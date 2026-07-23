@@ -1,0 +1,40 @@
+/* SearchEngineAdvanced monté hors carte (accueil gpu-site). */
+
+.ec-search-engine-standalone {
+  position: relative;
+  width: 100%;
+}
+
+.ec-search-engine-standalone__map-host {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.ec-search-engine-standalone__widget {
+  position: relative;
+  width: 100%;
+}
+
+.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] {
+  position: relative;
+  top: auto;
+  left: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
+.ec-search-engine-standalone .GPSearchBar {
+  width: 100%;
+}
+
+.ec-search-engine-standalone .GPAdvancedContainer {
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+}

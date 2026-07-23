@@ -1,5 +1,6 @@
-import { fromLonLat } from 'ol/proj'
+import { fromLonLat, toLonLat } from 'ol/proj'
 import type Map from 'ol/Map'
+import type Feature from 'ol/Feature'
 import type { StandardViewerSearch } from '@/lib/types'
 
 /** Zoom selon le type de résultat (comportement gpu-client LocateControl). */
@@ -39,11 +40,13 @@ export interface LocationRedirectParams {
   type: string
 }
 
-export function toLocationRedirectParams(location: {
+export interface LocationPayload {
   fullText: string
   position: { x: number; y: number }
   type?: string
-}): LocationRedirectParams {
+}
+
+export function toLocationRedirectParams(location: LocationPayload): LocationRedirectParams {
   return {
     municipality: location.fullText,
     position_x: String(location.position.x),
@@ -52,15 +55,82 @@ export function toLocationRedirectParams(location: {
   }
 }
 
+/** Autocomplete / select geopf → payload redirect. */
+export function locationFromGeopfSelect(event: {
+  title?: string
+  item?: {
+    fullText?: string
+    type?: string
+    position?: { x?: number; y?: number }
+  }
+}): LocationPayload | null {
+  const item = event.item
+  const x = Number(item?.position?.x)
+  const y = Number(item?.position?.y)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return {
+    fullText: item?.fullText || event.title || '',
+    position: { x, y },
+    type: item?.type,
+  }
+}
+
+/**
+ * Feature résultat geopf (géométrie en EPSG:3857 typiquement) → payload redirect.
+ */
+export function locationFromGeopfFeature(
+  feature: Feature,
+  fallbackType = '',
+): LocationPayload | null {
+  const geometry = feature.getGeometry()
+  if (!geometry || typeof geometry.getType !== 'function') {
+    return null
+  }
+
+  let coord: number[] | null = null
+  const geomType = geometry.getType()
+  if (geomType === 'Point') {
+    coord = (geometry as import('ol/geom/Point').default).getCoordinates()
+  } else if (typeof geometry.getExtent === 'function') {
+    const extent = geometry.getExtent()
+    coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]
+  }
+  if (!coord || coord.length < 2) return null
+
+  const [lon, lat] = toLonLat(coord, 'EPSG:3857')
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null
+
+  const infoPopup = String(feature.get('infoPopup') ?? '')
+  const label =
+    infoPopup.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ||
+    String(feature.get('fullText') ?? feature.get('label') ?? 'Localisation')
+
+  return {
+    fullText: label,
+    position: { x: lon, y: lat },
+    type: String(feature.get('type') ?? fallbackType),
+  }
+}
+
+export function locationFromGeolocation(
+  coordinates: number[],
+  label = 'Ma localisation',
+): LocationPayload | null {
+  const x = Number(coordinates?.[0])
+  const y = Number(coordinates?.[1])
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return {
+    fullText: label,
+    position: { x, y },
+    type: 'geolocate',
+  }
+}
+
 /**
  * Navigue vers la page carte avec les paramètres de localisation (contrat gpu-site).
  */
 export function redirectToMapWithLocation(
-  location: {
-    fullText: string
-    position: { x: number; y: number }
-    type?: string
-  },
+  location: LocationPayload,
   options: {
     mapUrl?: string
     method?: 'GET' | 'POST'

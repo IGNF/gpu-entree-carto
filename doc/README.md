@@ -17,6 +17,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | FullScreenControl | `src/components/map/FullScreenControl.vue` | [FullScreenControl.md](./FullScreenControl.md) |
 | ScaleLineControl | `src/components/map/ScaleLineControl.vue` | [ScaleLineControl.md](./ScaleLineControl.md) |
 | SearchEngineControl | `src/components/map/SearchEngineControl.vue` | [SearchEngineControl.md](./SearchEngineControl.md) |
+| mountSearchEngine | `src/lib/mountSearchEngine.ts` | [mountSearchEngine.md](./mountSearchEngine.md) |
 | LocationSearchWidget | `src/components/search/LocationSearchWidget.vue` | [LocationSearchWidget.md](./LocationSearchWidget.md) |
 | OverviewMapControl | `src/components/map/OverviewMapControl.vue` | [OverviewMapControl.md](./OverviewMapControl.md) |
 | TerritoriesControl | `src/components/map/TerritoriesControl.vue` | [TerritoriesControl.md](./TerritoriesControl.md) |

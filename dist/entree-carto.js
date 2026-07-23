@@ -10866,7 +10866,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const P4 = 151 / 96 * _E3 - 417 / 128 * _E5;
   const P5 = 1097 / 512 * _E4;
   const R = 6378137;
-  function toLonLat(easting, northing, zone) {
+  function toLonLat$1(easting, northing, zone) {
     const x = easting - 5e5;
     const y = zone.north ? northing : northing - 1e7;
     const m = y / K0;
@@ -11004,7 +11004,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return {
       forward: makeTransformFunction(fromLonLat$1, zone),
-      inverse: makeTransformFunction(toLonLat, zone)
+      inverse: makeTransformFunction(toLonLat$1, zone)
     };
   }
   const transformFactories = [makeTransforms];
@@ -11179,6 +11179,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       "EPSG:4326",
       projection !== void 0 ? projection : "EPSG:3857"
     );
+  }
+  function toLonLat(coordinate, projection) {
+    const lonLat = transform$1(
+      coordinate,
+      projection,
+      "EPSG:4326"
+    );
+    const lon = lonLat[0];
+    if (lon < -180 || lon > 180) {
+      lonLat[0] = modulo(lon + 180, 360) - 180;
+    }
+    return lonLat;
   }
   function equivalent$1(projection1, projection2) {
     if (projection1 === projection2) {
@@ -60846,67 +60858,76 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.ParcelAdvancedSearch = ParcelAdvancedSearch;
   }
+  const GEOPF_SERVICE_BASE = "https://data.geopf.fr";
+  function createSearchEngineAdvanced(options = {}) {
+    const base = (options.serviceBaseUrl ?? GEOPF_SERVICE_BASE).replace(/\/$/, "");
+    const searchOptions = {
+      serverUrl: `${base}/geocodage/search`,
+      wfsServerUrl: `${base}/wfs/ows?`,
+      geocodeGetCapabilitiesUrl: `${base}/geocodage/getCapabilities`
+    };
+    const advancedSearchOptions = { searchOptions };
+    return new SearchEngineAdvanced({
+      collapsed: options.collapsed ?? false,
+      collapsible: options.collapsible ?? false,
+      returnTrueGeometry: true,
+      placeholder: options.placeholder ?? "Rechercher un lieu...",
+      target: options.target,
+      autocompleteOptions: {
+        serviceOptions: {
+          maximumResponses: 10,
+          serverUrl: `${base}/geocodage/completion?`
+        },
+        prettifyResults: true,
+        maximumEntries: 5
+      },
+      searchOptions: {
+        serviceOptions: {
+          serverUrl: searchOptions.serverUrl
+        }
+      },
+      advancedSearch: [
+        new InseeAdvancedSearch({ ...advancedSearchOptions, name: "Code INSEE" }),
+        new LocationAdvancedSearch({ ...advancedSearchOptions, name: "Lieux et toponymes" }),
+        new CoordinateAdvancedSearch({
+          ...advancedSearchOptions,
+          name: "Coordonnées",
+          coordinateSearch: {
+            systems: [
+              { label: "Géographique", crs: "EPSG:4326", type: "Geographical" },
+              { label: "Web Mercator", crs: "EPSG:3857", type: "Metric" },
+              { label: "Lambert 93", crs: "EPSG:2154", type: "Metric" },
+              { label: "Lambert II étendu", crs: "EPSG:27572", type: "Metric" }
+            ]
+          }
+        }),
+        new ParcelAdvancedSearch({ ...advancedSearchOptions, name: "Parcelles cadastrales" })
+      ]
+    });
+  }
   const _hoisted_1$5 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const GEOPF_SERVICE_BASE = "https://data.geopf.fr";
   const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
       collapsed: { type: Boolean, default: false },
       collapsible: { type: Boolean, default: false },
-      serviceBaseUrl: { default: GEOPF_SERVICE_BASE }
+      serviceBaseUrl: { default: "https://data.geopf.fr" }
     },
     setup(__props) {
       const props = __props;
-      useOlControl(() => {
-        const base = props.serviceBaseUrl.replace(/\/$/, "");
-        const searchOptions = {
-          serverUrl: `${base}/geocodage/search`,
-          wfsServerUrl: `${base}/wfs/ows?`,
-          geocodeGetCapabilitiesUrl: `${base}/geocodage/getCapabilities`
-        };
-        const advancedSearchOptions = { searchOptions };
-        return new SearchEngineAdvanced({
+      useOlControl(
+        () => createSearchEngineAdvanced({
+          placeholder: props.placeholder,
           collapsed: props.collapsed,
           collapsible: props.collapsible,
-          returnTrueGeometry: true,
-          placeholder: props.placeholder,
-          autocompleteOptions: {
-            serviceOptions: {
-              maximumResponses: 10,
-              serverUrl: `${base}/geocodage/completion?`
-            },
-            prettifyResults: true,
-            maximumEntries: 5
-          },
-          searchOptions: {
-            serviceOptions: {
-              serverUrl: searchOptions.serverUrl
-            }
-          },
-          advancedSearch: [
-            new InseeAdvancedSearch({ ...advancedSearchOptions, name: "Code INSEE" }),
-            new LocationAdvancedSearch({ ...advancedSearchOptions, name: "Lieux et toponymes" }),
-            new CoordinateAdvancedSearch({
-              ...advancedSearchOptions,
-              name: "Coordonnées",
-              coordinateSearch: {
-                systems: [
-                  { label: "Géographique", crs: "EPSG:4326", type: "Geographical" },
-                  { label: "Web Mercator", crs: "EPSG:3857", type: "Metric" },
-                  { label: "Lambert 93", crs: "EPSG:2154", type: "Metric" },
-                  { label: "Lambert II étendu", crs: "EPSG:27572", type: "Metric" }
-                ]
-              }
-            }),
-            new ParcelAdvancedSearch({ ...advancedSearchOptions, name: "Parcelles cadastrales" })
-          ]
-        });
-      });
+          serviceBaseUrl: props.serviceBaseUrl
+        })
+      );
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("span", _hoisted_1$5);
       };
@@ -60940,6 +60961,52 @@ Expected function or array of functions, received type ${typeof value2}.`
       position_x: String(location.position.x),
       position_y: String(location.position.y),
       type: location.type ?? ""
+    };
+  }
+  function locationFromGeopfSelect(event) {
+    var _a, _b;
+    const item = event.item;
+    const x = Number((_a = item == null ? void 0 : item.position) == null ? void 0 : _a.x);
+    const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      fullText: (item == null ? void 0 : item.fullText) || event.title || "",
+      position: { x, y },
+      type: item == null ? void 0 : item.type
+    };
+  }
+  function locationFromGeopfFeature(feature, fallbackType = "") {
+    const geometry = feature.getGeometry();
+    if (!geometry || typeof geometry.getType !== "function") {
+      return null;
+    }
+    let coord = null;
+    const geomType = geometry.getType();
+    if (geomType === "Point") {
+      coord = geometry.getCoordinates();
+    } else if (typeof geometry.getExtent === "function") {
+      const extent = geometry.getExtent();
+      coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
+    }
+    if (!coord || coord.length < 2) return null;
+    const [lon, lat] = toLonLat(coord, "EPSG:3857");
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    const infoPopup = String(feature.get("infoPopup") ?? "");
+    const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
+    return {
+      fullText: label,
+      position: { x: lon, y: lat },
+      type: String(feature.get("type") ?? fallbackType)
+    };
+  }
+  function locationFromGeolocation(coordinates2, label = "Ma localisation") {
+    const x = Number(coordinates2 == null ? void 0 : coordinates2[0]);
+    const y = Number(coordinates2 == null ? void 0 : coordinates2[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      fullText: label,
+      position: { x, y },
+      type: "geolocate"
     };
   }
   function redirectToMapWithLocation(location, options = {}) {
@@ -67983,6 +68050,94 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     };
   }
+  function mountSearchEngine(container, options = {}) {
+    container.innerHTML = "";
+    container.classList.add("ec-search-engine-standalone");
+    const mapHost = document.createElement("div");
+    mapHost.className = "ec-search-engine-standalone__map-host";
+    mapHost.setAttribute("aria-hidden", "true");
+    container.appendChild(mapHost);
+    const widgetHost = document.createElement("div");
+    widgetHost.className = "ec-search-engine-standalone__widget";
+    container.appendChild(widgetHost);
+    const map2 = new Map$1({
+      target: mapHost,
+      controls: defaults$2({
+        attribution: false,
+        zoom: false,
+        rotate: false
+      }),
+      layers: [],
+      view: new View({
+        center: fromLonLat([2.424722, 46.763056]),
+        zoom: 6,
+        projection: "EPSG:3857"
+      })
+    });
+    const control = createSearchEngineAdvanced({
+      placeholder: options.placeholder ?? "Rechercher une adresse, une ville, un lieu...",
+      collapsed: false,
+      collapsible: false,
+      serviceBaseUrl: options.serviceBaseUrl,
+      target: widgetHost
+    });
+    map2.addControl(control);
+    const mode2 = options.mode ?? "redirect";
+    const mapUrl = options.mapUrl ?? "/map/";
+    const method = options.method ?? "POST";
+    let redirected = false;
+    const finish = (location) => {
+      var _a;
+      if (!location || redirected) return;
+      redirected = true;
+      (_a = options.onSelect) == null ? void 0 : _a.call(options, location);
+      if (mode2 === "redirect") {
+        redirectToMapWithLocation(location, { mapUrl, method });
+      }
+    };
+    const onSelect = (event) => {
+      finish(locationFromGeopfSelect(event));
+    };
+    const onSearch = (event) => {
+      const result = event.result;
+      if (result && typeof result === "object" && "getGeometry" in result) {
+        finish(locationFromGeopfFeature(result));
+      }
+    };
+    const onGeolocate = (event) => {
+      const coordinates2 = event.coordinates;
+      if (Array.isArray(coordinates2)) {
+        finish(locationFromGeolocation(coordinates2));
+      }
+    };
+    const onCombined = (event) => {
+      if (event.type === "select") onSelect(event);
+      else if (event.type === "search") onSearch(event);
+    };
+    control.on(["select", "search"], onCombined);
+    control.on("searchengineadvanced:geolocation:click", onGeolocate);
+    const formListeners = [];
+    for (const form of control._searchForms ?? []) {
+      const listener = (event) => onSearch(event);
+      form.on("search", listener);
+      formListeners.push({ form, listener });
+    }
+    return {
+      destroy() {
+        var _a, _b, _c;
+        redirected = true;
+        (_a = control.un) == null ? void 0 : _a.call(control, ["select", "search"], onCombined);
+        (_b = control.un) == null ? void 0 : _b.call(control, "searchengineadvanced:geolocation:click", onGeolocate);
+        for (const { form, listener } of formListeners) {
+          (_c = form.un) == null ? void 0 : _c.call(form, "search", listener);
+        }
+        map2.removeControl(control);
+        map2.setTarget(void 0);
+        container.innerHTML = "";
+        container.classList.remove("ec-search-engine-standalone");
+      }
+    };
+  }
   const name = "entree-carto";
   const version = "0.2.0";
   const description = "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)";
@@ -67996,6 +68151,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     config,
     createStandardViewer,
     ParcelViewer,
+    mountSearchEngine,
     mountLocationSearch,
     control: {
       LocateControl

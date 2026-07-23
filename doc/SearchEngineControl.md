@@ -22,7 +22,9 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 - **Me géolocaliser** (navigateur) dans l’autocomplete et le panneau avancé
 - Marqueurs / popup de résultat gérés par geopf
 - Les recherches avancées reçoivent `searchOptions.serverUrl` (sinon geopf passe `{}` → `url.split is not a function`)
-- Recherche initiale depuis l’accueil : voir `SearchAtInit` + `params.search` (`createStandardViewer`) ; widget hors carte : [LocationSearchWidget](./LocationSearchWidget.md)
+- Recherche initiale depuis l’accueil : `SearchAtInit` + `params.search`
+- Accueil hors carte (même contrôle) : [mountSearchEngine](./mountSearchEngine.md)
+- Fallback autocomplete seul : [LocationSearchWidget](./LocationSearchWidget.md)
 
 ## Placement
 

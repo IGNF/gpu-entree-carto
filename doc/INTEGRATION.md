@@ -34,7 +34,8 @@ Vue 3, OpenLayers ≥ 9 et les styles carte sont **inclus dans le bundle** (plus
 |--------|--------|----------------|
 | `gpu.config` | Compatible | Enrichi par `gpu_client_config.js.twig` |
 | `gpu.createStandardViewer(params)` | Partiel | `/map/` — carte + centrage si `params.search` |
-| `gpu.mountLocationSearch(el, opts)` | Compatible | Accueil — remplace le form gazetteer |
+| `gpu.mountSearchEngine(el, opts)` | Oui | Accueil — même SearchEngine que la carte → redirect `/map/` |
+| `gpu.mountLocationSearch(el, opts)` | Fallback | Accueil — autocomplete seul |
 | `gpu.ParcelViewer` | Stub | `/map/parcel-info/` — carte seule, pas de fiche parcelle |
 | `gpu.services.Geocode` | Partiel | Accueil — autocomplétion (Gp ou fetch Géoplateforme) |
 | `gpu.control.LocateControl` | Compatible | Filtres d’autocomplétion accueil |
@@ -117,28 +118,29 @@ Même remplacement CSS/JS que ci-dessus.
 <script src="{{ asset('build/vendor/entree-carto/entree-carto.min.js') }}"></script>
 ```
 
-**Remplacer** le formulaire gazetteer (`#searchForm` / `callGazetteerService.js`) par :
+**Remplacer** le formulaire gazetteer (`#searchForm` / `callGazetteerService.js`) par le **même** SearchEngine que sur la carte :
 
 ```twig
-{# banner_part.html.twig — à la place de #searchForm #}
-<div id="gpu-location-search"></div>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    gpu.mountLocationSearch(document.getElementById('gpu-location-search'), {
-      mode: 'redirect',
-      mapUrl: '{{ path('gpu_map') }}',
-      method: 'POST',
-      label: 'Rechercher par lieu:',
-      placeholder: '{{ 'home.search_place'|trans({}) }}',
-    });
-  });
-</script>
+{# banner_part.html.twig #}
+<div
+  id="gpu-location-search"
+  data-map-url="{{ path('gpu_map') }}"
+  data-placeholder="{{ 'home.search_place'|trans({}) }}"
+></div>
 ```
 
-Plus besoin de `callGazetteerService.js` ni de jQuery typeahead pour ce champ.  
-`GpServices.js` reste optionnel (fallback HTTP Géoplateforme dans `Geocode`).
+```js
+// assets/js/mountLocationSearchHome.js
+gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
+  mode: 'redirect',
+  mapUrl: el.getAttribute('data-map-url') || '/map/',
+  method: 'POST',
+  placeholder: el.getAttribute('data-placeholder') || '…',
+});
+```
 
-Voir [LocationSearchWidget.md](./LocationSearchWidget.md).
+Voir [mountSearchEngine.md](./mountSearchEngine.md).  
+Fallback léger : `gpu.mountLocationSearch` ([LocationSearchWidget.md](./LocationSearchWidget.md)).
 
 ### 6. Config JavaScript
 
