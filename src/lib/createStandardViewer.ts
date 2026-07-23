@@ -18,7 +18,7 @@ export function createStandardViewer(params: StandardViewerParams = {}): Mounted
     console.info(`${LOG_PREFIX} document reçu (aperçu partiel)`, params.document)
   }
   if (params.search?.fullText) {
-    console.info(`${LOG_PREFIX} recherche reçue (centrage à venir)`, params.search)
+    console.info(`${LOG_PREFIX} recherche initiale`, params.search)
   }
 
   console.warn(

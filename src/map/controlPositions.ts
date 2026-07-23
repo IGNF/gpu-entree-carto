@@ -1,13 +1,17 @@
 /**
- * Positions des contrôles de base — alignées sur
+ * Positions des contrôles — alignées sur
  * https://cartes.gouv.fr/explorer-les-cartes/
- * (repo IGNF/cartes.gouv.fr-entree-carto, useControlsExtensionPosition).
+ * (IGNF/cartes.gouv.fr-entree-carto, useControlsExtensionPosition).
  */
 export const CONTROL_POSITIONS = {
   zoom: 'bottom-right',
   fullscreen: 'bottom-right',
-  /** ScaleLine OL : bas-droite, décalé via CSS (pas d’option position geopf). */
+  /** ScaleLine OL : bas-droite, décalé via CSS. */
   scaleLine: 'bottom-right',
+  /** SearchEngine (CSS top-left, pas de position geopf). */
+  searchEngine: 'top-left',
+  overviewMap: 'bottom-left',
+  territories: 'bottom-left',
 } as const
 
 export type GeopfControlPosition =

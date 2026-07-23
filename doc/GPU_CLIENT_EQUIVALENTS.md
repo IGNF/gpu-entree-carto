@@ -62,7 +62,7 @@ Les équivalents carte se trouvent ailleurs :
 
 | gpu-client | Rôle | vue-components | geopf-extensions | cartes.gouv entree-carto |
 |------------|------|----------------|------------------|--------------------------|
-| `LocateControl` | Lieu / adresse / parcelle | Non | `SearchEngine` **Partiel** | `SearchEngine.vue` **Partiel** |
+| `LocateControl` | Lieu / adresse / parcelle | Non | `SearchEngine` **Oui** | `SearchEngineControl` (geopf Advanced) **Oui** |
 | `services.Geocode` | Autocomplete Gp + cadastre | Non | SearchEngine / géocode IGN **Oui** | via geopf **Oui** |
 | `DistrictService` | Arrondissements INSEE | Non | — **Non** | — **Non** |
 | `ReverseGeocode` (absent gpu) | Adresse au clic | Non | `ReverseGeocode` **Oui** | `ReverseGeocode.vue` **Oui** |

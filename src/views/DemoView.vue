@@ -4,6 +4,9 @@ import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
+import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
+import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
+import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import BaseLayerSwitcher from '@/components/map/BaseLayerSwitcher.vue'
 import LegendStub from '@/components/legend/LegendStub.vue'
 import LayersTreeStub from '@/components/layers/LayersTreeStub.vue'
@@ -14,6 +17,7 @@ import {
 } from '@/ol/baseLayers'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
+import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 
 const presets = createBaseLayerPresets()
@@ -67,6 +71,9 @@ function onToggleLayer(id: string, visible: boolean) {
     <main class="ec-layout">
       <div class="ec-layout__map">
         <MapShell :layers="baseLayers">
+          <SearchEngineControl />
+          <OverviewMapControl />
+          <TerritoriesControl />
           <ZoomControl />
           <FullScreenControl />
           <ScaleLineControl />

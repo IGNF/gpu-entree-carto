@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import '@gouvfr/dsfr/dist/dsfr.min.css'
+/* Pictos Remix / DSFR (`fr-icon-*`) — absents de dsfr.min.css seul */
+import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvminint/vue-dsfr/styles'
 import VueDsfr from '@gouvminint/vue-dsfr'
 

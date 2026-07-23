@@ -3,6 +3,7 @@ import { createStandardViewer } from '@/lib/createStandardViewer'
 import { ParcelViewer } from '@/lib/ParcelViewer'
 import LocateControl from '@/lib/control/LocateControl'
 import Geocode from '@/lib/services/Geocode'
+import { mountLocationSearch } from '@/lib/mountLocationSearch'
 import packageJson from '../../package.json'
 
 setScriptDirFromCurrentScript()
@@ -11,6 +12,7 @@ const gpu = {
   config,
   createStandardViewer,
   ParcelViewer,
+  mountLocationSearch,
   control: {
     LocateControl,
   },

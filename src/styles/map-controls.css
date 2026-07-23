@@ -1,16 +1,14 @@
 /**
- * Placement des contrôles de base — référence :
+ * Placement des contrôles — référence :
  * https://cartes.gouv.fr/explorer-les-cartes/
- * (IGNF/cartes.gouv.fr-entree-carto : variables.scss + ScaleLine.vue + Controls.vue)
- *
- * - Zoom + plein écran : bottom-right (colonne geopf)
- * - Échelle : bas-droite, à gauche de la colonne (right = btn + 2×gap)
+ * (clone local : cartes.gouv.fr-entree-carto)
  */
 
 :root {
   --ec-widget-gap: 8px;
   --ec-widget-btn-size: 48px;
-  /* équivalent $widget-panel-x = 48px + 8px * 2 */
+  --ec-widget-btn-padding: 4px;
+  --ec-widget-btn-radius: 4px;
   --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
 }
 
@@ -18,6 +16,71 @@
   z-index: 1;
   width: var(--ec-widget-btn-size);
   gap: var(--ec-widget-gap);
+}
+
+/*
+ * Le widget redevient containing block : PositionFactory met position:unset,
+ * donc les dialog.gpf-panel se calaient sur .position (pleine hauteur) → haut de carte.
+ */
+.position > .gpf-widget,
+.position > .gpf-widget-button {
+  position: relative !important;
+}
+
+/* Panneaux : bas-gauche / bas-droite alignés sur le bas du bouton (pas top:0 inline geopf) */
+.position-container-bottom-left > .gpf-widget > dialog.gpf-panel,
+.position-container-bottom-left > .gpf-widget-button > dialog.gpf-panel,
+.position-container-bottom-right > .gpf-widget > dialog.gpf-panel,
+.position-container-bottom-right > .gpf-widget-button > dialog.gpf-panel {
+  top: auto !important;
+  bottom: 0 !important;
+  /* reste dans la carte : ancré en bas, hauteur max = hauteur carte */
+  max-height: calc(100cqb - var(--ec-widget-gap) * 2) !important;
+  /* pas overflow:hidden ici : le dialog vues (left:100%) serait clipé */
+}
+
+.position-container-bottom-left > .gpf-widget > dialog.gpf-panel,
+.position-container-bottom-left > .gpf-widget-button > dialog.gpf-panel {
+  left: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap)) !important;
+}
+
+.position-container-bottom-right > .gpf-widget > dialog.gpf-panel,
+.position-container-bottom-right > .gpf-widget-button > dialog.gpf-panel {
+  right: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap)) !important;
+}
+
+.position-container-bottom-left > .gpf-widget > button[aria-pressed='true'] + dialog.gpf-panel,
+.position-container-bottom-left > .gpf-widget-button > button[aria-pressed='true'] + dialog.gpf-panel,
+.position-container-bottom-right > .gpf-widget > button[aria-pressed='true'] + dialog.gpf-panel,
+.position-container-bottom-right > .gpf-widget-button > button[aria-pressed='true'] + dialog.gpf-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.position-container-top-left > .gpf-widget > dialog.gpf-panel,
+.position-container-top-left > .gpf-widget-button > dialog.gpf-panel {
+  top: 0 !important;
+  left: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap)) !important;
+}
+
+.position-container-top-right > .gpf-widget > dialog.gpf-panel,
+.position-container-top-right > .gpf-widget-button > dialog.gpf-panel {
+  top: 0 !important;
+  right: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap)) !important;
+}
+
+.position-container-top-left {
+  top: var(--ec-widget-gap);
+  left: var(--ec-widget-gap);
+}
+
+.position-container-bottom-left {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ec-widget-gap);
+  bottom: var(--ec-widget-gap);
+  left: var(--ec-widget-gap);
 }
 
 .position-container-bottom-right {
@@ -30,7 +93,202 @@
   z-index: 0;
 }
 
-/* ScaleLine — placement + fond DSFR comme cartes.gouv (pas le style Figma) */
+/* Boutons geopf : état actif = fond bleu (cartes.gouv), pas la barre ::after */
+.gpf-widget-button {
+  width: var(--ec-widget-btn-size);
+  padding: 0;
+  border-radius: var(--ec-widget-btn-radius);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.gpf-widget-button > .gpf-btn-icon {
+  width: var(--ec-widget-btn-size);
+  height: var(--ec-widget-btn-size);
+  padding: var(--ec-widget-btn-padding);
+  filter: none;
+  max-width: initial !important;
+  max-height: initial !important;
+  background-color: var(--background-default-grey, #fff);
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--background-default-grey, #fff);
+  transition: background-color 300ms;
+}
+
+.gpf-widget-button > .gpf-btn-icon:not(:disabled):hover {
+  background-color: var(--hover-tint, #e3e3fd);
+}
+
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true'],
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover,
+.gpf-widget > .gpf-btn-icon[aria-pressed='true'],
+.gpf-widget > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover {
+  background-color: var(--background-open-blue-france, #e3e3fd);
+}
+
+.gpf-widget-button:has(> .gpf-btn-icon[aria-pressed='true'])::after,
+.gpf-widget:has(> .gpf-btn-icon[aria-pressed='true'])::after {
+  content: none;
+}
+
+/* Infobulles — appendice aligné sur le bord du bouton (cartes.gouv Controls.vue) */
+.position-container-top-left > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-bottom-left > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-top-left > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-bottom-left > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before {
+  transform: translate(
+    calc(var(--ec-widget-btn-size) - var(--ec-widget-btn-padding) * 2),
+    var(--ec-widget-btn-padding)
+  );
+}
+
+.position-container-top-right > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-bottom-right > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-top-right > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before,
+.position-container-bottom-right > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before {
+  transform: translate(-100%, var(--ec-widget-btn-padding));
+}
+
+.position:has(> .gpf-widget-button > .gpf-btn-icon[aria-label]:hover),
+.position:has(> .gpf-widget > .gpf-btn-icon[aria-label]:hover) {
+  z-index: 3;
+}
+
+.position > .gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:hover::before,
+.position > .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover::before {
+  content: none;
+}
+
+/* Minimap au-dessus du sélecteur de territoire (cartes.gouv OverviewMap.vue) */
+.position-container-bottom-left > .gpf-widget[id^='GPoverviewMap-'] {
+  order: -1;
+  position: relative !important;
+  left: auto;
+  bottom: auto;
+}
+
+.position-container-bottom-left > .gpf-widget[id^='GPoverviewMap-'] .ol-overviewmap-map {
+  position: absolute;
+  top: 0;
+  left: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap));
+  border-radius: 4px;
+  width: calc(var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap));
+  height: calc(var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap));
+  border: solid 4px var(--background-default-grey, #fff);
+  background-color: var(--background-default-grey, #fff);
+}
+
+/* SearchEngine — haut-gauche (cartes.gouv SearchEngine.vue) */
+.gpf-widget[id^='GPsearchEngine-Advanced'] {
+  top: var(--ec-widget-gap);
+  left: calc(var(--ec-widget-gap) - 5px);
+  z-index: 1;
+  box-shadow: none;
+  max-width: min(420px, calc(100% - 12px));
+}
+
+.gpf-widget[id^='GPsearchEngine-Advanced'] .GPSearchBar .GPInputGroup,
+.gpf-widget[id^='GPsearchEngine-Advanced'] .GPSearchBar .GPInputGroup > input,
+.gpf-widget[id^='GPsearchEngine-Advanced'] button[id^='GPshowSearchEnginePicto-'].fr-btn {
+  height: var(--ec-widget-btn-size);
+}
+
+.GPsearchInputSubmit {
+  flex: 0 0 var(--ec-widget-btn-size);
+}
+
+.GPsearchInputSubmit::before {
+  margin: 0 auto !important;
+}
+
+/* Territories — titres longs dans les tuiles */
+.gpf-tile .fr-tile__title,
+.gpf-tile .fr-tile__title .fr-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Territories — header : fermer absolument à droite (geopf #GPterritoriesPanelClose) */
+dialog[id^='GPterritoriesPanel-'] > .gpf-panel__header,
+dialog[id^='GPterritoriesPanel-'] > .GPpanelHeader {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 2.75rem;
+}
+
+dialog[id^='GPterritoriesPanel-'] .gpf-panel__title,
+dialog[id^='GPterritoriesPanel-'] .GPpanelTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#GPterritoriesPanelClose {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0.25rem !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: translateY(-50%);
+  margin: 0 !important;
+  z-index: 2;
+}
+
+/* Territories — corps scrollable pour ne pas sortir en haut de la carte */
+dialog[id^='GPterritoriesPanel-'] > .gpf-panel__territories,
+dialog[id^='GPterritoriesPanel-'] > .territories-views,
+dialog[id^='GPterritoriesPanel-'] > .gpf-panel__menuviews_territories {
+  flex: 0 0 auto;
+}
+
+dialog[id^='GPterritoriesPanel-'] > .territories-entries {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Territories — dialog « Modifier les territoires » collé à droite du panneau, bas alignés */
+dialog[id^='GPterritoriesPanel-'] {
+  overflow: visible;
+}
+
+#gpf-territories-views-container-id {
+  position: absolute;
+  top: auto !important;
+  bottom: 0;
+  /* containing block = dialog.GPterritoriesPanel (pas le bandeau menuviews) */
+  left: 100%;
+  z-index: 10000;
+  /* même hauteur que le panneau « Sélectionner un territoire » */
+  height: 100%;
+  max-height: 100%;
+  /* évite le rétrécissement (width:auto → tagliatelle) : au moins la largeur du panneau */
+  min-width: 100%;
+  width: max-content;
+  overflow: auto;
+  box-sizing: border-box;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  background-color: var(--background-default-grey, #fff);
+}
+
+/* geopf toggle gpf-visible ; <dialog> est display:none par défaut */
+#gpf-territories-views-container-id.gpf-visible {
+  display: block !important;
+}
+
+.gpf-panel__body_territories,
+.gpf-panel__views_territories-listview-entries {
+  max-height: initial;
+}
+
+/* ScaleLine — bas-droite, à gauche de zoom/fullscreen */
 .ol-scale-line {
   z-index: auto;
   left: auto;

@@ -7,6 +7,10 @@ import type Control from 'ol/control/Control'
  */
 export function useOlControl(
   createControl: () => Control,
+  options?: {
+    /** Hook après création, avant `addControl` (ex. patch DOM). */
+    afterCreate?: (control: Control) => void
+  },
 ): void {
   const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
   let control: Control | null = null
@@ -21,6 +25,7 @@ export function useOlControl(
       if (!map) return
 
       control = createControl()
+      options?.afterCreate?.(control)
       map.addControl(control)
 
       onCleanup(() => {

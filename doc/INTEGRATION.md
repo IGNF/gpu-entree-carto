@@ -33,9 +33,10 @@ Vue 3, OpenLayers ≥ 9 et les styles carte sont **inclus dans le bundle** (plus
 | Membre | Statut | Usage gpu-site |
 |--------|--------|----------------|
 | `gpu.config` | Compatible | Enrichi par `gpu_client_config.js.twig` |
-| `gpu.createStandardViewer(params)` | Partiel | `/map/` — carte minimale dans `#gpu-map-container` |
+| `gpu.createStandardViewer(params)` | Partiel | `/map/` — carte + centrage si `params.search` |
+| `gpu.mountLocationSearch(el, opts)` | Compatible | Accueil — remplace le form gazetteer |
 | `gpu.ParcelViewer` | Stub | `/map/parcel-info/` — carte seule, pas de fiche parcelle |
-| `gpu.services.Geocode` | Partiel | Accueil — autocomplétion si `Gp` est chargé |
+| `gpu.services.Geocode` | Partiel | Accueil — autocomplétion (Gp ou fetch Géoplateforme) |
 | `gpu.control.LocateControl` | Compatible | Filtres d’autocomplétion accueil |
 
 ### Limites actuelles (à prévoir côté gpu-site)
@@ -109,14 +110,35 @@ Conserver :
 Même remplacement CSS/JS que ci-dessus.  
 `parcel.js` reste inchangé ; `ParcelViewer` affiche une carte minimale et logue un avertissement.
 
-### 5. Page d’accueil (`templates/default/index.html.twig`)
+### 5. Page d’accueil (`templates/default/index.html.twig` + banner)
 
 ```twig
+<link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto.min.js') }}"></script>
 ```
 
-Conserver `ol.js` **uniquement si** d’autres scripts du site en dépendent encore — sinon le retirer.  
-Conserver `GpServices.js` et `callGazetteerService.js`.
+**Remplacer** le formulaire gazetteer (`#searchForm` / `callGazetteerService.js`) par :
+
+```twig
+{# banner_part.html.twig — à la place de #searchForm #}
+<div id="gpu-location-search"></div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    gpu.mountLocationSearch(document.getElementById('gpu-location-search'), {
+      mode: 'redirect',
+      mapUrl: '{{ path('gpu_map') }}',
+      method: 'POST',
+      label: 'Rechercher par lieu:',
+      placeholder: '{{ 'home.search_place'|trans({}) }}',
+    });
+  });
+</script>
+```
+
+Plus besoin de `callGazetteerService.js` ni de jQuery typeahead pour ce champ.  
+`GpServices.js` reste optionnel (fallback HTTP Géoplateforme dans `Geocode`).
+
+Voir [LocationSearchWidget.md](./LocationSearchWidget.md).
 
 ### 6. Config JavaScript
 
@@ -179,8 +201,8 @@ Puis `npm install` et `make build-lib` dans entree-carto.
 ## Feuille de route fonctionnelle
 
 - [ ] `createStandardViewer` : couches WMS/WFS, légende, fiche info, outils
+- [x] Recherche lieu accueil → `/map/` (`mountLocationSearch` + `params.search` centrage)
 - [ ] `ParcelViewer` complet
-- [ ] Recherche / centrage (`search`, `bbox`, `document`)
 - [ ] Éviter le double chargement DSFR (site + bundle) si nécessaire
 - [ ] Tests d’intégration gpu-site (parcours carte, parcelle, accueil)
 

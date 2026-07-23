@@ -4,17 +4,20 @@ import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
+import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
+import SearchAtInit from '@/components/map/SearchAtInit.vue'
+import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
+import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import { createBaseLayerPresets } from '@/ol/baseLayers'
 import type { StandardViewerParams } from '@/lib/types'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
+import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 
-const props = defineProps<{
+defineProps<{
   params?: StandardViewerParams
 }>()
-
-const searchHint = computed(() => props.params?.search?.fullText ?? '')
 
 const presets = createBaseLayerPresets()
 const baseLayers = computed(() => presets.map((p) => p.layer))
@@ -23,16 +26,14 @@ const baseLayers = computed(() => presets.map((p) => p.layer))
 <template>
   <div class="ec-embed-viewer gpu-client" data-testid="embed-map-viewer">
     <MapShell :layers="baseLayers" class="ec-embed-viewer__map">
+      <SearchEngineControl />
+      <SearchAtInit :search="params?.search" />
+      <OverviewMapControl />
+      <TerritoriesControl />
       <ZoomControl />
       <FullScreenControl />
       <ScaleLineControl />
     </MapShell>
-    <p
-      v-if="searchHint"
-      class="ec-embed-viewer__hint fr-text--xs fr-hint-text"
-    >
-      Recherche reçue : {{ searchHint }} (centrage à venir).
-    </p>
   </div>
 </template>
 
@@ -48,23 +49,18 @@ const baseLayers = computed(() => presets.map((p) => p.layer))
   width: 100%;
   height: 100%;
 }
-
-.ec-embed-viewer__hint {
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  z-index: 2;
-  margin: 0;
-  padding: 0.25rem 0.5rem;
-  background: rgba(255, 255, 255, 0.9);
-}
 </style>
 
 <style>
-/* Compatibilité gpu-site : #gpu-map { height: 726px } dans gpu-map.css */
+.ec-embed-viewer .ec-map-shell,
 .ec-embed-viewer .ec-map-shell__map,
 .ec-embed-viewer #gpu-map {
   width: 100%;
   height: 100%;
+}
+
+.ec-embed-viewer .ec-map-shell {
+  container-type: size;
+  container-name: map;
 }
 </style>
