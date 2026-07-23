@@ -25773,7 +25773,7 @@ Expected function or array of functions, received type ${typeof value}.`
         target: el,
         layers: options.layers ?? [],
         controls: defaults$1({
-          attribution: true,
+          attribution: false,
           zoom: false,
           rotate: false
         }),
@@ -25865,6 +25865,10 @@ Expected function or array of functions, received type ${typeof value}.`
       control = null;
     });
   }
+  const CONTROL_POSITIONS = {
+    zoom: "bottom-right",
+    fullscreen: "bottom-right"
+  };
   var loglevel$1 = { exports: {} };
   var loglevel = loglevel$1.exports;
   var hasRequiredLoglevel;
@@ -26366,7 +26370,7 @@ Expected function or array of functions, received type ${typeof value}.`
   const _sfc_main$3 = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
-      position: { default: "bottom-right" }
+      position: { default: CONTROL_POSITIONS.zoom }
     },
     setup(__props) {
       const props = __props;
@@ -26506,7 +26510,7 @@ Expected function or array of functions, received type ${typeof value}.`
   const _sfc_main$2 = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
-      position: { default: "bottom-right" }
+      position: { default: CONTROL_POSITIONS.fullscreen }
     },
     setup(__props) {
       const props = __props;
@@ -26531,8 +26535,7 @@ Expected function or array of functions, received type ${typeof value}.`
     setup(__props) {
       useOlControl(
         () => new ScaleLine({
-          units: "metric",
-          className: "ec-scale-line"
+          units: "metric"
         })
       );
       return (_ctx, _cache) => {
