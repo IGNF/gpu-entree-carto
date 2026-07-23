@@ -4,6 +4,7 @@ import type Control from 'ol/control/Control'
 
 /**
  * Attache / détache un contrôle OpenLayers (ou geopf) sur la carte injectée.
+ * @returns réf. du contrôle courant (null si pas de carte)
  */
 export function useOlControl(
   createControl: () => Control,
@@ -11,27 +12,28 @@ export function useOlControl(
     /** Hook après création, avant `addControl` (ex. patch DOM). */
     afterCreate?: (control: Control) => void
   },
-): void {
+): ShallowRef<Control | null> {
   const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
-  let control: Control | null = null
+  const controlRef = shallowRef<Control | null>(null)
 
   watch(
     mapRef,
     (map, _prev, onCleanup) => {
-      if (control && mapRef.value) {
-        mapRef.value.removeControl(control)
-        control = null
+      if (controlRef.value && mapRef.value) {
+        mapRef.value.removeControl(controlRef.value)
+        controlRef.value = null
       }
       if (!map) return
 
-      control = createControl()
+      const control = createControl()
       options?.afterCreate?.(control)
       map.addControl(control)
+      controlRef.value = control
 
       onCleanup(() => {
-        if (control && map) {
-          map.removeControl(control)
-          control = null
+        if (controlRef.value && map) {
+          map.removeControl(controlRef.value)
+          controlRef.value = null
         }
       })
     },
@@ -39,9 +41,11 @@ export function useOlControl(
   )
 
   onUnmounted(() => {
-    if (control && mapRef.value) {
-      mapRef.value.removeControl(control)
+    if (controlRef.value && mapRef.value) {
+      mapRef.value.removeControl(controlRef.value)
     }
-    control = null
+    controlRef.value = null
   })
+
+  return controlRef
 }

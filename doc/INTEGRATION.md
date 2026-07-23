@@ -203,7 +203,7 @@ Puis `npm install` et `make build-lib` dans entree-carto.
 ## Feuille de route fonctionnelle
 
 - [ ] `createStandardViewer` : couches WMS/WFS, légende, fiche info, outils
-- [x] Recherche lieu accueil → `/map/` (`mountLocationSearch` + `params.search` centrage)
+- [x] Recherche lieu accueil → `/map/` (`mountSearchEngine` + `params.search` → `SearchEngineControl.initialSearch`)
 - [ ] `ParcelViewer` complet
 - [ ] Éviter le double chargement DSFR (site + bundle) si nécessaire
 - [ ] Tests d’intégration gpu-site (parcours carte, parcelle, accueil)

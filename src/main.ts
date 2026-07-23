@@ -7,13 +7,15 @@ import '@gouvminint/vue-dsfr/styles'
 import VueDsfr from '@gouvminint/vue-dsfr'
 
 import App from './App.vue'
+import HomeView from './views/HomeView.vue'
 import DemoView from './views/DemoView.vue'
 import './styles/main.css'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'demo', component: DemoView },
+    { path: '/', name: 'home', component: HomeView },
+    { path: '/map', name: 'map', component: DemoView },
   ],
 })
 

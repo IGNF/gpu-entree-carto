@@ -11177,7 +11177,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return transform$1(
       coordinate,
       "EPSG:4326",
-      projection !== void 0 ? projection : "EPSG:3857"
+      "EPSG:3857"
     );
   }
   function toLonLat(coordinate, projection) {
@@ -27089,11 +27089,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$9 = {
+  const _hoisted_1$8 = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27118,7 +27118,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$9, [
+        return openBlock(), createElementBlock("div", _hoisted_1$8, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -27134,34 +27134,36 @@ Expected function or array of functions, received type ${typeof value2}.`
   });
   function useOlControl(createControl, options) {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
-    let control = null;
+    const controlRef = /* @__PURE__ */ shallowRef(null);
     watch(
       mapRef,
       (map2, _prev, onCleanup) => {
         var _a;
-        if (control && mapRef.value) {
-          mapRef.value.removeControl(control);
-          control = null;
+        if (controlRef.value && mapRef.value) {
+          mapRef.value.removeControl(controlRef.value);
+          controlRef.value = null;
         }
         if (!map2) return;
-        control = createControl();
+        const control = createControl();
         (_a = options == null ? void 0 : options.afterCreate) == null ? void 0 : _a.call(options, control);
         map2.addControl(control);
+        controlRef.value = control;
         onCleanup(() => {
-          if (control && map2) {
-            map2.removeControl(control);
-            control = null;
+          if (controlRef.value && map2) {
+            map2.removeControl(controlRef.value);
+            controlRef.value = null;
           }
         });
       },
       { immediate: true }
     );
     onUnmounted(() => {
-      if (control && mapRef.value) {
-        mapRef.value.removeControl(control);
+      if (controlRef.value && mapRef.value) {
+        mapRef.value.removeControl(controlRef.value);
       }
-      control = null;
+      controlRef.value = null;
     });
+    return controlRef;
   }
   const CONTROL_POSITIONS = {
     zoom: "bottom-right",
@@ -27666,12 +27668,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$8 = {
+  const _hoisted_1$7 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -27686,7 +27688,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$8);
+        return openBlock(), createElementBlock("span", _hoisted_1$7);
       };
     }
   });
@@ -27806,12 +27808,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$7 = {
+  const _hoisted_1$6 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -27825,16 +27827,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$7);
+        return openBlock(), createElementBlock("span", _hoisted_1$6);
       };
     }
   });
-  const _hoisted_1$6 = {
+  const _hoisted_1$5 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -27843,7 +27845,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$6);
+        return openBlock(), createElementBlock("span", _hoisted_1$5);
       };
     }
   });
@@ -60905,22 +60907,56 @@ Expected function or array of functions, received type ${typeof value2}.`
       ]
     });
   }
-  const _hoisted_1$5 = {
+  const _hoisted_1$4 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
       collapsed: { type: Boolean, default: false },
       collapsible: { type: Boolean, default: false },
-      serviceBaseUrl: { default: "https://data.geopf.fr" }
+      serviceBaseUrl: { default: "https://data.geopf.fr" },
+      initialSearch: { default: null }
     },
     setup(__props) {
       const props = __props;
-      useOlControl(
+      let appliedKey = null;
+      function searchKey(search) {
+        var _a, _b;
+        if (!(search == null ? void 0 : search.fullText)) return null;
+        const x = (_a = search.position) == null ? void 0 : _a.x;
+        const y = (_b = search.position) == null ? void 0 : _b.y;
+        return `${search.fullText}|${x ?? ""}|${y ?? ""}|${search.type ?? ""}`;
+      }
+      function applyInitialSearch(control, search) {
+        var _a, _b;
+        const key2 = searchKey(search);
+        if (!key2 || key2 === appliedKey) return;
+        appliedKey = key2;
+        const label = search.fullText ?? "";
+        control.baseSearchEngine.input.value = label;
+        const x = Number((_a = search.position) == null ? void 0 : _a.x);
+        const y = Number((_b = search.position) == null ? void 0 : _b.y);
+        const hasCoords = Number.isFinite(x) && Number.isFinite(y);
+        if (hasCoords) {
+          control.createMarker([x, y], label, "searchAtInit", true);
+        }
+        if (!label) return;
+        const poiType = Array.isArray(search.poiType) ? search.poiType : [];
+        control.baseSearchEngine.search({
+          location: {
+            fullText: label,
+            type: search.type,
+            kind: search.kind,
+            poiType,
+            ...hasCoords ? { position: { x, y } } : {}
+          }
+        });
+      }
+      const controlRef = useOlControl(
         () => createSearchEngineAdvanced({
           placeholder: props.placeholder,
           collapsed: props.collapsed,
@@ -60928,169 +60964,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           serviceBaseUrl: props.serviceBaseUrl
         })
       );
-      return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$5);
-      };
-    }
-  });
-  function zoomForLocationSearch(search) {
-    var _a;
-    if ((_a = search.poiType) == null ? void 0 : _a.includes("département")) return 9;
-    switch (search.type) {
-      case "StreetAddress":
-        return 18;
-      case "PositionOfInterest":
-        return 13;
-      default:
-        return 13;
-    }
-  }
-  function applySearchToMap(map2, search) {
-    var _a, _b;
-    const x = Number((_a = search.position) == null ? void 0 : _a.x);
-    const y = Number((_b = search.position) == null ? void 0 : _b.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-    const center = fromLonLat([x, y], map2.getView().getProjection());
-    const zoom = zoomForLocationSearch(search);
-    map2.getView().animate({ center, zoom, duration: 300 });
-    return true;
-  }
-  function toLocationRedirectParams(location) {
-    return {
-      municipality: location.fullText,
-      position_x: String(location.position.x),
-      position_y: String(location.position.y),
-      type: location.type ?? ""
-    };
-  }
-  function locationFromGeopfSelect(event) {
-    var _a, _b;
-    const item = event.item;
-    const x = Number((_a = item == null ? void 0 : item.position) == null ? void 0 : _a.x);
-    const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return {
-      fullText: (item == null ? void 0 : item.fullText) || event.title || "",
-      position: { x, y },
-      type: item == null ? void 0 : item.type
-    };
-  }
-  function locationFromGeopfFeature(feature, fallbackType = "") {
-    const geometry = feature.getGeometry();
-    if (!geometry || typeof geometry.getType !== "function") {
-      return null;
-    }
-    let coord = null;
-    const geomType = geometry.getType();
-    if (geomType === "Point") {
-      coord = geometry.getCoordinates();
-    } else if (typeof geometry.getExtent === "function") {
-      const extent = geometry.getExtent();
-      coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
-    }
-    if (!coord || coord.length < 2) return null;
-    const [lon, lat] = toLonLat(coord, "EPSG:3857");
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
-    const infoPopup = String(feature.get("infoPopup") ?? "");
-    const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
-    return {
-      fullText: label,
-      position: { x: lon, y: lat },
-      type: String(feature.get("type") ?? fallbackType)
-    };
-  }
-  function locationFromGeolocation(coordinates2, label = "Ma localisation") {
-    const x = Number(coordinates2 == null ? void 0 : coordinates2[0]);
-    const y = Number(coordinates2 == null ? void 0 : coordinates2[1]);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return {
-      fullText: label,
-      position: { x, y },
-      type: "geolocate"
-    };
-  }
-  function redirectToMapWithLocation(location, options = {}) {
-    const mapUrl = options.mapUrl ?? "/map/";
-    const method = options.method ?? "POST";
-    const params2 = toLocationRedirectParams(location);
-    if (method === "GET") {
-      const qs = new URLSearchParams({
-        municipality: params2.municipality,
-        position_x: params2.position_x,
-        position_y: params2.position_y,
-        type: params2.type
-      });
-      window.location.assign(`${mapUrl}${mapUrl.includes("?") ? "&" : "?"}${qs.toString()}`);
-      return;
-    }
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = mapUrl;
-    form.style.display = "none";
-    for (const [name2, value2] of Object.entries(params2)) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name2;
-      input.value = value2;
-      form.appendChild(input);
-    }
-    document.body.appendChild(form);
-    form.submit();
-  }
-  const _hoisted_1$4 = {
-    class: "ec-search-at-init-host",
-    hidden: "",
-    "aria-hidden": "true"
-  };
-  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
-    __name: "SearchAtInit",
-    props: {
-      search: {}
-    },
-    setup(__props) {
-      const props = __props;
-      const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
-      let markerLayer = null;
-      function clearMarker(map2) {
-        if (markerLayer && map2) {
-          map2.removeLayer(markerLayer);
-        }
-        markerLayer = null;
-      }
-      function showMarker(map2, search) {
-        var _a, _b;
-        const x = Number((_a = search.position) == null ? void 0 : _a.x);
-        const y = Number((_b = search.position) == null ? void 0 : _b.y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-        clearMarker(map2);
-        const feature = new Feature({
-          geometry: new Point$1(fromLonLat([x, y], map2.getView().getProjection()))
-        });
-        markerLayer = new VectorLayer({
-          source: new VectorSource({ features: [feature] }),
-          style: new Style({
-            image: new CircleStyle({
-              radius: 8,
-              fill: new Fill({ color: "#e1000f" }),
-              stroke: new Stroke({ color: "#fff", width: 2 })
-            })
-          }),
-          zIndex: 1e3
-        });
-        map2.addLayer(markerLayer);
-      }
       watch(
-        [mapRef, () => props.search],
-        ([map2, search]) => {
-          if (!map2 || !(search == null ? void 0 : search.fullText)) return;
-          applySearchToMap(map2, search);
-          showMarker(map2, search);
+        [controlRef, () => props.initialSearch],
+        ([control, search]) => {
+          if (!control || !(search == null ? void 0 : search.fullText)) return;
+          requestAnimationFrame(() => {
+            applyInitialSearch(control, search);
+          });
         },
         { immediate: true }
       );
-      onUnmounted(() => {
-        clearMarker(mapRef.value);
-      });
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("span", _hoisted_1$4);
       };
@@ -67649,28 +67532,27 @@ Expected function or array of functions, received type ${typeof value2}.`
       params: {}
     },
     setup(__props) {
+      const props = __props;
       const presets = createBaseLayerPresets();
       const baseLayers = computed(() => presets.map((p5) => p5.layer));
+      const initialSearch = computed(() => {
+        var _a;
+        return ((_a = props.params) == null ? void 0 : _a.search) ?? null;
+      });
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$9, {
+          createVNode(_sfc_main$8, {
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
-            default: withCtx(() => {
-              var _a;
-              return [
-                createVNode(_sfc_main$5),
-                createVNode(_sfc_main$4, {
-                  search: (_a = __props.params) == null ? void 0 : _a.search
-                }, null, 8, ["search"]),
-                createVNode(_sfc_main$3),
-                createVNode(_sfc_main$2),
-                createVNode(_sfc_main$8),
-                createVNode(_sfc_main$7),
-                createVNode(_sfc_main$6)
-              ];
-            }),
+            default: withCtx(() => [
+              createVNode(_sfc_main$4, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$3),
+              createVNode(_sfc_main$2),
+              createVNode(_sfc_main$7),
+              createVNode(_sfc_main$6),
+              createVNode(_sfc_main$5)
+            ]),
             _: 1
           }, 8, ["layers"])
         ]);
@@ -67684,7 +67566,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-19cb147f"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-80e5210e"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -67823,6 +67705,90 @@ Expected function or array of functions, received type ${typeof value2}.`
         suggestedLocations: (data.results ?? []).map(normalizeGeopfResult)
       };
     }
+  }
+  function toLocationRedirectParams(location) {
+    return {
+      municipality: location.fullText,
+      position_x: String(location.position.x),
+      position_y: String(location.position.y),
+      type: location.type ?? ""
+    };
+  }
+  function locationFromGeopfSelect(event) {
+    var _a, _b;
+    const item = event.item;
+    const x = Number((_a = item == null ? void 0 : item.position) == null ? void 0 : _a.x);
+    const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      fullText: (item == null ? void 0 : item.fullText) || event.title || "",
+      position: { x, y },
+      type: item == null ? void 0 : item.type,
+      kind: item == null ? void 0 : item.kind,
+      poiType: item == null ? void 0 : item.poiType
+    };
+  }
+  function locationFromGeopfFeature(feature, fallbackType = "") {
+    const geometry = feature.getGeometry();
+    if (!geometry || typeof geometry.getType !== "function") {
+      return null;
+    }
+    let coord = null;
+    const geomType = geometry.getType();
+    if (geomType === "Point") {
+      coord = geometry.getCoordinates();
+    } else if (typeof geometry.getExtent === "function") {
+      const extent = geometry.getExtent();
+      coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
+    }
+    if (!coord || coord.length < 2) return null;
+    const [lon, lat] = toLonLat(coord, "EPSG:3857");
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    const infoPopup = String(feature.get("infoPopup") ?? "");
+    const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
+    return {
+      fullText: label,
+      position: { x: lon, y: lat },
+      type: String(feature.get("type") ?? fallbackType)
+    };
+  }
+  function locationFromGeolocation(coordinates2, label = "Ma localisation") {
+    const x = Number(coordinates2 == null ? void 0 : coordinates2[0]);
+    const y = Number(coordinates2 == null ? void 0 : coordinates2[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      fullText: label,
+      position: { x, y },
+      type: "geolocate"
+    };
+  }
+  function redirectToMapWithLocation(location, options = {}) {
+    const mapUrl = options.mapUrl ?? "/map/";
+    const method = options.method ?? "POST";
+    const params2 = toLocationRedirectParams(location);
+    if (method === "GET") {
+      const qs = new URLSearchParams({
+        municipality: params2.municipality,
+        position_x: params2.position_x,
+        position_y: params2.position_y,
+        type: params2.type
+      });
+      window.location.assign(`${mapUrl}${mapUrl.includes("?") ? "&" : "?"}${qs.toString()}`);
+      return;
+    }
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = mapUrl;
+    form.style.display = "none";
+    for (const [name2, value2] of Object.entries(params2)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name2;
+      input.value = value2;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
   }
   const _hoisted_1 = {
     class: "fr-search-bar",

@@ -14,7 +14,8 @@ Contrôle plein écran Géoplateforme (`GeoportalFullScreen`).
 
 ## Placement
 
-Bas-droite, même colonne que `ZoomControl`.
+Bas-droite, au-dessus du zoom (geopf `prepend` en `bottom-*`).  
+Offset geopf `bottom: 0.5em` annulé en colonne bas-droite (`map-controls.css`) pour l’aligner avec l’échelle.
 
 ## Dépendances
 

@@ -93,6 +93,18 @@
   z-index: 0;
 }
 
+/* Annule les offsets geopf (top/bottom: 0.5em) qui décalent les boutons dans la colonne */
+.position-container-bottom-right [id^='GPzoom-'] {
+  top: 0;
+  left: auto;
+}
+
+.position-container-bottom-right [id^='GPfullScreen-'] {
+  /* geopf : bottom: 0.5em → remonte le bouton ; on aligne sur le bas (échelle) */
+  bottom: 0;
+  left: auto;
+}
+
 /* Boutons geopf : état actif = fond bleu (cartes.gouv), pas la barre ::after */
 .gpf-widget-button {
   width: var(--ec-widget-btn-size);

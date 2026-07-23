@@ -14,8 +14,8 @@ Contrôle de zoom Géoplateforme (`GeoportalZoom` via `geopf-extensions-openlaye
 
 ## Placement
 
-Bas-droite de la carte, empilé avec `FullScreenControl` (colonne `position-container-bottom-right`).  
-Constantes : `src/map/controlPositions.ts`. Styles : `src/styles/map-controls.css`.
+Bas-droite, **sous** le plein écran (colonne `position-container-bottom-right`, même `bottom` que l’échelle).  
+Styles : `src/styles/map-controls.css`.
 
 ## Dépendances
 

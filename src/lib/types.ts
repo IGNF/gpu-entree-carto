@@ -2,6 +2,8 @@ export interface StandardViewerSearch {
   fullText?: string
   position?: { x: number; y: number }
   type?: string
+  kind?: string
+  poiType?: string[]
 }
 
 export interface StandardViewerDocument {

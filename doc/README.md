@@ -7,6 +7,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
+- [Démonstration](./Demo.md) — pages `/` (localisation) et `/map` (carte) + nav DSFR
 
 ## Contrôles
 

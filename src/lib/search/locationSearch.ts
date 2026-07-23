@@ -44,6 +44,8 @@ export interface LocationPayload {
   fullText: string
   position: { x: number; y: number }
   type?: string
+  kind?: string
+  poiType?: string[]
 }
 
 export function toLocationRedirectParams(location: LocationPayload): LocationRedirectParams {
@@ -61,6 +63,8 @@ export function locationFromGeopfSelect(event: {
   item?: {
     fullText?: string
     type?: string
+    kind?: string
+    poiType?: string[]
     position?: { x?: number; y?: number }
   }
 }): LocationPayload | null {
@@ -72,6 +76,8 @@ export function locationFromGeopfSelect(event: {
     fullText: item?.fullText || event.title || '',
     position: { x, y },
     type: item?.type,
+    kind: item?.kind,
+    poiType: item?.poiType,
   }
 }
 

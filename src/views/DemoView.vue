@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
@@ -11,6 +12,7 @@ import BaseLayerSwitcher from '@/components/map/BaseLayerSwitcher.vue'
 import LegendStub from '@/components/legend/LegendStub.vue'
 import LayersTreeStub from '@/components/layers/LayersTreeStub.vue'
 import type { LegendItem, LayerTreeNode } from '@/types/stubs'
+import type { StandardViewerSearch } from '@/lib/types'
 import {
   createBaseLayerPresets,
   type BaseLayerId,
@@ -20,9 +22,32 @@ import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 
+const route = useRoute()
 const presets = createBaseLayerPresets()
 const activeBase = ref<BaseLayerId>('plan')
 const baseLayers = computed(() => presets.map((p) => p.layer))
+
+/** Recherche issue de l’accueil (query municipality / position / type). */
+const initialSearch = computed<StandardViewerSearch | null>(() => {
+  const municipality = String(route.query.municipality ?? '').trim()
+  if (!municipality) return null
+  const x = Number(route.query.position_x)
+  const y = Number(route.query.position_y)
+  const type = String(route.query.type ?? '').trim()
+  const kind = String(route.query.kind ?? '').trim()
+  const poiTypeRaw = String(route.query.poiType ?? '').trim()
+  const poiType = poiTypeRaw
+    ? poiTypeRaw.split(',').map((s) => s.trim()).filter(Boolean)
+    : []
+  return {
+    fullText: municipality,
+    type: type || undefined,
+    kind: kind || undefined,
+    poiType,
+    position:
+      Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined,
+  }
+})
 
 const legendItems = ref<LegendItem[]>([
   { id: 'demo-plu', title: 'Document d’urbanisme (exemple)' },
@@ -41,37 +66,11 @@ function onToggleLayer(id: string, visible: boolean) {
 </script>
 
 <template>
-  <div class="ec-demo">
-    <header class="fr-header ec-demo__header">
-      <div class="fr-header__body">
-        <div class="fr-container">
-          <div class="fr-header__body-row">
-            <div class="fr-header__brand fr-enlarge-link">
-              <div class="fr-header__brand-top">
-                <div class="fr-header__logo">
-                  <p class="fr-logo">
-                    République<br>Française
-                  </p>
-                </div>
-              </div>
-              <div class="fr-header__service">
-                <p class="fr-header__service-title">
-                  entree-carto
-                </p>
-                <p class="fr-header__service-tagline">
-                  Démonstration — refonte GPU / DSFR
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
+  <div class="ec-demo-map">
     <main class="ec-layout">
       <div class="ec-layout__map">
         <MapShell :layers="baseLayers">
-          <SearchEngineControl />
+          <SearchEngineControl :initial-search="initialSearch" />
           <OverviewMapControl />
           <TerritoriesControl />
           <ZoomControl />
@@ -80,9 +79,18 @@ function onToggleLayer(id: string, visible: boolean) {
         </MapShell>
       </div>
 
-      <aside class="ec-layout__panel" aria-label="Panneau cartographique">
-        <BaseLayerSwitcher v-model="activeBase" :presets="presets" />
-        <LayersTreeStub :nodes="layerNodes" @toggle="onToggleLayer" />
+      <aside
+        class="ec-layout__panel"
+        aria-label="Panneau cartographique"
+      >
+        <BaseLayerSwitcher
+          v-model="activeBase"
+          :presets="presets"
+        />
+        <LayersTreeStub
+          :nodes="layerNodes"
+          @toggle="onToggleLayer"
+        />
         <hr class="fr-hr">
         <LegendStub :items="legendItems" />
       </aside>
@@ -91,19 +99,16 @@ function onToggleLayer(id: string, visible: boolean) {
 </template>
 
 <style scoped>
-.ec-demo {
+.ec-demo-map {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 100vh;
-}
-
-.ec-demo__header {
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .ec-layout {
   flex: 1;
   min-height: 0;
+  height: auto;
 }
 </style>
