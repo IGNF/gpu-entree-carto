@@ -1,0 +1,13 @@
+---
+description: Format et rédaction de _local/TODO_LIST.txt
+globs: _local/TODO_LIST.txt
+alwaysApply: false
+---
+
+# TODO_LIST
+
+À chaque nouveau point ajouté dans `_local/TODO_LIST.txt` :
+
+1. **Corriger** les fautes d’orthographe et de grammaire.
+2. **Détailler** chaque idée : simple, rapide, concis (1–2 phrases max par sous-point).
+3. Garder la structure checkbox + puces ; ne pas transformer en roman.

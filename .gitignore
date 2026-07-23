@@ -1,2 +1,15 @@
 # Fichiers et notes locales (hors dépôt)
 _local/
+
+# Dépendances
+node_modules/
+
+# Build
+dist/
+*.local
+
+# Logs / cache
+npm-debug.log*
+.DS_Store
+*.tsbuildinfo
+coverage/
