@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
+import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import BaseLayerSwitcher from '@/components/map/BaseLayerSwitcher.vue'
 import LegendStub from '@/components/legend/LegendStub.vue'
@@ -12,6 +13,8 @@ import {
   type BaseLayerId,
 } from '@/ol/baseLayers'
 import 'ol/ol.css'
+import 'geopf-extensions-openlayers/css/Dsfr.css'
+import '@/styles/map-controls.css'
 
 const presets = createBaseLayerPresets()
 const activeBase = ref<BaseLayerId>('plan')
@@ -65,6 +68,7 @@ function onToggleLayer(id: string, visible: boolean) {
       <div class="ec-layout__map">
         <MapShell :layers="baseLayers">
           <ZoomControl />
+          <FullScreenControl />
           <ScaleLineControl />
         </MapShell>
       </div>

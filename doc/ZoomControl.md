@@ -1,27 +1,24 @@
 # ZoomControl
 
-Contrôle de zoom OpenLayers (`ol/control/Zoom`), branché sur la carte via l’injection `olMap` de `MapShell`.
+Contrôle de zoom Géoplateforme (`GeoportalZoom` via `geopf-extensions-openlayers`).
 
-**Source :** `src/components/map/ZoomControl.vue`
+**Source :** `src/components/map/ZoomControl.vue`  
+**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `zoomOptions: 'bottom-right'`  
+**Dépendance :** `geopf-extensions-openlayers`
 
 ## Props
 
-Aucune pour l’instant.
-
-## Options OpenLayers utilisées
-
-| Option | Valeur | Description |
-|--------|--------|-------------|
-| `zoomInLabel` | `+` | Libellé bouton zoom avant |
-| `zoomOutLabel` | `−` | Libellé bouton zoom arrière |
-| `zoomInTipLabel` | `Zoom avant` | Infobulle |
-| `zoomOutTipLabel` | `Zoom arrière` | Infobulle |
+| Prop | Type | Défaut | Description |
+|------|------|--------|-------------|
+| `position` | `GeopfControlPosition` | `'bottom-right'` | Position geopf |
 
 ## Placement
 
-Position par défaut OpenLayers (haut-gauche). À aligner plus tard sur la maquette Figma (bas-droite, bloc « Zoom »).
+Bas-droite de la carte, empilé avec `FullScreenControl` (colonne `position-container-bottom-right`).  
+Constantes : `src/map/controlPositions.ts`. Styles : `src/styles/map-controls.css`.
 
 ## Dépendances
 
-- Doit être enfant (direct ou indirect) de `MapShell`.
-- Cycle de vie : ajout à `map` au montage, retrait au démontage.
+- Enfant de `MapShell` (injection `olMap`).
+- OpenLayers ≥ 10.
+- Cycle de vie via `useOlControl`.

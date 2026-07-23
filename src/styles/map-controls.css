@@ -1,0 +1,44 @@
+/**
+ * Placement des contrôles de base — référence :
+ * https://cartes.gouv.fr/explorer-les-cartes/
+ * (IGNF/cartes.gouv.fr-entree-carto : variables.scss + ScaleLine.vue + Controls.vue)
+ *
+ * - Zoom + plein écran : bottom-right (colonne geopf)
+ * - Échelle : bas-droite, à gauche de la colonne (right = btn + 2×gap)
+ */
+
+:root {
+  --ec-widget-gap: 8px;
+  --ec-widget-btn-size: 48px;
+  /* équivalent $widget-panel-x = 48px + 8px * 2 */
+  --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
+}
+
+.position {
+  z-index: 1;
+  width: var(--ec-widget-btn-size);
+  gap: var(--ec-widget-gap);
+}
+
+.position-container-bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ec-widget-gap);
+  bottom: var(--ec-widget-gap);
+  right: var(--ec-widget-gap);
+  z-index: 0;
+}
+
+/* ScaleLine — placement + fond DSFR comme cartes.gouv (pas le style Figma) */
+.ol-scale-line {
+  z-index: auto;
+  left: auto;
+  right: var(--ec-widget-panel-x);
+  bottom: var(--ec-widget-gap);
+  background: var(--background-default-grey, #fff);
+}
+
+.position-container-bottom-right:empty ~ .ol-scale-line {
+  right: var(--ec-widget-gap);
+}

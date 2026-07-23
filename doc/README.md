@@ -6,6 +6,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 ## Intégration site tiers
 
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
+- [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
 
 ## Contrôles
 
@@ -13,5 +14,6 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 |----------|----------------|---------------|
 | MapShell | `src/components/map/MapShell.vue` | [MapShell.md](./MapShell.md) |
 | ZoomControl | `src/components/map/ZoomControl.vue` | [ZoomControl.md](./ZoomControl.md) |
+| FullScreenControl | `src/components/map/FullScreenControl.vue` | [FullScreenControl.md](./FullScreenControl.md) |
 | ScaleLineControl | `src/components/map/ScaleLineControl.vue` | [ScaleLineControl.md](./ScaleLineControl.md) |
 | BaseLayerSwitcher | `src/components/map/BaseLayerSwitcher.vue` | [BaseLayerSwitcher.md](./BaseLayerSwitcher.md) |

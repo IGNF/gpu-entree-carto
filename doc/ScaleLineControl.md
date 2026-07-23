@@ -1,32 +1,28 @@
 # ScaleLineControl
 
-Barre d’échelle métrique OpenLayers (`ol/control/ScaleLine`), stylée d’après la maquette Figma « Echelle ».
+Barre d’échelle métrique OpenLayers (`ol/control/ScaleLine`), style `ol-scale-line` + fond DSFR.
 
 **Source :** `src/components/map/ScaleLineControl.vue`  
-**Figma :** [Echelle `715:24047`](https://www.figma.com/design/ARSe9rthrHEp6UFJOh5rdn/GPU---UX-UI?node-id=715-24047) (bloc « W.D Bas »)
+**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/)  
+(IGNF `ScaleLine.vue` : `right: $widget-panel-x` = 48px + 2×8px)
 
 ## Props
 
 Aucune pour l’instant.
 
-## Options OpenLayers utilisées
+## Options OpenLayers
 
 | Option | Valeur | Description |
 |--------|--------|-------------|
 | `units` | `'metric'` | Unités métriques (m / km) |
-| `className` | `'ec-scale-line'` | Classe CSS custom (remplace `ol-scale-line`) |
 
-## Apparence (maquette)
+## Placement / style
 
-- Fond blanc semi-transparent (`rgba(255,255,255,0.85)`), padding 4 px
-- Trait en U : bordures gauche / bas / droite noires
-- Libellé centré, Marianne Bold 11 px (ex. « 500 m »)
-
-## Placement
-
-**Bas-droite** de la carte (`right` / `bottom`), comme dans Figma — pas à gauche.
+- Bas-droite, à gauche de la colonne zoom / plein écran (`--ec-widget-panel-x`)
+- Fond : `var(--background-default-grey)` (comme cartes.gouv)
+- Pas de style Figma custom
 
 ## Dépendances
 
-- Enfant de `MapShell` (injection `olMap`).
-- Styles globaux dans le SFC (le DOM OL est hors scoped).
+- Enfant de `MapShell`.
+- `ol/ol.css` + `src/styles/map-controls.css`.

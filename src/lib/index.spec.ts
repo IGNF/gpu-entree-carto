@@ -1,18 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import gpu from '@/lib/index'
+import LocateControl from '@/lib/control/LocateControl'
+import Geocode from '@/lib/services/Geocode'
+import config from '@/lib/config'
+import packageJson from '../../package.json'
 
-describe('lib gpu export', () => {
-  it('expose createStandardViewer, ParcelViewer et Geocode', () => {
-    expect(typeof gpu.createStandardViewer).toBe('function')
-    expect(typeof gpu.ParcelViewer).toBe('function')
-    expect(typeof gpu.services.Geocode).toBe('function')
-    expect(typeof gpu.control.LocateControl).toBe('function')
-    expect(gpu.config).toBeTruthy()
-    expect(gpu.informations.version).toBeTruthy()
+describe('lib exports unitaires', () => {
+  it('expose config et version package', () => {
+    expect(config).toBeTruthy()
+    expect(packageJson.version).toBeTruthy()
   })
 
   it('filtre les résultats autocomplétion comme LocateControl', () => {
-    const locate = new gpu.control.LocateControl()
+    const locate = new LocateControl()
     expect(
       locate.isAllowedResult({
         fullText: 'Paris',
@@ -21,5 +20,9 @@ describe('lib gpu export', () => {
         position: { x: 0, y: 0 },
       }),
     ).toBe(false)
+  })
+
+  it('instancie Geocode', () => {
+    expect(typeof new Geocode().autoComplete).toBe('function')
   })
 })

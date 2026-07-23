@@ -42,7 +42,8 @@ Autres cibles :
 |-----------|--------|
 | Framework UI | [Vue.js](https://vuejs.org/guide/introduction.html) 3 |
 | Design system | [DSFR](https://www.systeme-de-design.gouv.fr/version-courante/fr) + [VueDSFR](https://vue-ds.fr/) ([@gouvminint/vue-dsfr](https://github.com/dnum-mi/vue-dsfr)) |
-| Carte | [OpenLayers](https://github.com/openlayers/openlayers) ≥ 9.2.4 |
+| Carte | [OpenLayers](https://github.com/openlayers/openlayers) ≥ 10 (geopf) |
+| Extensions carte | [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers) |
 | Build / tests | Vite, Vitest, TypeScript |
 
 ---

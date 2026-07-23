@@ -1,27 +1,26 @@
 <script setup lang="ts">
 /**
- * Zoom Géoplateforme (geopf GeoportalZoom).
+ * Plein écran Géoplateforme (geopf GeoportalFullScreen).
  * Position par défaut : bottom-right (cartes.gouv.fr / explorer-les-cartes).
  */
 import { useOlControl } from '@/composables/useOlControl'
 import { CONTROL_POSITIONS, type GeopfControlPosition } from '@/map/controlPositions'
-import GeoportalZoom from 'geopf-extensions-openlayers/src/packages/Controls/Zoom/GeoportalZoom.js'
+import GeoportalFullScreen from 'geopf-extensions-openlayers/src/packages/Controls/FullScreen/GeoportalFullScreen.js'
 
 const props = withDefaults(
   defineProps<{
     position?: GeopfControlPosition
   }>(),
   {
-    position: CONTROL_POSITIONS.zoom,
+    position: CONTROL_POSITIONS.fullscreen,
   },
 )
 
 useOlControl(
   () =>
-    new GeoportalZoom({
+    new GeoportalFullScreen({
       position: props.position,
-      zoomInTipLabel: 'Zoom avant',
-      zoomOutTipLabel: 'Zoom arrière',
+      tipLabel: 'Plein écran',
     }),
 )
 </script>

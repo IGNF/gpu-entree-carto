@@ -2,10 +2,13 @@
 import { computed } from 'vue'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
+import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import { createBaseLayerPresets } from '@/ol/baseLayers'
 import type { StandardViewerParams } from '@/lib/types'
 import 'ol/ol.css'
+import 'geopf-extensions-openlayers/css/Dsfr.css'
+import '@/styles/map-controls.css'
 
 const props = defineProps<{
   params?: StandardViewerParams
@@ -21,6 +24,7 @@ const baseLayers = computed(() => presets.map((p) => p.layer))
   <div class="ec-embed-viewer gpu-client" data-testid="embed-map-viewer">
     <MapShell :layers="baseLayers" class="ec-embed-viewer__map">
       <ZoomControl />
+      <FullScreenControl />
       <ScaleLineControl />
     </MapShell>
     <p

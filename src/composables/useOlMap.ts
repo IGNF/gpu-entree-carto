@@ -39,7 +39,7 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
       target: el,
       layers: (options.layers ?? []) as Layer[],
       controls: defaultControls({
-        attribution: true,
+        attribution: false,
         zoom: false,
         rotate: false,
       }),

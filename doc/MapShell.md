@@ -29,5 +29,5 @@ Fournit `olMap` (`ShallowRef<Map | null>`) aux descendants pour attacher / déta
 ## Notes
 
 - Projection : EPSG:3857, centre France, minZoom 5 / maxZoom 19.
-- Attribution OL activée ; zoom / rotate natifs désactivés (contrôles dédiés).
+- Attribution OL **désactivée** ; zoom / rotate natifs désactivés (contrôles dédiés).
 - Le conteneur carte expose `id="gpu-map"` pour compatibilité gpu-site (`gpu-map.css`).
