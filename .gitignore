@@ -5,7 +5,6 @@ _local/
 node_modules/
 
 # Build
-dist/
 *.local
 
 # Logs / cache
