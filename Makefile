@@ -1,4 +1,4 @@
-.PHONY: install dev build test preview typecheck
+.PHONY: install dev build build-lib build-demo test preview typecheck
 
 install:
 	npm install
@@ -8,6 +8,12 @@ dev:
 
 build:
 	npm run build
+
+build-lib:
+	npm run build:lib
+
+build-demo:
+	npm run build:demo
 
 test:
 	npm run test

@@ -28,7 +28,8 @@ Autres cibles :
 
 | Commande | Effet |
 |----------|--------|
-| `make build` | Build de production (`dist/`) |
+| `make build` | Build démo + bibliothèque (`dist/`) |
+| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS) |
 | `make test` | Tests Vitest |
 | `make preview` | Prévisualiser le build |
 | `make typecheck` | Vérification TypeScript |
@@ -60,6 +61,8 @@ src/
 ```
 
 Composants de base inspirés de `gpu-client` (`Viewer`, contrôles zoom/échelle, switcher de fonds, légende / couches en stub).
+
+**Intégration gpu-site :** voir [doc/INTEGRATION.md](./doc/INTEGRATION.md) — build bibliothèque `dist/`, API `window.gpu`, limites actuelles.
 
 ---
 

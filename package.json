@@ -1,12 +1,18 @@
 {
   "name": "entree-carto",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)",
+  "main": "./dist/entree-carto.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "npm run build:demo && npm run build:lib",
+    "build:demo": "vue-tsc --noEmit && vite build",
+    "build:lib": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.lib.config.ts && LIB_MINIFY=1 vite build --config vite.lib.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,0 +1,18 @@
+---
+description: Documenter chaque contrôle / composant carte dans /doc
+alwaysApply: true
+---
+
+# Documentation des contrôles carte
+
+La carte expose des **composants / contrôles**. À chaque **création** ou **modification** d’un contrôle (ou composant cartographique associé) :
+
+1. Mettre à jour (ou créer) la doc Markdown dans **`/doc`**.
+2. Y indiquer au minimum :
+   - **description** du composant / contrôle ;
+   - **options** / props / API ;
+   - tout élément pertinent (placement UI, dépendance OpenLayers, lien Figma, comportement, exemples).
+3. Une page par contrôle, nom aligné sur le composant (ex. `ScaleLineControl.md` pour `ScaleLineControl.vue`).
+4. Tenir à jour l’index `doc/README.md` (liste des contrôles documentés).
+
+Ne pas livrer un contrôle nouveau ou modifié sans doc `/doc` à jour.

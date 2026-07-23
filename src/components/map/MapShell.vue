@@ -39,7 +39,13 @@ defineExpose({ map })
 
 <template>
   <div class="ec-map-shell" data-testid="map-shell">
-    <div ref="mapEl" class="ec-map-shell__map" role="application" aria-label="Carte" />
+    <div
+      id="gpu-map"
+      ref="mapEl"
+      class="ec-map-shell__map"
+      role="application"
+      aria-label="Carte"
+    />
     <slot :map="map" />
   </div>
 </template>
