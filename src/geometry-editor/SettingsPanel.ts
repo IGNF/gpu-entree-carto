@@ -1,12 +1,14 @@
 /**
  * Panneau réglages (roue crantée) — formulaire des options à chaud.
  */
-import type { GeometryEditor } from './GeometryEditor'
+import type Map from 'ol/Map'
+import { toLonLat } from 'ol/proj'
 import type {
   GeometryEditorOptions,
   GeometryOutputFormat,
   GeometryTypeOption,
 } from './types'
+import { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
 
 const GEOMETRY_TYPES: GeometryTypeOption[] = [
   'Point',
@@ -21,12 +23,36 @@ const GEOMETRY_TYPES: GeometryTypeOption[] = [
 
 const OUTPUT_FORMATS: GeometryOutputFormat[] = ['geojson', 'kml']
 
+/** Décimales lon/lat : compatible step HTML + validation navigateur. */
+const LON_LAT_DECIMALS = 7
+const ZOOM_DECIMALS = 1
+const LON_LAT_STEP = 10 ** -LON_LAT_DECIMALS
+const ZOOM_STEP = 10 ** -ZOOM_DECIMALS
+
+type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS &
+  GeometryEditorOptions
+
+/** API minimale — évite l’import circulaire avec GeometryEditor. */
+export interface SettingsEditorHost {
+  getOptions(): Readonly<ResolvedOptions>
+  getInitialOptions(): Readonly<ResolvedOptions>
+  getMap(): Map
+  setOptions(patch: GeometryEditorOptions): void
+  resetOptions(): void
+}
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals
+  return Math.round(value * factor) / factor
+}
+
 export class SettingsPanel {
-  private readonly editor: GeometryEditor
+  private readonly editor: SettingsEditorHost
   private readonly mapHost: HTMLElement
   private readonly root: HTMLElement
   private readonly button: HTMLButtonElement
   private dialog: HTMLElement | null = null
+  private form: HTMLFormElement | null = null
   private open = false
   private readonly onDocPointerDown = (evt: PointerEvent): void => {
     if (!this.open || !this.dialog) return
@@ -34,8 +60,11 @@ export class SettingsPanel {
     if (this.root.contains(t) || this.dialog.contains(t)) return
     this.close()
   }
+  private readonly onViewChange = (): void => {
+    this.syncViewFieldsFromMap()
+  }
 
-  constructor(editor: GeometryEditor, mapHost: HTMLElement) {
+  constructor(editor: SettingsEditorHost, mapHost: HTMLElement) {
     this.editor = editor
     this.mapHost = mapHost
 
@@ -69,6 +98,7 @@ export class SettingsPanel {
     this.dialog = this.buildDialog()
     this.mapHost.appendChild(this.dialog)
     document.addEventListener('pointerdown', this.onDocPointerDown, true)
+    this.bindViewListeners(true)
   }
 
   close(): void {
@@ -76,8 +106,10 @@ export class SettingsPanel {
     this.open = false
     this.button.setAttribute('aria-expanded', 'false')
     this.button.classList.remove('is-active')
+    this.bindViewListeners(false)
     this.dialog?.remove()
     this.dialog = null
+    this.form = null
     document.removeEventListener('pointerdown', this.onDocPointerDown, true)
   }
 
@@ -86,8 +118,20 @@ export class SettingsPanel {
     this.root.remove()
   }
 
+  private bindViewListeners(active: boolean): void {
+    const view = this.editor.getMap().getView()
+    if (active) {
+      view.on('change:center', this.onViewChange)
+      view.on('change:resolution', this.onViewChange)
+    } else {
+      view.un('change:center', this.onViewChange)
+      view.un('change:resolution', this.onViewChange)
+    }
+  }
+
   private buildDialog(): HTMLElement {
     const opts = this.editor.getOptions()
+    const viewState = this.readCurrentView(opts)
     const dialog = document.createElement('div')
     dialog.className = 'ec-geometry-editor__settings-dialog'
     dialog.setAttribute('role', 'dialog')
@@ -99,6 +143,7 @@ export class SettingsPanel {
       e.preventDefault()
       this.applyForm(form)
     })
+    this.form = form
 
     const title = document.createElement('p')
     title.className = 'ec-geometry-editor__settings-title'
@@ -118,9 +163,15 @@ export class SettingsPanel {
     form.appendChild(
       this.textField('width', 'Largeur', String(opts.width)),
     )
-    form.appendChild(this.numberField('lon', 'Longitude', opts.lon, 0.0000001))
-    form.appendChild(this.numberField('lat', 'Latitude', opts.lat, 0.0000001))
-    form.appendChild(this.numberField('zoom', 'Zoom', opts.zoom, 0.1))
+    form.appendChild(
+      this.numberField('lon', 'Longitude courante', viewState.lon, LON_LAT_STEP),
+    )
+    form.appendChild(
+      this.numberField('lat', 'Latitude courante', viewState.lat, LON_LAT_STEP),
+    )
+    form.appendChild(
+      this.numberField('zoom', 'Zoom courant', viewState.zoom, ZOOM_STEP),
+    )
     form.appendChild(this.numberField('minZoom', 'Zoom min', opts.minZoom, 1))
     form.appendChild(this.numberField('maxZoom', 'Zoom max', opts.maxZoom, 1))
     form.appendChild(
@@ -149,16 +200,86 @@ export class SettingsPanel {
     applyBtn.className = 'ec-geometry-editor__settings-apply'
     applyBtn.textContent = 'Appliquer'
 
+    const resetBtn = document.createElement('button')
+    resetBtn.type = 'button'
+    resetBtn.className = 'ec-geometry-editor__settings-reset'
+    resetBtn.textContent = 'Réinitialiser'
+    resetBtn.title = 'Remettre les options du chargement de la page'
+    resetBtn.addEventListener('click', () => this.resetToInitial())
+
     const cancelBtn = document.createElement('button')
     cancelBtn.type = 'button'
     cancelBtn.className = 'ec-geometry-editor__settings-cancel'
     cancelBtn.textContent = 'Fermer'
     cancelBtn.addEventListener('click', () => this.close())
 
-    actions.append(applyBtn, cancelBtn)
+    actions.append(applyBtn, resetBtn, cancelBtn)
     form.appendChild(actions)
     dialog.appendChild(form)
     return dialog
+  }
+
+  /** Restaure les options du mount initial et rafraîchit le formulaire. */
+  private resetToInitial(): void {
+    this.editor.resetOptions()
+    if (!this.editor.getOptions().showSettings) {
+      this.close()
+      return
+    }
+    this.bindViewListeners(false)
+    this.dialog?.remove()
+    this.dialog = this.buildDialog()
+    this.mapHost.appendChild(this.dialog)
+    this.bindViewListeners(true)
+  }
+
+  /** Vue actuelle tronquée (validation HTML number + step). */
+  private readCurrentView(opts: Readonly<ResolvedOptions>): {
+    lon: number
+    lat: number
+    zoom: number
+  } {
+    const view = this.editor.getMap().getView()
+    const zoom = roundTo(view.getZoom() ?? opts.zoom, ZOOM_DECIMALS)
+    const center = view.getCenter()
+    if (center) {
+      const [lon, lat] = toLonLat(center)
+      return {
+        lon: roundTo(lon, LON_LAT_DECIMALS),
+        lat: roundTo(lat, LON_LAT_DECIMALS),
+        zoom,
+      }
+    }
+    return {
+      lon: roundTo(opts.lon, LON_LAT_DECIMALS),
+      lat: roundTo(opts.lat, LON_LAT_DECIMALS),
+      zoom,
+    }
+  }
+
+  /**
+   * Met à jour lon / lat / zoom dans le formulaire ouvert.
+   * Ne touche pas un champ en cours d’édition (focus).
+   */
+  private syncViewFieldsFromMap(): void {
+    if (!this.open || !this.form) return
+    const viewState = this.readCurrentView(this.editor.getOptions())
+    this.setNumberIfIdle(this.form, 'lon', viewState.lon)
+    this.setNumberIfIdle(this.form, 'lat', viewState.lat)
+    this.setNumberIfIdle(this.form, 'zoom', viewState.zoom)
+  }
+
+  private setNumberIfIdle(
+    form: HTMLFormElement,
+    name: string,
+    value: number,
+  ): void {
+    const input = form.elements.namedItem(name)
+    if (!(input instanceof HTMLInputElement)) return
+    if (document.activeElement === input) return
+    const next = String(value)
+    if (input.value === next) return
+    input.value = next
   }
 
   private applyForm(form: HTMLFormElement): void {
@@ -171,9 +292,9 @@ export class SettingsPanel {
       outputFormat: String(fd.get('outputFormat')) as GeometryOutputFormat,
       height: num('height'),
       width: String(fd.get('width') ?? '100%'),
-      lon: num('lon'),
-      lat: num('lat'),
-      zoom: num('zoom'),
+      lon: roundTo(num('lon'), LON_LAT_DECIMALS),
+      lat: roundTo(num('lat'), LON_LAT_DECIMALS),
+      zoom: roundTo(num('zoom'), ZOOM_DECIMALS),
       minZoom: num('minZoom'),
       maxZoom: num('maxZoom'),
       precision: num('precision'),

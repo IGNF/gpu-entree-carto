@@ -12,10 +12,17 @@ export type {
 
 export { GeometryEditor } from './GeometryEditor'
 export { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
+export {
+  featureFromWkt,
+  bboxStringFromWkt,
+  createSimpleStyle,
+} from './olHelpers'
+export type { SimpleStyleOptions } from './olHelpers'
 
 export interface MountGeometryEditorHandle {
   editor: GeometryEditor
   setOptions: (patch: GeometryEditorOptions) => void
+  resetOptions: () => void
   destroy: () => void
 }
 
@@ -37,13 +44,23 @@ export function mountGeometryEditor(
   return {
     editor,
     setOptions: (patch) => editor.setOptions(patch),
+    resetOptions: () => editor.resetOptions(),
     destroy: () => editor.destroy(),
   }
 }
 
+import {
+  featureFromWkt,
+  bboxStringFromWkt,
+  createSimpleStyle,
+} from './olHelpers'
+
 const api = {
   mountGeometryEditor,
   GeometryEditor,
+  featureFromWkt,
+  bboxStringFromWkt,
+  createSimpleStyle,
 }
 
 export default api

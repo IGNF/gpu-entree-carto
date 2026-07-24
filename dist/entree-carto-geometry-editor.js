@@ -2316,7 +2316,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return worldsAway;
   }
-  function angleBetween(p0, pA, pB) {
+  function angleBetween$1(p0, pA, pB) {
     const lenA = Math.sqrt(
       (pA[0] - p0[0]) * (pA[0] - p0[0]) + (pA[1] - p0[1]) * (pA[1] - p0[1])
     );
@@ -2651,7 +2651,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const P4 = 151 / 96 * _E3 - 417 / 128 * _E5;
   const P5 = 1097 / 512 * _E4;
   const R = 6378137;
-  function toLonLat(easting, northing, zone) {
+  function toLonLat$1(easting, northing, zone) {
     const x = easting - 5e5;
     const y = zone.north ? northing : northing - 1e7;
     const m = y / K0;
@@ -2789,7 +2789,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return {
       forward: makeTransformFunction(fromLonLat$1, zone),
-      inverse: makeTransformFunction(toLonLat, zone)
+      inverse: makeTransformFunction(toLonLat$1, zone)
     };
   }
   const transformFactories = [makeTransforms];
@@ -2935,6 +2935,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       "EPSG:4326",
       "EPSG:3857"
     );
+  }
+  function toLonLat(coordinate, projection) {
+    const lonLat = transform(
+      coordinate,
+      "EPSG:3857",
+      "EPSG:4326"
+    );
+    const lon = lonLat[0];
+    if (lon < -180 || lon > 180) {
+      lonLat[0] = modulo(lon + 180, 360) - 180;
+    }
+    return lonLat;
   }
   function equivalent$1(projection1, projection2) {
     if (projection1 === projection2) {
@@ -10214,22 +10226,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     _build(items, left, right, height) {
       const N = right - left + 1;
-      let M = this._maxEntries;
+      let M5 = this._maxEntries;
       let node;
-      if (N <= M) {
+      if (N <= M5) {
         node = createNode(items.slice(left, right + 1));
         calcBBox(node, this.toBBox);
         return node;
       }
       if (!height) {
-        height = Math.ceil(Math.log(N) / Math.log(M));
-        M = Math.ceil(N / Math.pow(M, height - 1));
+        height = Math.ceil(Math.log(N) / Math.log(M5));
+        M5 = Math.ceil(N / Math.pow(M5, height - 1));
       }
       node = createNode([]);
       node.leaf = false;
       node.height = height;
-      const N2 = Math.ceil(N / M);
-      const N1 = N2 * Math.ceil(Math.sqrt(M));
+      const N2 = Math.ceil(N / M5);
+      const N1 = N2 * Math.ceil(Math.sqrt(M5));
       multiSelect(items, left, right, N1, this.compareMinX);
       for (let i = left; i <= right; i += N1) {
         const right2 = Math.min(i + N1 - 1, right);
@@ -10285,10 +10297,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     // split overflowed node into two
     _split(insertPath, level) {
       const node = insertPath[level];
-      const M = node.children.length;
+      const M5 = node.children.length;
       const m = this._minEntries;
-      this._chooseSplitAxis(node, m, M);
-      const splitIndex = this._chooseSplitIndex(node, m, M);
+      this._chooseSplitAxis(node, m, M5);
+      const splitIndex = this._chooseSplitIndex(node, m, M5);
       const newNode = createNode(node.children.splice(splitIndex, node.children.length - splitIndex));
       newNode.height = node.height;
       newNode.leaf = node.leaf;
@@ -10303,13 +10315,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.data.leaf = false;
       calcBBox(this.data, this.toBBox);
     }
-    _chooseSplitIndex(node, m, M) {
+    _chooseSplitIndex(node, m, M5) {
       let index;
       let minOverlap = Infinity;
       let minArea = Infinity;
-      for (let i = m; i <= M - m; i++) {
+      for (let i = m; i <= M5 - m; i++) {
         const bbox1 = distBBox(node, 0, i, this.toBBox);
-        const bbox2 = distBBox(node, i, M, this.toBBox);
+        const bbox2 = distBBox(node, i, M5, this.toBBox);
         const overlap = intersectionArea(bbox1, bbox2);
         const area = bboxArea(bbox1) + bboxArea(bbox2);
         if (overlap < minOverlap) {
@@ -10323,29 +10335,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           }
         }
       }
-      return index || M - m;
+      return index || M5 - m;
     }
     // sorts node children by the best axis for split
-    _chooseSplitAxis(node, m, M) {
+    _chooseSplitAxis(node, m, M5) {
       const compareMinX = node.leaf ? this.compareMinX : compareNodeMinX;
       const compareMinY = node.leaf ? this.compareMinY : compareNodeMinY;
-      const xMargin = this._allDistMargin(node, m, M, compareMinX);
-      const yMargin = this._allDistMargin(node, m, M, compareMinY);
+      const xMargin = this._allDistMargin(node, m, M5, compareMinX);
+      const yMargin = this._allDistMargin(node, m, M5, compareMinY);
       if (xMargin < yMargin) node.children.sort(compareMinX);
     }
     // total margin of all possible split distributions where each node is at least m full
-    _allDistMargin(node, m, M, compare) {
+    _allDistMargin(node, m, M5, compare) {
       node.children.sort(compare);
       const toBBox = this.toBBox;
       const leftBBox = distBBox(node, 0, m, toBBox);
-      const rightBBox = distBBox(node, M - m, M, toBBox);
+      const rightBBox = distBBox(node, M5 - m, M5, toBBox);
       let margin = bboxMargin(leftBBox) + bboxMargin(rightBBox);
-      for (let i = m; i < M - m; i++) {
+      for (let i = m; i < M5 - m; i++) {
         const child = node.children[i];
         extend(leftBBox, node.leaf ? toBBox(child) : child);
         margin += bboxMargin(leftBBox);
       }
-      for (let i = M - m - 1; i >= m; i--) {
+      for (let i = M5 - m - 1; i >= m; i--) {
         const child = node.children[i];
         extend(rightBBox, node.leaf ? toBBox(child) : child);
         margin += bboxMargin(rightBBox);
@@ -17512,2944 +17524,1757 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       values
     };
   }
-  class Tile extends Target {
+  class Feature extends BaseObject {
     /**
-     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("./TileState.js").default} state State.
-     * @param {Options} [options] Tile options.
+     * @param {Geometry|ObjectWithGeometry<Geometry, NoInfer<Properties>>} [geometryOrProperties]
+     *     You may pass a Geometry object directly, or an object literal containing
+     *     properties. If you pass an object literal, you may include a Geometry
+     *     associated with a `geometry` key.
      */
-    constructor(tileCoord, state, options) {
+    constructor(geometryOrProperties) {
       super();
-      options = options ? options : {};
-      this.tileCoord = tileCoord;
-      this.state = state;
-      this.key = "";
-      this.transition_ = options.transition === void 0 ? 250 : options.transition;
-      this.transitionStarts_ = {};
-      this.interpolate = !!options.interpolate;
-    }
-    /**
-     * @protected
-     */
-    changed() {
-      this.dispatchEvent(EventType.CHANGE);
-    }
-    /**
-     * Called by the tile cache when the tile is removed from the cache due to expiry
-     */
-    release() {
-      this.setState(TileState.EMPTY);
-    }
-    /**
-     * @return {string} Key.
-     */
-    getKey() {
-      return this.key + "/" + this.tileCoord;
-    }
-    /**
-     * Get the tile coordinate for this tile.
-     * @return {import("./tilecoord.js").TileCoord} The tile coordinate.
-     * @api
-     */
-    getTileCoord() {
-      return this.tileCoord;
-    }
-    /**
-     * @return {import("./TileState.js").default} State.
-     */
-    getState() {
-      return this.state;
-    }
-    /**
-     * Sets the state of this tile. If you write your own {@link module:ol/Tile~LoadFunction tileLoadFunction} ,
-     * it is important to set the state correctly to {@link module:ol/TileState~ERROR}
-     * when the tile cannot be loaded. Otherwise the tile cannot be removed from
-     * the tile queue and will block other requests.
-     * @param {import("./TileState.js").default} state State.
-     * @api
-     */
-    setState(state) {
-      if (this.state === TileState.EMPTY) {
-        return;
-      }
-      if (this.state !== TileState.ERROR && this.state > state) {
-        throw new Error("Tile load sequence violation");
-      }
-      this.state = state;
-      this.changed();
-    }
-    /**
-     * Load the image or retry if loading previously failed.
-     * Loading is taken care of by the tile queue, and calling this method is
-     * only needed for preloading or for reloading in case of an error.
-     * @abstract
-     * @api
-     */
-    load() {
-      abstract();
-    }
-    /**
-     * Get the alpha value for rendering.
-     * @param {string} id An id for the renderer.
-     * @param {number} time The render frame time.
-     * @return {number} A number between 0 and 1.
-     */
-    getAlpha(id, time) {
-      if (!this.transition_) {
-        return 1;
-      }
-      let start = this.transitionStarts_[id];
-      if (!start) {
-        start = time;
-        this.transitionStarts_[id] = start;
-      } else if (start === -1) {
-        return 1;
-      }
-      const delta = time - start + 1e3 / 60;
-      if (delta >= this.transition_) {
-        return 1;
-      }
-      return easeIn(delta / this.transition_);
-    }
-    /**
-     * Determine if a tile is in an alpha transition.  A tile is considered in
-     * transition if tile.getAlpha() has not yet been called or has been called
-     * and returned 1.
-     * @param {string} id An id for the renderer.
-     * @return {boolean} The tile is in transition.
-     */
-    inTransition(id) {
-      if (!this.transition_) {
-        return false;
-      }
-      return this.transitionStarts_[id] !== -1;
-    }
-    /**
-     * Mark a transition as complete.
-     * @param {string} id An id for the renderer.
-     */
-    endTransition(id) {
-      if (this.transition_) {
-        this.transitionStarts_[id] = -1;
-      }
-    }
-    /**
-     * @override
-     */
-    disposeInternal() {
-      this.release();
-      super.disposeInternal();
-    }
-  }
-  function asImageLike(data) {
-    return data instanceof Image || data instanceof HTMLCanvasElement || data instanceof HTMLVideoElement || data instanceof ImageBitmap ? data : null;
-  }
-  const disposedError = new Error("disposed");
-  const defaultSize = [256, 256];
-  class DataTile extends Tile {
-    /**
-     * @param {Options} options Tile options.
-     */
-    constructor(options) {
-      const state = TileState.IDLE;
-      super(options.tileCoord, state, {
-        transition: options.transition,
-        interpolate: options.interpolate
-      });
-      this.loader_ = options.loader;
-      this.data_ = null;
-      this.error_ = null;
-      this.size_ = options.size || null;
-      this.controller_ = options.controller || null;
-    }
-    /**
-     * Get the tile size.
-     * @return {import('./size.js').Size} Tile size.
-     */
-    getSize() {
-      if (this.size_) {
-        return this.size_;
-      }
-      const imageData = asImageLike(this.data_);
-      if (imageData) {
-        return [imageData.width, imageData.height];
-      }
-      return defaultSize;
-    }
-    /**
-     * Get the data for the tile.
-     * @return {Data} Tile data.
-     * @api
-     */
-    getData() {
-      return this.data_;
-    }
-    /**
-     * Get any loading error.
-     * @return {Error} Loading error.
-     * @api
-     */
-    getError() {
-      return this.error_;
-    }
-    /**
-     * Load the tile data.
-     * @api
-     * @override
-     */
-    load() {
-      if (this.state !== TileState.IDLE && this.state !== TileState.ERROR) {
-        return;
-      }
-      this.state = TileState.LOADING;
-      this.changed();
-      const self2 = this;
-      this.loader_().then(function(data) {
-        self2.data_ = data;
-        self2.state = TileState.LOADED;
-        self2.changed();
-      }).catch(function(error) {
-        self2.error_ = error;
-        self2.state = TileState.ERROR;
-        self2.changed();
-      });
-    }
-    /**
-     * Clean up.
-     * @override
-     */
-    disposeInternal() {
-      if (this.controller_) {
-        this.controller_.abort(disposedError);
-        this.controller_ = null;
-      }
-      super.disposeInternal();
-    }
-  }
-  class ImageTile extends Tile {
-    /**
-     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("./TileState.js").default} state State.
-     * @param {string} src Image source URI.
-     * @param {import('./dom.js').ImageAttributes} imageAttributes Image attributes options.
-     * @param {import("./Tile.js").LoadFunction} tileLoadFunction Tile load function.
-     * @param {import("./Tile.js").Options} [options] Tile options.
-     */
-    constructor(tileCoord, state, src, imageAttributes, tileLoadFunction, options) {
-      super(tileCoord, state, options);
-      this.crossOrigin_ = imageAttributes == null ? void 0 : imageAttributes.crossOrigin;
-      this.referrerPolicy_ = imageAttributes == null ? void 0 : imageAttributes.referrerPolicy;
-      this.src_ = src;
-      this.key = src;
-      this.image_;
-      if (WORKER_OFFSCREEN_CANVAS) {
-        this.image_ = new OffscreenCanvas(1, 1);
-      } else {
-        this.image_ = new Image();
-        if (this.crossOrigin_ !== null) {
-          this.image_.crossOrigin = this.crossOrigin_;
-        }
-        if (this.referrerPolicy_ !== void 0) {
-          this.image_.referrerPolicy = this.referrerPolicy_;
-        }
-      }
-      this.unlisten_ = null;
-      this.tileLoadFunction_ = tileLoadFunction;
-    }
-    /**
-     * Get the HTML image element for this tile (may be a Canvas, OffscreenCanvas, Image, or Video).
-     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
-     * @api
-     */
-    getImage() {
-      return this.image_;
-    }
-    /**
-     * Sets an HTML image element for this tile (may be a Canvas or preloaded Image).
-     * @param {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement} element Element.
-     */
-    setImage(element) {
-      this.image_ = element;
-      this.state = TileState.LOADED;
-      this.unlistenImage_();
-      this.changed();
-    }
-    /**
-     * Get the cross origin of the ImageTile.
-     * @return {string} Cross origin.
-     */
-    getCrossOrigin() {
-      return this.crossOrigin_;
-    }
-    /**
-     * Get the referrer policy of the ImageTile.
-     * @return {ReferrerPolicy} Referrer policy.
-     */
-    getReferrerPolicy() {
-      return this.referrerPolicy_;
-    }
-    /**
-     * Tracks loading or read errors.
-     *
-     * @private
-     */
-    handleImageError_() {
-      this.state = TileState.ERROR;
-      this.unlistenImage_();
-      this.image_ = getBlankImage();
-      this.changed();
-    }
-    /**
-     * Tracks successful image load.
-     *
-     * @private
-     */
-    handleImageLoad_() {
-      if (WORKER_OFFSCREEN_CANVAS) {
-        this.state = TileState.LOADED;
-      } else {
-        const image = (
-          /** @type {HTMLImageElement} */
-          this.image_
-        );
-        if (image.naturalWidth && image.naturalHeight) {
-          this.state = TileState.LOADED;
-        } else {
-          this.state = TileState.EMPTY;
-        }
-      }
-      this.unlistenImage_();
-      this.changed();
-    }
-    /**
-     * Load the image or retry if loading previously failed.
-     * Loading is taken care of by the tile queue, and calling this method is
-     * only needed for preloading or for reloading in case of an error.
-     *
-     * To retry loading tiles on failed requests, use a custom `tileLoadFunction`
-     * that checks for error status codes and reloads only when the status code is
-     * 408, 429, 500, 502, 503 and 504, and only when not too many retries have been
-     * made already:
-     *
-     * ```js
-     * const retryCodes = [408, 429, 500, 502, 503, 504];
-     * const retries = {};
-     * source.setTileLoadFunction((tile, src) => {
-     *   const image = tile.getImage();
-     *   fetch(src)
-     *     .then((response) => {
-     *       if (retryCodes.includes(response.status)) {
-     *         retries[src] = (retries[src] || 0) + 1;
-     *         if (retries[src] <= 3) {
-     *           setTimeout(() => tile.load(), retries[src] * 1000);
-     *         }
-     *         return Promise.reject();
-     *       }
-     *       return response.blob();
-     *     })
-     *     .then((blob) => {
-     *       const imageUrl = URL.createObjectURL(blob);
-     *       image.src = imageUrl;
-     *       setTimeout(() => URL.revokeObjectURL(imageUrl), 5000);
-     *     })
-     *     .catch(() => tile.setState(3)); // error
-     * });
-     * ```
-     * @api
-     * @override
-     */
-    load() {
-      if (this.state == TileState.ERROR) {
-        this.state = TileState.IDLE;
-        this.image_ = new Image();
-        if (this.crossOrigin_ !== null) {
-          this.image_.crossOrigin = this.crossOrigin_;
-        }
-        if (this.referrerPolicy_ !== void 0) {
-          this.image_.referrerPolicy = this.referrerPolicy_;
-        }
-      }
-      if (this.state == TileState.IDLE) {
-        this.state = TileState.LOADING;
-        this.changed();
-        this.tileLoadFunction_(this, this.src_);
-        this.unlisten_ = listenImage(
-          this.image_,
-          this.handleImageLoad_.bind(this),
-          this.handleImageError_.bind(this)
-        );
-      }
-    }
-    /**
-     * Discards event handlers which listen for load completion or errors.
-     *
-     * @private
-     */
-    unlistenImage_() {
-      if (this.unlisten_) {
-        this.unlisten_();
-        this.unlisten_ = null;
-      }
-    }
-    /**
-     * @override
-     */
-    disposeInternal() {
-      this.unlistenImage_();
-      this.image_ = null;
-      super.disposeInternal();
-    }
-  }
-  function getBlankImage() {
-    const ctx = createCanvasContext2D(1, 1);
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.fillRect(0, 0, 1, 1);
-    return ctx.canvas;
-  }
-  class TileRange {
-    /**
-     * @param {number} minX Minimum X.
-     * @param {number} maxX Maximum X.
-     * @param {number} minY Minimum Y.
-     * @param {number} maxY Maximum Y.
-     */
-    constructor(minX, maxX, minY, maxY) {
-      this.minX = minX;
-      this.maxX = maxX;
-      this.minY = minY;
-      this.maxY = maxY;
-    }
-    /**
-     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @return {boolean} Contains tile coordinate.
-     */
-    contains(tileCoord) {
-      return this.containsXY(tileCoord[1], tileCoord[2]);
-    }
-    /**
-     * @param {TileRange} tileRange Tile range.
-     * @return {boolean} Contains.
-     */
-    containsTileRange(tileRange) {
-      return this.minX <= tileRange.minX && tileRange.maxX <= this.maxX && this.minY <= tileRange.minY && tileRange.maxY <= this.maxY;
-    }
-    /**
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @return {boolean} Contains coordinate.
-     */
-    containsXY(x, y) {
-      return this.minX <= x && x <= this.maxX && this.minY <= y && y <= this.maxY;
-    }
-    /**
-     * @param {TileRange} tileRange Tile range.
-     * @return {boolean} Equals.
-     */
-    equals(tileRange) {
-      return this.minX == tileRange.minX && this.minY == tileRange.minY && this.maxX == tileRange.maxX && this.maxY == tileRange.maxY;
-    }
-    /**
-     * @param {TileRange} tileRange Tile range.
-     */
-    extend(tileRange) {
-      if (tileRange.minX < this.minX) {
-        this.minX = tileRange.minX;
-      }
-      if (tileRange.maxX > this.maxX) {
-        this.maxX = tileRange.maxX;
-      }
-      if (tileRange.minY < this.minY) {
-        this.minY = tileRange.minY;
-      }
-      if (tileRange.maxY > this.maxY) {
-        this.maxY = tileRange.maxY;
-      }
-    }
-    /**
-     * @return {number} Height.
-     */
-    getHeight() {
-      return this.maxY - this.minY + 1;
-    }
-    /**
-     * @return {import("./size.js").Size} Size.
-     */
-    getSize() {
-      return [this.getWidth(), this.getHeight()];
-    }
-    /**
-     * @return {number} Width.
-     */
-    getWidth() {
-      return this.maxX - this.minX + 1;
-    }
-    /**
-     * @param {TileRange} tileRange Tile range.
-     * @return {boolean} Intersects.
-     */
-    intersects(tileRange) {
-      return this.minX <= tileRange.maxX && this.maxX >= tileRange.minX && this.minY <= tileRange.maxY && this.maxY >= tileRange.minY;
-    }
-  }
-  function createOrUpdate$1(minX, maxX, minY, maxY, tileRange) {
-    if (tileRange !== void 0) {
-      tileRange.minX = minX;
-      tileRange.maxX = maxX;
-      tileRange.minY = minY;
-      tileRange.maxY = maxY;
-      return tileRange;
-    }
-    return new TileRange(minX, maxX, minY, maxY);
-  }
-  let brokenDiagonalRendering_;
-  const canvasPool$1 = [];
-  function drawTestTriangle(ctx, u1, v1, u2, v2) {
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(u1, v1);
-    ctx.lineTo(u2, v2);
-    ctx.closePath();
-    ctx.save();
-    ctx.clip();
-    ctx.fillRect(0, 0, Math.max(u1, u2) + 1, Math.max(v1, v2));
-    ctx.restore();
-  }
-  function verifyBrokenDiagonalRendering(data, offset) {
-    return Math.abs(data[offset * 4] - 210) > 2 || Math.abs(data[offset * 4 + 3] - 0.75 * 255) > 2;
-  }
-  function isBrokenDiagonalRendering() {
-    if (brokenDiagonalRendering_ === void 0) {
-      const ctx = createCanvasContext2D(6, 6, canvasPool$1);
-      ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = "rgba(210, 0, 0, 0.75)";
-      drawTestTriangle(ctx, 4, 5, 4, 0);
-      drawTestTriangle(ctx, 4, 5, 0, 5);
-      const data = ctx.getImageData(0, 0, 3, 3).data;
-      brokenDiagonalRendering_ = verifyBrokenDiagonalRendering(data, 0) || verifyBrokenDiagonalRendering(data, 4) || verifyBrokenDiagonalRendering(data, 8);
-      releaseCanvas(ctx);
-      canvasPool$1.push(ctx.canvas);
-    }
-    return brokenDiagonalRendering_;
-  }
-  function calculateSourceResolution(sourceProj, targetProj, targetCenter, targetResolution) {
-    const sourceCenter = transform(targetCenter, targetProj, sourceProj);
-    let sourceResolution = getPointResolution(
-      targetProj,
-      targetResolution,
-      targetCenter
-    );
-    const targetMetersPerUnit = targetProj.getMetersPerUnit();
-    if (targetMetersPerUnit !== void 0) {
-      sourceResolution *= targetMetersPerUnit;
-    }
-    const sourceMetersPerUnit = sourceProj.getMetersPerUnit();
-    if (sourceMetersPerUnit !== void 0) {
-      sourceResolution /= sourceMetersPerUnit;
-    }
-    const sourceExtent = sourceProj.getExtent();
-    if (!sourceExtent || containsCoordinate(sourceExtent, sourceCenter)) {
-      const compensationFactor = getPointResolution(sourceProj, sourceResolution, sourceCenter) / sourceResolution;
-      if (isFinite(compensationFactor) && compensationFactor > 0) {
-        sourceResolution /= compensationFactor;
-      }
-    }
-    return sourceResolution;
-  }
-  function calculateSourceExtentResolution(sourceProj, targetProj, targetExtent, targetResolution) {
-    const targetCenter = getCenter(targetExtent);
-    let sourceResolution = calculateSourceResolution(
-      sourceProj,
-      targetProj,
-      targetCenter,
-      targetResolution
-    );
-    if (!isFinite(sourceResolution) || sourceResolution <= 0) {
-      forEachCorner(targetExtent, function(corner) {
-        sourceResolution = calculateSourceResolution(
-          sourceProj,
-          targetProj,
-          corner,
-          targetResolution
-        );
-        return isFinite(sourceResolution) && sourceResolution > 0;
-      });
-    }
-    return sourceResolution;
-  }
-  function render(width, height, pixelRatio, sourceResolution, sourceExtent, targetResolution, targetExtent, triangulation, sources, gutter, renderEdges, interpolate, drawSingle, clipExtent) {
-    const context = createCanvasContext2D(
-      Math.round(pixelRatio * width),
-      Math.round(pixelRatio * height),
-      canvasPool$1
-    );
-    if (!interpolate) {
-      context.imageSmoothingEnabled = false;
-    }
-    if (sources.length === 0) {
-      return context.canvas;
-    }
-    context.scale(pixelRatio, pixelRatio);
-    function pixelRound(value) {
-      return Math.round(value * pixelRatio) / pixelRatio;
-    }
-    context.globalCompositeOperation = "lighter";
-    const sourceDataExtent = createEmpty();
-    sources.forEach(function(src, i, arr) {
-      extend$1(sourceDataExtent, src.extent);
-    });
-    let stitchContext;
-    const stitchScale = pixelRatio / sourceResolution;
-    const inverseScale = (interpolate ? 1 : 1 + Math.pow(2, -24)) / stitchScale;
-    {
-      stitchContext = createCanvasContext2D(
-        Math.round(getWidth(sourceDataExtent) * stitchScale),
-        Math.round(getHeight(sourceDataExtent) * stitchScale),
-        canvasPool$1
-      );
-      if (!interpolate) {
-        stitchContext.imageSmoothingEnabled = false;
-      }
-      sources.forEach(function(src, i, arr) {
-        if (src.image.width > 0 && src.image.height > 0) {
-          if (src.clipExtent) {
-            stitchContext.save();
-            const xPos2 = (src.clipExtent[0] - sourceDataExtent[0]) * stitchScale;
-            const yPos2 = -(src.clipExtent[3] - sourceDataExtent[3]) * stitchScale;
-            const width2 = getWidth(src.clipExtent) * stitchScale;
-            const height2 = getHeight(src.clipExtent) * stitchScale;
-            stitchContext.rect(
-              interpolate ? xPos2 : Math.round(xPos2),
-              interpolate ? yPos2 : Math.round(yPos2),
-              interpolate ? width2 : Math.round(xPos2 + width2) - Math.round(xPos2),
-              interpolate ? height2 : Math.round(yPos2 + height2) - Math.round(yPos2)
-            );
-            stitchContext.clip();
-          }
-          const xPos = (src.extent[0] - sourceDataExtent[0]) * stitchScale;
-          const yPos = -(src.extent[3] - sourceDataExtent[3]) * stitchScale;
-          const srcWidth = getWidth(src.extent) * stitchScale;
-          const srcHeight = getHeight(src.extent) * stitchScale;
-          stitchContext.drawImage(
-            src.image,
-            gutter,
-            gutter,
-            src.image.width - 2 * gutter,
-            src.image.height - 2 * gutter,
-            interpolate ? xPos : Math.round(xPos),
-            interpolate ? yPos : Math.round(yPos),
-            interpolate ? srcWidth : Math.round(xPos + srcWidth) - Math.round(xPos),
-            interpolate ? srcHeight : Math.round(yPos + srcHeight) - Math.round(yPos)
-          );
-          if (src.clipExtent) {
-            stitchContext.restore();
-          }
-        }
-      });
-    }
-    const targetTopLeft = getTopLeft(targetExtent);
-    triangulation.getTriangles().forEach(function(triangle, i, arr) {
-      const source = triangle.source;
-      const target = triangle.target;
-      let x0 = source[0][0], y0 = source[0][1];
-      let x1 = source[1][0], y1 = source[1][1];
-      let x2 = source[2][0], y2 = source[2][1];
-      const u0 = pixelRound((target[0][0] - targetTopLeft[0]) / targetResolution);
-      const v0 = pixelRound(
-        -(target[0][1] - targetTopLeft[1]) / targetResolution
-      );
-      const u1 = pixelRound((target[1][0] - targetTopLeft[0]) / targetResolution);
-      const v1 = pixelRound(
-        -(target[1][1] - targetTopLeft[1]) / targetResolution
-      );
-      const u2 = pixelRound((target[2][0] - targetTopLeft[0]) / targetResolution);
-      const v2 = pixelRound(
-        -(target[2][1] - targetTopLeft[1]) / targetResolution
-      );
-      const sourceNumericalShiftX = x0;
-      const sourceNumericalShiftY = y0;
-      x0 = 0;
-      y0 = 0;
-      x1 -= sourceNumericalShiftX;
-      y1 -= sourceNumericalShiftY;
-      x2 -= sourceNumericalShiftX;
-      y2 -= sourceNumericalShiftY;
-      const augmentedMatrix = [
-        [x1, y1, 0, 0, u1 - u0],
-        [x2, y2, 0, 0, u2 - u0],
-        [0, 0, x1, y1, v1 - v0],
-        [0, 0, x2, y2, v2 - v0]
-      ];
-      const affineCoefs = solveLinearSystem(augmentedMatrix);
-      if (!affineCoefs) {
-        return;
-      }
-      context.save();
-      context.beginPath();
-      if (isBrokenDiagonalRendering() || !interpolate) {
-        context.moveTo(u1, v1);
-        const steps = 4;
-        const ud = u0 - u1;
-        const vd = v0 - v1;
-        for (let step = 0; step < steps; step++) {
-          context.lineTo(
-            u1 + pixelRound((step + 1) * ud / steps),
-            v1 + pixelRound(step * vd / (steps - 1))
-          );
-          if (step != steps - 1) {
-            context.lineTo(
-              u1 + pixelRound((step + 1) * ud / steps),
-              v1 + pixelRound((step + 1) * vd / (steps - 1))
-            );
-          }
-        }
-        context.lineTo(u2, v2);
-      } else {
-        context.moveTo(u1, v1);
-        context.lineTo(u0, v0);
-        context.lineTo(u2, v2);
-      }
-      context.clip();
-      context.transform(
-        affineCoefs[0],
-        affineCoefs[2],
-        affineCoefs[1],
-        affineCoefs[3],
-        u0,
-        v0
-      );
-      context.translate(
-        sourceDataExtent[0] - sourceNumericalShiftX,
-        sourceDataExtent[3] - sourceNumericalShiftY
-      );
-      let image;
-      if (stitchContext) {
-        image = stitchContext.canvas;
-        context.scale(inverseScale, -inverseScale);
-      } else {
-        const source2 = sources[0];
-        const extent = source2.extent;
-        image = source2.image;
-        context.scale(
-          getWidth(extent) / image.width,
-          -getHeight(extent) / image.height
-        );
-      }
-      context.drawImage(image, 0, 0);
-      context.restore();
-    });
-    if (stitchContext) {
-      releaseCanvas(stitchContext);
-      canvasPool$1.push(stitchContext.canvas);
-    }
-    if (renderEdges) {
-      context.save();
-      context.globalCompositeOperation = "source-over";
-      context.strokeStyle = "black";
-      context.lineWidth = 1;
-      triangulation.getTriangles().forEach(function(triangle, i, arr) {
-        const target = triangle.target;
-        const u0 = (target[0][0] - targetTopLeft[0]) / targetResolution;
-        const v0 = -(target[0][1] - targetTopLeft[1]) / targetResolution;
-        const u1 = (target[1][0] - targetTopLeft[0]) / targetResolution;
-        const v1 = -(target[1][1] - targetTopLeft[1]) / targetResolution;
-        const u2 = (target[2][0] - targetTopLeft[0]) / targetResolution;
-        const v2 = -(target[2][1] - targetTopLeft[1]) / targetResolution;
-        context.beginPath();
-        context.moveTo(u1, v1);
-        context.lineTo(u0, v0);
-        context.lineTo(u2, v2);
-        context.closePath();
-        context.stroke();
-      });
-      context.restore();
-    }
-    return context.canvas;
-  }
-  const MAX_SUBDIVISION = 10;
-  const MAX_TRIANGLE_WIDTH = 0.25;
-  class Triangulation {
-    /**
-     * @param {import("../proj/Projection.js").default} sourceProj Source projection.
-     * @param {import("../proj/Projection.js").default} targetProj Target projection.
-     * @param {import("../extent.js").Extent} targetExtent Target extent to triangulate.
-     * @param {import("../extent.js").Extent} maxSourceExtent Maximal source extent that can be used.
-     * @param {number} errorThreshold Acceptable error (in source units).
-     * @param {?number} destinationResolution The (optional) resolution of the destination.
-     * @param {import("../transform.js").Transform} [sourceMatrix] Source transform matrix.
-     */
-    constructor(sourceProj, targetProj, targetExtent, maxSourceExtent, errorThreshold, destinationResolution, sourceMatrix) {
-      this.sourceProj_ = sourceProj;
-      this.targetProj_ = targetProj;
-      let transformInvCache = {};
-      const transformInv = sourceMatrix ? createTransformFromCoordinateTransform(
-        (input) => apply(
-          sourceMatrix,
-          transform(input, this.targetProj_, this.sourceProj_)
-        )
-      ) : getTransform(this.targetProj_, this.sourceProj_);
-      this.transformInv_ = function(c) {
-        const key = c[0] + "/" + c[1];
-        if (!transformInvCache[key]) {
-          transformInvCache[key] = transformInv(c);
-        }
-        return transformInvCache[key];
-      };
-      this.maxSourceExtent_ = maxSourceExtent;
-      this.errorThresholdSquared_ = errorThreshold * errorThreshold;
-      this.triangles_ = [];
-      this.wrapsXInSource_ = false;
-      this.canWrapXInSource_ = this.sourceProj_.canWrapX() && !!maxSourceExtent && !!this.sourceProj_.getExtent() && getWidth(maxSourceExtent) >= getWidth(this.sourceProj_.getExtent());
-      this.sourceWorldWidth_ = this.sourceProj_.getExtent() ? getWidth(this.sourceProj_.getExtent()) : null;
-      this.targetWorldWidth_ = this.targetProj_.getExtent() ? getWidth(this.targetProj_.getExtent()) : null;
-      const destinationTopLeft = getTopLeft(targetExtent);
-      const destinationTopRight = getTopRight(targetExtent);
-      const destinationBottomRight = getBottomRight(targetExtent);
-      const destinationBottomLeft = getBottomLeft(targetExtent);
-      const sourceTopLeft = this.transformInv_(destinationTopLeft);
-      const sourceTopRight = this.transformInv_(destinationTopRight);
-      const sourceBottomRight = this.transformInv_(destinationBottomRight);
-      const sourceBottomLeft = this.transformInv_(destinationBottomLeft);
-      const maxSubdivision = MAX_SUBDIVISION + (destinationResolution ? Math.max(
-        0,
-        Math.ceil(
-          Math.log2(
-            getArea(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
-          )
-        )
-      ) : 0);
-      this.addQuad_(
-        destinationTopLeft,
-        destinationTopRight,
-        destinationBottomRight,
-        destinationBottomLeft,
-        sourceTopLeft,
-        sourceTopRight,
-        sourceBottomRight,
-        sourceBottomLeft,
-        maxSubdivision
-      );
-      if (this.wrapsXInSource_) {
-        let leftBound = Infinity;
-        this.triangles_.forEach(function(triangle, i, arr) {
-          leftBound = Math.min(
-            leftBound,
-            triangle.source[0][0],
-            triangle.source[1][0],
-            triangle.source[2][0]
-          );
-        });
-        this.triangles_.forEach((triangle) => {
-          if (Math.max(
-            triangle.source[0][0],
-            triangle.source[1][0],
-            triangle.source[2][0]
-          ) - leftBound > this.sourceWorldWidth_ / 2) {
-            const newTriangle = [
-              [triangle.source[0][0], triangle.source[0][1]],
-              [triangle.source[1][0], triangle.source[1][1]],
-              [triangle.source[2][0], triangle.source[2][1]]
-            ];
-            if (newTriangle[0][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[0][0] -= this.sourceWorldWidth_;
-            }
-            if (newTriangle[1][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[1][0] -= this.sourceWorldWidth_;
-            }
-            if (newTriangle[2][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[2][0] -= this.sourceWorldWidth_;
-            }
-            const minX = Math.min(
-              newTriangle[0][0],
-              newTriangle[1][0],
-              newTriangle[2][0]
-            );
-            const maxX = Math.max(
-              newTriangle[0][0],
-              newTriangle[1][0],
-              newTriangle[2][0]
-            );
-            if (maxX - minX < this.sourceWorldWidth_ / 2) {
-              triangle.source = newTriangle;
-            }
-          }
-        });
-      }
-      transformInvCache = {};
-    }
-    /**
-     * Adds triangle to the triangulation.
-     * @param {import("../coordinate.js").Coordinate} a The target a coordinate.
-     * @param {import("../coordinate.js").Coordinate} b The target b coordinate.
-     * @param {import("../coordinate.js").Coordinate} c The target c coordinate.
-     * @param {import("../coordinate.js").Coordinate} aSrc The source a coordinate.
-     * @param {import("../coordinate.js").Coordinate} bSrc The source b coordinate.
-     * @param {import("../coordinate.js").Coordinate} cSrc The source c coordinate.
-     * @private
-     */
-    addTriangle_(a, b, c, aSrc, bSrc, cSrc) {
-      this.triangles_.push({
-        source: [aSrc, bSrc, cSrc],
-        target: [a, b, c]
-      });
-    }
-    /**
-     * Adds quad (points in clock-wise order) to the triangulation
-     * (and reprojects the vertices) if valid.
-     * Performs quad subdivision if needed to increase precision.
-     *
-     * @param {import("../coordinate.js").Coordinate} a The target a coordinate.
-     * @param {import("../coordinate.js").Coordinate} b The target b coordinate.
-     * @param {import("../coordinate.js").Coordinate} c The target c coordinate.
-     * @param {import("../coordinate.js").Coordinate} d The target d coordinate.
-     * @param {import("../coordinate.js").Coordinate} aSrc The source a coordinate.
-     * @param {import("../coordinate.js").Coordinate} bSrc The source b coordinate.
-     * @param {import("../coordinate.js").Coordinate} cSrc The source c coordinate.
-     * @param {import("../coordinate.js").Coordinate} dSrc The source d coordinate.
-     * @param {number} maxSubdivision Maximal allowed subdivision of the quad.
-     * @private
-     */
-    addQuad_(a, b, c, d, aSrc, bSrc, cSrc, dSrc, maxSubdivision) {
-      const sourceQuadExtent = boundingExtent([aSrc, bSrc, cSrc, dSrc]);
-      const sourceCoverageX = this.sourceWorldWidth_ ? getWidth(sourceQuadExtent) / this.sourceWorldWidth_ : null;
-      const sourceWorldWidth = (
-        /** @type {number} */
-        this.sourceWorldWidth_
-      );
-      const wrapsX = this.sourceProj_.canWrapX() && sourceCoverageX > 0.5 && sourceCoverageX < 1;
-      let needsSubdivision = false;
-      if (maxSubdivision > 0) {
-        if (this.targetProj_.isGlobal() && this.targetWorldWidth_) {
-          const targetQuadExtent = boundingExtent([a, b, c, d]);
-          const targetCoverageX = getWidth(targetQuadExtent) / this.targetWorldWidth_;
-          needsSubdivision = targetCoverageX > MAX_TRIANGLE_WIDTH || needsSubdivision;
-        }
-        if (!wrapsX && this.sourceProj_.isGlobal() && sourceCoverageX) {
-          needsSubdivision = sourceCoverageX > MAX_TRIANGLE_WIDTH || needsSubdivision;
-        }
-      }
-      if (!needsSubdivision && this.maxSourceExtent_) {
-        if (isFinite(sourceQuadExtent[0]) && isFinite(sourceQuadExtent[1]) && isFinite(sourceQuadExtent[2]) && isFinite(sourceQuadExtent[3])) {
-          if (!intersects$1(sourceQuadExtent, this.maxSourceExtent_)) {
-            return;
-          }
-        }
-      }
-      let isNotFinite = 0;
-      if (!needsSubdivision) {
-        if (!isFinite(aSrc[0]) || !isFinite(aSrc[1]) || !isFinite(bSrc[0]) || !isFinite(bSrc[1]) || !isFinite(cSrc[0]) || !isFinite(cSrc[1]) || !isFinite(dSrc[0]) || !isFinite(dSrc[1])) {
-          if (maxSubdivision > 0) {
-            needsSubdivision = true;
-          } else {
-            isNotFinite = (!isFinite(aSrc[0]) || !isFinite(aSrc[1]) ? 8 : 0) + (!isFinite(bSrc[0]) || !isFinite(bSrc[1]) ? 4 : 0) + (!isFinite(cSrc[0]) || !isFinite(cSrc[1]) ? 2 : 0) + (!isFinite(dSrc[0]) || !isFinite(dSrc[1]) ? 1 : 0);
-            if (isNotFinite != 1 && isNotFinite != 2 && isNotFinite != 4 && isNotFinite != 8) {
-              return;
-            }
-          }
-        }
-      }
-      if (maxSubdivision > 0) {
-        if (!needsSubdivision) {
-          const center = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
-          const centerSrc = this.transformInv_(center);
-          let dx;
-          if (wrapsX) {
-            const centerSrcEstimX = (modulo(aSrc[0], sourceWorldWidth) + modulo(cSrc[0], sourceWorldWidth)) / 2;
-            dx = centerSrcEstimX - modulo(centerSrc[0], sourceWorldWidth);
-          } else {
-            dx = (aSrc[0] + cSrc[0]) / 2 - centerSrc[0];
-          }
-          const dy = (aSrc[1] + cSrc[1]) / 2 - centerSrc[1];
-          const centerSrcErrorSquared = dx * dx + dy * dy;
-          needsSubdivision = centerSrcErrorSquared > this.errorThresholdSquared_;
-        }
-        if (needsSubdivision) {
-          if (Math.abs(a[0] - c[0]) <= Math.abs(a[1] - c[1])) {
-            const bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
-            const bcSrc = this.transformInv_(bc);
-            const da = [(d[0] + a[0]) / 2, (d[1] + a[1]) / 2];
-            const daSrc = this.transformInv_(da);
-            this.addQuad_(
-              a,
-              b,
-              bc,
-              da,
-              aSrc,
-              bSrc,
-              bcSrc,
-              daSrc,
-              maxSubdivision - 1
-            );
-            this.addQuad_(
-              da,
-              bc,
-              c,
-              d,
-              daSrc,
-              bcSrc,
-              cSrc,
-              dSrc,
-              maxSubdivision - 1
-            );
-          } else {
-            const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-            const abSrc = this.transformInv_(ab);
-            const cd = [(c[0] + d[0]) / 2, (c[1] + d[1]) / 2];
-            const cdSrc = this.transformInv_(cd);
-            this.addQuad_(
-              a,
-              ab,
-              cd,
-              d,
-              aSrc,
-              abSrc,
-              cdSrc,
-              dSrc,
-              maxSubdivision - 1
-            );
-            this.addQuad_(
-              ab,
-              b,
-              c,
-              cd,
-              abSrc,
-              bSrc,
-              cSrc,
-              cdSrc,
-              maxSubdivision - 1
-            );
-          }
-          return;
-        }
-      }
-      if (wrapsX) {
-        if (!this.canWrapXInSource_) {
-          return;
-        }
-        this.wrapsXInSource_ = true;
-      }
-      if ((isNotFinite & 11) == 0) {
-        this.addTriangle_(a, c, d, aSrc, cSrc, dSrc);
-      }
-      if ((isNotFinite & 14) == 0) {
-        this.addTriangle_(a, c, b, aSrc, cSrc, bSrc);
-      }
-      if (isNotFinite) {
-        if ((isNotFinite & 13) == 0) {
-          this.addTriangle_(b, d, a, bSrc, dSrc, aSrc);
-        }
-        if ((isNotFinite & 7) == 0) {
-          this.addTriangle_(b, d, c, bSrc, dSrc, cSrc);
-        }
-      }
-    }
-    /**
-     * Calculates extent of the `source` coordinates from all the triangles.
-     *
-     * @return {import("../extent.js").Extent} Calculated extent.
-     */
-    calculateSourceExtent() {
-      const extent = createEmpty();
-      this.triangles_.forEach(function(triangle, i, arr) {
-        const src = triangle.source;
-        extendCoordinate(extent, src[0]);
-        extendCoordinate(extent, src[1]);
-        extendCoordinate(extent, src[2]);
-      });
-      return extent;
-    }
-    /**
-     * @return {Array<Triangle>} Array of the calculated triangles.
-     */
-    getTriangles() {
-      return this.triangles_;
-    }
-  }
-  const ERROR_THRESHOLD = 0.5;
-  class ReprojTile extends Tile {
-    /**
-     * @param {import("../proj/Projection.js").default} sourceProj Source projection.
-     * @param {import("../tilegrid/TileGrid.js").default} sourceTileGrid Source tile grid.
-     * @param {import("../proj/Projection.js").default} targetProj Target projection.
-     * @param {import("../tilegrid/TileGrid.js").default} targetTileGrid Target tile grid.
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Coordinate of the tile.
-     * @param {import("../tilecoord.js").TileCoord} wrappedTileCoord Coordinate of the tile wrapped in X.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {number} gutter Gutter of the source tiles.
-     * @param {FunctionType} getTileFunction
-     *     Function returning source tiles (z, x, y, pixelRatio).
-     * @param {number} [errorThreshold] Acceptable reprojection error (in px).
-     * @param {boolean} [renderEdges] Render reprojection edges.
-     * @param {import("../Tile.js").Options} [options] Tile options.
-     */
-    constructor(sourceProj, sourceTileGrid, targetProj, targetTileGrid, tileCoord, wrappedTileCoord, pixelRatio, gutter, getTileFunction, errorThreshold, renderEdges, options) {
-      super(tileCoord, TileState.IDLE, options);
-      this.renderEdges_ = renderEdges !== void 0 ? renderEdges : false;
-      this.pixelRatio_ = pixelRatio;
-      this.gutter_ = gutter;
-      this.canvas_ = null;
-      this.sourceTileGrid_ = sourceTileGrid;
-      this.targetTileGrid_ = targetTileGrid;
-      this.wrappedTileCoord_ = wrappedTileCoord ? wrappedTileCoord : tileCoord;
-      this.sourceTiles_ = [];
-      this.sourcesListenerKeys_ = null;
-      this.sourceZ_ = 0;
-      this.clipExtent_ = sourceProj.canWrapX() ? sourceProj.getExtent() : void 0;
-      const targetExtent = targetTileGrid.getTileCoordExtent(
-        this.wrappedTileCoord_
-      );
-      const maxTargetExtent = this.targetTileGrid_.getExtent();
-      let maxSourceExtent = this.sourceTileGrid_.getExtent();
-      const limitedTargetExtent = maxTargetExtent ? getIntersection(targetExtent, maxTargetExtent) : targetExtent;
-      if (getArea(limitedTargetExtent) === 0) {
-        this.state = TileState.EMPTY;
-        return;
-      }
-      const sourceProjExtent = sourceProj.getExtent();
-      if (sourceProjExtent) {
-        if (!maxSourceExtent) {
-          maxSourceExtent = sourceProjExtent;
-        } else {
-          maxSourceExtent = getIntersection(maxSourceExtent, sourceProjExtent);
-        }
-      }
-      const targetResolution = targetTileGrid.getResolution(
-        this.wrappedTileCoord_[0]
-      );
-      const sourceResolution = calculateSourceExtentResolution(
-        sourceProj,
-        targetProj,
-        limitedTargetExtent,
-        targetResolution
-      );
-      if (!isFinite(sourceResolution) || sourceResolution <= 0) {
-        this.state = TileState.EMPTY;
-        return;
-      }
-      const errorThresholdInPixels = errorThreshold !== void 0 ? errorThreshold : ERROR_THRESHOLD;
-      this.triangulation_ = new Triangulation(
-        sourceProj,
-        targetProj,
-        limitedTargetExtent,
-        maxSourceExtent,
-        sourceResolution * errorThresholdInPixels,
-        targetResolution
-      );
-      if (this.triangulation_.getTriangles().length === 0) {
-        this.state = TileState.EMPTY;
-        return;
-      }
-      this.sourceZ_ = sourceTileGrid.getZForResolution(sourceResolution);
-      let sourceExtent = this.triangulation_.calculateSourceExtent();
-      if (maxSourceExtent) {
-        if (sourceProj.canWrapX()) {
-          sourceExtent[1] = clamp(
-            sourceExtent[1],
-            maxSourceExtent[1],
-            maxSourceExtent[3]
-          );
-          sourceExtent[3] = clamp(
-            sourceExtent[3],
-            maxSourceExtent[1],
-            maxSourceExtent[3]
-          );
-        } else {
-          sourceExtent = getIntersection(sourceExtent, maxSourceExtent);
-        }
-      }
-      if (!getArea(sourceExtent)) {
-        this.state = TileState.EMPTY;
-      } else {
-        let worldWidth = 0;
-        let worldsAway = 0;
-        if (sourceProj.canWrapX()) {
-          worldWidth = getWidth(sourceProjExtent);
-          worldsAway = Math.floor(
-            (sourceExtent[0] - sourceProjExtent[0]) / worldWidth
-          );
-        }
-        const sourceExtents = wrapAndSliceX(
-          sourceExtent.slice(),
-          sourceProj,
-          true
-        );
-        sourceExtents.forEach((extent) => {
-          const sourceRange = sourceTileGrid.getTileRangeForExtentAndZ(
-            extent,
-            this.sourceZ_
-          );
-          for (let srcX = sourceRange.minX; srcX <= sourceRange.maxX; srcX++) {
-            for (let srcY = sourceRange.minY; srcY <= sourceRange.maxY; srcY++) {
-              const offset = worldsAway * worldWidth;
-              this.sourceTiles_.push({
-                getTile: () => getTileFunction(this.sourceZ_, srcX, srcY, pixelRatio),
-                offset
-              });
-            }
-          }
-          ++worldsAway;
-        });
-        if (this.sourceTiles_.length === 0) {
-          this.state = TileState.EMPTY;
-        }
-      }
-    }
-    /**
-     * Get the HTML Canvas element for this tile.
-     * @return {HTMLCanvasElement|OffscreenCanvas} Canvas.
-     */
-    getImage() {
-      return this.canvas_;
-    }
-    /**
-     * @private
-     */
-    reproject_() {
-      const sources = [];
-      this.sourceTiles_.forEach((source) => {
-        var _a;
-        const tile = source.tile;
-        if (tile && tile.getState() == TileState.LOADED) {
-          const extent = this.sourceTileGrid_.getTileCoordExtent(tile.tileCoord);
-          extent[0] += source.offset;
-          extent[2] += source.offset;
-          const clipExtent = (_a = this.clipExtent_) == null ? void 0 : _a.slice();
-          if (clipExtent) {
-            clipExtent[0] += source.offset;
-            clipExtent[2] += source.offset;
-          }
-          sources.push({
-            extent,
-            clipExtent,
-            image: tile.getImage()
-          });
-        }
-      });
-      this.sourceTiles_.length = 0;
-      if (sources.length === 0) {
-        this.state = TileState.ERROR;
-      } else {
-        const z = this.wrappedTileCoord_[0];
-        const size = this.targetTileGrid_.getTileSize(z);
-        const width = typeof size === "number" ? size : size[0];
-        const height = typeof size === "number" ? size : size[1];
-        const targetResolution = this.targetTileGrid_.getResolution(z);
-        const sourceResolution = this.sourceTileGrid_.getResolution(
-          this.sourceZ_
-        );
-        const targetExtent = this.targetTileGrid_.getTileCoordExtent(
-          this.wrappedTileCoord_
-        );
-        this.canvas_ = render(
-          width,
-          height,
-          this.pixelRatio_,
-          sourceResolution,
-          this.sourceTileGrid_.getExtent(),
-          targetResolution,
-          targetExtent,
-          this.triangulation_,
-          sources,
-          this.gutter_,
-          this.renderEdges_,
-          this.interpolate
-        );
-        this.state = TileState.LOADED;
-      }
-      this.changed();
-    }
-    /**
-     * Load not yet loaded URI.
-     * @override
-     */
-    load() {
-      for (const sourceTile of this.sourceTiles_) {
-        sourceTile.tile = sourceTile.getTile();
-      }
-      if (this.state == TileState.IDLE) {
-        this.state = TileState.LOADING;
-        this.changed();
-        let leftToLoad = 0;
-        this.sourcesListenerKeys_ = [];
-        this.sourceTiles_.forEach(({ tile }) => {
-          const state = tile.getState();
-          if (state == TileState.IDLE || state == TileState.LOADING) {
-            leftToLoad++;
-            const sourceListenKey = listen(tile, EventType.CHANGE, (e) => {
-              const state2 = tile.getState();
-              if (state2 == TileState.LOADED || state2 == TileState.ERROR || state2 == TileState.EMPTY) {
-                unlistenByKey(sourceListenKey);
-                leftToLoad--;
-                if (leftToLoad === 0) {
-                  this.unlistenSources_();
-                  this.reproject_();
-                }
-              }
-            });
-            this.sourcesListenerKeys_.push(sourceListenKey);
-          }
-        });
-        if (leftToLoad === 0) {
-          setTimeout(this.reproject_.bind(this), 0);
-        } else {
-          this.sourceTiles_.forEach(function({ tile }, i, arr) {
-            const state = tile.getState();
-            if (state == TileState.IDLE) {
-              tile.load();
-            }
-          });
-        }
-      }
-    }
-    /**
-     * @private
-     */
-    unlistenSources_() {
-      this.sourcesListenerKeys_.forEach(unlistenByKey);
-      this.sourcesListenerKeys_ = null;
-    }
-    /**
-     * Remove from the cache due to expiry
-     * @override
-     */
-    release() {
-      if (this.canvas_) {
-        releaseCanvas(
-          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
-          this.canvas_.getContext("2d")
-        );
-        canvasPool$1.push(this.canvas_);
-        this.canvas_ = null;
-      }
-      this.sourceTiles_.length = 0;
-      super.release();
-    }
-  }
-  class LRUCache {
-    /**
-     * @param {number} [highWaterMark] High water mark.
-     */
-    constructor(highWaterMark) {
-      this.highWaterMark = highWaterMark !== void 0 ? highWaterMark : 2048;
-      this.count_ = 0;
-      this.entries_ = {};
-      this.oldest_ = null;
-      this.newest_ = null;
-    }
-    deleteOldest() {
-      const entry = this.pop();
-      if (entry instanceof Disposable) {
-        entry.dispose();
-      }
-    }
-    /**
-     * @return {boolean} Can expire cache.
-     */
-    canExpireCache() {
-      return this.highWaterMark > 0 && this.getCount() > this.highWaterMark;
-    }
-    /**
-     * Expire the cache. When the cache entry is a {@link module:ol/Disposable~Disposable},
-     * the entry will be disposed.
-     * @param {!Object<string, boolean>} [keep] Keys to keep. To be implemented by subclasses.
-     */
-    expireCache(keep) {
-      while (this.canExpireCache()) {
-        this.deleteOldest();
-      }
-    }
-    /**
-     * FIXME empty description for jsdoc
-     */
-    clear() {
-      while (this.oldest_) {
-        this.deleteOldest();
-      }
-    }
-    /**
-     * @param {string} key Key.
-     * @return {boolean} Contains key.
-     */
-    containsKey(key) {
-      return this.entries_.hasOwnProperty(key);
-    }
-    /**
-     * @param {function(T, string, LRUCache<T>): ?} f The function
-     *     to call for every entry from the oldest to the newer. This function takes
-     *     3 arguments (the entry value, the entry key and the LRUCache object).
-     *     The return value is ignored.
-     */
-    forEach(f) {
-      let entry = this.oldest_;
-      while (entry) {
-        f(entry.value_, entry.key_, this);
-        entry = entry.newer;
-      }
-    }
-    /**
-     * @param {string} key Key.
-     * @param {*} [options] Options (reserved for subclasses).
-     * @return {T} Value.
-     */
-    get(key, options) {
-      const entry = this.entries_[key];
-      assert(
-        entry !== void 0,
-        "Tried to get a value for a key that does not exist in the cache"
-      );
-      if (entry === this.newest_) {
-        return entry.value_;
-      }
-      if (entry === this.oldest_) {
-        this.oldest_ = /** @type {Entry} */
-        this.oldest_.newer;
-        this.oldest_.older = null;
-      } else {
-        entry.newer.older = entry.older;
-        entry.older.newer = entry.newer;
-      }
-      entry.newer = null;
-      entry.older = this.newest_;
-      this.newest_.newer = entry;
-      this.newest_ = entry;
-      return entry.value_;
-    }
-    /**
-     * Remove an entry from the cache.
-     * @param {string} key The entry key.
-     * @return {T} The removed entry.
-     */
-    remove(key) {
-      const entry = this.entries_[key];
-      assert(
-        entry !== void 0,
-        "Tried to get a value for a key that does not exist in the cache"
-      );
-      if (entry === this.newest_) {
-        this.newest_ = /** @type {Entry} */
-        entry.older;
-        if (this.newest_) {
-          this.newest_.newer = null;
-        }
-      } else if (entry === this.oldest_) {
-        this.oldest_ = /** @type {Entry} */
-        entry.newer;
-        if (this.oldest_) {
-          this.oldest_.older = null;
-        }
-      } else {
-        entry.newer.older = entry.older;
-        entry.older.newer = entry.newer;
-      }
-      delete this.entries_[key];
-      --this.count_;
-      return entry.value_;
-    }
-    /**
-     * @return {number} Count.
-     */
-    getCount() {
-      return this.count_;
-    }
-    /**
-     * @return {Array<string>} Keys.
-     */
-    getKeys() {
-      const keys = new Array(this.count_);
-      let i = 0;
-      let entry;
-      for (entry = this.newest_; entry; entry = entry.older) {
-        keys[i++] = entry.key_;
-      }
-      return keys;
-    }
-    /**
-     * @return {Array<T>} Values.
-     */
-    getValues() {
-      const values = new Array(this.count_);
-      let i = 0;
-      let entry;
-      for (entry = this.newest_; entry; entry = entry.older) {
-        values[i++] = entry.value_;
-      }
-      return values;
-    }
-    /**
-     * @return {T} Last value.
-     */
-    peekLast() {
-      return this.oldest_.value_;
-    }
-    /**
-     * @return {string} Last key.
-     */
-    peekLastKey() {
-      return this.oldest_.key_;
-    }
-    /**
-     * Get the key of the newest item in the cache.  Throws if the cache is empty.
-     * @return {string} The newest key.
-     */
-    peekFirstKey() {
-      return this.newest_.key_;
-    }
-    /**
-     * Return an entry without updating least recently used time.
-     * @param {string} key Key.
-     * @return {T|undefined} Value.
-     */
-    peek(key) {
-      var _a;
-      return (_a = this.entries_[key]) == null ? void 0 : _a.value_;
-    }
-    /**
-     * @return {T} value Value.
-     */
-    pop() {
-      const entry = this.oldest_;
-      delete this.entries_[entry.key_];
-      if (entry.newer) {
-        entry.newer.older = null;
-      }
-      this.oldest_ = /** @type {Entry} */
-      entry.newer;
-      if (!this.oldest_) {
-        this.newest_ = null;
-      }
-      --this.count_;
-      return entry.value_;
-    }
-    /**
-     * @param {string} key Key.
-     * @param {T} value Value.
-     */
-    replace(key, value) {
-      this.get(key);
-      this.entries_[key].value_ = value;
-    }
-    /**
-     * @param {string} key Key.
-     * @param {T} value Value.
-     */
-    set(key, value) {
-      assert(
-        !(key in this.entries_),
-        "Tried to set a value for a key that is used already"
-      );
-      const entry = {
-        key_: key,
-        newer: null,
-        older: this.newest_,
-        value_: value
-      };
-      if (!this.newest_) {
-        this.oldest_ = entry;
-      } else {
-        this.newest_.newer = entry;
-      }
-      this.newest_ = entry;
-      this.entries_[key] = entry;
-      ++this.count_;
-    }
-    /**
-     * Set a maximum number of entries for the cache.
-     * @param {number} size Cache size.
-     * @api
-     */
-    setSize(size) {
-      this.highWaterMark = size;
-    }
-  }
-  function createOrUpdate(z, x, y, tileCoord) {
-    if (tileCoord !== void 0) {
-      tileCoord[0] = z;
-      tileCoord[1] = x;
-      tileCoord[2] = y;
-      return tileCoord;
-    }
-    return [z, x, y];
-  }
-  function getKeyZXY(z, x, y) {
-    return z + "/" + x + "/" + y;
-  }
-  function getCacheKey(source, sourceKey, z, x, y) {
-    return `${getUid(source)},${sourceKey},${getKeyZXY(z, x, y)}`;
-  }
-  function hash(tileCoord) {
-    return hashZXY(tileCoord[0], tileCoord[1], tileCoord[2]);
-  }
-  function hashZXY(z, x, y) {
-    return (x << z) + y;
-  }
-  function withinExtentAndZ(tileCoord, tileGrid) {
-    const z = tileCoord[0];
-    const x = tileCoord[1];
-    const y = tileCoord[2];
-    if (tileGrid.getMinZoom() > z || z > tileGrid.getMaxZoom()) {
-      return false;
-    }
-    const tileRange = tileGrid.getFullTileRange(z);
-    if (!tileRange) {
-      return true;
-    }
-    return tileRange.containsXY(x, y);
-  }
-  class ZIndexContext {
-    constructor() {
-      /**
-       * @private
-       * @param {...*} args Args.
-       * @return {ZIndexContext} This.
-       */
-      __publicField(this, "pushMethodArgs_", (...args) => {
-        this.push_(args);
-        return this;
-      });
-      this.instructions_ = [];
-      this.zIndex = 0;
-      this.offset_ = 0;
-      this.context_ = /** @type {ZIndexContextProxy} */
-      new Proxy(getSharedCanvasContext2D(), {
-        get: (target, property) => {
-          if (typeof /** @type {*} */
-          getSharedCanvasContext2D()[property] !== "function") {
-            return void 0;
-          }
-          this.push_(property);
-          return this.pushMethodArgs_;
-        },
-        set: (target, property, value) => {
-          this.push_(property, value);
-          return true;
-        }
-      });
-    }
-    /**
-     * @param {...*} args Arguments to push to the instructions array.
-     * @private
-     */
-    push_(...args) {
-      const instructions = this.instructions_;
-      const index = this.zIndex + this.offset_;
-      if (!instructions[index]) {
-        instructions[index] = [];
-      }
-      instructions[index].push(...args);
-    }
-    /**
-     * Push a function that renders to the context directly.
-     * @param {function(CanvasRenderingContext2D): void} render Function.
-     */
-    pushFunction(render2) {
-      this.push_(render2);
-    }
-    /**
-     * Get a proxy for CanvasRenderingContext2D which does not support getting state
-     * (e.g. `context.globalAlpha`, which will return `undefined`). To set state, if it relies on a
-     * previous state (e.g. `context.globalAlpha = context.globalAlpha / 2`), set a function,
-     * e.g. `context.globalAlpha = (context) => context.globalAlpha / 2`.
-     * @return {ZIndexContextProxy} Context.
-     */
-    getContext() {
-      return this.context_;
-    }
-    /**
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
-     */
-    draw(context) {
-      this.instructions_.forEach((instructionsAtIndex) => {
-        for (let i = 0, ii = instructionsAtIndex.length; i < ii; ++i) {
-          const property = instructionsAtIndex[i];
-          if (typeof property === "function") {
-            property(context);
-            continue;
-          }
-          const instructionAtIndex = instructionsAtIndex[++i];
-          if (typeof /** @type {*} */
-          context[property] === "function") {
-            context[property](...instructionAtIndex);
-          } else {
-            if (typeof instructionAtIndex === "function") {
-              context[property] = instructionAtIndex(context);
-              continue;
-            }
-            context[property] = instructionAtIndex;
-          }
-        }
-      });
-    }
-    clear() {
-      this.instructions_.length = 0;
-      this.zIndex = 0;
-      this.offset_ = 0;
-    }
-    /**
-     * Offsets the zIndex by the highest current zIndex. Useful for rendering multiple worlds or tiles, to
-     * avoid conflicting context.clip() or context.save()/restore() calls.
-     */
-    offset() {
-      this.offset_ = this.instructions_.length;
-      this.zIndex = 0;
-    }
-  }
-  const maxStaleKeys = 5;
-  class LayerRenderer extends Observable {
-    /**
-     * @param {LayerType} layer Layer.
-     */
-    constructor(layer) {
-      super();
-      this.ready = true;
-      this.boundHandleImageChange_ = this.handleImageChange_.bind(this);
-      this.layer_ = layer;
-      this.staleKeys_ = new Array();
-      this.maxStaleKeys = maxStaleKeys;
-    }
-    /**
-     * @return {Array<string>} Get the list of stale keys.
-     */
-    getStaleKeys() {
-      return this.staleKeys_;
-    }
-    /**
-     * @param {string} key The new stale key.
-     */
-    prependStaleKey(key) {
-      this.staleKeys_.unshift(key);
-      if (this.staleKeys_.length > this.maxStaleKeys) {
-        this.staleKeys_.length = this.maxStaleKeys;
-      }
-    }
-    /**
-     * Asynchronous layer level hit detection.
-     * @param {import("../pixel.js").Pixel} pixel Pixel.
-     * @return {Promise<Array<import("../Feature.js").FeatureLike>>} Promise that resolves with
-     * an array of features.
-     */
-    getFeatures(pixel) {
-      return abstract();
-    }
-    /**
-     * @param {import("../pixel.js").Pixel} pixel Pixel.
-     * @return {Uint8ClampedArray|Uint8Array|Float32Array|DataView|null} Pixel data.
-     */
-    getData(pixel) {
-      return null;
-    }
-    /**
-     * Determine whether render should be called.
-     * @abstract
-     * @param {import("../Map.js").FrameState} frameState Frame state.
-     * @return {boolean} Layer is ready to be rendered.
-     */
-    prepareFrame(frameState) {
-      return abstract();
-    }
-    /**
-     * Render the layer.
-     * @abstract
-     * @param {import("../Map.js").FrameState} frameState Frame state.
-     * @param {HTMLElement|null} target Target that may be used to render content to.
-     * @return {HTMLElement} The rendered element.
-     */
-    renderFrame(frameState, target) {
-      return abstract();
-    }
-    /**
-     * @abstract
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @param {import("../Map.js").FrameState} frameState Frame state.
-     * @param {number} hitTolerance Hit tolerance in pixels.
-     * @param {import("./vector.js").FeatureCallback<T>} callback Feature callback.
-     * @param {Array<import("./Map.js").HitMatch<T>>} matches The hit detected matches with tolerance.
-     * @return {T|undefined} Callback result.
-     * @template T
-     */
-    forEachFeatureAtCoordinate(coordinate, frameState, hitTolerance, callback, matches) {
-      return void 0;
-    }
-    /**
-     * @return {LayerType} Layer.
-     */
-    getLayer() {
-      return this.layer_;
-    }
-    /**
-     * Perform action necessary to get the layer rendered after new fonts have loaded
-     * @abstract
-     */
-    handleFontsChanged() {
-    }
-    /**
-     * Handle changes in image state.
-     * @param {import("../events/Event.js").default} event Image change event.
-     * @private
-     */
-    handleImageChange_(event) {
-      const image = (
-        /** @type {import("../Image.js").default} */
-        event.target
-      );
-      if (image.getState() === ImageState.LOADED || image.getState() === ImageState.ERROR) {
-        this.renderIfReadyAndVisible();
-      }
-    }
-    /**
-     * Load the image if not already loaded, and register the image change
-     * listener if needed.
-     * @param {import("../Image.js").default} image Image.
-     * @return {boolean} `true` if the image is already loaded, `false` otherwise.
-     * @protected
-     */
-    loadImage(image) {
-      let imageState = image.getState();
-      if (imageState != ImageState.LOADED && imageState != ImageState.ERROR) {
-        image.addEventListener(EventType.CHANGE, this.boundHandleImageChange_);
-      }
-      if (imageState == ImageState.IDLE) {
-        image.load();
-        imageState = image.getState();
-      }
-      return imageState == ImageState.LOADED;
-    }
-    /**
-     * @protected
-     */
-    renderIfReadyAndVisible() {
-      const layer = this.getLayer();
-      if (layer && layer.getVisible() && layer.getSourceState() === "ready") {
-        layer.changed();
-      }
-    }
-    /**
-     * @param {import("../Map.js").FrameState} frameState Frame state.
-     */
-    renderDeferred(frameState) {
-    }
-    /**
-     * Clean up.
-     * @override
-     */
-    disposeInternal() {
-      delete this.layer_;
-      super.disposeInternal();
-    }
-  }
-  const canvasPool = [];
-  let pixelContext = null;
-  function createPixelContext() {
-    pixelContext = createCanvasContext2D(1, 1, void 0, {
-      willReadFrequently: true
-    });
-  }
-  class CanvasLayerRenderer extends LayerRenderer {
-    /**
-     * @param {LayerType} layer Layer.
-     */
-    constructor(layer) {
-      super(layer);
-      this.container = null;
-      this.renderedResolution;
-      this.tempTransform = create();
-      this.pixelTransform = create();
-      this.inversePixelTransform = create();
-      this.context = null;
-      this.deferredContext_ = null;
-      this.containerReused = false;
-      this.frameState = null;
-    }
-    /**
-     * @param {import('../../DataTile.js').ImageLike} image Image.
-     * @param {number} col The column index.
-     * @param {number} row The row index.
-     * @return {Uint8ClampedArray|null} The image data.
-     */
-    getImageData(image, col, row) {
-      if (!pixelContext) {
-        createPixelContext();
-      }
-      pixelContext.clearRect(0, 0, 1, 1);
-      let data;
-      try {
-        pixelContext.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
-        data = pixelContext.getImageData(0, 0, 1, 1).data;
-      } catch {
-        pixelContext = null;
-        return null;
-      }
-      return data;
-    }
-    /**
-     * @param {import('../../Map.js').FrameState} frameState Frame state.
-     * @return {string} Background color.
-     */
-    getBackground(frameState) {
-      const layer = this.getLayer();
-      let background = layer.getBackground();
-      if (typeof background === "function") {
-        background = background(frameState.viewState.resolution);
-      }
-      return background || void 0;
-    }
-    /**
-     * Get a rendering container from an existing target, if compatible.
-     * @param {HTMLElement} target Potential render target.
-     * @param {string} transform CSS transform matrix.
-     * @param {string} [backgroundColor] Background color.
-     */
-    useContainer(target, transform2, backgroundColor) {
-      const layerClassName = this.getLayer().getClassName();
-      let container, context;
-      if (target && target.className === layerClassName && (!backgroundColor || target && target.style.backgroundColor && equals$2(
-        asArray(target.style.backgroundColor),
-        asArray(backgroundColor)
-      ))) {
-        const canvas = target.firstElementChild;
-        if (isCanvas(canvas)) {
-          context = canvas.getContext("2d");
-        }
-      }
-      if (context && equivalent(context.canvas.style.transform, transform2)) {
-        this.container = target;
-        this.context = context;
-        this.containerReused = true;
-      } else if (this.containerReused) {
-        this.container = null;
-        this.context = null;
-        this.containerReused = false;
-      } else if (this.container) {
-        this.container.style.backgroundColor = null;
-      }
-      if (!this.container) {
-        container = WORKER_OFFSCREEN_CANVAS ? createMockDiv() : document.createElement("div");
-        container.className = layerClassName;
-        let style = container.style;
-        style.position = "absolute";
-        style.width = "100%";
-        style.height = "100%";
-        context = createCanvasContext2D();
-        const canvas = (
-          /** @type {HTMLCanvasElement} */
-          context.canvas
-        );
-        container.appendChild(canvas);
-        style = canvas.style;
-        style.position = "absolute";
-        style.left = "0";
-        style.transformOrigin = "top left";
-        this.container = container;
-        this.context = context;
-      }
-      if (!this.containerReused && backgroundColor && !this.container.style.backgroundColor) {
-        this.container.style.backgroundColor = backgroundColor;
-      }
-    }
-    /**
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @param {import("../../extent.js").Extent} extent Clip extent.
-     * @protected
-     */
-    clipUnrotated(context, frameState, extent) {
-      const topLeft = getTopLeft(extent);
-      const topRight = getTopRight(extent);
-      const bottomRight = getBottomRight(extent);
-      const bottomLeft = getBottomLeft(extent);
-      apply(frameState.coordinateToPixelTransform, topLeft);
-      apply(frameState.coordinateToPixelTransform, topRight);
-      apply(frameState.coordinateToPixelTransform, bottomRight);
-      apply(frameState.coordinateToPixelTransform, bottomLeft);
-      const inverted = this.inversePixelTransform;
-      apply(inverted, topLeft);
-      apply(inverted, topRight);
-      apply(inverted, bottomRight);
-      apply(inverted, bottomLeft);
-      context.save();
-      context.beginPath();
-      context.moveTo(Math.round(topLeft[0]), Math.round(topLeft[1]));
-      context.lineTo(Math.round(topRight[0]), Math.round(topRight[1]));
-      context.lineTo(Math.round(bottomRight[0]), Math.round(bottomRight[1]));
-      context.lineTo(Math.round(bottomLeft[0]), Math.round(bottomLeft[1]));
-      context.clip();
-    }
-    /**
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @param {HTMLElement} target Target that may be used to render content to.
-     * @protected
-     */
-    prepareContainer(frameState, target) {
-      const extent = frameState.extent;
-      const resolution = frameState.viewState.resolution;
-      const rotation = frameState.viewState.rotation;
-      const pixelRatio = frameState.pixelRatio;
-      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
-      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
-      compose(
-        this.pixelTransform,
-        frameState.size[0] / 2,
-        frameState.size[1] / 2,
-        1 / pixelRatio,
-        1 / pixelRatio,
-        rotation,
-        -width / 2,
-        -height / 2
-      );
-      makeInverse(this.inversePixelTransform, this.pixelTransform);
-      const canvasTransform = toString$1(this.pixelTransform);
-      this.useContainer(target, canvasTransform, this.getBackground(frameState));
-      if (!this.containerReused) {
-        const canvas = this.context.canvas;
-        if (canvas.width != width || canvas.height != height) {
-          canvas.width = width;
-          canvas.height = height;
-        } else {
-          this.context.clearRect(0, 0, width, height);
-        }
-        if (canvasTransform !== /** @type {HTMLCanvasElement} */
-        canvas.style.transform) {
-          canvas.style.transform = canvasTransform;
-        }
-      }
-    }
-    /**
-     * @param {import("../../render/EventType.js").default} type Event type.
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @private
-     */
-    dispatchRenderEvent_(type, context, frameState) {
-      const layer = this.getLayer();
-      if (layer.hasListener(type)) {
-        const event = new RenderEvent(
-          type,
-          this.inversePixelTransform,
-          frameState,
-          context
-        );
-        layer.dispatchEvent(event);
-      }
-    }
-    /**
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @protected
-     */
-    preRender(context, frameState) {
-      this.frameState = frameState;
-      if (frameState.declutter) {
-        return;
-      }
-      this.dispatchRenderEvent_(RenderEventType.PRERENDER, context, frameState);
-    }
-    /**
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @protected
-     */
-    postRender(context, frameState) {
-      if (frameState.declutter) {
-        return;
-      }
-      this.dispatchRenderEvent_(RenderEventType.POSTRENDER, context, frameState);
-    }
-    /**
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     */
-    renderDeferredInternal(frameState) {
-    }
-    /**
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @return {import('../../render/canvas/ZIndexContext.js').ZIndexContextProxy} Context.
-     */
-    getRenderContext(frameState) {
-      if (frameState.declutter && !this.deferredContext_) {
-        this.deferredContext_ = new ZIndexContext();
-      }
-      return frameState.declutter ? this.deferredContext_.getContext() : this.context;
-    }
-    /**
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @override
-     */
-    renderDeferred(frameState) {
-      if (!frameState.declutter) {
-        return;
-      }
-      this.dispatchRenderEvent_(
-        RenderEventType.PRERENDER,
-        this.context,
-        frameState
-      );
-      if (frameState.declutter && this.deferredContext_) {
-        this.deferredContext_.draw(this.context);
-        this.deferredContext_.clear();
-      }
-      this.renderDeferredInternal(frameState);
-      this.dispatchRenderEvent_(
-        RenderEventType.POSTRENDER,
-        this.context,
-        frameState
-      );
-    }
-    /**
-     * Creates a transform for rendering to an element that will be rotated after rendering.
-     * @param {import("../../coordinate.js").Coordinate} center Center.
-     * @param {number} resolution Resolution.
-     * @param {number} rotation Rotation.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {number} width Width of the rendered element (in pixels).
-     * @param {number} height Height of the rendered element (in pixels).
-     * @param {number} offsetX Offset on the x-axis in view coordinates.
-     * @protected
-     * @return {!import("../../transform.js").Transform} Transform.
-     */
-    getRenderTransform(center, resolution, rotation, pixelRatio, width, height, offsetX) {
-      const dx1 = width / 2;
-      const dy1 = height / 2;
-      const sx = pixelRatio / resolution;
-      const sy = -sx;
-      const dx2 = -center[0] + offsetX;
-      const dy2 = -center[1];
-      return compose(
-        this.tempTransform,
-        dx1,
-        dy1,
-        sx,
-        sy,
-        -rotation,
-        dx2,
-        dy2
-      );
-    }
-    /**
-     * Clean up.
-     * @override
-     */
-    disposeInternal() {
-      delete this.frameState;
-      super.disposeInternal();
-    }
-  }
-  function addTileToLookup(tilesByZ, tile, z) {
-    if (!(z in tilesByZ)) {
-      tilesByZ[z] = /* @__PURE__ */ new Set([tile]);
-      return true;
-    }
-    const set = tilesByZ[z];
-    const existing = set.has(tile);
-    if (!existing) {
-      set.add(tile);
-    }
-    return !existing;
-  }
-  function removeTileFromLookup(tilesByZ, tile, z) {
-    const set = tilesByZ[z];
-    if (set) {
-      return set.delete(tile);
-    }
-    return false;
-  }
-  function getRenderExtent(frameState, extent) {
-    const layerState = frameState.layerStatesArray[frameState.layerIndex];
-    if (layerState.extent) {
-      extent = getIntersection(
-        extent,
-        fromUserExtent(layerState.extent, frameState.viewState.projection)
-      );
-    }
-    const source = (
-      /** @type {import("../../source/Tile.js").default} */
-      layerState.layer.getRenderSource()
-    );
-    if (!source.getWrapX()) {
-      const gridExtent = source.getTileGridForProjection(frameState.viewState.projection).getExtent();
-      if (gridExtent) {
-        extent = getIntersection(extent, gridExtent);
-      }
-    }
-    return extent;
-  }
-  class CanvasTileLayerRenderer extends CanvasLayerRenderer {
-    /**
-     * @param {LayerType} tileLayer Tile layer.
-     * @param {Options} [options] Options.
-     */
-    constructor(tileLayer, options) {
-      super(tileLayer);
-      options = options || {};
-      this.extentChanged = true;
-      this.renderComplete = false;
-      this.renderedExtent_ = null;
-      this.renderedPixelRatio;
-      this.renderedProjection = null;
-      this.renderedTiles = [];
-      this.renderedSourceKey_;
-      this.renderedSourceRevision_;
-      this.tempExtent = createEmpty();
-      this.tempTileRange_ = new TileRange(0, 0, 0, 0);
-      this.tempTileCoord_ = createOrUpdate(0, 0, 0);
-      const cacheSize2 = options.cacheSize !== void 0 ? options.cacheSize : 512;
-      this.tileCache_ = new LRUCache(cacheSize2);
-      this.sourceTileCache_ = null;
-      this.layerExtent = null;
-      this.maxStaleKeys = cacheSize2 * 0.5;
-    }
-    /**
-     * @return {LRUCache} Tile cache.
-     */
-    getTileCache() {
-      return this.tileCache_;
-    }
-    /**
-     * @return {LRUCache} Tile cache.
-     */
-    getSourceTileCache() {
-      if (!this.sourceTileCache_) {
-        this.sourceTileCache_ = new LRUCache(512);
-      }
-      return this.sourceTileCache_;
-    }
-    /**
-     * Get a tile from the cache or create one if needed.
-     *
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @return {import("../../Tile.js").default|null} Tile (or null if outside source extent).
-     * @protected
-     */
-    getOrCreateTile(z, x, y, frameState) {
-      const tileCache = this.tileCache_;
-      const tileLayer = this.getLayer();
-      const tileSource = tileLayer.getSource();
-      const cacheKey = getCacheKey(tileSource, tileSource.getKey(), z, x, y);
-      let tile;
-      if (tileCache.containsKey(cacheKey)) {
-        tile = tileCache.get(cacheKey);
-      } else {
-        const projection = frameState.viewState.projection;
-        const sourceProjection = tileSource.getProjection();
-        tile = tileSource.getTile(
-          z,
-          x,
-          y,
-          frameState.pixelRatio,
-          projection,
-          !sourceProjection || equivalent$1(sourceProjection, projection) ? void 0 : this.getSourceTileCache()
-        );
-        if (!tile) {
-          return null;
-        }
-        tileCache.set(cacheKey, tile);
-      }
-      return tile;
-    }
-    /**
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @return {import("../../Tile.js").default|null} Tile (or null if outside source extent).
-     * @protected
-     */
-    getTile(z, x, y, frameState) {
-      const tile = this.getOrCreateTile(z, x, y, frameState);
-      if (!tile) {
-        return null;
-      }
-      return tile;
-    }
-    /**
-     * @param {import("../../pixel.js").Pixel} pixel Pixel.
-     * @return {Uint8ClampedArray} Data at the pixel location.
-     * @override
-     */
-    getData(pixel) {
-      const frameState = this.frameState;
-      if (!frameState) {
-        return null;
-      }
-      const layer = this.getLayer();
-      const coordinate = apply(
-        frameState.pixelToCoordinateTransform,
-        pixel.slice()
-      );
-      const layerExtent = layer.getExtent();
-      if (layerExtent) {
-        if (!containsCoordinate(layerExtent, coordinate)) {
-          return null;
-        }
-      }
-      const viewState = frameState.viewState;
-      const source = layer.getRenderSource();
-      const tileGrid = source.getTileGridForProjection(viewState.projection);
-      const tilePixelRatio = source.getTilePixelRatio(frameState.pixelRatio);
-      for (let z = tileGrid.getZForResolution(viewState.resolution); z >= tileGrid.getMinZoom(); --z) {
-        const tileCoord = tileGrid.getTileCoordForCoordAndZ(coordinate, z);
-        const tile = this.getTile(z, tileCoord[1], tileCoord[2], frameState);
-        if (!tile || tile.getState() !== TileState.LOADED) {
-          continue;
-        }
-        const tileOrigin = tileGrid.getOrigin(z);
-        const tileSize = toSize(tileGrid.getTileSize(z));
-        const tileResolution = tileGrid.getResolution(z);
-        let image;
-        if (tile instanceof ImageTile || tile instanceof ReprojTile) {
-          image = tile.getImage();
-        } else if (tile instanceof DataTile) {
-          image = asImageLike(tile.getData());
-          if (!image) {
-            continue;
-          }
-        } else {
-          continue;
-        }
-        const col = Math.floor(
-          tilePixelRatio * ((coordinate[0] - tileOrigin[0]) / tileResolution - tileCoord[1] * tileSize[0])
-        );
-        const row = Math.floor(
-          tilePixelRatio * ((tileOrigin[1] - coordinate[1]) / tileResolution - tileCoord[2] * tileSize[1])
-        );
-        const gutter = Math.round(
-          tilePixelRatio * source.getGutterForProjection(viewState.projection)
-        );
-        return this.getImageData(image, col + gutter, row + gutter);
-      }
-      return null;
-    }
-    /**
-     * Determine whether render should be called.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @return {boolean} Layer is ready to be rendered.
-     * @override
-     */
-    prepareFrame(frameState) {
-      var _a;
-      if (!this.renderedProjection) {
-        this.renderedProjection = frameState.viewState.projection;
-      } else if (frameState.viewState.projection !== this.renderedProjection) {
-        this.tileCache_.clear();
-        this.renderedProjection = frameState.viewState.projection;
-      }
-      const source = this.getLayer().getSource();
-      if (!source) {
-        return false;
-      }
-      const sourceRevision = source.getRevision();
-      if (!this.renderedSourceRevision_) {
-        this.renderedSourceRevision_ = sourceRevision;
-      } else if (this.renderedSourceRevision_ !== sourceRevision) {
-        this.renderedSourceRevision_ = sourceRevision;
-        if (this.renderedSourceKey_ === source.getKey()) {
-          this.tileCache_.clear();
-          (_a = this.sourceTileCache_) == null ? void 0 : _a.clear();
-        }
-      }
-      return true;
-    }
-    /**
-     * Determine whether tiles for next extent should be enqueued for rendering.
-     * @return {boolean} Rendering tiles for next extent is supported.
-     * @protected
-     */
-    enqueueTilesForNextExtent() {
-      return true;
-    }
-    /**
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @param {import("../../extent.js").Extent} extent The extent to be rendered.
-     * @param {number} initialZ The zoom level.
-     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
-     * @param {number} preload Number of additional levels to load.
-     */
-    enqueueTiles(frameState, extent, initialZ, tilesByZ, preload) {
-      const viewState = frameState.viewState;
-      const tileLayer = this.getLayer();
-      const tileSource = tileLayer.getRenderSource();
-      const tileGrid = tileSource.getTileGridForProjection(viewState.projection);
-      const tileSourceKey = getUid(tileSource);
-      if (!(tileSourceKey in frameState.wantedTiles)) {
-        frameState.wantedTiles[tileSourceKey] = {};
-      }
-      const wantedTiles = frameState.wantedTiles[tileSourceKey];
-      const map = tileLayer.getMapInternal();
-      const minZ = Math.max(
-        initialZ - preload,
-        tileGrid.getMinZoom(),
-        tileGrid.getZForResolution(
-          Math.min(
-            tileLayer.getMaxResolution(),
-            map ? map.getView().getResolutionForZoom(Math.max(tileLayer.getMinZoom(), 0)) : tileGrid.getResolution(0)
-          ),
-          tileSource.zDirection
-        )
-      );
-      const rotation = viewState.rotation;
-      const viewport = rotation ? getRotatedViewport(
-        viewState.center,
-        viewState.resolution,
-        rotation,
-        frameState.size
-      ) : void 0;
-      for (let z = initialZ; z >= minZ; --z) {
-        const tileRange = tileGrid.getTileRangeForExtentAndZ(
-          extent,
-          z,
-          this.tempTileRange_
-        );
-        const tileResolution = tileGrid.getResolution(z);
-        for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
-          for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
-            if (rotation && !tileGrid.tileCoordIntersectsViewport([z, x, y], viewport)) {
-              continue;
-            }
-            const tile = this.getTile(z, x, y, frameState);
-            if (!tile) {
-              continue;
-            }
-            const added = addTileToLookup(tilesByZ, tile, z);
-            if (!added) {
-              continue;
-            }
-            const tileQueueKey = tile.getKey();
-            wantedTiles[tileQueueKey] = true;
-            if (tile.getState() === TileState.IDLE) {
-              if (!frameState.tileQueue.isKeyQueued(tileQueueKey)) {
-                const tileCoord = createOrUpdate(z, x, y, this.tempTileCoord_);
-                frameState.tileQueue.enqueue([
-                  tile,
-                  tileSourceKey,
-                  tileGrid.getTileCoordCenter(tileCoord),
-                  tileResolution
-                ]);
-              }
-            }
-          }
-        }
-      }
-    }
-    /**
-     * Look for tiles covering the provided tile coordinate at an alternate
-     * zoom level.  Loaded tiles will be added to the provided tile texture lookup.
-     * @param {import("../../tilecoord.js").TileCoord} tileCoord The target tile coordinate.
-     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
-     * @return {boolean} The tile coordinate is covered by loaded tiles at the alternate zoom level.
-     * @private
-     */
-    findStaleTile_(tileCoord, tilesByZ) {
-      const tileCache = this.tileCache_;
-      const z = tileCoord[0];
-      const x = tileCoord[1];
-      const y = tileCoord[2];
-      const staleKeys = this.getStaleKeys();
-      for (let i = 0; i < staleKeys.length; ++i) {
-        const cacheKey = getCacheKey(
-          this.getLayer().getSource(),
-          staleKeys[i],
-          z,
-          x,
-          y
-        );
-        if (tileCache.containsKey(cacheKey)) {
-          const tile = tileCache.peek(cacheKey);
-          if (tile.getState() === TileState.LOADED) {
-            tile.endTransition(getUid(this));
-            addTileToLookup(tilesByZ, tile, z);
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-    /**
-     * Look for tiles covering the provided tile coordinate at an alternate
-     * zoom level.  Loaded tiles will be added to the provided tile texture lookup.
-     * @param {import("../../tilegrid/TileGrid.js").default} tileGrid The tile grid.
-     * @param {import("../../tilecoord.js").TileCoord} tileCoord The target tile coordinate.
-     * @param {number} altZ The alternate zoom level.
-     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
-     * @return {boolean} The tile coordinate is covered by loaded tiles at the alternate zoom level.
-     * @private
-     */
-    findAltTiles_(tileGrid, tileCoord, altZ, tilesByZ) {
-      const tileRange = tileGrid.getTileRangeForTileCoordAndZ(
-        tileCoord,
-        altZ,
-        this.tempTileRange_
-      );
-      if (!tileRange) {
-        return false;
-      }
-      let covered = true;
-      const tileCache = this.tileCache_;
-      const source = this.getLayer().getRenderSource();
-      const sourceKey = source.getKey();
-      for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
-        for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
-          const cacheKey = getCacheKey(source, sourceKey, altZ, x, y);
-          let loaded = false;
-          if (tileCache.containsKey(cacheKey)) {
-            const tile = tileCache.peek(cacheKey);
-            if (tile.getState() === TileState.LOADED) {
-              addTileToLookup(tilesByZ, tile, altZ);
-              loaded = true;
-            }
-          }
-          if (!loaded) {
-            covered = false;
-          }
-        }
-      }
-      return covered;
-    }
-    /**
-     * Render the layer.
-     *
-     * The frame rendering logic has three parts:
-     *
-     *  1. Enqueue tiles
-     *  2. Find alt tiles for those that are not yet loaded
-     *  3. Render loaded tiles
-     *
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @param {HTMLElement} target Target that may be used to render content to.
-     * @return {HTMLElement} The rendered element.
-     * @override
-     */
-    renderFrame(frameState, target) {
-      this.renderComplete = true;
-      const layerState = frameState.layerStatesArray[frameState.layerIndex];
-      const viewState = frameState.viewState;
-      const projection = viewState.projection;
-      const viewResolution = viewState.resolution;
-      const viewCenter = viewState.center;
-      const pixelRatio = frameState.pixelRatio;
-      const tileLayer = this.getLayer();
-      const tileSource = tileLayer.getSource();
-      const tileGrid = tileSource.getTileGridForProjection(projection);
-      const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
-      const tileResolution = tileGrid.getResolution(z);
-      const sourceKey = tileSource.getKey();
-      if (!this.renderedSourceKey_) {
-        this.renderedSourceKey_ = sourceKey;
-      } else if (this.renderedSourceKey_ !== sourceKey) {
-        this.prependStaleKey(this.renderedSourceKey_);
-        this.renderedSourceKey_ = sourceKey;
-      }
-      let frameExtent = frameState.extent;
-      const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
-      this.prepareContainer(frameState, target);
-      const width = this.context.canvas.width;
-      const height = this.context.canvas.height;
-      this.layerExtent = layerState.extent ? fromUserExtent(layerState.extent) : null;
-      if (this.layerExtent) {
-        frameExtent = getIntersection(frameExtent, this.layerExtent);
-      }
-      const dx = tileResolution * width / 2 / tilePixelRatio;
-      const dy = tileResolution * height / 2 / tilePixelRatio;
-      const canvasExtent = [
-        viewCenter[0] - dx,
-        viewCenter[1] - dy,
-        viewCenter[0] + dx,
-        viewCenter[1] + dy
-      ];
-      const tilesByZ = {};
-      this.renderedTiles.length = 0;
-      const preload = tileLayer.getPreload();
-      if (frameState.nextExtent && this.enqueueTilesForNextExtent()) {
-        const targetZ = tileGrid.getZForResolution(
-          viewState.nextResolution,
-          tileSource.zDirection
-        );
-        const nextExtent = getRenderExtent(frameState, frameState.nextExtent);
-        this.enqueueTiles(frameState, nextExtent, targetZ, tilesByZ, preload);
-      }
-      const renderExtent = getRenderExtent(frameState, frameExtent);
-      this.enqueueTiles(frameState, renderExtent, z, tilesByZ, 0);
-      if (preload > 0) {
-        setTimeout(() => {
-          this.enqueueTiles(
-            frameState,
-            renderExtent,
-            z - 1,
-            tilesByZ,
-            preload - 1
-          );
-        }, 0);
-      }
-      if (!(z in tilesByZ)) {
-        return this.container;
-      }
-      const uid = getUid(this);
-      const time = frameState.time;
-      for (const tile of tilesByZ[z]) {
-        const tileState = tile.getState();
-        if (tileState === TileState.EMPTY) {
-          continue;
-        }
-        const tileCoord = tile.tileCoord;
-        if (tileState === TileState.LOADED) {
-          const alpha = tile.getAlpha(uid, time);
-          if (alpha === 1) {
-            tile.endTransition(uid);
-            continue;
-          }
-        }
-        if (tileState !== TileState.ERROR) {
-          this.renderComplete = false;
-        }
-        const hasStaleTile = this.findStaleTile_(tileCoord, tilesByZ);
-        if (hasStaleTile) {
-          removeTileFromLookup(tilesByZ, tile, z);
-          frameState.animate = true;
-          continue;
-        }
-        const coveredByChildren = this.findAltTiles_(
-          tileGrid,
-          tileCoord,
-          z + 1,
-          tilesByZ
-        );
-        if (coveredByChildren) {
-          continue;
-        }
-        const minZoom = tileGrid.getMinZoom();
-        for (let parentZ = z - 1; parentZ >= minZoom; --parentZ) {
-          const coveredByParent = this.findAltTiles_(
-            tileGrid,
-            tileCoord,
-            parentZ,
-            tilesByZ
-          );
-          if (coveredByParent) {
-            break;
-          }
-        }
-      }
-      const canvasScale = tileResolution / viewResolution * pixelRatio / tilePixelRatio;
-      const context = this.getRenderContext(frameState);
-      compose(
-        this.tempTransform,
-        width / 2,
-        height / 2,
-        canvasScale,
-        canvasScale,
-        0,
-        -width / 2,
-        -height / 2
-      );
-      if (this.layerExtent) {
-        this.clipUnrotated(context, frameState, this.layerExtent);
-      }
-      if (!tileSource.getInterpolate()) {
-        context.imageSmoothingEnabled = false;
-      }
-      this.preRender(context, frameState);
-      const zs = Object.keys(tilesByZ).map(Number);
-      zs.sort(ascending);
-      let currentClip;
-      const clips = [];
-      const clipZs = [];
-      for (let i = zs.length - 1; i >= 0; --i) {
-        const currentZ = zs[i];
-        const currentTilePixelSize = tileSource.getTilePixelSize(
-          currentZ,
-          pixelRatio,
-          projection
-        );
-        const currentResolution = tileGrid.getResolution(currentZ);
-        const currentScale = currentResolution / tileResolution;
-        const dx2 = currentTilePixelSize[0] * currentScale * canvasScale;
-        const dy2 = currentTilePixelSize[1] * currentScale * canvasScale;
-        const originTileCoord = tileGrid.getTileCoordForCoordAndZ(
-          getTopLeft(canvasExtent),
-          currentZ
-        );
-        const originTileExtent = tileGrid.getTileCoordExtent(originTileCoord);
-        const origin = apply(this.tempTransform, [
-          tilePixelRatio * (originTileExtent[0] - canvasExtent[0]) / tileResolution,
-          tilePixelRatio * (canvasExtent[3] - originTileExtent[3]) / tileResolution
-        ]);
-        const tileGutter = tilePixelRatio * tileSource.getGutterForProjection(projection);
-        for (const tile of tilesByZ[currentZ]) {
-          if (tile.getState() !== TileState.LOADED) {
-            continue;
-          }
-          const tileCoord = tile.tileCoord;
-          const xIndex = originTileCoord[1] - tileCoord[1];
-          const nextX = Math.round(origin[0] - (xIndex - 1) * dx2);
-          const yIndex = originTileCoord[2] - tileCoord[2];
-          const nextY = Math.round(origin[1] - (yIndex - 1) * dy2);
-          const x = Math.round(origin[0] - xIndex * dx2);
-          const y = Math.round(origin[1] - yIndex * dy2);
-          const w = nextX - x;
-          const h = nextY - y;
-          const transition = zs.length === 1;
-          let contextSaved = false;
-          currentClip = [x, y, x + w, y, x + w, y + h, x, y + h];
-          for (let i2 = 0, ii = clips.length; i2 < ii; ++i2) {
-            if (!transition && currentZ < clipZs[i2]) {
-              const clip = clips[i2];
-              if (intersects$1(
-                [x, y, x + w, y + h],
-                [clip[0], clip[3], clip[4], clip[7]]
-              )) {
-                if (!contextSaved) {
-                  context.save();
-                  contextSaved = true;
-                }
-                context.beginPath();
-                context.moveTo(currentClip[0], currentClip[1]);
-                context.lineTo(currentClip[2], currentClip[3]);
-                context.lineTo(currentClip[4], currentClip[5]);
-                context.lineTo(currentClip[6], currentClip[7]);
-                context.moveTo(clip[6], clip[7]);
-                context.lineTo(clip[4], clip[5]);
-                context.lineTo(clip[2], clip[3]);
-                context.lineTo(clip[0], clip[1]);
-                context.clip();
-              }
-            }
-          }
-          clips.push(currentClip);
-          clipZs.push(currentZ);
-          this.drawTile(tile, frameState, x, y, w, h, tileGutter, transition);
-          if (contextSaved) {
-            context.restore();
-          }
-          this.renderedTiles.unshift(tile);
-          this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
-        }
-      }
-      this.renderedResolution = tileResolution;
-      this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
-      this.renderedExtent_ = canvasExtent;
-      this.renderedPixelRatio = pixelRatio;
-      this.postRender(this.context, frameState);
-      if (this.layerExtent) {
-        context.restore();
-      }
-      context.imageSmoothingEnabled = true;
-      if (this.renderComplete) {
-        const postRenderFunction = (map, frameState2) => {
-          var _a;
-          const tileSourceKey = getUid(tileSource);
-          const wantedTiles = frameState2.wantedTiles[tileSourceKey];
-          const tilesCount = wantedTiles ? Object.keys(wantedTiles).length : 0;
-          this.updateCacheSize(tilesCount);
-          this.tileCache_.expireCache();
-          (_a = this.sourceTileCache_) == null ? void 0 : _a.expireCache();
-        };
-        frameState.postRenderFunctions.push(postRenderFunction);
-      }
-      return this.container;
-    }
-    /**
-     * Increases the cache size if needed
-     * @param {number} tileCount Minimum number of tiles needed.
-     */
-    updateCacheSize(tileCount) {
-      this.tileCache_.highWaterMark = Math.max(
-        this.tileCache_.highWaterMark,
-        tileCount * 2
-      );
-    }
-    /**
-     * @param {import("../../Tile.js").default} tile Tile.
-     * @param {import("../../Map.js").FrameState} frameState Frame state.
-     * @param {number} x Left of the tile.
-     * @param {number} y Top of the tile.
-     * @param {number} w Width of the tile.
-     * @param {number} h Height of the tile.
-     * @param {number} gutter Tile gutter.
-     * @param {boolean} transition Apply an alpha transition.
-     * @protected
-     */
-    drawTile(tile, frameState, x, y, w, h, gutter, transition) {
-      let image;
-      if (tile instanceof DataTile) {
-        image = asImageLike(tile.getData());
-        if (!image) {
-          throw new Error("Rendering array data is not yet supported");
-        }
-      } else {
-        image = this.getTileImage(
-          /** @type {import("../../ImageTile.js").default} */
-          tile
-        );
-      }
-      if (!image) {
-        return;
-      }
-      const context = this.getRenderContext(frameState);
-      const uid = getUid(this);
-      const layerState = frameState.layerStatesArray[frameState.layerIndex];
-      const alpha = layerState.opacity * (transition ? tile.getAlpha(uid, frameState.time) : 1);
-      const alphaChanged = alpha !== context.globalAlpha;
-      if (alphaChanged) {
-        context.save();
-        context.globalAlpha = alpha;
-      }
-      context.drawImage(
-        image,
-        gutter,
-        gutter,
-        image.width - 2 * gutter,
-        image.height - 2 * gutter,
-        x,
-        y,
-        w,
-        h
-      );
-      if (alphaChanged) {
-        context.restore();
-      }
-      if (alpha !== layerState.opacity) {
-        frameState.animate = true;
-      } else if (transition) {
-        tile.endTransition(uid);
-      }
-    }
-    /**
-     * @return {HTMLCanvasElement|OffscreenCanvas} Image
-     */
-    getImage() {
-      const context = this.context;
-      return context ? context.canvas : null;
-    }
-    /**
-     * Get the image from a tile.
-     * @param {import("../../ImageTile.js").default} tile Tile.
-     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
-     * @protected
-     */
-    getTileImage(tile) {
-      return tile.getImage();
-    }
-    /**
-     * @param {!Object<string, !Object<string, boolean>>} usedTiles Used tiles.
-     * @param {import("../../source/Tile.js").default} tileSource Tile source.
-     * @param {import('../../Tile.js').default} tile Tile.
-     * @protected
-     */
-    updateUsedTiles(usedTiles, tileSource, tile) {
-      const tileSourceKey = getUid(tileSource);
-      if (!(tileSourceKey in usedTiles)) {
-        usedTiles[tileSourceKey] = {};
-      }
-      usedTiles[tileSourceKey][tile.getKey()] = true;
-    }
-  }
-  const TileProperty = {
-    PRELOAD: "preload",
-    USE_INTERIM_TILES_ON_ERROR: "useInterimTilesOnError"
-  };
-  class BaseTileLayer extends Layer {
-    /**
-     * @param {Options<TileSourceType>} [options] Tile layer options.
-     */
-    constructor(options) {
-      options = options ? options : {};
-      const baseOptions = Object.assign({}, options);
-      const cacheSize2 = options.cacheSize;
-      delete options.cacheSize;
-      delete baseOptions.preload;
-      delete baseOptions.useInterimTilesOnError;
-      super(baseOptions);
       this.on;
       this.once;
       this.un;
-      this.cacheSize_ = cacheSize2;
-      this.setPreload(options.preload !== void 0 ? options.preload : 0);
-      this.setUseInterimTilesOnError(
-        options.useInterimTilesOnError !== void 0 ? options.useInterimTilesOnError : true
-      );
+      this.id_ = void 0;
+      this.geometryName_ = "geometry";
+      this.style_ = null;
+      this.styleFunction_ = void 0;
+      this.geometryChangeKey_ = null;
+      this.addChangeListener(this.geometryName_, this.handleGeometryChanged_);
+      if (geometryOrProperties) {
+        if (typeof /** @type {?} */
+        geometryOrProperties.getSimplifiedGeometry === "function") {
+          const geometry = (
+            /** @type {Geometry} */
+            geometryOrProperties
+          );
+          this.setGeometry(geometry);
+        } else {
+          const properties = geometryOrProperties;
+          this.setProperties(properties);
+        }
+      }
     }
     /**
-     * @return {number|undefined} The suggested cache size
-     * @protected
-     */
-    getCacheSize() {
-      return this.cacheSize_;
-    }
-    /**
-     * Return the level as number to which we will preload tiles up to.
-     * @return {number} The level to preload tiles up to.
-     * @observable
+     * Clone this feature. If the original feature has a geometry it
+     * is also cloned. The feature id is not set in the clone.
+     * @return {Feature<Geometry>} The clone.
      * @api
      */
-    getPreload() {
+    clone() {
+      const clone2 = (
+        /** @type {Feature<Geometry>} */
+        new Feature()
+      );
+      const geometryName = this.geometryName_;
+      clone2.setGeometryName(geometryName);
+      const properties = this.getPropertiesInternal();
+      if (properties) {
+        const geometry = this.getGeometry();
+        for (const key in properties) {
+          if (key === geometryName && geometry) {
+            clone2.set(key, geometry.clone());
+          } else {
+            clone2.set(key, properties[key], true);
+          }
+        }
+      }
+      const style = this.getStyle();
+      if (style) {
+        clone2.setStyle(style);
+      }
+      return clone2;
+    }
+    /**
+     * Get the feature's default geometry.  A feature may have any number of named
+     * geometries.  The "default" geometry (the one that is rendered by default) is
+     * set when calling {@link module:ol/Feature~Feature#setGeometry}.
+     * @return {Geometry|undefined} The default geometry for the feature.
+     * @api
+     * @observable
+     */
+    getGeometry() {
       return (
-        /** @type {number} */
-        this.get(TileProperty.PRELOAD)
+        /** @type {Geometry|undefined} */
+        this.get(this.geometryName_)
       );
     }
     /**
-     * Set the level as number to which we will preload tiles up to.
-     * @param {number} preload The level to preload tiles up to.
-     * @observable
+     * Get the feature identifier.  This is a stable identifier for the feature and
+     * is either set when reading data from a remote source or set explicitly by
+     * calling {@link module:ol/Feature~Feature#setId}.
+     * @return {number|string|undefined} Id.
      * @api
      */
-    setPreload(preload) {
-      this.set(TileProperty.PRELOAD, preload);
+    getId() {
+      return this.id_;
     }
     /**
-     * Deprecated.  Whether we use interim tiles on error.
-     * @return {boolean} Use interim tiles on error.
-     * @observable
+     * Get the name of the feature's default geometry.  By default, the default
+     * geometry is named `geometry`.
+     * @return {string} Get the property name associated with the default geometry
+     *     for this feature.
      * @api
      */
-    getUseInterimTilesOnError() {
-      return (
-        /** @type {boolean} */
-        this.get(TileProperty.USE_INTERIM_TILES_ON_ERROR)
-      );
+    getGeometryName() {
+      return this.geometryName_;
     }
     /**
-     * Deprecated.  Set whether we use interim tiles on error.
-     * @param {boolean} useInterimTilesOnError Use interim tiles on error.
-     * @observable
+     * Get the feature's style. Will return what was provided to the
+     * {@link module:ol/Feature~Feature#setStyle} method.
+     * @return {import("./style/Style.js").StyleLike|undefined} The feature style.
      * @api
      */
-    setUseInterimTilesOnError(useInterimTilesOnError) {
-      this.set(TileProperty.USE_INTERIM_TILES_ON_ERROR, useInterimTilesOnError);
+    getStyle() {
+      return this.style_;
     }
     /**
-     * Get data for a pixel location.  The return type depends on the source data.  For image tiles,
-     * a four element RGBA array will be returned.  For data tiles, the array length will match the
-     * number of bands in the dataset.  For requests outside the layer extent, `null` will be returned.
-     * Data for a image tiles can only be retrieved if the source's `crossOrigin` property is set.
-     *
-     * ```js
-     * // display layer data on every pointer move
-     * map.on('pointermove', (event) => {
-     *   console.log(layer.getData(event.pixel));
-     * });
-     * ```
-     * @param {import("../pixel.js").Pixel} pixel Pixel.
-     * @return {Uint8ClampedArray|Uint8Array|Float32Array|DataView|null} Pixel data.
+     * Get the feature's style function.
+     * @return {import("./style/Style.js").StyleFunction|undefined} Return a function
+     * representing the current style of this feature.
      * @api
-     * @override
      */
-    getData(pixel) {
-      return super.getData(pixel);
+    getStyleFunction() {
+      return this.styleFunction_;
+    }
+    /**
+     * @private
+     */
+    handleGeometryChange_() {
+      this.changed();
+    }
+    /**
+     * @private
+     */
+    handleGeometryChanged_() {
+      if (this.geometryChangeKey_) {
+        unlistenByKey(this.geometryChangeKey_);
+        this.geometryChangeKey_ = null;
+      }
+      const geometry = this.getGeometry();
+      if (geometry) {
+        this.geometryChangeKey_ = listen(
+          geometry,
+          EventType.CHANGE,
+          this.handleGeometryChange_,
+          this
+        );
+      }
+      this.changed();
+    }
+    /**
+     * Set the default geometry for the feature.  This will update the property
+     * with the name returned by {@link module:ol/Feature~Feature#getGeometryName}.
+     * @param {Geometry|undefined} geometry The new geometry.
+     * @api
+     * @observable
+     */
+    setGeometry(geometry) {
+      this.set(this.geometryName_, geometry);
+    }
+    /**
+     * Set the style for the feature to override the layer style.  This can be a
+     * single style object, an array of styles, or a function that takes a
+     * resolution and returns an array of styles. To unset the feature style, call
+     * `setStyle()` without arguments or a falsey value.
+     * @param {import("./style/Style.js").StyleLike} [style] Style for this feature.
+     * @api
+     * @fires module:ol/events/Event~BaseEvent#event:change
+     */
+    setStyle(style) {
+      this.style_ = style;
+      this.styleFunction_ = !style ? void 0 : createStyleFunction(style);
+      this.changed();
+    }
+    /**
+     * Set the feature id.  The feature id is considered stable and may be used when
+     * requesting features or comparing identifiers returned from a remote source.
+     * The feature id can be used with the
+     * {@link module:ol/source/Vector~VectorSource#getFeatureById} method.
+     * @param {number|string|undefined} id The feature id.
+     * @api
+     * @fires module:ol/events/Event~BaseEvent#event:change
+     */
+    setId(id) {
+      this.id_ = id;
+      this.changed();
+    }
+    /**
+     * Set the property name to be used when getting the feature's default geometry.
+     * When calling {@link module:ol/Feature~Feature#getGeometry}, the value of the property with
+     * this name will be returned.
+     * @param {string} name The property name of the default geometry.
+     * @api
+     */
+    setGeometryName(name) {
+      if (name === this.geometryName_) {
+        return;
+      }
+      this.removeChangeListener(this.geometryName_, this.handleGeometryChanged_);
+      this.geometryName_ = name;
+      this.addChangeListener(this.geometryName_, this.handleGeometryChanged_);
+      this.handleGeometryChanged_();
     }
   }
-  class TileLayer extends BaseTileLayer {
+  function createStyleFunction(obj) {
+    if (typeof obj === "function") {
+      return obj;
+    }
+    let styles;
+    if (Array.isArray(obj)) {
+      styles = obj;
+    } else {
+      assert(
+        typeof /** @type {?} */
+        obj.getZIndex === "function",
+        "Expected an `ol/style/Style` or an array of `ol/style/Style.js`"
+      );
+      const style = (
+        /** @type {import("./style/Style.js").default} */
+        obj
+      );
+      styles = [style];
+    }
+    return function() {
+      return styles;
+    };
+  }
+  class Circle extends SimpleGeometry {
     /**
-     * @param {import("./BaseTile.js").Options<TileSourceType>} [options] Tile layer options.
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     *     For internal use, flat coordinates in combination with `layout` and no
+     *     `radius` are also accepted.
+     * @param {number} [radius] Radius in units of the projection.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
      */
-    constructor(options) {
-      super(options);
+    constructor(center, radius, layout) {
+      super();
+      if (layout !== void 0 && radius === void 0) {
+        this.setFlatCoordinates(layout, center);
+      } else {
+        radius = radius ? radius : 0;
+        this.setCenterAndRadius(center, radius, layout);
+      }
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!Circle} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const circle = new Circle(
+        this.flatCoordinates.slice(),
+        void 0,
+        this.layout
+      );
+      circle.applyProperties(this);
+      return circle;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      const squaredDistance2 = dx * dx + dy * dy;
+      if (squaredDistance2 < minSquaredDistance) {
+        if (squaredDistance2 === 0) {
+          for (let i = 0; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        } else {
+          const delta = this.getRadius() / Math.sqrt(squaredDistance2);
+          closestPoint[0] = flatCoordinates[0] + delta * dx;
+          closestPoint[1] = flatCoordinates[1] + delta * dy;
+          for (let i = 2; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        }
+        closestPoint.length = this.stride;
+        return squaredDistance2;
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     * @override
+     */
+    containsXY(x, y) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      return dx * dx + dy * dy <= this.getRadiusSquared_();
+    }
+    /**
+     * Return the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @return {import("../coordinate.js").Coordinate} Center.
+     * @api
+     */
+    getCenter() {
+      return this.flatCoordinates.slice(0, this.stride);
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      const flatCoordinates = this.flatCoordinates;
+      const radius = flatCoordinates[this.stride] - flatCoordinates[0];
+      return createOrUpdate$2(
+        flatCoordinates[0] - radius,
+        flatCoordinates[1] - radius,
+        flatCoordinates[0] + radius,
+        flatCoordinates[1] + radius,
+        extent
+      );
+    }
+    /**
+     * Return the radius of the circle.
+     * @return {number} Radius.
+     * @api
+     */
+    getRadius() {
+      return Math.sqrt(this.getRadiusSquared_());
+    }
+    /**
+     * @private
+     * @return {number} Radius squared.
+     */
+    getRadiusSquared_() {
+      const dx = this.flatCoordinates[this.stride] - this.flatCoordinates[0];
+      const dy = this.flatCoordinates[this.stride + 1] - this.flatCoordinates[1];
+      return dx * dx + dy * dy;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "Circle";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      const circleExtent = this.getExtent();
+      if (intersects$1(extent, circleExtent)) {
+        const center = this.getCenter();
+        if (extent[0] <= center[0] && extent[2] >= center[0]) {
+          return true;
+        }
+        if (extent[1] <= center[1] && extent[3] >= center[1]) {
+          return true;
+        }
+        return forEachCorner(extent, this.intersectsCoordinate.bind(this));
+      }
+      return false;
+    }
+    /**
+     * Set the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @param {import("../coordinate.js").Coordinate} center Center.
+     * @api
+     */
+    setCenter(center) {
+      const stride = this.stride;
+      const radius = this.flatCoordinates[stride] - this.flatCoordinates[0];
+      const flatCoordinates = center.slice();
+      flatCoordinates[stride] = flatCoordinates[0] + radius;
+      for (let i = 1; i < stride; ++i) {
+        flatCoordinates[stride + i] = center[i];
+      }
+      this.setFlatCoordinates(this.layout, flatCoordinates);
+      this.changed();
+    }
+    /**
+     * Set the center (as {@link module:ol/coordinate~Coordinate coordinate}) and the radius (as
+     * number) of the circle.
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     * @param {number} radius Radius.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     */
+    setCenterAndRadius(center, radius, layout) {
+      this.setLayout(layout, center, 0);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      const flatCoordinates = this.flatCoordinates;
+      let offset = deflateCoordinate(flatCoordinates, 0, center, this.stride);
+      flatCoordinates[offset++] = flatCoordinates[0] + radius;
+      for (let i = 1, ii = this.stride; i < ii; ++i) {
+        flatCoordinates[offset++] = flatCoordinates[i];
+      }
+      flatCoordinates.length = offset;
+      this.changed();
     }
     /**
      * @override
      */
-    createRenderer() {
-      return new CanvasTileLayerRenderer(this, {
-        cacheSize: this.getCacheSize()
-      });
+    getCoordinates() {
+      return null;
+    }
+    /**
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+    }
+    /**
+     * Set the radius of the circle. The radius is in the units of the projection.
+     * @param {number} radius Radius.
+     * @api
+     */
+    setRadius(radius) {
+      this.flatCoordinates[this.stride] = this.flatCoordinates[0] + radius;
+      this.changed();
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @param {number} angle Rotation angle in counter-clockwise radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     * @override
+     */
+    rotate(angle, anchor) {
+      const center = this.getCenter();
+      const stride = this.getStride();
+      this.setCenter(
+        rotate(center, 0, center.length, stride, angle, anchor, center)
+      );
+      this.changed();
+    }
+  }
+  Circle.prototype.transform;
+  function interpolatePoint(flatCoordinates, offset, end, stride, fraction, dest, dimension) {
+    let o, t;
+    const n = (end - offset) / stride;
+    if (n === 1) {
+      o = offset;
+    } else if (n === 2) {
+      o = offset;
+      t = fraction;
+    } else if (n !== 0) {
+      let x1 = flatCoordinates[offset];
+      let y1 = flatCoordinates[offset + 1];
+      let length = 0;
+      const cumulativeLengths = [0];
+      for (let i = offset + stride; i < end; i += stride) {
+        const x2 = flatCoordinates[i];
+        const y2 = flatCoordinates[i + 1];
+        length += Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        cumulativeLengths.push(length);
+        x1 = x2;
+        y1 = y2;
+      }
+      const target = fraction * length;
+      const index = binarySearch(cumulativeLengths, target);
+      if (index < 0) {
+        t = (target - cumulativeLengths[-index - 2]) / (cumulativeLengths[-index - 1] - cumulativeLengths[-index - 2]);
+        o = offset + (-index - 2) * stride;
+      } else {
+        o = offset + index * stride;
+      }
+    }
+    dimension = dimension > 1 ? dimension : 2;
+    dest = dest ? dest : new Array(dimension);
+    for (let i = 0; i < dimension; ++i) {
+      dest[i] = o === void 0 ? NaN : t === void 0 ? flatCoordinates[o + i] : lerp(flatCoordinates[o + i], flatCoordinates[o + stride + i], t);
+    }
+    return dest;
+  }
+  function lineStringCoordinateAtM(flatCoordinates, offset, end, stride, m, extrapolate) {
+    if (end == offset) {
+      return null;
+    }
+    let coordinate;
+    if (m < flatCoordinates[offset + stride - 1]) {
+      if (extrapolate) {
+        coordinate = flatCoordinates.slice(offset, offset + stride);
+        coordinate[stride - 1] = m;
+        return coordinate;
+      }
+      return null;
+    }
+    if (flatCoordinates[end - 1] < m) {
+      if (extrapolate) {
+        coordinate = flatCoordinates.slice(end - stride, end);
+        coordinate[stride - 1] = m;
+        return coordinate;
+      }
+      return null;
+    }
+    if (m == flatCoordinates[offset + stride - 1]) {
+      return flatCoordinates.slice(offset, offset + stride);
+    }
+    let lo = offset / stride;
+    let hi = end / stride;
+    while (lo < hi) {
+      const mid = lo + hi >> 1;
+      if (m < flatCoordinates[(mid + 1) * stride - 1]) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    const m0 = flatCoordinates[lo * stride - 1];
+    if (m == m0) {
+      return flatCoordinates.slice((lo - 1) * stride, (lo - 1) * stride + stride);
+    }
+    const m1 = flatCoordinates[(lo + 1) * stride - 1];
+    const t = (m - m0) / (m1 - m0);
+    coordinate = [];
+    for (let i = 0; i < stride - 1; ++i) {
+      coordinate.push(
+        lerp(
+          flatCoordinates[(lo - 1) * stride + i],
+          flatCoordinates[lo * stride + i],
+          t
+        )
+      );
+    }
+    coordinate.push(m);
+    return coordinate;
+  }
+  function lineStringsCoordinateAtM(flatCoordinates, offset, ends, stride, m, extrapolate, interpolate) {
+    if (interpolate) {
+      return lineStringCoordinateAtM(
+        flatCoordinates,
+        offset,
+        ends[ends.length - 1],
+        stride,
+        m,
+        extrapolate
+      );
+    }
+    let coordinate;
+    if (m < flatCoordinates[stride - 1]) {
+      if (extrapolate) {
+        coordinate = flatCoordinates.slice(0, stride);
+        coordinate[stride - 1] = m;
+        return coordinate;
+      }
+      return null;
+    }
+    if (flatCoordinates[flatCoordinates.length - 1] < m) {
+      if (extrapolate) {
+        coordinate = flatCoordinates.slice(flatCoordinates.length - stride);
+        coordinate[stride - 1] = m;
+        return coordinate;
+      }
+      return null;
+    }
+    for (let i = 0, ii = ends.length; i < ii; ++i) {
+      const end = ends[i];
+      if (offset == end) {
+        continue;
+      }
+      if (m < flatCoordinates[offset + stride - 1]) {
+        return null;
+      }
+      if (m <= flatCoordinates[end - 1]) {
+        return lineStringCoordinateAtM(
+          flatCoordinates,
+          offset,
+          end,
+          stride,
+          m,
+          false
+        );
+      }
+      offset = end;
+    }
+    return null;
+  }
+  function lineStringLength(flatCoordinates, offset, end, stride) {
+    let x1 = flatCoordinates[offset];
+    let y1 = flatCoordinates[offset + 1];
+    let length = 0;
+    for (let i = offset + stride; i < end; i += stride) {
+      const x2 = flatCoordinates[i];
+      const y2 = flatCoordinates[i + 1];
+      length += Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      x1 = x2;
+      y1 = y2;
+    }
+    return length;
+  }
+  class LineString extends SimpleGeometry {
+    /**
+     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
+     *     For internal use, flat coordinates in combination with `layout` are also accepted.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(coordinates2, layout) {
+      super();
+      this.flatMidpoint_ = null;
+      this.flatMidpointRevision_ = -1;
+      this.maxDelta_ = -1;
+      this.maxDeltaRevision_ = -1;
+      if (layout !== void 0 && !Array.isArray(coordinates2[0])) {
+        this.setFlatCoordinates(
+          layout,
+          /** @type {Array<number>} */
+          coordinates2
+        );
+      } else {
+        this.setCoordinates(
+          /** @type {Array<import("../coordinate.js").Coordinate>} */
+          coordinates2,
+          layout
+        );
+      }
+    }
+    /**
+     * Append the passed coordinate to the coordinates of the linestring.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @api
+     */
+    appendCoordinate(coordinate) {
+      extend$2(this.flatCoordinates, coordinate);
+      this.changed();
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!LineString} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const lineString = new LineString(
+        this.flatCoordinates.slice(),
+        this.layout
+      );
+      lineString.applyProperties(this);
+      return lineString;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      if (this.maxDeltaRevision_ != this.getRevision()) {
+        this.maxDelta_ = Math.sqrt(
+          maxSquaredDelta(
+            this.flatCoordinates,
+            0,
+            this.flatCoordinates.length,
+            this.stride,
+            0
+          )
+        );
+        this.maxDeltaRevision_ = this.getRevision();
+      }
+      return assignClosestPoint(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        this.maxDelta_,
+        false,
+        x,
+        y,
+        closestPoint,
+        minSquaredDistance
+      );
+    }
+    /**
+     * Iterate over each segment, calling the provided callback.
+     * If the callback returns a truthy value the function returns that
+     * value immediately. Otherwise the function returns `false`.
+     *
+     * @param {function(this: S, import("../coordinate.js").Coordinate, import("../coordinate.js").Coordinate): T} callback Function
+     *     called for each segment. The function will receive two arguments, the start and end coordinates of the segment.
+     * @return {T|boolean} Value.
+     * @template T,S
+     * @api
+     */
+    forEachSegment(callback) {
+      return forEach(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        callback
+      );
+    }
+    /**
+     * Returns the coordinate at `m` using linear interpolation, or `null` if no
+     * such coordinate exists.
+     *
+     * `extrapolate` controls extrapolation beyond the range of Ms in the
+     * MultiLineString. If `extrapolate` is `true` then Ms less than the first
+     * M will return the first coordinate and Ms greater than the last M will
+     * return the last coordinate.
+     *
+     * @param {number} m M.
+     * @param {boolean} [extrapolate] Extrapolate. Default is `false`.
+     * @return {import("../coordinate.js").Coordinate|null} Coordinate.
+     * @api
+     */
+    getCoordinateAtM(m, extrapolate) {
+      if (this.layout != "XYM" && this.layout != "XYZM") {
+        return null;
+      }
+      extrapolate = extrapolate !== void 0 ? extrapolate : false;
+      return lineStringCoordinateAtM(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        m,
+        extrapolate
+      );
+    }
+    /**
+     * Return the coordinates of the linestring.
+     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates() {
+      return inflateCoordinates(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride
+      );
+    }
+    /**
+     * Return the coordinate at the provided fraction along the linestring.
+     * The `fraction` is a number between 0 and 1, where 0 is the start of the
+     * linestring and 1 is the end.
+     * @param {number} fraction Fraction.
+     * @param {import("../coordinate.js").Coordinate} [dest] Optional coordinate whose values will
+     *     be modified. If not provided, a new coordinate will be returned.
+     * @return {import("../coordinate.js").Coordinate} Coordinate of the interpolated point.
+     * @api
+     */
+    getCoordinateAt(fraction, dest) {
+      return interpolatePoint(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        fraction,
+        dest,
+        this.stride
+      );
+    }
+    /**
+     * Return the length of the linestring on projected plane.
+     * @return {number} Length (on projected plane).
+     * @api
+     */
+    getLength() {
+      return lineStringLength(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride
+      );
+    }
+    /**
+     * @return {Array<number>} Flat midpoint.
+     */
+    getFlatMidpoint() {
+      if (this.flatMidpointRevision_ != this.getRevision()) {
+        this.flatMidpoint_ = this.getCoordinateAt(
+          0.5,
+          this.flatMidpoint_ ?? void 0
+        );
+        this.flatMidpointRevision_ = this.getRevision();
+      }
+      return (
+        /** @type {Array<number>} */
+        this.flatMidpoint_
+      );
+    }
+    /**
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {LineString} Simplified LineString.
+     * @protected
+     * @override
+     */
+    getSimplifiedGeometryInternal(squaredTolerance) {
+      const simplifiedFlatCoordinates = [];
+      simplifiedFlatCoordinates.length = douglasPeucker(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        squaredTolerance,
+        simplifiedFlatCoordinates,
+        0
+      );
+      return new LineString(simplifiedFlatCoordinates, "XY");
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "LineString";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      return intersectsLineString(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        extent,
+        this.getExtent()
+      );
+    }
+    /**
+     * Set the coordinates of the linestring.
+     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 1);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      this.flatCoordinates.length = deflateCoordinates(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride
+      );
+      this.changed();
+    }
+  }
+  class MultiLineString extends SimpleGeometry {
+    /**
+     * @param {Array<Array<import("../coordinate.js").Coordinate>|LineString>|Array<number>} coordinates
+     *     Coordinates or LineString geometries. (For internal use, flat coordinates in
+     *     combination with `layout` and `ends` are also accepted.)
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @param {Array<number>} [ends] Flat coordinate ends for internal use.
+     */
+    constructor(coordinates2, layout, ends) {
+      super();
+      this.ends_ = [];
+      this.maxDelta_ = -1;
+      this.maxDeltaRevision_ = -1;
+      if (Array.isArray(coordinates2[0])) {
+        this.setCoordinates(
+          /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+          coordinates2,
+          layout
+        );
+      } else if (layout !== void 0 && ends) {
+        this.setFlatCoordinates(
+          layout,
+          /** @type {Array<number>} */
+          coordinates2
+        );
+        this.ends_ = ends;
+      } else {
+        const lineStrings = (
+          /** @type {Array<LineString>} */
+          coordinates2
+        );
+        const flatCoordinates = [];
+        const ends2 = [];
+        for (let i = 0, ii = lineStrings.length; i < ii; ++i) {
+          const lineString = lineStrings[i];
+          extend$2(flatCoordinates, lineString.getFlatCoordinates());
+          ends2.push(flatCoordinates.length);
+        }
+        const layout2 = lineStrings.length === 0 ? this.getLayout() : lineStrings[0].getLayout();
+        this.setFlatCoordinates(layout2, flatCoordinates);
+        this.ends_ = ends2;
+      }
+    }
+    /**
+     * Append the passed linestring to the multilinestring.
+     * @param {LineString} lineString LineString.
+     * @api
+     */
+    appendLineString(lineString) {
+      extend$2(this.flatCoordinates, lineString.getFlatCoordinates().slice());
+      this.ends_.push(this.flatCoordinates.length);
+      this.changed();
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!MultiLineString} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const multiLineString = new MultiLineString(
+        this.flatCoordinates.slice(),
+        this.layout,
+        this.ends_.slice()
+      );
+      multiLineString.applyProperties(this);
+      return multiLineString;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      if (this.maxDeltaRevision_ != this.getRevision()) {
+        this.maxDelta_ = Math.sqrt(
+          arrayMaxSquaredDelta(
+            this.flatCoordinates,
+            0,
+            this.ends_,
+            this.stride,
+            0
+          )
+        );
+        this.maxDeltaRevision_ = this.getRevision();
+      }
+      return assignClosestArrayPoint(
+        this.flatCoordinates,
+        0,
+        this.ends_,
+        this.stride,
+        this.maxDelta_,
+        false,
+        x,
+        y,
+        closestPoint,
+        minSquaredDistance
+      );
+    }
+    /**
+     * Returns the coordinate at `m` using linear interpolation, or `null` if no
+     * such coordinate exists.
+     *
+     * `extrapolate` controls extrapolation beyond the range of Ms in the
+     * MultiLineString. If `extrapolate` is `true` then Ms less than the first
+     * M will return the first coordinate and Ms greater than the last M will
+     * return the last coordinate.
+     *
+     * `interpolate` controls interpolation between consecutive LineStrings
+     * within the MultiLineString. If `interpolate` is `true` the coordinates
+     * will be linearly interpolated between the last coordinate of one LineString
+     * and the first coordinate of the next LineString.  If `interpolate` is
+     * `false` then the function will return `null` for Ms falling between
+     * LineStrings.
+     *
+     * @param {number} m M.
+     * @param {boolean} [extrapolate] Extrapolate. Default is `false`.
+     * @param {boolean} [interpolate] Interpolate. Default is `false`.
+     * @return {import("../coordinate.js").Coordinate|null} Coordinate.
+     * @api
+     */
+    getCoordinateAtM(m, extrapolate, interpolate) {
+      if (this.layout != "XYM" && this.layout != "XYZM" || this.flatCoordinates.length === 0) {
+        return null;
+      }
+      extrapolate = extrapolate !== void 0 ? extrapolate : false;
+      interpolate = interpolate !== void 0 ? interpolate : false;
+      return lineStringsCoordinateAtM(
+        this.flatCoordinates,
+        0,
+        this.ends_,
+        this.stride,
+        m,
+        extrapolate,
+        interpolate
+      );
+    }
+    /**
+     * Return the coordinates of the multilinestring.
+     * @return {Array<Array<import("../coordinate.js").Coordinate>>} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates() {
+      return inflateCoordinatesArray(
+        this.flatCoordinates,
+        0,
+        this.ends_,
+        this.stride
+      );
+    }
+    /**
+     * @return {Array<number>} Ends.
+     */
+    getEnds() {
+      return this.ends_;
+    }
+    /**
+     * Return the linestring at the specified index.
+     * @param {number} index Index.
+     * @return {LineString} LineString.
+     * @api
+     */
+    getLineString(index) {
+      if (index < 0 || this.ends_.length <= index) {
+        return null;
+      }
+      return new LineString(
+        this.flatCoordinates.slice(
+          index === 0 ? 0 : this.ends_[index - 1],
+          this.ends_[index]
+        ),
+        this.layout
+      );
+    }
+    /**
+     * Return the linestrings of this multilinestring.
+     * @return {Array<LineString>} LineStrings.
+     * @api
+     */
+    getLineStrings() {
+      const flatCoordinates = this.flatCoordinates;
+      const ends = this.ends_;
+      const layout = this.layout;
+      const lineStrings = [];
+      let offset = 0;
+      for (let i = 0, ii = ends.length; i < ii; ++i) {
+        const end = ends[i];
+        const lineString = new LineString(
+          flatCoordinates.slice(offset, end),
+          layout
+        );
+        lineStrings.push(lineString);
+        offset = end;
+      }
+      return lineStrings;
+    }
+    /**
+     * Return the sum of all line string lengths
+     * @return {number} Length (on projected plane).
+     * @api
+     */
+    getLength() {
+      const ends = this.ends_;
+      let start = 0;
+      let length = 0;
+      for (let i = 0, ii = ends.length; i < ii; ++i) {
+        length += lineStringLength(
+          this.flatCoordinates,
+          start,
+          ends[i],
+          this.stride
+        );
+        start = ends[i];
+      }
+      return length;
+    }
+    /**
+     * @return {Array<number>} Flat midpoints.
+     */
+    getFlatMidpoints() {
+      const midpoints = [];
+      const flatCoordinates = this.flatCoordinates;
+      let offset = 0;
+      const ends = this.ends_;
+      const stride = this.stride;
+      for (let i = 0, ii = ends.length; i < ii; ++i) {
+        const end = ends[i];
+        const midpoint = interpolatePoint(
+          flatCoordinates,
+          offset,
+          end,
+          stride,
+          0.5
+        );
+        extend$2(midpoints, midpoint);
+        offset = end;
+      }
+      return midpoints;
+    }
+    /**
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {MultiLineString} Simplified MultiLineString.
+     * @protected
+     * @override
+     */
+    getSimplifiedGeometryInternal(squaredTolerance) {
+      const simplifiedFlatCoordinates = [];
+      const simplifiedEnds = [];
+      simplifiedFlatCoordinates.length = douglasPeuckerArray(
+        this.flatCoordinates,
+        0,
+        this.ends_,
+        this.stride,
+        squaredTolerance,
+        simplifiedFlatCoordinates,
+        0,
+        simplifiedEnds
+      );
+      return new MultiLineString(simplifiedFlatCoordinates, "XY", simplifiedEnds);
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "MultiLineString";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      return intersectsLineStringArray(
+        this.flatCoordinates,
+        0,
+        this.ends_,
+        this.stride,
+        extent
+      );
+    }
+    /**
+     * Set the coordinates of the multilinestring.
+     * @param {!Array<Array<import("../coordinate.js").Coordinate>>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 2);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      const ends = deflateCoordinatesArray(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride,
+        this.ends_
+      );
+      this.flatCoordinates.length = ends.length === 0 ? 0 : ends[ends.length - 1];
+      this.changed();
+    }
+  }
+  class MultiPoint extends SimpleGeometry {
+    /**
+     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
+     *     For internal use, flat coordinates in combination with `layout` are also accepted.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(coordinates2, layout) {
+      super();
+      if (layout && !Array.isArray(coordinates2[0])) {
+        this.setFlatCoordinates(
+          layout,
+          /** @type {Array<number>} */
+          coordinates2
+        );
+      } else {
+        this.setCoordinates(
+          /** @type {Array<import("../coordinate.js").Coordinate>} */
+          coordinates2,
+          layout
+        );
+      }
+    }
+    /**
+     * Append the passed point to this multipoint.
+     * @param {Point} point Point.
+     * @api
+     */
+    appendPoint(point) {
+      extend$2(this.flatCoordinates, point.getFlatCoordinates());
+      this.changed();
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!MultiPoint} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const multiPoint = new MultiPoint(
+        this.flatCoordinates.slice(),
+        this.layout
+      );
+      multiPoint.applyProperties(this);
+      return multiPoint;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      const flatCoordinates = this.flatCoordinates;
+      const stride = this.stride;
+      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
+        const squaredDistance2 = squaredDistance$1(
+          x,
+          y,
+          flatCoordinates[i],
+          flatCoordinates[i + 1]
+        );
+        if (squaredDistance2 < minSquaredDistance) {
+          minSquaredDistance = squaredDistance2;
+          for (let j = 0; j < stride; ++j) {
+            closestPoint[j] = flatCoordinates[i + j];
+          }
+          closestPoint.length = stride;
+        }
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * Return the coordinates of the multipoint.
+     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates() {
+      return inflateCoordinates(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride
+      );
+    }
+    /**
+     * Return the point at the specified index.
+     * @param {number} index Index.
+     * @return {Point} Point.
+     * @api
+     */
+    getPoint(index) {
+      const n = this.flatCoordinates.length / this.stride;
+      if (index < 0 || n <= index) {
+        return null;
+      }
+      return new Point(
+        this.flatCoordinates.slice(
+          index * this.stride,
+          (index + 1) * this.stride
+        ),
+        this.layout
+      );
+    }
+    /**
+     * Return the points of this multipoint.
+     * @return {Array<Point>} Points.
+     * @api
+     */
+    getPoints() {
+      const flatCoordinates = this.flatCoordinates;
+      const layout = this.layout;
+      const stride = this.stride;
+      const points = [];
+      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
+        const point = new Point(flatCoordinates.slice(i, i + stride), layout);
+        points.push(point);
+      }
+      return points;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "MultiPoint";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      const flatCoordinates = this.flatCoordinates;
+      const stride = this.stride;
+      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
+        const x = flatCoordinates[i];
+        const y = flatCoordinates[i + 1];
+        if (containsXY(extent, x, y)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Set the coordinates of the multipoint.
+     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 1);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      this.flatCoordinates.length = deflateCoordinates(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride
+      );
+      this.changed();
+    }
+  }
+  function linearRingss(flatCoordinates, offset, endss, stride) {
+    const flatCenters = [];
+    let extent = createEmpty();
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      extent = createOrUpdateFromFlatCoordinates(
+        flatCoordinates,
+        offset,
+        ends[0],
+        stride
+      );
+      flatCenters.push((extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2);
+      offset = ends[ends.length - 1];
+    }
+    return flatCenters;
+  }
+  class MultiPolygon extends SimpleGeometry {
+    /**
+     * @param {Array<Array<Array<import("../coordinate.js").Coordinate>>|Polygon>|Array<number>} coordinates Coordinates.
+     *     For internal use, flat coordinates in combination with `layout` and `endss` are also accepted.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @param {Array<Array<number>>} [endss] Array of ends for internal use with flat coordinates.
+     */
+    constructor(coordinates2, layout, endss) {
+      super();
+      this.endss_ = [];
+      this.flatInteriorPointsRevision_ = -1;
+      this.flatInteriorPoints_ = null;
+      this.maxDelta_ = -1;
+      this.maxDeltaRevision_ = -1;
+      this.orientedRevision_ = -1;
+      this.orientedFlatCoordinates_ = null;
+      if (!endss && !Array.isArray(coordinates2[0])) {
+        const polygons = (
+          /** @type {Array<Polygon>} */
+          coordinates2
+        );
+        const flatCoordinates = [];
+        const thisEndss = [];
+        for (let i = 0, ii = polygons.length; i < ii; ++i) {
+          const polygon = polygons[i];
+          const offset = flatCoordinates.length;
+          const ends = polygon.getEnds();
+          for (let j = 0, jj = ends.length; j < jj; ++j) {
+            ends[j] += offset;
+          }
+          extend$2(flatCoordinates, polygon.getFlatCoordinates());
+          thisEndss.push(ends);
+        }
+        layout = polygons.length === 0 ? this.getLayout() : polygons[0].getLayout();
+        coordinates2 = flatCoordinates;
+        endss = thisEndss;
+      }
+      if (layout !== void 0 && endss) {
+        this.setFlatCoordinates(
+          layout,
+          /** @type {Array<number>} */
+          coordinates2
+        );
+        this.endss_ = endss;
+      } else {
+        this.setCoordinates(
+          /** @type {Array<Array<Array<import("../coordinate.js").Coordinate>>>} */
+          coordinates2,
+          layout
+        );
+      }
+    }
+    /**
+     * Append the passed polygon to this multipolygon.
+     * @param {Polygon} polygon Polygon.
+     * @api
+     */
+    appendPolygon(polygon) {
+      let ends;
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = polygon.getFlatCoordinates().slice();
+        ends = polygon.getEnds().slice();
+        this.endss_.push();
+      } else {
+        const offset = this.flatCoordinates.length;
+        extend$2(this.flatCoordinates, polygon.getFlatCoordinates());
+        ends = polygon.getEnds().slice();
+        for (let i = 0, ii = ends.length; i < ii; ++i) {
+          ends[i] += offset;
+        }
+      }
+      this.endss_.push(ends);
+      this.changed();
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!MultiPolygon} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const len = this.endss_.length;
+      const newEndss = new Array(len);
+      for (let i = 0; i < len; ++i) {
+        newEndss[i] = this.endss_[i].slice();
+      }
+      const multiPolygon = new MultiPolygon(
+        this.flatCoordinates.slice(),
+        this.layout,
+        newEndss
+      );
+      multiPolygon.applyProperties(this);
+      return multiPolygon;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      if (this.maxDeltaRevision_ != this.getRevision()) {
+        this.maxDelta_ = Math.sqrt(
+          multiArrayMaxSquaredDelta(
+            this.flatCoordinates,
+            0,
+            this.endss_,
+            this.stride,
+            0
+          )
+        );
+        this.maxDeltaRevision_ = this.getRevision();
+      }
+      return assignClosestMultiArrayPoint(
+        this.getOrientedFlatCoordinates(),
+        0,
+        this.endss_,
+        this.stride,
+        this.maxDelta_,
+        true,
+        x,
+        y,
+        closestPoint,
+        minSquaredDistance
+      );
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     * @override
+     */
+    containsXY(x, y) {
+      return linearRingssContainsXY(
+        this.getOrientedFlatCoordinates(),
+        0,
+        this.endss_,
+        this.stride,
+        x,
+        y
+      );
+    }
+    /**
+     * Return the area of the multipolygon on projected plane.
+     * @return {number} Area (on projected plane).
+     * @api
+     */
+    getArea() {
+      return linearRingss$1(
+        this.getOrientedFlatCoordinates(),
+        0,
+        this.endss_,
+        this.stride
+      );
+    }
+    /**
+     * Get the coordinate array for this geometry.  This array has the structure
+     * of a GeoJSON coordinate array for multi-polygons.
+     *
+     * @param {boolean} [right] Orient coordinates according to the right-hand
+     *     rule (counter-clockwise for exterior and clockwise for interior rings).
+     *     If `false`, coordinates will be oriented according to the left-hand rule
+     *     (clockwise for exterior and counter-clockwise for interior rings).
+     *     By default, coordinate orientation will depend on how the geometry was
+     *     constructed.
+     * @return {Array<Array<Array<import("../coordinate.js").Coordinate>>>} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates(right) {
+      let flatCoordinates;
+      if (right !== void 0) {
+        flatCoordinates = this.getOrientedFlatCoordinates().slice();
+        orientLinearRingsArray(
+          flatCoordinates,
+          0,
+          this.endss_,
+          this.stride,
+          right
+        );
+      } else {
+        flatCoordinates = this.flatCoordinates;
+      }
+      return inflateMultiCoordinatesArray(
+        flatCoordinates,
+        0,
+        this.endss_,
+        this.stride
+      );
+    }
+    /**
+     * @return {Array<Array<number>>} Endss.
+     */
+    getEndss() {
+      return this.endss_;
+    }
+    /**
+     * @return {Array<number>} Flat interior points.
+     */
+    getFlatInteriorPoints() {
+      if (this.flatInteriorPointsRevision_ != this.getRevision()) {
+        const flatCenters = linearRingss(
+          this.flatCoordinates,
+          0,
+          this.endss_,
+          this.stride
+        );
+        this.flatInteriorPoints_ = getInteriorPointsOfMultiArray(
+          this.getOrientedFlatCoordinates(),
+          0,
+          this.endss_,
+          this.stride,
+          flatCenters
+        );
+        this.flatInteriorPointsRevision_ = this.getRevision();
+      }
+      return (
+        /** @type {Array<number>} */
+        this.flatInteriorPoints_
+      );
+    }
+    /**
+     * Return the interior points as {@link module:ol/geom/MultiPoint~MultiPoint multipoint}.
+     * @return {MultiPoint} Interior points as XYM coordinates, where M is
+     * the length of the horizontal intersection that the point belongs to.
+     * @api
+     */
+    getInteriorPoints() {
+      return new MultiPoint(this.getFlatInteriorPoints().slice(), "XYM");
+    }
+    /**
+     * @return {Array<number>} Oriented flat coordinates.
+     */
+    getOrientedFlatCoordinates() {
+      if (this.orientedRevision_ != this.getRevision()) {
+        const flatCoordinates = this.flatCoordinates;
+        if (linearRingssAreOriented(flatCoordinates, 0, this.endss_, this.stride)) {
+          this.orientedFlatCoordinates_ = flatCoordinates;
+        } else {
+          this.orientedFlatCoordinates_ = flatCoordinates.slice();
+          this.orientedFlatCoordinates_.length = orientLinearRingsArray(
+            this.orientedFlatCoordinates_,
+            0,
+            this.endss_,
+            this.stride
+          );
+        }
+        this.orientedRevision_ = this.getRevision();
+      }
+      return (
+        /** @type {Array<number>} */
+        this.orientedFlatCoordinates_
+      );
+    }
+    /**
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {MultiPolygon} Simplified MultiPolygon.
+     * @protected
+     * @override
+     */
+    getSimplifiedGeometryInternal(squaredTolerance) {
+      const simplifiedFlatCoordinates = [];
+      const simplifiedEndss = [];
+      simplifiedFlatCoordinates.length = quantizeMultiArray(
+        this.flatCoordinates,
+        0,
+        this.endss_,
+        this.stride,
+        Math.sqrt(squaredTolerance),
+        simplifiedFlatCoordinates,
+        0,
+        simplifiedEndss
+      );
+      return new MultiPolygon(simplifiedFlatCoordinates, "XY", simplifiedEndss);
+    }
+    /**
+     * Return the polygon at the specified index.
+     * @param {number} index Index.
+     * @return {Polygon} Polygon.
+     * @api
+     */
+    getPolygon(index) {
+      if (index < 0 || this.endss_.length <= index) {
+        return null;
+      }
+      let offset;
+      if (index === 0) {
+        offset = 0;
+      } else {
+        const prevEnds = this.endss_[index - 1];
+        offset = prevEnds[prevEnds.length - 1];
+      }
+      const ends = this.endss_[index].slice();
+      const end = ends[ends.length - 1];
+      if (offset !== 0) {
+        for (let i = 0, ii = ends.length; i < ii; ++i) {
+          ends[i] -= offset;
+        }
+      }
+      return new Polygon(
+        this.flatCoordinates.slice(offset, end),
+        this.layout,
+        ends
+      );
+    }
+    /**
+     * Return the polygons of this multipolygon.
+     * @return {Array<Polygon>} Polygons.
+     * @api
+     */
+    getPolygons() {
+      const layout = this.layout;
+      const flatCoordinates = this.flatCoordinates;
+      const endss = this.endss_;
+      const polygons = [];
+      let offset = 0;
+      for (let i = 0, ii = endss.length; i < ii; ++i) {
+        const ends = endss[i].slice();
+        const end = ends[ends.length - 1];
+        if (offset !== 0) {
+          for (let j = 0, jj = ends.length; j < jj; ++j) {
+            ends[j] -= offset;
+          }
+        }
+        const polygon = new Polygon(
+          flatCoordinates.slice(offset, end),
+          layout,
+          ends
+        );
+        polygons.push(polygon);
+        offset = end;
+      }
+      return polygons;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "MultiPolygon";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      return intersectsLinearRingMultiArray(
+        this.getOrientedFlatCoordinates(),
+        0,
+        this.endss_,
+        this.stride,
+        extent
+      );
+    }
+    /**
+     * Set the coordinates of the multipolygon.
+     * @param {!Array<Array<Array<import("../coordinate.js").Coordinate>>>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 3);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      const endss = deflateMultiCoordinatesArray(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride,
+        this.endss_
+      );
+      if (endss.length === 0) {
+        this.flatCoordinates.length = 0;
+      } else {
+        const lastEnds = endss[endss.length - 1];
+        this.flatCoordinates.length = lastEnds.length === 0 ? 0 : lastEnds[lastEnds.length - 1];
+      }
+      this.changed();
     }
   }
   class VectorContext {
@@ -22357,19 +21182,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return replay;
     }
   }
-  function lineStringLength(flatCoordinates, offset, end, stride) {
-    let x1 = flatCoordinates[offset];
-    let y1 = flatCoordinates[offset + 1];
-    let length = 0;
-    for (let i = offset + stride; i < end; i += stride) {
-      const x2 = flatCoordinates[i];
-      const y2 = flatCoordinates[i + 1];
-      length += Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-      x1 = x2;
-      y1 = y2;
-    }
-    return length;
-  }
   function offsetLineString(flatCoordinates, start, end, stride, offset, isClosedRing, dest, destinationStride) {
     dest = dest ?? [];
     destinationStride = destinationStride ?? stride;
@@ -22441,7 +21253,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (nextX === void 0 || nextY === void 0) {
       return [x + nx * offset, y + ny * offset];
     }
-    const joinAngle = angleBetween([x, y], [prevX, prevY], [nextX, nextY]);
+    const joinAngle = angleBetween$1([x, y], [prevX, prevY], [nextX, nextY]);
     if (Math.cos(joinAngle) > 0.998) {
       return [x + tx * offset, y + ty * offset];
     }
@@ -22579,6 +21391,104 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       startM += charLength;
     }
     return result;
+  }
+  class ZIndexContext {
+    constructor() {
+      /**
+       * @private
+       * @param {...*} args Args.
+       * @return {ZIndexContext} This.
+       */
+      __publicField(this, "pushMethodArgs_", (...args) => {
+        this.push_(args);
+        return this;
+      });
+      this.instructions_ = [];
+      this.zIndex = 0;
+      this.offset_ = 0;
+      this.context_ = /** @type {ZIndexContextProxy} */
+      new Proxy(getSharedCanvasContext2D(), {
+        get: (target, property) => {
+          if (typeof /** @type {*} */
+          getSharedCanvasContext2D()[property] !== "function") {
+            return void 0;
+          }
+          this.push_(property);
+          return this.pushMethodArgs_;
+        },
+        set: (target, property, value) => {
+          this.push_(property, value);
+          return true;
+        }
+      });
+    }
+    /**
+     * @param {...*} args Arguments to push to the instructions array.
+     * @private
+     */
+    push_(...args) {
+      const instructions = this.instructions_;
+      const index = this.zIndex + this.offset_;
+      if (!instructions[index]) {
+        instructions[index] = [];
+      }
+      instructions[index].push(...args);
+    }
+    /**
+     * Push a function that renders to the context directly.
+     * @param {function(CanvasRenderingContext2D): void} render Function.
+     */
+    pushFunction(render2) {
+      this.push_(render2);
+    }
+    /**
+     * Get a proxy for CanvasRenderingContext2D which does not support getting state
+     * (e.g. `context.globalAlpha`, which will return `undefined`). To set state, if it relies on a
+     * previous state (e.g. `context.globalAlpha = context.globalAlpha / 2`), set a function,
+     * e.g. `context.globalAlpha = (context) => context.globalAlpha / 2`.
+     * @return {ZIndexContextProxy} Context.
+     */
+    getContext() {
+      return this.context_;
+    }
+    /**
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
+     */
+    draw(context) {
+      this.instructions_.forEach((instructionsAtIndex) => {
+        for (let i = 0, ii = instructionsAtIndex.length; i < ii; ++i) {
+          const property = instructionsAtIndex[i];
+          if (typeof property === "function") {
+            property(context);
+            continue;
+          }
+          const instructionAtIndex = instructionsAtIndex[++i];
+          if (typeof /** @type {*} */
+          context[property] === "function") {
+            context[property](...instructionAtIndex);
+          } else {
+            if (typeof instructionAtIndex === "function") {
+              context[property] = instructionAtIndex(context);
+              continue;
+            }
+            context[property] = instructionAtIndex;
+          }
+        }
+      });
+    }
+    clear() {
+      this.instructions_.length = 0;
+      this.zIndex = 0;
+      this.offset_ = 0;
+    }
+    /**
+     * Offsets the zIndex by the highest current zIndex. Useful for rendering multiple worlds or tiles, to
+     * avoid conflicting context.clip() or context.save()/restore() calls.
+     */
+    offset() {
+      this.offset_ = this.instructions_.length;
+      this.zIndex = 0;
+    }
   }
   const tmpExtent = createEmpty();
   const p1 = [];
@@ -25334,6 +24244,444 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       textReplay.drawText(geometry, feature, index);
     }
   }
+  const maxStaleKeys = 5;
+  class LayerRenderer extends Observable {
+    /**
+     * @param {LayerType} layer Layer.
+     */
+    constructor(layer) {
+      super();
+      this.ready = true;
+      this.boundHandleImageChange_ = this.handleImageChange_.bind(this);
+      this.layer_ = layer;
+      this.staleKeys_ = new Array();
+      this.maxStaleKeys = maxStaleKeys;
+    }
+    /**
+     * @return {Array<string>} Get the list of stale keys.
+     */
+    getStaleKeys() {
+      return this.staleKeys_;
+    }
+    /**
+     * @param {string} key The new stale key.
+     */
+    prependStaleKey(key) {
+      this.staleKeys_.unshift(key);
+      if (this.staleKeys_.length > this.maxStaleKeys) {
+        this.staleKeys_.length = this.maxStaleKeys;
+      }
+    }
+    /**
+     * Asynchronous layer level hit detection.
+     * @param {import("../pixel.js").Pixel} pixel Pixel.
+     * @return {Promise<Array<import("../Feature.js").FeatureLike>>} Promise that resolves with
+     * an array of features.
+     */
+    getFeatures(pixel) {
+      return abstract();
+    }
+    /**
+     * @param {import("../pixel.js").Pixel} pixel Pixel.
+     * @return {Uint8ClampedArray|Uint8Array|Float32Array|DataView|null} Pixel data.
+     */
+    getData(pixel) {
+      return null;
+    }
+    /**
+     * Determine whether render should be called.
+     * @abstract
+     * @param {import("../Map.js").FrameState} frameState Frame state.
+     * @return {boolean} Layer is ready to be rendered.
+     */
+    prepareFrame(frameState) {
+      return abstract();
+    }
+    /**
+     * Render the layer.
+     * @abstract
+     * @param {import("../Map.js").FrameState} frameState Frame state.
+     * @param {HTMLElement|null} target Target that may be used to render content to.
+     * @return {HTMLElement} The rendered element.
+     */
+    renderFrame(frameState, target) {
+      return abstract();
+    }
+    /**
+     * @abstract
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {import("../Map.js").FrameState} frameState Frame state.
+     * @param {number} hitTolerance Hit tolerance in pixels.
+     * @param {import("./vector.js").FeatureCallback<T>} callback Feature callback.
+     * @param {Array<import("./Map.js").HitMatch<T>>} matches The hit detected matches with tolerance.
+     * @return {T|undefined} Callback result.
+     * @template T
+     */
+    forEachFeatureAtCoordinate(coordinate, frameState, hitTolerance, callback, matches) {
+      return void 0;
+    }
+    /**
+     * @return {LayerType} Layer.
+     */
+    getLayer() {
+      return this.layer_;
+    }
+    /**
+     * Perform action necessary to get the layer rendered after new fonts have loaded
+     * @abstract
+     */
+    handleFontsChanged() {
+    }
+    /**
+     * Handle changes in image state.
+     * @param {import("../events/Event.js").default} event Image change event.
+     * @private
+     */
+    handleImageChange_(event) {
+      const image = (
+        /** @type {import("../Image.js").default} */
+        event.target
+      );
+      if (image.getState() === ImageState.LOADED || image.getState() === ImageState.ERROR) {
+        this.renderIfReadyAndVisible();
+      }
+    }
+    /**
+     * Load the image if not already loaded, and register the image change
+     * listener if needed.
+     * @param {import("../Image.js").default} image Image.
+     * @return {boolean} `true` if the image is already loaded, `false` otherwise.
+     * @protected
+     */
+    loadImage(image) {
+      let imageState = image.getState();
+      if (imageState != ImageState.LOADED && imageState != ImageState.ERROR) {
+        image.addEventListener(EventType.CHANGE, this.boundHandleImageChange_);
+      }
+      if (imageState == ImageState.IDLE) {
+        image.load();
+        imageState = image.getState();
+      }
+      return imageState == ImageState.LOADED;
+    }
+    /**
+     * @protected
+     */
+    renderIfReadyAndVisible() {
+      const layer = this.getLayer();
+      if (layer && layer.getVisible() && layer.getSourceState() === "ready") {
+        layer.changed();
+      }
+    }
+    /**
+     * @param {import("../Map.js").FrameState} frameState Frame state.
+     */
+    renderDeferred(frameState) {
+    }
+    /**
+     * Clean up.
+     * @override
+     */
+    disposeInternal() {
+      delete this.layer_;
+      super.disposeInternal();
+    }
+  }
+  const canvasPool$1 = [];
+  let pixelContext = null;
+  function createPixelContext() {
+    pixelContext = createCanvasContext2D(1, 1, void 0, {
+      willReadFrequently: true
+    });
+  }
+  class CanvasLayerRenderer extends LayerRenderer {
+    /**
+     * @param {LayerType} layer Layer.
+     */
+    constructor(layer) {
+      super(layer);
+      this.container = null;
+      this.renderedResolution;
+      this.tempTransform = create();
+      this.pixelTransform = create();
+      this.inversePixelTransform = create();
+      this.context = null;
+      this.deferredContext_ = null;
+      this.containerReused = false;
+      this.frameState = null;
+    }
+    /**
+     * @param {import('../../DataTile.js').ImageLike} image Image.
+     * @param {number} col The column index.
+     * @param {number} row The row index.
+     * @return {Uint8ClampedArray|null} The image data.
+     */
+    getImageData(image, col, row) {
+      if (!pixelContext) {
+        createPixelContext();
+      }
+      pixelContext.clearRect(0, 0, 1, 1);
+      let data;
+      try {
+        pixelContext.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
+        data = pixelContext.getImageData(0, 0, 1, 1).data;
+      } catch {
+        pixelContext = null;
+        return null;
+      }
+      return data;
+    }
+    /**
+     * @param {import('../../Map.js').FrameState} frameState Frame state.
+     * @return {string} Background color.
+     */
+    getBackground(frameState) {
+      const layer = this.getLayer();
+      let background = layer.getBackground();
+      if (typeof background === "function") {
+        background = background(frameState.viewState.resolution);
+      }
+      return background || void 0;
+    }
+    /**
+     * Get a rendering container from an existing target, if compatible.
+     * @param {HTMLElement} target Potential render target.
+     * @param {string} transform CSS transform matrix.
+     * @param {string} [backgroundColor] Background color.
+     */
+    useContainer(target, transform2, backgroundColor) {
+      const layerClassName = this.getLayer().getClassName();
+      let container, context;
+      if (target && target.className === layerClassName && (!backgroundColor || target && target.style.backgroundColor && equals$2(
+        asArray(target.style.backgroundColor),
+        asArray(backgroundColor)
+      ))) {
+        const canvas = target.firstElementChild;
+        if (isCanvas(canvas)) {
+          context = canvas.getContext("2d");
+        }
+      }
+      if (context && equivalent(context.canvas.style.transform, transform2)) {
+        this.container = target;
+        this.context = context;
+        this.containerReused = true;
+      } else if (this.containerReused) {
+        this.container = null;
+        this.context = null;
+        this.containerReused = false;
+      } else if (this.container) {
+        this.container.style.backgroundColor = null;
+      }
+      if (!this.container) {
+        container = WORKER_OFFSCREEN_CANVAS ? createMockDiv() : document.createElement("div");
+        container.className = layerClassName;
+        let style = container.style;
+        style.position = "absolute";
+        style.width = "100%";
+        style.height = "100%";
+        context = createCanvasContext2D();
+        const canvas = (
+          /** @type {HTMLCanvasElement} */
+          context.canvas
+        );
+        container.appendChild(canvas);
+        style = canvas.style;
+        style.position = "absolute";
+        style.left = "0";
+        style.transformOrigin = "top left";
+        this.container = container;
+        this.context = context;
+      }
+      if (!this.containerReused && backgroundColor && !this.container.style.backgroundColor) {
+        this.container.style.backgroundColor = backgroundColor;
+      }
+    }
+    /**
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {import("../../extent.js").Extent} extent Clip extent.
+     * @protected
+     */
+    clipUnrotated(context, frameState, extent) {
+      const topLeft = getTopLeft(extent);
+      const topRight = getTopRight(extent);
+      const bottomRight = getBottomRight(extent);
+      const bottomLeft = getBottomLeft(extent);
+      apply(frameState.coordinateToPixelTransform, topLeft);
+      apply(frameState.coordinateToPixelTransform, topRight);
+      apply(frameState.coordinateToPixelTransform, bottomRight);
+      apply(frameState.coordinateToPixelTransform, bottomLeft);
+      const inverted = this.inversePixelTransform;
+      apply(inverted, topLeft);
+      apply(inverted, topRight);
+      apply(inverted, bottomRight);
+      apply(inverted, bottomLeft);
+      context.save();
+      context.beginPath();
+      context.moveTo(Math.round(topLeft[0]), Math.round(topLeft[1]));
+      context.lineTo(Math.round(topRight[0]), Math.round(topRight[1]));
+      context.lineTo(Math.round(bottomRight[0]), Math.round(bottomRight[1]));
+      context.lineTo(Math.round(bottomLeft[0]), Math.round(bottomLeft[1]));
+      context.clip();
+    }
+    /**
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {HTMLElement} target Target that may be used to render content to.
+     * @protected
+     */
+    prepareContainer(frameState, target) {
+      const extent = frameState.extent;
+      const resolution = frameState.viewState.resolution;
+      const rotation = frameState.viewState.rotation;
+      const pixelRatio = frameState.pixelRatio;
+      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
+      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
+      compose(
+        this.pixelTransform,
+        frameState.size[0] / 2,
+        frameState.size[1] / 2,
+        1 / pixelRatio,
+        1 / pixelRatio,
+        rotation,
+        -width / 2,
+        -height / 2
+      );
+      makeInverse(this.inversePixelTransform, this.pixelTransform);
+      const canvasTransform = toString$1(this.pixelTransform);
+      this.useContainer(target, canvasTransform, this.getBackground(frameState));
+      if (!this.containerReused) {
+        const canvas = this.context.canvas;
+        if (canvas.width != width || canvas.height != height) {
+          canvas.width = width;
+          canvas.height = height;
+        } else {
+          this.context.clearRect(0, 0, width, height);
+        }
+        if (canvasTransform !== /** @type {HTMLCanvasElement} */
+        canvas.style.transform) {
+          canvas.style.transform = canvasTransform;
+        }
+      }
+    }
+    /**
+     * @param {import("../../render/EventType.js").default} type Event type.
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @private
+     */
+    dispatchRenderEvent_(type, context, frameState) {
+      const layer = this.getLayer();
+      if (layer.hasListener(type)) {
+        const event = new RenderEvent(
+          type,
+          this.inversePixelTransform,
+          frameState,
+          context
+        );
+        layer.dispatchEvent(event);
+      }
+    }
+    /**
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @protected
+     */
+    preRender(context, frameState) {
+      this.frameState = frameState;
+      if (frameState.declutter) {
+        return;
+      }
+      this.dispatchRenderEvent_(RenderEventType.PRERENDER, context, frameState);
+    }
+    /**
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @protected
+     */
+    postRender(context, frameState) {
+      if (frameState.declutter) {
+        return;
+      }
+      this.dispatchRenderEvent_(RenderEventType.POSTRENDER, context, frameState);
+    }
+    /**
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     */
+    renderDeferredInternal(frameState) {
+    }
+    /**
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {import('../../render/canvas/ZIndexContext.js').ZIndexContextProxy} Context.
+     */
+    getRenderContext(frameState) {
+      if (frameState.declutter && !this.deferredContext_) {
+        this.deferredContext_ = new ZIndexContext();
+      }
+      return frameState.declutter ? this.deferredContext_.getContext() : this.context;
+    }
+    /**
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @override
+     */
+    renderDeferred(frameState) {
+      if (!frameState.declutter) {
+        return;
+      }
+      this.dispatchRenderEvent_(
+        RenderEventType.PRERENDER,
+        this.context,
+        frameState
+      );
+      if (frameState.declutter && this.deferredContext_) {
+        this.deferredContext_.draw(this.context);
+        this.deferredContext_.clear();
+      }
+      this.renderDeferredInternal(frameState);
+      this.dispatchRenderEvent_(
+        RenderEventType.POSTRENDER,
+        this.context,
+        frameState
+      );
+    }
+    /**
+     * Creates a transform for rendering to an element that will be rotated after rendering.
+     * @param {import("../../coordinate.js").Coordinate} center Center.
+     * @param {number} resolution Resolution.
+     * @param {number} rotation Rotation.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {number} width Width of the rendered element (in pixels).
+     * @param {number} height Height of the rendered element (in pixels).
+     * @param {number} offsetX Offset on the x-axis in view coordinates.
+     * @protected
+     * @return {!import("../../transform.js").Transform} Transform.
+     */
+    getRenderTransform(center, resolution, rotation, pixelRatio, width, height, offsetX) {
+      const dx1 = width / 2;
+      const dy1 = height / 2;
+      const sx = pixelRatio / resolution;
+      const sy = -sx;
+      const dx2 = -center[0] + offsetX;
+      const dy2 = -center[1];
+      return compose(
+        this.tempTransform,
+        dx1,
+        dy1,
+        sx,
+        sy,
+        -rotation,
+        dx2,
+        dy2
+      );
+    }
+    /**
+     * Clean up.
+     * @override
+     */
+    disposeInternal() {
+      delete this.frameState;
+      super.disposeInternal();
+    }
+  }
   class CanvasVectorLayerRenderer extends CanvasLayerRenderer {
     /**
      * @param {import("../../layer/BaseVector.js").default} vectorLayer Vector layer.
@@ -25421,7 +24769,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.context = createCanvasContext2D(
           this.context.canvas.width,
           this.context.canvas.height,
-          canvasPool
+          canvasPool$1
         );
       }
     }
@@ -25435,7 +24783,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.targetContext_.drawImage(this.context.canvas, 0, 0);
         this.targetContext_.globalAlpha = alpha;
         releaseCanvas(this.context);
-        canvasPool.push(this.context.canvas);
+        canvasPool$1.push(this.context.canvas);
         this.context = this.targetContext_;
         this.targetContext_ = null;
       }
@@ -25986,1523 +25334,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function all(extent, resolution) {
     return [[-Infinity, -Infinity, Infinity, Infinity]];
-  }
-  class Feature extends BaseObject {
-    /**
-     * @param {Geometry|ObjectWithGeometry<Geometry, NoInfer<Properties>>} [geometryOrProperties]
-     *     You may pass a Geometry object directly, or an object literal containing
-     *     properties. If you pass an object literal, you may include a Geometry
-     *     associated with a `geometry` key.
-     */
-    constructor(geometryOrProperties) {
-      super();
-      this.on;
-      this.once;
-      this.un;
-      this.id_ = void 0;
-      this.geometryName_ = "geometry";
-      this.style_ = null;
-      this.styleFunction_ = void 0;
-      this.geometryChangeKey_ = null;
-      this.addChangeListener(this.geometryName_, this.handleGeometryChanged_);
-      if (geometryOrProperties) {
-        if (typeof /** @type {?} */
-        geometryOrProperties.getSimplifiedGeometry === "function") {
-          const geometry = (
-            /** @type {Geometry} */
-            geometryOrProperties
-          );
-          this.setGeometry(geometry);
-        } else {
-          const properties = geometryOrProperties;
-          this.setProperties(properties);
-        }
-      }
-    }
-    /**
-     * Clone this feature. If the original feature has a geometry it
-     * is also cloned. The feature id is not set in the clone.
-     * @return {Feature<Geometry>} The clone.
-     * @api
-     */
-    clone() {
-      const clone2 = (
-        /** @type {Feature<Geometry>} */
-        new Feature()
-      );
-      const geometryName = this.geometryName_;
-      clone2.setGeometryName(geometryName);
-      const properties = this.getPropertiesInternal();
-      if (properties) {
-        const geometry = this.getGeometry();
-        for (const key in properties) {
-          if (key === geometryName && geometry) {
-            clone2.set(key, geometry.clone());
-          } else {
-            clone2.set(key, properties[key], true);
-          }
-        }
-      }
-      const style = this.getStyle();
-      if (style) {
-        clone2.setStyle(style);
-      }
-      return clone2;
-    }
-    /**
-     * Get the feature's default geometry.  A feature may have any number of named
-     * geometries.  The "default" geometry (the one that is rendered by default) is
-     * set when calling {@link module:ol/Feature~Feature#setGeometry}.
-     * @return {Geometry|undefined} The default geometry for the feature.
-     * @api
-     * @observable
-     */
-    getGeometry() {
-      return (
-        /** @type {Geometry|undefined} */
-        this.get(this.geometryName_)
-      );
-    }
-    /**
-     * Get the feature identifier.  This is a stable identifier for the feature and
-     * is either set when reading data from a remote source or set explicitly by
-     * calling {@link module:ol/Feature~Feature#setId}.
-     * @return {number|string|undefined} Id.
-     * @api
-     */
-    getId() {
-      return this.id_;
-    }
-    /**
-     * Get the name of the feature's default geometry.  By default, the default
-     * geometry is named `geometry`.
-     * @return {string} Get the property name associated with the default geometry
-     *     for this feature.
-     * @api
-     */
-    getGeometryName() {
-      return this.geometryName_;
-    }
-    /**
-     * Get the feature's style. Will return what was provided to the
-     * {@link module:ol/Feature~Feature#setStyle} method.
-     * @return {import("./style/Style.js").StyleLike|undefined} The feature style.
-     * @api
-     */
-    getStyle() {
-      return this.style_;
-    }
-    /**
-     * Get the feature's style function.
-     * @return {import("./style/Style.js").StyleFunction|undefined} Return a function
-     * representing the current style of this feature.
-     * @api
-     */
-    getStyleFunction() {
-      return this.styleFunction_;
-    }
-    /**
-     * @private
-     */
-    handleGeometryChange_() {
-      this.changed();
-    }
-    /**
-     * @private
-     */
-    handleGeometryChanged_() {
-      if (this.geometryChangeKey_) {
-        unlistenByKey(this.geometryChangeKey_);
-        this.geometryChangeKey_ = null;
-      }
-      const geometry = this.getGeometry();
-      if (geometry) {
-        this.geometryChangeKey_ = listen(
-          geometry,
-          EventType.CHANGE,
-          this.handleGeometryChange_,
-          this
-        );
-      }
-      this.changed();
-    }
-    /**
-     * Set the default geometry for the feature.  This will update the property
-     * with the name returned by {@link module:ol/Feature~Feature#getGeometryName}.
-     * @param {Geometry|undefined} geometry The new geometry.
-     * @api
-     * @observable
-     */
-    setGeometry(geometry) {
-      this.set(this.geometryName_, geometry);
-    }
-    /**
-     * Set the style for the feature to override the layer style.  This can be a
-     * single style object, an array of styles, or a function that takes a
-     * resolution and returns an array of styles. To unset the feature style, call
-     * `setStyle()` without arguments or a falsey value.
-     * @param {import("./style/Style.js").StyleLike} [style] Style for this feature.
-     * @api
-     * @fires module:ol/events/Event~BaseEvent#event:change
-     */
-    setStyle(style) {
-      this.style_ = style;
-      this.styleFunction_ = !style ? void 0 : createStyleFunction(style);
-      this.changed();
-    }
-    /**
-     * Set the feature id.  The feature id is considered stable and may be used when
-     * requesting features or comparing identifiers returned from a remote source.
-     * The feature id can be used with the
-     * {@link module:ol/source/Vector~VectorSource#getFeatureById} method.
-     * @param {number|string|undefined} id The feature id.
-     * @api
-     * @fires module:ol/events/Event~BaseEvent#event:change
-     */
-    setId(id) {
-      this.id_ = id;
-      this.changed();
-    }
-    /**
-     * Set the property name to be used when getting the feature's default geometry.
-     * When calling {@link module:ol/Feature~Feature#getGeometry}, the value of the property with
-     * this name will be returned.
-     * @param {string} name The property name of the default geometry.
-     * @api
-     */
-    setGeometryName(name) {
-      if (name === this.geometryName_) {
-        return;
-      }
-      this.removeChangeListener(this.geometryName_, this.handleGeometryChanged_);
-      this.geometryName_ = name;
-      this.addChangeListener(this.geometryName_, this.handleGeometryChanged_);
-      this.handleGeometryChanged_();
-    }
-  }
-  function createStyleFunction(obj) {
-    if (typeof obj === "function") {
-      return obj;
-    }
-    let styles;
-    if (Array.isArray(obj)) {
-      styles = obj;
-    } else {
-      assert(
-        typeof /** @type {?} */
-        obj.getZIndex === "function",
-        "Expected an `ol/style/Style` or an array of `ol/style/Style.js`"
-      );
-      const style = (
-        /** @type {import("./style/Style.js").default} */
-        obj
-      );
-      styles = [style];
-    }
-    return function() {
-      return styles;
-    };
-  }
-  function interpolatePoint(flatCoordinates, offset, end, stride, fraction, dest, dimension) {
-    let o, t;
-    const n = (end - offset) / stride;
-    if (n === 1) {
-      o = offset;
-    } else if (n === 2) {
-      o = offset;
-      t = fraction;
-    } else if (n !== 0) {
-      let x1 = flatCoordinates[offset];
-      let y1 = flatCoordinates[offset + 1];
-      let length = 0;
-      const cumulativeLengths = [0];
-      for (let i = offset + stride; i < end; i += stride) {
-        const x2 = flatCoordinates[i];
-        const y2 = flatCoordinates[i + 1];
-        length += Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        cumulativeLengths.push(length);
-        x1 = x2;
-        y1 = y2;
-      }
-      const target = fraction * length;
-      const index = binarySearch(cumulativeLengths, target);
-      if (index < 0) {
-        t = (target - cumulativeLengths[-index - 2]) / (cumulativeLengths[-index - 1] - cumulativeLengths[-index - 2]);
-        o = offset + (-index - 2) * stride;
-      } else {
-        o = offset + index * stride;
-      }
-    }
-    dimension = dimension > 1 ? dimension : 2;
-    dest = dest ? dest : new Array(dimension);
-    for (let i = 0; i < dimension; ++i) {
-      dest[i] = o === void 0 ? NaN : t === void 0 ? flatCoordinates[o + i] : lerp(flatCoordinates[o + i], flatCoordinates[o + stride + i], t);
-    }
-    return dest;
-  }
-  function lineStringCoordinateAtM(flatCoordinates, offset, end, stride, m, extrapolate) {
-    if (end == offset) {
-      return null;
-    }
-    let coordinate;
-    if (m < flatCoordinates[offset + stride - 1]) {
-      if (extrapolate) {
-        coordinate = flatCoordinates.slice(offset, offset + stride);
-        coordinate[stride - 1] = m;
-        return coordinate;
-      }
-      return null;
-    }
-    if (flatCoordinates[end - 1] < m) {
-      if (extrapolate) {
-        coordinate = flatCoordinates.slice(end - stride, end);
-        coordinate[stride - 1] = m;
-        return coordinate;
-      }
-      return null;
-    }
-    if (m == flatCoordinates[offset + stride - 1]) {
-      return flatCoordinates.slice(offset, offset + stride);
-    }
-    let lo = offset / stride;
-    let hi = end / stride;
-    while (lo < hi) {
-      const mid = lo + hi >> 1;
-      if (m < flatCoordinates[(mid + 1) * stride - 1]) {
-        hi = mid;
-      } else {
-        lo = mid + 1;
-      }
-    }
-    const m0 = flatCoordinates[lo * stride - 1];
-    if (m == m0) {
-      return flatCoordinates.slice((lo - 1) * stride, (lo - 1) * stride + stride);
-    }
-    const m1 = flatCoordinates[(lo + 1) * stride - 1];
-    const t = (m - m0) / (m1 - m0);
-    coordinate = [];
-    for (let i = 0; i < stride - 1; ++i) {
-      coordinate.push(
-        lerp(
-          flatCoordinates[(lo - 1) * stride + i],
-          flatCoordinates[lo * stride + i],
-          t
-        )
-      );
-    }
-    coordinate.push(m);
-    return coordinate;
-  }
-  function lineStringsCoordinateAtM(flatCoordinates, offset, ends, stride, m, extrapolate, interpolate) {
-    if (interpolate) {
-      return lineStringCoordinateAtM(
-        flatCoordinates,
-        offset,
-        ends[ends.length - 1],
-        stride,
-        m,
-        extrapolate
-      );
-    }
-    let coordinate;
-    if (m < flatCoordinates[stride - 1]) {
-      if (extrapolate) {
-        coordinate = flatCoordinates.slice(0, stride);
-        coordinate[stride - 1] = m;
-        return coordinate;
-      }
-      return null;
-    }
-    if (flatCoordinates[flatCoordinates.length - 1] < m) {
-      if (extrapolate) {
-        coordinate = flatCoordinates.slice(flatCoordinates.length - stride);
-        coordinate[stride - 1] = m;
-        return coordinate;
-      }
-      return null;
-    }
-    for (let i = 0, ii = ends.length; i < ii; ++i) {
-      const end = ends[i];
-      if (offset == end) {
-        continue;
-      }
-      if (m < flatCoordinates[offset + stride - 1]) {
-        return null;
-      }
-      if (m <= flatCoordinates[end - 1]) {
-        return lineStringCoordinateAtM(
-          flatCoordinates,
-          offset,
-          end,
-          stride,
-          m,
-          false
-        );
-      }
-      offset = end;
-    }
-    return null;
-  }
-  class LineString extends SimpleGeometry {
-    /**
-     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
-     *     For internal use, flat coordinates in combination with `layout` are also accepted.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(coordinates2, layout) {
-      super();
-      this.flatMidpoint_ = null;
-      this.flatMidpointRevision_ = -1;
-      this.maxDelta_ = -1;
-      this.maxDeltaRevision_ = -1;
-      if (layout !== void 0 && !Array.isArray(coordinates2[0])) {
-        this.setFlatCoordinates(
-          layout,
-          /** @type {Array<number>} */
-          coordinates2
-        );
-      } else {
-        this.setCoordinates(
-          /** @type {Array<import("../coordinate.js").Coordinate>} */
-          coordinates2,
-          layout
-        );
-      }
-    }
-    /**
-     * Append the passed coordinate to the coordinates of the linestring.
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @api
-     */
-    appendCoordinate(coordinate) {
-      extend$2(this.flatCoordinates, coordinate);
-      this.changed();
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!LineString} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const lineString = new LineString(
-        this.flatCoordinates.slice(),
-        this.layout
-      );
-      lineString.applyProperties(this);
-      return lineString;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      if (this.maxDeltaRevision_ != this.getRevision()) {
-        this.maxDelta_ = Math.sqrt(
-          maxSquaredDelta(
-            this.flatCoordinates,
-            0,
-            this.flatCoordinates.length,
-            this.stride,
-            0
-          )
-        );
-        this.maxDeltaRevision_ = this.getRevision();
-      }
-      return assignClosestPoint(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        this.maxDelta_,
-        false,
-        x,
-        y,
-        closestPoint,
-        minSquaredDistance
-      );
-    }
-    /**
-     * Iterate over each segment, calling the provided callback.
-     * If the callback returns a truthy value the function returns that
-     * value immediately. Otherwise the function returns `false`.
-     *
-     * @param {function(this: S, import("../coordinate.js").Coordinate, import("../coordinate.js").Coordinate): T} callback Function
-     *     called for each segment. The function will receive two arguments, the start and end coordinates of the segment.
-     * @return {T|boolean} Value.
-     * @template T,S
-     * @api
-     */
-    forEachSegment(callback) {
-      return forEach(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        callback
-      );
-    }
-    /**
-     * Returns the coordinate at `m` using linear interpolation, or `null` if no
-     * such coordinate exists.
-     *
-     * `extrapolate` controls extrapolation beyond the range of Ms in the
-     * MultiLineString. If `extrapolate` is `true` then Ms less than the first
-     * M will return the first coordinate and Ms greater than the last M will
-     * return the last coordinate.
-     *
-     * @param {number} m M.
-     * @param {boolean} [extrapolate] Extrapolate. Default is `false`.
-     * @return {import("../coordinate.js").Coordinate|null} Coordinate.
-     * @api
-     */
-    getCoordinateAtM(m, extrapolate) {
-      if (this.layout != "XYM" && this.layout != "XYZM") {
-        return null;
-      }
-      extrapolate = extrapolate !== void 0 ? extrapolate : false;
-      return lineStringCoordinateAtM(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        m,
-        extrapolate
-      );
-    }
-    /**
-     * Return the coordinates of the linestring.
-     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates() {
-      return inflateCoordinates(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride
-      );
-    }
-    /**
-     * Return the coordinate at the provided fraction along the linestring.
-     * The `fraction` is a number between 0 and 1, where 0 is the start of the
-     * linestring and 1 is the end.
-     * @param {number} fraction Fraction.
-     * @param {import("../coordinate.js").Coordinate} [dest] Optional coordinate whose values will
-     *     be modified. If not provided, a new coordinate will be returned.
-     * @return {import("../coordinate.js").Coordinate} Coordinate of the interpolated point.
-     * @api
-     */
-    getCoordinateAt(fraction, dest) {
-      return interpolatePoint(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        fraction,
-        dest,
-        this.stride
-      );
-    }
-    /**
-     * Return the length of the linestring on projected plane.
-     * @return {number} Length (on projected plane).
-     * @api
-     */
-    getLength() {
-      return lineStringLength(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride
-      );
-    }
-    /**
-     * @return {Array<number>} Flat midpoint.
-     */
-    getFlatMidpoint() {
-      if (this.flatMidpointRevision_ != this.getRevision()) {
-        this.flatMidpoint_ = this.getCoordinateAt(
-          0.5,
-          this.flatMidpoint_ ?? void 0
-        );
-        this.flatMidpointRevision_ = this.getRevision();
-      }
-      return (
-        /** @type {Array<number>} */
-        this.flatMidpoint_
-      );
-    }
-    /**
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {LineString} Simplified LineString.
-     * @protected
-     * @override
-     */
-    getSimplifiedGeometryInternal(squaredTolerance) {
-      const simplifiedFlatCoordinates = [];
-      simplifiedFlatCoordinates.length = douglasPeucker(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        squaredTolerance,
-        simplifiedFlatCoordinates,
-        0
-      );
-      return new LineString(simplifiedFlatCoordinates, "XY");
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "LineString";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      return intersectsLineString(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        extent,
-        this.getExtent()
-      );
-    }
-    /**
-     * Set the coordinates of the linestring.
-     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 1);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      this.flatCoordinates.length = deflateCoordinates(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride
-      );
-      this.changed();
-    }
-  }
-  class MultiLineString extends SimpleGeometry {
-    /**
-     * @param {Array<Array<import("../coordinate.js").Coordinate>|LineString>|Array<number>} coordinates
-     *     Coordinates or LineString geometries. (For internal use, flat coordinates in
-     *     combination with `layout` and `ends` are also accepted.)
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @param {Array<number>} [ends] Flat coordinate ends for internal use.
-     */
-    constructor(coordinates2, layout, ends) {
-      super();
-      this.ends_ = [];
-      this.maxDelta_ = -1;
-      this.maxDeltaRevision_ = -1;
-      if (Array.isArray(coordinates2[0])) {
-        this.setCoordinates(
-          /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
-          coordinates2,
-          layout
-        );
-      } else if (layout !== void 0 && ends) {
-        this.setFlatCoordinates(
-          layout,
-          /** @type {Array<number>} */
-          coordinates2
-        );
-        this.ends_ = ends;
-      } else {
-        const lineStrings = (
-          /** @type {Array<LineString>} */
-          coordinates2
-        );
-        const flatCoordinates = [];
-        const ends2 = [];
-        for (let i = 0, ii = lineStrings.length; i < ii; ++i) {
-          const lineString = lineStrings[i];
-          extend$2(flatCoordinates, lineString.getFlatCoordinates());
-          ends2.push(flatCoordinates.length);
-        }
-        const layout2 = lineStrings.length === 0 ? this.getLayout() : lineStrings[0].getLayout();
-        this.setFlatCoordinates(layout2, flatCoordinates);
-        this.ends_ = ends2;
-      }
-    }
-    /**
-     * Append the passed linestring to the multilinestring.
-     * @param {LineString} lineString LineString.
-     * @api
-     */
-    appendLineString(lineString) {
-      extend$2(this.flatCoordinates, lineString.getFlatCoordinates().slice());
-      this.ends_.push(this.flatCoordinates.length);
-      this.changed();
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!MultiLineString} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const multiLineString = new MultiLineString(
-        this.flatCoordinates.slice(),
-        this.layout,
-        this.ends_.slice()
-      );
-      multiLineString.applyProperties(this);
-      return multiLineString;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      if (this.maxDeltaRevision_ != this.getRevision()) {
-        this.maxDelta_ = Math.sqrt(
-          arrayMaxSquaredDelta(
-            this.flatCoordinates,
-            0,
-            this.ends_,
-            this.stride,
-            0
-          )
-        );
-        this.maxDeltaRevision_ = this.getRevision();
-      }
-      return assignClosestArrayPoint(
-        this.flatCoordinates,
-        0,
-        this.ends_,
-        this.stride,
-        this.maxDelta_,
-        false,
-        x,
-        y,
-        closestPoint,
-        minSquaredDistance
-      );
-    }
-    /**
-     * Returns the coordinate at `m` using linear interpolation, or `null` if no
-     * such coordinate exists.
-     *
-     * `extrapolate` controls extrapolation beyond the range of Ms in the
-     * MultiLineString. If `extrapolate` is `true` then Ms less than the first
-     * M will return the first coordinate and Ms greater than the last M will
-     * return the last coordinate.
-     *
-     * `interpolate` controls interpolation between consecutive LineStrings
-     * within the MultiLineString. If `interpolate` is `true` the coordinates
-     * will be linearly interpolated between the last coordinate of one LineString
-     * and the first coordinate of the next LineString.  If `interpolate` is
-     * `false` then the function will return `null` for Ms falling between
-     * LineStrings.
-     *
-     * @param {number} m M.
-     * @param {boolean} [extrapolate] Extrapolate. Default is `false`.
-     * @param {boolean} [interpolate] Interpolate. Default is `false`.
-     * @return {import("../coordinate.js").Coordinate|null} Coordinate.
-     * @api
-     */
-    getCoordinateAtM(m, extrapolate, interpolate) {
-      if (this.layout != "XYM" && this.layout != "XYZM" || this.flatCoordinates.length === 0) {
-        return null;
-      }
-      extrapolate = extrapolate !== void 0 ? extrapolate : false;
-      interpolate = interpolate !== void 0 ? interpolate : false;
-      return lineStringsCoordinateAtM(
-        this.flatCoordinates,
-        0,
-        this.ends_,
-        this.stride,
-        m,
-        extrapolate,
-        interpolate
-      );
-    }
-    /**
-     * Return the coordinates of the multilinestring.
-     * @return {Array<Array<import("../coordinate.js").Coordinate>>} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates() {
-      return inflateCoordinatesArray(
-        this.flatCoordinates,
-        0,
-        this.ends_,
-        this.stride
-      );
-    }
-    /**
-     * @return {Array<number>} Ends.
-     */
-    getEnds() {
-      return this.ends_;
-    }
-    /**
-     * Return the linestring at the specified index.
-     * @param {number} index Index.
-     * @return {LineString} LineString.
-     * @api
-     */
-    getLineString(index) {
-      if (index < 0 || this.ends_.length <= index) {
-        return null;
-      }
-      return new LineString(
-        this.flatCoordinates.slice(
-          index === 0 ? 0 : this.ends_[index - 1],
-          this.ends_[index]
-        ),
-        this.layout
-      );
-    }
-    /**
-     * Return the linestrings of this multilinestring.
-     * @return {Array<LineString>} LineStrings.
-     * @api
-     */
-    getLineStrings() {
-      const flatCoordinates = this.flatCoordinates;
-      const ends = this.ends_;
-      const layout = this.layout;
-      const lineStrings = [];
-      let offset = 0;
-      for (let i = 0, ii = ends.length; i < ii; ++i) {
-        const end = ends[i];
-        const lineString = new LineString(
-          flatCoordinates.slice(offset, end),
-          layout
-        );
-        lineStrings.push(lineString);
-        offset = end;
-      }
-      return lineStrings;
-    }
-    /**
-     * Return the sum of all line string lengths
-     * @return {number} Length (on projected plane).
-     * @api
-     */
-    getLength() {
-      const ends = this.ends_;
-      let start = 0;
-      let length = 0;
-      for (let i = 0, ii = ends.length; i < ii; ++i) {
-        length += lineStringLength(
-          this.flatCoordinates,
-          start,
-          ends[i],
-          this.stride
-        );
-        start = ends[i];
-      }
-      return length;
-    }
-    /**
-     * @return {Array<number>} Flat midpoints.
-     */
-    getFlatMidpoints() {
-      const midpoints = [];
-      const flatCoordinates = this.flatCoordinates;
-      let offset = 0;
-      const ends = this.ends_;
-      const stride = this.stride;
-      for (let i = 0, ii = ends.length; i < ii; ++i) {
-        const end = ends[i];
-        const midpoint = interpolatePoint(
-          flatCoordinates,
-          offset,
-          end,
-          stride,
-          0.5
-        );
-        extend$2(midpoints, midpoint);
-        offset = end;
-      }
-      return midpoints;
-    }
-    /**
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {MultiLineString} Simplified MultiLineString.
-     * @protected
-     * @override
-     */
-    getSimplifiedGeometryInternal(squaredTolerance) {
-      const simplifiedFlatCoordinates = [];
-      const simplifiedEnds = [];
-      simplifiedFlatCoordinates.length = douglasPeuckerArray(
-        this.flatCoordinates,
-        0,
-        this.ends_,
-        this.stride,
-        squaredTolerance,
-        simplifiedFlatCoordinates,
-        0,
-        simplifiedEnds
-      );
-      return new MultiLineString(simplifiedFlatCoordinates, "XY", simplifiedEnds);
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "MultiLineString";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      return intersectsLineStringArray(
-        this.flatCoordinates,
-        0,
-        this.ends_,
-        this.stride,
-        extent
-      );
-    }
-    /**
-     * Set the coordinates of the multilinestring.
-     * @param {!Array<Array<import("../coordinate.js").Coordinate>>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 2);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      const ends = deflateCoordinatesArray(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride,
-        this.ends_
-      );
-      this.flatCoordinates.length = ends.length === 0 ? 0 : ends[ends.length - 1];
-      this.changed();
-    }
-  }
-  class MultiPoint extends SimpleGeometry {
-    /**
-     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
-     *     For internal use, flat coordinates in combination with `layout` are also accepted.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(coordinates2, layout) {
-      super();
-      if (layout && !Array.isArray(coordinates2[0])) {
-        this.setFlatCoordinates(
-          layout,
-          /** @type {Array<number>} */
-          coordinates2
-        );
-      } else {
-        this.setCoordinates(
-          /** @type {Array<import("../coordinate.js").Coordinate>} */
-          coordinates2,
-          layout
-        );
-      }
-    }
-    /**
-     * Append the passed point to this multipoint.
-     * @param {Point} point Point.
-     * @api
-     */
-    appendPoint(point) {
-      extend$2(this.flatCoordinates, point.getFlatCoordinates());
-      this.changed();
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!MultiPoint} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const multiPoint = new MultiPoint(
-        this.flatCoordinates.slice(),
-        this.layout
-      );
-      multiPoint.applyProperties(this);
-      return multiPoint;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      const flatCoordinates = this.flatCoordinates;
-      const stride = this.stride;
-      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
-        const squaredDistance2 = squaredDistance$1(
-          x,
-          y,
-          flatCoordinates[i],
-          flatCoordinates[i + 1]
-        );
-        if (squaredDistance2 < minSquaredDistance) {
-          minSquaredDistance = squaredDistance2;
-          for (let j = 0; j < stride; ++j) {
-            closestPoint[j] = flatCoordinates[i + j];
-          }
-          closestPoint.length = stride;
-        }
-      }
-      return minSquaredDistance;
-    }
-    /**
-     * Return the coordinates of the multipoint.
-     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates() {
-      return inflateCoordinates(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride
-      );
-    }
-    /**
-     * Return the point at the specified index.
-     * @param {number} index Index.
-     * @return {Point} Point.
-     * @api
-     */
-    getPoint(index) {
-      const n = this.flatCoordinates.length / this.stride;
-      if (index < 0 || n <= index) {
-        return null;
-      }
-      return new Point(
-        this.flatCoordinates.slice(
-          index * this.stride,
-          (index + 1) * this.stride
-        ),
-        this.layout
-      );
-    }
-    /**
-     * Return the points of this multipoint.
-     * @return {Array<Point>} Points.
-     * @api
-     */
-    getPoints() {
-      const flatCoordinates = this.flatCoordinates;
-      const layout = this.layout;
-      const stride = this.stride;
-      const points = [];
-      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
-        const point = new Point(flatCoordinates.slice(i, i + stride), layout);
-        points.push(point);
-      }
-      return points;
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "MultiPoint";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      const flatCoordinates = this.flatCoordinates;
-      const stride = this.stride;
-      for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
-        const x = flatCoordinates[i];
-        const y = flatCoordinates[i + 1];
-        if (containsXY(extent, x, y)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    /**
-     * Set the coordinates of the multipoint.
-     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 1);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      this.flatCoordinates.length = deflateCoordinates(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride
-      );
-      this.changed();
-    }
-  }
-  function linearRingss(flatCoordinates, offset, endss, stride) {
-    const flatCenters = [];
-    let extent = createEmpty();
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      extent = createOrUpdateFromFlatCoordinates(
-        flatCoordinates,
-        offset,
-        ends[0],
-        stride
-      );
-      flatCenters.push((extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2);
-      offset = ends[ends.length - 1];
-    }
-    return flatCenters;
-  }
-  class MultiPolygon extends SimpleGeometry {
-    /**
-     * @param {Array<Array<Array<import("../coordinate.js").Coordinate>>|Polygon>|Array<number>} coordinates Coordinates.
-     *     For internal use, flat coordinates in combination with `layout` and `endss` are also accepted.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @param {Array<Array<number>>} [endss] Array of ends for internal use with flat coordinates.
-     */
-    constructor(coordinates2, layout, endss) {
-      super();
-      this.endss_ = [];
-      this.flatInteriorPointsRevision_ = -1;
-      this.flatInteriorPoints_ = null;
-      this.maxDelta_ = -1;
-      this.maxDeltaRevision_ = -1;
-      this.orientedRevision_ = -1;
-      this.orientedFlatCoordinates_ = null;
-      if (!endss && !Array.isArray(coordinates2[0])) {
-        const polygons = (
-          /** @type {Array<Polygon>} */
-          coordinates2
-        );
-        const flatCoordinates = [];
-        const thisEndss = [];
-        for (let i = 0, ii = polygons.length; i < ii; ++i) {
-          const polygon = polygons[i];
-          const offset = flatCoordinates.length;
-          const ends = polygon.getEnds();
-          for (let j = 0, jj = ends.length; j < jj; ++j) {
-            ends[j] += offset;
-          }
-          extend$2(flatCoordinates, polygon.getFlatCoordinates());
-          thisEndss.push(ends);
-        }
-        layout = polygons.length === 0 ? this.getLayout() : polygons[0].getLayout();
-        coordinates2 = flatCoordinates;
-        endss = thisEndss;
-      }
-      if (layout !== void 0 && endss) {
-        this.setFlatCoordinates(
-          layout,
-          /** @type {Array<number>} */
-          coordinates2
-        );
-        this.endss_ = endss;
-      } else {
-        this.setCoordinates(
-          /** @type {Array<Array<Array<import("../coordinate.js").Coordinate>>>} */
-          coordinates2,
-          layout
-        );
-      }
-    }
-    /**
-     * Append the passed polygon to this multipolygon.
-     * @param {Polygon} polygon Polygon.
-     * @api
-     */
-    appendPolygon(polygon) {
-      let ends;
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = polygon.getFlatCoordinates().slice();
-        ends = polygon.getEnds().slice();
-        this.endss_.push();
-      } else {
-        const offset = this.flatCoordinates.length;
-        extend$2(this.flatCoordinates, polygon.getFlatCoordinates());
-        ends = polygon.getEnds().slice();
-        for (let i = 0, ii = ends.length; i < ii; ++i) {
-          ends[i] += offset;
-        }
-      }
-      this.endss_.push(ends);
-      this.changed();
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!MultiPolygon} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const len = this.endss_.length;
-      const newEndss = new Array(len);
-      for (let i = 0; i < len; ++i) {
-        newEndss[i] = this.endss_[i].slice();
-      }
-      const multiPolygon = new MultiPolygon(
-        this.flatCoordinates.slice(),
-        this.layout,
-        newEndss
-      );
-      multiPolygon.applyProperties(this);
-      return multiPolygon;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      if (this.maxDeltaRevision_ != this.getRevision()) {
-        this.maxDelta_ = Math.sqrt(
-          multiArrayMaxSquaredDelta(
-            this.flatCoordinates,
-            0,
-            this.endss_,
-            this.stride,
-            0
-          )
-        );
-        this.maxDeltaRevision_ = this.getRevision();
-      }
-      return assignClosestMultiArrayPoint(
-        this.getOrientedFlatCoordinates(),
-        0,
-        this.endss_,
-        this.stride,
-        this.maxDelta_,
-        true,
-        x,
-        y,
-        closestPoint,
-        minSquaredDistance
-      );
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @return {boolean} Contains (x, y).
-     * @override
-     */
-    containsXY(x, y) {
-      return linearRingssContainsXY(
-        this.getOrientedFlatCoordinates(),
-        0,
-        this.endss_,
-        this.stride,
-        x,
-        y
-      );
-    }
-    /**
-     * Return the area of the multipolygon on projected plane.
-     * @return {number} Area (on projected plane).
-     * @api
-     */
-    getArea() {
-      return linearRingss$1(
-        this.getOrientedFlatCoordinates(),
-        0,
-        this.endss_,
-        this.stride
-      );
-    }
-    /**
-     * Get the coordinate array for this geometry.  This array has the structure
-     * of a GeoJSON coordinate array for multi-polygons.
-     *
-     * @param {boolean} [right] Orient coordinates according to the right-hand
-     *     rule (counter-clockwise for exterior and clockwise for interior rings).
-     *     If `false`, coordinates will be oriented according to the left-hand rule
-     *     (clockwise for exterior and counter-clockwise for interior rings).
-     *     By default, coordinate orientation will depend on how the geometry was
-     *     constructed.
-     * @return {Array<Array<Array<import("../coordinate.js").Coordinate>>>} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates(right) {
-      let flatCoordinates;
-      if (right !== void 0) {
-        flatCoordinates = this.getOrientedFlatCoordinates().slice();
-        orientLinearRingsArray(
-          flatCoordinates,
-          0,
-          this.endss_,
-          this.stride,
-          right
-        );
-      } else {
-        flatCoordinates = this.flatCoordinates;
-      }
-      return inflateMultiCoordinatesArray(
-        flatCoordinates,
-        0,
-        this.endss_,
-        this.stride
-      );
-    }
-    /**
-     * @return {Array<Array<number>>} Endss.
-     */
-    getEndss() {
-      return this.endss_;
-    }
-    /**
-     * @return {Array<number>} Flat interior points.
-     */
-    getFlatInteriorPoints() {
-      if (this.flatInteriorPointsRevision_ != this.getRevision()) {
-        const flatCenters = linearRingss(
-          this.flatCoordinates,
-          0,
-          this.endss_,
-          this.stride
-        );
-        this.flatInteriorPoints_ = getInteriorPointsOfMultiArray(
-          this.getOrientedFlatCoordinates(),
-          0,
-          this.endss_,
-          this.stride,
-          flatCenters
-        );
-        this.flatInteriorPointsRevision_ = this.getRevision();
-      }
-      return (
-        /** @type {Array<number>} */
-        this.flatInteriorPoints_
-      );
-    }
-    /**
-     * Return the interior points as {@link module:ol/geom/MultiPoint~MultiPoint multipoint}.
-     * @return {MultiPoint} Interior points as XYM coordinates, where M is
-     * the length of the horizontal intersection that the point belongs to.
-     * @api
-     */
-    getInteriorPoints() {
-      return new MultiPoint(this.getFlatInteriorPoints().slice(), "XYM");
-    }
-    /**
-     * @return {Array<number>} Oriented flat coordinates.
-     */
-    getOrientedFlatCoordinates() {
-      if (this.orientedRevision_ != this.getRevision()) {
-        const flatCoordinates = this.flatCoordinates;
-        if (linearRingssAreOriented(flatCoordinates, 0, this.endss_, this.stride)) {
-          this.orientedFlatCoordinates_ = flatCoordinates;
-        } else {
-          this.orientedFlatCoordinates_ = flatCoordinates.slice();
-          this.orientedFlatCoordinates_.length = orientLinearRingsArray(
-            this.orientedFlatCoordinates_,
-            0,
-            this.endss_,
-            this.stride
-          );
-        }
-        this.orientedRevision_ = this.getRevision();
-      }
-      return (
-        /** @type {Array<number>} */
-        this.orientedFlatCoordinates_
-      );
-    }
-    /**
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {MultiPolygon} Simplified MultiPolygon.
-     * @protected
-     * @override
-     */
-    getSimplifiedGeometryInternal(squaredTolerance) {
-      const simplifiedFlatCoordinates = [];
-      const simplifiedEndss = [];
-      simplifiedFlatCoordinates.length = quantizeMultiArray(
-        this.flatCoordinates,
-        0,
-        this.endss_,
-        this.stride,
-        Math.sqrt(squaredTolerance),
-        simplifiedFlatCoordinates,
-        0,
-        simplifiedEndss
-      );
-      return new MultiPolygon(simplifiedFlatCoordinates, "XY", simplifiedEndss);
-    }
-    /**
-     * Return the polygon at the specified index.
-     * @param {number} index Index.
-     * @return {Polygon} Polygon.
-     * @api
-     */
-    getPolygon(index) {
-      if (index < 0 || this.endss_.length <= index) {
-        return null;
-      }
-      let offset;
-      if (index === 0) {
-        offset = 0;
-      } else {
-        const prevEnds = this.endss_[index - 1];
-        offset = prevEnds[prevEnds.length - 1];
-      }
-      const ends = this.endss_[index].slice();
-      const end = ends[ends.length - 1];
-      if (offset !== 0) {
-        for (let i = 0, ii = ends.length; i < ii; ++i) {
-          ends[i] -= offset;
-        }
-      }
-      return new Polygon(
-        this.flatCoordinates.slice(offset, end),
-        this.layout,
-        ends
-      );
-    }
-    /**
-     * Return the polygons of this multipolygon.
-     * @return {Array<Polygon>} Polygons.
-     * @api
-     */
-    getPolygons() {
-      const layout = this.layout;
-      const flatCoordinates = this.flatCoordinates;
-      const endss = this.endss_;
-      const polygons = [];
-      let offset = 0;
-      for (let i = 0, ii = endss.length; i < ii; ++i) {
-        const ends = endss[i].slice();
-        const end = ends[ends.length - 1];
-        if (offset !== 0) {
-          for (let j = 0, jj = ends.length; j < jj; ++j) {
-            ends[j] -= offset;
-          }
-        }
-        const polygon = new Polygon(
-          flatCoordinates.slice(offset, end),
-          layout,
-          ends
-        );
-        polygons.push(polygon);
-        offset = end;
-      }
-      return polygons;
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "MultiPolygon";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      return intersectsLinearRingMultiArray(
-        this.getOrientedFlatCoordinates(),
-        0,
-        this.endss_,
-        this.stride,
-        extent
-      );
-    }
-    /**
-     * Set the coordinates of the multipolygon.
-     * @param {!Array<Array<Array<import("../coordinate.js").Coordinate>>>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 3);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      const endss = deflateMultiCoordinatesArray(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride,
-        this.endss_
-      );
-      if (endss.length === 0) {
-        this.flatCoordinates.length = 0;
-      } else {
-        const lastEnds = endss[endss.length - 1];
-        this.flatCoordinates.length = lastEnds.length === 0 ? 0 : lastEnds[lastEnds.length - 1];
-      }
-      this.changed();
-    }
   }
   const tmpTransform = create();
   class RenderFeature {
@@ -29041,1320 +26872,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.changed();
     }
   }
-  const tmpTileCoord = [0, 0, 0];
-  const DECIMALS = 5;
-  class TileGrid {
-    /**
-     * @param {Options} options Tile grid options.
-     */
-    constructor(options) {
-      this.minZoom = options.minZoom !== void 0 ? options.minZoom : 0;
-      this.resolutions_ = options.resolutions;
-      assert(
-        isSorted(
-          this.resolutions_,
-          /**
-           * @param {number} a First resolution
-           * @param {number} b Second resolution
-           * @return {number} Comparison result
-           */
-          (a, b) => b - a
-        ),
-        "`resolutions` must be sorted in descending order"
-      );
-      let zoomFactor;
-      if (!options.origins) {
-        for (let i = 0, ii = this.resolutions_.length - 1; i < ii; ++i) {
-          if (!zoomFactor) {
-            zoomFactor = this.resolutions_[i] / this.resolutions_[i + 1];
-          } else {
-            if (this.resolutions_[i] / this.resolutions_[i + 1] !== zoomFactor) {
-              zoomFactor = void 0;
-              break;
-            }
-          }
-        }
-      }
-      this.zoomFactor_ = zoomFactor;
-      this.maxZoom = this.resolutions_.length - 1;
-      this.origin_ = options.origin !== void 0 ? options.origin : null;
-      this.origins_ = null;
-      if (options.origins !== void 0) {
-        this.origins_ = options.origins;
-        assert(
-          this.origins_.length == this.resolutions_.length,
-          "Number of `origins` and `resolutions` must be equal"
-        );
-      }
-      const extent = options.extent;
-      if (extent !== void 0 && !this.origin_ && !this.origins_) {
-        this.origin_ = getTopLeft(extent);
-      }
-      assert(
-        !this.origin_ && this.origins_ || this.origin_ && !this.origins_,
-        "Either `origin` or `origins` must be configured, never both"
-      );
-      this.tileSizes_ = null;
-      if (options.tileSizes !== void 0) {
-        this.tileSizes_ = options.tileSizes;
-        assert(
-          this.tileSizes_.length == this.resolutions_.length,
-          "Number of `tileSizes` and `resolutions` must be equal"
-        );
-      }
-      this.tileSize_ = options.tileSize !== void 0 ? options.tileSize : !this.tileSizes_ ? DEFAULT_TILE_SIZE : null;
-      assert(
-        !this.tileSize_ && this.tileSizes_ || this.tileSize_ && !this.tileSizes_,
-        "Either `tileSize` or `tileSizes` must be configured, never both"
-      );
-      this.extent_ = extent !== void 0 ? extent : null;
-      this.fullTileRanges_ = null;
-      this.tmpSize_ = [0, 0];
-      this.tmpExtent_ = [0, 0, 0, 0];
-      if (options.sizes !== void 0) {
-        this.fullTileRanges_ = options.sizes.map((size, z) => {
-          const tileRange = new TileRange(
-            Math.min(0, size[0]),
-            Math.max(size[0] - 1, -1),
-            Math.min(0, size[1]),
-            Math.max(size[1] - 1, -1)
-          );
-          if (extent) {
-            const restrictedTileRange = this.getTileRangeForExtentAndZ(extent, z);
-            tileRange.minX = Math.max(restrictedTileRange.minX, tileRange.minX);
-            tileRange.maxX = Math.min(restrictedTileRange.maxX, tileRange.maxX);
-            tileRange.minY = Math.max(restrictedTileRange.minY, tileRange.minY);
-            tileRange.maxY = Math.min(restrictedTileRange.maxY, tileRange.maxY);
-          }
-          return tileRange;
-        });
-      } else if (extent) {
-        this.calculateTileRanges_(extent);
-      }
-    }
-    /**
-     * Call a function with each tile coordinate for a given extent and zoom level.
-     *
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @param {number} zoom Integer zoom level.
-     * @param {function(import("../tilecoord.js").TileCoord): void} callback Function called with each tile coordinate.
-     * @api
-     */
-    forEachTileCoord(extent, zoom, callback) {
-      const tileRange = this.getTileRangeForExtentAndZ(extent, zoom);
-      for (let i = tileRange.minX, ii = tileRange.maxX; i <= ii; ++i) {
-        for (let j = tileRange.minY, jj = tileRange.maxY; j <= jj; ++j) {
-          callback([zoom, i, j]);
-        }
-      }
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {function(number, import("../TileRange.js").default): boolean} callback Callback.
-     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
-     * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
-     * @return {boolean} Callback succeeded.
-     */
-    forEachTileCoordParentTileRange(tileCoord, callback, tempTileRange, tempExtent2) {
-      let tileRange, x, y;
-      let tileCoordExtent = null;
-      let z = tileCoord[0] - 1;
-      if (this.zoomFactor_ === 2) {
-        x = tileCoord[1];
-        y = tileCoord[2];
-      } else {
-        tileCoordExtent = this.getTileCoordExtent(tileCoord, tempExtent2);
-      }
-      while (z >= this.minZoom) {
-        if (x !== void 0 && y !== void 0) {
-          x = Math.floor(x / 2);
-          y = Math.floor(y / 2);
-          tileRange = createOrUpdate$1(x, x, y, y, tempTileRange);
-        } else {
-          tileRange = this.getTileRangeForExtentAndZ(
-            tileCoordExtent,
-            z,
-            tempTileRange
-          );
-        }
-        if (callback(z, tileRange)) {
-          return true;
-        }
-        --z;
-      }
-      return false;
-    }
-    /**
-     * Get the extent for this tile grid, if it was configured.
-     * @return {import("../extent.js").Extent} Extent.
-     * @api
-     */
-    getExtent() {
-      return this.extent_;
-    }
-    /**
-     * Get the maximum zoom level for the grid.
-     * @return {number} Max zoom.
-     * @api
-     */
-    getMaxZoom() {
-      return this.maxZoom;
-    }
-    /**
-     * Get the minimum zoom level for the grid.
-     * @return {number} Min zoom.
-     * @api
-     */
-    getMinZoom() {
-      return this.minZoom;
-    }
-    /**
-     * Get the origin for the grid at the given zoom level.
-     * @param {number} z Integer zoom level.
-     * @return {import("../coordinate.js").Coordinate} Origin.
-     * @api
-     */
-    getOrigin(z) {
-      if (this.origin_) {
-        return this.origin_;
-      }
-      return this.origins_[z];
-    }
-    /**
-     * Get the list of origins for the grid.
-     * @return {Array<import("../coordinate.js").Coordinate>|null} Origin.
-     */
-    getOrigins() {
-      return this.origins_;
-    }
-    /**
-     * Get the resolution for the given zoom level.
-     * @param {number} z Integer zoom level.
-     * @return {number} Resolution.
-     * @api
-     */
-    getResolution(z) {
-      return this.resolutions_[z];
-    }
-    /**
-     * Get the list of resolutions for the tile grid.
-     * @return {Array<number>} Resolutions.
-     * @api
-     */
-    getResolutions() {
-      return this.resolutions_;
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
-     * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
-     * @return {import("../TileRange.js").default|null} Tile range.
-     */
-    getTileCoordChildTileRange(tileCoord, tempTileRange, tempExtent2) {
-      if (tileCoord[0] < this.maxZoom) {
-        if (this.zoomFactor_ === 2) {
-          const minX = tileCoord[1] * 2;
-          const minY = tileCoord[2] * 2;
-          return createOrUpdate$1(
-            minX,
-            minX + 1,
-            minY,
-            minY + 1,
-            tempTileRange
-          );
-        }
-        const tileCoordExtent = this.getTileCoordExtent(
-          tileCoord,
-          tempExtent2 || this.tmpExtent_
-        );
-        return this.getTileRangeForExtentAndZ(
-          tileCoordExtent,
-          tileCoord[0] + 1,
-          tempTileRange
-        );
-      }
-      return null;
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {number} z Integer zoom level.
-     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
-     * @return {import("../TileRange.js").default|null} Tile range.
-     */
-    getTileRangeForTileCoordAndZ(tileCoord, z, tempTileRange) {
-      if (z > this.maxZoom || z < this.minZoom) {
-        return null;
-      }
-      const tileCoordZ = tileCoord[0];
-      const tileCoordX = tileCoord[1];
-      const tileCoordY = tileCoord[2];
-      if (z === tileCoordZ) {
-        return createOrUpdate$1(
-          tileCoordX,
-          tileCoordY,
-          tileCoordX,
-          tileCoordY,
-          tempTileRange
-        );
-      }
-      if (this.zoomFactor_) {
-        const factor = Math.pow(this.zoomFactor_, z - tileCoordZ);
-        const minX = Math.floor(tileCoordX * factor);
-        const minY = Math.floor(tileCoordY * factor);
-        if (z < tileCoordZ) {
-          return createOrUpdate$1(minX, minX, minY, minY, tempTileRange);
-        }
-        const maxX = Math.floor(factor * (tileCoordX + 1)) - 1;
-        const maxY = Math.floor(factor * (tileCoordY + 1)) - 1;
-        return createOrUpdate$1(minX, maxX, minY, maxY, tempTileRange);
-      }
-      const tileCoordExtent = this.getTileCoordExtent(tileCoord, this.tmpExtent_);
-      return this.getTileRangeForExtentAndZ(tileCoordExtent, z, tempTileRange);
-    }
-    /**
-     * Get a tile range for the given extent and integer zoom level.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @param {number} z Integer zoom level.
-     * @param {import("../TileRange.js").default} [tempTileRange] Temporary tile range object.
-     * @return {import("../TileRange.js").default} Tile range.
-     */
-    getTileRangeForExtentAndZ(extent, z, tempTileRange) {
-      this.getTileCoordForXYAndZ_(extent[0], extent[3], z, false, tmpTileCoord);
-      const minX = tmpTileCoord[1];
-      const minY = tmpTileCoord[2];
-      this.getTileCoordForXYAndZ_(extent[2], extent[1], z, true, tmpTileCoord);
-      const maxX = tmpTileCoord[1];
-      const maxY = tmpTileCoord[2];
-      return createOrUpdate$1(minX, maxX, minY, maxY, tempTileRange);
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @return {import("../coordinate.js").Coordinate} Tile center.
-     */
-    getTileCoordCenter(tileCoord) {
-      const origin = this.getOrigin(tileCoord[0]);
-      const resolution = this.getResolution(tileCoord[0]);
-      const tileSize = toSize(this.getTileSize(tileCoord[0]), this.tmpSize_);
-      return [
-        origin[0] + (tileCoord[1] + 0.5) * tileSize[0] * resolution,
-        origin[1] - (tileCoord[2] + 0.5) * tileSize[1] * resolution
-      ];
-    }
-    /**
-     * Get the extent of a tile coordinate.
-     *
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("../extent.js").Extent} [tempExtent] Temporary extent object.
-     * @return {import("../extent.js").Extent} Extent.
-     * @api
-     */
-    getTileCoordExtent(tileCoord, tempExtent2) {
-      const origin = this.getOrigin(tileCoord[0]);
-      const resolution = this.getResolution(tileCoord[0]);
-      const tileSize = toSize(this.getTileSize(tileCoord[0]), this.tmpSize_);
-      const minX = origin[0] + tileCoord[1] * tileSize[0] * resolution;
-      const minY = origin[1] - (tileCoord[2] + 1) * tileSize[1] * resolution;
-      const maxX = minX + tileSize[0] * resolution;
-      const maxY = minY + tileSize[1] * resolution;
-      return createOrUpdate$2(minX, minY, maxX, maxY, tempExtent2);
-    }
-    /**
-     * Get the tile coordinate for the given map coordinate and resolution.  This
-     * method considers that coordinates that intersect tile boundaries should be
-     * assigned the higher tile coordinate.
-     *
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @param {number} resolution Resolution.
-     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Destination import("../tilecoord.js").TileCoord object.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
-     * @api
-     */
-    getTileCoordForCoordAndResolution(coordinate, resolution, opt_tileCoord) {
-      return this.getTileCoordForXYAndResolution_(
-        coordinate[0],
-        coordinate[1],
-        resolution,
-        false,
-        opt_tileCoord
-      );
-    }
-    /**
-     * Note that this method should not be called for resolutions that correspond
-     * to an integer zoom level.  Instead call the `getTileCoordForXYAndZ_` method.
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {number} resolution Resolution (for a non-integer zoom level).
-     * @param {boolean} reverseIntersectionPolicy Instead of letting edge
-     *     intersections go to the higher tile coordinate, let edge intersections
-     *     go to the lower tile coordinate.
-     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Temporary import("../tilecoord.js").TileCoord object.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
-     * @private
-     */
-    getTileCoordForXYAndResolution_(x, y, resolution, reverseIntersectionPolicy, opt_tileCoord) {
-      const z = this.getZForResolution(resolution);
-      const scale2 = resolution / this.getResolution(z);
-      const origin = this.getOrigin(z);
-      const tileSize = toSize(this.getTileSize(z), this.tmpSize_);
-      let tileCoordX = scale2 * (x - origin[0]) / resolution / tileSize[0];
-      let tileCoordY = scale2 * (origin[1] - y) / resolution / tileSize[1];
-      if (reverseIntersectionPolicy) {
-        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
-        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
-      } else {
-        tileCoordX = floor(tileCoordX, DECIMALS);
-        tileCoordY = floor(tileCoordY, DECIMALS);
-      }
-      return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
-    }
-    /**
-     * Although there is repetition between this method and `getTileCoordForXYAndResolution_`,
-     * they should have separate implementations.  This method is for integer zoom
-     * levels.  The other method should only be called for resolutions corresponding
-     * to non-integer zoom levels.
-     * @param {number} x Map x coordinate.
-     * @param {number} y Map y coordinate.
-     * @param {number} z Integer zoom level.
-     * @param {boolean} reverseIntersectionPolicy Instead of letting edge
-     *     intersections go to the higher tile coordinate, let edge intersections
-     *     go to the lower tile coordinate.
-     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Temporary import("../tilecoord.js").TileCoord object.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
-     * @private
-     */
-    getTileCoordForXYAndZ_(x, y, z, reverseIntersectionPolicy, opt_tileCoord) {
-      const origin = this.getOrigin(z);
-      const resolution = this.getResolution(z);
-      const tileSize = toSize(this.getTileSize(z), this.tmpSize_);
-      let tileCoordX = (x - origin[0]) / resolution / tileSize[0];
-      let tileCoordY = (origin[1] - y) / resolution / tileSize[1];
-      if (reverseIntersectionPolicy) {
-        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
-        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
-      } else {
-        tileCoordX = floor(tileCoordX, DECIMALS);
-        tileCoordY = floor(tileCoordY, DECIMALS);
-      }
-      return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
-    }
-    /**
-     * Get a tile coordinate given a map coordinate and zoom level.
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @param {number} z Integer zoom level, e.g. the result of a `getZForResolution()` method call
-     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Destination import("../tilecoord.js").TileCoord object.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
-     * @api
-     */
-    getTileCoordForCoordAndZ(coordinate, z, opt_tileCoord) {
-      return this.getTileCoordForXYAndZ_(
-        coordinate[0],
-        coordinate[1],
-        z,
-        false,
-        opt_tileCoord
-      );
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @return {number} Tile resolution.
-     */
-    getTileCoordResolution(tileCoord) {
-      return this.resolutions_[tileCoord[0]];
-    }
-    /**
-     * Get the tile size for a zoom level. The type of the return value matches the
-     * `tileSize` or `tileSizes` that the tile grid was configured with. To always
-     * get an {@link import("../size.js").Size}, run the result through {@link module:ol/size.toSize}.
-     * @param {number} z Z.
-     * @return {number|import("../size.js").Size} Tile size.
-     * @api
-     */
-    getTileSize(z) {
-      if (this.tileSize_) {
-        return this.tileSize_;
-      }
-      return this.tileSizes_[z];
-    }
-    /**
-     * @param {number} z Zoom level.
-     * @return {import("../TileRange.js").default|null} Extent tile range for the specified zoom level.
-     */
-    getFullTileRange(z) {
-      if (!this.fullTileRanges_) {
-        return this.extent_ ? this.getTileRangeForExtentAndZ(this.extent_, z) : null;
-      }
-      return this.fullTileRanges_[z];
-    }
-    /**
-     * @param {number} resolution Resolution.
-     * @param {number|import("../array.js").NearestDirectionFunction} [opt_direction]
-     *     If 0, the nearest resolution will be used.
-     *     If 1, the nearest higher resolution (lower Z) will be used. If -1, the
-     *     nearest lower resolution (higher Z) will be used. Default is 0.
-     *     Use a {@link module:ol/array~NearestDirectionFunction} for more precise control.
-     *
-     * For example to change tile Z at the midpoint of zoom levels
-     * ```js
-     * function(value, high, low) {
-     *   return value - low * Math.sqrt(high / low);
-     * }
-     * ```
-     * @return {number} Z.
-     * @api
-     */
-    getZForResolution(resolution, opt_direction) {
-      const z = linearFindNearest(
-        this.resolutions_,
-        resolution,
-        opt_direction || 0
-      );
-      return clamp(z, this.minZoom, this.maxZoom);
-    }
-    /**
-     * The tile with the provided tile coordinate intersects the given viewport.
-     * @param {import('../tilecoord.js').TileCoord} tileCoord Tile coordinate.
-     * @param {Array<number>} viewport Viewport as returned from {@link module:ol/extent.getRotatedViewport}.
-     * @return {boolean} The tile with the provided tile coordinate intersects the given viewport.
-     */
-    tileCoordIntersectsViewport(tileCoord, viewport) {
-      return intersectsLinearRing(
-        viewport,
-        0,
-        viewport.length,
-        2,
-        this.getTileCoordExtent(tileCoord)
-      );
-    }
-    /**
-     * @param {!import("../extent.js").Extent} extent Extent for this tile grid.
-     * @private
-     */
-    calculateTileRanges_(extent) {
-      const length = this.resolutions_.length;
-      const fullTileRanges = new Array(length);
-      for (let z = this.minZoom; z < length; ++z) {
-        fullTileRanges[z] = this.getTileRangeForExtentAndZ(extent, z);
-      }
-      this.fullTileRanges_ = fullTileRanges;
-    }
-  }
-  function getForProjection(projection) {
-    let tileGrid = projection.getDefaultTileGrid();
-    if (!tileGrid) {
-      tileGrid = createForProjection(projection);
-      projection.setDefaultTileGrid(tileGrid);
-    }
-    return tileGrid;
-  }
-  function wrapX(tileGrid, tileCoord, projection) {
-    const z = tileCoord[0];
-    const center = tileGrid.getTileCoordCenter(tileCoord);
-    const projectionExtent = extentFromProjection(projection);
-    if (!containsCoordinate(projectionExtent, center)) {
-      const worldWidth = getWidth(projectionExtent);
-      const worldsAway = Math.ceil(
-        (projectionExtent[0] - center[0]) / worldWidth
-      );
-      center[0] += worldWidth * worldsAway;
-      return tileGrid.getTileCoordForCoordAndZ(center, z);
-    }
-    return tileCoord;
-  }
-  function createForExtent(extent, maxZoom, tileSize, corner) {
-    corner = corner !== void 0 ? corner : "top-left";
-    const resolutions = resolutionsFromExtent(extent, maxZoom, tileSize);
-    return new TileGrid({
-      extent,
-      origin: getCorner(extent, corner),
-      resolutions,
-      tileSize
-    });
-  }
-  function createXYZ(options) {
-    const xyzOptions = options || {};
-    const extent = xyzOptions.extent || get$1("EPSG:3857").getExtent();
-    const gridOptions = {
-      extent,
-      minZoom: xyzOptions.minZoom,
-      tileSize: xyzOptions.tileSize,
-      resolutions: resolutionsFromExtent(
-        extent,
-        xyzOptions.maxZoom,
-        xyzOptions.tileSize,
-        xyzOptions.maxResolution
-      )
-    };
-    return new TileGrid(gridOptions);
-  }
-  function resolutionsFromExtent(extent, maxZoom, tileSize, maxResolution) {
-    maxZoom = maxZoom !== void 0 ? maxZoom : DEFAULT_MAX_ZOOM;
-    tileSize = toSize(tileSize !== void 0 ? tileSize : DEFAULT_TILE_SIZE);
-    const height = getHeight(extent);
-    const width = getWidth(extent);
-    maxResolution = maxResolution > 0 ? maxResolution : Math.max(width / tileSize[0], height / tileSize[1]);
-    const length = maxZoom + 1;
-    const resolutions = new Array(length);
-    for (let z = 0; z < length; ++z) {
-      resolutions[z] = maxResolution / Math.pow(2, z);
-    }
-    return resolutions;
-  }
-  function createForProjection(projection, maxZoom, tileSize, corner) {
-    const extent = extentFromProjection(projection);
-    return createForExtent(extent, maxZoom, tileSize, corner);
-  }
-  function extentFromProjection(projection) {
-    projection = get$1(projection);
-    let extent = projection.getExtent();
-    if (!extent) {
-      const half = 180 * METERS_PER_UNIT$1.degrees / projection.getMetersPerUnit();
-      extent = createOrUpdate$2(-half, -half, half, half);
-    }
-    return extent;
-  }
-  const zRegEx = /\{z\}/g;
-  const xRegEx = /\{x\}/g;
-  const yRegEx = /\{y\}/g;
-  const dashYRegEx = /\{-y\}/g;
-  function renderXYZTemplate(template, z, x, y, maxY) {
-    return template.replace(zRegEx, z.toString()).replace(xRegEx, x.toString()).replace(yRegEx, y.toString()).replace(dashYRegEx, function() {
-      if (maxY === void 0) {
-        throw new Error(
-          "If the URL template has a {-y} placeholder, the grid extent must be known"
-        );
-      }
-      return (maxY - y).toString();
-    });
-  }
-  function expandUrl(url) {
-    const urls = [];
-    let match = /\{([a-z])-([a-z])\}/.exec(url);
-    if (match) {
-      const startCharCode = match[1].charCodeAt(0);
-      const stopCharCode = match[2].charCodeAt(0);
-      let charCode;
-      for (charCode = startCharCode; charCode <= stopCharCode; ++charCode) {
-        urls.push(url.replace(match[0], String.fromCharCode(charCode)));
-      }
-      return urls;
-    }
-    match = /\{(\d+)-(\d+)\}/.exec(url);
-    if (match) {
-      const stop = parseInt(match[2], 10);
-      for (let i = parseInt(match[1], 10); i <= stop; i++) {
-        urls.push(url.replace(match[0], i.toString()));
-      }
-      return urls;
-    }
-    urls.push(url);
-    return urls;
-  }
-  function createFromTemplate(template, tileGrid) {
-    return (
-      /**
-       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
-       * @param {number} pixelRatio Pixel ratio.
-       * @param {import("./proj/Projection.js").default} projection Projection.
-       * @return {string|undefined} Tile URL.
-       */
-      (function(tileCoord, pixelRatio, projection) {
-        if (!tileCoord) {
-          return void 0;
-        }
-        let maxY;
-        const z = tileCoord[0];
-        if (tileGrid) {
-          const range = tileGrid.getFullTileRange(z);
-          if (range) {
-            maxY = range.getHeight() - 1;
-          }
-        }
-        return renderXYZTemplate(template, z, tileCoord[1], tileCoord[2], maxY);
-      })
-    );
-  }
-  function createFromTemplates(templates, tileGrid) {
-    const len = templates.length;
-    const tileUrlFunctions = new Array(len);
-    for (let i = 0; i < len; ++i) {
-      tileUrlFunctions[i] = createFromTemplate(templates[i], tileGrid);
-    }
-    return createFromTileUrlFunctions(tileUrlFunctions);
-  }
-  function createFromTileUrlFunctions(tileUrlFunctions) {
-    if (tileUrlFunctions.length === 1) {
-      return tileUrlFunctions[0];
-    }
-    return (
-      /**
-       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
-       * @param {number} pixelRatio Pixel ratio.
-       * @param {import("./proj/Projection.js").default} projection Projection.
-       * @return {string|undefined} Tile URL.
-       */
-      (function(tileCoord, pixelRatio, projection) {
-        if (!tileCoord) {
-          return void 0;
-        }
-        const h = hash(tileCoord);
-        const index = modulo(h, tileUrlFunctions.length);
-        return tileUrlFunctions[index](tileCoord, pixelRatio, projection);
-      })
-    );
-  }
-  class TileSource extends Source {
-    /**
-     * @param {Options} options SourceTile source options.
-     */
-    constructor(options) {
-      super({
-        attributions: options.attributions,
-        attributionsCollapsible: options.attributionsCollapsible,
-        projection: options.projection,
-        state: options.state,
-        wrapX: options.wrapX,
-        interpolate: options.interpolate
-      });
-      this.on;
-      this.once;
-      this.un;
-      this.tilePixelRatio_ = options.tilePixelRatio !== void 0 ? options.tilePixelRatio : 1;
-      this.tileGrid = options.tileGrid !== void 0 ? options.tileGrid : null;
-      const tileSize = [256, 256];
-      if (this.tileGrid) {
-        toSize(this.tileGrid.getTileSize(this.tileGrid.getMinZoom()), tileSize);
-      }
-      this.tmpSize = [0, 0];
-      this.key_ = options.key || getUid(this);
-      this.tileOptions = {
-        transition: options.transition,
-        interpolate: options.interpolate
-      };
-      this.zDirection = options.zDirection ? options.zDirection : 0;
-    }
-    /**
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {number} Gutter.
-     */
-    getGutterForProjection(projection) {
-      return 0;
-    }
-    /**
-     * Return the key to be used for all tiles in the source.
-     * @return {string} The key for all tiles.
-     */
-    getKey() {
-      return this.key_;
-    }
-    /**
-     * Set the value to be used as the key for all tiles in the source.
-     * @param {string} key The key for tiles.
-     * @protected
-     */
-    setKey(key) {
-      if (this.key_ !== key) {
-        this.key_ = key;
-        this.changed();
-      }
-    }
-    /**
-     * @param {import("../proj/Projection.js").default} [projection] Projection.
-     * @return {Array<number>|null} Resolutions.
-     * @override
-     */
-    getResolutions(projection) {
-      const tileGrid = projection ? this.getTileGridForProjection(projection) : this.tileGrid;
-      if (!tileGrid) {
-        return null;
-      }
-      return tileGrid.getResolutions();
-    }
-    /**
-     * @abstract
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
-     * @return {TileType|null} Tile.
-     */
-    getTile(z, x, y, pixelRatio, projection, tileCache) {
-      return abstract();
-    }
-    /**
-     * Return the tile grid of the tile source.
-     * @return {import("../tilegrid/TileGrid.js").default|null} Tile grid.
-     * @api
-     */
-    getTileGrid() {
-      return this.tileGrid;
-    }
-    /**
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {!import("../tilegrid/TileGrid.js").default} Tile grid.
-     */
-    getTileGridForProjection(projection) {
-      if (!this.tileGrid) {
-        return getForProjection(projection);
-      }
-      return this.tileGrid;
-    }
-    /**
-     * Get the tile pixel ratio for this source. Subclasses may override this
-     * method, which is meant to return a supported pixel ratio that matches the
-     * provided `pixelRatio` as close as possible.
-     * @param {number} pixelRatio Pixel ratio.
-     * @return {number} Tile pixel ratio.
-     */
-    getTilePixelRatio(pixelRatio) {
-      return this.tilePixelRatio_;
-    }
-    /**
-     * @param {number} z Z.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {import("../size.js").Size} Tile size.
-     */
-    getTilePixelSize(z, pixelRatio, projection) {
-      const tileGrid = this.getTileGridForProjection(projection);
-      const tilePixelRatio = this.getTilePixelRatio(pixelRatio);
-      const tileSize = toSize(tileGrid.getTileSize(z), this.tmpSize);
-      if (tilePixelRatio == 1) {
-        return tileSize;
-      }
-      return scale(tileSize, tilePixelRatio, this.tmpSize);
-    }
-    /**
-     * Returns a tile coordinate wrapped around the x-axis. When the tile coordinate
-     * is outside the resolution and extent range of the tile grid, `null` will be
-     * returned.
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("../proj/Projection.js").default} [projection] Projection.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate to be passed to the tileUrlFunction or
-     *     null if no tile URL should be created for the passed `tileCoord`.
-     */
-    getTileCoordForTileUrlFunction(tileCoord, projection) {
-      const gridProjection = projection !== void 0 ? projection : this.getProjection();
-      const tileGrid = projection !== void 0 ? this.getTileGridForProjection(gridProjection) : this.tileGrid || this.getTileGridForProjection(gridProjection);
-      if (this.getWrapX() && gridProjection.isGlobal()) {
-        tileCoord = wrapX(tileGrid, tileCoord, gridProjection);
-      }
-      return withinExtentAndZ(tileCoord, tileGrid) ? tileCoord : null;
-    }
-    /**
-     * Remove all cached reprojected tiles from the source. The next render cycle will create new tiles.
-     * @api
-     */
-    clear() {
-    }
-    /**
-     * @override
-     */
-    refresh() {
-      this.clear();
-      super.refresh();
-    }
-  }
-  class TileSourceEvent extends BaseEvent {
-    /**
-     * @param {string} type Type.
-     * @param {import("../Tile.js").default} tile The tile.
-     */
-    constructor(type, tile) {
-      super(type);
-      this.tile = tile;
-    }
-  }
-  const TileEventType = {
-    /**
-     * Triggered when a tile starts loading.
-     * @event module:ol/source/Tile.TileSourceEvent#tileloadstart
-     * @api
-     */
-    TILELOADSTART: "tileloadstart",
-    /**
-     * Triggered when a tile finishes loading, either when its data is loaded,
-     * or when loading was aborted because the tile is no longer needed.
-     * @event module:ol/source/Tile.TileSourceEvent#tileloadend
-     * @api
-     */
-    TILELOADEND: "tileloadend",
-    /**
-     * Triggered if tile loading results in an error. Note that this is not the
-     * right place to re-fetch tiles. See {@link module:ol/ImageTile~ImageTile#load}
-     * for details.
-     * @event module:ol/source/Tile.TileSourceEvent#tileloaderror
-     * @api
-     */
-    TILELOADERROR: "tileloaderror"
-  };
-  class UrlTile extends TileSource {
-    /**
-     * @param {Options} options Image tile options.
-     */
-    constructor(options) {
-      super({
-        attributions: options.attributions,
-        cacheSize: options.cacheSize,
-        projection: options.projection,
-        state: options.state,
-        tileGrid: options.tileGrid,
-        tilePixelRatio: options.tilePixelRatio,
-        wrapX: options.wrapX,
-        transition: options.transition,
-        interpolate: options.interpolate,
-        key: options.key,
-        attributionsCollapsible: options.attributionsCollapsible,
-        zDirection: options.zDirection
-      });
-      this.generateTileUrlFunction_ = this.tileUrlFunction === UrlTile.prototype.tileUrlFunction;
-      this.tileLoadFunction = options.tileLoadFunction;
-      if (options.tileUrlFunction) {
-        this.tileUrlFunction = options.tileUrlFunction;
-      }
-      this.urls = null;
-      if (options.urls) {
-        this.setUrls(options.urls);
-      } else if (options.url) {
-        this.setUrl(options.url);
-      }
-      this.tileLoadingKeys_ = {};
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Return the tile load function of the source.
-     * @return {import("../Tile.js").LoadFunction} TileLoadFunction
-     * @api
-     */
-    getTileLoadFunction() {
-      return this.tileLoadFunction;
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Return the tile URL function of the source.
-     * @return {import("../Tile.js").UrlFunction} TileUrlFunction
-     * @api
-     */
-    getTileUrlFunction() {
-      return Object.getPrototypeOf(this).tileUrlFunction === this.tileUrlFunction ? this.tileUrlFunction.bind(this) : this.tileUrlFunction;
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Return the URLs used for this source.
-     * When a tileUrlFunction is used instead of url or urls,
-     * null will be returned.
-     * @return {!Array<string>|null} URLs.
-     * @api
-     */
-    getUrls() {
-      return this.urls;
-    }
-    /**
-     * Handle tile change events.
-     * @param {import("../events/Event.js").default} event Event.
-     * @protected
-     */
-    handleTileChange(event) {
-      const tile = (
-        /** @type {import("../Tile.js").default} */
-        event.target
-      );
-      const uid = getUid(tile);
-      const tileState = tile.getState();
-      let type;
-      if (tileState == TileState.LOADING) {
-        this.tileLoadingKeys_[uid] = true;
-        type = TileEventType.TILELOADSTART;
-      } else if (uid in this.tileLoadingKeys_) {
-        delete this.tileLoadingKeys_[uid];
-        type = tileState == TileState.ERROR ? TileEventType.TILELOADERROR : tileState == TileState.LOADED ? TileEventType.TILELOADEND : void 0;
-      }
-      if (type != void 0) {
-        this.dispatchEvent(new TileSourceEvent(type, tile));
-      }
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Set the tile load function of the source.
-     * @param {import("../Tile.js").LoadFunction} tileLoadFunction Tile load function.
-     * @api
-     */
-    setTileLoadFunction(tileLoadFunction) {
-      this.tileLoadFunction = tileLoadFunction;
-      this.changed();
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Set the tile URL function of the source.
-     * @param {import("../Tile.js").UrlFunction} tileUrlFunction Tile URL function.
-     * @param {string} [key] Optional new tile key for the source.
-     * @api
-     */
-    setTileUrlFunction(tileUrlFunction, key) {
-      this.tileUrlFunction = tileUrlFunction;
-      if (typeof key !== "undefined") {
-        this.setKey(key);
-      } else {
-        this.changed();
-      }
-    }
-    /**
-     * Set the URL to use for requests.
-     * @param {string} url URL.
-     * @api
-     */
-    setUrl(url) {
-      const urls = expandUrl(url);
-      this.urls = urls;
-      this.setUrls(urls);
-    }
-    /**
-     * Deprecated.  Use an ImageTile source instead.
-     * Set the URLs to use for requests.
-     * @param {Array<string>} urls URLs.
-     * @api
-     */
-    setUrls(urls) {
-      this.urls = urls;
-      const key = urls.join("\n");
-      if (this.generateTileUrlFunction_) {
-        this.setTileUrlFunction(createFromTemplates(urls, this.tileGrid), key);
-      } else {
-        this.setKey(key);
-      }
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {string|undefined} Tile URL.
-     */
-    tileUrlFunction(tileCoord, pixelRatio, projection) {
-      return void 0;
-    }
-  }
-  class TileImage extends UrlTile {
-    /**
-     * @param {!Options} options Image tile options.
-     */
-    constructor(options) {
-      super({
-        attributions: options.attributions,
-        cacheSize: options.cacheSize,
-        projection: options.projection,
-        state: options.state,
-        tileGrid: options.tileGrid,
-        tileLoadFunction: options.tileLoadFunction ? options.tileLoadFunction : defaultTileLoadFunction,
-        tilePixelRatio: options.tilePixelRatio,
-        tileUrlFunction: options.tileUrlFunction,
-        url: options.url,
-        urls: options.urls,
-        wrapX: options.wrapX,
-        transition: options.transition,
-        interpolate: options.interpolate !== void 0 ? options.interpolate : true,
-        key: options.key,
-        attributionsCollapsible: options.attributionsCollapsible,
-        zDirection: options.zDirection
-      });
-      this.crossOrigin = options.crossOrigin !== void 0 ? options.crossOrigin : null;
-      this.referrerPolicy = options.referrerPolicy;
-      this.tileClass = options.tileClass !== void 0 ? options.tileClass : ImageTile;
-      this.tileGridForProjection = {};
-      this.reprojectionErrorThreshold_ = options.reprojectionErrorThreshold;
-      this.renderReprojectionEdges_ = false;
-    }
-    /**
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {number} Gutter.
-     * @override
-     */
-    getGutterForProjection(projection) {
-      if (this.getProjection() && projection && !equivalent$1(this.getProjection(), projection)) {
-        return 0;
-      }
-      return this.getGutter();
-    }
-    /**
-     * @return {number} Gutter.
-     */
-    getGutter() {
-      return 0;
-    }
-    /**
-     * Return the key to be used for all tiles in the source.
-     * @return {string} The key for all tiles.
-     * @override
-     */
-    getKey() {
-      let key = super.getKey();
-      if (!this.getInterpolate()) {
-        key += ":disable-interpolation";
-      }
-      return key;
-    }
-    /**
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {!import("../tilegrid/TileGrid.js").default} Tile grid.
-     * @override
-     */
-    getTileGridForProjection(projection) {
-      const thisProj = this.getProjection();
-      if (this.tileGrid && (!thisProj || equivalent$1(thisProj, projection))) {
-        return this.tileGrid;
-      }
-      const projKey = getUid(projection);
-      if (!(projKey in this.tileGridForProjection)) {
-        this.tileGridForProjection[projKey] = getForProjection(projection);
-      }
-      return this.tileGridForProjection[projKey];
-    }
-    /**
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @param {string} key The key set on the tile.
-     * @return {!ImageTile} Tile.
-     * @private
-     */
-    createTile_(z, x, y, pixelRatio, projection, key) {
-      const tileCoord = [z, x, y];
-      const urlTileCoord = this.getTileCoordForTileUrlFunction(
-        tileCoord,
-        projection
-      );
-      const tileUrl = urlTileCoord ? this.tileUrlFunction(urlTileCoord, pixelRatio, projection) : void 0;
-      const tile = new this.tileClass(
-        tileCoord,
-        tileUrl !== void 0 ? TileState.IDLE : TileState.EMPTY,
-        tileUrl !== void 0 ? tileUrl : "",
-        {
-          crossOrigin: this.crossOrigin,
-          referrerPolicy: this.referrerPolicy
-        },
-        this.tileLoadFunction,
-        this.tileOptions
-      );
-      tile.key = key;
-      tile.addEventListener(EventType.CHANGE, this.handleTileChange.bind(this));
-      return tile;
-    }
-    /**
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
-     * @return {!(ImageTile|ReprojTile)} Tile.
-     * @override
-     */
-    getTile(z, x, y, pixelRatio, projection, tileCache) {
-      const sourceProjection = this.getProjection();
-      if (!sourceProjection || !projection || equivalent$1(sourceProjection, projection)) {
-        return this.getTileInternal(
-          z,
-          x,
-          y,
-          pixelRatio,
-          sourceProjection || projection
-        );
-      }
-      const tileCoord = [z, x, y];
-      const key = this.getKey();
-      const sourceTileGrid = this.getTileGridForProjection(sourceProjection);
-      const targetTileGrid = this.getTileGridForProjection(projection);
-      const wrappedTileCoord = this.getTileCoordForTileUrlFunction(
-        tileCoord,
-        projection
-      );
-      const tile = new ReprojTile(
-        sourceProjection,
-        sourceTileGrid,
-        projection,
-        targetTileGrid,
-        tileCoord,
-        wrappedTileCoord,
-        this.getTilePixelRatio(pixelRatio),
-        this.getGutter(),
-        (z2, x2, y2, pixelRatio2) => this.getTileInternal(z2, x2, y2, pixelRatio2, sourceProjection, tileCache),
-        this.reprojectionErrorThreshold_,
-        this.renderReprojectionEdges_,
-        this.tileOptions
-      );
-      tile.key = key;
-      return tile;
-    }
-    /**
-     * @param {number} z Tile coordinate z.
-     * @param {number} x Tile coordinate x.
-     * @param {number} y Tile coordinate y.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {!import("../proj/Projection.js").default} projection Projection.
-     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
-     * @return {!ImageTile} Tile.
-     * @protected
-     */
-    getTileInternal(z, x, y, pixelRatio, projection, tileCache) {
-      const key = this.getKey();
-      const cacheKey = getCacheKey(this, key, z, x, y);
-      if (tileCache && tileCache.containsKey(cacheKey)) {
-        const tile2 = (
-          /** @type {!ImageTile} */
-          tileCache.get(cacheKey)
-        );
-        return tile2;
-      }
-      const tile = this.createTile_(z, x, y, pixelRatio, projection, key);
-      tileCache == null ? void 0 : tileCache.set(cacheKey, tile);
-      return tile;
-    }
-    /**
-     * Sets whether to render reprojection edges or not (usually for debugging).
-     * @param {boolean} render Render the edges.
-     * @api
-     */
-    setRenderReprojectionEdges(render2) {
-      if (this.renderReprojectionEdges_ == render2) {
-        return;
-      }
-      this.renderReprojectionEdges_ = render2;
-      this.changed();
-    }
-    /**
-     * Sets the tile grid to use when reprojecting the tiles to the given
-     * projection instead of the default tile grid for the projection.
-     *
-     * This can be useful when the default tile grid cannot be created
-     * (e.g. projection has no extent defined) or
-     * for optimization reasons (custom tile size, resolutions, ...).
-     *
-     * @param {import("../proj.js").ProjectionLike} projection Projection.
-     * @param {import("../tilegrid/TileGrid.js").default} tilegrid Tile grid to use for the projection.
-     * @api
-     */
-    setTileGridForProjection(projection, tilegrid) {
-      const proj = get$1(projection);
-      if (proj) {
-        const projKey = getUid(proj);
-        if (!(projKey in this.tileGridForProjection)) {
-          this.tileGridForProjection[projKey] = tilegrid;
-        }
-      }
-    }
-  }
-  function defaultTileLoadFunction(imageTile, src) {
-    if (WORKER_OFFSCREEN_CANVAS) {
-      const crossOrigin = imageTile.getCrossOrigin();
-      let mode = "same-origin";
-      let credentials = "same-origin";
-      if (crossOrigin === "anonymous" || crossOrigin === "") {
-        mode = "cors";
-        credentials = "omit";
-      } else if (crossOrigin === "use-credentials") {
-        mode = "cors";
-        credentials = "include";
-      }
-      const options = {
-        mode,
-        credentials,
-        referrerPolicy: imageTile.getReferrerPolicy()
-      };
-      fetch(src, options).then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        return response.blob();
-      }).then((blob) => {
-        return createImageBitmap(blob);
-      }).then((imageBitmap) => {
-        var _a;
-        const canvas = imageTile.getImage();
-        canvas.width = imageBitmap.width;
-        canvas.height = imageBitmap.height;
-        const ctx = (
-          /** @type {OffscreenCanvas} */
-          canvas.getContext("2d")
-        );
-        ctx.drawImage(imageBitmap, 0, 0);
-        (_a = imageBitmap.close) == null ? void 0 : _a.call(imageBitmap);
-        canvas.dispatchEvent(new Event("load"));
-      }).catch(() => {
-        const canvas = imageTile.getImage();
-        canvas.dispatchEvent(new Event("error"));
-      });
-      return;
-    }
-    imageTile.getImage().src = src;
-  }
-  class XYZ extends TileImage {
-    /**
-     * @param {Options} [options] XYZ options.
-     */
-    constructor(options) {
-      options = options || {};
-      const projection = options.projection !== void 0 ? options.projection : "EPSG:3857";
-      const tileGrid = options.tileGrid !== void 0 ? options.tileGrid : createXYZ({
-        extent: extentFromProjection(projection),
-        maxResolution: options.maxResolution,
-        maxZoom: options.maxZoom,
-        minZoom: options.minZoom,
-        tileSize: options.tileSize
-      });
-      super({
-        attributions: options.attributions,
-        cacheSize: options.cacheSize,
-        crossOrigin: options.crossOrigin,
-        referrerPolicy: options.referrerPolicy,
-        interpolate: options.interpolate,
-        projection,
-        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-        tileGrid,
-        tileLoadFunction: options.tileLoadFunction,
-        tilePixelRatio: options.tilePixelRatio,
-        tileUrlFunction: options.tileUrlFunction,
-        url: options.url,
-        urls: options.urls,
-        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
-        transition: options.transition,
-        attributionsCollapsible: options.attributionsCollapsible,
-        zDirection: options.zDirection
-      });
-      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
-    }
-    /**
-     * @return {number} Gutter.
-     * @override
-     */
-    getGutter() {
-      return this.gutter_;
-    }
-  }
-  const DEFAULT_GEOMETRY_EDITOR_OPTIONS = {
-    geometryType: "Geometry",
-    hide: true,
-    editable: true,
-    tileLayers: [
-      {
-        title: "Plan IGN",
-        url: "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-        attribution: "© IGN — Géoplateforme",
-        maxZoom: 19
-      }
-    ],
-    width: "100%",
-    height: 400,
-    lon: 2,
-    lat: 46.5,
-    zoom: 5,
-    minZoom: 4,
-    maxZoom: 19,
-    centerOnResults: true,
-    precision: 7,
-    outputFormat: "geojson"
-  };
   class GeometryCollection extends Geometry {
     /**
      * @param {Array<Geometry>} geometries Geometries.
@@ -30641,4226 +27158,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function cloneGeometries(geometries) {
     return geometries.map((geometry) => geometry.clone());
-  }
-  class FeatureFormat {
-    constructor() {
-      this.dataProjection = void 0;
-      this.defaultFeatureProjection = void 0;
-      this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
-      Feature;
-      this.supportedMediaTypes = null;
-    }
-    /**
-     * Adds the data projection to the read options.
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Options.
-     * @return {ReadOptions|undefined} Options.
-     * @protected
-     */
-    getReadOptions(source, options) {
-      if (options) {
-        let dataProjection = options.dataProjection ? get$1(options.dataProjection) : this.readProjection(source);
-        if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
-          dataProjection = get$1(dataProjection);
-          dataProjection.setWorldExtent(options.extent);
-        }
-        options = {
-          dataProjection,
-          featureProjection: options.featureProjection
-        };
-      }
-      return this.adaptOptions(options);
-    }
-    /**
-     * Sets the `dataProjection` on the options, if no `dataProjection`
-     * is set.
-     * @param {WriteOptions|ReadOptions|undefined} options
-     *     Options.
-     * @protected
-     * @return {WriteOptions|ReadOptions|undefined}
-     *     Updated options.
-     */
-    adaptOptions(options) {
-      return Object.assign(
-        {
-          dataProjection: this.dataProjection,
-          featureProjection: this.defaultFeatureProjection,
-          featureClass: this.featureClass
-        },
-        options
-      );
-    }
-    /**
-     * @abstract
-     * @return {Type} The format type.
-     */
-    getType() {
-      return abstract();
-    }
-    /**
-     * Read a single feature from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     */
-    readFeature(source, options) {
-      return abstract();
-    }
-    /**
-     * Read all features from a source.
-     *
-     * @abstract
-     * @param {Document|Element|ArrayBuffer|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {Array<FeatureType>} Features.
-     */
-    readFeatures(source, options) {
-      return abstract();
-    }
-    /**
-     * Read a single geometry from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometry(source, options) {
-      return abstract();
-    }
-    /**
-     * Read the projection from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default|undefined} Projection.
-     */
-    readProjection(source) {
-      return abstract();
-    }
-    /**
-     * Encode a feature in this format.
-     *
-     * @abstract
-     * @param {Feature} feature Feature.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeFeature(feature, options) {
-      return abstract();
-    }
-    /**
-     * Encode an array of features in this format.
-     *
-     * @abstract
-     * @param {Array<Feature>} features Features.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeFeatures(features, options) {
-      return abstract();
-    }
-    /**
-     * Write a single geometry in this format.
-     *
-     * @abstract
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeGeometry(geometry, options) {
-      return abstract();
-    }
-  }
-  function transformGeometryWithOptions(geometry, write, options) {
-    const featureProjection = options ? get$1(options.featureProjection) : null;
-    const dataProjection = options ? get$1(options.dataProjection) : null;
-    let transformed = geometry;
-    if (featureProjection && dataProjection && !equivalent$1(featureProjection, dataProjection)) {
-      if (write) {
-        transformed = /** @type {T} */
-        geometry.clone();
-      }
-      const fromProjection = write ? featureProjection : dataProjection;
-      const toProjection = write ? dataProjection : featureProjection;
-      if (fromProjection.getUnits() === "tile-pixels") {
-        transformed.transform(fromProjection, toProjection);
-      } else {
-        transformed.applyTransform(getTransform(fromProjection, toProjection));
-      }
-    }
-    if (write && options && /** @type {WriteOptions} */
-    options.decimals !== void 0) {
-      const power = Math.pow(
-        10,
-        /** @type {WriteOptions} */
-        options.decimals
-      );
-      const transform2 = function(coordinates2) {
-        for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
-          coordinates2[i] = Math.round(coordinates2[i] * power) / power;
-        }
-        return coordinates2;
-      };
-      if (transformed === geometry) {
-        transformed = /** @type {T} */
-        geometry.clone();
-      }
-      transformed.applyTransform(transform2);
-    }
-    return transformed;
-  }
-  const GeometryConstructor = {
-    Point,
-    LineString,
-    Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon
-  };
-  function orientFlatCoordinates(flatCoordinates, ends, stride) {
-    if (Array.isArray(ends[0])) {
-      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
-        flatCoordinates = flatCoordinates.slice();
-        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
-      }
-      return flatCoordinates;
-    }
-    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
-      flatCoordinates = flatCoordinates.slice();
-      orientLinearRings(flatCoordinates, 0, ends, stride);
-    }
-    return flatCoordinates;
-  }
-  function createRenderFeature(object, options) {
-    var _a;
-    const geometry = object.geometry;
-    if (!geometry) {
-      return [];
-    }
-    if (Array.isArray(geometry)) {
-      return geometry.map((geometry2) => createRenderFeature({ ...object, geometry: geometry2 })).flat();
-    }
-    const geometryType = geometry.type === "MultiPolygon" ? "Polygon" : geometry.type;
-    if (geometryType === "GeometryCollection" || geometryType === "Circle") {
-      throw new Error("Unsupported geometry type: " + geometryType);
-    }
-    const stride = geometry.layout.length;
-    return transformGeometryWithOptions(
-      new RenderFeature(
-        geometryType,
-        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
-        (_a = geometry.ends) == null ? void 0 : _a.flat(),
-        stride,
-        object.properties || {},
-        object.id
-      ).enableSimplifyTransformed(),
-      false,
-      options
-    );
-  }
-  function createGeometry(object, options) {
-    if (!object) {
-      return null;
-    }
-    if (Array.isArray(object)) {
-      const geometries = object.map(
-        (geometry) => createGeometry(geometry, options)
-      );
-      return new GeometryCollection(geometries);
-    }
-    const Geometry2 = GeometryConstructor[object.type];
-    return transformGeometryWithOptions(
-      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
-      false,
-      options
-    );
-  }
-  class JSONFeature extends FeatureFormat {
-    constructor() {
-      super();
-    }
-    /**
-     * @return {import("./Feature.js").Type} Format.
-     * @override
-     */
-    getType() {
-      return "json";
-    }
-    /**
-     * Read a feature.  Only works for a single feature. Use `readFeatures` to
-     * read a feature collection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     * @api
-     * @override
-     */
-    readFeature(source, options) {
-      return this.readFeatureFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * Read all features.  Works with both a single feature and a feature
-     * collection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {Array<FeatureType>} Features.
-     * @api
-     * @override
-     */
-    readFeatures(source, options) {
-      return this.readFeaturesFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     */
-    readFeatureFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {Array<FeatureType>} Features.
-     */
-    readFeaturesFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * Read a geometry.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     * @api
-     * @override
-     */
-    readGeometry(source, options) {
-      return this.readGeometryFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometryFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * Read the projection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default} Projection.
-     * @api
-     * @override
-     */
-    readProjection(source) {
-      return this.readProjectionFromObject(getObject(source));
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     */
-    readProjectionFromObject(object) {
-      return abstract();
-    }
-    /**
-     * Encode a feature as string.
-     *
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded feature.
-     * @api
-     * @override
-     */
-    writeFeature(feature, options) {
-      return JSON.stringify(this.writeFeatureObject(feature, options));
-    }
-    /**
-     * @abstract
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeFeatureObject(feature, options) {
-      return abstract();
-    }
-    /**
-     * Encode an array of features as string.
-     *
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded features.
-     * @api
-     * @override
-     */
-    writeFeatures(features, options) {
-      return JSON.stringify(this.writeFeaturesObject(features, options));
-    }
-    /**
-     * @abstract
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeFeaturesObject(features, options) {
-      return abstract();
-    }
-    /**
-     * Encode a geometry as string.
-     *
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded geometry.
-     * @api
-     * @override
-     */
-    writeGeometry(geometry, options) {
-      return JSON.stringify(this.writeGeometryObject(geometry, options));
-    }
-    /**
-     * @abstract
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeGeometryObject(geometry, options) {
-      return abstract();
-    }
-  }
-  function getObject(source) {
-    if (typeof source === "string") {
-      const object = JSON.parse(source);
-      return object ? (
-        /** @type {Object} */
-        object
-      ) : null;
-    }
-    if (source !== null) {
-      return source;
-    }
-    return null;
-  }
-  class GeoJSON extends JSONFeature {
-    /**
-     * @param {Options<FeatureType>} [options] Options.
-     */
-    constructor(options) {
-      options = options ? options : {};
-      super();
-      this.dataProjection = get$1(
-        options.dataProjection ? options.dataProjection : "EPSG:4326"
-      );
-      if (options.featureProjection) {
-        this.defaultFeatureProjection = get$1(options.featureProjection);
-      }
-      if (options.featureClass) {
-        this.featureClass = options.featureClass;
-      }
-      this.geometryName_ = options.geometryName;
-      this.extractGeometryName_ = options.extractGeometryName;
-      this.supportedMediaTypes = [
-        "application/geo+json",
-        "application/vnd.geo+json"
-      ];
-    }
-    /**
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     * @override
-     */
-    readFeatureFromObject(object, options) {
-      let geoJSONFeature = null;
-      if (object["type"] === "Feature") {
-        geoJSONFeature = /** @type {GeoJSONFeature} */
-        object;
-      } else {
-        geoJSONFeature = {
-          "type": "Feature",
-          "geometry": (
-            /** @type {GeoJSONGeometry} */
-            object
-          ),
-          "properties": null
-        };
-      }
-      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
-      if (this.featureClass === RenderFeature) {
-        return (
-          /** @type {FeatureType|Array<FeatureType>} */
-          createRenderFeature(
-            {
-              geometry,
-              id: geoJSONFeature["id"],
-              properties: geoJSONFeature["properties"]
-            },
-            options
-          )
-        );
-      }
-      const feature = new Feature();
-      if (this.geometryName_) {
-        feature.setGeometryName(this.geometryName_);
-      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
-        feature.setGeometryName(geoJSONFeature["geometry_name"]);
-      }
-      feature.setGeometry(createGeometry(geometry, options));
-      if ("id" in geoJSONFeature) {
-        feature.setId(geoJSONFeature["id"]);
-      }
-      if (geoJSONFeature["properties"]) {
-        feature.setProperties(geoJSONFeature["properties"], true);
-      }
-      return (
-        /** @type {FeatureType|Array<FeatureType>} */
-        feature
-      );
-    }
-    /**
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {Array<FeatureType>} Features.
-     * @override
-     */
-    readFeaturesFromObject(object, options) {
-      const geoJSONObject = (
-        /** @type {GeoJSONObject} */
-        object
-      );
-      let features = null;
-      if (geoJSONObject["type"] === "FeatureCollection") {
-        const geoJSONFeatureCollection = (
-          /** @type {GeoJSONFeatureCollection} */
-          object
-        );
-        features = [];
-        const geoJSONFeatures = geoJSONFeatureCollection["features"];
-        for (let i = 0, ii = geoJSONFeatures.length; i < ii; ++i) {
-          const featureObject = this.readFeatureFromObject(
-            geoJSONFeatures[i],
-            options
-          );
-          if (!featureObject) {
-            continue;
-          }
-          features.push(featureObject);
-        }
-      } else {
-        features = [this.readFeatureFromObject(object, options)];
-      }
-      return (
-        /** @type {Array<FeatureType>} */
-        features.flat()
-      );
-    }
-    /**
-     * @param {GeoJSONGeometry} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     * @override
-     */
-    readGeometryFromObject(object, options) {
-      return readGeometry(object, options);
-    }
-    /**
-     * @param {Object} object Object.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     * @override
-     */
-    readProjectionFromObject(object) {
-      const crs = object["crs"];
-      let projection;
-      if (crs) {
-        if (crs["type"] == "name") {
-          projection = get$1(crs["properties"]["name"]);
-        } else if (crs["type"] === "EPSG") {
-          projection = get$1("EPSG:" + crs["properties"]["code"]);
-        } else {
-          throw new Error("Unknown SRS type");
-        }
-      } else {
-        projection = this.dataProjection;
-      }
-      return (
-        /** @type {import("../proj/Projection.js").default} */
-        projection
-      );
-    }
-    /**
-     * Encode a feature as a GeoJSON Feature object.
-     *
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONFeature} Object.
-     * @api
-     * @override
-     */
-    writeFeatureObject(feature, options) {
-      options = this.adaptOptions(options);
-      const object = {
-        "type": "Feature",
-        geometry: null,
-        properties: null
-      };
-      const id = feature.getId();
-      if (id !== void 0) {
-        object.id = id;
-      }
-      if (!feature.hasProperties()) {
-        return object;
-      }
-      const properties = feature.getProperties();
-      const geometry = feature.getGeometry();
-      if (geometry) {
-        object.geometry = writeGeometry(geometry, options);
-        delete properties[feature.getGeometryName()];
-      }
-      if (!isEmpty$1(properties)) {
-        object.properties = properties;
-      }
-      return object;
-    }
-    /**
-     * Encode an array of features as a GeoJSON object.
-     *
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONFeatureCollection} GeoJSON Object.
-     * @api
-     * @override
-     */
-    writeFeaturesObject(features, options) {
-      options = this.adaptOptions(options);
-      const objects = [];
-      for (let i = 0, ii = features.length; i < ii; ++i) {
-        objects.push(this.writeFeatureObject(features[i], options));
-      }
-      return {
-        type: "FeatureCollection",
-        features: objects
-      };
-    }
-    /**
-     * Encode a geometry as a GeoJSON object.
-     *
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONGeometry|GeoJSONGeometryCollection} Object.
-     * @api
-     * @override
-     */
-    writeGeometryObject(geometry, options) {
-      return writeGeometry(geometry, this.adaptOptions(options));
-    }
-  }
-  function readGeometryInternal(object, options) {
-    if (!object) {
-      return null;
-    }
-    let geometry;
-    switch (object["type"]) {
-      case "Point": {
-        geometry = readPointGeometry(
-          /** @type {GeoJSONPoint} */
-          object
-        );
-        break;
-      }
-      case "LineString": {
-        geometry = readLineStringGeometry(
-          /** @type {GeoJSONLineString} */
-          object
-        );
-        break;
-      }
-      case "Polygon": {
-        geometry = readPolygonGeometry(
-          /** @type {GeoJSONPolygon} */
-          object
-        );
-        break;
-      }
-      case "MultiPoint": {
-        geometry = readMultiPointGeometry(
-          /** @type {GeoJSONMultiPoint} */
-          object
-        );
-        break;
-      }
-      case "MultiLineString": {
-        geometry = readMultiLineStringGeometry(
-          /** @type {GeoJSONMultiLineString} */
-          object
-        );
-        break;
-      }
-      case "MultiPolygon": {
-        geometry = readMultiPolygonGeometry(
-          /** @type {GeoJSONMultiPolygon} */
-          object
-        );
-        break;
-      }
-      case "GeometryCollection": {
-        geometry = readGeometryCollectionGeometry(
-          /** @type {GeoJSONGeometryCollection} */
-          object
-        );
-        break;
-      }
-      default: {
-        throw new Error("Unsupported GeoJSON type: " + object["type"]);
-      }
-    }
-    return geometry;
-  }
-  function readGeometry(object, options) {
-    const geometryObject = readGeometryInternal(object);
-    return createGeometry(geometryObject, options);
-  }
-  function readGeometryCollectionGeometry(object, options) {
-    const geometries = object["geometries"].map(
-      /**
-       * @param {GeoJSONGeometry} geometry Geometry.
-       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
-       */
-      function(geometry) {
-        return readGeometryInternal(geometry);
-      }
-    );
-    return geometries;
-  }
-  function readPointGeometry(object) {
-    const flatCoordinates = object["coordinates"];
-    return {
-      type: "Point",
-      flatCoordinates,
-      layout: getLayoutForStride(flatCoordinates.length)
-    };
-  }
-  function readLineStringGeometry(object) {
-    var _a;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = coordinates2.flat();
-    return {
-      type: "LineString",
-      flatCoordinates,
-      ends: [flatCoordinates.length],
-      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
-    };
-  }
-  function readMultiLineStringGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
-    const flatCoordinates = [];
-    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
-    return {
-      type: "MultiLineString",
-      flatCoordinates,
-      ends,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function readMultiPointGeometry(object) {
-    var _a;
-    const coordinates2 = object["coordinates"];
-    return {
-      type: "MultiPoint",
-      flatCoordinates: coordinates2.flat(),
-      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
-    };
-  }
-  function readMultiPolygonGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
-    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
-    const endss = deflateMultiCoordinatesArray(
-      flatCoordinates,
-      0,
-      coordinates2,
-      stride
-    );
-    return {
-      type: "MultiPolygon",
-      flatCoordinates,
-      ends: endss,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function readPolygonGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
-    const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
-    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
-    return {
-      type: "Polygon",
-      flatCoordinates,
-      ends,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function writeGeometry(geometry, options) {
-    geometry = transformGeometryWithOptions(geometry, true, options);
-    const type = geometry.getType();
-    let geoJSON;
-    switch (type) {
-      case "Point": {
-        geoJSON = writePointGeometry(
-          /** @type {import("../geom/Point.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "LineString": {
-        geoJSON = writeLineStringGeometry(
-          /** @type {import("../geom/LineString.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "Polygon": {
-        geoJSON = writePolygonGeometry(
-          /** @type {import("../geom/Polygon.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "MultiPoint": {
-        geoJSON = writeMultiPointGeometry(
-          /** @type {import("../geom/MultiPoint.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "MultiLineString": {
-        geoJSON = writeMultiLineStringGeometry(
-          /** @type {import("../geom/MultiLineString.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "MultiPolygon": {
-        geoJSON = writeMultiPolygonGeometry(
-          /** @type {import("../geom/MultiPolygon.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "GeometryCollection": {
-        geoJSON = writeGeometryCollectionGeometry(
-          /** @type {import("../geom/GeometryCollection.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "Circle": {
-        geoJSON = {
-          type: "GeometryCollection",
-          geometries: []
-        };
-        break;
-      }
-      default: {
-        throw new Error("Unsupported geometry type: " + type);
-      }
-    }
-    return geoJSON;
-  }
-  function writeGeometryCollectionGeometry(geometry, options) {
-    options = Object.assign({}, options);
-    delete options.featureProjection;
-    const geometries = geometry.getGeometriesArray().map(function(geometry2) {
-      return writeGeometry(geometry2, options);
-    });
-    return {
-      type: "GeometryCollection",
-      geometries
-    };
-  }
-  function writeLineStringGeometry(geometry, options) {
-    return {
-      type: "LineString",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiLineStringGeometry(geometry, options) {
-    return {
-      type: "MultiLineString",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiPointGeometry(geometry, options) {
-    return {
-      type: "MultiPoint",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiPolygonGeometry(geometry, options) {
-    let right;
-    if (options) {
-      right = options.rightHanded;
-    }
-    return {
-      type: "MultiPolygon",
-      coordinates: geometry.getCoordinates(right)
-    };
-  }
-  function writePointGeometry(geometry, options) {
-    return {
-      type: "Point",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writePolygonGeometry(geometry, options) {
-    let right;
-    if (options) {
-      right = options.rightHanded;
-    }
-    return {
-      type: "Polygon",
-      coordinates: geometry.getCoordinates(right)
-    };
-  }
-  const XML_SCHEMA_INSTANCE_URI = "http://www.w3.org/2001/XMLSchema-instance";
-  function createElementNS(namespaceURI, qualifiedName) {
-    return getDocument().createElementNS(namespaceURI, qualifiedName);
-  }
-  function getAllTextContent(node, normalizeWhitespace) {
-    return getAllTextContent_(node, normalizeWhitespace, []).join("");
-  }
-  function getAllTextContent_(node, normalizeWhitespace, accumulator) {
-    if (node.nodeType == Node.CDATA_SECTION_NODE || node.nodeType == Node.TEXT_NODE) {
-      {
-        accumulator.push(node.nodeValue);
-      }
-    } else {
-      let n;
-      for (n = node.firstChild; n; n = n.nextSibling) {
-        getAllTextContent_(n, normalizeWhitespace, accumulator);
-      }
-    }
-    return accumulator;
-  }
-  function isDocument(object) {
-    return "documentElement" in object;
-  }
-  function parse(xml) {
-    return new DOMParser().parseFromString(xml, "application/xml");
-  }
-  function makeArrayExtender(valueReader, thisArg) {
-    return (
-      /**
-       * @param {Node} node Node.
-       * @param {Array<*>} objectStack Object stack.
-       * @this {*}
-       */
-      (function(node, objectStack) {
-        const value = valueReader.call(thisArg ?? this, node, objectStack);
-        if (value !== void 0) {
-          const array = (
-            /** @type {Array<*>} */
-            objectStack[objectStack.length - 1]
-          );
-          extend$2(array, value);
-        }
-      })
-    );
-  }
-  function makeArrayPusher(valueReader, thisArg) {
-    return (
-      /**
-       * @param {Element} node Node.
-       * @param {Array<*>} objectStack Object stack.
-       * @this {*}
-       */
-      (function(node, objectStack) {
-        const value = valueReader.call(thisArg ?? this, node, objectStack);
-        if (value !== void 0) {
-          const array = (
-            /** @type {Array<*>} */
-            objectStack[objectStack.length - 1]
-          );
-          array.push(value);
-        }
-      })
-    );
-  }
-  function makeReplacer(valueReader, thisArg) {
-    return (
-      /**
-       * @param {Node} node Node.
-       * @param {Array<*>} objectStack Object stack.
-       * @this {*}
-       */
-      (function(node, objectStack) {
-        const value = valueReader.call(this, node, objectStack);
-        if (value !== void 0) {
-          objectStack[objectStack.length - 1] = value;
-        }
-      })
-    );
-  }
-  function makeObjectPropertySetter(valueReader, property, thisArg) {
-    return (
-      /**
-       * @param {Element} node Node.
-       * @param {Array<*>} objectStack Object stack.
-       * @this {*}
-       */
-      (function(node, objectStack) {
-        const value = valueReader.call(this, node, objectStack);
-        if (value !== void 0) {
-          const object = (
-            /** @type {!Object} */
-            objectStack[objectStack.length - 1]
-          );
-          const name = property !== void 0 ? property : node.localName;
-          object[name] = value;
-        }
-      })
-    );
-  }
-  function makeChildAppender(nodeWriter, thisArg) {
-    return (
-      /**
-       * @param {Element} node Node.
-       * @param {*} value Value to be written.
-       * @param {Array<*>} objectStack Object stack.
-       * @this {*}
-       */
-      (function(node, value, objectStack) {
-        nodeWriter.call(this, node, value, objectStack);
-        const parent = (
-          /** @type {NodeStackItem} */
-          objectStack[objectStack.length - 1]
-        );
-        const parentNode = parent.node;
-        parentNode.appendChild(node);
-      })
-    );
-  }
-  function makeSimpleNodeFactory(fixedNodeName, fixedNamespaceURI) {
-    return (
-      /**
-       * @param {*} value Value.
-       * @param {Array<*>} objectStack Object stack.
-       * @param {string} [newNodeName] Node name.
-       * @return {Node} Node.
-       */
-      (function(value, objectStack, newNodeName) {
-        const context = (
-          /** @type {NodeStackItem} */
-          objectStack[objectStack.length - 1]
-        );
-        const node = context.node;
-        let nodeName = fixedNodeName;
-        if (nodeName === void 0) {
-          nodeName = newNodeName;
-        }
-        const namespaceURI = node.namespaceURI;
-        return createElementNS(
-          namespaceURI,
-          /** @type {string} */
-          nodeName
-        );
-      })
-    );
-  }
-  const OBJECT_PROPERTY_NODE_FACTORY = makeSimpleNodeFactory();
-  function makeSequence(object, orderedKeys) {
-    const length = orderedKeys.length;
-    const sequence = new Array(length);
-    for (let i = 0; i < length; ++i) {
-      sequence[i] = object[orderedKeys[i]];
-    }
-    return sequence;
-  }
-  function makeStructureNS(namespaceURIs, structure, structureNS) {
-    structureNS = structureNS !== void 0 ? structureNS : {};
-    let i, ii;
-    for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
-      structureNS[namespaceURIs[i]] = structure;
-    }
-    return structureNS;
-  }
-  function parseNode(parsersNS, node, objectStack, thisArg) {
-    let n;
-    for (n = node.firstElementChild; n; n = n.nextElementSibling) {
-      const parsers2 = parsersNS[n.namespaceURI];
-      if (parsers2 !== void 0) {
-        const parser = parsers2[n.localName];
-        if (parser !== void 0) {
-          parser.call(thisArg, n, objectStack);
-        }
-      }
-    }
-  }
-  function pushParseAndPop(object, parsersNS, node, objectStack, thisArg) {
-    objectStack.push(object);
-    parseNode(parsersNS, node, objectStack, thisArg);
-    return (
-      /** @type {T} */
-      objectStack.pop()
-    );
-  }
-  function serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
-    const length = (keys !== void 0 ? keys : values).length;
-    let value, node;
-    for (let i = 0; i < length; ++i) {
-      value = values[i];
-      if (value !== void 0) {
-        node = nodeFactory.call(
-          thisArg,
-          value,
-          objectStack,
-          keys !== void 0 ? keys[i] : void 0
-        );
-        if (node !== void 0) {
-          serializersNS[node.namespaceURI][node.localName].call(
-            thisArg,
-            node,
-            value,
-            objectStack
-          );
-        }
-      }
-    }
-  }
-  function pushSerializeAndPop(object, serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
-    objectStack.push(object);
-    serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg);
-    return (
-      /** @type {O|undefined} */
-      objectStack.pop()
-    );
-  }
-  let xmlSerializer_ = void 0;
-  function getXMLSerializer() {
-    if (xmlSerializer_ === void 0 && typeof XMLSerializer !== "undefined") {
-      xmlSerializer_ = new XMLSerializer();
-    }
-    return xmlSerializer_;
-  }
-  let document_ = void 0;
-  function getDocument() {
-    if (document_ === void 0 && typeof document !== "undefined") {
-      document_ = document.implementation.createDocument("", "", null);
-    }
-    return document_;
-  }
-  class XMLFeature extends FeatureFormat {
-    constructor() {
-      super();
-      this.xmlSerializer_ = getXMLSerializer();
-    }
-    /**
-     * @return {import("./Feature.js").Type} Format.
-     * @override
-     */
-    getType() {
-      return "xml";
-    }
-    /**
-     * Read a single feature.
-     *
-     * @param {Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../Feature.js").default} Feature.
-     * @api
-     * @override
-     */
-    readFeature(source, options) {
-      if (!source) {
-        return null;
-      }
-      if (typeof source === "string") {
-        const doc = parse(source);
-        return this.readFeatureFromDocument(doc, options);
-      }
-      if (isDocument(source)) {
-        return this.readFeatureFromDocument(
-          /** @type {Document} */
-          source,
-          options
-        );
-      }
-      return this.readFeatureFromNode(
-        /** @type {Element} */
-        source,
-        options
-      );
-    }
-    /**
-     * @param {Document} doc Document.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
-     */
-    readFeatureFromDocument(doc, options) {
-      const features = this.readFeaturesFromDocument(doc, options);
-      if (features.length > 0) {
-        return features[0];
-      }
-      return null;
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
-     */
-    readFeatureFromNode(node, options) {
-      return null;
-    }
-    /**
-     * Read all features from a feature collection.
-     *
-     * @param {Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {Array<import("../Feature.js").default>} Features.
-     * @api
-     * @override
-     */
-    readFeatures(source, options) {
-      if (!source) {
-        return [];
-      }
-      if (typeof source === "string") {
-        const doc = parse(source);
-        return this.readFeaturesFromDocument(doc, options);
-      }
-      if (isDocument(source)) {
-        return this.readFeaturesFromDocument(
-          /** @type {Document} */
-          source,
-          options
-        );
-      }
-      return this.readFeaturesFromNode(
-        /** @type {Element} */
-        source,
-        options
-      );
-    }
-    /**
-     * @param {Document} doc Document.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @protected
-     * @return {Array<import("../Feature.js").default>} Features.
-     */
-    readFeaturesFromDocument(doc, options) {
-      const features = [];
-      for (let n = doc.firstChild; n; n = n.nextSibling) {
-        if (n.nodeType == Node.ELEMENT_NODE) {
-          extend$2(
-            features,
-            this.readFeaturesFromNode(
-              /** @type {Element} */
-              n,
-              options
-            )
-          );
-        }
-      }
-      return features;
-    }
-    /**
-     * @abstract
-     * @param {Element} node Node.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @protected
-     * @return {Array<import("../Feature.js").default>} Features.
-     */
-    readFeaturesFromNode(node, options) {
-      return abstract();
-    }
-    /**
-     * Read a single geometry from a source.
-     *
-     * @param {Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     * @override
-     */
-    readGeometry(source, options) {
-      if (!source) {
-        return null;
-      }
-      if (typeof source === "string") {
-        const doc = parse(source);
-        return this.readGeometryFromDocument(doc, options);
-      }
-      if (isDocument(source)) {
-        return this.readGeometryFromDocument(
-          /** @type {Document} */
-          source,
-          options
-        );
-      }
-      return this.readGeometryFromNode(
-        /** @type {Element} */
-        source,
-        options
-      );
-    }
-    /**
-     * @param {Document} doc Document.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometryFromDocument(doc, options) {
-      return null;
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometryFromNode(node, options) {
-      return null;
-    }
-    /**
-     * Read the projection from the source.
-     *
-     * @param {Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default} Projection.
-     * @api
-     * @override
-     */
-    readProjection(source) {
-      if (!source) {
-        return null;
-      }
-      if (typeof source === "string") {
-        const doc = parse(source);
-        return this.readProjectionFromDocument(doc);
-      }
-      if (isDocument(source)) {
-        return this.readProjectionFromDocument(
-          /** @type {Document} */
-          source
-        );
-      }
-      return this.readProjectionFromNode(
-        /** @type {Element} */
-        source
-      );
-    }
-    /**
-     * @param {Document} doc Document.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     */
-    readProjectionFromDocument(doc) {
-      return this.dataProjection;
-    }
-    /**
-     * @param {Element} node Node.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     */
-    readProjectionFromNode(node) {
-      return this.dataProjection;
-    }
-    /**
-     * Encode a feature as string.
-     *
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded feature.
-     * @override
-     */
-    writeFeature(feature, options) {
-      const node = this.writeFeatureNode(feature, options);
-      return this.xmlSerializer_.serializeToString(node);
-    }
-    /**
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @protected
-     * @return {Node} Node.
-     */
-    writeFeatureNode(feature, options) {
-      return null;
-    }
-    /**
-     * Encode an array of features as string.
-     *
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Result.
-     * @api
-     * @override
-     */
-    writeFeatures(features, options) {
-      const node = this.writeFeaturesNode(features, options);
-      return this.xmlSerializer_.serializeToString(node);
-    }
-    /**
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @return {Node} Node.
-     */
-    writeFeaturesNode(features, options) {
-      return null;
-    }
-    /**
-     * Encode a geometry as string.
-     *
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded geometry.
-     * @override
-     */
-    writeGeometry(geometry, options) {
-      const node = this.writeGeometryNode(geometry, options);
-      return this.xmlSerializer_.serializeToString(node);
-    }
-    /**
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @return {Node} Node.
-     */
-    writeGeometryNode(geometry, options) {
-      return null;
-    }
-  }
-  function readBoolean(node) {
-    const s = getAllTextContent(node, false);
-    return readBooleanString(s);
-  }
-  function readBooleanString(string) {
-    const m = /^\s*(true|1)|(false|0)\s*$/.exec(string);
-    if (m) {
-      return m[1] !== void 0 || false;
-    }
-    return void 0;
-  }
-  function readDecimal(node) {
-    const s = getAllTextContent(node, false);
-    return readDecimalString(s);
-  }
-  function readDecimalString(string) {
-    const m = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)\s*$/i.exec(string);
-    if (m) {
-      return parseFloat(m[1]);
-    }
-    return void 0;
-  }
-  function readString(node) {
-    return getAllTextContent(node, false).trim();
-  }
-  function writeBooleanTextNode(node, bool) {
-    writeStringTextNode(node, bool ? "1" : "0");
-  }
-  function writeCDATASection(node, string) {
-    node.appendChild(getDocument().createCDATASection(string));
-  }
-  function writeDecimalTextNode(node, decimal) {
-    const string = decimal.toPrecision();
-    node.appendChild(getDocument().createTextNode(string));
-  }
-  const whiteSpaceStart = /^\s/;
-  const whiteSpaceEnd = /\s$/;
-  const cdataCharacters = /(\n|\t|\r|<|&| {2})/;
-  function writeStringTextNode(node, string) {
-    if (typeof string === "string" && (whiteSpaceStart.test(string) || whiteSpaceEnd.test(string) || cdataCharacters.test(string))) {
-      string.split("]]>").forEach((part, i, a) => {
-        if (i < a.length - 1) {
-          part += "]]";
-        }
-        if (i > 0) {
-          part = ">" + part;
-        }
-        writeCDATASection(node, part);
-      });
-    } else {
-      node.appendChild(getDocument().createTextNode(string));
-    }
-  }
-  const GX_NAMESPACE_URIS = ["http://www.google.com/kml/ext/2.2"];
-  const NAMESPACE_URIS = [
-    null,
-    "http://earth.google.com/kml/2.0",
-    "http://earth.google.com/kml/2.1",
-    "http://earth.google.com/kml/2.2",
-    "http://www.opengis.net/kml/2.2"
-  ];
-  const SCHEMA_LOCATION = "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd";
-  const ICON_ANCHOR_UNITS_MAP = {
-    "fraction": "fraction",
-    "pixels": "pixels",
-    "insetPixels": "pixels"
-  };
-  const PLACEMARK_PARSERS = makeStructureNS(
-    NAMESPACE_URIS,
-    {
-      "ExtendedData": extendedDataParser,
-      "Region": regionParser,
-      "MultiGeometry": makeObjectPropertySetter(readMultiGeometry, "geometry"),
-      "LineString": makeObjectPropertySetter(readLineString, "geometry"),
-      "LinearRing": makeObjectPropertySetter(readLinearRing, "geometry"),
-      "Point": makeObjectPropertySetter(readPoint, "geometry"),
-      "Polygon": makeObjectPropertySetter(readPolygon, "geometry"),
-      "Style": makeObjectPropertySetter(readStyle),
-      "StyleMap": placemarkStyleMapParser,
-      "address": makeObjectPropertySetter(readString),
-      "description": makeObjectPropertySetter(readString),
-      "name": makeObjectPropertySetter(readString),
-      "open": makeObjectPropertySetter(readBoolean),
-      "phoneNumber": makeObjectPropertySetter(readString),
-      "styleUrl": makeObjectPropertySetter(readStyleURL),
-      "visibility": makeObjectPropertySetter(readBoolean)
-    },
-    makeStructureNS(GX_NAMESPACE_URIS, {
-      "MultiTrack": makeObjectPropertySetter(readGxMultiTrack, "geometry"),
-      "Track": makeObjectPropertySetter(readGxTrack, "geometry")
-    })
-  );
-  const NETWORK_LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "ExtendedData": extendedDataParser,
-    "Region": regionParser,
-    "Link": linkParser,
-    "address": makeObjectPropertySetter(readString),
-    "description": makeObjectPropertySetter(readString),
-    "name": makeObjectPropertySetter(readString),
-    "open": makeObjectPropertySetter(readBoolean),
-    "phoneNumber": makeObjectPropertySetter(readString),
-    "visibility": makeObjectPropertySetter(readBoolean)
-  });
-  const LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "href": makeObjectPropertySetter(readURI)
-  });
-  const CAMERA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    Altitude: makeObjectPropertySetter(readDecimal),
-    Longitude: makeObjectPropertySetter(readDecimal),
-    Latitude: makeObjectPropertySetter(readDecimal),
-    Tilt: makeObjectPropertySetter(readDecimal),
-    AltitudeMode: makeObjectPropertySetter(readString),
-    Heading: makeObjectPropertySetter(readDecimal),
-    Roll: makeObjectPropertySetter(readDecimal)
-  });
-  const REGION_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "LatLonAltBox": latLonAltBoxParser,
-    "Lod": lodParser
-  });
-  const KML_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["Document", "Placemark"]);
-  const KML_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "Document": makeChildAppender(writeDocument),
-    "Placemark": makeChildAppender(writePlacemark)
-  });
-  let DEFAULT_COLOR;
-  let DEFAULT_FILL_STYLE = null;
-  let DEFAULT_IMAGE_STYLE_ANCHOR;
-  let DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
-  let DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
-  let DEFAULT_IMAGE_STYLE_SIZE;
-  let DEFAULT_IMAGE_STYLE_SRC;
-  let DEFAULT_IMAGE_STYLE = null;
-  let DEFAULT_NO_IMAGE_STYLE;
-  let DEFAULT_STROKE_STYLE = null;
-  let DEFAULT_TEXT_STROKE_STYLE;
-  let DEFAULT_TEXT_STYLE = null;
-  let DEFAULT_STYLE = null;
-  let DEFAULT_STYLE_ARRAY = null;
-  function scaleForSize(size) {
-    return 32 / Math.min(size[0], size[1]);
-  }
-  function createStyleDefaults() {
-    DEFAULT_COLOR = [255, 255, 255, 1];
-    DEFAULT_FILL_STYLE = new Fill({
-      color: DEFAULT_COLOR
-    });
-    DEFAULT_IMAGE_STYLE_ANCHOR = [20, 2];
-    DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS = "pixels";
-    DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS = "pixels";
-    DEFAULT_IMAGE_STYLE_SIZE = [64, 64];
-    DEFAULT_IMAGE_STYLE_SRC = "https://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png";
-    DEFAULT_IMAGE_STYLE = new Icon({
-      anchor: DEFAULT_IMAGE_STYLE_ANCHOR,
-      anchorOrigin: "bottom-left",
-      anchorXUnits: DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS,
-      anchorYUnits: DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS,
-      crossOrigin: "anonymous",
-      rotation: 0,
-      scale: scaleForSize(DEFAULT_IMAGE_STYLE_SIZE),
-      size: DEFAULT_IMAGE_STYLE_SIZE,
-      src: DEFAULT_IMAGE_STYLE_SRC
-    });
-    DEFAULT_NO_IMAGE_STYLE = "NO_IMAGE";
-    DEFAULT_STROKE_STYLE = new Stroke({
-      color: DEFAULT_COLOR,
-      width: 1
-    });
-    DEFAULT_TEXT_STROKE_STYLE = new Stroke({
-      color: [51, 51, 51, 1],
-      width: 2
-    });
-    DEFAULT_TEXT_STYLE = new Text({
-      font: "bold 16px Helvetica",
-      fill: DEFAULT_FILL_STYLE,
-      stroke: DEFAULT_TEXT_STROKE_STYLE,
-      scale: 0.8
-    });
-    DEFAULT_STYLE = new Style({
-      fill: DEFAULT_FILL_STYLE,
-      image: DEFAULT_IMAGE_STYLE,
-      text: DEFAULT_TEXT_STYLE,
-      stroke: DEFAULT_STROKE_STYLE,
-      zIndex: 0
-    });
-    DEFAULT_STYLE_ARRAY = [DEFAULT_STYLE];
-  }
-  let TEXTAREA;
-  function defaultIconUrlFunction(href) {
-    return href;
-  }
-  class KML extends XMLFeature {
-    /**
-     * @param {Options} [options] Options.
-     */
-    constructor(options) {
-      super();
-      options = options ? options : {};
-      if (!DEFAULT_STYLE_ARRAY) {
-        createStyleDefaults();
-      }
-      this.dataProjection = get$1("EPSG:4326");
-      this.defaultStyle_ = options.defaultStyle ? options.defaultStyle : DEFAULT_STYLE_ARRAY;
-      this.extractStyles_ = options.extractStyles !== void 0 ? options.extractStyles : true;
-      this.writeStyles_ = options.writeStyles !== void 0 ? options.writeStyles : true;
-      this.sharedStyles_ = {};
-      this.showPointNames_ = options.showPointNames !== void 0 ? options.showPointNames : true;
-      this.crossOrigin_ = options.crossOrigin !== void 0 ? options.crossOrigin : "anonymous";
-      this.referrerPolicy_ = options.referrerPolicy;
-      this.iconUrlFunction_ = options.iconUrlFunction ? options.iconUrlFunction : defaultIconUrlFunction;
-      this.supportedMediaTypes = ["application/vnd.google-earth.kml+xml"];
-    }
-    /**
-     * @param {Node} node Node.
-     * @param {Array<*>} objectStack Object stack.
-     * @private
-     * @return {Array<Feature>|undefined} Features.
-     */
-    readDocumentOrFolder_(node, objectStack) {
-      const parsersNS = makeStructureNS(NAMESPACE_URIS, {
-        "Document": makeArrayExtender(this.readDocumentOrFolder_, this),
-        "Folder": makeArrayExtender(this.readDocumentOrFolder_, this),
-        "Placemark": makeArrayPusher(this.readPlacemark_, this),
-        "Style": this.readSharedStyle_.bind(this),
-        "StyleMap": this.readSharedStyleMap_.bind(this)
-      });
-      const features = pushParseAndPop([], parsersNS, node, objectStack, this);
-      if (features) {
-        return features;
-      }
-      return void 0;
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {Array<*>} objectStack Object stack.
-     * @private
-     * @return {Feature|undefined} Feature.
-     */
-    readPlacemark_(node, objectStack) {
-      const object = pushParseAndPop(
-        { "geometry": null },
-        PLACEMARK_PARSERS,
-        node,
-        objectStack,
-        this
-      );
-      if (!object) {
-        return void 0;
-      }
-      const feature = new Feature();
-      const id = node.getAttribute("id");
-      if (id !== null) {
-        feature.setId(id);
-      }
-      const options = (
-        /** @type {import("./Feature.js").ReadOptions} */
-        objectStack[0]
-      );
-      const geometry = object["geometry"];
-      if (geometry) {
-        transformGeometryWithOptions(geometry, false, options);
-      }
-      feature.setGeometry(geometry);
-      delete object["geometry"];
-      if (this.extractStyles_) {
-        const style = object["Style"];
-        const styleUrl = object["styleUrl"];
-        const styleFunction = createFeatureStyleFunction(
-          style,
-          styleUrl,
-          this.defaultStyle_,
-          this.sharedStyles_,
-          this.showPointNames_
-        );
-        feature.setStyle(styleFunction);
-      }
-      delete object["Style"];
-      feature.setProperties(object, true);
-      return feature;
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {Array<*>} objectStack Object stack.
-     * @private
-     */
-    readSharedStyle_(node, objectStack) {
-      const id = node.getAttribute("id");
-      if (id !== null) {
-        const style = readStyle.call(this, node, objectStack);
-        if (style) {
-          let styleUri;
-          let baseURI = node.baseURI;
-          if (!baseURI || baseURI == "about:blank") {
-            baseURI = window.location.href;
-          }
-          if (baseURI) {
-            const url = new URL("#" + id, baseURI);
-            styleUri = url.href;
-          } else {
-            styleUri = "#" + id;
-          }
-          this.sharedStyles_[styleUri] = style;
-        }
-      }
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {Array<*>} objectStack Object stack.
-     * @private
-     */
-    readSharedStyleMap_(node, objectStack) {
-      const id = node.getAttribute("id");
-      if (id === null) {
-        return;
-      }
-      const styleMapValue = readStyleMapValue.call(this, node, objectStack);
-      if (!styleMapValue) {
-        return;
-      }
-      let styleUri;
-      let baseURI = node.baseURI;
-      if (!baseURI || baseURI == "about:blank") {
-        baseURI = window.location.href;
-      }
-      if (baseURI) {
-        const url = new URL("#" + id, baseURI);
-        styleUri = url.href;
-      } else {
-        styleUri = "#" + id;
-      }
-      this.sharedStyles_[styleUri] = styleMapValue;
-    }
-    /**
-     * @param {Element} node Node.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
-     * @override
-     */
-    readFeatureFromNode(node, options) {
-      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
-        return null;
-      }
-      const feature = this.readPlacemark_(node, [
-        this.getReadOptions(node, options)
-      ]);
-      if (feature) {
-        return feature;
-      }
-      return null;
-    }
-    /**
-     * @protected
-     * @param {Element} node Node.
-     * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {Array<import("../Feature.js").default>} Features.
-     * @override
-     */
-    readFeaturesFromNode(node, options) {
-      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
-        return [];
-      }
-      let features;
-      const localName = node.localName;
-      if (localName == "Document" || localName == "Folder") {
-        features = this.readDocumentOrFolder_(node, [
-          this.getReadOptions(node, options)
-        ]);
-        if (features) {
-          return features;
-        }
-        return [];
-      }
-      if (localName == "Placemark") {
-        const feature = this.readPlacemark_(node, [
-          this.getReadOptions(node, options)
-        ]);
-        if (feature) {
-          return [feature];
-        }
-        return [];
-      }
-      if (localName == "kml") {
-        features = [];
-        for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-          const fs = this.readFeaturesFromNode(n, options);
-          if (fs) {
-            extend$2(features, fs);
-          }
-        }
-        return features;
-      }
-      return [];
-    }
-    /**
-     * Read the name of the KML.
-     *
-     * @param {Document|Element|string} source Source.
-     * @return {string|undefined} Name.
-     * @api
-     */
-    readName(source) {
-      if (!source) {
-        return void 0;
-      }
-      if (typeof source === "string") {
-        const doc = parse(source);
-        return this.readNameFromDocument(doc);
-      }
-      if (isDocument(source)) {
-        return this.readNameFromDocument(
-          /** @type {Document} */
-          source
-        );
-      }
-      return this.readNameFromNode(
-        /** @type {Element} */
-        source
-      );
-    }
-    /**
-     * @param {Document} doc Document.
-     * @return {string|undefined} Name.
-     */
-    readNameFromDocument(doc) {
-      for (let n = (
-        /** @type {Node} */
-        doc.firstChild
-      ); n; n = n.nextSibling) {
-        if (n.nodeType == Node.ELEMENT_NODE) {
-          const name = this.readNameFromNode(
-            /** @type {Element} */
-            n
-          );
-          if (name) {
-            return name;
-          }
-        }
-      }
-      return void 0;
-    }
-    /**
-     * @param {Element} node Node.
-     * @return {string|undefined} Name.
-     */
-    readNameFromNode(node) {
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "name") {
-          return readString(n);
-        }
-      }
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        const localName = n.localName;
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "Placemark" || localName == "kml")) {
-          const name = this.readNameFromNode(n);
-          if (name) {
-            return name;
-          }
-        }
-      }
-      return void 0;
-    }
-    /**
-     * Read the network links of the KML.
-     *
-     * @param {Document|Element|string} source Source.
-     * @return {Array<Object>} Network links.
-     * @api
-     */
-    readNetworkLinks(source) {
-      const networkLinks = [];
-      if (typeof source === "string") {
-        const doc = parse(source);
-        extend$2(networkLinks, this.readNetworkLinksFromDocument(doc));
-      } else if (isDocument(source)) {
-        extend$2(
-          networkLinks,
-          this.readNetworkLinksFromDocument(
-            /** @type {Document} */
-            source
-          )
-        );
-      } else {
-        extend$2(
-          networkLinks,
-          this.readNetworkLinksFromNode(
-            /** @type {Element} */
-            source
-          )
-        );
-      }
-      return networkLinks;
-    }
-    /**
-     * @param {Document} doc Document.
-     * @return {Array<Object>} Network links.
-     */
-    readNetworkLinksFromDocument(doc) {
-      const networkLinks = [];
-      for (let n = (
-        /** @type {Node} */
-        doc.firstChild
-      ); n; n = n.nextSibling) {
-        if (n.nodeType == Node.ELEMENT_NODE) {
-          extend$2(
-            networkLinks,
-            this.readNetworkLinksFromNode(
-              /** @type {Element} */
-              n
-            )
-          );
-        }
-      }
-      return networkLinks;
-    }
-    /**
-     * @param {Element} node Node.
-     * @return {Array<Object>} Network links.
-     */
-    readNetworkLinksFromNode(node) {
-      const networkLinks = [];
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "NetworkLink") {
-          const obj = pushParseAndPop({}, NETWORK_LINK_PARSERS, n, []);
-          networkLinks.push(obj);
-        }
-      }
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        const localName = n.localName;
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
-          extend$2(networkLinks, this.readNetworkLinksFromNode(n));
-        }
-      }
-      return networkLinks;
-    }
-    /**
-     * Read the regions of the KML.
-     *
-     * @param {Document|Element|string} source Source.
-     * @return {Array<Object>} Regions.
-     * @api
-     */
-    readRegion(source) {
-      const regions = [];
-      if (typeof source === "string") {
-        const doc = parse(source);
-        extend$2(regions, this.readRegionFromDocument(doc));
-      } else if (isDocument(source)) {
-        extend$2(
-          regions,
-          this.readRegionFromDocument(
-            /** @type {Document} */
-            source
-          )
-        );
-      } else {
-        extend$2(regions, this.readRegionFromNode(
-          /** @type {Element} */
-          source
-        ));
-      }
-      return regions;
-    }
-    /**
-     * @param {Document} doc Document.
-     * @return {Array<Object>} Region.
-     */
-    readRegionFromDocument(doc) {
-      const regions = [];
-      for (let n = (
-        /** @type {Node} */
-        doc.firstChild
-      ); n; n = n.nextSibling) {
-        if (n.nodeType == Node.ELEMENT_NODE) {
-          extend$2(regions, this.readRegionFromNode(
-            /** @type {Element} */
-            n
-          ));
-        }
-      }
-      return regions;
-    }
-    /**
-     * @param {Element} node Node.
-     * @return {Array<Object>} Region.
-     * @api
-     */
-    readRegionFromNode(node) {
-      const regions = [];
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "Region") {
-          const obj = pushParseAndPop({}, REGION_PARSERS, n, []);
-          regions.push(obj);
-        }
-      }
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        const localName = n.localName;
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
-          extend$2(regions, this.readRegionFromNode(n));
-        }
-      }
-      return regions;
-    }
-    /**
-     * @typedef {Object} KMLCamera Specifies the observer's viewpoint and associated view parameters.
-     * @property {number} [Latitude] Latitude of the camera.
-     * @property {number} [Longitude] Longitude of the camera.
-     * @property {number} [Altitude] Altitude of the camera.
-     * @property {string} [AltitudeMode] Floor-related altitude mode.
-     * @property {number} [Heading] Horizontal camera rotation.
-     * @property {number} [Tilt] Lateral camera rotation.
-     * @property {number} [Roll] Vertical camera rotation.
-     */
-    /**
-     * Read the cameras of the KML.
-     *
-     * @param {Document|Element|string} source Source.
-     * @return {Array<KMLCamera>} Cameras.
-     * @api
-     */
-    readCamera(source) {
-      const cameras = [];
-      if (typeof source === "string") {
-        const doc = parse(source);
-        extend$2(cameras, this.readCameraFromDocument(doc));
-      } else if (isDocument(source)) {
-        extend$2(
-          cameras,
-          this.readCameraFromDocument(
-            /** @type {Document} */
-            source
-          )
-        );
-      } else {
-        extend$2(cameras, this.readCameraFromNode(
-          /** @type {Element} */
-          source
-        ));
-      }
-      return cameras;
-    }
-    /**
-     * @param {Document} doc Document.
-     * @return {Array<KMLCamera>} Cameras.
-     */
-    readCameraFromDocument(doc) {
-      const cameras = [];
-      for (let n = (
-        /** @type {Node} */
-        doc.firstChild
-      ); n; n = n.nextSibling) {
-        if (n.nodeType === Node.ELEMENT_NODE) {
-          extend$2(cameras, this.readCameraFromNode(
-            /** @type {Element} */
-            n
-          ));
-        }
-      }
-      return cameras;
-    }
-    /**
-     * @param {Element} node Node.
-     * @return {Array<KMLCamera>} Cameras.
-     * @api
-     */
-    readCameraFromNode(node) {
-      const cameras = [];
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName === "Camera") {
-          const obj = pushParseAndPop({}, CAMERA_PARSERS, n, []);
-          cameras.push(obj);
-        }
-      }
-      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
-        const localName = n.localName;
-        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName === "Document" || localName === "Folder" || localName === "Placemark" || localName === "kml")) {
-          extend$2(cameras, this.readCameraFromNode(n));
-        }
-      }
-      return cameras;
-    }
-    /**
-     * Encode an array of features in the KML format as an XML node. GeometryCollections,
-     * MultiPoints, MultiLineStrings, and MultiPolygons are output as MultiGeometries.
-     *
-     * @param {Array<Feature>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @return {Node} Node.
-     * @api
-     * @override
-     */
-    writeFeaturesNode(features, options) {
-      options = this.adaptOptions(options);
-      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
-      const xmlnsUri = "http://www.w3.org/2000/xmlns/";
-      kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
-      kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
-      kml.setAttributeNS(
-        XML_SCHEMA_INSTANCE_URI,
-        "xsi:schemaLocation",
-        SCHEMA_LOCATION
-      );
-      const context = {
-        node: kml
-      };
-      const properties = {};
-      if (features.length > 1) {
-        properties["Document"] = features;
-      } else if (features.length == 1) {
-        properties["Placemark"] = features[0];
-      }
-      const orderedKeys = KML_SEQUENCE[kml.namespaceURI];
-      const values = makeSequence(properties, orderedKeys);
-      pushSerializeAndPop(
-        context,
-        KML_SERIALIZERS,
-        OBJECT_PROPERTY_NODE_FACTORY,
-        values,
-        [options],
-        orderedKeys,
-        this
-      );
-      return kml;
-    }
-  }
-  function createNameStyleFunction(foundStyle, name) {
-    const textOffset = [0, 0];
-    let textAlign = "start";
-    const imageStyle = foundStyle.getImage();
-    if (imageStyle) {
-      const imageSize = imageStyle.getSize();
-      if (imageSize && imageSize.length == 2) {
-        const imageScale = imageStyle.getScaleArray();
-        const anchor = imageStyle.getAnchor();
-        textOffset[0] = imageScale[0] * (imageSize[0] - anchor[0]);
-        textOffset[1] = imageScale[1] * (imageSize[1] / 2 - anchor[1]);
-        textAlign = "left";
-      }
-    }
-    let textStyle = foundStyle.getText();
-    if (textStyle) {
-      textStyle = textStyle.clone();
-      textStyle.setFont(textStyle.getFont() || DEFAULT_TEXT_STYLE.getFont());
-      textStyle.setScale(textStyle.getScale() || DEFAULT_TEXT_STYLE.getScale());
-      textStyle.setFill(textStyle.getFill() || DEFAULT_TEXT_STYLE.getFill());
-      textStyle.setStroke(textStyle.getStroke() || DEFAULT_TEXT_STROKE_STYLE);
-    } else {
-      textStyle = DEFAULT_TEXT_STYLE.clone();
-    }
-    textStyle.setText(name);
-    textStyle.setOffsetX(textOffset[0]);
-    textStyle.setOffsetY(textOffset[1]);
-    textStyle.setTextAlign(textAlign);
-    const nameStyle = new Style({
-      image: imageStyle,
-      text: textStyle
-    });
-    return nameStyle;
-  }
-  function createFeatureStyleFunction(style, styleUrl, defaultStyle, sharedStyles, showPointNames) {
-    return (
-      /**
-       * @param {Feature} feature feature.
-       * @param {number} resolution Resolution.
-       * @return {Array<Style>|Style} Style.
-       */
-      (function(feature, resolution) {
-        let drawName = showPointNames;
-        let name = "";
-        let multiGeometryPoints = [];
-        if (drawName) {
-          const geometry = feature.getGeometry();
-          if (geometry) {
-            if (geometry instanceof GeometryCollection) {
-              multiGeometryPoints = geometry.getGeometriesArrayRecursive().filter(function(geometry2) {
-                const type = geometry2.getType();
-                return type === "Point" || type === "MultiPoint";
-              });
-              drawName = multiGeometryPoints.length > 0;
-            } else {
-              const type = geometry.getType();
-              drawName = type === "Point" || type === "MultiPoint";
-            }
-          }
-        }
-        if (drawName) {
-          name = /** @type {string} */
-          feature.get("name");
-          drawName = drawName && !!name;
-          if (drawName && /&[^&]+;/.test(name)) {
-            if (!TEXTAREA) {
-              TEXTAREA = document.createElement("textarea");
-            }
-            TEXTAREA.innerHTML = name;
-            name = TEXTAREA.value;
-          }
-        }
-        let featureStyle = defaultStyle;
-        if (style) {
-          featureStyle = style;
-        } else if (styleUrl) {
-          featureStyle = findStyle(styleUrl, defaultStyle, sharedStyles);
-        }
-        if (drawName) {
-          const nameStyle = createNameStyleFunction(featureStyle[0], name);
-          if (multiGeometryPoints.length > 0) {
-            nameStyle.setGeometry(new GeometryCollection(multiGeometryPoints));
-            const baseStyle = new Style({
-              geometry: featureStyle[0].getGeometry(),
-              image: null,
-              fill: featureStyle[0].getFill(),
-              stroke: featureStyle[0].getStroke(),
-              text: null
-            });
-            return [nameStyle, baseStyle].concat(featureStyle.slice(1));
-          }
-          return nameStyle;
-        }
-        return featureStyle;
-      })
-    );
-  }
-  function findStyle(styleValue, defaultStyle, sharedStyles) {
-    if (Array.isArray(styleValue)) {
-      return styleValue;
-    }
-    if (typeof styleValue === "string") {
-      return findStyle(sharedStyles[styleValue], defaultStyle, sharedStyles);
-    }
-    return defaultStyle;
-  }
-  function readColor(node) {
-    const s = getAllTextContent(node, false);
-    const m = /^\s*#?\s*([0-9A-Fa-f]{8})\s*$/.exec(s);
-    if (m) {
-      const hexColor = m[1];
-      return [
-        parseInt(hexColor.substr(6, 2), 16),
-        parseInt(hexColor.substr(4, 2), 16),
-        parseInt(hexColor.substr(2, 2), 16),
-        parseInt(hexColor.substr(0, 2), 16) / 255
-      ];
-    }
-    return void 0;
-  }
-  function readFlatCoordinates(node) {
-    let s = getAllTextContent(node, false);
-    const flatCoordinates = [];
-    s = s.replace(/\s*,\s*/g, ",");
-    const re = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?),([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|,|$)(?:([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|$))?\s*/i;
-    let m;
-    while (m = re.exec(s)) {
-      const x = parseFloat(m[1]);
-      const y = parseFloat(m[2]);
-      const z = m[3] ? parseFloat(m[3]) : 0;
-      flatCoordinates.push(x, y, z);
-      s = s.substr(m[0].length);
-    }
-    if (s !== "") {
-      return void 0;
-    }
-    return flatCoordinates;
-  }
-  function readURI(node) {
-    const s = getAllTextContent(node, false).trim();
-    let baseURI = node.baseURI;
-    if (!baseURI || baseURI == "about:blank") {
-      baseURI = window.location.href;
-    }
-    if (baseURI) {
-      const url = new URL(s, baseURI);
-      return url.href;
-    }
-    return s;
-  }
-  function readStyleURL(node) {
-    const s = getAllTextContent(node, false).trim().replace(/^(?!.*#)/, "#");
-    let baseURI = node.baseURI;
-    if (!baseURI || baseURI == "about:blank") {
-      baseURI = window.location.href;
-    }
-    if (baseURI) {
-      const url = new URL(s, baseURI);
-      return url.href;
-    }
-    return s;
-  }
-  function readVec2(node) {
-    const xunits = node.getAttribute("xunits");
-    const yunits = node.getAttribute("yunits");
-    let origin;
-    if (xunits !== "insetPixels") {
-      if (yunits !== "insetPixels") {
-        origin = "bottom-left";
-      } else {
-        origin = "top-left";
-      }
-    } else {
-      if (yunits !== "insetPixels") {
-        origin = "bottom-right";
-      } else {
-        origin = "top-right";
-      }
-    }
-    return {
-      x: parseFloat(node.getAttribute("x")),
-      xunits: ICON_ANCHOR_UNITS_MAP[xunits],
-      y: parseFloat(node.getAttribute("y")),
-      yunits: ICON_ANCHOR_UNITS_MAP[yunits],
-      origin
-    };
-  }
-  function readScale(node) {
-    return readDecimal(node);
-  }
-  const STYLE_MAP_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "Pair": pairDataParser
-  });
-  function readStyleMapValue(node, objectStack) {
-    return pushParseAndPop(void 0, STYLE_MAP_PARSERS, node, objectStack, this);
-  }
-  const ICON_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "Icon": makeObjectPropertySetter(readIcon),
-    "color": makeObjectPropertySetter(readColor),
-    "heading": makeObjectPropertySetter(readDecimal),
-    "hotSpot": makeObjectPropertySetter(readVec2),
-    "scale": makeObjectPropertySetter(readScale)
-  });
-  function iconStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, ICON_STYLE_PARSERS, node, objectStack);
-    if (!object) {
-      return;
-    }
-    const styleObject = (
-      /** @type {Object} */
-      objectStack[objectStack.length - 1]
-    );
-    const IconObject = "Icon" in object ? object["Icon"] : {};
-    const drawIcon = !("Icon" in object) || Object.keys(IconObject).length > 0;
-    let src;
-    const href = (
-      /** @type {string|undefined} */
-      IconObject["href"]
-    );
-    if (href) {
-      src = href;
-    } else if (drawIcon) {
-      src = DEFAULT_IMAGE_STYLE_SRC;
-    }
-    let anchor, anchorXUnits, anchorYUnits;
-    let anchorOrigin = "bottom-left";
-    const hotSpot = (
-      /** @type {Vec2|undefined} */
-      object["hotSpot"]
-    );
-    if (hotSpot) {
-      anchor = [hotSpot.x, hotSpot.y];
-      anchorXUnits = hotSpot.xunits;
-      anchorYUnits = hotSpot.yunits;
-      anchorOrigin = hotSpot.origin;
-    } else if (/^https?:\/\/maps\.(?:google|gstatic)\.com\//.test(src)) {
-      if (src.includes("pushpin")) {
-        anchor = DEFAULT_IMAGE_STYLE_ANCHOR;
-        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
-        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
-      } else if (src.includes("arrow-reverse")) {
-        anchor = [54, 42];
-        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
-        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
-      } else if (src.includes("paddle")) {
-        anchor = [32, 1];
-        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
-        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
-      }
-    }
-    let offset;
-    const x = (
-      /** @type {number|undefined} */
-      IconObject["x"]
-    );
-    const y = (
-      /** @type {number|undefined} */
-      IconObject["y"]
-    );
-    if (x !== void 0 && y !== void 0) {
-      offset = [x, y];
-    }
-    let size;
-    const w = (
-      /** @type {number|undefined} */
-      IconObject["w"]
-    );
-    const h = (
-      /** @type {number|undefined} */
-      IconObject["h"]
-    );
-    if (w !== void 0 && h !== void 0) {
-      size = [w, h];
-    }
-    let rotation;
-    const heading = (
-      /** @type {number} */
-      object["heading"]
-    );
-    if (heading !== void 0) {
-      rotation = toRadians(heading);
-    }
-    const scale2 = (
-      /** @type {number|undefined} */
-      object["scale"]
-    );
-    const color = (
-      /** @type {Array<number>|undefined} */
-      object["color"]
-    );
-    if (drawIcon) {
-      if (src == DEFAULT_IMAGE_STYLE_SRC) {
-        size = DEFAULT_IMAGE_STYLE_SIZE;
-      }
-      const imageStyle = new Icon({
-        anchor,
-        anchorOrigin,
-        anchorXUnits,
-        anchorYUnits,
-        crossOrigin: this.crossOrigin_,
-        referrerPolicy: this.referrerPolicy_,
-        offset,
-        offsetOrigin: "bottom-left",
-        rotation,
-        scale: scale2,
-        size,
-        src: this.iconUrlFunction_(src),
-        color
-      });
-      const imageScale = imageStyle.getScaleArray()[0];
-      const imageSize = imageStyle.getSize();
-      if (imageSize === null) {
-        const imageState = imageStyle.getImageState();
-        if (imageState === ImageState.IDLE || imageState === ImageState.LOADING) {
-          const listener = function() {
-            const imageState2 = imageStyle.getImageState();
-            if (!(imageState2 === ImageState.IDLE || imageState2 === ImageState.LOADING)) {
-              const imageSize2 = imageStyle.getSize();
-              if (imageSize2 && imageSize2.length == 2) {
-                const resizeScale = scaleForSize(imageSize2);
-                imageStyle.setScale(imageScale * resizeScale);
-              }
-              imageStyle.unlistenImageChange(listener);
-            }
-          };
-          imageStyle.listenImageChange(listener);
-          if (imageState === ImageState.IDLE) {
-            imageStyle.load();
-          }
-        }
-      } else if (imageSize.length == 2) {
-        const resizeScale = scaleForSize(imageSize);
-        imageStyle.setScale(imageScale * resizeScale);
-      }
-      styleObject["imageStyle"] = imageStyle;
-    } else {
-      styleObject["imageStyle"] = DEFAULT_NO_IMAGE_STYLE;
-    }
-  }
-  const LABEL_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeObjectPropertySetter(readColor),
-    "scale": makeObjectPropertySetter(readScale)
-  });
-  function labelStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, LABEL_STYLE_PARSERS, node, objectStack);
-    if (!object) {
-      return;
-    }
-    const styleObject = objectStack[objectStack.length - 1];
-    const textStyle = new Text({
-      fill: new Fill({
-        color: (
-          /** @type {import("../color.js").Color} */
-          "color" in object ? object["color"] : DEFAULT_COLOR
-        )
-      }),
-      scale: (
-        /** @type {number|undefined} */
-        object["scale"]
-      )
-    });
-    styleObject["textStyle"] = textStyle;
-  }
-  const LINE_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeObjectPropertySetter(readColor),
-    "width": makeObjectPropertySetter(readDecimal)
-  });
-  function lineStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, LINE_STYLE_PARSERS, node, objectStack);
-    if (!object) {
-      return;
-    }
-    const styleObject = objectStack[objectStack.length - 1];
-    const strokeStyle = new Stroke({
-      color: (
-        /** @type {import("../color.js").Color} */
-        "color" in object ? object["color"] : DEFAULT_COLOR
-      ),
-      width: (
-        /** @type {number} */
-        "width" in object ? object["width"] : 1
-      )
-    });
-    styleObject["strokeStyle"] = strokeStyle;
-  }
-  const POLY_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeObjectPropertySetter(readColor),
-    "fill": makeObjectPropertySetter(readBoolean),
-    "outline": makeObjectPropertySetter(readBoolean)
-  });
-  function polyStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, POLY_STYLE_PARSERS, node, objectStack);
-    if (!object) {
-      return;
-    }
-    const styleObject = objectStack[objectStack.length - 1];
-    const fillStyle = new Fill({
-      color: (
-        /** @type {import("../color.js").Color} */
-        "color" in object ? object["color"] : DEFAULT_COLOR
-      )
-    });
-    styleObject["fillStyle"] = fillStyle;
-    const fill = (
-      /** @type {boolean|undefined} */
-      object["fill"]
-    );
-    if (fill !== void 0) {
-      styleObject["fill"] = fill;
-    }
-    const outline = (
-      /** @type {boolean|undefined} */
-      object["outline"]
-    );
-    if (outline !== void 0) {
-      styleObject["outline"] = outline;
-    }
-  }
-  const FLAT_LINEAR_RING_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "coordinates": makeReplacer(readFlatCoordinates)
-  });
-  function readFlatLinearRing(node, objectStack) {
-    return pushParseAndPop(null, FLAT_LINEAR_RING_PARSERS, node, objectStack);
-  }
-  function gxCoordParser(node, objectStack) {
-    const gxTrackObject = (
-      /** @type {GxTrackObject} */
-      objectStack[objectStack.length - 1]
-    );
-    const coordinates2 = gxTrackObject.coordinates;
-    const s = getAllTextContent(node, false);
-    const re = /^\s*([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s*$/i;
-    const m = re.exec(s);
-    if (m) {
-      const x = parseFloat(m[1]);
-      const y = parseFloat(m[2]);
-      const z = parseFloat(m[3]);
-      coordinates2.push([x, y, z]);
-    } else {
-      coordinates2.push([]);
-    }
-  }
-  const GX_MULTITRACK_GEOMETRY_PARSERS = makeStructureNS(GX_NAMESPACE_URIS, {
-    "Track": makeArrayPusher(readGxTrack)
-  });
-  function readGxMultiTrack(node, objectStack) {
-    const lineStrings = pushParseAndPop(
-      [],
-      GX_MULTITRACK_GEOMETRY_PARSERS,
-      node,
-      objectStack
-    );
-    if (!lineStrings) {
-      return void 0;
-    }
-    return new MultiLineString(lineStrings);
-  }
-  const GX_TRACK_PARSERS = makeStructureNS(
-    NAMESPACE_URIS,
-    {
-      "when": whenParser
-    },
-    makeStructureNS(GX_NAMESPACE_URIS, {
-      "coord": gxCoordParser
-    })
-  );
-  function readGxTrack(node, objectStack) {
-    const gxTrackObject = pushParseAndPop(
-      /** @type {GxTrackObject} */
-      {
-        coordinates: [],
-        whens: []
-      },
-      GX_TRACK_PARSERS,
-      node,
-      objectStack
-    );
-    if (!gxTrackObject) {
-      return void 0;
-    }
-    const flatCoordinates = [];
-    const coordinates2 = gxTrackObject.coordinates;
-    const whens = gxTrackObject.whens;
-    for (let i = 0, ii = Math.min(coordinates2.length, whens.length); i < ii; ++i) {
-      if (coordinates2[i].length == 3) {
-        flatCoordinates.push(
-          coordinates2[i][0],
-          coordinates2[i][1],
-          coordinates2[i][2],
-          whens[i]
-        );
-      }
-    }
-    return new LineString(flatCoordinates, "XYZM");
-  }
-  const ICON_PARSERS = makeStructureNS(
-    NAMESPACE_URIS,
-    {
-      "href": makeObjectPropertySetter(readURI)
-    },
-    makeStructureNS(GX_NAMESPACE_URIS, {
-      "x": makeObjectPropertySetter(readDecimal),
-      "y": makeObjectPropertySetter(readDecimal),
-      "w": makeObjectPropertySetter(readDecimal),
-      "h": makeObjectPropertySetter(readDecimal)
-    })
-  );
-  function readIcon(node, objectStack) {
-    const iconObject = pushParseAndPop({}, ICON_PARSERS, node, objectStack);
-    if (iconObject) {
-      return iconObject;
-    }
-    return null;
-  }
-  const GEOMETRY_FLAT_COORDINATES_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "coordinates": makeReplacer(readFlatCoordinates)
-  });
-  function readFlatCoordinatesFromNode(node, objectStack) {
-    return pushParseAndPop(
-      null,
-      GEOMETRY_FLAT_COORDINATES_PARSERS,
-      node,
-      objectStack
-    );
-  }
-  const EXTRUDE_AND_ALTITUDE_MODE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "extrude": makeObjectPropertySetter(readBoolean),
-    "tessellate": makeObjectPropertySetter(readBoolean),
-    "altitudeMode": makeObjectPropertySetter(readString)
-  });
-  function readLineString(node, objectStack) {
-    const properties = pushParseAndPop(
-      {},
-      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
-      node,
-      objectStack
-    );
-    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
-    if (flatCoordinates) {
-      const lineString = new LineString(flatCoordinates, "XYZ");
-      lineString.setProperties(properties, true);
-      return lineString;
-    }
-    return void 0;
-  }
-  function readLinearRing(node, objectStack) {
-    const properties = pushParseAndPop(
-      {},
-      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
-      node,
-      objectStack
-    );
-    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
-    if (flatCoordinates) {
-      const polygon = new Polygon(flatCoordinates, "XYZ", [
-        flatCoordinates.length
-      ]);
-      polygon.setProperties(properties, true);
-      return polygon;
-    }
-    return void 0;
-  }
-  const MULTI_GEOMETRY_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "LineString": makeArrayPusher(readLineString),
-    "LinearRing": makeArrayPusher(readLinearRing),
-    "MultiGeometry": makeArrayPusher(readMultiGeometry),
-    "Point": makeArrayPusher(readPoint),
-    "Polygon": makeArrayPusher(readPolygon)
-  });
-  function readMultiGeometry(node, objectStack) {
-    const geometries = pushParseAndPop(
-      [],
-      MULTI_GEOMETRY_PARSERS,
-      node,
-      objectStack
-    );
-    if (!geometries) {
-      return null;
-    }
-    if (geometries.length === 0) {
-      return new GeometryCollection(geometries);
-    }
-    let multiGeometry;
-    let homogeneous = true;
-    const type = geometries[0].getType();
-    let geometry;
-    for (let i = 1, ii = geometries.length; i < ii; ++i) {
-      geometry = geometries[i];
-      if (geometry.getType() != type) {
-        homogeneous = false;
-        break;
-      }
-    }
-    if (homogeneous) {
-      let layout;
-      let flatCoordinates;
-      if (type == "Point") {
-        const point = geometries[0];
-        layout = point.getLayout();
-        flatCoordinates = point.getFlatCoordinates();
-        for (let i = 1, ii = geometries.length; i < ii; ++i) {
-          geometry = geometries[i];
-          extend$2(flatCoordinates, geometry.getFlatCoordinates());
-        }
-        multiGeometry = new MultiPoint(flatCoordinates, layout);
-        setCommonGeometryProperties(multiGeometry, geometries);
-      } else if (type == "LineString") {
-        multiGeometry = new MultiLineString(geometries);
-        setCommonGeometryProperties(multiGeometry, geometries);
-      } else if (type == "Polygon") {
-        multiGeometry = new MultiPolygon(geometries);
-        setCommonGeometryProperties(multiGeometry, geometries);
-      } else if (type == "GeometryCollection" || type.startsWith("Multi")) {
-        multiGeometry = new GeometryCollection(geometries);
-      } else {
-        throw new Error("Unknown geometry type found");
-      }
-    } else {
-      multiGeometry = new GeometryCollection(geometries);
-    }
-    return (
-      /** @type {import("../geom/Geometry.js").default} */
-      multiGeometry
-    );
-  }
-  function readPoint(node, objectStack) {
-    const properties = pushParseAndPop(
-      {},
-      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
-      node,
-      objectStack
-    );
-    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
-    if (flatCoordinates) {
-      const point = new Point(flatCoordinates, "XYZ");
-      point.setProperties(properties, true);
-      return point;
-    }
-    return void 0;
-  }
-  const FLAT_LINEAR_RINGS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "innerBoundaryIs": innerBoundaryIsParser,
-    "outerBoundaryIs": outerBoundaryIsParser
-  });
-  function readPolygon(node, objectStack) {
-    const properties = pushParseAndPop(
-      /** @type {Object<string,*>} */
-      {},
-      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
-      node,
-      objectStack
-    );
-    const flatLinearRings = pushParseAndPop(
-      [null],
-      FLAT_LINEAR_RINGS_PARSERS,
-      node,
-      objectStack
-    );
-    if (flatLinearRings && flatLinearRings[0]) {
-      const flatCoordinates = flatLinearRings[0];
-      const ends = [flatCoordinates.length];
-      for (let i = 1, ii = flatLinearRings.length; i < ii; ++i) {
-        extend$2(flatCoordinates, flatLinearRings[i]);
-        ends.push(flatCoordinates.length);
-      }
-      const polygon = new Polygon(flatCoordinates, "XYZ", ends);
-      polygon.setProperties(properties, true);
-      return polygon;
-    }
-    return void 0;
-  }
-  const STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "IconStyle": iconStyleParser,
-    "LabelStyle": labelStyleParser,
-    "LineStyle": lineStyleParser,
-    "PolyStyle": polyStyleParser
-  });
-  function readStyle(node, objectStack) {
-    const styleObject = pushParseAndPop(
-      {},
-      STYLE_PARSERS,
-      node,
-      objectStack,
-      this
-    );
-    if (!styleObject) {
-      return null;
-    }
-    let fillStyle = (
-      /** @type {Fill} */
-      "fillStyle" in styleObject ? styleObject["fillStyle"] : DEFAULT_FILL_STYLE
-    );
-    const fill = (
-      /** @type {boolean|undefined} */
-      styleObject["fill"]
-    );
-    if (fill !== void 0 && !fill) {
-      fillStyle = null;
-    }
-    let imageStyle;
-    if ("imageStyle" in styleObject) {
-      if (styleObject["imageStyle"] != DEFAULT_NO_IMAGE_STYLE) {
-        imageStyle = /** @type {import("../style/Image.js").default} */
-        styleObject["imageStyle"];
-      }
-    } else {
-      imageStyle = DEFAULT_IMAGE_STYLE;
-    }
-    const textStyle = (
-      /** @type {Text} */
-      "textStyle" in styleObject ? styleObject["textStyle"] : DEFAULT_TEXT_STYLE
-    );
-    const strokeStyle = (
-      /** @type {Stroke} */
-      "strokeStyle" in styleObject ? styleObject["strokeStyle"] : DEFAULT_STROKE_STYLE
-    );
-    const outline = (
-      /** @type {boolean|undefined} */
-      styleObject["outline"]
-    );
-    if (outline !== void 0 && !outline) {
-      return [
-        new Style({
-          geometry: function(feature) {
-            const geometry = feature.getGeometry();
-            const type = geometry.getType();
-            if (type === "GeometryCollection") {
-              const collection = (
-                /** @type {import("../geom/GeometryCollection.js").default} */
-                geometry
-              );
-              return new GeometryCollection(
-                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
-                  const type2 = geometry2.getType();
-                  return type2 !== "Polygon" && type2 !== "MultiPolygon";
-                })
-              );
-            }
-            if (type !== "Polygon" && type !== "MultiPolygon") {
-              return geometry;
-            }
-          },
-          fill: fillStyle,
-          image: imageStyle,
-          stroke: strokeStyle,
-          text: textStyle,
-          zIndex: void 0
-          // FIXME
-        }),
-        new Style({
-          geometry: function(feature) {
-            const geometry = feature.getGeometry();
-            const type = geometry.getType();
-            if (type === "GeometryCollection") {
-              const collection = (
-                /** @type {import("../geom/GeometryCollection.js").default} */
-                geometry
-              );
-              return new GeometryCollection(
-                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
-                  const type2 = geometry2.getType();
-                  return type2 === "Polygon" || type2 === "MultiPolygon";
-                })
-              );
-            }
-            if (type === "Polygon" || type === "MultiPolygon") {
-              return geometry;
-            }
-          },
-          fill: fillStyle,
-          stroke: null,
-          zIndex: void 0
-          // FIXME
-        })
-      ];
-    }
-    return [
-      new Style({
-        fill: fillStyle,
-        image: imageStyle,
-        stroke: strokeStyle,
-        text: textStyle,
-        zIndex: void 0
-        // FIXME
-      })
-    ];
-  }
-  function setCommonGeometryProperties(multiGeometry, geometries) {
-    const ii = geometries.length;
-    const extrudes = new Array(geometries.length);
-    const tessellates = new Array(geometries.length);
-    const altitudeModes = new Array(geometries.length);
-    let hasExtrude, hasTessellate, hasAltitudeMode;
-    hasExtrude = false;
-    hasTessellate = false;
-    hasAltitudeMode = false;
-    for (let i = 0; i < ii; ++i) {
-      const geometry = geometries[i];
-      extrudes[i] = geometry.get("extrude");
-      tessellates[i] = geometry.get("tessellate");
-      altitudeModes[i] = geometry.get("altitudeMode");
-      hasExtrude = hasExtrude || extrudes[i] !== void 0;
-      hasTessellate = hasTessellate || tessellates[i] !== void 0;
-      hasAltitudeMode = hasAltitudeMode || altitudeModes[i];
-    }
-    if (hasExtrude) {
-      multiGeometry.set("extrude", extrudes);
-    }
-    if (hasTessellate) {
-      multiGeometry.set("tessellate", tessellates);
-    }
-    if (hasAltitudeMode) {
-      multiGeometry.set("altitudeMode", altitudeModes);
-    }
-  }
-  const DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "displayName": makeObjectPropertySetter(readString),
-    "value": makeObjectPropertySetter(readString)
-  });
-  function dataParser(node, objectStack) {
-    const name = node.getAttribute("name");
-    parseNode(DATA_PARSERS, node, objectStack);
-    const featureObject = (
-      /** @type {Object} */
-      objectStack[objectStack.length - 1]
-    );
-    if (name && featureObject.displayName) {
-      featureObject[name] = {
-        value: featureObject.value,
-        displayName: featureObject.displayName,
-        toString: function() {
-          return featureObject.value;
-        }
-      };
-    } else if (name !== null) {
-      featureObject[name] = featureObject.value;
-    } else if (featureObject.displayName !== null) {
-      featureObject[featureObject.displayName] = featureObject.value;
-    }
-    delete featureObject["value"];
-  }
-  const EXTENDED_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "Data": dataParser,
-    "SchemaData": schemaDataParser
-  });
-  function extendedDataParser(node, objectStack) {
-    parseNode(EXTENDED_DATA_PARSERS, node, objectStack);
-  }
-  function regionParser(node, objectStack) {
-    parseNode(REGION_PARSERS, node, objectStack);
-  }
-  const PAIR_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "Style": makeObjectPropertySetter(readStyle),
-    "key": makeObjectPropertySetter(readString),
-    "styleUrl": makeObjectPropertySetter(readStyleURL)
-  });
-  function pairDataParser(node, objectStack) {
-    const pairObject = pushParseAndPop({}, PAIR_PARSERS, node, objectStack, this);
-    if (!pairObject) {
-      return;
-    }
-    const key = (
-      /** @type {string|undefined} */
-      pairObject["key"]
-    );
-    if (key && key == "normal") {
-      const styleUrl = (
-        /** @type {string|undefined} */
-        pairObject["styleUrl"]
-      );
-      if (styleUrl) {
-        objectStack[objectStack.length - 1] = styleUrl;
-      }
-      const style = (
-        /** @type {Style} */
-        pairObject["Style"]
-      );
-      if (style) {
-        objectStack[objectStack.length - 1] = style;
-      }
-    }
-  }
-  function placemarkStyleMapParser(node, objectStack) {
-    const styleMapValue = readStyleMapValue.call(this, node, objectStack);
-    if (!styleMapValue) {
-      return;
-    }
-    const placemarkObject = objectStack[objectStack.length - 1];
-    if (Array.isArray(styleMapValue)) {
-      placemarkObject["Style"] = styleMapValue;
-    } else if (typeof styleMapValue === "string") {
-      placemarkObject["styleUrl"] = styleMapValue;
-    } else {
-      throw new Error("`styleMapValue` has an unknown type");
-    }
-  }
-  const SCHEMA_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "SimpleData": simpleDataParser
-  });
-  function schemaDataParser(node, objectStack) {
-    parseNode(SCHEMA_DATA_PARSERS, node, objectStack);
-  }
-  function simpleDataParser(node, objectStack) {
-    const name = node.getAttribute("name");
-    if (name !== null) {
-      const data = readString(node);
-      const featureObject = (
-        /** @type {Object} */
-        objectStack[objectStack.length - 1]
-      );
-      featureObject[name] = data;
-    }
-  }
-  const LAT_LON_ALT_BOX_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "altitudeMode": makeObjectPropertySetter(readString),
-    "minAltitude": makeObjectPropertySetter(readDecimal),
-    "maxAltitude": makeObjectPropertySetter(readDecimal),
-    "north": makeObjectPropertySetter(readDecimal),
-    "south": makeObjectPropertySetter(readDecimal),
-    "east": makeObjectPropertySetter(readDecimal),
-    "west": makeObjectPropertySetter(readDecimal)
-  });
-  function latLonAltBoxParser(node, objectStack) {
-    const object = pushParseAndPop(
-      {},
-      LAT_LON_ALT_BOX_PARSERS,
-      node,
-      objectStack
-    );
-    if (!object) {
-      return;
-    }
-    const regionObject = (
-      /** @type {Object} */
-      objectStack[objectStack.length - 1]
-    );
-    const extent = [
-      parseFloat(object["west"]),
-      parseFloat(object["south"]),
-      parseFloat(object["east"]),
-      parseFloat(object["north"])
-    ];
-    regionObject["extent"] = extent;
-    regionObject["altitudeMode"] = object["altitudeMode"];
-    regionObject["minAltitude"] = parseFloat(object["minAltitude"]);
-    regionObject["maxAltitude"] = parseFloat(object["maxAltitude"]);
-  }
-  const LOD_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "minLodPixels": makeObjectPropertySetter(readDecimal),
-    "maxLodPixels": makeObjectPropertySetter(readDecimal),
-    "minFadeExtent": makeObjectPropertySetter(readDecimal),
-    "maxFadeExtent": makeObjectPropertySetter(readDecimal)
-  });
-  function lodParser(node, objectStack) {
-    const object = pushParseAndPop({}, LOD_PARSERS, node, objectStack);
-    if (!object) {
-      return;
-    }
-    const lodObject = (
-      /** @type {Object} */
-      objectStack[objectStack.length - 1]
-    );
-    lodObject["minLodPixels"] = parseFloat(object["minLodPixels"]);
-    lodObject["maxLodPixels"] = parseFloat(object["maxLodPixels"]);
-    lodObject["minFadeExtent"] = parseFloat(object["minFadeExtent"]);
-    lodObject["maxFadeExtent"] = parseFloat(object["maxFadeExtent"]);
-  }
-  const INNER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    // KML spec only allows one LinearRing  per innerBoundaryIs, but Google Earth
-    // allows multiple, so we parse multiple here too.
-    "LinearRing": makeArrayPusher(readFlatLinearRing)
-  });
-  function innerBoundaryIsParser(node, objectStack) {
-    const innerBoundaryFlatLinearRings = pushParseAndPop(
-      /** @type {Array<Array<number>>} */
-      [],
-      INNER_BOUNDARY_IS_PARSERS,
-      node,
-      objectStack
-    );
-    if (innerBoundaryFlatLinearRings.length > 0) {
-      const flatLinearRings = (
-        /** @type {Array<Array<number>>} */
-        objectStack[objectStack.length - 1]
-      );
-      flatLinearRings.push(...innerBoundaryFlatLinearRings);
-    }
-  }
-  const OUTER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
-    "LinearRing": makeReplacer(readFlatLinearRing)
-  });
-  function outerBoundaryIsParser(node, objectStack) {
-    const flatLinearRing = pushParseAndPop(
-      void 0,
-      OUTER_BOUNDARY_IS_PARSERS,
-      node,
-      objectStack
-    );
-    if (flatLinearRing) {
-      const flatLinearRings = (
-        /** @type {Array<Array<number>>} */
-        objectStack[objectStack.length - 1]
-      );
-      flatLinearRings[0] = flatLinearRing;
-    }
-  }
-  function linkParser(node, objectStack) {
-    parseNode(LINK_PARSERS, node, objectStack);
-  }
-  function whenParser(node, objectStack) {
-    const gxTrackObject = (
-      /** @type {GxTrackObject} */
-      objectStack[objectStack.length - 1]
-    );
-    const whens = gxTrackObject.whens;
-    const s = getAllTextContent(node, false);
-    const when = Date.parse(s);
-    whens.push(isNaN(when) ? 0 : when);
-  }
-  function writeColorTextNode(node, color) {
-    const rgba = asArray(color);
-    const opacity = rgba.length == 4 ? rgba[3] : 1;
-    const abgr = [opacity * 255, rgba[2], rgba[1], rgba[0]];
-    for (let i = 0; i < 4; ++i) {
-      const hex = Math.floor(
-        /** @type {number} */
-        abgr[i]
-      ).toString(16);
-      abgr[i] = hex.length == 1 ? "0" + hex : hex;
-    }
-    writeStringTextNode(node, abgr.join(""));
-  }
-  function writeCoordinatesTextNode(node, coordinates2, objectStack) {
-    const context = objectStack[objectStack.length - 1];
-    const layout = context["layout"];
-    const stride = context["stride"];
-    let dimension;
-    if (layout == "XY" || layout == "XYM") {
-      dimension = 2;
-    } else if (layout == "XYZ" || layout == "XYZM") {
-      dimension = 3;
-    } else {
-      throw new Error("Invalid geometry layout");
-    }
-    const ii = coordinates2.length;
-    let text = "";
-    if (ii > 0) {
-      text += coordinates2[0];
-      for (let d = 1; d < dimension; ++d) {
-        text += "," + coordinates2[d];
-      }
-      for (let i = stride; i < ii; i += stride) {
-        text += " " + coordinates2[i];
-        for (let d = 1; d < dimension; ++d) {
-          text += "," + coordinates2[i + d];
-        }
-      }
-    }
-    writeStringTextNode(node, text);
-  }
-  const EXTENDEDDATA_NODE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "Data": makeChildAppender(writeDataNode),
-    "value": makeChildAppender(writeDataNodeValue),
-    "displayName": makeChildAppender(writeDataNodeName)
-  });
-  function writeDataNode(node, pair, objectStack) {
-    node.setAttribute("name", pair.name);
-    const context = { node };
-    const value = pair.value;
-    if (typeof value == "object") {
-      if (value !== null && value.displayName) {
-        pushSerializeAndPop(
-          context,
-          EXTENDEDDATA_NODE_SERIALIZERS,
-          OBJECT_PROPERTY_NODE_FACTORY,
-          [value.displayName],
-          objectStack,
-          ["displayName"]
-        );
-      }
-      if (value !== null && value.value) {
-        pushSerializeAndPop(
-          context,
-          EXTENDEDDATA_NODE_SERIALIZERS,
-          OBJECT_PROPERTY_NODE_FACTORY,
-          [value.value],
-          objectStack,
-          ["value"]
-        );
-      }
-    } else {
-      pushSerializeAndPop(
-        context,
-        EXTENDEDDATA_NODE_SERIALIZERS,
-        OBJECT_PROPERTY_NODE_FACTORY,
-        [value],
-        objectStack,
-        ["value"]
-      );
-    }
-  }
-  function writeDataNodeName(node, name) {
-    writeStringTextNode(node, name);
-  }
-  function writeDataNodeValue(node, value) {
-    writeStringTextNode(node, value);
-  }
-  const DOCUMENT_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "Placemark": makeChildAppender(writePlacemark)
-  });
-  const DOCUMENT_NODE_FACTORY = function(value, objectStack, nodeName) {
-    const parentNode = objectStack[objectStack.length - 1].node;
-    return createElementNS(parentNode.namespaceURI, "Placemark");
-  };
-  function writeDocument(node, features, objectStack) {
-    const context = { node };
-    pushSerializeAndPop(
-      context,
-      DOCUMENT_SERIALIZERS,
-      DOCUMENT_NODE_FACTORY,
-      features,
-      objectStack,
-      void 0,
-      this
-    );
-  }
-  const DATA_NODE_FACTORY = makeSimpleNodeFactory("Data");
-  function writeExtendedData(node, namesAndValues, objectStack) {
-    const context = { node };
-    const names = namesAndValues.names;
-    const values = namesAndValues.values;
-    const length = names.length;
-    for (let i = 0; i < length; i++) {
-      pushSerializeAndPop(
-        context,
-        EXTENDEDDATA_NODE_SERIALIZERS,
-        DATA_NODE_FACTORY,
-        [{ name: names[i], value: values[i] }],
-        objectStack
-      );
-    }
-  }
-  const ICON_SEQUENCE = makeStructureNS(
-    NAMESPACE_URIS,
-    ["href"],
-    makeStructureNS(GX_NAMESPACE_URIS, ["x", "y", "w", "h"])
-  );
-  const ICON_SERIALIZERS = makeStructureNS(
-    NAMESPACE_URIS,
-    {
-      "href": makeChildAppender(writeStringTextNode)
-    },
-    makeStructureNS(GX_NAMESPACE_URIS, {
-      "x": makeChildAppender(writeDecimalTextNode),
-      "y": makeChildAppender(writeDecimalTextNode),
-      "w": makeChildAppender(writeDecimalTextNode),
-      "h": makeChildAppender(writeDecimalTextNode)
-    })
-  );
-  const GX_NODE_FACTORY = function(value, objectStack, nodeName) {
-    return createElementNS(GX_NAMESPACE_URIS[0], "gx:" + nodeName);
-  };
-  function writeIcon(node, icon, objectStack) {
-    const context = { node };
-    const parentNode = objectStack[objectStack.length - 1].node;
-    let orderedKeys = ICON_SEQUENCE[parentNode.namespaceURI];
-    let values = makeSequence(icon, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      ICON_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-    orderedKeys = ICON_SEQUENCE[GX_NAMESPACE_URIS[0]];
-    values = makeSequence(icon, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      ICON_SERIALIZERS,
-      GX_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  const ICON_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "scale",
-    "heading",
-    "Icon",
-    "color",
-    "hotSpot"
-  ]);
-  const ICON_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "Icon": makeChildAppender(writeIcon),
-    "color": makeChildAppender(writeColorTextNode),
-    "heading": makeChildAppender(writeDecimalTextNode),
-    "hotSpot": makeChildAppender(writeVec2),
-    "scale": makeChildAppender(writeScaleTextNode)
-  });
-  function writeIconStyle(node, style, objectStack) {
-    const context = { node };
-    const properties = {};
-    const src = style.getSrc();
-    const size = style.getSize();
-    const iconImageSize = style.getImageSize();
-    const iconProperties = {
-      "href": src
-    };
-    if (size) {
-      iconProperties["w"] = size[0];
-      iconProperties["h"] = size[1];
-      const anchor = style.getAnchor();
-      const origin = style.getOrigin();
-      if (origin && iconImageSize && origin[0] !== 0 && origin[1] !== size[1]) {
-        iconProperties["x"] = origin[0];
-        iconProperties["y"] = iconImageSize[1] - (origin[1] + size[1]);
-      }
-      if (anchor && (anchor[0] !== size[0] / 2 || anchor[1] !== size[1] / 2)) {
-        const hotSpot = {
-          x: anchor[0],
-          xunits: "pixels",
-          y: size[1] - anchor[1],
-          yunits: "pixels"
-        };
-        properties["hotSpot"] = hotSpot;
-      }
-    }
-    properties["Icon"] = iconProperties;
-    let scale2 = style.getScaleArray()[0];
-    let imageSize = size;
-    if (imageSize === null) {
-      imageSize = DEFAULT_IMAGE_STYLE_SIZE;
-    }
-    if (imageSize.length == 2) {
-      const resizeScale = scaleForSize(imageSize);
-      scale2 = scale2 / resizeScale;
-    }
-    if (scale2 !== 1) {
-      properties["scale"] = scale2;
-    }
-    const rotation = style.getRotation();
-    if (rotation !== 0) {
-      properties["heading"] = rotation;
-    }
-    const color = style.getColor();
-    if (color) {
-      properties["color"] = color;
-    }
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = ICON_STYLE_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      ICON_STYLE_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  const LABEL_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "color",
-    "scale"
-  ]);
-  const LABEL_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeChildAppender(writeColorTextNode),
-    "scale": makeChildAppender(writeScaleTextNode)
-  });
-  function writeLabelStyle(node, style, objectStack) {
-    const context = { node };
-    const properties = {};
-    const fill = style.getFill();
-    if (fill) {
-      properties["color"] = fill.getColor();
-    }
-    const scale2 = style.getScale();
-    if (scale2 && scale2 !== 1) {
-      properties["scale"] = scale2;
-    }
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = LABEL_STYLE_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      LABEL_STYLE_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  const LINE_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["color", "width"]);
-  const LINE_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeChildAppender(writeColorTextNode),
-    "width": makeChildAppender(writeDecimalTextNode)
-  });
-  function writeLineStyle(node, style, objectStack) {
-    const context = { node };
-    const properties = {
-      "color": style.getColor(),
-      "width": Number(style.getWidth()) || 1
-    };
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = LINE_STYLE_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      LINE_STYLE_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  const GEOMETRY_TYPE_TO_NODENAME = {
-    "Point": "Point",
-    "LineString": "LineString",
-    "LinearRing": "LinearRing",
-    "Polygon": "Polygon",
-    "MultiPoint": "MultiGeometry",
-    "MultiLineString": "MultiGeometry",
-    "MultiPolygon": "MultiGeometry",
-    "GeometryCollection": "MultiGeometry"
-  };
-  const GEOMETRY_NODE_FACTORY = function(value, objectStack, nodeName) {
-    if (value) {
-      const parentNode = objectStack[objectStack.length - 1].node;
-      return createElementNS(
-        parentNode.namespaceURI,
-        GEOMETRY_TYPE_TO_NODENAME[
-          /** @type {import("../geom/Geometry.js").default} */
-          value.getType()
-        ]
-      );
-    }
-  };
-  const POINT_NODE_FACTORY = makeSimpleNodeFactory("Point");
-  const LINE_STRING_NODE_FACTORY = makeSimpleNodeFactory("LineString");
-  const LINEAR_RING_NODE_FACTORY = makeSimpleNodeFactory("LinearRing");
-  const POLYGON_NODE_FACTORY = makeSimpleNodeFactory("Polygon");
-  const MULTI_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "LineString": makeChildAppender(writePrimitiveGeometry),
-    "Point": makeChildAppender(writePrimitiveGeometry),
-    "Polygon": makeChildAppender(writePolygon),
-    "GeometryCollection": makeChildAppender(writeMultiGeometry)
-  });
-  function writeMultiGeometry(node, geometry, objectStack) {
-    const context = { node };
-    const type = geometry.getType();
-    let geometries = [];
-    let factory;
-    if (type === "GeometryCollection") {
-      geometry.getGeometriesArrayRecursive().forEach(function(geometry2) {
-        const type2 = geometry2.getType();
-        if (type2 === "MultiPoint") {
-          geometries = geometries.concat(
-            /** @type {MultiPoint} */
-            geometry2.getPoints()
-          );
-        } else if (type2 === "MultiLineString") {
-          geometries = geometries.concat(
-            /** @type {MultiLineString} */
-            geometry2.getLineStrings()
-          );
-        } else if (type2 === "MultiPolygon") {
-          geometries = geometries.concat(
-            /** @type {MultiPolygon} */
-            geometry2.getPolygons()
-          );
-        } else if (type2 === "Point" || type2 === "LineString" || type2 === "Polygon") {
-          geometries.push(geometry2);
-        } else {
-          throw new Error("Unknown geometry type");
-        }
-      });
-      factory = GEOMETRY_NODE_FACTORY;
-    } else if (type === "MultiPoint") {
-      geometries = /** @type {MultiPoint} */
-      geometry.getPoints();
-      factory = POINT_NODE_FACTORY;
-    } else if (type === "MultiLineString") {
-      geometries = /** @type {MultiLineString} */
-      geometry.getLineStrings();
-      factory = LINE_STRING_NODE_FACTORY;
-    } else if (type === "MultiPolygon") {
-      geometries = /** @type {MultiPolygon} */
-      geometry.getPolygons();
-      factory = POLYGON_NODE_FACTORY;
-    } else {
-      throw new Error("Unknown geometry type");
-    }
-    pushSerializeAndPop(
-      context,
-      MULTI_GEOMETRY_SERIALIZERS,
-      factory,
-      geometries,
-      objectStack
-    );
-  }
-  const BOUNDARY_IS_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "LinearRing": makeChildAppender(writePrimitiveGeometry)
-  });
-  function writeBoundaryIs(node, linearRing2, objectStack) {
-    const context = { node };
-    pushSerializeAndPop(
-      context,
-      BOUNDARY_IS_SERIALIZERS,
-      LINEAR_RING_NODE_FACTORY,
-      [linearRing2],
-      objectStack
-    );
-  }
-  const PLACEMARK_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "ExtendedData": makeChildAppender(writeExtendedData),
-    "MultiGeometry": makeChildAppender(writeMultiGeometry),
-    "LineString": makeChildAppender(writePrimitiveGeometry),
-    "LinearRing": makeChildAppender(writePrimitiveGeometry),
-    "Point": makeChildAppender(writePrimitiveGeometry),
-    "Polygon": makeChildAppender(writePolygon),
-    "Style": makeChildAppender(writeStyle),
-    "address": makeChildAppender(writeStringTextNode),
-    "description": makeChildAppender(writeStringTextNode),
-    "name": makeChildAppender(writeStringTextNode),
-    "open": makeChildAppender(writeBooleanTextNode),
-    "phoneNumber": makeChildAppender(writeStringTextNode),
-    "styleUrl": makeChildAppender(writeStringTextNode),
-    "visibility": makeChildAppender(writeBooleanTextNode)
-  });
-  const PLACEMARK_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "name",
-    "open",
-    "visibility",
-    "address",
-    "phoneNumber",
-    "description",
-    "styleUrl",
-    "Style"
-  ]);
-  const EXTENDEDDATA_NODE_FACTORY = makeSimpleNodeFactory("ExtendedData");
-  function writePlacemark(node, feature, objectStack) {
-    const context = { node };
-    if (feature.getId()) {
-      node.setAttribute(
-        "id",
-        /** @type {string} */
-        feature.getId()
-      );
-    }
-    const properties = feature.getProperties();
-    const filter = {
-      "address": 1,
-      "description": 1,
-      "name": 1,
-      "open": 1,
-      "phoneNumber": 1,
-      "styleUrl": 1,
-      "visibility": 1
-    };
-    filter[feature.getGeometryName()] = 1;
-    const keys = Object.keys(properties || {}).sort().filter(function(v) {
-      return !filter[v];
-    });
-    const styleFunction = feature.getStyleFunction();
-    if (styleFunction) {
-      const styles = styleFunction(feature, 0);
-      if (styles) {
-        const styleArray = Array.isArray(styles) ? styles : [styles];
-        let pointStyles = styleArray;
-        if (feature.getGeometry()) {
-          pointStyles = styleArray.filter(function(style) {
-            const geometry2 = style.getGeometryFunction()(feature);
-            if (geometry2) {
-              const type = geometry2.getType();
-              if (type === "GeometryCollection") {
-                return (
-                  /** @type {GeometryCollection} */
-                  geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
-                    const type2 = geometry3.getType();
-                    return type2 === "Point" || type2 === "MultiPoint";
-                  }).length
-                );
-              }
-              return type === "Point" || type === "MultiPoint";
-            }
-          });
-        }
-        if (this.writeStyles_) {
-          let lineStyles = styleArray;
-          let polyStyles = styleArray;
-          if (feature.getGeometry()) {
-            lineStyles = styleArray.filter(function(style) {
-              const geometry2 = style.getGeometryFunction()(feature);
-              if (geometry2) {
-                const type = geometry2.getType();
-                if (type === "GeometryCollection") {
-                  return (
-                    /** @type {GeometryCollection} */
-                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
-                      const type2 = geometry3.getType();
-                      return type2 === "LineString" || type2 === "MultiLineString";
-                    }).length
-                  );
-                }
-                return type === "LineString" || type === "MultiLineString";
-              }
-            });
-            polyStyles = styleArray.filter(function(style) {
-              const geometry2 = style.getGeometryFunction()(feature);
-              if (geometry2) {
-                const type = geometry2.getType();
-                if (type === "GeometryCollection") {
-                  return (
-                    /** @type {GeometryCollection} */
-                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
-                      const type2 = geometry3.getType();
-                      return type2 === "Polygon" || type2 === "MultiPolygon";
-                    }).length
-                  );
-                }
-                return type === "Polygon" || type === "MultiPolygon";
-              }
-            });
-          }
-          properties["Style"] = {
-            pointStyles,
-            lineStyles,
-            polyStyles
-          };
-        }
-        if (pointStyles.length && properties["name"] === void 0) {
-          const textStyle = pointStyles[0].getText();
-          if (textStyle) {
-            properties["name"] = textStyle.getText();
-          }
-        }
-      }
-    }
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = PLACEMARK_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      PLACEMARK_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-    if (keys.length > 0) {
-      const sequence = makeSequence(properties, keys);
-      const namesAndValues = { names: keys, values: sequence };
-      pushSerializeAndPop(
-        context,
-        PLACEMARK_SERIALIZERS,
-        EXTENDEDDATA_NODE_FACTORY,
-        [namesAndValues],
-        objectStack
-      );
-    }
-    const options = (
-      /** @type {import("./Feature.js").WriteOptions} */
-      objectStack[0]
-    );
-    let geometry = feature.getGeometry();
-    if (geometry) {
-      geometry = transformGeometryWithOptions(geometry, true, options);
-    }
-    pushSerializeAndPop(
-      context,
-      PLACEMARK_SERIALIZERS,
-      GEOMETRY_NODE_FACTORY,
-      [geometry],
-      objectStack
-    );
-  }
-  const PRIMITIVE_GEOMETRY_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "extrude",
-    "tessellate",
-    "altitudeMode",
-    "coordinates"
-  ]);
-  const PRIMITIVE_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "extrude": makeChildAppender(writeBooleanTextNode),
-    "tessellate": makeChildAppender(writeBooleanTextNode),
-    "altitudeMode": makeChildAppender(writeStringTextNode),
-    "coordinates": makeChildAppender(writeCoordinatesTextNode)
-  });
-  function writePrimitiveGeometry(node, geometry, objectStack) {
-    const flatCoordinates = geometry.getFlatCoordinates();
-    const context = { node };
-    context["layout"] = geometry.getLayout();
-    context["stride"] = geometry.getStride();
-    const properties = geometry.getProperties();
-    properties.coordinates = flatCoordinates;
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = PRIMITIVE_GEOMETRY_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      PRIMITIVE_GEOMETRY_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  const POLY_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "color",
-    "fill",
-    "outline"
-  ]);
-  const POLYGON_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "outerBoundaryIs": makeChildAppender(writeBoundaryIs),
-    "innerBoundaryIs": makeChildAppender(writeBoundaryIs)
-  });
-  const INNER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("innerBoundaryIs");
-  const OUTER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("outerBoundaryIs");
-  function writePolygon(node, polygon, objectStack) {
-    const linearRings2 = polygon.getLinearRings();
-    const outerRing = linearRings2.shift();
-    const context = { node };
-    pushSerializeAndPop(
-      context,
-      POLYGON_SERIALIZERS,
-      INNER_BOUNDARY_NODE_FACTORY,
-      linearRings2,
-      objectStack
-    );
-    pushSerializeAndPop(
-      context,
-      POLYGON_SERIALIZERS,
-      OUTER_BOUNDARY_NODE_FACTORY,
-      [outerRing],
-      objectStack
-    );
-  }
-  const POLY_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "color": makeChildAppender(writeColorTextNode),
-    "fill": makeChildAppender(writeBooleanTextNode),
-    "outline": makeChildAppender(writeBooleanTextNode)
-  });
-  function writePolyStyle(node, style, objectStack) {
-    const context = { node };
-    const fill = style.getFill();
-    const stroke = style.getStroke();
-    const properties = {
-      "color": fill ? fill.getColor() : void 0,
-      "fill": fill ? void 0 : false,
-      "outline": stroke ? void 0 : false
-    };
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = POLY_STYLE_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      POLY_STYLE_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  function writeScaleTextNode(node, scale2) {
-    writeDecimalTextNode(node, Math.round(scale2 * 1e6) / 1e6);
-  }
-  const STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "IconStyle",
-    "LabelStyle",
-    "LineStyle",
-    "PolyStyle"
-  ]);
-  const STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
-    "IconStyle": makeChildAppender(writeIconStyle),
-    "LabelStyle": makeChildAppender(writeLabelStyle),
-    "LineStyle": makeChildAppender(writeLineStyle),
-    "PolyStyle": makeChildAppender(writePolyStyle)
-  });
-  function writeStyle(node, styles, objectStack) {
-    const context = { node };
-    const properties = {};
-    if (styles.pointStyles.length) {
-      const textStyle = styles.pointStyles[0].getText();
-      if (textStyle) {
-        properties["LabelStyle"] = textStyle;
-      }
-      const imageStyle = styles.pointStyles[0].getImage();
-      if (imageStyle && typeof /** @type {?} */
-      imageStyle.getSrc === "function") {
-        properties["IconStyle"] = imageStyle;
-      }
-    }
-    if (styles.lineStyles.length) {
-      const strokeStyle = styles.lineStyles[0].getStroke();
-      if (strokeStyle) {
-        properties["LineStyle"] = strokeStyle;
-      }
-    }
-    if (styles.polyStyles.length) {
-      const strokeStyle = styles.polyStyles[0].getStroke();
-      if (strokeStyle && !properties["LineStyle"]) {
-        properties["LineStyle"] = strokeStyle;
-      }
-      properties["PolyStyle"] = styles.polyStyles[0];
-    }
-    const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = STYLE_SEQUENCE[parentNode.namespaceURI];
-    const values = makeSequence(properties, orderedKeys);
-    pushSerializeAndPop(
-      context,
-      STYLE_SERIALIZERS,
-      OBJECT_PROPERTY_NODE_FACTORY,
-      values,
-      objectStack,
-      orderedKeys
-    );
-  }
-  function writeVec2(node, vec2) {
-    node.setAttribute("x", String(vec2.x));
-    node.setAttribute("y", String(vec2.y));
-    node.setAttribute("xunits", vec2.xunits);
-    node.setAttribute("yunits", vec2.yunits);
-  }
-  class Circle extends SimpleGeometry {
-    /**
-     * @param {!import("../coordinate.js").Coordinate} center Center.
-     *     For internal use, flat coordinates in combination with `layout` and no
-     *     `radius` are also accepted.
-     * @param {number} [radius] Radius in units of the projection.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(center, radius, layout) {
-      super();
-      if (layout !== void 0 && radius === void 0) {
-        this.setFlatCoordinates(layout, center);
-      } else {
-        radius = radius ? radius : 0;
-        this.setCenterAndRadius(center, radius, layout);
-      }
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!Circle} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const circle = new Circle(
-        this.flatCoordinates.slice(),
-        void 0,
-        this.layout
-      );
-      circle.applyProperties(this);
-      return circle;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      const flatCoordinates = this.flatCoordinates;
-      const dx = x - flatCoordinates[0];
-      const dy = y - flatCoordinates[1];
-      const squaredDistance2 = dx * dx + dy * dy;
-      if (squaredDistance2 < minSquaredDistance) {
-        if (squaredDistance2 === 0) {
-          for (let i = 0; i < this.stride; ++i) {
-            closestPoint[i] = flatCoordinates[i];
-          }
-        } else {
-          const delta = this.getRadius() / Math.sqrt(squaredDistance2);
-          closestPoint[0] = flatCoordinates[0] + delta * dx;
-          closestPoint[1] = flatCoordinates[1] + delta * dy;
-          for (let i = 2; i < this.stride; ++i) {
-            closestPoint[i] = flatCoordinates[i];
-          }
-        }
-        closestPoint.length = this.stride;
-        return squaredDistance2;
-      }
-      return minSquaredDistance;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @return {boolean} Contains (x, y).
-     * @override
-     */
-    containsXY(x, y) {
-      const flatCoordinates = this.flatCoordinates;
-      const dx = x - flatCoordinates[0];
-      const dy = y - flatCoordinates[1];
-      return dx * dx + dy * dy <= this.getRadiusSquared_();
-    }
-    /**
-     * Return the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
-     * @return {import("../coordinate.js").Coordinate} Center.
-     * @api
-     */
-    getCenter() {
-      return this.flatCoordinates.slice(0, this.stride);
-    }
-    /**
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @override
-     */
-    computeExtent(extent) {
-      const flatCoordinates = this.flatCoordinates;
-      const radius = flatCoordinates[this.stride] - flatCoordinates[0];
-      return createOrUpdate$2(
-        flatCoordinates[0] - radius,
-        flatCoordinates[1] - radius,
-        flatCoordinates[0] + radius,
-        flatCoordinates[1] + radius,
-        extent
-      );
-    }
-    /**
-     * Return the radius of the circle.
-     * @return {number} Radius.
-     * @api
-     */
-    getRadius() {
-      return Math.sqrt(this.getRadiusSquared_());
-    }
-    /**
-     * @private
-     * @return {number} Radius squared.
-     */
-    getRadiusSquared_() {
-      const dx = this.flatCoordinates[this.stride] - this.flatCoordinates[0];
-      const dy = this.flatCoordinates[this.stride + 1] - this.flatCoordinates[1];
-      return dx * dx + dy * dy;
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "Circle";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      const circleExtent = this.getExtent();
-      if (intersects$1(extent, circleExtent)) {
-        const center = this.getCenter();
-        if (extent[0] <= center[0] && extent[2] >= center[0]) {
-          return true;
-        }
-        if (extent[1] <= center[1] && extent[3] >= center[1]) {
-          return true;
-        }
-        return forEachCorner(extent, this.intersectsCoordinate.bind(this));
-      }
-      return false;
-    }
-    /**
-     * Set the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
-     * @param {import("../coordinate.js").Coordinate} center Center.
-     * @api
-     */
-    setCenter(center) {
-      const stride = this.stride;
-      const radius = this.flatCoordinates[stride] - this.flatCoordinates[0];
-      const flatCoordinates = center.slice();
-      flatCoordinates[stride] = flatCoordinates[0] + radius;
-      for (let i = 1; i < stride; ++i) {
-        flatCoordinates[stride + i] = center[i];
-      }
-      this.setFlatCoordinates(this.layout, flatCoordinates);
-      this.changed();
-    }
-    /**
-     * Set the center (as {@link module:ol/coordinate~Coordinate coordinate}) and the radius (as
-     * number) of the circle.
-     * @param {!import("../coordinate.js").Coordinate} center Center.
-     * @param {number} radius Radius.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     */
-    setCenterAndRadius(center, radius, layout) {
-      this.setLayout(layout, center, 0);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      const flatCoordinates = this.flatCoordinates;
-      let offset = deflateCoordinate(flatCoordinates, 0, center, this.stride);
-      flatCoordinates[offset++] = flatCoordinates[0] + radius;
-      for (let i = 1, ii = this.stride; i < ii; ++i) {
-        flatCoordinates[offset++] = flatCoordinates[i];
-      }
-      flatCoordinates.length = offset;
-      this.changed();
-    }
-    /**
-     * @override
-     */
-    getCoordinates() {
-      return null;
-    }
-    /**
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-    }
-    /**
-     * Set the radius of the circle. The radius is in the units of the projection.
-     * @param {number} radius Radius.
-     * @api
-     */
-    setRadius(radius) {
-      this.flatCoordinates[this.stride] = this.flatCoordinates[0] + radius;
-      this.changed();
-    }
-    /**
-     * Rotate the geometry around a given coordinate. This modifies the geometry
-     * coordinates in place.
-     * @param {number} angle Rotation angle in counter-clockwise radians.
-     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
-     * @api
-     * @override
-     */
-    rotate(angle, anchor) {
-      const center = this.getCenter();
-      const stride = this.getStride();
-      this.setCenter(
-        rotate(center, 0, center.length, stride, angle, anchor, center)
-      );
-      this.changed();
-    }
-  }
-  Circle.prototype.transform;
-  const geoJsonFormat$1 = new GeoJSON();
-  const kmlFormat$1 = new KML({ extractStyles: false });
-  function looksLikeKml(raw) {
-    const t = raw.trim();
-    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
-  }
-  function looksLikeBbox(raw) {
-    try {
-      const v = JSON.parse(raw);
-      return Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
-    } catch {
-      return false;
-    }
-  }
-  function bboxToPolygon(bbox) {
-    const [minX, minY, maxX, maxY] = bbox;
-    return new Polygon([
-      [
-        [minX, minY],
-        [minX, maxY],
-        [maxX, maxY],
-        [maxX, minY],
-        [minX, minY]
-      ]
-    ]);
-  }
-  function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
-    const text = raw.trim();
-    if (!text) return [];
-    if (looksLikeKml(text)) {
-      return kmlFormat$1.readFeatures(text, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
-    }
-    if (looksLikeBbox(text)) {
-      const bbox = JSON.parse(text);
-      const poly = bboxToPolygon(bbox);
-      poly.transform("EPSG:4326", mapProjection);
-      return [new Feature({ geometry: poly })];
-    }
-    try {
-      const data = JSON.parse(text);
-      if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
-        return geoJsonFormat$1.readFeatures(data, {
-          dataProjection: "EPSG:4326",
-          featureProjection: mapProjection
-        });
-      }
-      return geoJsonFormat$1.readFeatures(
-        { type: "Feature", geometry: data, properties: {} },
-        {
-          dataProjection: "EPSG:4326",
-          featureProjection: mapProjection
-        }
-      );
-    } catch {
-      console.error("[entree-carto-geometry-editor] parse failed");
-      return [];
-    }
-  }
-  const geoJsonFormat = new GeoJSON();
-  const kmlFormat = new KML();
-  function roundCoords(value, precision) {
-    if (typeof value === "number") {
-      const f = 10 ** precision;
-      return Math.round(value * f) / f;
-    }
-    if (Array.isArray(value)) {
-      return value.map((v) => roundCoords(v, precision));
-    }
-    if (value && typeof value === "object") {
-      const out = {};
-      for (const [k, v] of Object.entries(value)) {
-        out[k] = roundCoords(v, precision);
-      }
-      return out;
-    }
-    return value;
-  }
-  function serializeFeatures(features, options) {
-    const {
-      geometryType,
-      precision,
-      outputFormat,
-      mapProjection = "EPSG:3857"
-    } = options;
-    if (!features.length) return "";
-    if (outputFormat === "kml") {
-      return kmlFormat.writeFeatures(features, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
-    }
-    if (geometryType === "Rectangle" && features.length === 1) {
-      const geom = features[0].getGeometry();
-      if (geom) {
-        const clone2 = geom.clone();
-        clone2.transform(mapProjection, "EPSG:4326");
-        const e = clone2.getExtent();
-        return JSON.stringify(roundCoords([...e], precision));
-      }
-    }
-    const json = geoJsonFormat.writeFeaturesObject(features, {
-      dataProjection: "EPSG:4326",
-      featureProjection: mapProjection
-    });
-    const rounded = roundCoords(json, precision);
-    if (rounded.features.length === 1) {
-      return JSON.stringify(rounded.features[0].geometry);
-    }
-    return JSON.stringify(rounded);
-  }
-  const blue = "#000091";
-  const fillBlue = "rgba(0, 0, 145, 0.2)";
-  const geometryFeatureStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
-    stroke: new Stroke({ color: blue, width: 2 }),
-    image: new CircleStyle({
-      radius: 6,
-      fill: new Fill({ color: blue }),
-      stroke: new Stroke({ color: "#fff", width: 2 })
-    })
-  });
-  const geometryDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
-    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
-    image: new CircleStyle({
-      radius: 5,
-      fill: new Fill({ color: blue })
-    })
-  });
-  function geometryStyleFunction(_feature) {
-    return geometryFeatureStyle;
   }
   function getCoordinate(coordinates2, index) {
     const count = coordinates2.length;
@@ -38840,29 +31137,8288 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.addFeature(feature, false);
     }
   }
-  function toolsFor(geometryType) {
-    const remove = {
-      id: "remove",
-      label: "Supprimer",
-      icon: "fr-icon-delete-bin-line",
-      remove: true
+  class Tile extends Target {
+    /**
+     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("./TileState.js").default} state State.
+     * @param {Options} [options] Tile options.
+     */
+    constructor(tileCoord, state, options) {
+      super();
+      options = options ? options : {};
+      this.tileCoord = tileCoord;
+      this.state = state;
+      this.key = "";
+      this.transition_ = options.transition === void 0 ? 250 : options.transition;
+      this.transitionStarts_ = {};
+      this.interpolate = !!options.interpolate;
+    }
+    /**
+     * @protected
+     */
+    changed() {
+      this.dispatchEvent(EventType.CHANGE);
+    }
+    /**
+     * Called by the tile cache when the tile is removed from the cache due to expiry
+     */
+    release() {
+      this.setState(TileState.EMPTY);
+    }
+    /**
+     * @return {string} Key.
+     */
+    getKey() {
+      return this.key + "/" + this.tileCoord;
+    }
+    /**
+     * Get the tile coordinate for this tile.
+     * @return {import("./tilecoord.js").TileCoord} The tile coordinate.
+     * @api
+     */
+    getTileCoord() {
+      return this.tileCoord;
+    }
+    /**
+     * @return {import("./TileState.js").default} State.
+     */
+    getState() {
+      return this.state;
+    }
+    /**
+     * Sets the state of this tile. If you write your own {@link module:ol/Tile~LoadFunction tileLoadFunction} ,
+     * it is important to set the state correctly to {@link module:ol/TileState~ERROR}
+     * when the tile cannot be loaded. Otherwise the tile cannot be removed from
+     * the tile queue and will block other requests.
+     * @param {import("./TileState.js").default} state State.
+     * @api
+     */
+    setState(state) {
+      if (this.state === TileState.EMPTY) {
+        return;
+      }
+      if (this.state !== TileState.ERROR && this.state > state) {
+        throw new Error("Tile load sequence violation");
+      }
+      this.state = state;
+      this.changed();
+    }
+    /**
+     * Load the image or retry if loading previously failed.
+     * Loading is taken care of by the tile queue, and calling this method is
+     * only needed for preloading or for reloading in case of an error.
+     * @abstract
+     * @api
+     */
+    load() {
+      abstract();
+    }
+    /**
+     * Get the alpha value for rendering.
+     * @param {string} id An id for the renderer.
+     * @param {number} time The render frame time.
+     * @return {number} A number between 0 and 1.
+     */
+    getAlpha(id, time) {
+      if (!this.transition_) {
+        return 1;
+      }
+      let start = this.transitionStarts_[id];
+      if (!start) {
+        start = time;
+        this.transitionStarts_[id] = start;
+      } else if (start === -1) {
+        return 1;
+      }
+      const delta = time - start + 1e3 / 60;
+      if (delta >= this.transition_) {
+        return 1;
+      }
+      return easeIn(delta / this.transition_);
+    }
+    /**
+     * Determine if a tile is in an alpha transition.  A tile is considered in
+     * transition if tile.getAlpha() has not yet been called or has been called
+     * and returned 1.
+     * @param {string} id An id for the renderer.
+     * @return {boolean} The tile is in transition.
+     */
+    inTransition(id) {
+      if (!this.transition_) {
+        return false;
+      }
+      return this.transitionStarts_[id] !== -1;
+    }
+    /**
+     * Mark a transition as complete.
+     * @param {string} id An id for the renderer.
+     */
+    endTransition(id) {
+      if (this.transition_) {
+        this.transitionStarts_[id] = -1;
+      }
+    }
+    /**
+     * @override
+     */
+    disposeInternal() {
+      this.release();
+      super.disposeInternal();
+    }
+  }
+  function asImageLike(data) {
+    return data instanceof Image || data instanceof HTMLCanvasElement || data instanceof HTMLVideoElement || data instanceof ImageBitmap ? data : null;
+  }
+  const disposedError = new Error("disposed");
+  const defaultSize = [256, 256];
+  class DataTile extends Tile {
+    /**
+     * @param {Options} options Tile options.
+     */
+    constructor(options) {
+      const state = TileState.IDLE;
+      super(options.tileCoord, state, {
+        transition: options.transition,
+        interpolate: options.interpolate
+      });
+      this.loader_ = options.loader;
+      this.data_ = null;
+      this.error_ = null;
+      this.size_ = options.size || null;
+      this.controller_ = options.controller || null;
+    }
+    /**
+     * Get the tile size.
+     * @return {import('./size.js').Size} Tile size.
+     */
+    getSize() {
+      if (this.size_) {
+        return this.size_;
+      }
+      const imageData = asImageLike(this.data_);
+      if (imageData) {
+        return [imageData.width, imageData.height];
+      }
+      return defaultSize;
+    }
+    /**
+     * Get the data for the tile.
+     * @return {Data} Tile data.
+     * @api
+     */
+    getData() {
+      return this.data_;
+    }
+    /**
+     * Get any loading error.
+     * @return {Error} Loading error.
+     * @api
+     */
+    getError() {
+      return this.error_;
+    }
+    /**
+     * Load the tile data.
+     * @api
+     * @override
+     */
+    load() {
+      if (this.state !== TileState.IDLE && this.state !== TileState.ERROR) {
+        return;
+      }
+      this.state = TileState.LOADING;
+      this.changed();
+      const self2 = this;
+      this.loader_().then(function(data) {
+        self2.data_ = data;
+        self2.state = TileState.LOADED;
+        self2.changed();
+      }).catch(function(error) {
+        self2.error_ = error;
+        self2.state = TileState.ERROR;
+        self2.changed();
+      });
+    }
+    /**
+     * Clean up.
+     * @override
+     */
+    disposeInternal() {
+      if (this.controller_) {
+        this.controller_.abort(disposedError);
+        this.controller_ = null;
+      }
+      super.disposeInternal();
+    }
+  }
+  class ImageTile extends Tile {
+    /**
+     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("./TileState.js").default} state State.
+     * @param {string} src Image source URI.
+     * @param {import('./dom.js').ImageAttributes} imageAttributes Image attributes options.
+     * @param {import("./Tile.js").LoadFunction} tileLoadFunction Tile load function.
+     * @param {import("./Tile.js").Options} [options] Tile options.
+     */
+    constructor(tileCoord, state, src, imageAttributes, tileLoadFunction, options) {
+      super(tileCoord, state, options);
+      this.crossOrigin_ = imageAttributes == null ? void 0 : imageAttributes.crossOrigin;
+      this.referrerPolicy_ = imageAttributes == null ? void 0 : imageAttributes.referrerPolicy;
+      this.src_ = src;
+      this.key = src;
+      this.image_;
+      if (WORKER_OFFSCREEN_CANVAS) {
+        this.image_ = new OffscreenCanvas(1, 1);
+      } else {
+        this.image_ = new Image();
+        if (this.crossOrigin_ !== null) {
+          this.image_.crossOrigin = this.crossOrigin_;
+        }
+        if (this.referrerPolicy_ !== void 0) {
+          this.image_.referrerPolicy = this.referrerPolicy_;
+        }
+      }
+      this.unlisten_ = null;
+      this.tileLoadFunction_ = tileLoadFunction;
+    }
+    /**
+     * Get the HTML image element for this tile (may be a Canvas, OffscreenCanvas, Image, or Video).
+     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
+     * @api
+     */
+    getImage() {
+      return this.image_;
+    }
+    /**
+     * Sets an HTML image element for this tile (may be a Canvas or preloaded Image).
+     * @param {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement} element Element.
+     */
+    setImage(element) {
+      this.image_ = element;
+      this.state = TileState.LOADED;
+      this.unlistenImage_();
+      this.changed();
+    }
+    /**
+     * Get the cross origin of the ImageTile.
+     * @return {string} Cross origin.
+     */
+    getCrossOrigin() {
+      return this.crossOrigin_;
+    }
+    /**
+     * Get the referrer policy of the ImageTile.
+     * @return {ReferrerPolicy} Referrer policy.
+     */
+    getReferrerPolicy() {
+      return this.referrerPolicy_;
+    }
+    /**
+     * Tracks loading or read errors.
+     *
+     * @private
+     */
+    handleImageError_() {
+      this.state = TileState.ERROR;
+      this.unlistenImage_();
+      this.image_ = getBlankImage();
+      this.changed();
+    }
+    /**
+     * Tracks successful image load.
+     *
+     * @private
+     */
+    handleImageLoad_() {
+      if (WORKER_OFFSCREEN_CANVAS) {
+        this.state = TileState.LOADED;
+      } else {
+        const image = (
+          /** @type {HTMLImageElement} */
+          this.image_
+        );
+        if (image.naturalWidth && image.naturalHeight) {
+          this.state = TileState.LOADED;
+        } else {
+          this.state = TileState.EMPTY;
+        }
+      }
+      this.unlistenImage_();
+      this.changed();
+    }
+    /**
+     * Load the image or retry if loading previously failed.
+     * Loading is taken care of by the tile queue, and calling this method is
+     * only needed for preloading or for reloading in case of an error.
+     *
+     * To retry loading tiles on failed requests, use a custom `tileLoadFunction`
+     * that checks for error status codes and reloads only when the status code is
+     * 408, 429, 500, 502, 503 and 504, and only when not too many retries have been
+     * made already:
+     *
+     * ```js
+     * const retryCodes = [408, 429, 500, 502, 503, 504];
+     * const retries = {};
+     * source.setTileLoadFunction((tile, src) => {
+     *   const image = tile.getImage();
+     *   fetch(src)
+     *     .then((response) => {
+     *       if (retryCodes.includes(response.status)) {
+     *         retries[src] = (retries[src] || 0) + 1;
+     *         if (retries[src] <= 3) {
+     *           setTimeout(() => tile.load(), retries[src] * 1000);
+     *         }
+     *         return Promise.reject();
+     *       }
+     *       return response.blob();
+     *     })
+     *     .then((blob) => {
+     *       const imageUrl = URL.createObjectURL(blob);
+     *       image.src = imageUrl;
+     *       setTimeout(() => URL.revokeObjectURL(imageUrl), 5000);
+     *     })
+     *     .catch(() => tile.setState(3)); // error
+     * });
+     * ```
+     * @api
+     * @override
+     */
+    load() {
+      if (this.state == TileState.ERROR) {
+        this.state = TileState.IDLE;
+        this.image_ = new Image();
+        if (this.crossOrigin_ !== null) {
+          this.image_.crossOrigin = this.crossOrigin_;
+        }
+        if (this.referrerPolicy_ !== void 0) {
+          this.image_.referrerPolicy = this.referrerPolicy_;
+        }
+      }
+      if (this.state == TileState.IDLE) {
+        this.state = TileState.LOADING;
+        this.changed();
+        this.tileLoadFunction_(this, this.src_);
+        this.unlisten_ = listenImage(
+          this.image_,
+          this.handleImageLoad_.bind(this),
+          this.handleImageError_.bind(this)
+        );
+      }
+    }
+    /**
+     * Discards event handlers which listen for load completion or errors.
+     *
+     * @private
+     */
+    unlistenImage_() {
+      if (this.unlisten_) {
+        this.unlisten_();
+        this.unlisten_ = null;
+      }
+    }
+    /**
+     * @override
+     */
+    disposeInternal() {
+      this.unlistenImage_();
+      this.image_ = null;
+      super.disposeInternal();
+    }
+  }
+  function getBlankImage() {
+    const ctx = createCanvasContext2D(1, 1);
+    ctx.fillStyle = "rgba(0,0,0,0)";
+    ctx.fillRect(0, 0, 1, 1);
+    return ctx.canvas;
+  }
+  class TileRange {
+    /**
+     * @param {number} minX Minimum X.
+     * @param {number} maxX Maximum X.
+     * @param {number} minY Minimum Y.
+     * @param {number} maxY Maximum Y.
+     */
+    constructor(minX, maxX, minY, maxY) {
+      this.minX = minX;
+      this.maxX = maxX;
+      this.minY = minY;
+      this.maxY = maxY;
+    }
+    /**
+     * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @return {boolean} Contains tile coordinate.
+     */
+    contains(tileCoord) {
+      return this.containsXY(tileCoord[1], tileCoord[2]);
+    }
+    /**
+     * @param {TileRange} tileRange Tile range.
+     * @return {boolean} Contains.
+     */
+    containsTileRange(tileRange) {
+      return this.minX <= tileRange.minX && tileRange.maxX <= this.maxX && this.minY <= tileRange.minY && tileRange.maxY <= this.maxY;
+    }
+    /**
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @return {boolean} Contains coordinate.
+     */
+    containsXY(x, y) {
+      return this.minX <= x && x <= this.maxX && this.minY <= y && y <= this.maxY;
+    }
+    /**
+     * @param {TileRange} tileRange Tile range.
+     * @return {boolean} Equals.
+     */
+    equals(tileRange) {
+      return this.minX == tileRange.minX && this.minY == tileRange.minY && this.maxX == tileRange.maxX && this.maxY == tileRange.maxY;
+    }
+    /**
+     * @param {TileRange} tileRange Tile range.
+     */
+    extend(tileRange) {
+      if (tileRange.minX < this.minX) {
+        this.minX = tileRange.minX;
+      }
+      if (tileRange.maxX > this.maxX) {
+        this.maxX = tileRange.maxX;
+      }
+      if (tileRange.minY < this.minY) {
+        this.minY = tileRange.minY;
+      }
+      if (tileRange.maxY > this.maxY) {
+        this.maxY = tileRange.maxY;
+      }
+    }
+    /**
+     * @return {number} Height.
+     */
+    getHeight() {
+      return this.maxY - this.minY + 1;
+    }
+    /**
+     * @return {import("./size.js").Size} Size.
+     */
+    getSize() {
+      return [this.getWidth(), this.getHeight()];
+    }
+    /**
+     * @return {number} Width.
+     */
+    getWidth() {
+      return this.maxX - this.minX + 1;
+    }
+    /**
+     * @param {TileRange} tileRange Tile range.
+     * @return {boolean} Intersects.
+     */
+    intersects(tileRange) {
+      return this.minX <= tileRange.maxX && this.maxX >= tileRange.minX && this.minY <= tileRange.maxY && this.maxY >= tileRange.minY;
+    }
+  }
+  function createOrUpdate$1(minX, maxX, minY, maxY, tileRange) {
+    if (tileRange !== void 0) {
+      tileRange.minX = minX;
+      tileRange.maxX = maxX;
+      tileRange.minY = minY;
+      tileRange.maxY = maxY;
+      return tileRange;
+    }
+    return new TileRange(minX, maxX, minY, maxY);
+  }
+  let brokenDiagonalRendering_;
+  const canvasPool = [];
+  function drawTestTriangle(ctx, u1, v1, u2, v2) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(u1, v1);
+    ctx.lineTo(u2, v2);
+    ctx.closePath();
+    ctx.save();
+    ctx.clip();
+    ctx.fillRect(0, 0, Math.max(u1, u2) + 1, Math.max(v1, v2));
+    ctx.restore();
+  }
+  function verifyBrokenDiagonalRendering(data, offset) {
+    return Math.abs(data[offset * 4] - 210) > 2 || Math.abs(data[offset * 4 + 3] - 0.75 * 255) > 2;
+  }
+  function isBrokenDiagonalRendering() {
+    if (brokenDiagonalRendering_ === void 0) {
+      const ctx = createCanvasContext2D(6, 6, canvasPool);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(210, 0, 0, 0.75)";
+      drawTestTriangle(ctx, 4, 5, 4, 0);
+      drawTestTriangle(ctx, 4, 5, 0, 5);
+      const data = ctx.getImageData(0, 0, 3, 3).data;
+      brokenDiagonalRendering_ = verifyBrokenDiagonalRendering(data, 0) || verifyBrokenDiagonalRendering(data, 4) || verifyBrokenDiagonalRendering(data, 8);
+      releaseCanvas(ctx);
+      canvasPool.push(ctx.canvas);
+    }
+    return brokenDiagonalRendering_;
+  }
+  function calculateSourceResolution(sourceProj, targetProj, targetCenter, targetResolution) {
+    const sourceCenter = transform(targetCenter, targetProj, sourceProj);
+    let sourceResolution = getPointResolution(
+      targetProj,
+      targetResolution,
+      targetCenter
+    );
+    const targetMetersPerUnit = targetProj.getMetersPerUnit();
+    if (targetMetersPerUnit !== void 0) {
+      sourceResolution *= targetMetersPerUnit;
+    }
+    const sourceMetersPerUnit = sourceProj.getMetersPerUnit();
+    if (sourceMetersPerUnit !== void 0) {
+      sourceResolution /= sourceMetersPerUnit;
+    }
+    const sourceExtent = sourceProj.getExtent();
+    if (!sourceExtent || containsCoordinate(sourceExtent, sourceCenter)) {
+      const compensationFactor = getPointResolution(sourceProj, sourceResolution, sourceCenter) / sourceResolution;
+      if (isFinite(compensationFactor) && compensationFactor > 0) {
+        sourceResolution /= compensationFactor;
+      }
+    }
+    return sourceResolution;
+  }
+  function calculateSourceExtentResolution(sourceProj, targetProj, targetExtent, targetResolution) {
+    const targetCenter = getCenter(targetExtent);
+    let sourceResolution = calculateSourceResolution(
+      sourceProj,
+      targetProj,
+      targetCenter,
+      targetResolution
+    );
+    if (!isFinite(sourceResolution) || sourceResolution <= 0) {
+      forEachCorner(targetExtent, function(corner) {
+        sourceResolution = calculateSourceResolution(
+          sourceProj,
+          targetProj,
+          corner,
+          targetResolution
+        );
+        return isFinite(sourceResolution) && sourceResolution > 0;
+      });
+    }
+    return sourceResolution;
+  }
+  function render(width, height, pixelRatio, sourceResolution, sourceExtent, targetResolution, targetExtent, triangulation, sources, gutter, renderEdges, interpolate, drawSingle, clipExtent) {
+    const context = createCanvasContext2D(
+      Math.round(pixelRatio * width),
+      Math.round(pixelRatio * height),
+      canvasPool
+    );
+    if (!interpolate) {
+      context.imageSmoothingEnabled = false;
+    }
+    if (sources.length === 0) {
+      return context.canvas;
+    }
+    context.scale(pixelRatio, pixelRatio);
+    function pixelRound(value) {
+      return Math.round(value * pixelRatio) / pixelRatio;
+    }
+    context.globalCompositeOperation = "lighter";
+    const sourceDataExtent = createEmpty();
+    sources.forEach(function(src, i, arr) {
+      extend$1(sourceDataExtent, src.extent);
+    });
+    let stitchContext;
+    const stitchScale = pixelRatio / sourceResolution;
+    const inverseScale = (interpolate ? 1 : 1 + Math.pow(2, -24)) / stitchScale;
+    {
+      stitchContext = createCanvasContext2D(
+        Math.round(getWidth(sourceDataExtent) * stitchScale),
+        Math.round(getHeight(sourceDataExtent) * stitchScale),
+        canvasPool
+      );
+      if (!interpolate) {
+        stitchContext.imageSmoothingEnabled = false;
+      }
+      sources.forEach(function(src, i, arr) {
+        if (src.image.width > 0 && src.image.height > 0) {
+          if (src.clipExtent) {
+            stitchContext.save();
+            const xPos2 = (src.clipExtent[0] - sourceDataExtent[0]) * stitchScale;
+            const yPos2 = -(src.clipExtent[3] - sourceDataExtent[3]) * stitchScale;
+            const width2 = getWidth(src.clipExtent) * stitchScale;
+            const height2 = getHeight(src.clipExtent) * stitchScale;
+            stitchContext.rect(
+              interpolate ? xPos2 : Math.round(xPos2),
+              interpolate ? yPos2 : Math.round(yPos2),
+              interpolate ? width2 : Math.round(xPos2 + width2) - Math.round(xPos2),
+              interpolate ? height2 : Math.round(yPos2 + height2) - Math.round(yPos2)
+            );
+            stitchContext.clip();
+          }
+          const xPos = (src.extent[0] - sourceDataExtent[0]) * stitchScale;
+          const yPos = -(src.extent[3] - sourceDataExtent[3]) * stitchScale;
+          const srcWidth = getWidth(src.extent) * stitchScale;
+          const srcHeight = getHeight(src.extent) * stitchScale;
+          stitchContext.drawImage(
+            src.image,
+            gutter,
+            gutter,
+            src.image.width - 2 * gutter,
+            src.image.height - 2 * gutter,
+            interpolate ? xPos : Math.round(xPos),
+            interpolate ? yPos : Math.round(yPos),
+            interpolate ? srcWidth : Math.round(xPos + srcWidth) - Math.round(xPos),
+            interpolate ? srcHeight : Math.round(yPos + srcHeight) - Math.round(yPos)
+          );
+          if (src.clipExtent) {
+            stitchContext.restore();
+          }
+        }
+      });
+    }
+    const targetTopLeft = getTopLeft(targetExtent);
+    triangulation.getTriangles().forEach(function(triangle, i, arr) {
+      const source = triangle.source;
+      const target = triangle.target;
+      let x0 = source[0][0], y0 = source[0][1];
+      let x1 = source[1][0], y1 = source[1][1];
+      let x2 = source[2][0], y2 = source[2][1];
+      const u0 = pixelRound((target[0][0] - targetTopLeft[0]) / targetResolution);
+      const v0 = pixelRound(
+        -(target[0][1] - targetTopLeft[1]) / targetResolution
+      );
+      const u1 = pixelRound((target[1][0] - targetTopLeft[0]) / targetResolution);
+      const v1 = pixelRound(
+        -(target[1][1] - targetTopLeft[1]) / targetResolution
+      );
+      const u2 = pixelRound((target[2][0] - targetTopLeft[0]) / targetResolution);
+      const v2 = pixelRound(
+        -(target[2][1] - targetTopLeft[1]) / targetResolution
+      );
+      const sourceNumericalShiftX = x0;
+      const sourceNumericalShiftY = y0;
+      x0 = 0;
+      y0 = 0;
+      x1 -= sourceNumericalShiftX;
+      y1 -= sourceNumericalShiftY;
+      x2 -= sourceNumericalShiftX;
+      y2 -= sourceNumericalShiftY;
+      const augmentedMatrix = [
+        [x1, y1, 0, 0, u1 - u0],
+        [x2, y2, 0, 0, u2 - u0],
+        [0, 0, x1, y1, v1 - v0],
+        [0, 0, x2, y2, v2 - v0]
+      ];
+      const affineCoefs = solveLinearSystem(augmentedMatrix);
+      if (!affineCoefs) {
+        return;
+      }
+      context.save();
+      context.beginPath();
+      if (isBrokenDiagonalRendering() || !interpolate) {
+        context.moveTo(u1, v1);
+        const steps = 4;
+        const ud = u0 - u1;
+        const vd = v0 - v1;
+        for (let step = 0; step < steps; step++) {
+          context.lineTo(
+            u1 + pixelRound((step + 1) * ud / steps),
+            v1 + pixelRound(step * vd / (steps - 1))
+          );
+          if (step != steps - 1) {
+            context.lineTo(
+              u1 + pixelRound((step + 1) * ud / steps),
+              v1 + pixelRound((step + 1) * vd / (steps - 1))
+            );
+          }
+        }
+        context.lineTo(u2, v2);
+      } else {
+        context.moveTo(u1, v1);
+        context.lineTo(u0, v0);
+        context.lineTo(u2, v2);
+      }
+      context.clip();
+      context.transform(
+        affineCoefs[0],
+        affineCoefs[2],
+        affineCoefs[1],
+        affineCoefs[3],
+        u0,
+        v0
+      );
+      context.translate(
+        sourceDataExtent[0] - sourceNumericalShiftX,
+        sourceDataExtent[3] - sourceNumericalShiftY
+      );
+      let image;
+      if (stitchContext) {
+        image = stitchContext.canvas;
+        context.scale(inverseScale, -inverseScale);
+      } else {
+        const source2 = sources[0];
+        const extent = source2.extent;
+        image = source2.image;
+        context.scale(
+          getWidth(extent) / image.width,
+          -getHeight(extent) / image.height
+        );
+      }
+      context.drawImage(image, 0, 0);
+      context.restore();
+    });
+    if (stitchContext) {
+      releaseCanvas(stitchContext);
+      canvasPool.push(stitchContext.canvas);
+    }
+    if (renderEdges) {
+      context.save();
+      context.globalCompositeOperation = "source-over";
+      context.strokeStyle = "black";
+      context.lineWidth = 1;
+      triangulation.getTriangles().forEach(function(triangle, i, arr) {
+        const target = triangle.target;
+        const u0 = (target[0][0] - targetTopLeft[0]) / targetResolution;
+        const v0 = -(target[0][1] - targetTopLeft[1]) / targetResolution;
+        const u1 = (target[1][0] - targetTopLeft[0]) / targetResolution;
+        const v1 = -(target[1][1] - targetTopLeft[1]) / targetResolution;
+        const u2 = (target[2][0] - targetTopLeft[0]) / targetResolution;
+        const v2 = -(target[2][1] - targetTopLeft[1]) / targetResolution;
+        context.beginPath();
+        context.moveTo(u1, v1);
+        context.lineTo(u0, v0);
+        context.lineTo(u2, v2);
+        context.closePath();
+        context.stroke();
+      });
+      context.restore();
+    }
+    return context.canvas;
+  }
+  const MAX_SUBDIVISION = 10;
+  const MAX_TRIANGLE_WIDTH = 0.25;
+  class Triangulation {
+    /**
+     * @param {import("../proj/Projection.js").default} sourceProj Source projection.
+     * @param {import("../proj/Projection.js").default} targetProj Target projection.
+     * @param {import("../extent.js").Extent} targetExtent Target extent to triangulate.
+     * @param {import("../extent.js").Extent} maxSourceExtent Maximal source extent that can be used.
+     * @param {number} errorThreshold Acceptable error (in source units).
+     * @param {?number} destinationResolution The (optional) resolution of the destination.
+     * @param {import("../transform.js").Transform} [sourceMatrix] Source transform matrix.
+     */
+    constructor(sourceProj, targetProj, targetExtent, maxSourceExtent, errorThreshold, destinationResolution, sourceMatrix) {
+      this.sourceProj_ = sourceProj;
+      this.targetProj_ = targetProj;
+      let transformInvCache = {};
+      const transformInv = sourceMatrix ? createTransformFromCoordinateTransform(
+        (input) => apply(
+          sourceMatrix,
+          transform(input, this.targetProj_, this.sourceProj_)
+        )
+      ) : getTransform(this.targetProj_, this.sourceProj_);
+      this.transformInv_ = function(c) {
+        const key = c[0] + "/" + c[1];
+        if (!transformInvCache[key]) {
+          transformInvCache[key] = transformInv(c);
+        }
+        return transformInvCache[key];
+      };
+      this.maxSourceExtent_ = maxSourceExtent;
+      this.errorThresholdSquared_ = errorThreshold * errorThreshold;
+      this.triangles_ = [];
+      this.wrapsXInSource_ = false;
+      this.canWrapXInSource_ = this.sourceProj_.canWrapX() && !!maxSourceExtent && !!this.sourceProj_.getExtent() && getWidth(maxSourceExtent) >= getWidth(this.sourceProj_.getExtent());
+      this.sourceWorldWidth_ = this.sourceProj_.getExtent() ? getWidth(this.sourceProj_.getExtent()) : null;
+      this.targetWorldWidth_ = this.targetProj_.getExtent() ? getWidth(this.targetProj_.getExtent()) : null;
+      const destinationTopLeft = getTopLeft(targetExtent);
+      const destinationTopRight = getTopRight(targetExtent);
+      const destinationBottomRight = getBottomRight(targetExtent);
+      const destinationBottomLeft = getBottomLeft(targetExtent);
+      const sourceTopLeft = this.transformInv_(destinationTopLeft);
+      const sourceTopRight = this.transformInv_(destinationTopRight);
+      const sourceBottomRight = this.transformInv_(destinationBottomRight);
+      const sourceBottomLeft = this.transformInv_(destinationBottomLeft);
+      const maxSubdivision = MAX_SUBDIVISION + (destinationResolution ? Math.max(
+        0,
+        Math.ceil(
+          Math.log2(
+            getArea(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
+          )
+        )
+      ) : 0);
+      this.addQuad_(
+        destinationTopLeft,
+        destinationTopRight,
+        destinationBottomRight,
+        destinationBottomLeft,
+        sourceTopLeft,
+        sourceTopRight,
+        sourceBottomRight,
+        sourceBottomLeft,
+        maxSubdivision
+      );
+      if (this.wrapsXInSource_) {
+        let leftBound = Infinity;
+        this.triangles_.forEach(function(triangle, i, arr) {
+          leftBound = Math.min(
+            leftBound,
+            triangle.source[0][0],
+            triangle.source[1][0],
+            triangle.source[2][0]
+          );
+        });
+        this.triangles_.forEach((triangle) => {
+          if (Math.max(
+            triangle.source[0][0],
+            triangle.source[1][0],
+            triangle.source[2][0]
+          ) - leftBound > this.sourceWorldWidth_ / 2) {
+            const newTriangle = [
+              [triangle.source[0][0], triangle.source[0][1]],
+              [triangle.source[1][0], triangle.source[1][1]],
+              [triangle.source[2][0], triangle.source[2][1]]
+            ];
+            if (newTriangle[0][0] - leftBound > this.sourceWorldWidth_ / 2) {
+              newTriangle[0][0] -= this.sourceWorldWidth_;
+            }
+            if (newTriangle[1][0] - leftBound > this.sourceWorldWidth_ / 2) {
+              newTriangle[1][0] -= this.sourceWorldWidth_;
+            }
+            if (newTriangle[2][0] - leftBound > this.sourceWorldWidth_ / 2) {
+              newTriangle[2][0] -= this.sourceWorldWidth_;
+            }
+            const minX = Math.min(
+              newTriangle[0][0],
+              newTriangle[1][0],
+              newTriangle[2][0]
+            );
+            const maxX = Math.max(
+              newTriangle[0][0],
+              newTriangle[1][0],
+              newTriangle[2][0]
+            );
+            if (maxX - minX < this.sourceWorldWidth_ / 2) {
+              triangle.source = newTriangle;
+            }
+          }
+        });
+      }
+      transformInvCache = {};
+    }
+    /**
+     * Adds triangle to the triangulation.
+     * @param {import("../coordinate.js").Coordinate} a The target a coordinate.
+     * @param {import("../coordinate.js").Coordinate} b The target b coordinate.
+     * @param {import("../coordinate.js").Coordinate} c The target c coordinate.
+     * @param {import("../coordinate.js").Coordinate} aSrc The source a coordinate.
+     * @param {import("../coordinate.js").Coordinate} bSrc The source b coordinate.
+     * @param {import("../coordinate.js").Coordinate} cSrc The source c coordinate.
+     * @private
+     */
+    addTriangle_(a, b, c, aSrc, bSrc, cSrc) {
+      this.triangles_.push({
+        source: [aSrc, bSrc, cSrc],
+        target: [a, b, c]
+      });
+    }
+    /**
+     * Adds quad (points in clock-wise order) to the triangulation
+     * (and reprojects the vertices) if valid.
+     * Performs quad subdivision if needed to increase precision.
+     *
+     * @param {import("../coordinate.js").Coordinate} a The target a coordinate.
+     * @param {import("../coordinate.js").Coordinate} b The target b coordinate.
+     * @param {import("../coordinate.js").Coordinate} c The target c coordinate.
+     * @param {import("../coordinate.js").Coordinate} d The target d coordinate.
+     * @param {import("../coordinate.js").Coordinate} aSrc The source a coordinate.
+     * @param {import("../coordinate.js").Coordinate} bSrc The source b coordinate.
+     * @param {import("../coordinate.js").Coordinate} cSrc The source c coordinate.
+     * @param {import("../coordinate.js").Coordinate} dSrc The source d coordinate.
+     * @param {number} maxSubdivision Maximal allowed subdivision of the quad.
+     * @private
+     */
+    addQuad_(a, b, c, d, aSrc, bSrc, cSrc, dSrc, maxSubdivision) {
+      const sourceQuadExtent = boundingExtent([aSrc, bSrc, cSrc, dSrc]);
+      const sourceCoverageX = this.sourceWorldWidth_ ? getWidth(sourceQuadExtent) / this.sourceWorldWidth_ : null;
+      const sourceWorldWidth = (
+        /** @type {number} */
+        this.sourceWorldWidth_
+      );
+      const wrapsX = this.sourceProj_.canWrapX() && sourceCoverageX > 0.5 && sourceCoverageX < 1;
+      let needsSubdivision = false;
+      if (maxSubdivision > 0) {
+        if (this.targetProj_.isGlobal() && this.targetWorldWidth_) {
+          const targetQuadExtent = boundingExtent([a, b, c, d]);
+          const targetCoverageX = getWidth(targetQuadExtent) / this.targetWorldWidth_;
+          needsSubdivision = targetCoverageX > MAX_TRIANGLE_WIDTH || needsSubdivision;
+        }
+        if (!wrapsX && this.sourceProj_.isGlobal() && sourceCoverageX) {
+          needsSubdivision = sourceCoverageX > MAX_TRIANGLE_WIDTH || needsSubdivision;
+        }
+      }
+      if (!needsSubdivision && this.maxSourceExtent_) {
+        if (isFinite(sourceQuadExtent[0]) && isFinite(sourceQuadExtent[1]) && isFinite(sourceQuadExtent[2]) && isFinite(sourceQuadExtent[3])) {
+          if (!intersects$1(sourceQuadExtent, this.maxSourceExtent_)) {
+            return;
+          }
+        }
+      }
+      let isNotFinite = 0;
+      if (!needsSubdivision) {
+        if (!isFinite(aSrc[0]) || !isFinite(aSrc[1]) || !isFinite(bSrc[0]) || !isFinite(bSrc[1]) || !isFinite(cSrc[0]) || !isFinite(cSrc[1]) || !isFinite(dSrc[0]) || !isFinite(dSrc[1])) {
+          if (maxSubdivision > 0) {
+            needsSubdivision = true;
+          } else {
+            isNotFinite = (!isFinite(aSrc[0]) || !isFinite(aSrc[1]) ? 8 : 0) + (!isFinite(bSrc[0]) || !isFinite(bSrc[1]) ? 4 : 0) + (!isFinite(cSrc[0]) || !isFinite(cSrc[1]) ? 2 : 0) + (!isFinite(dSrc[0]) || !isFinite(dSrc[1]) ? 1 : 0);
+            if (isNotFinite != 1 && isNotFinite != 2 && isNotFinite != 4 && isNotFinite != 8) {
+              return;
+            }
+          }
+        }
+      }
+      if (maxSubdivision > 0) {
+        if (!needsSubdivision) {
+          const center = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+          const centerSrc = this.transformInv_(center);
+          let dx;
+          if (wrapsX) {
+            const centerSrcEstimX = (modulo(aSrc[0], sourceWorldWidth) + modulo(cSrc[0], sourceWorldWidth)) / 2;
+            dx = centerSrcEstimX - modulo(centerSrc[0], sourceWorldWidth);
+          } else {
+            dx = (aSrc[0] + cSrc[0]) / 2 - centerSrc[0];
+          }
+          const dy = (aSrc[1] + cSrc[1]) / 2 - centerSrc[1];
+          const centerSrcErrorSquared = dx * dx + dy * dy;
+          needsSubdivision = centerSrcErrorSquared > this.errorThresholdSquared_;
+        }
+        if (needsSubdivision) {
+          if (Math.abs(a[0] - c[0]) <= Math.abs(a[1] - c[1])) {
+            const bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2];
+            const bcSrc = this.transformInv_(bc);
+            const da = [(d[0] + a[0]) / 2, (d[1] + a[1]) / 2];
+            const daSrc = this.transformInv_(da);
+            this.addQuad_(
+              a,
+              b,
+              bc,
+              da,
+              aSrc,
+              bSrc,
+              bcSrc,
+              daSrc,
+              maxSubdivision - 1
+            );
+            this.addQuad_(
+              da,
+              bc,
+              c,
+              d,
+              daSrc,
+              bcSrc,
+              cSrc,
+              dSrc,
+              maxSubdivision - 1
+            );
+          } else {
+            const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+            const abSrc = this.transformInv_(ab);
+            const cd = [(c[0] + d[0]) / 2, (c[1] + d[1]) / 2];
+            const cdSrc = this.transformInv_(cd);
+            this.addQuad_(
+              a,
+              ab,
+              cd,
+              d,
+              aSrc,
+              abSrc,
+              cdSrc,
+              dSrc,
+              maxSubdivision - 1
+            );
+            this.addQuad_(
+              ab,
+              b,
+              c,
+              cd,
+              abSrc,
+              bSrc,
+              cSrc,
+              cdSrc,
+              maxSubdivision - 1
+            );
+          }
+          return;
+        }
+      }
+      if (wrapsX) {
+        if (!this.canWrapXInSource_) {
+          return;
+        }
+        this.wrapsXInSource_ = true;
+      }
+      if ((isNotFinite & 11) == 0) {
+        this.addTriangle_(a, c, d, aSrc, cSrc, dSrc);
+      }
+      if ((isNotFinite & 14) == 0) {
+        this.addTriangle_(a, c, b, aSrc, cSrc, bSrc);
+      }
+      if (isNotFinite) {
+        if ((isNotFinite & 13) == 0) {
+          this.addTriangle_(b, d, a, bSrc, dSrc, aSrc);
+        }
+        if ((isNotFinite & 7) == 0) {
+          this.addTriangle_(b, d, c, bSrc, dSrc, cSrc);
+        }
+      }
+    }
+    /**
+     * Calculates extent of the `source` coordinates from all the triangles.
+     *
+     * @return {import("../extent.js").Extent} Calculated extent.
+     */
+    calculateSourceExtent() {
+      const extent = createEmpty();
+      this.triangles_.forEach(function(triangle, i, arr) {
+        const src = triangle.source;
+        extendCoordinate(extent, src[0]);
+        extendCoordinate(extent, src[1]);
+        extendCoordinate(extent, src[2]);
+      });
+      return extent;
+    }
+    /**
+     * @return {Array<Triangle>} Array of the calculated triangles.
+     */
+    getTriangles() {
+      return this.triangles_;
+    }
+  }
+  const ERROR_THRESHOLD = 0.5;
+  class ReprojTile extends Tile {
+    /**
+     * @param {import("../proj/Projection.js").default} sourceProj Source projection.
+     * @param {import("../tilegrid/TileGrid.js").default} sourceTileGrid Source tile grid.
+     * @param {import("../proj/Projection.js").default} targetProj Target projection.
+     * @param {import("../tilegrid/TileGrid.js").default} targetTileGrid Target tile grid.
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Coordinate of the tile.
+     * @param {import("../tilecoord.js").TileCoord} wrappedTileCoord Coordinate of the tile wrapped in X.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {number} gutter Gutter of the source tiles.
+     * @param {FunctionType} getTileFunction
+     *     Function returning source tiles (z, x, y, pixelRatio).
+     * @param {number} [errorThreshold] Acceptable reprojection error (in px).
+     * @param {boolean} [renderEdges] Render reprojection edges.
+     * @param {import("../Tile.js").Options} [options] Tile options.
+     */
+    constructor(sourceProj, sourceTileGrid, targetProj, targetTileGrid, tileCoord, wrappedTileCoord, pixelRatio, gutter, getTileFunction, errorThreshold, renderEdges, options) {
+      super(tileCoord, TileState.IDLE, options);
+      this.renderEdges_ = renderEdges !== void 0 ? renderEdges : false;
+      this.pixelRatio_ = pixelRatio;
+      this.gutter_ = gutter;
+      this.canvas_ = null;
+      this.sourceTileGrid_ = sourceTileGrid;
+      this.targetTileGrid_ = targetTileGrid;
+      this.wrappedTileCoord_ = wrappedTileCoord ? wrappedTileCoord : tileCoord;
+      this.sourceTiles_ = [];
+      this.sourcesListenerKeys_ = null;
+      this.sourceZ_ = 0;
+      this.clipExtent_ = sourceProj.canWrapX() ? sourceProj.getExtent() : void 0;
+      const targetExtent = targetTileGrid.getTileCoordExtent(
+        this.wrappedTileCoord_
+      );
+      const maxTargetExtent = this.targetTileGrid_.getExtent();
+      let maxSourceExtent = this.sourceTileGrid_.getExtent();
+      const limitedTargetExtent = maxTargetExtent ? getIntersection(targetExtent, maxTargetExtent) : targetExtent;
+      if (getArea(limitedTargetExtent) === 0) {
+        this.state = TileState.EMPTY;
+        return;
+      }
+      const sourceProjExtent = sourceProj.getExtent();
+      if (sourceProjExtent) {
+        if (!maxSourceExtent) {
+          maxSourceExtent = sourceProjExtent;
+        } else {
+          maxSourceExtent = getIntersection(maxSourceExtent, sourceProjExtent);
+        }
+      }
+      const targetResolution = targetTileGrid.getResolution(
+        this.wrappedTileCoord_[0]
+      );
+      const sourceResolution = calculateSourceExtentResolution(
+        sourceProj,
+        targetProj,
+        limitedTargetExtent,
+        targetResolution
+      );
+      if (!isFinite(sourceResolution) || sourceResolution <= 0) {
+        this.state = TileState.EMPTY;
+        return;
+      }
+      const errorThresholdInPixels = errorThreshold !== void 0 ? errorThreshold : ERROR_THRESHOLD;
+      this.triangulation_ = new Triangulation(
+        sourceProj,
+        targetProj,
+        limitedTargetExtent,
+        maxSourceExtent,
+        sourceResolution * errorThresholdInPixels,
+        targetResolution
+      );
+      if (this.triangulation_.getTriangles().length === 0) {
+        this.state = TileState.EMPTY;
+        return;
+      }
+      this.sourceZ_ = sourceTileGrid.getZForResolution(sourceResolution);
+      let sourceExtent = this.triangulation_.calculateSourceExtent();
+      if (maxSourceExtent) {
+        if (sourceProj.canWrapX()) {
+          sourceExtent[1] = clamp(
+            sourceExtent[1],
+            maxSourceExtent[1],
+            maxSourceExtent[3]
+          );
+          sourceExtent[3] = clamp(
+            sourceExtent[3],
+            maxSourceExtent[1],
+            maxSourceExtent[3]
+          );
+        } else {
+          sourceExtent = getIntersection(sourceExtent, maxSourceExtent);
+        }
+      }
+      if (!getArea(sourceExtent)) {
+        this.state = TileState.EMPTY;
+      } else {
+        let worldWidth = 0;
+        let worldsAway = 0;
+        if (sourceProj.canWrapX()) {
+          worldWidth = getWidth(sourceProjExtent);
+          worldsAway = Math.floor(
+            (sourceExtent[0] - sourceProjExtent[0]) / worldWidth
+          );
+        }
+        const sourceExtents = wrapAndSliceX(
+          sourceExtent.slice(),
+          sourceProj,
+          true
+        );
+        sourceExtents.forEach((extent) => {
+          const sourceRange = sourceTileGrid.getTileRangeForExtentAndZ(
+            extent,
+            this.sourceZ_
+          );
+          for (let srcX = sourceRange.minX; srcX <= sourceRange.maxX; srcX++) {
+            for (let srcY = sourceRange.minY; srcY <= sourceRange.maxY; srcY++) {
+              const offset = worldsAway * worldWidth;
+              this.sourceTiles_.push({
+                getTile: () => getTileFunction(this.sourceZ_, srcX, srcY, pixelRatio),
+                offset
+              });
+            }
+          }
+          ++worldsAway;
+        });
+        if (this.sourceTiles_.length === 0) {
+          this.state = TileState.EMPTY;
+        }
+      }
+    }
+    /**
+     * Get the HTML Canvas element for this tile.
+     * @return {HTMLCanvasElement|OffscreenCanvas} Canvas.
+     */
+    getImage() {
+      return this.canvas_;
+    }
+    /**
+     * @private
+     */
+    reproject_() {
+      const sources = [];
+      this.sourceTiles_.forEach((source) => {
+        var _a;
+        const tile = source.tile;
+        if (tile && tile.getState() == TileState.LOADED) {
+          const extent = this.sourceTileGrid_.getTileCoordExtent(tile.tileCoord);
+          extent[0] += source.offset;
+          extent[2] += source.offset;
+          const clipExtent = (_a = this.clipExtent_) == null ? void 0 : _a.slice();
+          if (clipExtent) {
+            clipExtent[0] += source.offset;
+            clipExtent[2] += source.offset;
+          }
+          sources.push({
+            extent,
+            clipExtent,
+            image: tile.getImage()
+          });
+        }
+      });
+      this.sourceTiles_.length = 0;
+      if (sources.length === 0) {
+        this.state = TileState.ERROR;
+      } else {
+        const z = this.wrappedTileCoord_[0];
+        const size = this.targetTileGrid_.getTileSize(z);
+        const width = typeof size === "number" ? size : size[0];
+        const height = typeof size === "number" ? size : size[1];
+        const targetResolution = this.targetTileGrid_.getResolution(z);
+        const sourceResolution = this.sourceTileGrid_.getResolution(
+          this.sourceZ_
+        );
+        const targetExtent = this.targetTileGrid_.getTileCoordExtent(
+          this.wrappedTileCoord_
+        );
+        this.canvas_ = render(
+          width,
+          height,
+          this.pixelRatio_,
+          sourceResolution,
+          this.sourceTileGrid_.getExtent(),
+          targetResolution,
+          targetExtent,
+          this.triangulation_,
+          sources,
+          this.gutter_,
+          this.renderEdges_,
+          this.interpolate
+        );
+        this.state = TileState.LOADED;
+      }
+      this.changed();
+    }
+    /**
+     * Load not yet loaded URI.
+     * @override
+     */
+    load() {
+      for (const sourceTile of this.sourceTiles_) {
+        sourceTile.tile = sourceTile.getTile();
+      }
+      if (this.state == TileState.IDLE) {
+        this.state = TileState.LOADING;
+        this.changed();
+        let leftToLoad = 0;
+        this.sourcesListenerKeys_ = [];
+        this.sourceTiles_.forEach(({ tile }) => {
+          const state = tile.getState();
+          if (state == TileState.IDLE || state == TileState.LOADING) {
+            leftToLoad++;
+            const sourceListenKey = listen(tile, EventType.CHANGE, (e) => {
+              const state2 = tile.getState();
+              if (state2 == TileState.LOADED || state2 == TileState.ERROR || state2 == TileState.EMPTY) {
+                unlistenByKey(sourceListenKey);
+                leftToLoad--;
+                if (leftToLoad === 0) {
+                  this.unlistenSources_();
+                  this.reproject_();
+                }
+              }
+            });
+            this.sourcesListenerKeys_.push(sourceListenKey);
+          }
+        });
+        if (leftToLoad === 0) {
+          setTimeout(this.reproject_.bind(this), 0);
+        } else {
+          this.sourceTiles_.forEach(function({ tile }, i, arr) {
+            const state = tile.getState();
+            if (state == TileState.IDLE) {
+              tile.load();
+            }
+          });
+        }
+      }
+    }
+    /**
+     * @private
+     */
+    unlistenSources_() {
+      this.sourcesListenerKeys_.forEach(unlistenByKey);
+      this.sourcesListenerKeys_ = null;
+    }
+    /**
+     * Remove from the cache due to expiry
+     * @override
+     */
+    release() {
+      if (this.canvas_) {
+        releaseCanvas(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.canvas_.getContext("2d")
+        );
+        canvasPool.push(this.canvas_);
+        this.canvas_ = null;
+      }
+      this.sourceTiles_.length = 0;
+      super.release();
+    }
+  }
+  class LRUCache {
+    /**
+     * @param {number} [highWaterMark] High water mark.
+     */
+    constructor(highWaterMark) {
+      this.highWaterMark = highWaterMark !== void 0 ? highWaterMark : 2048;
+      this.count_ = 0;
+      this.entries_ = {};
+      this.oldest_ = null;
+      this.newest_ = null;
+    }
+    deleteOldest() {
+      const entry = this.pop();
+      if (entry instanceof Disposable) {
+        entry.dispose();
+      }
+    }
+    /**
+     * @return {boolean} Can expire cache.
+     */
+    canExpireCache() {
+      return this.highWaterMark > 0 && this.getCount() > this.highWaterMark;
+    }
+    /**
+     * Expire the cache. When the cache entry is a {@link module:ol/Disposable~Disposable},
+     * the entry will be disposed.
+     * @param {!Object<string, boolean>} [keep] Keys to keep. To be implemented by subclasses.
+     */
+    expireCache(keep) {
+      while (this.canExpireCache()) {
+        this.deleteOldest();
+      }
+    }
+    /**
+     * FIXME empty description for jsdoc
+     */
+    clear() {
+      while (this.oldest_) {
+        this.deleteOldest();
+      }
+    }
+    /**
+     * @param {string} key Key.
+     * @return {boolean} Contains key.
+     */
+    containsKey(key) {
+      return this.entries_.hasOwnProperty(key);
+    }
+    /**
+     * @param {function(T, string, LRUCache<T>): ?} f The function
+     *     to call for every entry from the oldest to the newer. This function takes
+     *     3 arguments (the entry value, the entry key and the LRUCache object).
+     *     The return value is ignored.
+     */
+    forEach(f) {
+      let entry = this.oldest_;
+      while (entry) {
+        f(entry.value_, entry.key_, this);
+        entry = entry.newer;
+      }
+    }
+    /**
+     * @param {string} key Key.
+     * @param {*} [options] Options (reserved for subclasses).
+     * @return {T} Value.
+     */
+    get(key, options) {
+      const entry = this.entries_[key];
+      assert(
+        entry !== void 0,
+        "Tried to get a value for a key that does not exist in the cache"
+      );
+      if (entry === this.newest_) {
+        return entry.value_;
+      }
+      if (entry === this.oldest_) {
+        this.oldest_ = /** @type {Entry} */
+        this.oldest_.newer;
+        this.oldest_.older = null;
+      } else {
+        entry.newer.older = entry.older;
+        entry.older.newer = entry.newer;
+      }
+      entry.newer = null;
+      entry.older = this.newest_;
+      this.newest_.newer = entry;
+      this.newest_ = entry;
+      return entry.value_;
+    }
+    /**
+     * Remove an entry from the cache.
+     * @param {string} key The entry key.
+     * @return {T} The removed entry.
+     */
+    remove(key) {
+      const entry = this.entries_[key];
+      assert(
+        entry !== void 0,
+        "Tried to get a value for a key that does not exist in the cache"
+      );
+      if (entry === this.newest_) {
+        this.newest_ = /** @type {Entry} */
+        entry.older;
+        if (this.newest_) {
+          this.newest_.newer = null;
+        }
+      } else if (entry === this.oldest_) {
+        this.oldest_ = /** @type {Entry} */
+        entry.newer;
+        if (this.oldest_) {
+          this.oldest_.older = null;
+        }
+      } else {
+        entry.newer.older = entry.older;
+        entry.older.newer = entry.newer;
+      }
+      delete this.entries_[key];
+      --this.count_;
+      return entry.value_;
+    }
+    /**
+     * @return {number} Count.
+     */
+    getCount() {
+      return this.count_;
+    }
+    /**
+     * @return {Array<string>} Keys.
+     */
+    getKeys() {
+      const keys = new Array(this.count_);
+      let i = 0;
+      let entry;
+      for (entry = this.newest_; entry; entry = entry.older) {
+        keys[i++] = entry.key_;
+      }
+      return keys;
+    }
+    /**
+     * @return {Array<T>} Values.
+     */
+    getValues() {
+      const values = new Array(this.count_);
+      let i = 0;
+      let entry;
+      for (entry = this.newest_; entry; entry = entry.older) {
+        values[i++] = entry.value_;
+      }
+      return values;
+    }
+    /**
+     * @return {T} Last value.
+     */
+    peekLast() {
+      return this.oldest_.value_;
+    }
+    /**
+     * @return {string} Last key.
+     */
+    peekLastKey() {
+      return this.oldest_.key_;
+    }
+    /**
+     * Get the key of the newest item in the cache.  Throws if the cache is empty.
+     * @return {string} The newest key.
+     */
+    peekFirstKey() {
+      return this.newest_.key_;
+    }
+    /**
+     * Return an entry without updating least recently used time.
+     * @param {string} key Key.
+     * @return {T|undefined} Value.
+     */
+    peek(key) {
+      var _a;
+      return (_a = this.entries_[key]) == null ? void 0 : _a.value_;
+    }
+    /**
+     * @return {T} value Value.
+     */
+    pop() {
+      const entry = this.oldest_;
+      delete this.entries_[entry.key_];
+      if (entry.newer) {
+        entry.newer.older = null;
+      }
+      this.oldest_ = /** @type {Entry} */
+      entry.newer;
+      if (!this.oldest_) {
+        this.newest_ = null;
+      }
+      --this.count_;
+      return entry.value_;
+    }
+    /**
+     * @param {string} key Key.
+     * @param {T} value Value.
+     */
+    replace(key, value) {
+      this.get(key);
+      this.entries_[key].value_ = value;
+    }
+    /**
+     * @param {string} key Key.
+     * @param {T} value Value.
+     */
+    set(key, value) {
+      assert(
+        !(key in this.entries_),
+        "Tried to set a value for a key that is used already"
+      );
+      const entry = {
+        key_: key,
+        newer: null,
+        older: this.newest_,
+        value_: value
+      };
+      if (!this.newest_) {
+        this.oldest_ = entry;
+      } else {
+        this.newest_.newer = entry;
+      }
+      this.newest_ = entry;
+      this.entries_[key] = entry;
+      ++this.count_;
+    }
+    /**
+     * Set a maximum number of entries for the cache.
+     * @param {number} size Cache size.
+     * @api
+     */
+    setSize(size) {
+      this.highWaterMark = size;
+    }
+  }
+  function createOrUpdate(z, x, y, tileCoord) {
+    if (tileCoord !== void 0) {
+      tileCoord[0] = z;
+      tileCoord[1] = x;
+      tileCoord[2] = y;
+      return tileCoord;
+    }
+    return [z, x, y];
+  }
+  function getKeyZXY(z, x, y) {
+    return z + "/" + x + "/" + y;
+  }
+  function getCacheKey(source, sourceKey, z, x, y) {
+    return `${getUid(source)},${sourceKey},${getKeyZXY(z, x, y)}`;
+  }
+  function hash(tileCoord) {
+    return hashZXY(tileCoord[0], tileCoord[1], tileCoord[2]);
+  }
+  function hashZXY(z, x, y) {
+    return (x << z) + y;
+  }
+  function withinExtentAndZ(tileCoord, tileGrid) {
+    const z = tileCoord[0];
+    const x = tileCoord[1];
+    const y = tileCoord[2];
+    if (tileGrid.getMinZoom() > z || z > tileGrid.getMaxZoom()) {
+      return false;
+    }
+    const tileRange = tileGrid.getFullTileRange(z);
+    if (!tileRange) {
+      return true;
+    }
+    return tileRange.containsXY(x, y);
+  }
+  function addTileToLookup(tilesByZ, tile, z) {
+    if (!(z in tilesByZ)) {
+      tilesByZ[z] = /* @__PURE__ */ new Set([tile]);
+      return true;
+    }
+    const set = tilesByZ[z];
+    const existing = set.has(tile);
+    if (!existing) {
+      set.add(tile);
+    }
+    return !existing;
+  }
+  function removeTileFromLookup(tilesByZ, tile, z) {
+    const set = tilesByZ[z];
+    if (set) {
+      return set.delete(tile);
+    }
+    return false;
+  }
+  function getRenderExtent(frameState, extent) {
+    const layerState = frameState.layerStatesArray[frameState.layerIndex];
+    if (layerState.extent) {
+      extent = getIntersection(
+        extent,
+        fromUserExtent(layerState.extent, frameState.viewState.projection)
+      );
+    }
+    const source = (
+      /** @type {import("../../source/Tile.js").default} */
+      layerState.layer.getRenderSource()
+    );
+    if (!source.getWrapX()) {
+      const gridExtent = source.getTileGridForProjection(frameState.viewState.projection).getExtent();
+      if (gridExtent) {
+        extent = getIntersection(extent, gridExtent);
+      }
+    }
+    return extent;
+  }
+  class CanvasTileLayerRenderer extends CanvasLayerRenderer {
+    /**
+     * @param {LayerType} tileLayer Tile layer.
+     * @param {Options} [options] Options.
+     */
+    constructor(tileLayer, options) {
+      super(tileLayer);
+      options = options || {};
+      this.extentChanged = true;
+      this.renderComplete = false;
+      this.renderedExtent_ = null;
+      this.renderedPixelRatio;
+      this.renderedProjection = null;
+      this.renderedTiles = [];
+      this.renderedSourceKey_;
+      this.renderedSourceRevision_;
+      this.tempExtent = createEmpty();
+      this.tempTileRange_ = new TileRange(0, 0, 0, 0);
+      this.tempTileCoord_ = createOrUpdate(0, 0, 0);
+      const cacheSize2 = options.cacheSize !== void 0 ? options.cacheSize : 512;
+      this.tileCache_ = new LRUCache(cacheSize2);
+      this.sourceTileCache_ = null;
+      this.layerExtent = null;
+      this.maxStaleKeys = cacheSize2 * 0.5;
+    }
+    /**
+     * @return {LRUCache} Tile cache.
+     */
+    getTileCache() {
+      return this.tileCache_;
+    }
+    /**
+     * @return {LRUCache} Tile cache.
+     */
+    getSourceTileCache() {
+      if (!this.sourceTileCache_) {
+        this.sourceTileCache_ = new LRUCache(512);
+      }
+      return this.sourceTileCache_;
+    }
+    /**
+     * Get a tile from the cache or create one if needed.
+     *
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {import("../../Tile.js").default|null} Tile (or null if outside source extent).
+     * @protected
+     */
+    getOrCreateTile(z, x, y, frameState) {
+      const tileCache = this.tileCache_;
+      const tileLayer = this.getLayer();
+      const tileSource = tileLayer.getSource();
+      const cacheKey = getCacheKey(tileSource, tileSource.getKey(), z, x, y);
+      let tile;
+      if (tileCache.containsKey(cacheKey)) {
+        tile = tileCache.get(cacheKey);
+      } else {
+        const projection = frameState.viewState.projection;
+        const sourceProjection = tileSource.getProjection();
+        tile = tileSource.getTile(
+          z,
+          x,
+          y,
+          frameState.pixelRatio,
+          projection,
+          !sourceProjection || equivalent$1(sourceProjection, projection) ? void 0 : this.getSourceTileCache()
+        );
+        if (!tile) {
+          return null;
+        }
+        tileCache.set(cacheKey, tile);
+      }
+      return tile;
+    }
+    /**
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {import("../../Tile.js").default|null} Tile (or null if outside source extent).
+     * @protected
+     */
+    getTile(z, x, y, frameState) {
+      const tile = this.getOrCreateTile(z, x, y, frameState);
+      if (!tile) {
+        return null;
+      }
+      return tile;
+    }
+    /**
+     * @param {import("../../pixel.js").Pixel} pixel Pixel.
+     * @return {Uint8ClampedArray} Data at the pixel location.
+     * @override
+     */
+    getData(pixel) {
+      const frameState = this.frameState;
+      if (!frameState) {
+        return null;
+      }
+      const layer = this.getLayer();
+      const coordinate = apply(
+        frameState.pixelToCoordinateTransform,
+        pixel.slice()
+      );
+      const layerExtent = layer.getExtent();
+      if (layerExtent) {
+        if (!containsCoordinate(layerExtent, coordinate)) {
+          return null;
+        }
+      }
+      const viewState = frameState.viewState;
+      const source = layer.getRenderSource();
+      const tileGrid = source.getTileGridForProjection(viewState.projection);
+      const tilePixelRatio = source.getTilePixelRatio(frameState.pixelRatio);
+      for (let z = tileGrid.getZForResolution(viewState.resolution); z >= tileGrid.getMinZoom(); --z) {
+        const tileCoord = tileGrid.getTileCoordForCoordAndZ(coordinate, z);
+        const tile = this.getTile(z, tileCoord[1], tileCoord[2], frameState);
+        if (!tile || tile.getState() !== TileState.LOADED) {
+          continue;
+        }
+        const tileOrigin = tileGrid.getOrigin(z);
+        const tileSize = toSize(tileGrid.getTileSize(z));
+        const tileResolution = tileGrid.getResolution(z);
+        let image;
+        if (tile instanceof ImageTile || tile instanceof ReprojTile) {
+          image = tile.getImage();
+        } else if (tile instanceof DataTile) {
+          image = asImageLike(tile.getData());
+          if (!image) {
+            continue;
+          }
+        } else {
+          continue;
+        }
+        const col = Math.floor(
+          tilePixelRatio * ((coordinate[0] - tileOrigin[0]) / tileResolution - tileCoord[1] * tileSize[0])
+        );
+        const row = Math.floor(
+          tilePixelRatio * ((tileOrigin[1] - coordinate[1]) / tileResolution - tileCoord[2] * tileSize[1])
+        );
+        const gutter = Math.round(
+          tilePixelRatio * source.getGutterForProjection(viewState.projection)
+        );
+        return this.getImageData(image, col + gutter, row + gutter);
+      }
+      return null;
+    }
+    /**
+     * Determine whether render should be called.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {boolean} Layer is ready to be rendered.
+     * @override
+     */
+    prepareFrame(frameState) {
+      var _a;
+      if (!this.renderedProjection) {
+        this.renderedProjection = frameState.viewState.projection;
+      } else if (frameState.viewState.projection !== this.renderedProjection) {
+        this.tileCache_.clear();
+        this.renderedProjection = frameState.viewState.projection;
+      }
+      const source = this.getLayer().getSource();
+      if (!source) {
+        return false;
+      }
+      const sourceRevision = source.getRevision();
+      if (!this.renderedSourceRevision_) {
+        this.renderedSourceRevision_ = sourceRevision;
+      } else if (this.renderedSourceRevision_ !== sourceRevision) {
+        this.renderedSourceRevision_ = sourceRevision;
+        if (this.renderedSourceKey_ === source.getKey()) {
+          this.tileCache_.clear();
+          (_a = this.sourceTileCache_) == null ? void 0 : _a.clear();
+        }
+      }
+      return true;
+    }
+    /**
+     * Determine whether tiles for next extent should be enqueued for rendering.
+     * @return {boolean} Rendering tiles for next extent is supported.
+     * @protected
+     */
+    enqueueTilesForNextExtent() {
+      return true;
+    }
+    /**
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {import("../../extent.js").Extent} extent The extent to be rendered.
+     * @param {number} initialZ The zoom level.
+     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
+     * @param {number} preload Number of additional levels to load.
+     */
+    enqueueTiles(frameState, extent, initialZ, tilesByZ, preload) {
+      const viewState = frameState.viewState;
+      const tileLayer = this.getLayer();
+      const tileSource = tileLayer.getRenderSource();
+      const tileGrid = tileSource.getTileGridForProjection(viewState.projection);
+      const tileSourceKey = getUid(tileSource);
+      if (!(tileSourceKey in frameState.wantedTiles)) {
+        frameState.wantedTiles[tileSourceKey] = {};
+      }
+      const wantedTiles = frameState.wantedTiles[tileSourceKey];
+      const map = tileLayer.getMapInternal();
+      const minZ = Math.max(
+        initialZ - preload,
+        tileGrid.getMinZoom(),
+        tileGrid.getZForResolution(
+          Math.min(
+            tileLayer.getMaxResolution(),
+            map ? map.getView().getResolutionForZoom(Math.max(tileLayer.getMinZoom(), 0)) : tileGrid.getResolution(0)
+          ),
+          tileSource.zDirection
+        )
+      );
+      const rotation = viewState.rotation;
+      const viewport = rotation ? getRotatedViewport(
+        viewState.center,
+        viewState.resolution,
+        rotation,
+        frameState.size
+      ) : void 0;
+      for (let z = initialZ; z >= minZ; --z) {
+        const tileRange = tileGrid.getTileRangeForExtentAndZ(
+          extent,
+          z,
+          this.tempTileRange_
+        );
+        const tileResolution = tileGrid.getResolution(z);
+        for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
+          for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
+            if (rotation && !tileGrid.tileCoordIntersectsViewport([z, x, y], viewport)) {
+              continue;
+            }
+            const tile = this.getTile(z, x, y, frameState);
+            if (!tile) {
+              continue;
+            }
+            const added = addTileToLookup(tilesByZ, tile, z);
+            if (!added) {
+              continue;
+            }
+            const tileQueueKey = tile.getKey();
+            wantedTiles[tileQueueKey] = true;
+            if (tile.getState() === TileState.IDLE) {
+              if (!frameState.tileQueue.isKeyQueued(tileQueueKey)) {
+                const tileCoord = createOrUpdate(z, x, y, this.tempTileCoord_);
+                frameState.tileQueue.enqueue([
+                  tile,
+                  tileSourceKey,
+                  tileGrid.getTileCoordCenter(tileCoord),
+                  tileResolution
+                ]);
+              }
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Look for tiles covering the provided tile coordinate at an alternate
+     * zoom level.  Loaded tiles will be added to the provided tile texture lookup.
+     * @param {import("../../tilecoord.js").TileCoord} tileCoord The target tile coordinate.
+     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
+     * @return {boolean} The tile coordinate is covered by loaded tiles at the alternate zoom level.
+     * @private
+     */
+    findStaleTile_(tileCoord, tilesByZ) {
+      const tileCache = this.tileCache_;
+      const z = tileCoord[0];
+      const x = tileCoord[1];
+      const y = tileCoord[2];
+      const staleKeys = this.getStaleKeys();
+      for (let i = 0; i < staleKeys.length; ++i) {
+        const cacheKey = getCacheKey(
+          this.getLayer().getSource(),
+          staleKeys[i],
+          z,
+          x,
+          y
+        );
+        if (tileCache.containsKey(cacheKey)) {
+          const tile = tileCache.peek(cacheKey);
+          if (tile.getState() === TileState.LOADED) {
+            tile.endTransition(getUid(this));
+            addTileToLookup(tilesByZ, tile, z);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    /**
+     * Look for tiles covering the provided tile coordinate at an alternate
+     * zoom level.  Loaded tiles will be added to the provided tile texture lookup.
+     * @param {import("../../tilegrid/TileGrid.js").default} tileGrid The tile grid.
+     * @param {import("../../tilecoord.js").TileCoord} tileCoord The target tile coordinate.
+     * @param {number} altZ The alternate zoom level.
+     * @param {TileLookup} tilesByZ Lookup of tiles by zoom level.
+     * @return {boolean} The tile coordinate is covered by loaded tiles at the alternate zoom level.
+     * @private
+     */
+    findAltTiles_(tileGrid, tileCoord, altZ, tilesByZ) {
+      const tileRange = tileGrid.getTileRangeForTileCoordAndZ(
+        tileCoord,
+        altZ,
+        this.tempTileRange_
+      );
+      if (!tileRange) {
+        return false;
+      }
+      let covered = true;
+      const tileCache = this.tileCache_;
+      const source = this.getLayer().getRenderSource();
+      const sourceKey = source.getKey();
+      for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
+        for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
+          const cacheKey = getCacheKey(source, sourceKey, altZ, x, y);
+          let loaded = false;
+          if (tileCache.containsKey(cacheKey)) {
+            const tile = tileCache.peek(cacheKey);
+            if (tile.getState() === TileState.LOADED) {
+              addTileToLookup(tilesByZ, tile, altZ);
+              loaded = true;
+            }
+          }
+          if (!loaded) {
+            covered = false;
+          }
+        }
+      }
+      return covered;
+    }
+    /**
+     * Render the layer.
+     *
+     * The frame rendering logic has three parts:
+     *
+     *  1. Enqueue tiles
+     *  2. Find alt tiles for those that are not yet loaded
+     *  3. Render loaded tiles
+     *
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {HTMLElement} target Target that may be used to render content to.
+     * @return {HTMLElement} The rendered element.
+     * @override
+     */
+    renderFrame(frameState, target) {
+      this.renderComplete = true;
+      const layerState = frameState.layerStatesArray[frameState.layerIndex];
+      const viewState = frameState.viewState;
+      const projection = viewState.projection;
+      const viewResolution = viewState.resolution;
+      const viewCenter = viewState.center;
+      const pixelRatio = frameState.pixelRatio;
+      const tileLayer = this.getLayer();
+      const tileSource = tileLayer.getSource();
+      const tileGrid = tileSource.getTileGridForProjection(projection);
+      const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
+      const tileResolution = tileGrid.getResolution(z);
+      const sourceKey = tileSource.getKey();
+      if (!this.renderedSourceKey_) {
+        this.renderedSourceKey_ = sourceKey;
+      } else if (this.renderedSourceKey_ !== sourceKey) {
+        this.prependStaleKey(this.renderedSourceKey_);
+        this.renderedSourceKey_ = sourceKey;
+      }
+      let frameExtent = frameState.extent;
+      const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
+      this.prepareContainer(frameState, target);
+      const width = this.context.canvas.width;
+      const height = this.context.canvas.height;
+      this.layerExtent = layerState.extent ? fromUserExtent(layerState.extent) : null;
+      if (this.layerExtent) {
+        frameExtent = getIntersection(frameExtent, this.layerExtent);
+      }
+      const dx = tileResolution * width / 2 / tilePixelRatio;
+      const dy = tileResolution * height / 2 / tilePixelRatio;
+      const canvasExtent = [
+        viewCenter[0] - dx,
+        viewCenter[1] - dy,
+        viewCenter[0] + dx,
+        viewCenter[1] + dy
+      ];
+      const tilesByZ = {};
+      this.renderedTiles.length = 0;
+      const preload = tileLayer.getPreload();
+      if (frameState.nextExtent && this.enqueueTilesForNextExtent()) {
+        const targetZ = tileGrid.getZForResolution(
+          viewState.nextResolution,
+          tileSource.zDirection
+        );
+        const nextExtent = getRenderExtent(frameState, frameState.nextExtent);
+        this.enqueueTiles(frameState, nextExtent, targetZ, tilesByZ, preload);
+      }
+      const renderExtent = getRenderExtent(frameState, frameExtent);
+      this.enqueueTiles(frameState, renderExtent, z, tilesByZ, 0);
+      if (preload > 0) {
+        setTimeout(() => {
+          this.enqueueTiles(
+            frameState,
+            renderExtent,
+            z - 1,
+            tilesByZ,
+            preload - 1
+          );
+        }, 0);
+      }
+      if (!(z in tilesByZ)) {
+        return this.container;
+      }
+      const uid = getUid(this);
+      const time = frameState.time;
+      for (const tile of tilesByZ[z]) {
+        const tileState = tile.getState();
+        if (tileState === TileState.EMPTY) {
+          continue;
+        }
+        const tileCoord = tile.tileCoord;
+        if (tileState === TileState.LOADED) {
+          const alpha = tile.getAlpha(uid, time);
+          if (alpha === 1) {
+            tile.endTransition(uid);
+            continue;
+          }
+        }
+        if (tileState !== TileState.ERROR) {
+          this.renderComplete = false;
+        }
+        const hasStaleTile = this.findStaleTile_(tileCoord, tilesByZ);
+        if (hasStaleTile) {
+          removeTileFromLookup(tilesByZ, tile, z);
+          frameState.animate = true;
+          continue;
+        }
+        const coveredByChildren = this.findAltTiles_(
+          tileGrid,
+          tileCoord,
+          z + 1,
+          tilesByZ
+        );
+        if (coveredByChildren) {
+          continue;
+        }
+        const minZoom = tileGrid.getMinZoom();
+        for (let parentZ = z - 1; parentZ >= minZoom; --parentZ) {
+          const coveredByParent = this.findAltTiles_(
+            tileGrid,
+            tileCoord,
+            parentZ,
+            tilesByZ
+          );
+          if (coveredByParent) {
+            break;
+          }
+        }
+      }
+      const canvasScale = tileResolution / viewResolution * pixelRatio / tilePixelRatio;
+      const context = this.getRenderContext(frameState);
+      compose(
+        this.tempTransform,
+        width / 2,
+        height / 2,
+        canvasScale,
+        canvasScale,
+        0,
+        -width / 2,
+        -height / 2
+      );
+      if (this.layerExtent) {
+        this.clipUnrotated(context, frameState, this.layerExtent);
+      }
+      if (!tileSource.getInterpolate()) {
+        context.imageSmoothingEnabled = false;
+      }
+      this.preRender(context, frameState);
+      const zs = Object.keys(tilesByZ).map(Number);
+      zs.sort(ascending);
+      let currentClip;
+      const clips = [];
+      const clipZs = [];
+      for (let i = zs.length - 1; i >= 0; --i) {
+        const currentZ = zs[i];
+        const currentTilePixelSize = tileSource.getTilePixelSize(
+          currentZ,
+          pixelRatio,
+          projection
+        );
+        const currentResolution = tileGrid.getResolution(currentZ);
+        const currentScale = currentResolution / tileResolution;
+        const dx2 = currentTilePixelSize[0] * currentScale * canvasScale;
+        const dy2 = currentTilePixelSize[1] * currentScale * canvasScale;
+        const originTileCoord = tileGrid.getTileCoordForCoordAndZ(
+          getTopLeft(canvasExtent),
+          currentZ
+        );
+        const originTileExtent = tileGrid.getTileCoordExtent(originTileCoord);
+        const origin = apply(this.tempTransform, [
+          tilePixelRatio * (originTileExtent[0] - canvasExtent[0]) / tileResolution,
+          tilePixelRatio * (canvasExtent[3] - originTileExtent[3]) / tileResolution
+        ]);
+        const tileGutter = tilePixelRatio * tileSource.getGutterForProjection(projection);
+        for (const tile of tilesByZ[currentZ]) {
+          if (tile.getState() !== TileState.LOADED) {
+            continue;
+          }
+          const tileCoord = tile.tileCoord;
+          const xIndex = originTileCoord[1] - tileCoord[1];
+          const nextX = Math.round(origin[0] - (xIndex - 1) * dx2);
+          const yIndex = originTileCoord[2] - tileCoord[2];
+          const nextY = Math.round(origin[1] - (yIndex - 1) * dy2);
+          const x = Math.round(origin[0] - xIndex * dx2);
+          const y = Math.round(origin[1] - yIndex * dy2);
+          const w = nextX - x;
+          const h = nextY - y;
+          const transition = zs.length === 1;
+          let contextSaved = false;
+          currentClip = [x, y, x + w, y, x + w, y + h, x, y + h];
+          for (let i2 = 0, ii = clips.length; i2 < ii; ++i2) {
+            if (!transition && currentZ < clipZs[i2]) {
+              const clip = clips[i2];
+              if (intersects$1(
+                [x, y, x + w, y + h],
+                [clip[0], clip[3], clip[4], clip[7]]
+              )) {
+                if (!contextSaved) {
+                  context.save();
+                  contextSaved = true;
+                }
+                context.beginPath();
+                context.moveTo(currentClip[0], currentClip[1]);
+                context.lineTo(currentClip[2], currentClip[3]);
+                context.lineTo(currentClip[4], currentClip[5]);
+                context.lineTo(currentClip[6], currentClip[7]);
+                context.moveTo(clip[6], clip[7]);
+                context.lineTo(clip[4], clip[5]);
+                context.lineTo(clip[2], clip[3]);
+                context.lineTo(clip[0], clip[1]);
+                context.clip();
+              }
+            }
+          }
+          clips.push(currentClip);
+          clipZs.push(currentZ);
+          this.drawTile(tile, frameState, x, y, w, h, tileGutter, transition);
+          if (contextSaved) {
+            context.restore();
+          }
+          this.renderedTiles.unshift(tile);
+          this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
+        }
+      }
+      this.renderedResolution = tileResolution;
+      this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
+      this.renderedExtent_ = canvasExtent;
+      this.renderedPixelRatio = pixelRatio;
+      this.postRender(this.context, frameState);
+      if (this.layerExtent) {
+        context.restore();
+      }
+      context.imageSmoothingEnabled = true;
+      if (this.renderComplete) {
+        const postRenderFunction = (map, frameState2) => {
+          var _a;
+          const tileSourceKey = getUid(tileSource);
+          const wantedTiles = frameState2.wantedTiles[tileSourceKey];
+          const tilesCount = wantedTiles ? Object.keys(wantedTiles).length : 0;
+          this.updateCacheSize(tilesCount);
+          this.tileCache_.expireCache();
+          (_a = this.sourceTileCache_) == null ? void 0 : _a.expireCache();
+        };
+        frameState.postRenderFunctions.push(postRenderFunction);
+      }
+      return this.container;
+    }
+    /**
+     * Increases the cache size if needed
+     * @param {number} tileCount Minimum number of tiles needed.
+     */
+    updateCacheSize(tileCount) {
+      this.tileCache_.highWaterMark = Math.max(
+        this.tileCache_.highWaterMark,
+        tileCount * 2
+      );
+    }
+    /**
+     * @param {import("../../Tile.js").default} tile Tile.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {number} x Left of the tile.
+     * @param {number} y Top of the tile.
+     * @param {number} w Width of the tile.
+     * @param {number} h Height of the tile.
+     * @param {number} gutter Tile gutter.
+     * @param {boolean} transition Apply an alpha transition.
+     * @protected
+     */
+    drawTile(tile, frameState, x, y, w, h, gutter, transition) {
+      let image;
+      if (tile instanceof DataTile) {
+        image = asImageLike(tile.getData());
+        if (!image) {
+          throw new Error("Rendering array data is not yet supported");
+        }
+      } else {
+        image = this.getTileImage(
+          /** @type {import("../../ImageTile.js").default} */
+          tile
+        );
+      }
+      if (!image) {
+        return;
+      }
+      const context = this.getRenderContext(frameState);
+      const uid = getUid(this);
+      const layerState = frameState.layerStatesArray[frameState.layerIndex];
+      const alpha = layerState.opacity * (transition ? tile.getAlpha(uid, frameState.time) : 1);
+      const alphaChanged = alpha !== context.globalAlpha;
+      if (alphaChanged) {
+        context.save();
+        context.globalAlpha = alpha;
+      }
+      context.drawImage(
+        image,
+        gutter,
+        gutter,
+        image.width - 2 * gutter,
+        image.height - 2 * gutter,
+        x,
+        y,
+        w,
+        h
+      );
+      if (alphaChanged) {
+        context.restore();
+      }
+      if (alpha !== layerState.opacity) {
+        frameState.animate = true;
+      } else if (transition) {
+        tile.endTransition(uid);
+      }
+    }
+    /**
+     * @return {HTMLCanvasElement|OffscreenCanvas} Image
+     */
+    getImage() {
+      const context = this.context;
+      return context ? context.canvas : null;
+    }
+    /**
+     * Get the image from a tile.
+     * @param {import("../../ImageTile.js").default} tile Tile.
+     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
+     * @protected
+     */
+    getTileImage(tile) {
+      return tile.getImage();
+    }
+    /**
+     * @param {!Object<string, !Object<string, boolean>>} usedTiles Used tiles.
+     * @param {import("../../source/Tile.js").default} tileSource Tile source.
+     * @param {import('../../Tile.js').default} tile Tile.
+     * @protected
+     */
+    updateUsedTiles(usedTiles, tileSource, tile) {
+      const tileSourceKey = getUid(tileSource);
+      if (!(tileSourceKey in usedTiles)) {
+        usedTiles[tileSourceKey] = {};
+      }
+      usedTiles[tileSourceKey][tile.getKey()] = true;
+    }
+  }
+  const TileProperty = {
+    PRELOAD: "preload",
+    USE_INTERIM_TILES_ON_ERROR: "useInterimTilesOnError"
+  };
+  class BaseTileLayer extends Layer {
+    /**
+     * @param {Options<TileSourceType>} [options] Tile layer options.
+     */
+    constructor(options) {
+      options = options ? options : {};
+      const baseOptions = Object.assign({}, options);
+      const cacheSize2 = options.cacheSize;
+      delete options.cacheSize;
+      delete baseOptions.preload;
+      delete baseOptions.useInterimTilesOnError;
+      super(baseOptions);
+      this.on;
+      this.once;
+      this.un;
+      this.cacheSize_ = cacheSize2;
+      this.setPreload(options.preload !== void 0 ? options.preload : 0);
+      this.setUseInterimTilesOnError(
+        options.useInterimTilesOnError !== void 0 ? options.useInterimTilesOnError : true
+      );
+    }
+    /**
+     * @return {number|undefined} The suggested cache size
+     * @protected
+     */
+    getCacheSize() {
+      return this.cacheSize_;
+    }
+    /**
+     * Return the level as number to which we will preload tiles up to.
+     * @return {number} The level to preload tiles up to.
+     * @observable
+     * @api
+     */
+    getPreload() {
+      return (
+        /** @type {number} */
+        this.get(TileProperty.PRELOAD)
+      );
+    }
+    /**
+     * Set the level as number to which we will preload tiles up to.
+     * @param {number} preload The level to preload tiles up to.
+     * @observable
+     * @api
+     */
+    setPreload(preload) {
+      this.set(TileProperty.PRELOAD, preload);
+    }
+    /**
+     * Deprecated.  Whether we use interim tiles on error.
+     * @return {boolean} Use interim tiles on error.
+     * @observable
+     * @api
+     */
+    getUseInterimTilesOnError() {
+      return (
+        /** @type {boolean} */
+        this.get(TileProperty.USE_INTERIM_TILES_ON_ERROR)
+      );
+    }
+    /**
+     * Deprecated.  Set whether we use interim tiles on error.
+     * @param {boolean} useInterimTilesOnError Use interim tiles on error.
+     * @observable
+     * @api
+     */
+    setUseInterimTilesOnError(useInterimTilesOnError) {
+      this.set(TileProperty.USE_INTERIM_TILES_ON_ERROR, useInterimTilesOnError);
+    }
+    /**
+     * Get data for a pixel location.  The return type depends on the source data.  For image tiles,
+     * a four element RGBA array will be returned.  For data tiles, the array length will match the
+     * number of bands in the dataset.  For requests outside the layer extent, `null` will be returned.
+     * Data for a image tiles can only be retrieved if the source's `crossOrigin` property is set.
+     *
+     * ```js
+     * // display layer data on every pointer move
+     * map.on('pointermove', (event) => {
+     *   console.log(layer.getData(event.pixel));
+     * });
+     * ```
+     * @param {import("../pixel.js").Pixel} pixel Pixel.
+     * @return {Uint8ClampedArray|Uint8Array|Float32Array|DataView|null} Pixel data.
+     * @api
+     * @override
+     */
+    getData(pixel) {
+      return super.getData(pixel);
+    }
+  }
+  class TileLayer extends BaseTileLayer {
+    /**
+     * @param {import("./BaseTile.js").Options<TileSourceType>} [options] Tile layer options.
+     */
+    constructor(options) {
+      super(options);
+    }
+    /**
+     * @override
+     */
+    createRenderer() {
+      return new CanvasTileLayerRenderer(this, {
+        cacheSize: this.getCacheSize()
+      });
+    }
+  }
+  const tmpTileCoord = [0, 0, 0];
+  const DECIMALS = 5;
+  class TileGrid {
+    /**
+     * @param {Options} options Tile grid options.
+     */
+    constructor(options) {
+      this.minZoom = options.minZoom !== void 0 ? options.minZoom : 0;
+      this.resolutions_ = options.resolutions;
+      assert(
+        isSorted(
+          this.resolutions_,
+          /**
+           * @param {number} a First resolution
+           * @param {number} b Second resolution
+           * @return {number} Comparison result
+           */
+          (a, b) => b - a
+        ),
+        "`resolutions` must be sorted in descending order"
+      );
+      let zoomFactor;
+      if (!options.origins) {
+        for (let i = 0, ii = this.resolutions_.length - 1; i < ii; ++i) {
+          if (!zoomFactor) {
+            zoomFactor = this.resolutions_[i] / this.resolutions_[i + 1];
+          } else {
+            if (this.resolutions_[i] / this.resolutions_[i + 1] !== zoomFactor) {
+              zoomFactor = void 0;
+              break;
+            }
+          }
+        }
+      }
+      this.zoomFactor_ = zoomFactor;
+      this.maxZoom = this.resolutions_.length - 1;
+      this.origin_ = options.origin !== void 0 ? options.origin : null;
+      this.origins_ = null;
+      if (options.origins !== void 0) {
+        this.origins_ = options.origins;
+        assert(
+          this.origins_.length == this.resolutions_.length,
+          "Number of `origins` and `resolutions` must be equal"
+        );
+      }
+      const extent = options.extent;
+      if (extent !== void 0 && !this.origin_ && !this.origins_) {
+        this.origin_ = getTopLeft(extent);
+      }
+      assert(
+        !this.origin_ && this.origins_ || this.origin_ && !this.origins_,
+        "Either `origin` or `origins` must be configured, never both"
+      );
+      this.tileSizes_ = null;
+      if (options.tileSizes !== void 0) {
+        this.tileSizes_ = options.tileSizes;
+        assert(
+          this.tileSizes_.length == this.resolutions_.length,
+          "Number of `tileSizes` and `resolutions` must be equal"
+        );
+      }
+      this.tileSize_ = options.tileSize !== void 0 ? options.tileSize : !this.tileSizes_ ? DEFAULT_TILE_SIZE : null;
+      assert(
+        !this.tileSize_ && this.tileSizes_ || this.tileSize_ && !this.tileSizes_,
+        "Either `tileSize` or `tileSizes` must be configured, never both"
+      );
+      this.extent_ = extent !== void 0 ? extent : null;
+      this.fullTileRanges_ = null;
+      this.tmpSize_ = [0, 0];
+      this.tmpExtent_ = [0, 0, 0, 0];
+      if (options.sizes !== void 0) {
+        this.fullTileRanges_ = options.sizes.map((size, z) => {
+          const tileRange = new TileRange(
+            Math.min(0, size[0]),
+            Math.max(size[0] - 1, -1),
+            Math.min(0, size[1]),
+            Math.max(size[1] - 1, -1)
+          );
+          if (extent) {
+            const restrictedTileRange = this.getTileRangeForExtentAndZ(extent, z);
+            tileRange.minX = Math.max(restrictedTileRange.minX, tileRange.minX);
+            tileRange.maxX = Math.min(restrictedTileRange.maxX, tileRange.maxX);
+            tileRange.minY = Math.max(restrictedTileRange.minY, tileRange.minY);
+            tileRange.maxY = Math.min(restrictedTileRange.maxY, tileRange.maxY);
+          }
+          return tileRange;
+        });
+      } else if (extent) {
+        this.calculateTileRanges_(extent);
+      }
+    }
+    /**
+     * Call a function with each tile coordinate for a given extent and zoom level.
+     *
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @param {number} zoom Integer zoom level.
+     * @param {function(import("../tilecoord.js").TileCoord): void} callback Function called with each tile coordinate.
+     * @api
+     */
+    forEachTileCoord(extent, zoom, callback) {
+      const tileRange = this.getTileRangeForExtentAndZ(extent, zoom);
+      for (let i = tileRange.minX, ii = tileRange.maxX; i <= ii; ++i) {
+        for (let j = tileRange.minY, jj = tileRange.maxY; j <= jj; ++j) {
+          callback([zoom, i, j]);
+        }
+      }
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {function(number, import("../TileRange.js").default): boolean} callback Callback.
+     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
+     * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
+     * @return {boolean} Callback succeeded.
+     */
+    forEachTileCoordParentTileRange(tileCoord, callback, tempTileRange, tempExtent2) {
+      let tileRange, x, y;
+      let tileCoordExtent = null;
+      let z = tileCoord[0] - 1;
+      if (this.zoomFactor_ === 2) {
+        x = tileCoord[1];
+        y = tileCoord[2];
+      } else {
+        tileCoordExtent = this.getTileCoordExtent(tileCoord, tempExtent2);
+      }
+      while (z >= this.minZoom) {
+        if (x !== void 0 && y !== void 0) {
+          x = Math.floor(x / 2);
+          y = Math.floor(y / 2);
+          tileRange = createOrUpdate$1(x, x, y, y, tempTileRange);
+        } else {
+          tileRange = this.getTileRangeForExtentAndZ(
+            tileCoordExtent,
+            z,
+            tempTileRange
+          );
+        }
+        if (callback(z, tileRange)) {
+          return true;
+        }
+        --z;
+      }
+      return false;
+    }
+    /**
+     * Get the extent for this tile grid, if it was configured.
+     * @return {import("../extent.js").Extent} Extent.
+     * @api
+     */
+    getExtent() {
+      return this.extent_;
+    }
+    /**
+     * Get the maximum zoom level for the grid.
+     * @return {number} Max zoom.
+     * @api
+     */
+    getMaxZoom() {
+      return this.maxZoom;
+    }
+    /**
+     * Get the minimum zoom level for the grid.
+     * @return {number} Min zoom.
+     * @api
+     */
+    getMinZoom() {
+      return this.minZoom;
+    }
+    /**
+     * Get the origin for the grid at the given zoom level.
+     * @param {number} z Integer zoom level.
+     * @return {import("../coordinate.js").Coordinate} Origin.
+     * @api
+     */
+    getOrigin(z) {
+      if (this.origin_) {
+        return this.origin_;
+      }
+      return this.origins_[z];
+    }
+    /**
+     * Get the list of origins for the grid.
+     * @return {Array<import("../coordinate.js").Coordinate>|null} Origin.
+     */
+    getOrigins() {
+      return this.origins_;
+    }
+    /**
+     * Get the resolution for the given zoom level.
+     * @param {number} z Integer zoom level.
+     * @return {number} Resolution.
+     * @api
+     */
+    getResolution(z) {
+      return this.resolutions_[z];
+    }
+    /**
+     * Get the list of resolutions for the tile grid.
+     * @return {Array<number>} Resolutions.
+     * @api
+     */
+    getResolutions() {
+      return this.resolutions_;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
+     * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
+     * @return {import("../TileRange.js").default|null} Tile range.
+     */
+    getTileCoordChildTileRange(tileCoord, tempTileRange, tempExtent2) {
+      if (tileCoord[0] < this.maxZoom) {
+        if (this.zoomFactor_ === 2) {
+          const minX = tileCoord[1] * 2;
+          const minY = tileCoord[2] * 2;
+          return createOrUpdate$1(
+            minX,
+            minX + 1,
+            minY,
+            minY + 1,
+            tempTileRange
+          );
+        }
+        const tileCoordExtent = this.getTileCoordExtent(
+          tileCoord,
+          tempExtent2 || this.tmpExtent_
+        );
+        return this.getTileRangeForExtentAndZ(
+          tileCoordExtent,
+          tileCoord[0] + 1,
+          tempTileRange
+        );
+      }
+      return null;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {number} z Integer zoom level.
+     * @param {import("../TileRange.js").default} [tempTileRange] Temporary import("../TileRange.js").default object.
+     * @return {import("../TileRange.js").default|null} Tile range.
+     */
+    getTileRangeForTileCoordAndZ(tileCoord, z, tempTileRange) {
+      if (z > this.maxZoom || z < this.minZoom) {
+        return null;
+      }
+      const tileCoordZ = tileCoord[0];
+      const tileCoordX = tileCoord[1];
+      const tileCoordY = tileCoord[2];
+      if (z === tileCoordZ) {
+        return createOrUpdate$1(
+          tileCoordX,
+          tileCoordY,
+          tileCoordX,
+          tileCoordY,
+          tempTileRange
+        );
+      }
+      if (this.zoomFactor_) {
+        const factor = Math.pow(this.zoomFactor_, z - tileCoordZ);
+        const minX = Math.floor(tileCoordX * factor);
+        const minY = Math.floor(tileCoordY * factor);
+        if (z < tileCoordZ) {
+          return createOrUpdate$1(minX, minX, minY, minY, tempTileRange);
+        }
+        const maxX = Math.floor(factor * (tileCoordX + 1)) - 1;
+        const maxY = Math.floor(factor * (tileCoordY + 1)) - 1;
+        return createOrUpdate$1(minX, maxX, minY, maxY, tempTileRange);
+      }
+      const tileCoordExtent = this.getTileCoordExtent(tileCoord, this.tmpExtent_);
+      return this.getTileRangeForExtentAndZ(tileCoordExtent, z, tempTileRange);
+    }
+    /**
+     * Get a tile range for the given extent and integer zoom level.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @param {number} z Integer zoom level.
+     * @param {import("../TileRange.js").default} [tempTileRange] Temporary tile range object.
+     * @return {import("../TileRange.js").default} Tile range.
+     */
+    getTileRangeForExtentAndZ(extent, z, tempTileRange) {
+      this.getTileCoordForXYAndZ_(extent[0], extent[3], z, false, tmpTileCoord);
+      const minX = tmpTileCoord[1];
+      const minY = tmpTileCoord[2];
+      this.getTileCoordForXYAndZ_(extent[2], extent[1], z, true, tmpTileCoord);
+      const maxX = tmpTileCoord[1];
+      const maxY = tmpTileCoord[2];
+      return createOrUpdate$1(minX, maxX, minY, maxY, tempTileRange);
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @return {import("../coordinate.js").Coordinate} Tile center.
+     */
+    getTileCoordCenter(tileCoord) {
+      const origin = this.getOrigin(tileCoord[0]);
+      const resolution = this.getResolution(tileCoord[0]);
+      const tileSize = toSize(this.getTileSize(tileCoord[0]), this.tmpSize_);
+      return [
+        origin[0] + (tileCoord[1] + 0.5) * tileSize[0] * resolution,
+        origin[1] - (tileCoord[2] + 0.5) * tileSize[1] * resolution
+      ];
+    }
+    /**
+     * Get the extent of a tile coordinate.
+     *
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("../extent.js").Extent} [tempExtent] Temporary extent object.
+     * @return {import("../extent.js").Extent} Extent.
+     * @api
+     */
+    getTileCoordExtent(tileCoord, tempExtent2) {
+      const origin = this.getOrigin(tileCoord[0]);
+      const resolution = this.getResolution(tileCoord[0]);
+      const tileSize = toSize(this.getTileSize(tileCoord[0]), this.tmpSize_);
+      const minX = origin[0] + tileCoord[1] * tileSize[0] * resolution;
+      const minY = origin[1] - (tileCoord[2] + 1) * tileSize[1] * resolution;
+      const maxX = minX + tileSize[0] * resolution;
+      const maxY = minY + tileSize[1] * resolution;
+      return createOrUpdate$2(minX, minY, maxX, maxY, tempExtent2);
+    }
+    /**
+     * Get the tile coordinate for the given map coordinate and resolution.  This
+     * method considers that coordinates that intersect tile boundaries should be
+     * assigned the higher tile coordinate.
+     *
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {number} resolution Resolution.
+     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Destination import("../tilecoord.js").TileCoord object.
+     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
+     * @api
+     */
+    getTileCoordForCoordAndResolution(coordinate, resolution, opt_tileCoord) {
+      return this.getTileCoordForXYAndResolution_(
+        coordinate[0],
+        coordinate[1],
+        resolution,
+        false,
+        opt_tileCoord
+      );
+    }
+    /**
+     * Note that this method should not be called for resolutions that correspond
+     * to an integer zoom level.  Instead call the `getTileCoordForXYAndZ_` method.
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {number} resolution Resolution (for a non-integer zoom level).
+     * @param {boolean} reverseIntersectionPolicy Instead of letting edge
+     *     intersections go to the higher tile coordinate, let edge intersections
+     *     go to the lower tile coordinate.
+     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Temporary import("../tilecoord.js").TileCoord object.
+     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
+     * @private
+     */
+    getTileCoordForXYAndResolution_(x, y, resolution, reverseIntersectionPolicy, opt_tileCoord) {
+      const z = this.getZForResolution(resolution);
+      const scale2 = resolution / this.getResolution(z);
+      const origin = this.getOrigin(z);
+      const tileSize = toSize(this.getTileSize(z), this.tmpSize_);
+      let tileCoordX = scale2 * (x - origin[0]) / resolution / tileSize[0];
+      let tileCoordY = scale2 * (origin[1] - y) / resolution / tileSize[1];
+      if (reverseIntersectionPolicy) {
+        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
+        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
+      } else {
+        tileCoordX = floor(tileCoordX, DECIMALS);
+        tileCoordY = floor(tileCoordY, DECIMALS);
+      }
+      return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
+    }
+    /**
+     * Although there is repetition between this method and `getTileCoordForXYAndResolution_`,
+     * they should have separate implementations.  This method is for integer zoom
+     * levels.  The other method should only be called for resolutions corresponding
+     * to non-integer zoom levels.
+     * @param {number} x Map x coordinate.
+     * @param {number} y Map y coordinate.
+     * @param {number} z Integer zoom level.
+     * @param {boolean} reverseIntersectionPolicy Instead of letting edge
+     *     intersections go to the higher tile coordinate, let edge intersections
+     *     go to the lower tile coordinate.
+     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Temporary import("../tilecoord.js").TileCoord object.
+     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
+     * @private
+     */
+    getTileCoordForXYAndZ_(x, y, z, reverseIntersectionPolicy, opt_tileCoord) {
+      const origin = this.getOrigin(z);
+      const resolution = this.getResolution(z);
+      const tileSize = toSize(this.getTileSize(z), this.tmpSize_);
+      let tileCoordX = (x - origin[0]) / resolution / tileSize[0];
+      let tileCoordY = (origin[1] - y) / resolution / tileSize[1];
+      if (reverseIntersectionPolicy) {
+        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
+        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
+      } else {
+        tileCoordX = floor(tileCoordX, DECIMALS);
+        tileCoordY = floor(tileCoordY, DECIMALS);
+      }
+      return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
+    }
+    /**
+     * Get a tile coordinate given a map coordinate and zoom level.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {number} z Integer zoom level, e.g. the result of a `getZForResolution()` method call
+     * @param {import("../tilecoord.js").TileCoord} [opt_tileCoord] Destination import("../tilecoord.js").TileCoord object.
+     * @return {import("../tilecoord.js").TileCoord} Tile coordinate.
+     * @api
+     */
+    getTileCoordForCoordAndZ(coordinate, z, opt_tileCoord) {
+      return this.getTileCoordForXYAndZ_(
+        coordinate[0],
+        coordinate[1],
+        z,
+        false,
+        opt_tileCoord
+      );
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @return {number} Tile resolution.
+     */
+    getTileCoordResolution(tileCoord) {
+      return this.resolutions_[tileCoord[0]];
+    }
+    /**
+     * Get the tile size for a zoom level. The type of the return value matches the
+     * `tileSize` or `tileSizes` that the tile grid was configured with. To always
+     * get an {@link import("../size.js").Size}, run the result through {@link module:ol/size.toSize}.
+     * @param {number} z Z.
+     * @return {number|import("../size.js").Size} Tile size.
+     * @api
+     */
+    getTileSize(z) {
+      if (this.tileSize_) {
+        return this.tileSize_;
+      }
+      return this.tileSizes_[z];
+    }
+    /**
+     * @param {number} z Zoom level.
+     * @return {import("../TileRange.js").default|null} Extent tile range for the specified zoom level.
+     */
+    getFullTileRange(z) {
+      if (!this.fullTileRanges_) {
+        return this.extent_ ? this.getTileRangeForExtentAndZ(this.extent_, z) : null;
+      }
+      return this.fullTileRanges_[z];
+    }
+    /**
+     * @param {number} resolution Resolution.
+     * @param {number|import("../array.js").NearestDirectionFunction} [opt_direction]
+     *     If 0, the nearest resolution will be used.
+     *     If 1, the nearest higher resolution (lower Z) will be used. If -1, the
+     *     nearest lower resolution (higher Z) will be used. Default is 0.
+     *     Use a {@link module:ol/array~NearestDirectionFunction} for more precise control.
+     *
+     * For example to change tile Z at the midpoint of zoom levels
+     * ```js
+     * function(value, high, low) {
+     *   return value - low * Math.sqrt(high / low);
+     * }
+     * ```
+     * @return {number} Z.
+     * @api
+     */
+    getZForResolution(resolution, opt_direction) {
+      const z = linearFindNearest(
+        this.resolutions_,
+        resolution,
+        opt_direction || 0
+      );
+      return clamp(z, this.minZoom, this.maxZoom);
+    }
+    /**
+     * The tile with the provided tile coordinate intersects the given viewport.
+     * @param {import('../tilecoord.js').TileCoord} tileCoord Tile coordinate.
+     * @param {Array<number>} viewport Viewport as returned from {@link module:ol/extent.getRotatedViewport}.
+     * @return {boolean} The tile with the provided tile coordinate intersects the given viewport.
+     */
+    tileCoordIntersectsViewport(tileCoord, viewport) {
+      return intersectsLinearRing(
+        viewport,
+        0,
+        viewport.length,
+        2,
+        this.getTileCoordExtent(tileCoord)
+      );
+    }
+    /**
+     * @param {!import("../extent.js").Extent} extent Extent for this tile grid.
+     * @private
+     */
+    calculateTileRanges_(extent) {
+      const length = this.resolutions_.length;
+      const fullTileRanges = new Array(length);
+      for (let z = this.minZoom; z < length; ++z) {
+        fullTileRanges[z] = this.getTileRangeForExtentAndZ(extent, z);
+      }
+      this.fullTileRanges_ = fullTileRanges;
+    }
+  }
+  function getForProjection(projection) {
+    let tileGrid = projection.getDefaultTileGrid();
+    if (!tileGrid) {
+      tileGrid = createForProjection(projection);
+      projection.setDefaultTileGrid(tileGrid);
+    }
+    return tileGrid;
+  }
+  function wrapX(tileGrid, tileCoord, projection) {
+    const z = tileCoord[0];
+    const center = tileGrid.getTileCoordCenter(tileCoord);
+    const projectionExtent = extentFromProjection(projection);
+    if (!containsCoordinate(projectionExtent, center)) {
+      const worldWidth = getWidth(projectionExtent);
+      const worldsAway = Math.ceil(
+        (projectionExtent[0] - center[0]) / worldWidth
+      );
+      center[0] += worldWidth * worldsAway;
+      return tileGrid.getTileCoordForCoordAndZ(center, z);
+    }
+    return tileCoord;
+  }
+  function createForExtent(extent, maxZoom, tileSize, corner) {
+    corner = corner !== void 0 ? corner : "top-left";
+    const resolutions = resolutionsFromExtent(extent, maxZoom, tileSize);
+    return new TileGrid({
+      extent,
+      origin: getCorner(extent, corner),
+      resolutions,
+      tileSize
+    });
+  }
+  function createXYZ(options) {
+    const xyzOptions = options || {};
+    const extent = xyzOptions.extent || get$1("EPSG:3857").getExtent();
+    const gridOptions = {
+      extent,
+      minZoom: xyzOptions.minZoom,
+      tileSize: xyzOptions.tileSize,
+      resolutions: resolutionsFromExtent(
+        extent,
+        xyzOptions.maxZoom,
+        xyzOptions.tileSize,
+        xyzOptions.maxResolution
+      )
     };
+    return new TileGrid(gridOptions);
+  }
+  function resolutionsFromExtent(extent, maxZoom, tileSize, maxResolution) {
+    maxZoom = maxZoom !== void 0 ? maxZoom : DEFAULT_MAX_ZOOM;
+    tileSize = toSize(tileSize !== void 0 ? tileSize : DEFAULT_TILE_SIZE);
+    const height = getHeight(extent);
+    const width = getWidth(extent);
+    maxResolution = maxResolution > 0 ? maxResolution : Math.max(width / tileSize[0], height / tileSize[1]);
+    const length = maxZoom + 1;
+    const resolutions = new Array(length);
+    for (let z = 0; z < length; ++z) {
+      resolutions[z] = maxResolution / Math.pow(2, z);
+    }
+    return resolutions;
+  }
+  function createForProjection(projection, maxZoom, tileSize, corner) {
+    const extent = extentFromProjection(projection);
+    return createForExtent(extent, maxZoom, tileSize, corner);
+  }
+  function extentFromProjection(projection) {
+    projection = get$1(projection);
+    let extent = projection.getExtent();
+    if (!extent) {
+      const half = 180 * METERS_PER_UNIT$1.degrees / projection.getMetersPerUnit();
+      extent = createOrUpdate$2(-half, -half, half, half);
+    }
+    return extent;
+  }
+  const zRegEx = /\{z\}/g;
+  const xRegEx = /\{x\}/g;
+  const yRegEx = /\{y\}/g;
+  const dashYRegEx = /\{-y\}/g;
+  function renderXYZTemplate(template, z, x, y, maxY) {
+    return template.replace(zRegEx, z.toString()).replace(xRegEx, x.toString()).replace(yRegEx, y.toString()).replace(dashYRegEx, function() {
+      if (maxY === void 0) {
+        throw new Error(
+          "If the URL template has a {-y} placeholder, the grid extent must be known"
+        );
+      }
+      return (maxY - y).toString();
+    });
+  }
+  function expandUrl(url) {
+    const urls = [];
+    let match = /\{([a-z])-([a-z])\}/.exec(url);
+    if (match) {
+      const startCharCode = match[1].charCodeAt(0);
+      const stopCharCode = match[2].charCodeAt(0);
+      let charCode;
+      for (charCode = startCharCode; charCode <= stopCharCode; ++charCode) {
+        urls.push(url.replace(match[0], String.fromCharCode(charCode)));
+      }
+      return urls;
+    }
+    match = /\{(\d+)-(\d+)\}/.exec(url);
+    if (match) {
+      const stop = parseInt(match[2], 10);
+      for (let i = parseInt(match[1], 10); i <= stop; i++) {
+        urls.push(url.replace(match[0], i.toString()));
+      }
+      return urls;
+    }
+    urls.push(url);
+    return urls;
+  }
+  function createFromTemplate(template, tileGrid) {
+    return (
+      /**
+       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
+       * @param {number} pixelRatio Pixel ratio.
+       * @param {import("./proj/Projection.js").default} projection Projection.
+       * @return {string|undefined} Tile URL.
+       */
+      (function(tileCoord, pixelRatio, projection) {
+        if (!tileCoord) {
+          return void 0;
+        }
+        let maxY;
+        const z = tileCoord[0];
+        if (tileGrid) {
+          const range = tileGrid.getFullTileRange(z);
+          if (range) {
+            maxY = range.getHeight() - 1;
+          }
+        }
+        return renderXYZTemplate(template, z, tileCoord[1], tileCoord[2], maxY);
+      })
+    );
+  }
+  function createFromTemplates(templates, tileGrid) {
+    const len = templates.length;
+    const tileUrlFunctions = new Array(len);
+    for (let i = 0; i < len; ++i) {
+      tileUrlFunctions[i] = createFromTemplate(templates[i], tileGrid);
+    }
+    return createFromTileUrlFunctions(tileUrlFunctions);
+  }
+  function createFromTileUrlFunctions(tileUrlFunctions) {
+    if (tileUrlFunctions.length === 1) {
+      return tileUrlFunctions[0];
+    }
+    return (
+      /**
+       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
+       * @param {number} pixelRatio Pixel ratio.
+       * @param {import("./proj/Projection.js").default} projection Projection.
+       * @return {string|undefined} Tile URL.
+       */
+      (function(tileCoord, pixelRatio, projection) {
+        if (!tileCoord) {
+          return void 0;
+        }
+        const h = hash(tileCoord);
+        const index = modulo(h, tileUrlFunctions.length);
+        return tileUrlFunctions[index](tileCoord, pixelRatio, projection);
+      })
+    );
+  }
+  class TileSource extends Source {
+    /**
+     * @param {Options} options SourceTile source options.
+     */
+    constructor(options) {
+      super({
+        attributions: options.attributions,
+        attributionsCollapsible: options.attributionsCollapsible,
+        projection: options.projection,
+        state: options.state,
+        wrapX: options.wrapX,
+        interpolate: options.interpolate
+      });
+      this.on;
+      this.once;
+      this.un;
+      this.tilePixelRatio_ = options.tilePixelRatio !== void 0 ? options.tilePixelRatio : 1;
+      this.tileGrid = options.tileGrid !== void 0 ? options.tileGrid : null;
+      const tileSize = [256, 256];
+      if (this.tileGrid) {
+        toSize(this.tileGrid.getTileSize(this.tileGrid.getMinZoom()), tileSize);
+      }
+      this.tmpSize = [0, 0];
+      this.key_ = options.key || getUid(this);
+      this.tileOptions = {
+        transition: options.transition,
+        interpolate: options.interpolate
+      };
+      this.zDirection = options.zDirection ? options.zDirection : 0;
+    }
+    /**
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {number} Gutter.
+     */
+    getGutterForProjection(projection) {
+      return 0;
+    }
+    /**
+     * Return the key to be used for all tiles in the source.
+     * @return {string} The key for all tiles.
+     */
+    getKey() {
+      return this.key_;
+    }
+    /**
+     * Set the value to be used as the key for all tiles in the source.
+     * @param {string} key The key for tiles.
+     * @protected
+     */
+    setKey(key) {
+      if (this.key_ !== key) {
+        this.key_ = key;
+        this.changed();
+      }
+    }
+    /**
+     * @param {import("../proj/Projection.js").default} [projection] Projection.
+     * @return {Array<number>|null} Resolutions.
+     * @override
+     */
+    getResolutions(projection) {
+      const tileGrid = projection ? this.getTileGridForProjection(projection) : this.tileGrid;
+      if (!tileGrid) {
+        return null;
+      }
+      return tileGrid.getResolutions();
+    }
+    /**
+     * @abstract
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
+     * @return {TileType|null} Tile.
+     */
+    getTile(z, x, y, pixelRatio, projection, tileCache) {
+      return abstract();
+    }
+    /**
+     * Return the tile grid of the tile source.
+     * @return {import("../tilegrid/TileGrid.js").default|null} Tile grid.
+     * @api
+     */
+    getTileGrid() {
+      return this.tileGrid;
+    }
+    /**
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {!import("../tilegrid/TileGrid.js").default} Tile grid.
+     */
+    getTileGridForProjection(projection) {
+      if (!this.tileGrid) {
+        return getForProjection(projection);
+      }
+      return this.tileGrid;
+    }
+    /**
+     * Get the tile pixel ratio for this source. Subclasses may override this
+     * method, which is meant to return a supported pixel ratio that matches the
+     * provided `pixelRatio` as close as possible.
+     * @param {number} pixelRatio Pixel ratio.
+     * @return {number} Tile pixel ratio.
+     */
+    getTilePixelRatio(pixelRatio) {
+      return this.tilePixelRatio_;
+    }
+    /**
+     * @param {number} z Z.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {import("../size.js").Size} Tile size.
+     */
+    getTilePixelSize(z, pixelRatio, projection) {
+      const tileGrid = this.getTileGridForProjection(projection);
+      const tilePixelRatio = this.getTilePixelRatio(pixelRatio);
+      const tileSize = toSize(tileGrid.getTileSize(z), this.tmpSize);
+      if (tilePixelRatio == 1) {
+        return tileSize;
+      }
+      return scale(tileSize, tilePixelRatio, this.tmpSize);
+    }
+    /**
+     * Returns a tile coordinate wrapped around the x-axis. When the tile coordinate
+     * is outside the resolution and extent range of the tile grid, `null` will be
+     * returned.
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("../proj/Projection.js").default} [projection] Projection.
+     * @return {import("../tilecoord.js").TileCoord} Tile coordinate to be passed to the tileUrlFunction or
+     *     null if no tile URL should be created for the passed `tileCoord`.
+     */
+    getTileCoordForTileUrlFunction(tileCoord, projection) {
+      const gridProjection = projection !== void 0 ? projection : this.getProjection();
+      const tileGrid = projection !== void 0 ? this.getTileGridForProjection(gridProjection) : this.tileGrid || this.getTileGridForProjection(gridProjection);
+      if (this.getWrapX() && gridProjection.isGlobal()) {
+        tileCoord = wrapX(tileGrid, tileCoord, gridProjection);
+      }
+      return withinExtentAndZ(tileCoord, tileGrid) ? tileCoord : null;
+    }
+    /**
+     * Remove all cached reprojected tiles from the source. The next render cycle will create new tiles.
+     * @api
+     */
+    clear() {
+    }
+    /**
+     * @override
+     */
+    refresh() {
+      this.clear();
+      super.refresh();
+    }
+  }
+  class TileSourceEvent extends BaseEvent {
+    /**
+     * @param {string} type Type.
+     * @param {import("../Tile.js").default} tile The tile.
+     */
+    constructor(type, tile) {
+      super(type);
+      this.tile = tile;
+    }
+  }
+  const TileEventType = {
+    /**
+     * Triggered when a tile starts loading.
+     * @event module:ol/source/Tile.TileSourceEvent#tileloadstart
+     * @api
+     */
+    TILELOADSTART: "tileloadstart",
+    /**
+     * Triggered when a tile finishes loading, either when its data is loaded,
+     * or when loading was aborted because the tile is no longer needed.
+     * @event module:ol/source/Tile.TileSourceEvent#tileloadend
+     * @api
+     */
+    TILELOADEND: "tileloadend",
+    /**
+     * Triggered if tile loading results in an error. Note that this is not the
+     * right place to re-fetch tiles. See {@link module:ol/ImageTile~ImageTile#load}
+     * for details.
+     * @event module:ol/source/Tile.TileSourceEvent#tileloaderror
+     * @api
+     */
+    TILELOADERROR: "tileloaderror"
+  };
+  class UrlTile extends TileSource {
+    /**
+     * @param {Options} options Image tile options.
+     */
+    constructor(options) {
+      super({
+        attributions: options.attributions,
+        cacheSize: options.cacheSize,
+        projection: options.projection,
+        state: options.state,
+        tileGrid: options.tileGrid,
+        tilePixelRatio: options.tilePixelRatio,
+        wrapX: options.wrapX,
+        transition: options.transition,
+        interpolate: options.interpolate,
+        key: options.key,
+        attributionsCollapsible: options.attributionsCollapsible,
+        zDirection: options.zDirection
+      });
+      this.generateTileUrlFunction_ = this.tileUrlFunction === UrlTile.prototype.tileUrlFunction;
+      this.tileLoadFunction = options.tileLoadFunction;
+      if (options.tileUrlFunction) {
+        this.tileUrlFunction = options.tileUrlFunction;
+      }
+      this.urls = null;
+      if (options.urls) {
+        this.setUrls(options.urls);
+      } else if (options.url) {
+        this.setUrl(options.url);
+      }
+      this.tileLoadingKeys_ = {};
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Return the tile load function of the source.
+     * @return {import("../Tile.js").LoadFunction} TileLoadFunction
+     * @api
+     */
+    getTileLoadFunction() {
+      return this.tileLoadFunction;
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Return the tile URL function of the source.
+     * @return {import("../Tile.js").UrlFunction} TileUrlFunction
+     * @api
+     */
+    getTileUrlFunction() {
+      return Object.getPrototypeOf(this).tileUrlFunction === this.tileUrlFunction ? this.tileUrlFunction.bind(this) : this.tileUrlFunction;
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Return the URLs used for this source.
+     * When a tileUrlFunction is used instead of url or urls,
+     * null will be returned.
+     * @return {!Array<string>|null} URLs.
+     * @api
+     */
+    getUrls() {
+      return this.urls;
+    }
+    /**
+     * Handle tile change events.
+     * @param {import("../events/Event.js").default} event Event.
+     * @protected
+     */
+    handleTileChange(event) {
+      const tile = (
+        /** @type {import("../Tile.js").default} */
+        event.target
+      );
+      const uid = getUid(tile);
+      const tileState = tile.getState();
+      let type;
+      if (tileState == TileState.LOADING) {
+        this.tileLoadingKeys_[uid] = true;
+        type = TileEventType.TILELOADSTART;
+      } else if (uid in this.tileLoadingKeys_) {
+        delete this.tileLoadingKeys_[uid];
+        type = tileState == TileState.ERROR ? TileEventType.TILELOADERROR : tileState == TileState.LOADED ? TileEventType.TILELOADEND : void 0;
+      }
+      if (type != void 0) {
+        this.dispatchEvent(new TileSourceEvent(type, tile));
+      }
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Set the tile load function of the source.
+     * @param {import("../Tile.js").LoadFunction} tileLoadFunction Tile load function.
+     * @api
+     */
+    setTileLoadFunction(tileLoadFunction) {
+      this.tileLoadFunction = tileLoadFunction;
+      this.changed();
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Set the tile URL function of the source.
+     * @param {import("../Tile.js").UrlFunction} tileUrlFunction Tile URL function.
+     * @param {string} [key] Optional new tile key for the source.
+     * @api
+     */
+    setTileUrlFunction(tileUrlFunction, key) {
+      this.tileUrlFunction = tileUrlFunction;
+      if (typeof key !== "undefined") {
+        this.setKey(key);
+      } else {
+        this.changed();
+      }
+    }
+    /**
+     * Set the URL to use for requests.
+     * @param {string} url URL.
+     * @api
+     */
+    setUrl(url) {
+      const urls = expandUrl(url);
+      this.urls = urls;
+      this.setUrls(urls);
+    }
+    /**
+     * Deprecated.  Use an ImageTile source instead.
+     * Set the URLs to use for requests.
+     * @param {Array<string>} urls URLs.
+     * @api
+     */
+    setUrls(urls) {
+      this.urls = urls;
+      const key = urls.join("\n");
+      if (this.generateTileUrlFunction_) {
+        this.setTileUrlFunction(createFromTemplates(urls, this.tileGrid), key);
+      } else {
+        this.setKey(key);
+      }
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {string|undefined} Tile URL.
+     */
+    tileUrlFunction(tileCoord, pixelRatio, projection) {
+      return void 0;
+    }
+  }
+  class TileImage extends UrlTile {
+    /**
+     * @param {!Options} options Image tile options.
+     */
+    constructor(options) {
+      super({
+        attributions: options.attributions,
+        cacheSize: options.cacheSize,
+        projection: options.projection,
+        state: options.state,
+        tileGrid: options.tileGrid,
+        tileLoadFunction: options.tileLoadFunction ? options.tileLoadFunction : defaultTileLoadFunction,
+        tilePixelRatio: options.tilePixelRatio,
+        tileUrlFunction: options.tileUrlFunction,
+        url: options.url,
+        urls: options.urls,
+        wrapX: options.wrapX,
+        transition: options.transition,
+        interpolate: options.interpolate !== void 0 ? options.interpolate : true,
+        key: options.key,
+        attributionsCollapsible: options.attributionsCollapsible,
+        zDirection: options.zDirection
+      });
+      this.crossOrigin = options.crossOrigin !== void 0 ? options.crossOrigin : null;
+      this.referrerPolicy = options.referrerPolicy;
+      this.tileClass = options.tileClass !== void 0 ? options.tileClass : ImageTile;
+      this.tileGridForProjection = {};
+      this.reprojectionErrorThreshold_ = options.reprojectionErrorThreshold;
+      this.renderReprojectionEdges_ = false;
+    }
+    /**
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {number} Gutter.
+     * @override
+     */
+    getGutterForProjection(projection) {
+      if (this.getProjection() && projection && !equivalent$1(this.getProjection(), projection)) {
+        return 0;
+      }
+      return this.getGutter();
+    }
+    /**
+     * @return {number} Gutter.
+     */
+    getGutter() {
+      return 0;
+    }
+    /**
+     * Return the key to be used for all tiles in the source.
+     * @return {string} The key for all tiles.
+     * @override
+     */
+    getKey() {
+      let key = super.getKey();
+      if (!this.getInterpolate()) {
+        key += ":disable-interpolation";
+      }
+      return key;
+    }
+    /**
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {!import("../tilegrid/TileGrid.js").default} Tile grid.
+     * @override
+     */
+    getTileGridForProjection(projection) {
+      const thisProj = this.getProjection();
+      if (this.tileGrid && (!thisProj || equivalent$1(thisProj, projection))) {
+        return this.tileGrid;
+      }
+      const projKey = getUid(projection);
+      if (!(projKey in this.tileGridForProjection)) {
+        this.tileGridForProjection[projKey] = getForProjection(projection);
+      }
+      return this.tileGridForProjection[projKey];
+    }
+    /**
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @param {string} key The key set on the tile.
+     * @return {!ImageTile} Tile.
+     * @private
+     */
+    createTile_(z, x, y, pixelRatio, projection, key) {
+      const tileCoord = [z, x, y];
+      const urlTileCoord = this.getTileCoordForTileUrlFunction(
+        tileCoord,
+        projection
+      );
+      const tileUrl = urlTileCoord ? this.tileUrlFunction(urlTileCoord, pixelRatio, projection) : void 0;
+      const tile = new this.tileClass(
+        tileCoord,
+        tileUrl !== void 0 ? TileState.IDLE : TileState.EMPTY,
+        tileUrl !== void 0 ? tileUrl : "",
+        {
+          crossOrigin: this.crossOrigin,
+          referrerPolicy: this.referrerPolicy
+        },
+        this.tileLoadFunction,
+        this.tileOptions
+      );
+      tile.key = key;
+      tile.addEventListener(EventType.CHANGE, this.handleTileChange.bind(this));
+      return tile;
+    }
+    /**
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
+     * @return {!(ImageTile|ReprojTile)} Tile.
+     * @override
+     */
+    getTile(z, x, y, pixelRatio, projection, tileCache) {
+      const sourceProjection = this.getProjection();
+      if (!sourceProjection || !projection || equivalent$1(sourceProjection, projection)) {
+        return this.getTileInternal(
+          z,
+          x,
+          y,
+          pixelRatio,
+          sourceProjection || projection
+        );
+      }
+      const tileCoord = [z, x, y];
+      const key = this.getKey();
+      const sourceTileGrid = this.getTileGridForProjection(sourceProjection);
+      const targetTileGrid = this.getTileGridForProjection(projection);
+      const wrappedTileCoord = this.getTileCoordForTileUrlFunction(
+        tileCoord,
+        projection
+      );
+      const tile = new ReprojTile(
+        sourceProjection,
+        sourceTileGrid,
+        projection,
+        targetTileGrid,
+        tileCoord,
+        wrappedTileCoord,
+        this.getTilePixelRatio(pixelRatio),
+        this.getGutter(),
+        (z2, x2, y2, pixelRatio2) => this.getTileInternal(z2, x2, y2, pixelRatio2, sourceProjection, tileCache),
+        this.reprojectionErrorThreshold_,
+        this.renderReprojectionEdges_,
+        this.tileOptions
+      );
+      tile.key = key;
+      return tile;
+    }
+    /**
+     * @param {number} z Tile coordinate z.
+     * @param {number} x Tile coordinate x.
+     * @param {number} y Tile coordinate y.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {!import("../proj/Projection.js").default} projection Projection.
+     * @param {import("../structs/LRUCache.js").default<import("../Tile.js").default>} [tileCache] Tile cache.
+     * @return {!ImageTile} Tile.
+     * @protected
+     */
+    getTileInternal(z, x, y, pixelRatio, projection, tileCache) {
+      const key = this.getKey();
+      const cacheKey = getCacheKey(this, key, z, x, y);
+      if (tileCache && tileCache.containsKey(cacheKey)) {
+        const tile2 = (
+          /** @type {!ImageTile} */
+          tileCache.get(cacheKey)
+        );
+        return tile2;
+      }
+      const tile = this.createTile_(z, x, y, pixelRatio, projection, key);
+      tileCache == null ? void 0 : tileCache.set(cacheKey, tile);
+      return tile;
+    }
+    /**
+     * Sets whether to render reprojection edges or not (usually for debugging).
+     * @param {boolean} render Render the edges.
+     * @api
+     */
+    setRenderReprojectionEdges(render2) {
+      if (this.renderReprojectionEdges_ == render2) {
+        return;
+      }
+      this.renderReprojectionEdges_ = render2;
+      this.changed();
+    }
+    /**
+     * Sets the tile grid to use when reprojecting the tiles to the given
+     * projection instead of the default tile grid for the projection.
+     *
+     * This can be useful when the default tile grid cannot be created
+     * (e.g. projection has no extent defined) or
+     * for optimization reasons (custom tile size, resolutions, ...).
+     *
+     * @param {import("../proj.js").ProjectionLike} projection Projection.
+     * @param {import("../tilegrid/TileGrid.js").default} tilegrid Tile grid to use for the projection.
+     * @api
+     */
+    setTileGridForProjection(projection, tilegrid) {
+      const proj = get$1(projection);
+      if (proj) {
+        const projKey = getUid(proj);
+        if (!(projKey in this.tileGridForProjection)) {
+          this.tileGridForProjection[projKey] = tilegrid;
+        }
+      }
+    }
+  }
+  function defaultTileLoadFunction(imageTile, src) {
+    if (WORKER_OFFSCREEN_CANVAS) {
+      const crossOrigin = imageTile.getCrossOrigin();
+      let mode = "same-origin";
+      let credentials = "same-origin";
+      if (crossOrigin === "anonymous" || crossOrigin === "") {
+        mode = "cors";
+        credentials = "omit";
+      } else if (crossOrigin === "use-credentials") {
+        mode = "cors";
+        credentials = "include";
+      }
+      const options = {
+        mode,
+        credentials,
+        referrerPolicy: imageTile.getReferrerPolicy()
+      };
+      fetch(src, options).then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.blob();
+      }).then((blob) => {
+        return createImageBitmap(blob);
+      }).then((imageBitmap) => {
+        var _a;
+        const canvas = imageTile.getImage();
+        canvas.width = imageBitmap.width;
+        canvas.height = imageBitmap.height;
+        const ctx = (
+          /** @type {OffscreenCanvas} */
+          canvas.getContext("2d")
+        );
+        ctx.drawImage(imageBitmap, 0, 0);
+        (_a = imageBitmap.close) == null ? void 0 : _a.call(imageBitmap);
+        canvas.dispatchEvent(new Event("load"));
+      }).catch(() => {
+        const canvas = imageTile.getImage();
+        canvas.dispatchEvent(new Event("error"));
+      });
+      return;
+    }
+    imageTile.getImage().src = src;
+  }
+  class XYZ extends TileImage {
+    /**
+     * @param {Options} [options] XYZ options.
+     */
+    constructor(options) {
+      options = options || {};
+      const projection = options.projection !== void 0 ? options.projection : "EPSG:3857";
+      const tileGrid = options.tileGrid !== void 0 ? options.tileGrid : createXYZ({
+        extent: extentFromProjection(projection),
+        maxResolution: options.maxResolution,
+        maxZoom: options.maxZoom,
+        minZoom: options.minZoom,
+        tileSize: options.tileSize
+      });
+      super({
+        attributions: options.attributions,
+        cacheSize: options.cacheSize,
+        crossOrigin: options.crossOrigin,
+        referrerPolicy: options.referrerPolicy,
+        interpolate: options.interpolate,
+        projection,
+        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+        tileGrid,
+        tileLoadFunction: options.tileLoadFunction,
+        tilePixelRatio: options.tilePixelRatio,
+        tileUrlFunction: options.tileUrlFunction,
+        url: options.url,
+        urls: options.urls,
+        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
+        transition: options.transition,
+        attributionsCollapsible: options.attributionsCollapsible,
+        zDirection: options.zDirection
+      });
+      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
+    }
+    /**
+     * @return {number} Gutter.
+     * @override
+     */
+    getGutter() {
+      return this.gutter_;
+    }
+  }
+  const DEFAULT_GEOMETRY_EDITOR_OPTIONS = {
+    geometryType: "Geometry",
+    hide: true,
+    editable: true,
+    tileLayers: [
+      {
+        title: "Plan IGN",
+        url: "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+        attribution: "© IGN — Géoplateforme",
+        maxZoom: 19
+      }
+    ],
+    width: "100%",
+    height: 400,
+    lon: 2,
+    lat: 46.5,
+    zoom: 5,
+    minZoom: 4,
+    maxZoom: 19,
+    centerOnResults: true,
+    precision: 7,
+    outputFormat: "geojson",
+    blockView: false,
+    showZoom: true,
+    showSettings: false,
+    showAttributions: false,
+    customStyle: null
+  };
+  class FeatureFormat {
+    constructor() {
+      this.dataProjection = void 0;
+      this.defaultFeatureProjection = void 0;
+      this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
+      Feature;
+      this.supportedMediaTypes = null;
+    }
+    /**
+     * Adds the data projection to the read options.
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Options.
+     * @return {ReadOptions|undefined} Options.
+     * @protected
+     */
+    getReadOptions(source, options) {
+      if (options) {
+        let dataProjection = options.dataProjection ? get$1(options.dataProjection) : this.readProjection(source);
+        if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
+          dataProjection = get$1(dataProjection);
+          dataProjection.setWorldExtent(options.extent);
+        }
+        options = {
+          dataProjection,
+          featureProjection: options.featureProjection
+        };
+      }
+      return this.adaptOptions(options);
+    }
+    /**
+     * Sets the `dataProjection` on the options, if no `dataProjection`
+     * is set.
+     * @param {WriteOptions|ReadOptions|undefined} options
+     *     Options.
+     * @protected
+     * @return {WriteOptions|ReadOptions|undefined}
+     *     Updated options.
+     */
+    adaptOptions(options) {
+      return Object.assign(
+        {
+          dataProjection: this.dataProjection,
+          featureProjection: this.defaultFeatureProjection,
+          featureClass: this.featureClass
+        },
+        options
+      );
+    }
+    /**
+     * @abstract
+     * @return {Type} The format type.
+     */
+    getType() {
+      return abstract();
+    }
+    /**
+     * Read a single feature from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     */
+    readFeature(source, options) {
+      return abstract();
+    }
+    /**
+     * Read all features from a source.
+     *
+     * @abstract
+     * @param {Document|Element|ArrayBuffer|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {Array<FeatureType>} Features.
+     */
+    readFeatures(source, options) {
+      return abstract();
+    }
+    /**
+     * Read a single geometry from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometry(source, options) {
+      return abstract();
+    }
+    /**
+     * Read the projection from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
+     */
+    readProjection(source) {
+      return abstract();
+    }
+    /**
+     * Encode a feature in this format.
+     *
+     * @abstract
+     * @param {Feature} feature Feature.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeFeature(feature, options) {
+      return abstract();
+    }
+    /**
+     * Encode an array of features in this format.
+     *
+     * @abstract
+     * @param {Array<Feature>} features Features.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeFeatures(features, options) {
+      return abstract();
+    }
+    /**
+     * Write a single geometry in this format.
+     *
+     * @abstract
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeGeometry(geometry, options) {
+      return abstract();
+    }
+  }
+  function transformGeometryWithOptions(geometry, write, options) {
+    const featureProjection = options ? get$1(options.featureProjection) : null;
+    const dataProjection = options ? get$1(options.dataProjection) : null;
+    let transformed = geometry;
+    if (featureProjection && dataProjection && !equivalent$1(featureProjection, dataProjection)) {
+      if (write) {
+        transformed = /** @type {T} */
+        geometry.clone();
+      }
+      const fromProjection = write ? featureProjection : dataProjection;
+      const toProjection = write ? dataProjection : featureProjection;
+      if (fromProjection.getUnits() === "tile-pixels") {
+        transformed.transform(fromProjection, toProjection);
+      } else {
+        transformed.applyTransform(getTransform(fromProjection, toProjection));
+      }
+    }
+    if (write && options && /** @type {WriteOptions} */
+    options.decimals !== void 0) {
+      const power = Math.pow(
+        10,
+        /** @type {WriteOptions} */
+        options.decimals
+      );
+      const transform2 = function(coordinates2) {
+        for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coordinates2[i] = Math.round(coordinates2[i] * power) / power;
+        }
+        return coordinates2;
+      };
+      if (transformed === geometry) {
+        transformed = /** @type {T} */
+        geometry.clone();
+      }
+      transformed.applyTransform(transform2);
+    }
+    return transformed;
+  }
+  const GeometryConstructor$1 = {
+    Point,
+    LineString,
+    Polygon,
+    MultiPoint,
+    MultiLineString,
+    MultiPolygon
+  };
+  function orientFlatCoordinates(flatCoordinates, ends, stride) {
+    if (Array.isArray(ends[0])) {
+      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
+        flatCoordinates = flatCoordinates.slice();
+        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
+      }
+      return flatCoordinates;
+    }
+    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
+      flatCoordinates = flatCoordinates.slice();
+      orientLinearRings(flatCoordinates, 0, ends, stride);
+    }
+    return flatCoordinates;
+  }
+  function createRenderFeature(object, options) {
+    var _a;
+    const geometry = object.geometry;
+    if (!geometry) {
+      return [];
+    }
+    if (Array.isArray(geometry)) {
+      return geometry.map((geometry2) => createRenderFeature({ ...object, geometry: geometry2 })).flat();
+    }
+    const geometryType = geometry.type === "MultiPolygon" ? "Polygon" : geometry.type;
+    if (geometryType === "GeometryCollection" || geometryType === "Circle") {
+      throw new Error("Unsupported geometry type: " + geometryType);
+    }
+    const stride = geometry.layout.length;
+    return transformGeometryWithOptions(
+      new RenderFeature(
+        geometryType,
+        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
+        (_a = geometry.ends) == null ? void 0 : _a.flat(),
+        stride,
+        object.properties || {},
+        object.id
+      ).enableSimplifyTransformed(),
+      false,
+      options
+    );
+  }
+  function createGeometry(object, options) {
+    if (!object) {
+      return null;
+    }
+    if (Array.isArray(object)) {
+      const geometries = object.map(
+        (geometry) => createGeometry(geometry, options)
+      );
+      return new GeometryCollection(geometries);
+    }
+    const Geometry2 = GeometryConstructor$1[object.type];
+    return transformGeometryWithOptions(
+      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
+      false,
+      options
+    );
+  }
+  class JSONFeature extends FeatureFormat {
+    constructor() {
+      super();
+    }
+    /**
+     * @return {import("./Feature.js").Type} Format.
+     * @override
+     */
+    getType() {
+      return "json";
+    }
+    /**
+     * Read a feature.  Only works for a single feature. Use `readFeatures` to
+     * read a feature collection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @api
+     * @override
+     */
+    readFeature(source, options) {
+      return this.readFeatureFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * Read all features.  Works with both a single feature and a feature
+     * collection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {Array<FeatureType>} Features.
+     * @api
+     * @override
+     */
+    readFeatures(source, options) {
+      return this.readFeaturesFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     */
+    readFeatureFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<FeatureType>} Features.
+     */
+    readFeaturesFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * Read a geometry.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @api
+     * @override
+     */
+    readGeometry(source, options) {
+      return this.readGeometryFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * Read the projection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @api
+     * @override
+     */
+    readProjection(source) {
+      return this.readProjectionFromObject(getObject(source));
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromObject(object) {
+      return abstract();
+    }
+    /**
+     * Encode a feature as string.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded feature.
+     * @api
+     * @override
+     */
+    writeFeature(feature, options) {
+      return JSON.stringify(this.writeFeatureObject(feature, options));
+    }
+    /**
+     * @abstract
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeFeatureObject(feature, options) {
+      return abstract();
+    }
+    /**
+     * Encode an array of features as string.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded features.
+     * @api
+     * @override
+     */
+    writeFeatures(features, options) {
+      return JSON.stringify(this.writeFeaturesObject(features, options));
+    }
+    /**
+     * @abstract
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeFeaturesObject(features, options) {
+      return abstract();
+    }
+    /**
+     * Encode a geometry as string.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded geometry.
+     * @api
+     * @override
+     */
+    writeGeometry(geometry, options) {
+      return JSON.stringify(this.writeGeometryObject(geometry, options));
+    }
+    /**
+     * @abstract
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeGeometryObject(geometry, options) {
+      return abstract();
+    }
+  }
+  function getObject(source) {
+    if (typeof source === "string") {
+      const object = JSON.parse(source);
+      return object ? (
+        /** @type {Object} */
+        object
+      ) : null;
+    }
+    if (source !== null) {
+      return source;
+    }
+    return null;
+  }
+  class GeoJSON extends JSONFeature {
+    /**
+     * @param {Options<FeatureType>} [options] Options.
+     */
+    constructor(options) {
+      options = options ? options : {};
+      super();
+      this.dataProjection = get$1(
+        options.dataProjection ? options.dataProjection : "EPSG:4326"
+      );
+      if (options.featureProjection) {
+        this.defaultFeatureProjection = get$1(options.featureProjection);
+      }
+      if (options.featureClass) {
+        this.featureClass = options.featureClass;
+      }
+      this.geometryName_ = options.geometryName;
+      this.extractGeometryName_ = options.extractGeometryName;
+      this.supportedMediaTypes = [
+        "application/geo+json",
+        "application/vnd.geo+json"
+      ];
+    }
+    /**
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @override
+     */
+    readFeatureFromObject(object, options) {
+      let geoJSONFeature = null;
+      if (object["type"] === "Feature") {
+        geoJSONFeature = /** @type {GeoJSONFeature} */
+        object;
+      } else {
+        geoJSONFeature = {
+          "type": "Feature",
+          "geometry": (
+            /** @type {GeoJSONGeometry} */
+            object
+          ),
+          "properties": null
+        };
+      }
+      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
+      if (this.featureClass === RenderFeature) {
+        return (
+          /** @type {FeatureType|Array<FeatureType>} */
+          createRenderFeature(
+            {
+              geometry,
+              id: geoJSONFeature["id"],
+              properties: geoJSONFeature["properties"]
+            },
+            options
+          )
+        );
+      }
+      const feature = new Feature();
+      if (this.geometryName_) {
+        feature.setGeometryName(this.geometryName_);
+      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
+        feature.setGeometryName(geoJSONFeature["geometry_name"]);
+      }
+      feature.setGeometry(createGeometry(geometry, options));
+      if ("id" in geoJSONFeature) {
+        feature.setId(geoJSONFeature["id"]);
+      }
+      if (geoJSONFeature["properties"]) {
+        feature.setProperties(geoJSONFeature["properties"], true);
+      }
+      return (
+        /** @type {FeatureType|Array<FeatureType>} */
+        feature
+      );
+    }
+    /**
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<FeatureType>} Features.
+     * @override
+     */
+    readFeaturesFromObject(object, options) {
+      const geoJSONObject = (
+        /** @type {GeoJSONObject} */
+        object
+      );
+      let features = null;
+      if (geoJSONObject["type"] === "FeatureCollection") {
+        const geoJSONFeatureCollection = (
+          /** @type {GeoJSONFeatureCollection} */
+          object
+        );
+        features = [];
+        const geoJSONFeatures = geoJSONFeatureCollection["features"];
+        for (let i = 0, ii = geoJSONFeatures.length; i < ii; ++i) {
+          const featureObject = this.readFeatureFromObject(
+            geoJSONFeatures[i],
+            options
+          );
+          if (!featureObject) {
+            continue;
+          }
+          features.push(featureObject);
+        }
+      } else {
+        features = [this.readFeatureFromObject(object, options)];
+      }
+      return (
+        /** @type {Array<FeatureType>} */
+        features.flat()
+      );
+    }
+    /**
+     * @param {GeoJSONGeometry} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @override
+     */
+    readGeometryFromObject(object, options) {
+      return readGeometry(object, options);
+    }
+    /**
+     * @param {Object} object Object.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @override
+     */
+    readProjectionFromObject(object) {
+      const crs = object["crs"];
+      let projection;
+      if (crs) {
+        if (crs["type"] == "name") {
+          projection = get$1(crs["properties"]["name"]);
+        } else if (crs["type"] === "EPSG") {
+          projection = get$1("EPSG:" + crs["properties"]["code"]);
+        } else {
+          throw new Error("Unknown SRS type");
+        }
+      } else {
+        projection = this.dataProjection;
+      }
+      return (
+        /** @type {import("../proj/Projection.js").default} */
+        projection
+      );
+    }
+    /**
+     * Encode a feature as a GeoJSON Feature object.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONFeature} Object.
+     * @api
+     * @override
+     */
+    writeFeatureObject(feature, options) {
+      options = this.adaptOptions(options);
+      const object = {
+        "type": "Feature",
+        geometry: null,
+        properties: null
+      };
+      const id = feature.getId();
+      if (id !== void 0) {
+        object.id = id;
+      }
+      if (!feature.hasProperties()) {
+        return object;
+      }
+      const properties = feature.getProperties();
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        object.geometry = writeGeometry(geometry, options);
+        delete properties[feature.getGeometryName()];
+      }
+      if (!isEmpty$1(properties)) {
+        object.properties = properties;
+      }
+      return object;
+    }
+    /**
+     * Encode an array of features as a GeoJSON object.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONFeatureCollection} GeoJSON Object.
+     * @api
+     * @override
+     */
+    writeFeaturesObject(features, options) {
+      options = this.adaptOptions(options);
+      const objects = [];
+      for (let i = 0, ii = features.length; i < ii; ++i) {
+        objects.push(this.writeFeatureObject(features[i], options));
+      }
+      return {
+        type: "FeatureCollection",
+        features: objects
+      };
+    }
+    /**
+     * Encode a geometry as a GeoJSON object.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONGeometry|GeoJSONGeometryCollection} Object.
+     * @api
+     * @override
+     */
+    writeGeometryObject(geometry, options) {
+      return writeGeometry(geometry, this.adaptOptions(options));
+    }
+  }
+  function readGeometryInternal(object, options) {
+    if (!object) {
+      return null;
+    }
+    let geometry;
+    switch (object["type"]) {
+      case "Point": {
+        geometry = readPointGeometry(
+          /** @type {GeoJSONPoint} */
+          object
+        );
+        break;
+      }
+      case "LineString": {
+        geometry = readLineStringGeometry(
+          /** @type {GeoJSONLineString} */
+          object
+        );
+        break;
+      }
+      case "Polygon": {
+        geometry = readPolygonGeometry(
+          /** @type {GeoJSONPolygon} */
+          object
+        );
+        break;
+      }
+      case "MultiPoint": {
+        geometry = readMultiPointGeometry(
+          /** @type {GeoJSONMultiPoint} */
+          object
+        );
+        break;
+      }
+      case "MultiLineString": {
+        geometry = readMultiLineStringGeometry(
+          /** @type {GeoJSONMultiLineString} */
+          object
+        );
+        break;
+      }
+      case "MultiPolygon": {
+        geometry = readMultiPolygonGeometry(
+          /** @type {GeoJSONMultiPolygon} */
+          object
+        );
+        break;
+      }
+      case "GeometryCollection": {
+        geometry = readGeometryCollectionGeometry(
+          /** @type {GeoJSONGeometryCollection} */
+          object
+        );
+        break;
+      }
+      default: {
+        throw new Error("Unsupported GeoJSON type: " + object["type"]);
+      }
+    }
+    return geometry;
+  }
+  function readGeometry(object, options) {
+    const geometryObject = readGeometryInternal(object);
+    return createGeometry(geometryObject, options);
+  }
+  function readGeometryCollectionGeometry(object, options) {
+    const geometries = object["geometries"].map(
+      /**
+       * @param {GeoJSONGeometry} geometry Geometry.
+       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
+       */
+      function(geometry) {
+        return readGeometryInternal(geometry);
+      }
+    );
+    return geometries;
+  }
+  function readPointGeometry(object) {
+    const flatCoordinates = object["coordinates"];
+    return {
+      type: "Point",
+      flatCoordinates,
+      layout: getLayoutForStride(flatCoordinates.length)
+    };
+  }
+  function readLineStringGeometry(object) {
+    var _a;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = coordinates2.flat();
+    return {
+      type: "LineString",
+      flatCoordinates,
+      ends: [flatCoordinates.length],
+      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
+    };
+  }
+  function readMultiLineStringGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
+    const flatCoordinates = [];
+    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
+    return {
+      type: "MultiLineString",
+      flatCoordinates,
+      ends,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function readMultiPointGeometry(object) {
+    var _a;
+    const coordinates2 = object["coordinates"];
+    return {
+      type: "MultiPoint",
+      flatCoordinates: coordinates2.flat(),
+      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
+    };
+  }
+  function readMultiPolygonGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = [];
+    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
+    const endss = deflateMultiCoordinatesArray(
+      flatCoordinates,
+      0,
+      coordinates2,
+      stride
+    );
+    return {
+      type: "MultiPolygon",
+      flatCoordinates,
+      ends: endss,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function readPolygonGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = [];
+    const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
+    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
+    return {
+      type: "Polygon",
+      flatCoordinates,
+      ends,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function writeGeometry(geometry, options) {
+    geometry = transformGeometryWithOptions(geometry, true, options);
+    const type = geometry.getType();
+    let geoJSON;
+    switch (type) {
+      case "Point": {
+        geoJSON = writePointGeometry(
+          /** @type {import("../geom/Point.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "LineString": {
+        geoJSON = writeLineStringGeometry(
+          /** @type {import("../geom/LineString.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "Polygon": {
+        geoJSON = writePolygonGeometry(
+          /** @type {import("../geom/Polygon.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "MultiPoint": {
+        geoJSON = writeMultiPointGeometry(
+          /** @type {import("../geom/MultiPoint.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "MultiLineString": {
+        geoJSON = writeMultiLineStringGeometry(
+          /** @type {import("../geom/MultiLineString.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "MultiPolygon": {
+        geoJSON = writeMultiPolygonGeometry(
+          /** @type {import("../geom/MultiPolygon.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "GeometryCollection": {
+        geoJSON = writeGeometryCollectionGeometry(
+          /** @type {import("../geom/GeometryCollection.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "Circle": {
+        geoJSON = {
+          type: "GeometryCollection",
+          geometries: []
+        };
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return geoJSON;
+  }
+  function writeGeometryCollectionGeometry(geometry, options) {
+    options = Object.assign({}, options);
+    delete options.featureProjection;
+    const geometries = geometry.getGeometriesArray().map(function(geometry2) {
+      return writeGeometry(geometry2, options);
+    });
+    return {
+      type: "GeometryCollection",
+      geometries
+    };
+  }
+  function writeLineStringGeometry(geometry, options) {
+    return {
+      type: "LineString",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiLineStringGeometry(geometry, options) {
+    return {
+      type: "MultiLineString",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiPointGeometry(geometry, options) {
+    return {
+      type: "MultiPoint",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiPolygonGeometry(geometry, options) {
+    let right;
+    if (options) {
+      right = options.rightHanded;
+    }
+    return {
+      type: "MultiPolygon",
+      coordinates: geometry.getCoordinates(right)
+    };
+  }
+  function writePointGeometry(geometry, options) {
+    return {
+      type: "Point",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writePolygonGeometry(geometry, options) {
+    let right;
+    if (options) {
+      right = options.rightHanded;
+    }
+    return {
+      type: "Polygon",
+      coordinates: geometry.getCoordinates(right)
+    };
+  }
+  const XML_SCHEMA_INSTANCE_URI = "http://www.w3.org/2001/XMLSchema-instance";
+  function createElementNS(namespaceURI, qualifiedName) {
+    return getDocument().createElementNS(namespaceURI, qualifiedName);
+  }
+  function getAllTextContent(node, normalizeWhitespace) {
+    return getAllTextContent_(node, normalizeWhitespace, []).join("");
+  }
+  function getAllTextContent_(node, normalizeWhitespace, accumulator) {
+    if (node.nodeType == Node.CDATA_SECTION_NODE || node.nodeType == Node.TEXT_NODE) {
+      {
+        accumulator.push(node.nodeValue);
+      }
+    } else {
+      let n;
+      for (n = node.firstChild; n; n = n.nextSibling) {
+        getAllTextContent_(n, normalizeWhitespace, accumulator);
+      }
+    }
+    return accumulator;
+  }
+  function isDocument(object) {
+    return "documentElement" in object;
+  }
+  function parse(xml) {
+    return new DOMParser().parseFromString(xml, "application/xml");
+  }
+  function makeArrayExtender(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Node} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value = valueReader.call(thisArg ?? this, node, objectStack);
+        if (value !== void 0) {
+          const array = (
+            /** @type {Array<*>} */
+            objectStack[objectStack.length - 1]
+          );
+          extend$2(array, value);
+        }
+      })
+    );
+  }
+  function makeArrayPusher(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value = valueReader.call(thisArg ?? this, node, objectStack);
+        if (value !== void 0) {
+          const array = (
+            /** @type {Array<*>} */
+            objectStack[objectStack.length - 1]
+          );
+          array.push(value);
+        }
+      })
+    );
+  }
+  function makeReplacer(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Node} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value = valueReader.call(this, node, objectStack);
+        if (value !== void 0) {
+          objectStack[objectStack.length - 1] = value;
+        }
+      })
+    );
+  }
+  function makeObjectPropertySetter(valueReader, property, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value = valueReader.call(this, node, objectStack);
+        if (value !== void 0) {
+          const object = (
+            /** @type {!Object} */
+            objectStack[objectStack.length - 1]
+          );
+          const name = property !== void 0 ? property : node.localName;
+          object[name] = value;
+        }
+      })
+    );
+  }
+  function makeChildAppender(nodeWriter, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {*} value Value to be written.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, value, objectStack) {
+        nodeWriter.call(this, node, value, objectStack);
+        const parent = (
+          /** @type {NodeStackItem} */
+          objectStack[objectStack.length - 1]
+        );
+        const parentNode = parent.node;
+        parentNode.appendChild(node);
+      })
+    );
+  }
+  function makeSimpleNodeFactory(fixedNodeName, fixedNamespaceURI) {
+    return (
+      /**
+       * @param {*} value Value.
+       * @param {Array<*>} objectStack Object stack.
+       * @param {string} [newNodeName] Node name.
+       * @return {Node} Node.
+       */
+      (function(value, objectStack, newNodeName) {
+        const context = (
+          /** @type {NodeStackItem} */
+          objectStack[objectStack.length - 1]
+        );
+        const node = context.node;
+        let nodeName = fixedNodeName;
+        if (nodeName === void 0) {
+          nodeName = newNodeName;
+        }
+        const namespaceURI = node.namespaceURI;
+        return createElementNS(
+          namespaceURI,
+          /** @type {string} */
+          nodeName
+        );
+      })
+    );
+  }
+  const OBJECT_PROPERTY_NODE_FACTORY = makeSimpleNodeFactory();
+  function makeSequence(object, orderedKeys) {
+    const length = orderedKeys.length;
+    const sequence = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      sequence[i] = object[orderedKeys[i]];
+    }
+    return sequence;
+  }
+  function makeStructureNS(namespaceURIs, structure, structureNS) {
+    structureNS = structureNS !== void 0 ? structureNS : {};
+    let i, ii;
+    for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
+      structureNS[namespaceURIs[i]] = structure;
+    }
+    return structureNS;
+  }
+  function parseNode(parsersNS, node, objectStack, thisArg) {
+    let n;
+    for (n = node.firstElementChild; n; n = n.nextElementSibling) {
+      const parsers2 = parsersNS[n.namespaceURI];
+      if (parsers2 !== void 0) {
+        const parser = parsers2[n.localName];
+        if (parser !== void 0) {
+          parser.call(thisArg, n, objectStack);
+        }
+      }
+    }
+  }
+  function pushParseAndPop(object, parsersNS, node, objectStack, thisArg) {
+    objectStack.push(object);
+    parseNode(parsersNS, node, objectStack, thisArg);
+    return (
+      /** @type {T} */
+      objectStack.pop()
+    );
+  }
+  function serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
+    const length = (keys !== void 0 ? keys : values).length;
+    let value, node;
+    for (let i = 0; i < length; ++i) {
+      value = values[i];
+      if (value !== void 0) {
+        node = nodeFactory.call(
+          thisArg,
+          value,
+          objectStack,
+          keys !== void 0 ? keys[i] : void 0
+        );
+        if (node !== void 0) {
+          serializersNS[node.namespaceURI][node.localName].call(
+            thisArg,
+            node,
+            value,
+            objectStack
+          );
+        }
+      }
+    }
+  }
+  function pushSerializeAndPop(object, serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
+    objectStack.push(object);
+    serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg);
+    return (
+      /** @type {O|undefined} */
+      objectStack.pop()
+    );
+  }
+  let xmlSerializer_ = void 0;
+  function getXMLSerializer() {
+    if (xmlSerializer_ === void 0 && typeof XMLSerializer !== "undefined") {
+      xmlSerializer_ = new XMLSerializer();
+    }
+    return xmlSerializer_;
+  }
+  let document_ = void 0;
+  function getDocument() {
+    if (document_ === void 0 && typeof document !== "undefined") {
+      document_ = document.implementation.createDocument("", "", null);
+    }
+    return document_;
+  }
+  class XMLFeature extends FeatureFormat {
+    constructor() {
+      super();
+      this.xmlSerializer_ = getXMLSerializer();
+    }
+    /**
+     * @return {import("./Feature.js").Type} Format.
+     * @override
+     */
+    getType() {
+      return "xml";
+    }
+    /**
+     * Read a single feature.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../Feature.js").default} Feature.
+     * @api
+     * @override
+     */
+    readFeature(source, options) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc = parse(source);
+        return this.readFeatureFromDocument(doc, options);
+      }
+      if (isDocument(source)) {
+        return this.readFeatureFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readFeatureFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     */
+    readFeatureFromDocument(doc, options) {
+      const features = this.readFeaturesFromDocument(doc, options);
+      if (features.length > 0) {
+        return features[0];
+      }
+      return null;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     */
+    readFeatureFromNode(node, options) {
+      return null;
+    }
+    /**
+     * Read all features from a feature collection.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @api
+     * @override
+     */
+    readFeatures(source, options) {
+      if (!source) {
+        return [];
+      }
+      if (typeof source === "string") {
+        const doc = parse(source);
+        return this.readFeaturesFromDocument(doc, options);
+      }
+      if (isDocument(source)) {
+        return this.readFeaturesFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readFeaturesFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {Array<import("../Feature.js").default>} Features.
+     */
+    readFeaturesFromDocument(doc, options) {
+      const features = [];
+      for (let n = doc.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$2(
+            features,
+            this.readFeaturesFromNode(
+              /** @type {Element} */
+              n,
+              options
+            )
+          );
+        }
+      }
+      return features;
+    }
+    /**
+     * @abstract
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {Array<import("../Feature.js").default>} Features.
+     */
+    readFeaturesFromNode(node, options) {
+      return abstract();
+    }
+    /**
+     * Read a single geometry from a source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @override
+     */
+    readGeometry(source, options) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc = parse(source);
+        return this.readGeometryFromDocument(doc, options);
+      }
+      if (isDocument(source)) {
+        return this.readGeometryFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readGeometryFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromDocument(doc, options) {
+      return null;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromNode(node, options) {
+      return null;
+    }
+    /**
+     * Read the projection from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @api
+     * @override
+     */
+    readProjection(source) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc = parse(source);
+        return this.readProjectionFromDocument(doc);
+      }
+      if (isDocument(source)) {
+        return this.readProjectionFromDocument(
+          /** @type {Document} */
+          source
+        );
+      }
+      return this.readProjectionFromNode(
+        /** @type {Element} */
+        source
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromDocument(doc) {
+      return this.dataProjection;
+    }
+    /**
+     * @param {Element} node Node.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromNode(node) {
+      return this.dataProjection;
+    }
+    /**
+     * Encode a feature as string.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded feature.
+     * @override
+     */
+    writeFeature(feature, options) {
+      const node = this.writeFeatureNode(feature, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @protected
+     * @return {Node} Node.
+     */
+    writeFeatureNode(feature, options) {
+      return null;
+    }
+    /**
+     * Encode an array of features as string.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Result.
+     * @api
+     * @override
+     */
+    writeFeatures(features, options) {
+      const node = this.writeFeaturesNode(features, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     */
+    writeFeaturesNode(features, options) {
+      return null;
+    }
+    /**
+     * Encode a geometry as string.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded geometry.
+     * @override
+     */
+    writeGeometry(geometry, options) {
+      const node = this.writeGeometryNode(geometry, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     */
+    writeGeometryNode(geometry, options) {
+      return null;
+    }
+  }
+  function readBoolean(node) {
+    const s = getAllTextContent(node, false);
+    return readBooleanString(s);
+  }
+  function readBooleanString(string) {
+    const m = /^\s*(true|1)|(false|0)\s*$/.exec(string);
+    if (m) {
+      return m[1] !== void 0 || false;
+    }
+    return void 0;
+  }
+  function readDecimal(node) {
+    const s = getAllTextContent(node, false);
+    return readDecimalString(s);
+  }
+  function readDecimalString(string) {
+    const m = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)\s*$/i.exec(string);
+    if (m) {
+      return parseFloat(m[1]);
+    }
+    return void 0;
+  }
+  function readString(node) {
+    return getAllTextContent(node, false).trim();
+  }
+  function writeBooleanTextNode(node, bool) {
+    writeStringTextNode(node, bool ? "1" : "0");
+  }
+  function writeCDATASection(node, string) {
+    node.appendChild(getDocument().createCDATASection(string));
+  }
+  function writeDecimalTextNode(node, decimal) {
+    const string = decimal.toPrecision();
+    node.appendChild(getDocument().createTextNode(string));
+  }
+  const whiteSpaceStart = /^\s/;
+  const whiteSpaceEnd = /\s$/;
+  const cdataCharacters = /(\n|\t|\r|<|&| {2})/;
+  function writeStringTextNode(node, string) {
+    if (typeof string === "string" && (whiteSpaceStart.test(string) || whiteSpaceEnd.test(string) || cdataCharacters.test(string))) {
+      string.split("]]>").forEach((part, i, a) => {
+        if (i < a.length - 1) {
+          part += "]]";
+        }
+        if (i > 0) {
+          part = ">" + part;
+        }
+        writeCDATASection(node, part);
+      });
+    } else {
+      node.appendChild(getDocument().createTextNode(string));
+    }
+  }
+  const GX_NAMESPACE_URIS = ["http://www.google.com/kml/ext/2.2"];
+  const NAMESPACE_URIS = [
+    null,
+    "http://earth.google.com/kml/2.0",
+    "http://earth.google.com/kml/2.1",
+    "http://earth.google.com/kml/2.2",
+    "http://www.opengis.net/kml/2.2"
+  ];
+  const SCHEMA_LOCATION = "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd";
+  const ICON_ANCHOR_UNITS_MAP = {
+    "fraction": "fraction",
+    "pixels": "pixels",
+    "insetPixels": "pixels"
+  };
+  const PLACEMARK_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "ExtendedData": extendedDataParser,
+      "Region": regionParser,
+      "MultiGeometry": makeObjectPropertySetter(readMultiGeometry, "geometry"),
+      "LineString": makeObjectPropertySetter(readLineString, "geometry"),
+      "LinearRing": makeObjectPropertySetter(readLinearRing, "geometry"),
+      "Point": makeObjectPropertySetter(readPoint, "geometry"),
+      "Polygon": makeObjectPropertySetter(readPolygon, "geometry"),
+      "Style": makeObjectPropertySetter(readStyle),
+      "StyleMap": placemarkStyleMapParser,
+      "address": makeObjectPropertySetter(readString),
+      "description": makeObjectPropertySetter(readString),
+      "name": makeObjectPropertySetter(readString),
+      "open": makeObjectPropertySetter(readBoolean),
+      "phoneNumber": makeObjectPropertySetter(readString),
+      "styleUrl": makeObjectPropertySetter(readStyleURL),
+      "visibility": makeObjectPropertySetter(readBoolean)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "MultiTrack": makeObjectPropertySetter(readGxMultiTrack, "geometry"),
+      "Track": makeObjectPropertySetter(readGxTrack, "geometry")
+    })
+  );
+  const NETWORK_LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "ExtendedData": extendedDataParser,
+    "Region": regionParser,
+    "Link": linkParser,
+    "address": makeObjectPropertySetter(readString),
+    "description": makeObjectPropertySetter(readString),
+    "name": makeObjectPropertySetter(readString),
+    "open": makeObjectPropertySetter(readBoolean),
+    "phoneNumber": makeObjectPropertySetter(readString),
+    "visibility": makeObjectPropertySetter(readBoolean)
+  });
+  const LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "href": makeObjectPropertySetter(readURI)
+  });
+  const CAMERA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    Altitude: makeObjectPropertySetter(readDecimal),
+    Longitude: makeObjectPropertySetter(readDecimal),
+    Latitude: makeObjectPropertySetter(readDecimal),
+    Tilt: makeObjectPropertySetter(readDecimal),
+    AltitudeMode: makeObjectPropertySetter(readString),
+    Heading: makeObjectPropertySetter(readDecimal),
+    Roll: makeObjectPropertySetter(readDecimal)
+  });
+  const REGION_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LatLonAltBox": latLonAltBoxParser,
+    "Lod": lodParser
+  });
+  const KML_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["Document", "Placemark"]);
+  const KML_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Document": makeChildAppender(writeDocument),
+    "Placemark": makeChildAppender(writePlacemark)
+  });
+  let DEFAULT_COLOR;
+  let DEFAULT_FILL_STYLE = null;
+  let DEFAULT_IMAGE_STYLE_ANCHOR;
+  let DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+  let DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+  let DEFAULT_IMAGE_STYLE_SIZE;
+  let DEFAULT_IMAGE_STYLE_SRC;
+  let DEFAULT_IMAGE_STYLE = null;
+  let DEFAULT_NO_IMAGE_STYLE;
+  let DEFAULT_STROKE_STYLE = null;
+  let DEFAULT_TEXT_STROKE_STYLE;
+  let DEFAULT_TEXT_STYLE = null;
+  let DEFAULT_STYLE = null;
+  let DEFAULT_STYLE_ARRAY = null;
+  function scaleForSize(size) {
+    return 32 / Math.min(size[0], size[1]);
+  }
+  function createStyleDefaults() {
+    DEFAULT_COLOR = [255, 255, 255, 1];
+    DEFAULT_FILL_STYLE = new Fill({
+      color: DEFAULT_COLOR
+    });
+    DEFAULT_IMAGE_STYLE_ANCHOR = [20, 2];
+    DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS = "pixels";
+    DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS = "pixels";
+    DEFAULT_IMAGE_STYLE_SIZE = [64, 64];
+    DEFAULT_IMAGE_STYLE_SRC = "https://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png";
+    DEFAULT_IMAGE_STYLE = new Icon({
+      anchor: DEFAULT_IMAGE_STYLE_ANCHOR,
+      anchorOrigin: "bottom-left",
+      anchorXUnits: DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS,
+      anchorYUnits: DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS,
+      crossOrigin: "anonymous",
+      rotation: 0,
+      scale: scaleForSize(DEFAULT_IMAGE_STYLE_SIZE),
+      size: DEFAULT_IMAGE_STYLE_SIZE,
+      src: DEFAULT_IMAGE_STYLE_SRC
+    });
+    DEFAULT_NO_IMAGE_STYLE = "NO_IMAGE";
+    DEFAULT_STROKE_STYLE = new Stroke({
+      color: DEFAULT_COLOR,
+      width: 1
+    });
+    DEFAULT_TEXT_STROKE_STYLE = new Stroke({
+      color: [51, 51, 51, 1],
+      width: 2
+    });
+    DEFAULT_TEXT_STYLE = new Text({
+      font: "bold 16px Helvetica",
+      fill: DEFAULT_FILL_STYLE,
+      stroke: DEFAULT_TEXT_STROKE_STYLE,
+      scale: 0.8
+    });
+    DEFAULT_STYLE = new Style({
+      fill: DEFAULT_FILL_STYLE,
+      image: DEFAULT_IMAGE_STYLE,
+      text: DEFAULT_TEXT_STYLE,
+      stroke: DEFAULT_STROKE_STYLE,
+      zIndex: 0
+    });
+    DEFAULT_STYLE_ARRAY = [DEFAULT_STYLE];
+  }
+  let TEXTAREA;
+  function defaultIconUrlFunction(href) {
+    return href;
+  }
+  class KML extends XMLFeature {
+    /**
+     * @param {Options} [options] Options.
+     */
+    constructor(options) {
+      super();
+      options = options ? options : {};
+      if (!DEFAULT_STYLE_ARRAY) {
+        createStyleDefaults();
+      }
+      this.dataProjection = get$1("EPSG:4326");
+      this.defaultStyle_ = options.defaultStyle ? options.defaultStyle : DEFAULT_STYLE_ARRAY;
+      this.extractStyles_ = options.extractStyles !== void 0 ? options.extractStyles : true;
+      this.writeStyles_ = options.writeStyles !== void 0 ? options.writeStyles : true;
+      this.sharedStyles_ = {};
+      this.showPointNames_ = options.showPointNames !== void 0 ? options.showPointNames : true;
+      this.crossOrigin_ = options.crossOrigin !== void 0 ? options.crossOrigin : "anonymous";
+      this.referrerPolicy_ = options.referrerPolicy;
+      this.iconUrlFunction_ = options.iconUrlFunction ? options.iconUrlFunction : defaultIconUrlFunction;
+      this.supportedMediaTypes = ["application/vnd.google-earth.kml+xml"];
+    }
+    /**
+     * @param {Node} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     * @return {Array<Feature>|undefined} Features.
+     */
+    readDocumentOrFolder_(node, objectStack) {
+      const parsersNS = makeStructureNS(NAMESPACE_URIS, {
+        "Document": makeArrayExtender(this.readDocumentOrFolder_, this),
+        "Folder": makeArrayExtender(this.readDocumentOrFolder_, this),
+        "Placemark": makeArrayPusher(this.readPlacemark_, this),
+        "Style": this.readSharedStyle_.bind(this),
+        "StyleMap": this.readSharedStyleMap_.bind(this)
+      });
+      const features = pushParseAndPop([], parsersNS, node, objectStack, this);
+      if (features) {
+        return features;
+      }
+      return void 0;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     * @return {Feature|undefined} Feature.
+     */
+    readPlacemark_(node, objectStack) {
+      const object = pushParseAndPop(
+        { "geometry": null },
+        PLACEMARK_PARSERS,
+        node,
+        objectStack,
+        this
+      );
+      if (!object) {
+        return void 0;
+      }
+      const feature = new Feature();
+      const id = node.getAttribute("id");
+      if (id !== null) {
+        feature.setId(id);
+      }
+      const options = (
+        /** @type {import("./Feature.js").ReadOptions} */
+        objectStack[0]
+      );
+      const geometry = object["geometry"];
+      if (geometry) {
+        transformGeometryWithOptions(geometry, false, options);
+      }
+      feature.setGeometry(geometry);
+      delete object["geometry"];
+      if (this.extractStyles_) {
+        const style = object["Style"];
+        const styleUrl = object["styleUrl"];
+        const styleFunction = createFeatureStyleFunction(
+          style,
+          styleUrl,
+          this.defaultStyle_,
+          this.sharedStyles_,
+          this.showPointNames_
+        );
+        feature.setStyle(styleFunction);
+      }
+      delete object["Style"];
+      feature.setProperties(object, true);
+      return feature;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     */
+    readSharedStyle_(node, objectStack) {
+      const id = node.getAttribute("id");
+      if (id !== null) {
+        const style = readStyle.call(this, node, objectStack);
+        if (style) {
+          let styleUri;
+          let baseURI = node.baseURI;
+          if (!baseURI || baseURI == "about:blank") {
+            baseURI = window.location.href;
+          }
+          if (baseURI) {
+            const url = new URL("#" + id, baseURI);
+            styleUri = url.href;
+          } else {
+            styleUri = "#" + id;
+          }
+          this.sharedStyles_[styleUri] = style;
+        }
+      }
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     */
+    readSharedStyleMap_(node, objectStack) {
+      const id = node.getAttribute("id");
+      if (id === null) {
+        return;
+      }
+      const styleMapValue = readStyleMapValue.call(this, node, objectStack);
+      if (!styleMapValue) {
+        return;
+      }
+      let styleUri;
+      let baseURI = node.baseURI;
+      if (!baseURI || baseURI == "about:blank") {
+        baseURI = window.location.href;
+      }
+      if (baseURI) {
+        const url = new URL("#" + id, baseURI);
+        styleUri = url.href;
+      } else {
+        styleUri = "#" + id;
+      }
+      this.sharedStyles_[styleUri] = styleMapValue;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     * @override
+     */
+    readFeatureFromNode(node, options) {
+      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
+        return null;
+      }
+      const feature = this.readPlacemark_(node, [
+        this.getReadOptions(node, options)
+      ]);
+      if (feature) {
+        return feature;
+      }
+      return null;
+    }
+    /**
+     * @protected
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @override
+     */
+    readFeaturesFromNode(node, options) {
+      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
+        return [];
+      }
+      let features;
+      const localName = node.localName;
+      if (localName == "Document" || localName == "Folder") {
+        features = this.readDocumentOrFolder_(node, [
+          this.getReadOptions(node, options)
+        ]);
+        if (features) {
+          return features;
+        }
+        return [];
+      }
+      if (localName == "Placemark") {
+        const feature = this.readPlacemark_(node, [
+          this.getReadOptions(node, options)
+        ]);
+        if (feature) {
+          return [feature];
+        }
+        return [];
+      }
+      if (localName == "kml") {
+        features = [];
+        for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+          const fs = this.readFeaturesFromNode(n, options);
+          if (fs) {
+            extend$2(features, fs);
+          }
+        }
+        return features;
+      }
+      return [];
+    }
+    /**
+     * Read the name of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {string|undefined} Name.
+     * @api
+     */
+    readName(source) {
+      if (!source) {
+        return void 0;
+      }
+      if (typeof source === "string") {
+        const doc = parse(source);
+        return this.readNameFromDocument(doc);
+      }
+      if (isDocument(source)) {
+        return this.readNameFromDocument(
+          /** @type {Document} */
+          source
+        );
+      }
+      return this.readNameFromNode(
+        /** @type {Element} */
+        source
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {string|undefined} Name.
+     */
+    readNameFromDocument(doc) {
+      for (let n = (
+        /** @type {Node} */
+        doc.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          const name = this.readNameFromNode(
+            /** @type {Element} */
+            n
+          );
+          if (name) {
+            return name;
+          }
+        }
+      }
+      return void 0;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {string|undefined} Name.
+     */
+    readNameFromNode(node) {
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "name") {
+          return readString(n);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "Placemark" || localName == "kml")) {
+          const name = this.readNameFromNode(n);
+          if (name) {
+            return name;
+          }
+        }
+      }
+      return void 0;
+    }
+    /**
+     * Read the network links of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<Object>} Network links.
+     * @api
+     */
+    readNetworkLinks(source) {
+      const networkLinks = [];
+      if (typeof source === "string") {
+        const doc = parse(source);
+        extend$2(networkLinks, this.readNetworkLinksFromDocument(doc));
+      } else if (isDocument(source)) {
+        extend$2(
+          networkLinks,
+          this.readNetworkLinksFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$2(
+          networkLinks,
+          this.readNetworkLinksFromNode(
+            /** @type {Element} */
+            source
+          )
+        );
+      }
+      return networkLinks;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<Object>} Network links.
+     */
+    readNetworkLinksFromDocument(doc) {
+      const networkLinks = [];
+      for (let n = (
+        /** @type {Node} */
+        doc.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$2(
+            networkLinks,
+            this.readNetworkLinksFromNode(
+              /** @type {Element} */
+              n
+            )
+          );
+        }
+      }
+      return networkLinks;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<Object>} Network links.
+     */
+    readNetworkLinksFromNode(node) {
+      const networkLinks = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "NetworkLink") {
+          const obj = pushParseAndPop({}, NETWORK_LINK_PARSERS, n, []);
+          networkLinks.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
+          extend$2(networkLinks, this.readNetworkLinksFromNode(n));
+        }
+      }
+      return networkLinks;
+    }
+    /**
+     * Read the regions of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<Object>} Regions.
+     * @api
+     */
+    readRegion(source) {
+      const regions = [];
+      if (typeof source === "string") {
+        const doc = parse(source);
+        extend$2(regions, this.readRegionFromDocument(doc));
+      } else if (isDocument(source)) {
+        extend$2(
+          regions,
+          this.readRegionFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$2(regions, this.readRegionFromNode(
+          /** @type {Element} */
+          source
+        ));
+      }
+      return regions;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<Object>} Region.
+     */
+    readRegionFromDocument(doc) {
+      const regions = [];
+      for (let n = (
+        /** @type {Node} */
+        doc.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$2(regions, this.readRegionFromNode(
+            /** @type {Element} */
+            n
+          ));
+        }
+      }
+      return regions;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<Object>} Region.
+     * @api
+     */
+    readRegionFromNode(node) {
+      const regions = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "Region") {
+          const obj = pushParseAndPop({}, REGION_PARSERS, n, []);
+          regions.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
+          extend$2(regions, this.readRegionFromNode(n));
+        }
+      }
+      return regions;
+    }
+    /**
+     * @typedef {Object} KMLCamera Specifies the observer's viewpoint and associated view parameters.
+     * @property {number} [Latitude] Latitude of the camera.
+     * @property {number} [Longitude] Longitude of the camera.
+     * @property {number} [Altitude] Altitude of the camera.
+     * @property {string} [AltitudeMode] Floor-related altitude mode.
+     * @property {number} [Heading] Horizontal camera rotation.
+     * @property {number} [Tilt] Lateral camera rotation.
+     * @property {number} [Roll] Vertical camera rotation.
+     */
+    /**
+     * Read the cameras of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<KMLCamera>} Cameras.
+     * @api
+     */
+    readCamera(source) {
+      const cameras = [];
+      if (typeof source === "string") {
+        const doc = parse(source);
+        extend$2(cameras, this.readCameraFromDocument(doc));
+      } else if (isDocument(source)) {
+        extend$2(
+          cameras,
+          this.readCameraFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$2(cameras, this.readCameraFromNode(
+          /** @type {Element} */
+          source
+        ));
+      }
+      return cameras;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<KMLCamera>} Cameras.
+     */
+    readCameraFromDocument(doc) {
+      const cameras = [];
+      for (let n = (
+        /** @type {Node} */
+        doc.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType === Node.ELEMENT_NODE) {
+          extend$2(cameras, this.readCameraFromNode(
+            /** @type {Element} */
+            n
+          ));
+        }
+      }
+      return cameras;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<KMLCamera>} Cameras.
+     * @api
+     */
+    readCameraFromNode(node) {
+      const cameras = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName === "Camera") {
+          const obj = pushParseAndPop({}, CAMERA_PARSERS, n, []);
+          cameras.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName === "Document" || localName === "Folder" || localName === "Placemark" || localName === "kml")) {
+          extend$2(cameras, this.readCameraFromNode(n));
+        }
+      }
+      return cameras;
+    }
+    /**
+     * Encode an array of features in the KML format as an XML node. GeometryCollections,
+     * MultiPoints, MultiLineStrings, and MultiPolygons are output as MultiGeometries.
+     *
+     * @param {Array<Feature>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     * @api
+     * @override
+     */
+    writeFeaturesNode(features, options) {
+      options = this.adaptOptions(options);
+      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
+      const xmlnsUri = "http://www.w3.org/2000/xmlns/";
+      kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
+      kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
+      kml.setAttributeNS(
+        XML_SCHEMA_INSTANCE_URI,
+        "xsi:schemaLocation",
+        SCHEMA_LOCATION
+      );
+      const context = {
+        node: kml
+      };
+      const properties = {};
+      if (features.length > 1) {
+        properties["Document"] = features;
+      } else if (features.length == 1) {
+        properties["Placemark"] = features[0];
+      }
+      const orderedKeys = KML_SEQUENCE[kml.namespaceURI];
+      const values = makeSequence(properties, orderedKeys);
+      pushSerializeAndPop(
+        context,
+        KML_SERIALIZERS,
+        OBJECT_PROPERTY_NODE_FACTORY,
+        values,
+        [options],
+        orderedKeys,
+        this
+      );
+      return kml;
+    }
+  }
+  function createNameStyleFunction(foundStyle, name) {
+    const textOffset = [0, 0];
+    let textAlign = "start";
+    const imageStyle = foundStyle.getImage();
+    if (imageStyle) {
+      const imageSize = imageStyle.getSize();
+      if (imageSize && imageSize.length == 2) {
+        const imageScale = imageStyle.getScaleArray();
+        const anchor = imageStyle.getAnchor();
+        textOffset[0] = imageScale[0] * (imageSize[0] - anchor[0]);
+        textOffset[1] = imageScale[1] * (imageSize[1] / 2 - anchor[1]);
+        textAlign = "left";
+      }
+    }
+    let textStyle = foundStyle.getText();
+    if (textStyle) {
+      textStyle = textStyle.clone();
+      textStyle.setFont(textStyle.getFont() || DEFAULT_TEXT_STYLE.getFont());
+      textStyle.setScale(textStyle.getScale() || DEFAULT_TEXT_STYLE.getScale());
+      textStyle.setFill(textStyle.getFill() || DEFAULT_TEXT_STYLE.getFill());
+      textStyle.setStroke(textStyle.getStroke() || DEFAULT_TEXT_STROKE_STYLE);
+    } else {
+      textStyle = DEFAULT_TEXT_STYLE.clone();
+    }
+    textStyle.setText(name);
+    textStyle.setOffsetX(textOffset[0]);
+    textStyle.setOffsetY(textOffset[1]);
+    textStyle.setTextAlign(textAlign);
+    const nameStyle = new Style({
+      image: imageStyle,
+      text: textStyle
+    });
+    return nameStyle;
+  }
+  function createFeatureStyleFunction(style, styleUrl, defaultStyle, sharedStyles, showPointNames) {
+    return (
+      /**
+       * @param {Feature} feature feature.
+       * @param {number} resolution Resolution.
+       * @return {Array<Style>|Style} Style.
+       */
+      (function(feature, resolution) {
+        let drawName = showPointNames;
+        let name = "";
+        let multiGeometryPoints = [];
+        if (drawName) {
+          const geometry = feature.getGeometry();
+          if (geometry) {
+            if (geometry instanceof GeometryCollection) {
+              multiGeometryPoints = geometry.getGeometriesArrayRecursive().filter(function(geometry2) {
+                const type = geometry2.getType();
+                return type === "Point" || type === "MultiPoint";
+              });
+              drawName = multiGeometryPoints.length > 0;
+            } else {
+              const type = geometry.getType();
+              drawName = type === "Point" || type === "MultiPoint";
+            }
+          }
+        }
+        if (drawName) {
+          name = /** @type {string} */
+          feature.get("name");
+          drawName = drawName && !!name;
+          if (drawName && /&[^&]+;/.test(name)) {
+            if (!TEXTAREA) {
+              TEXTAREA = document.createElement("textarea");
+            }
+            TEXTAREA.innerHTML = name;
+            name = TEXTAREA.value;
+          }
+        }
+        let featureStyle = defaultStyle;
+        if (style) {
+          featureStyle = style;
+        } else if (styleUrl) {
+          featureStyle = findStyle(styleUrl, defaultStyle, sharedStyles);
+        }
+        if (drawName) {
+          const nameStyle = createNameStyleFunction(featureStyle[0], name);
+          if (multiGeometryPoints.length > 0) {
+            nameStyle.setGeometry(new GeometryCollection(multiGeometryPoints));
+            const baseStyle = new Style({
+              geometry: featureStyle[0].getGeometry(),
+              image: null,
+              fill: featureStyle[0].getFill(),
+              stroke: featureStyle[0].getStroke(),
+              text: null
+            });
+            return [nameStyle, baseStyle].concat(featureStyle.slice(1));
+          }
+          return nameStyle;
+        }
+        return featureStyle;
+      })
+    );
+  }
+  function findStyle(styleValue, defaultStyle, sharedStyles) {
+    if (Array.isArray(styleValue)) {
+      return styleValue;
+    }
+    if (typeof styleValue === "string") {
+      return findStyle(sharedStyles[styleValue], defaultStyle, sharedStyles);
+    }
+    return defaultStyle;
+  }
+  function readColor(node) {
+    const s = getAllTextContent(node, false);
+    const m = /^\s*#?\s*([0-9A-Fa-f]{8})\s*$/.exec(s);
+    if (m) {
+      const hexColor = m[1];
+      return [
+        parseInt(hexColor.substr(6, 2), 16),
+        parseInt(hexColor.substr(4, 2), 16),
+        parseInt(hexColor.substr(2, 2), 16),
+        parseInt(hexColor.substr(0, 2), 16) / 255
+      ];
+    }
+    return void 0;
+  }
+  function readFlatCoordinates(node) {
+    let s = getAllTextContent(node, false);
+    const flatCoordinates = [];
+    s = s.replace(/\s*,\s*/g, ",");
+    const re = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?),([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|,|$)(?:([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|$))?\s*/i;
+    let m;
+    while (m = re.exec(s)) {
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      const z = m[3] ? parseFloat(m[3]) : 0;
+      flatCoordinates.push(x, y, z);
+      s = s.substr(m[0].length);
+    }
+    if (s !== "") {
+      return void 0;
+    }
+    return flatCoordinates;
+  }
+  function readURI(node) {
+    const s = getAllTextContent(node, false).trim();
+    let baseURI = node.baseURI;
+    if (!baseURI || baseURI == "about:blank") {
+      baseURI = window.location.href;
+    }
+    if (baseURI) {
+      const url = new URL(s, baseURI);
+      return url.href;
+    }
+    return s;
+  }
+  function readStyleURL(node) {
+    const s = getAllTextContent(node, false).trim().replace(/^(?!.*#)/, "#");
+    let baseURI = node.baseURI;
+    if (!baseURI || baseURI == "about:blank") {
+      baseURI = window.location.href;
+    }
+    if (baseURI) {
+      const url = new URL(s, baseURI);
+      return url.href;
+    }
+    return s;
+  }
+  function readVec2(node) {
+    const xunits = node.getAttribute("xunits");
+    const yunits = node.getAttribute("yunits");
+    let origin;
+    if (xunits !== "insetPixels") {
+      if (yunits !== "insetPixels") {
+        origin = "bottom-left";
+      } else {
+        origin = "top-left";
+      }
+    } else {
+      if (yunits !== "insetPixels") {
+        origin = "bottom-right";
+      } else {
+        origin = "top-right";
+      }
+    }
+    return {
+      x: parseFloat(node.getAttribute("x")),
+      xunits: ICON_ANCHOR_UNITS_MAP[xunits],
+      y: parseFloat(node.getAttribute("y")),
+      yunits: ICON_ANCHOR_UNITS_MAP[yunits],
+      origin
+    };
+  }
+  function readScale(node) {
+    return readDecimal(node);
+  }
+  const STYLE_MAP_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Pair": pairDataParser
+  });
+  function readStyleMapValue(node, objectStack) {
+    return pushParseAndPop(void 0, STYLE_MAP_PARSERS, node, objectStack, this);
+  }
+  const ICON_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Icon": makeObjectPropertySetter(readIcon),
+    "color": makeObjectPropertySetter(readColor),
+    "heading": makeObjectPropertySetter(readDecimal),
+    "hotSpot": makeObjectPropertySetter(readVec2),
+    "scale": makeObjectPropertySetter(readScale)
+  });
+  function iconStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, ICON_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    const IconObject = "Icon" in object ? object["Icon"] : {};
+    const drawIcon = !("Icon" in object) || Object.keys(IconObject).length > 0;
+    let src;
+    const href = (
+      /** @type {string|undefined} */
+      IconObject["href"]
+    );
+    if (href) {
+      src = href;
+    } else if (drawIcon) {
+      src = DEFAULT_IMAGE_STYLE_SRC;
+    }
+    let anchor, anchorXUnits, anchorYUnits;
+    let anchorOrigin = "bottom-left";
+    const hotSpot = (
+      /** @type {Vec2|undefined} */
+      object["hotSpot"]
+    );
+    if (hotSpot) {
+      anchor = [hotSpot.x, hotSpot.y];
+      anchorXUnits = hotSpot.xunits;
+      anchorYUnits = hotSpot.yunits;
+      anchorOrigin = hotSpot.origin;
+    } else if (/^https?:\/\/maps\.(?:google|gstatic)\.com\//.test(src)) {
+      if (src.includes("pushpin")) {
+        anchor = DEFAULT_IMAGE_STYLE_ANCHOR;
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      } else if (src.includes("arrow-reverse")) {
+        anchor = [54, 42];
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      } else if (src.includes("paddle")) {
+        anchor = [32, 1];
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      }
+    }
+    let offset;
+    const x = (
+      /** @type {number|undefined} */
+      IconObject["x"]
+    );
+    const y = (
+      /** @type {number|undefined} */
+      IconObject["y"]
+    );
+    if (x !== void 0 && y !== void 0) {
+      offset = [x, y];
+    }
+    let size;
+    const w = (
+      /** @type {number|undefined} */
+      IconObject["w"]
+    );
+    const h = (
+      /** @type {number|undefined} */
+      IconObject["h"]
+    );
+    if (w !== void 0 && h !== void 0) {
+      size = [w, h];
+    }
+    let rotation;
+    const heading = (
+      /** @type {number} */
+      object["heading"]
+    );
+    if (heading !== void 0) {
+      rotation = toRadians(heading);
+    }
+    const scale2 = (
+      /** @type {number|undefined} */
+      object["scale"]
+    );
+    const color = (
+      /** @type {Array<number>|undefined} */
+      object["color"]
+    );
+    if (drawIcon) {
+      if (src == DEFAULT_IMAGE_STYLE_SRC) {
+        size = DEFAULT_IMAGE_STYLE_SIZE;
+      }
+      const imageStyle = new Icon({
+        anchor,
+        anchorOrigin,
+        anchorXUnits,
+        anchorYUnits,
+        crossOrigin: this.crossOrigin_,
+        referrerPolicy: this.referrerPolicy_,
+        offset,
+        offsetOrigin: "bottom-left",
+        rotation,
+        scale: scale2,
+        size,
+        src: this.iconUrlFunction_(src),
+        color
+      });
+      const imageScale = imageStyle.getScaleArray()[0];
+      const imageSize = imageStyle.getSize();
+      if (imageSize === null) {
+        const imageState = imageStyle.getImageState();
+        if (imageState === ImageState.IDLE || imageState === ImageState.LOADING) {
+          const listener = function() {
+            const imageState2 = imageStyle.getImageState();
+            if (!(imageState2 === ImageState.IDLE || imageState2 === ImageState.LOADING)) {
+              const imageSize2 = imageStyle.getSize();
+              if (imageSize2 && imageSize2.length == 2) {
+                const resizeScale = scaleForSize(imageSize2);
+                imageStyle.setScale(imageScale * resizeScale);
+              }
+              imageStyle.unlistenImageChange(listener);
+            }
+          };
+          imageStyle.listenImageChange(listener);
+          if (imageState === ImageState.IDLE) {
+            imageStyle.load();
+          }
+        }
+      } else if (imageSize.length == 2) {
+        const resizeScale = scaleForSize(imageSize);
+        imageStyle.setScale(imageScale * resizeScale);
+      }
+      styleObject["imageStyle"] = imageStyle;
+    } else {
+      styleObject["imageStyle"] = DEFAULT_NO_IMAGE_STYLE;
+    }
+  }
+  const LABEL_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "scale": makeObjectPropertySetter(readScale)
+  });
+  function labelStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, LABEL_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const textStyle = new Text({
+      fill: new Fill({
+        color: (
+          /** @type {import("../color.js").Color} */
+          "color" in object ? object["color"] : DEFAULT_COLOR
+        )
+      }),
+      scale: (
+        /** @type {number|undefined} */
+        object["scale"]
+      )
+    });
+    styleObject["textStyle"] = textStyle;
+  }
+  const LINE_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "width": makeObjectPropertySetter(readDecimal)
+  });
+  function lineStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, LINE_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const strokeStyle = new Stroke({
+      color: (
+        /** @type {import("../color.js").Color} */
+        "color" in object ? object["color"] : DEFAULT_COLOR
+      ),
+      width: (
+        /** @type {number} */
+        "width" in object ? object["width"] : 1
+      )
+    });
+    styleObject["strokeStyle"] = strokeStyle;
+  }
+  const POLY_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "fill": makeObjectPropertySetter(readBoolean),
+    "outline": makeObjectPropertySetter(readBoolean)
+  });
+  function polyStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, POLY_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const fillStyle = new Fill({
+      color: (
+        /** @type {import("../color.js").Color} */
+        "color" in object ? object["color"] : DEFAULT_COLOR
+      )
+    });
+    styleObject["fillStyle"] = fillStyle;
+    const fill = (
+      /** @type {boolean|undefined} */
+      object["fill"]
+    );
+    if (fill !== void 0) {
+      styleObject["fill"] = fill;
+    }
+    const outline = (
+      /** @type {boolean|undefined} */
+      object["outline"]
+    );
+    if (outline !== void 0) {
+      styleObject["outline"] = outline;
+    }
+  }
+  const FLAT_LINEAR_RING_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "coordinates": makeReplacer(readFlatCoordinates)
+  });
+  function readFlatLinearRing(node, objectStack) {
+    return pushParseAndPop(null, FLAT_LINEAR_RING_PARSERS, node, objectStack);
+  }
+  function gxCoordParser(node, objectStack) {
+    const gxTrackObject = (
+      /** @type {GxTrackObject} */
+      objectStack[objectStack.length - 1]
+    );
+    const coordinates2 = gxTrackObject.coordinates;
+    const s = getAllTextContent(node, false);
+    const re = /^\s*([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s*$/i;
+    const m = re.exec(s);
+    if (m) {
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      const z = parseFloat(m[3]);
+      coordinates2.push([x, y, z]);
+    } else {
+      coordinates2.push([]);
+    }
+  }
+  const GX_MULTITRACK_GEOMETRY_PARSERS = makeStructureNS(GX_NAMESPACE_URIS, {
+    "Track": makeArrayPusher(readGxTrack)
+  });
+  function readGxMultiTrack(node, objectStack) {
+    const lineStrings = pushParseAndPop(
+      [],
+      GX_MULTITRACK_GEOMETRY_PARSERS,
+      node,
+      objectStack
+    );
+    if (!lineStrings) {
+      return void 0;
+    }
+    return new MultiLineString(lineStrings);
+  }
+  const GX_TRACK_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "when": whenParser
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "coord": gxCoordParser
+    })
+  );
+  function readGxTrack(node, objectStack) {
+    const gxTrackObject = pushParseAndPop(
+      /** @type {GxTrackObject} */
+      {
+        coordinates: [],
+        whens: []
+      },
+      GX_TRACK_PARSERS,
+      node,
+      objectStack
+    );
+    if (!gxTrackObject) {
+      return void 0;
+    }
+    const flatCoordinates = [];
+    const coordinates2 = gxTrackObject.coordinates;
+    const whens = gxTrackObject.whens;
+    for (let i = 0, ii = Math.min(coordinates2.length, whens.length); i < ii; ++i) {
+      if (coordinates2[i].length == 3) {
+        flatCoordinates.push(
+          coordinates2[i][0],
+          coordinates2[i][1],
+          coordinates2[i][2],
+          whens[i]
+        );
+      }
+    }
+    return new LineString(flatCoordinates, "XYZM");
+  }
+  const ICON_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "href": makeObjectPropertySetter(readURI)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "x": makeObjectPropertySetter(readDecimal),
+      "y": makeObjectPropertySetter(readDecimal),
+      "w": makeObjectPropertySetter(readDecimal),
+      "h": makeObjectPropertySetter(readDecimal)
+    })
+  );
+  function readIcon(node, objectStack) {
+    const iconObject = pushParseAndPop({}, ICON_PARSERS, node, objectStack);
+    if (iconObject) {
+      return iconObject;
+    }
+    return null;
+  }
+  const GEOMETRY_FLAT_COORDINATES_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "coordinates": makeReplacer(readFlatCoordinates)
+  });
+  function readFlatCoordinatesFromNode(node, objectStack) {
+    return pushParseAndPop(
+      null,
+      GEOMETRY_FLAT_COORDINATES_PARSERS,
+      node,
+      objectStack
+    );
+  }
+  const EXTRUDE_AND_ALTITUDE_MODE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "extrude": makeObjectPropertySetter(readBoolean),
+    "tessellate": makeObjectPropertySetter(readBoolean),
+    "altitudeMode": makeObjectPropertySetter(readString)
+  });
+  function readLineString(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const lineString = new LineString(flatCoordinates, "XYZ");
+      lineString.setProperties(properties, true);
+      return lineString;
+    }
+    return void 0;
+  }
+  function readLinearRing(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const polygon = new Polygon(flatCoordinates, "XYZ", [
+        flatCoordinates.length
+      ]);
+      polygon.setProperties(properties, true);
+      return polygon;
+    }
+    return void 0;
+  }
+  const MULTI_GEOMETRY_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LineString": makeArrayPusher(readLineString),
+    "LinearRing": makeArrayPusher(readLinearRing),
+    "MultiGeometry": makeArrayPusher(readMultiGeometry),
+    "Point": makeArrayPusher(readPoint),
+    "Polygon": makeArrayPusher(readPolygon)
+  });
+  function readMultiGeometry(node, objectStack) {
+    const geometries = pushParseAndPop(
+      [],
+      MULTI_GEOMETRY_PARSERS,
+      node,
+      objectStack
+    );
+    if (!geometries) {
+      return null;
+    }
+    if (geometries.length === 0) {
+      return new GeometryCollection(geometries);
+    }
+    let multiGeometry;
+    let homogeneous = true;
+    const type = geometries[0].getType();
+    let geometry;
+    for (let i = 1, ii = geometries.length; i < ii; ++i) {
+      geometry = geometries[i];
+      if (geometry.getType() != type) {
+        homogeneous = false;
+        break;
+      }
+    }
+    if (homogeneous) {
+      let layout;
+      let flatCoordinates;
+      if (type == "Point") {
+        const point = geometries[0];
+        layout = point.getLayout();
+        flatCoordinates = point.getFlatCoordinates();
+        for (let i = 1, ii = geometries.length; i < ii; ++i) {
+          geometry = geometries[i];
+          extend$2(flatCoordinates, geometry.getFlatCoordinates());
+        }
+        multiGeometry = new MultiPoint(flatCoordinates, layout);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "LineString") {
+        multiGeometry = new MultiLineString(geometries);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "Polygon") {
+        multiGeometry = new MultiPolygon(geometries);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "GeometryCollection" || type.startsWith("Multi")) {
+        multiGeometry = new GeometryCollection(geometries);
+      } else {
+        throw new Error("Unknown geometry type found");
+      }
+    } else {
+      multiGeometry = new GeometryCollection(geometries);
+    }
+    return (
+      /** @type {import("../geom/Geometry.js").default} */
+      multiGeometry
+    );
+  }
+  function readPoint(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const point = new Point(flatCoordinates, "XYZ");
+      point.setProperties(properties, true);
+      return point;
+    }
+    return void 0;
+  }
+  const FLAT_LINEAR_RINGS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "innerBoundaryIs": innerBoundaryIsParser,
+    "outerBoundaryIs": outerBoundaryIsParser
+  });
+  function readPolygon(node, objectStack) {
+    const properties = pushParseAndPop(
+      /** @type {Object<string,*>} */
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatLinearRings = pushParseAndPop(
+      [null],
+      FLAT_LINEAR_RINGS_PARSERS,
+      node,
+      objectStack
+    );
+    if (flatLinearRings && flatLinearRings[0]) {
+      const flatCoordinates = flatLinearRings[0];
+      const ends = [flatCoordinates.length];
+      for (let i = 1, ii = flatLinearRings.length; i < ii; ++i) {
+        extend$2(flatCoordinates, flatLinearRings[i]);
+        ends.push(flatCoordinates.length);
+      }
+      const polygon = new Polygon(flatCoordinates, "XYZ", ends);
+      polygon.setProperties(properties, true);
+      return polygon;
+    }
+    return void 0;
+  }
+  const STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "IconStyle": iconStyleParser,
+    "LabelStyle": labelStyleParser,
+    "LineStyle": lineStyleParser,
+    "PolyStyle": polyStyleParser
+  });
+  function readStyle(node, objectStack) {
+    const styleObject = pushParseAndPop(
+      {},
+      STYLE_PARSERS,
+      node,
+      objectStack,
+      this
+    );
+    if (!styleObject) {
+      return null;
+    }
+    let fillStyle = (
+      /** @type {Fill} */
+      "fillStyle" in styleObject ? styleObject["fillStyle"] : DEFAULT_FILL_STYLE
+    );
+    const fill = (
+      /** @type {boolean|undefined} */
+      styleObject["fill"]
+    );
+    if (fill !== void 0 && !fill) {
+      fillStyle = null;
+    }
+    let imageStyle;
+    if ("imageStyle" in styleObject) {
+      if (styleObject["imageStyle"] != DEFAULT_NO_IMAGE_STYLE) {
+        imageStyle = /** @type {import("../style/Image.js").default} */
+        styleObject["imageStyle"];
+      }
+    } else {
+      imageStyle = DEFAULT_IMAGE_STYLE;
+    }
+    const textStyle = (
+      /** @type {Text} */
+      "textStyle" in styleObject ? styleObject["textStyle"] : DEFAULT_TEXT_STYLE
+    );
+    const strokeStyle = (
+      /** @type {Stroke} */
+      "strokeStyle" in styleObject ? styleObject["strokeStyle"] : DEFAULT_STROKE_STYLE
+    );
+    const outline = (
+      /** @type {boolean|undefined} */
+      styleObject["outline"]
+    );
+    if (outline !== void 0 && !outline) {
+      return [
+        new Style({
+          geometry: function(feature) {
+            const geometry = feature.getGeometry();
+            const type = geometry.getType();
+            if (type === "GeometryCollection") {
+              const collection = (
+                /** @type {import("../geom/GeometryCollection.js").default} */
+                geometry
+              );
+              return new GeometryCollection(
+                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                  const type2 = geometry2.getType();
+                  return type2 !== "Polygon" && type2 !== "MultiPolygon";
+                })
+              );
+            }
+            if (type !== "Polygon" && type !== "MultiPolygon") {
+              return geometry;
+            }
+          },
+          fill: fillStyle,
+          image: imageStyle,
+          stroke: strokeStyle,
+          text: textStyle,
+          zIndex: void 0
+          // FIXME
+        }),
+        new Style({
+          geometry: function(feature) {
+            const geometry = feature.getGeometry();
+            const type = geometry.getType();
+            if (type === "GeometryCollection") {
+              const collection = (
+                /** @type {import("../geom/GeometryCollection.js").default} */
+                geometry
+              );
+              return new GeometryCollection(
+                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                  const type2 = geometry2.getType();
+                  return type2 === "Polygon" || type2 === "MultiPolygon";
+                })
+              );
+            }
+            if (type === "Polygon" || type === "MultiPolygon") {
+              return geometry;
+            }
+          },
+          fill: fillStyle,
+          stroke: null,
+          zIndex: void 0
+          // FIXME
+        })
+      ];
+    }
+    return [
+      new Style({
+        fill: fillStyle,
+        image: imageStyle,
+        stroke: strokeStyle,
+        text: textStyle,
+        zIndex: void 0
+        // FIXME
+      })
+    ];
+  }
+  function setCommonGeometryProperties(multiGeometry, geometries) {
+    const ii = geometries.length;
+    const extrudes = new Array(geometries.length);
+    const tessellates = new Array(geometries.length);
+    const altitudeModes = new Array(geometries.length);
+    let hasExtrude, hasTessellate, hasAltitudeMode;
+    hasExtrude = false;
+    hasTessellate = false;
+    hasAltitudeMode = false;
+    for (let i = 0; i < ii; ++i) {
+      const geometry = geometries[i];
+      extrudes[i] = geometry.get("extrude");
+      tessellates[i] = geometry.get("tessellate");
+      altitudeModes[i] = geometry.get("altitudeMode");
+      hasExtrude = hasExtrude || extrudes[i] !== void 0;
+      hasTessellate = hasTessellate || tessellates[i] !== void 0;
+      hasAltitudeMode = hasAltitudeMode || altitudeModes[i];
+    }
+    if (hasExtrude) {
+      multiGeometry.set("extrude", extrudes);
+    }
+    if (hasTessellate) {
+      multiGeometry.set("tessellate", tessellates);
+    }
+    if (hasAltitudeMode) {
+      multiGeometry.set("altitudeMode", altitudeModes);
+    }
+  }
+  const DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "displayName": makeObjectPropertySetter(readString),
+    "value": makeObjectPropertySetter(readString)
+  });
+  function dataParser(node, objectStack) {
+    const name = node.getAttribute("name");
+    parseNode(DATA_PARSERS, node, objectStack);
+    const featureObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    if (name && featureObject.displayName) {
+      featureObject[name] = {
+        value: featureObject.value,
+        displayName: featureObject.displayName,
+        toString: function() {
+          return featureObject.value;
+        }
+      };
+    } else if (name !== null) {
+      featureObject[name] = featureObject.value;
+    } else if (featureObject.displayName !== null) {
+      featureObject[featureObject.displayName] = featureObject.value;
+    }
+    delete featureObject["value"];
+  }
+  const EXTENDED_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Data": dataParser,
+    "SchemaData": schemaDataParser
+  });
+  function extendedDataParser(node, objectStack) {
+    parseNode(EXTENDED_DATA_PARSERS, node, objectStack);
+  }
+  function regionParser(node, objectStack) {
+    parseNode(REGION_PARSERS, node, objectStack);
+  }
+  const PAIR_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Style": makeObjectPropertySetter(readStyle),
+    "key": makeObjectPropertySetter(readString),
+    "styleUrl": makeObjectPropertySetter(readStyleURL)
+  });
+  function pairDataParser(node, objectStack) {
+    const pairObject = pushParseAndPop({}, PAIR_PARSERS, node, objectStack, this);
+    if (!pairObject) {
+      return;
+    }
+    const key = (
+      /** @type {string|undefined} */
+      pairObject["key"]
+    );
+    if (key && key == "normal") {
+      const styleUrl = (
+        /** @type {string|undefined} */
+        pairObject["styleUrl"]
+      );
+      if (styleUrl) {
+        objectStack[objectStack.length - 1] = styleUrl;
+      }
+      const style = (
+        /** @type {Style} */
+        pairObject["Style"]
+      );
+      if (style) {
+        objectStack[objectStack.length - 1] = style;
+      }
+    }
+  }
+  function placemarkStyleMapParser(node, objectStack) {
+    const styleMapValue = readStyleMapValue.call(this, node, objectStack);
+    if (!styleMapValue) {
+      return;
+    }
+    const placemarkObject = objectStack[objectStack.length - 1];
+    if (Array.isArray(styleMapValue)) {
+      placemarkObject["Style"] = styleMapValue;
+    } else if (typeof styleMapValue === "string") {
+      placemarkObject["styleUrl"] = styleMapValue;
+    } else {
+      throw new Error("`styleMapValue` has an unknown type");
+    }
+  }
+  const SCHEMA_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "SimpleData": simpleDataParser
+  });
+  function schemaDataParser(node, objectStack) {
+    parseNode(SCHEMA_DATA_PARSERS, node, objectStack);
+  }
+  function simpleDataParser(node, objectStack) {
+    const name = node.getAttribute("name");
+    if (name !== null) {
+      const data = readString(node);
+      const featureObject = (
+        /** @type {Object} */
+        objectStack[objectStack.length - 1]
+      );
+      featureObject[name] = data;
+    }
+  }
+  const LAT_LON_ALT_BOX_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "altitudeMode": makeObjectPropertySetter(readString),
+    "minAltitude": makeObjectPropertySetter(readDecimal),
+    "maxAltitude": makeObjectPropertySetter(readDecimal),
+    "north": makeObjectPropertySetter(readDecimal),
+    "south": makeObjectPropertySetter(readDecimal),
+    "east": makeObjectPropertySetter(readDecimal),
+    "west": makeObjectPropertySetter(readDecimal)
+  });
+  function latLonAltBoxParser(node, objectStack) {
+    const object = pushParseAndPop(
+      {},
+      LAT_LON_ALT_BOX_PARSERS,
+      node,
+      objectStack
+    );
+    if (!object) {
+      return;
+    }
+    const regionObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    const extent = [
+      parseFloat(object["west"]),
+      parseFloat(object["south"]),
+      parseFloat(object["east"]),
+      parseFloat(object["north"])
+    ];
+    regionObject["extent"] = extent;
+    regionObject["altitudeMode"] = object["altitudeMode"];
+    regionObject["minAltitude"] = parseFloat(object["minAltitude"]);
+    regionObject["maxAltitude"] = parseFloat(object["maxAltitude"]);
+  }
+  const LOD_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "minLodPixels": makeObjectPropertySetter(readDecimal),
+    "maxLodPixels": makeObjectPropertySetter(readDecimal),
+    "minFadeExtent": makeObjectPropertySetter(readDecimal),
+    "maxFadeExtent": makeObjectPropertySetter(readDecimal)
+  });
+  function lodParser(node, objectStack) {
+    const object = pushParseAndPop({}, LOD_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const lodObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    lodObject["minLodPixels"] = parseFloat(object["minLodPixels"]);
+    lodObject["maxLodPixels"] = parseFloat(object["maxLodPixels"]);
+    lodObject["minFadeExtent"] = parseFloat(object["minFadeExtent"]);
+    lodObject["maxFadeExtent"] = parseFloat(object["maxFadeExtent"]);
+  }
+  const INNER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    // KML spec only allows one LinearRing  per innerBoundaryIs, but Google Earth
+    // allows multiple, so we parse multiple here too.
+    "LinearRing": makeArrayPusher(readFlatLinearRing)
+  });
+  function innerBoundaryIsParser(node, objectStack) {
+    const innerBoundaryFlatLinearRings = pushParseAndPop(
+      /** @type {Array<Array<number>>} */
+      [],
+      INNER_BOUNDARY_IS_PARSERS,
+      node,
+      objectStack
+    );
+    if (innerBoundaryFlatLinearRings.length > 0) {
+      const flatLinearRings = (
+        /** @type {Array<Array<number>>} */
+        objectStack[objectStack.length - 1]
+      );
+      flatLinearRings.push(...innerBoundaryFlatLinearRings);
+    }
+  }
+  const OUTER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LinearRing": makeReplacer(readFlatLinearRing)
+  });
+  function outerBoundaryIsParser(node, objectStack) {
+    const flatLinearRing = pushParseAndPop(
+      void 0,
+      OUTER_BOUNDARY_IS_PARSERS,
+      node,
+      objectStack
+    );
+    if (flatLinearRing) {
+      const flatLinearRings = (
+        /** @type {Array<Array<number>>} */
+        objectStack[objectStack.length - 1]
+      );
+      flatLinearRings[0] = flatLinearRing;
+    }
+  }
+  function linkParser(node, objectStack) {
+    parseNode(LINK_PARSERS, node, objectStack);
+  }
+  function whenParser(node, objectStack) {
+    const gxTrackObject = (
+      /** @type {GxTrackObject} */
+      objectStack[objectStack.length - 1]
+    );
+    const whens = gxTrackObject.whens;
+    const s = getAllTextContent(node, false);
+    const when = Date.parse(s);
+    whens.push(isNaN(when) ? 0 : when);
+  }
+  function writeColorTextNode(node, color) {
+    const rgba = asArray(color);
+    const opacity = rgba.length == 4 ? rgba[3] : 1;
+    const abgr = [opacity * 255, rgba[2], rgba[1], rgba[0]];
+    for (let i = 0; i < 4; ++i) {
+      const hex = Math.floor(
+        /** @type {number} */
+        abgr[i]
+      ).toString(16);
+      abgr[i] = hex.length == 1 ? "0" + hex : hex;
+    }
+    writeStringTextNode(node, abgr.join(""));
+  }
+  function writeCoordinatesTextNode(node, coordinates2, objectStack) {
+    const context = objectStack[objectStack.length - 1];
+    const layout = context["layout"];
+    const stride = context["stride"];
+    let dimension;
+    if (layout == "XY" || layout == "XYM") {
+      dimension = 2;
+    } else if (layout == "XYZ" || layout == "XYZM") {
+      dimension = 3;
+    } else {
+      throw new Error("Invalid geometry layout");
+    }
+    const ii = coordinates2.length;
+    let text = "";
+    if (ii > 0) {
+      text += coordinates2[0];
+      for (let d = 1; d < dimension; ++d) {
+        text += "," + coordinates2[d];
+      }
+      for (let i = stride; i < ii; i += stride) {
+        text += " " + coordinates2[i];
+        for (let d = 1; d < dimension; ++d) {
+          text += "," + coordinates2[i + d];
+        }
+      }
+    }
+    writeStringTextNode(node, text);
+  }
+  const EXTENDEDDATA_NODE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Data": makeChildAppender(writeDataNode),
+    "value": makeChildAppender(writeDataNodeValue),
+    "displayName": makeChildAppender(writeDataNodeName)
+  });
+  function writeDataNode(node, pair, objectStack) {
+    node.setAttribute("name", pair.name);
+    const context = { node };
+    const value = pair.value;
+    if (typeof value == "object") {
+      if (value !== null && value.displayName) {
+        pushSerializeAndPop(
+          context,
+          EXTENDEDDATA_NODE_SERIALIZERS,
+          OBJECT_PROPERTY_NODE_FACTORY,
+          [value.displayName],
+          objectStack,
+          ["displayName"]
+        );
+      }
+      if (value !== null && value.value) {
+        pushSerializeAndPop(
+          context,
+          EXTENDEDDATA_NODE_SERIALIZERS,
+          OBJECT_PROPERTY_NODE_FACTORY,
+          [value.value],
+          objectStack,
+          ["value"]
+        );
+      }
+    } else {
+      pushSerializeAndPop(
+        context,
+        EXTENDEDDATA_NODE_SERIALIZERS,
+        OBJECT_PROPERTY_NODE_FACTORY,
+        [value],
+        objectStack,
+        ["value"]
+      );
+    }
+  }
+  function writeDataNodeName(node, name) {
+    writeStringTextNode(node, name);
+  }
+  function writeDataNodeValue(node, value) {
+    writeStringTextNode(node, value);
+  }
+  const DOCUMENT_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Placemark": makeChildAppender(writePlacemark)
+  });
+  const DOCUMENT_NODE_FACTORY = function(value, objectStack, nodeName) {
+    const parentNode = objectStack[objectStack.length - 1].node;
+    return createElementNS(parentNode.namespaceURI, "Placemark");
+  };
+  function writeDocument(node, features, objectStack) {
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      DOCUMENT_SERIALIZERS,
+      DOCUMENT_NODE_FACTORY,
+      features,
+      objectStack,
+      void 0,
+      this
+    );
+  }
+  const DATA_NODE_FACTORY = makeSimpleNodeFactory("Data");
+  function writeExtendedData(node, namesAndValues, objectStack) {
+    const context = { node };
+    const names = namesAndValues.names;
+    const values = namesAndValues.values;
+    const length = names.length;
+    for (let i = 0; i < length; i++) {
+      pushSerializeAndPop(
+        context,
+        EXTENDEDDATA_NODE_SERIALIZERS,
+        DATA_NODE_FACTORY,
+        [{ name: names[i], value: values[i] }],
+        objectStack
+      );
+    }
+  }
+  const ICON_SEQUENCE = makeStructureNS(
+    NAMESPACE_URIS,
+    ["href"],
+    makeStructureNS(GX_NAMESPACE_URIS, ["x", "y", "w", "h"])
+  );
+  const ICON_SERIALIZERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "href": makeChildAppender(writeStringTextNode)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "x": makeChildAppender(writeDecimalTextNode),
+      "y": makeChildAppender(writeDecimalTextNode),
+      "w": makeChildAppender(writeDecimalTextNode),
+      "h": makeChildAppender(writeDecimalTextNode)
+    })
+  );
+  const GX_NODE_FACTORY = function(value, objectStack, nodeName) {
+    return createElementNS(GX_NAMESPACE_URIS[0], "gx:" + nodeName);
+  };
+  function writeIcon(node, icon, objectStack) {
+    const context = { node };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    let orderedKeys = ICON_SEQUENCE[parentNode.namespaceURI];
+    let values = makeSequence(icon, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+    orderedKeys = ICON_SEQUENCE[GX_NAMESPACE_URIS[0]];
+    values = makeSequence(icon, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_SERIALIZERS,
+      GX_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const ICON_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "scale",
+    "heading",
+    "Icon",
+    "color",
+    "hotSpot"
+  ]);
+  const ICON_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Icon": makeChildAppender(writeIcon),
+    "color": makeChildAppender(writeColorTextNode),
+    "heading": makeChildAppender(writeDecimalTextNode),
+    "hotSpot": makeChildAppender(writeVec2),
+    "scale": makeChildAppender(writeScaleTextNode)
+  });
+  function writeIconStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {};
+    const src = style.getSrc();
+    const size = style.getSize();
+    const iconImageSize = style.getImageSize();
+    const iconProperties = {
+      "href": src
+    };
+    if (size) {
+      iconProperties["w"] = size[0];
+      iconProperties["h"] = size[1];
+      const anchor = style.getAnchor();
+      const origin = style.getOrigin();
+      if (origin && iconImageSize && origin[0] !== 0 && origin[1] !== size[1]) {
+        iconProperties["x"] = origin[0];
+        iconProperties["y"] = iconImageSize[1] - (origin[1] + size[1]);
+      }
+      if (anchor && (anchor[0] !== size[0] / 2 || anchor[1] !== size[1] / 2)) {
+        const hotSpot = {
+          x: anchor[0],
+          xunits: "pixels",
+          y: size[1] - anchor[1],
+          yunits: "pixels"
+        };
+        properties["hotSpot"] = hotSpot;
+      }
+    }
+    properties["Icon"] = iconProperties;
+    let scale2 = style.getScaleArray()[0];
+    let imageSize = size;
+    if (imageSize === null) {
+      imageSize = DEFAULT_IMAGE_STYLE_SIZE;
+    }
+    if (imageSize.length == 2) {
+      const resizeScale = scaleForSize(imageSize);
+      scale2 = scale2 / resizeScale;
+    }
+    if (scale2 !== 1) {
+      properties["scale"] = scale2;
+    }
+    const rotation = style.getRotation();
+    if (rotation !== 0) {
+      properties["heading"] = rotation;
+    }
+    const color = style.getColor();
+    if (color) {
+      properties["color"] = color;
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = ICON_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const LABEL_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "color",
+    "scale"
+  ]);
+  const LABEL_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "scale": makeChildAppender(writeScaleTextNode)
+  });
+  function writeLabelStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {};
+    const fill = style.getFill();
+    if (fill) {
+      properties["color"] = fill.getColor();
+    }
+    const scale2 = style.getScale();
+    if (scale2 && scale2 !== 1) {
+      properties["scale"] = scale2;
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = LABEL_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      LABEL_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const LINE_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["color", "width"]);
+  const LINE_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "width": makeChildAppender(writeDecimalTextNode)
+  });
+  function writeLineStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {
+      "color": style.getColor(),
+      "width": Number(style.getWidth()) || 1
+    };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = LINE_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      LINE_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const GEOMETRY_TYPE_TO_NODENAME = {
+    "Point": "Point",
+    "LineString": "LineString",
+    "LinearRing": "LinearRing",
+    "Polygon": "Polygon",
+    "MultiPoint": "MultiGeometry",
+    "MultiLineString": "MultiGeometry",
+    "MultiPolygon": "MultiGeometry",
+    "GeometryCollection": "MultiGeometry"
+  };
+  const GEOMETRY_NODE_FACTORY = function(value, objectStack, nodeName) {
+    if (value) {
+      const parentNode = objectStack[objectStack.length - 1].node;
+      return createElementNS(
+        parentNode.namespaceURI,
+        GEOMETRY_TYPE_TO_NODENAME[
+          /** @type {import("../geom/Geometry.js").default} */
+          value.getType()
+        ]
+      );
+    }
+  };
+  const POINT_NODE_FACTORY = makeSimpleNodeFactory("Point");
+  const LINE_STRING_NODE_FACTORY = makeSimpleNodeFactory("LineString");
+  const LINEAR_RING_NODE_FACTORY = makeSimpleNodeFactory("LinearRing");
+  const POLYGON_NODE_FACTORY = makeSimpleNodeFactory("Polygon");
+  const MULTI_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "LineString": makeChildAppender(writePrimitiveGeometry),
+    "Point": makeChildAppender(writePrimitiveGeometry),
+    "Polygon": makeChildAppender(writePolygon),
+    "GeometryCollection": makeChildAppender(writeMultiGeometry)
+  });
+  function writeMultiGeometry(node, geometry, objectStack) {
+    const context = { node };
+    const type = geometry.getType();
+    let geometries = [];
+    let factory;
+    if (type === "GeometryCollection") {
+      geometry.getGeometriesArrayRecursive().forEach(function(geometry2) {
+        const type2 = geometry2.getType();
+        if (type2 === "MultiPoint") {
+          geometries = geometries.concat(
+            /** @type {MultiPoint} */
+            geometry2.getPoints()
+          );
+        } else if (type2 === "MultiLineString") {
+          geometries = geometries.concat(
+            /** @type {MultiLineString} */
+            geometry2.getLineStrings()
+          );
+        } else if (type2 === "MultiPolygon") {
+          geometries = geometries.concat(
+            /** @type {MultiPolygon} */
+            geometry2.getPolygons()
+          );
+        } else if (type2 === "Point" || type2 === "LineString" || type2 === "Polygon") {
+          geometries.push(geometry2);
+        } else {
+          throw new Error("Unknown geometry type");
+        }
+      });
+      factory = GEOMETRY_NODE_FACTORY;
+    } else if (type === "MultiPoint") {
+      geometries = /** @type {MultiPoint} */
+      geometry.getPoints();
+      factory = POINT_NODE_FACTORY;
+    } else if (type === "MultiLineString") {
+      geometries = /** @type {MultiLineString} */
+      geometry.getLineStrings();
+      factory = LINE_STRING_NODE_FACTORY;
+    } else if (type === "MultiPolygon") {
+      geometries = /** @type {MultiPolygon} */
+      geometry.getPolygons();
+      factory = POLYGON_NODE_FACTORY;
+    } else {
+      throw new Error("Unknown geometry type");
+    }
+    pushSerializeAndPop(
+      context,
+      MULTI_GEOMETRY_SERIALIZERS,
+      factory,
+      geometries,
+      objectStack
+    );
+  }
+  const BOUNDARY_IS_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "LinearRing": makeChildAppender(writePrimitiveGeometry)
+  });
+  function writeBoundaryIs(node, linearRing2, objectStack) {
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      BOUNDARY_IS_SERIALIZERS,
+      LINEAR_RING_NODE_FACTORY,
+      [linearRing2],
+      objectStack
+    );
+  }
+  const PLACEMARK_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "ExtendedData": makeChildAppender(writeExtendedData),
+    "MultiGeometry": makeChildAppender(writeMultiGeometry),
+    "LineString": makeChildAppender(writePrimitiveGeometry),
+    "LinearRing": makeChildAppender(writePrimitiveGeometry),
+    "Point": makeChildAppender(writePrimitiveGeometry),
+    "Polygon": makeChildAppender(writePolygon),
+    "Style": makeChildAppender(writeStyle),
+    "address": makeChildAppender(writeStringTextNode),
+    "description": makeChildAppender(writeStringTextNode),
+    "name": makeChildAppender(writeStringTextNode),
+    "open": makeChildAppender(writeBooleanTextNode),
+    "phoneNumber": makeChildAppender(writeStringTextNode),
+    "styleUrl": makeChildAppender(writeStringTextNode),
+    "visibility": makeChildAppender(writeBooleanTextNode)
+  });
+  const PLACEMARK_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "name",
+    "open",
+    "visibility",
+    "address",
+    "phoneNumber",
+    "description",
+    "styleUrl",
+    "Style"
+  ]);
+  const EXTENDEDDATA_NODE_FACTORY = makeSimpleNodeFactory("ExtendedData");
+  function writePlacemark(node, feature, objectStack) {
+    const context = { node };
+    if (feature.getId()) {
+      node.setAttribute(
+        "id",
+        /** @type {string} */
+        feature.getId()
+      );
+    }
+    const properties = feature.getProperties();
+    const filter = {
+      "address": 1,
+      "description": 1,
+      "name": 1,
+      "open": 1,
+      "phoneNumber": 1,
+      "styleUrl": 1,
+      "visibility": 1
+    };
+    filter[feature.getGeometryName()] = 1;
+    const keys = Object.keys(properties || {}).sort().filter(function(v) {
+      return !filter[v];
+    });
+    const styleFunction = feature.getStyleFunction();
+    if (styleFunction) {
+      const styles = styleFunction(feature, 0);
+      if (styles) {
+        const styleArray = Array.isArray(styles) ? styles : [styles];
+        let pointStyles = styleArray;
+        if (feature.getGeometry()) {
+          pointStyles = styleArray.filter(function(style) {
+            const geometry2 = style.getGeometryFunction()(feature);
+            if (geometry2) {
+              const type = geometry2.getType();
+              if (type === "GeometryCollection") {
+                return (
+                  /** @type {GeometryCollection} */
+                  geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                    const type2 = geometry3.getType();
+                    return type2 === "Point" || type2 === "MultiPoint";
+                  }).length
+                );
+              }
+              return type === "Point" || type === "MultiPoint";
+            }
+          });
+        }
+        if (this.writeStyles_) {
+          let lineStyles = styleArray;
+          let polyStyles = styleArray;
+          if (feature.getGeometry()) {
+            lineStyles = styleArray.filter(function(style) {
+              const geometry2 = style.getGeometryFunction()(feature);
+              if (geometry2) {
+                const type = geometry2.getType();
+                if (type === "GeometryCollection") {
+                  return (
+                    /** @type {GeometryCollection} */
+                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                      const type2 = geometry3.getType();
+                      return type2 === "LineString" || type2 === "MultiLineString";
+                    }).length
+                  );
+                }
+                return type === "LineString" || type === "MultiLineString";
+              }
+            });
+            polyStyles = styleArray.filter(function(style) {
+              const geometry2 = style.getGeometryFunction()(feature);
+              if (geometry2) {
+                const type = geometry2.getType();
+                if (type === "GeometryCollection") {
+                  return (
+                    /** @type {GeometryCollection} */
+                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                      const type2 = geometry3.getType();
+                      return type2 === "Polygon" || type2 === "MultiPolygon";
+                    }).length
+                  );
+                }
+                return type === "Polygon" || type === "MultiPolygon";
+              }
+            });
+          }
+          properties["Style"] = {
+            pointStyles,
+            lineStyles,
+            polyStyles
+          };
+        }
+        if (pointStyles.length && properties["name"] === void 0) {
+          const textStyle = pointStyles[0].getText();
+          if (textStyle) {
+            properties["name"] = textStyle.getText();
+          }
+        }
+      }
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = PLACEMARK_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      PLACEMARK_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+    if (keys.length > 0) {
+      const sequence = makeSequence(properties, keys);
+      const namesAndValues = { names: keys, values: sequence };
+      pushSerializeAndPop(
+        context,
+        PLACEMARK_SERIALIZERS,
+        EXTENDEDDATA_NODE_FACTORY,
+        [namesAndValues],
+        objectStack
+      );
+    }
+    const options = (
+      /** @type {import("./Feature.js").WriteOptions} */
+      objectStack[0]
+    );
+    let geometry = feature.getGeometry();
+    if (geometry) {
+      geometry = transformGeometryWithOptions(geometry, true, options);
+    }
+    pushSerializeAndPop(
+      context,
+      PLACEMARK_SERIALIZERS,
+      GEOMETRY_NODE_FACTORY,
+      [geometry],
+      objectStack
+    );
+  }
+  const PRIMITIVE_GEOMETRY_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "extrude",
+    "tessellate",
+    "altitudeMode",
+    "coordinates"
+  ]);
+  const PRIMITIVE_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "extrude": makeChildAppender(writeBooleanTextNode),
+    "tessellate": makeChildAppender(writeBooleanTextNode),
+    "altitudeMode": makeChildAppender(writeStringTextNode),
+    "coordinates": makeChildAppender(writeCoordinatesTextNode)
+  });
+  function writePrimitiveGeometry(node, geometry, objectStack) {
+    const flatCoordinates = geometry.getFlatCoordinates();
+    const context = { node };
+    context["layout"] = geometry.getLayout();
+    context["stride"] = geometry.getStride();
+    const properties = geometry.getProperties();
+    properties.coordinates = flatCoordinates;
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = PRIMITIVE_GEOMETRY_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      PRIMITIVE_GEOMETRY_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const POLY_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "color",
+    "fill",
+    "outline"
+  ]);
+  const POLYGON_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "outerBoundaryIs": makeChildAppender(writeBoundaryIs),
+    "innerBoundaryIs": makeChildAppender(writeBoundaryIs)
+  });
+  const INNER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("innerBoundaryIs");
+  const OUTER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("outerBoundaryIs");
+  function writePolygon(node, polygon, objectStack) {
+    const linearRings2 = polygon.getLinearRings();
+    const outerRing = linearRings2.shift();
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      POLYGON_SERIALIZERS,
+      INNER_BOUNDARY_NODE_FACTORY,
+      linearRings2,
+      objectStack
+    );
+    pushSerializeAndPop(
+      context,
+      POLYGON_SERIALIZERS,
+      OUTER_BOUNDARY_NODE_FACTORY,
+      [outerRing],
+      objectStack
+    );
+  }
+  const POLY_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "fill": makeChildAppender(writeBooleanTextNode),
+    "outline": makeChildAppender(writeBooleanTextNode)
+  });
+  function writePolyStyle(node, style, objectStack) {
+    const context = { node };
+    const fill = style.getFill();
+    const stroke = style.getStroke();
+    const properties = {
+      "color": fill ? fill.getColor() : void 0,
+      "fill": fill ? void 0 : false,
+      "outline": stroke ? void 0 : false
+    };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = POLY_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      POLY_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  function writeScaleTextNode(node, scale2) {
+    writeDecimalTextNode(node, Math.round(scale2 * 1e6) / 1e6);
+  }
+  const STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "IconStyle",
+    "LabelStyle",
+    "LineStyle",
+    "PolyStyle"
+  ]);
+  const STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "IconStyle": makeChildAppender(writeIconStyle),
+    "LabelStyle": makeChildAppender(writeLabelStyle),
+    "LineStyle": makeChildAppender(writeLineStyle),
+    "PolyStyle": makeChildAppender(writePolyStyle)
+  });
+  function writeStyle(node, styles, objectStack) {
+    const context = { node };
+    const properties = {};
+    if (styles.pointStyles.length) {
+      const textStyle = styles.pointStyles[0].getText();
+      if (textStyle) {
+        properties["LabelStyle"] = textStyle;
+      }
+      const imageStyle = styles.pointStyles[0].getImage();
+      if (imageStyle && typeof /** @type {?} */
+      imageStyle.getSrc === "function") {
+        properties["IconStyle"] = imageStyle;
+      }
+    }
+    if (styles.lineStyles.length) {
+      const strokeStyle = styles.lineStyles[0].getStroke();
+      if (strokeStyle) {
+        properties["LineStyle"] = strokeStyle;
+      }
+    }
+    if (styles.polyStyles.length) {
+      const strokeStyle = styles.polyStyles[0].getStroke();
+      if (strokeStyle && !properties["LineStyle"]) {
+        properties["LineStyle"] = strokeStyle;
+      }
+      properties["PolyStyle"] = styles.polyStyles[0];
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  function writeVec2(node, vec2) {
+    node.setAttribute("x", String(vec2.x));
+    node.setAttribute("y", String(vec2.y));
+    node.setAttribute("xunits", vec2.xunits);
+    node.setAttribute("yunits", vec2.yunits);
+  }
+  const geoJsonFormat$1 = new GeoJSON();
+  const kmlFormat$1 = new KML({ extractStyles: false });
+  function looksLikeKml(raw) {
+    const t = raw.trim();
+    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
+  }
+  function looksLikeBbox(raw) {
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
+    } catch {
+      return false;
+    }
+  }
+  function bboxToPolygon(bbox) {
+    const [minX, minY, maxX, maxY] = bbox;
+    return new Polygon([
+      [
+        [minX, minY],
+        [minX, maxY],
+        [maxX, maxY],
+        [maxX, minY],
+        [minX, minY]
+      ]
+    ]);
+  }
+  function explodeMultiFeatures(features) {
+    const out = [];
+    for (const feature of features) {
+      const geom = feature.getGeometry();
+      if (!geom) continue;
+      if (geom instanceof MultiPoint) {
+        for (const point of geom.getPoints()) {
+          out.push(new Feature({ geometry: point }));
+        }
+      } else if (geom instanceof MultiLineString) {
+        for (const line of geom.getLineStrings()) {
+          out.push(new Feature({ geometry: line }));
+        }
+      } else if (geom instanceof MultiPolygon) {
+        for (const poly of geom.getPolygons()) {
+          out.push(new Feature({ geometry: poly }));
+        }
+      } else {
+        out.push(feature);
+      }
+    }
+    return out;
+  }
+  function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
+    const text = raw.trim();
+    if (!text) return [];
+    let features = [];
+    if (looksLikeKml(text)) {
+      features = kmlFormat$1.readFeatures(text, {
+        dataProjection: "EPSG:4326",
+        featureProjection: mapProjection
+      });
+    } else if (looksLikeBbox(text)) {
+      const bbox = JSON.parse(text);
+      const poly = bboxToPolygon(bbox);
+      poly.transform("EPSG:4326", mapProjection);
+      features = [new Feature({ geometry: poly })];
+    } else {
+      try {
+        const data = JSON.parse(text);
+        if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
+          features = geoJsonFormat$1.readFeatures(data, {
+            dataProjection: "EPSG:4326",
+            featureProjection: mapProjection
+          });
+        } else {
+          features = geoJsonFormat$1.readFeatures(
+            { type: "Feature", geometry: data, properties: {} },
+            {
+              dataProjection: "EPSG:4326",
+              featureProjection: mapProjection
+            }
+          );
+        }
+      } catch {
+        console.error("[entree-carto-geometry-editor] parse failed");
+        return [];
+      }
+    }
+    return explodeMultiFeatures(features);
+  }
+  const geoJsonFormat = new GeoJSON();
+  const kmlFormat = new KML();
+  function roundCoords(value, precision) {
+    if (typeof value === "number") {
+      const f = 10 ** precision;
+      return Math.round(value * f) / f;
+    }
+    if (Array.isArray(value)) {
+      return value.map((v) => roundCoords(v, precision));
+    }
+    if (value && typeof value === "object") {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) {
+        out[k] = roundCoords(v, precision);
+      }
+      return out;
+    }
+    return value;
+  }
+  function serializeFeatures(features, options) {
+    const {
+      geometryType,
+      precision,
+      outputFormat,
+      mapProjection = "EPSG:3857"
+    } = options;
+    if (!features.length) return "";
+    if (outputFormat === "kml") {
+      return kmlFormat.writeFeatures(features, {
+        dataProjection: "EPSG:4326",
+        featureProjection: mapProjection
+      });
+    }
+    if (geometryType === "Rectangle" && features.length === 1) {
+      const geom = features[0].getGeometry();
+      if (geom) {
+        const clone2 = geom.clone();
+        clone2.transform(mapProjection, "EPSG:4326");
+        const e = clone2.getExtent();
+        return JSON.stringify(roundCoords([...e], precision));
+      }
+    }
+    const multiMerged = mergeToMultiFeature(features, geometryType);
+    const toWrite = multiMerged ? [multiMerged] : features;
+    const json = geoJsonFormat.writeFeaturesObject(toWrite, {
+      dataProjection: "EPSG:4326",
+      featureProjection: mapProjection
+    });
+    const rounded = roundCoords(json, precision);
+    if (rounded.features.length === 1) {
+      return JSON.stringify(rounded.features[0].geometry);
+    }
+    return JSON.stringify(rounded);
+  }
+  function mergeToMultiFeature(features, geometryType) {
+    if (geometryType === "MultiPoint") {
+      const points = features.map((f) => f.getGeometry()).filter((g) => g instanceof Point);
+      if (!points.length) return null;
+      return new Feature({
+        geometry: new MultiPoint(points.map((p) => p.getCoordinates()))
+      });
+    }
+    if (geometryType === "MultiLineString") {
+      const lines = features.map((f) => f.getGeometry()).filter((g) => g instanceof LineString);
+      if (!lines.length) return null;
+      return new Feature({
+        geometry: new MultiLineString(lines.map((l) => l.getCoordinates()))
+      });
+    }
+    if (geometryType === "MultiPolygon") {
+      const polys = features.map((f) => f.getGeometry()).filter((g) => g instanceof Polygon);
+      if (!polys.length) return null;
+      return new Feature({
+        geometry: new MultiPolygon(polys.map((p) => p.getCoordinates()))
+      });
+    }
+    return null;
+  }
+  const blue = "#000091";
+  const fillBlue = "rgba(0, 0, 145, 0.2)";
+  const geometryFeatureStyle = new Style({
+    fill: new Fill({ color: fillBlue }),
+    stroke: new Stroke({ color: blue, width: 2 }),
+    image: new CircleStyle({
+      radius: 6,
+      fill: new Fill({ color: blue }),
+      stroke: new Stroke({ color: "#fff", width: 2 })
+    })
+  });
+  const geometryDrawStyle = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  function geometryStyleFunction(_feature) {
+    return geometryFeatureStyle;
+  }
+  const HANDLE_BLUE = "#000091";
+  const RESIZE_FILL = "#fff";
+  const HANDLE_ICON_SCALE = 1.75;
+  const LINE_SIDE_OFFSET_PX = 44;
+  const LINE_HANDLE_GAP_PX = 40;
+  const POLYGON_INNER_MARGIN_PX = 14;
+  const TRANSLATE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M13 5.83V11h5.17l-1.59-1.59L18 8l4 4-4 4-1.41-1.41L18.17 13H13v5.17l1.59-1.59L16 18l-4 4-4-4 1.41-1.41L11 18.17V13H5.83l1.59 1.59L6 16l-4-4 4-4 1.41 1.41L5.83 11H11V5.83L9.41 7.41 8 6l4-4 4 4-1.41 1.41L13 5.83z"/>
+    </svg>`
+  );
+  const ROTATE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M12 5V1L7 6l5 5V7c2.76 0 5 2.24 5 5 0 .65-.13 1.28-.36 1.86l1.53 1.53C18.7 14.34 19 13.2 19 12c0-3.87-3.13-7-7-7zM6 12c0-.65.13-1.28.36-1.86L4.83 8.61C4.3 9.66 4 10.8 4 12c0 3.87 3.13 7 7 7v4l5-5-5-5v4c-2.76 0-5-2.24-5-5z"/>
+    </svg>`
+  );
+  const RESIZE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+      <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
+    </svg>`
+  );
+  function styleForRole(role) {
+    if (role === "translate") {
+      return new Style({
+        image: new Icon({
+          src: TRANSLATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    if (role === "rotate") {
+      return new Style({
+        image: new Icon({
+          src: ROTATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    return new Style({
+      image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
+      zIndex: 1
+    });
+  }
+  function rotateCoordinate(coord, angle, origin) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const dx = coord[0] - origin[0];
+    const dy = coord[1] - origin[1];
+    return [origin[0] + dx * cos - dy * sin, origin[1] + dx * sin + dy * cos];
+  }
+  function rotateGeometry(geom, angle, origin) {
+    if (geom instanceof Point) {
+      geom.setCoordinates(rotateCoordinate(geom.getCoordinates(), angle, origin));
+      return;
+    }
+    if (geom instanceof LineString) {
+      geom.setCoordinates(
+        geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin))
+      );
+      return;
+    }
+    if (geom instanceof Polygon) {
+      geom.setCoordinates(
+        geom.getCoordinates().map((ring) => ring.map((c) => rotateCoordinate(c, angle, origin)))
+      );
+    }
+  }
+  function featureCentroid(geom) {
+    return getCenter(geom.getExtent());
+  }
+  function angleBetween(origin, point) {
+    return Math.atan2(point[1] - origin[1], point[0] - origin[0]);
+  }
+  function resolutionOf(map) {
+    return map.getView().getResolution() ?? 1;
+  }
+  function distPointToSegment(p, a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) {
+      const ex = p[0] - a[0];
+      const ey = p[1] - a[1];
+      return Math.hypot(ex, ey);
+    }
+    let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+  }
+  function isDeepInsidePolygon(poly, coord, margin) {
+    if (!poly.intersectsCoordinate(coord)) return false;
+    const ring = poly.getLinearRing(0);
+    if (!ring) return false;
+    const coords = ring.getCoordinates();
+    for (let i = 0; i < coords.length - 1; i++) {
+      if (distPointToSegment(coord, coords[i], coords[i + 1]) < margin) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function lineSideAnchors(geom, res) {
+    const extent = geom.getExtent();
+    const midY = (extent[1] + extent[3]) / 2;
+    const x = extent[2] + LINE_SIDE_OFFSET_PX * res;
+    const gap = LINE_HANDLE_GAP_PX * res;
+    return {
+      translate: [x, midY + gap / 2],
+      rotate: [x, midY - gap / 2]
+    };
+  }
+  function bboxPolygonFromExtent(extent) {
+    const [minX, minY, maxX, maxY] = extent;
+    return new Polygon([
+      [
+        [minX, minY],
+        [minX, maxY],
+        [maxX, maxY],
+        [maxX, minY],
+        [minX, minY]
+      ]
+    ]);
+  }
+  function applyBBoxResize(extent, role, coord) {
+    let [minX, minY, maxX, maxY] = extent;
+    const minSize = 1e-6;
+    switch (role) {
+      case "resize-nw":
+        minX = Math.min(coord[0], maxX - minSize);
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-n":
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-ne":
+        maxX = Math.max(coord[0], minX + minSize);
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-e":
+        maxX = Math.max(coord[0], minX + minSize);
+        break;
+      case "resize-se":
+        maxX = Math.max(coord[0], minX + minSize);
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-s":
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-sw":
+        minX = Math.min(coord[0], maxX - minSize);
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-w":
+        minX = Math.min(coord[0], maxX - minSize);
+        break;
+    }
+    return [minX, minY, maxX, maxY];
+  }
+  function cursorForRole(role) {
+    switch (role) {
+      case "translate":
+        return "move";
+      case "rotate":
+        return "grab";
+      case "resize-n":
+      case "resize-s":
+        return "ns-resize";
+      case "resize-e":
+      case "resize-w":
+        return "ew-resize";
+      case "resize-ne":
+      case "resize-sw":
+        return "nesw-resize";
+      case "resize-nw":
+      case "resize-se":
+        return "nwse-resize";
+      default:
+        return "pointer";
+    }
+  }
+  class TransformPointer extends PointerInteraction {
+    constructor(ctrl) {
+      super({
+        handleDownEvent: (evt) => ctrl.handleDown(evt),
+        handleDragEvent: (evt) => ctrl.handleDrag(evt),
+        handleUpEvent: (evt) => ctrl.handleUp(evt),
+        handleMoveEvent: (evt) => ctrl.handleMove(evt)
+      });
+    }
+  }
+  class ModifyTransformController {
+    constructor(opts) {
+      __publicField(this, "map");
+      __publicField(this, "dataSource");
+      __publicField(this, "dataLayer");
+      __publicField(this, "onChange");
+      __publicField(this, "mode");
+      __publicField(this, "active", false);
+      __publicField(this, "handleSource", new VectorSource({ wrapX: false }));
+      __publicField(this, "handleLayer");
+      __publicField(this, "pointer");
+      __publicField(this, "hovered", null);
+      __publicField(this, "dragging", null);
+      this.map = opts.map;
+      this.dataSource = opts.source;
+      this.dataLayer = opts.layer;
+      this.mode = opts.mode;
+      this.onChange = opts.onChange;
+      this.handleLayer = new VectorLayer({
+        source: this.handleSource,
+        // Au-dessus des couches données / tuiles
+        zIndex: 1e4,
+        className: "ec-geometry-editor__transform-handles",
+        style: (feature) => styleForRole(feature.get("role")),
+        updateWhileAnimating: true,
+        updateWhileInteracting: true
+      });
+      this.handleLayer.set("ec-transform-handles", true);
+      this.pointer = new TransformPointer(this);
+    }
+    setMode(mode) {
+      this.mode = mode;
+      this.clearHandles();
+      this.hovered = null;
+    }
+    setActive(active) {
+      if (this.active === active) return;
+      this.active = active;
+      if (active) {
+        this.map.addLayer(this.handleLayer);
+        this.map.addInteraction(this.pointer);
+      } else {
+        this.map.removeInteraction(this.pointer);
+        this.map.removeLayer(this.handleLayer);
+        this.clearHandles();
+        this.hovered = null;
+        this.dragging = null;
+        const el = this.map.getTargetElement();
+        if (el) el.style.cursor = "";
+      }
+    }
+    destroy() {
+      this.setActive(false);
+    }
+    usesVertexModify() {
+      return this.mode === "line-polygon" || this.mode === "point";
+    }
+    clearHandles() {
+      this.handleSource.clear(true);
+    }
+    isHandleFeature(feature) {
+      return Boolean(feature.get("role")) && this.handleSource.hasFeature(feature);
+    }
+    findHandleAtPixel(pixel) {
+      let found = null;
+      this.map.forEachFeatureAtPixel(
+        pixel,
+        (feature) => {
+          if (this.isHandleFeature(feature)) {
+            found = feature;
+            return true;
+          }
+          return void 0;
+        },
+        {
+          layerFilter: (layer) => layer === this.handleLayer,
+          hitTolerance: 18
+        }
+      );
+      return found;
+    }
+    findDataFeatureAtPixel(pixel) {
+      let found = null;
+      this.map.forEachFeatureAtPixel(
+        pixel,
+        (feature) => {
+          if (this.isHandleFeature(feature)) return void 0;
+          const f = feature;
+          if (!this.dataSource.hasFeature(f)) return void 0;
+          const geom = f.getGeometry();
+          if (this.mode === "bbox") {
+            if (geom instanceof Polygon) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          if (this.mode === "point") {
+            if (geom instanceof Point) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          const t = geom == null ? void 0 : geom.getType();
+          if (t === "LineString" || t === "Polygon") {
+            found = f;
+            return true;
+          }
+          return void 0;
+        },
+        {
+          layerFilter: (layer) => layer === this.dataLayer,
+          hitTolerance: 10
+        }
+      );
+      return found;
+    }
+    /**
+     * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
+     */
+    placeHandles(feature, opts) {
+      this.clearHandles();
+      const geom = feature.getGeometry();
+      if (!geom) return;
+      const add2 = (role, coord) => {
+        const f = new Feature({ geometry: new Point(coord) });
+        f.set("role", role);
+        this.handleSource.addFeature(f);
+      };
+      const res = resolutionOf(this.map);
+      if (this.mode === "bbox" && geom instanceof Polygon) {
+        const extent = geom.getExtent();
+        const [minX, minY, maxX, maxY] = extent;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        add2("translate", getCenter(extent));
+        add2("resize-nw", [minX, maxY]);
+        add2("resize-n", [midX, maxY]);
+        add2("resize-ne", [maxX, maxY]);
+        add2("resize-e", [maxX, midY]);
+        add2("resize-se", [maxX, minY]);
+        add2("resize-s", [midX, minY]);
+        add2("resize-sw", [minX, minY]);
+        add2("resize-w", [minX, midY]);
+        return;
+      }
+      if (this.mode !== "line-polygon") return;
+      if (geom instanceof LineString) {
+        const anchors = lineSideAnchors(geom, res);
+        add2("translate", anchors.translate);
+        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate);
+        return;
+      }
+      if (geom instanceof Polygon) {
+        const center = featureCentroid(geom);
+        const extent = geom.getExtent();
+        const span = Math.max(getHeight(extent), getWidth(extent), 1);
+        const defaultOffset = Math.max(span * 0.12, 36 * res);
+        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
+        add2("rotate", rotateAt);
+      }
+    }
+    handleMove(evt) {
+      if (!this.active || this.dragging) return;
+      const handle = this.findHandleAtPixel(evt.pixel);
+      const el = this.map.getTargetElement();
+      if (handle) {
+        if (el) el.style.cursor = cursorForRole(handle.get("role"));
+        return;
+      }
+      const feature = this.findDataFeatureAtPixel(evt.pixel);
+      if (feature) {
+        if (feature !== this.hovered) {
+          this.hovered = feature;
+        }
+        this.placeHandles(feature);
+        const geom = feature.getGeometry();
+        const coord = evt.coordinate;
+        if (el && geom instanceof Polygon && this.mode === "line-polygon" && coord && isDeepInsidePolygon(
+          geom,
+          coord,
+          POLYGON_INNER_MARGIN_PX * resolutionOf(this.map)
+        )) {
+          el.style.cursor = "move";
+        } else if (el) {
+          el.style.cursor = "pointer";
+        }
+        return;
+      }
+      this.hovered = null;
+      this.clearHandles();
+      if (el) el.style.cursor = "";
+    }
+    handleDown(evt) {
+      if (!this.active || this.mode === "point") return false;
+      const coord = evt.coordinate;
+      if (!coord) return false;
+      const handle = this.findHandleAtPixel(evt.pixel);
+      if (handle && this.hovered) {
+        const role = handle.get("role");
+        const geom = this.hovered.getGeometry();
+        if (!geom) return false;
+        this.dragging = {
+          role,
+          feature: this.hovered,
+          startCoord: coord.slice(),
+          startGeom: geom.clone(),
+          origin: featureCentroid(geom),
+          startAngle: angleBetween(featureCentroid(geom), coord),
+          startExtent: geom.getExtent().slice()
+        };
+        const el = this.map.getTargetElement();
+        if (el) {
+          el.style.cursor = role === "rotate" ? "grabbing" : cursorForRole(role);
+        }
+        return true;
+      }
+      if (this.mode === "line-polygon" && this.hovered) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Polygon) {
+          const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
+          if (isDeepInsidePolygon(geom, coord, margin)) {
+            this.dragging = {
+              role: "translate",
+              feature: this.hovered,
+              startCoord: coord.slice(),
+              startGeom: geom.clone(),
+              origin: featureCentroid(geom),
+              startAngle: 0,
+              startExtent: geom.getExtent().slice()
+            };
+            const el = this.map.getTargetElement();
+            if (el) el.style.cursor = "move";
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    handleDrag(evt) {
+      if (!this.dragging) return;
+      const coord = evt.coordinate;
+      if (!coord) return;
+      const { role, feature, startCoord, startGeom, origin, startAngle, startExtent } = this.dragging;
+      if (role === "translate") {
+        const next = startGeom.clone();
+        next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
+        feature.setGeometry(next);
+        this.placeHandles(feature);
+        return;
+      }
+      if (role === "rotate" && this.mode === "line-polygon") {
+        const angle = angleBetween(origin, coord) - startAngle;
+        const next = startGeom.clone();
+        rotateGeometry(next, angle, origin);
+        feature.setGeometry(next);
+        this.placeHandles(feature, { rotateAt: coord });
+        return;
+      }
+      if (this.mode === "bbox" && role.startsWith("resize-")) {
+        feature.setGeometry(
+          bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord))
+        );
+        this.placeHandles(feature);
+      }
+    }
+    handleUp(_evt) {
+      if (!this.dragging) return false;
+      const feature = this.dragging.feature;
+      this.dragging = null;
+      this.placeHandles(feature);
+      this.onChange();
+      return false;
+    }
+  }
+  function transformModeFor(geometryType) {
+    if (geometryType === "Rectangle") return "bbox";
+    if (geometryType === "Point" || geometryType === "MultiPoint") return "point";
+    return "line-polygon";
+  }
+  const modifyTool = {
+    id: "modify",
+    label: "Modifier une géométrie",
+    iconClass: "ec-geometry-editor__tool--modify",
+    modify: true
+  };
+  const removeTool = {
+    id: "remove",
+    label: "Supprimer une géométrie",
+    iconClass: "ec-geometry-editor__tool--remove",
+    remove: true
+  };
+  function toolsFor(geometryType) {
     if (geometryType === "Geometry") {
       return [
-        { id: "point", label: "Point", icon: "fr-icon-map-pin-2-line", drawType: "Point" },
+        {
+          id: "point",
+          label: "Point",
+          iconClass: "ec-geometry-editor__tool--point",
+          drawType: "Point"
+        },
         {
           id: "line",
           label: "Ligne",
-          icon: "fr-icon-arrow-right-up-line",
+          iconClass: "ec-geometry-editor__tool--line",
           drawType: "LineString"
         },
         {
           id: "polygon",
           label: "Polygone",
-          icon: "fr-icon-shapes-line",
+          iconClass: "ec-geometry-editor__tool--polygon",
           drawType: "Polygon"
         },
-        remove
+        modifyTool,
+        removeTool
       ];
     }
     if (geometryType === "Rectangle") {
@@ -38870,63 +39426,112 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         {
           id: "rect",
           label: "Rectangle",
-          icon: "fr-icon-crop-line",
+          iconClass: "ec-geometry-editor__tool--rectangle",
           drawType: "Circle",
           box: true
         },
-        remove
+        modifyTool,
+        removeTool
       ];
     }
     const simple = geometryType.replace(/^Multi/, "");
+    const iconClass = simple === "Point" ? "ec-geometry-editor__tool--point" : simple === "LineString" ? "ec-geometry-editor__tool--line" : "ec-geometry-editor__tool--polygon";
     return [
       {
         id: "draw",
         label: geometryType,
-        icon: "fr-icon-edit-line",
+        iconClass,
         drawType: simple === "Point" || simple === "LineString" || simple === "Polygon" ? simple : "Polygon"
       },
-      remove
+      modifyTool,
+      removeTool
     ];
   }
   class DrawToolsBar {
     constructor(opts) {
       __publicField(this, "map");
       __publicField(this, "source");
+      __publicField(this, "layer");
       __publicField(this, "target");
       __publicField(this, "onChange");
       __publicField(this, "geometryType");
+      __publicField(this, "drawStyle");
       __publicField(this, "activeId", null);
       __publicField(this, "draw", null);
       __publicField(this, "modify", null);
       __publicField(this, "select", null);
       __publicField(this, "snap", null);
+      __publicField(this, "transform");
+      __publicField(this, "onFeaturePointerMove", (evt) => {
+        if (evt.dragging) return;
+        if (this.activeId === "modify") return;
+        const hit = this.map.hasFeatureAtPixel(evt.pixel, {
+          layerFilter: (layer) => layer === this.layer,
+          hitTolerance: 12
+        });
+        const target = this.map.getTargetElement();
+        if (target) {
+          target.style.cursor = hit ? "pointer" : "";
+        }
+      });
       this.map = opts.map;
       this.source = opts.source;
+      this.layer = opts.layer;
       this.geometryType = opts.geometryType;
       this.target = opts.target;
       this.onChange = opts.onChange;
+      this.drawStyle = opts.style ?? geometryDrawStyle;
       this.modify = new Modify({ source: this.source });
+      this.modify.setActive(false);
       this.snap = new Snap({ source: this.source });
       this.map.addInteraction(this.modify);
       this.map.addInteraction(this.snap);
       this.modify.on("modifyend", () => this.onChange());
+      this.transform = new ModifyTransformController({
+        map: this.map,
+        source: this.source,
+        layer: this.layer,
+        mode: transformModeFor(this.geometryType),
+        onChange: () => this.onChange()
+      });
       this.render();
+    }
+    /** Met à jour le type de géométrie (recrée les boutons). */
+    setGeometryType(geometryType) {
+      if (this.geometryType === geometryType) return;
+      this.clearTransient();
+      this.geometryType = geometryType;
+      this.transform.setMode(transformModeFor(geometryType));
+      this.render();
+    }
+    /** Met à jour le style du croquis en cours. */
+    setStyle(style) {
+      this.clearTransient();
+      this.drawStyle = style ?? geometryDrawStyle;
     }
     render() {
       this.target.replaceChildren();
-      const tools = toolsFor(this.geometryType);
-      for (const tool of tools) {
+      for (const tool of toolsFor(this.geometryType)) {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `ec-geometry-editor__tool fr-btn fr-btn--secondary fr-btn--sm ${tool.icon}`;
+        btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
         btn.title = tool.label;
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
+        btn.dataset.toolId = tool.id;
         btn.addEventListener("click", () => this.activate(tool));
         this.target.appendChild(btn);
       }
     }
-    clearDraw() {
+    clearFeatureCursor() {
+      this.map.un("pointermove", this.onFeaturePointerMove);
+      const target = this.map.getTargetElement();
+      if (target) target.style.cursor = "";
+    }
+    clearTransient() {
+      var _a;
+      this.clearFeatureCursor();
+      this.transform.setActive(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
         this.draw = null;
@@ -38936,29 +39541,49 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.select = null;
       }
       this.activeId = null;
+      (_a = this.modify) == null ? void 0 : _a.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
     }
     activate(tool) {
+      var _a;
       const already = this.activeId === tool.id;
-      this.clearDraw();
+      this.clearTransient();
       if (already) return;
       this.activeId = tool.id;
       const btn = this.target.querySelector(
-        `button[aria-label="${CSS.escape(tool.label)}"]`
+        `button[data-tool-id="${tool.id}"]`
       );
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
+      if (tool.modify) {
+        this.transform.setMode(transformModeFor(this.geometryType));
+        this.transform.setActive(true);
+        if (this.transform.usesVertexModify()) {
+          (_a = this.modify) == null ? void 0 : _a.setActive(true);
+        }
+        this.map.on("pointermove", this.onFeaturePointerMove);
+        return;
+      }
       if (tool.remove) {
-        this.select = new Select({ condition: click });
+        this.map.on("pointermove", this.onFeaturePointerMove);
+        this.select = new Select({
+          condition: click,
+          hitTolerance: 12,
+          layers: [this.layer],
+          style: null
+        });
         this.select.on("select", (e) => {
-          var _a;
-          for (const f of e.selected) {
-            this.source.removeFeature(f);
+          var _a2;
+          const selected = [...e.selected];
+          for (const f of selected) {
+            if (this.source.hasFeature(f)) {
+              this.source.removeFeature(f);
+            }
           }
-          (_a = this.select) == null ? void 0 : _a.getFeatures().clear();
+          (_a2 = this.select) == null ? void 0 : _a2.getFeatures().clear();
           this.onChange();
         });
         this.map.addInteraction(this.select);
@@ -38969,25 +39594,320 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.draw = new Draw({
         source: this.source,
         type: tool.drawType,
-        style: geometryDrawStyle,
+        style: this.drawStyle,
         geometryFunction: tool.box ? createBox() : void 0
       });
       this.draw.on("drawstart", () => {
         if (replaceOnDraw) this.source.clear(true);
       });
       this.draw.on("drawend", () => {
-        queueMicrotask(() => {
-          this.onChange();
-          if (replaceOnDraw) this.clearDraw();
-        });
+        queueMicrotask(() => this.onChange());
       });
       this.map.addInteraction(this.draw);
     }
     destroy() {
-      this.clearDraw();
+      this.clearTransient();
+      this.transform.destroy();
       if (this.modify) this.map.removeInteraction(this.modify);
       if (this.snap) this.map.removeInteraction(this.snap);
       this.target.replaceChildren();
+    }
+  }
+  const GEOMETRY_TYPES = [
+    "Point",
+    "LineString",
+    "Polygon",
+    "MultiPoint",
+    "MultiLineString",
+    "MultiPolygon",
+    "Rectangle",
+    "Geometry"
+  ];
+  const OUTPUT_FORMATS = ["geojson", "kml"];
+  const LON_LAT_DECIMALS = 7;
+  const ZOOM_DECIMALS = 1;
+  const LON_LAT_STEP = 10 ** -LON_LAT_DECIMALS;
+  const ZOOM_STEP = 10 ** -ZOOM_DECIMALS;
+  function roundTo(value, decimals) {
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+  }
+  class SettingsPanel {
+    constructor(editor, mapHost) {
+      __publicField(this, "editor");
+      __publicField(this, "mapHost");
+      __publicField(this, "root");
+      __publicField(this, "button");
+      __publicField(this, "dialog", null);
+      __publicField(this, "form", null);
+      __publicField(this, "open", false);
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.open || !this.dialog) return;
+        const t = evt.target;
+        if (this.root.contains(t) || this.dialog.contains(t)) return;
+        this.close();
+      });
+      __publicField(this, "onViewChange", () => {
+        this.syncViewFieldsFromMap();
+      });
+      this.editor = editor;
+      this.mapHost = mapHost;
+      this.root = document.createElement("div");
+      this.root.className = "ec-geometry-editor__settings";
+      this.button = document.createElement("button");
+      this.button.type = "button";
+      this.button.className = "ec-geometry-editor__tool ec-geometry-editor__tool--settings";
+      this.button.title = "Options de la carte";
+      this.button.setAttribute("aria-label", "Options de la carte");
+      this.button.setAttribute("aria-expanded", "false");
+      this.button.setAttribute("aria-haspopup", "dialog");
+      this.button.addEventListener("click", () => this.toggle());
+      this.root.appendChild(this.button);
+      this.mapHost.appendChild(this.root);
+    }
+    toggle() {
+      if (this.open) this.close();
+      else this.openDialog();
+    }
+    openDialog() {
+      if (this.open) return;
+      this.open = true;
+      this.button.setAttribute("aria-expanded", "true");
+      this.button.classList.add("is-active");
+      this.dialog = this.buildDialog();
+      this.mapHost.appendChild(this.dialog);
+      document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      this.bindViewListeners(true);
+    }
+    close() {
+      var _a;
+      if (!this.open) return;
+      this.open = false;
+      this.button.setAttribute("aria-expanded", "false");
+      this.button.classList.remove("is-active");
+      this.bindViewListeners(false);
+      (_a = this.dialog) == null ? void 0 : _a.remove();
+      this.dialog = null;
+      this.form = null;
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+    }
+    destroy() {
+      this.close();
+      this.root.remove();
+    }
+    bindViewListeners(active) {
+      const view = this.editor.getMap().getView();
+      if (active) {
+        view.on("change:center", this.onViewChange);
+        view.on("change:resolution", this.onViewChange);
+      } else {
+        view.un("change:center", this.onViewChange);
+        view.un("change:resolution", this.onViewChange);
+      }
+    }
+    buildDialog() {
+      const opts = this.editor.getOptions();
+      const viewState = this.readCurrentView(opts);
+      const dialog = document.createElement("div");
+      dialog.className = "ec-geometry-editor__settings-dialog";
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-label", "Options de l’éditeur");
+      const form = document.createElement("form");
+      form.className = "ec-geometry-editor__settings-form";
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        this.applyForm(form);
+      });
+      this.form = form;
+      const title = document.createElement("p");
+      title.className = "ec-geometry-editor__settings-title";
+      title.textContent = "Options";
+      form.appendChild(title);
+      form.appendChild(
+        this.selectField("geometryType", "Type de géométrie", GEOMETRY_TYPES, opts.geometryType)
+      );
+      form.appendChild(
+        this.selectField("outputFormat", "Format de sortie", OUTPUT_FORMATS, opts.outputFormat)
+      );
+      form.appendChild(
+        this.numberField("height", "Hauteur (px)", Number(opts.height) || 400)
+      );
+      form.appendChild(
+        this.textField("width", "Largeur", String(opts.width))
+      );
+      form.appendChild(
+        this.numberField("lon", "Longitude courante", viewState.lon, LON_LAT_STEP)
+      );
+      form.appendChild(
+        this.numberField("lat", "Latitude courante", viewState.lat, LON_LAT_STEP)
+      );
+      form.appendChild(
+        this.numberField("zoom", "Zoom courant", viewState.zoom, ZOOM_STEP)
+      );
+      form.appendChild(this.numberField("minZoom", "Zoom min", opts.minZoom, 1));
+      form.appendChild(this.numberField("maxZoom", "Zoom max", opts.maxZoom, 1));
+      form.appendChild(
+        this.numberField("precision", "Précision", opts.precision, 1)
+      );
+      form.appendChild(this.checkField("editable", "Éditable", opts.editable));
+      form.appendChild(
+        this.checkField("centerOnResults", "Recadrer sur les résultats", opts.centerOnResults)
+      );
+      form.appendChild(this.checkField("blockView", "Bloquer la vue", opts.blockView));
+      form.appendChild(this.checkField("showZoom", "Contrôle zoom", opts.showZoom));
+      form.appendChild(
+        this.checkField("showAttributions", "Attributions", opts.showAttributions)
+      );
+      form.appendChild(
+        this.checkField("showSettings", "Bouton réglages", opts.showSettings)
+      );
+      form.appendChild(this.checkField("hide", "Masquer le champ source", opts.hide));
+      const actions = document.createElement("div");
+      actions.className = "ec-geometry-editor__settings-actions";
+      const applyBtn = document.createElement("button");
+      applyBtn.type = "submit";
+      applyBtn.className = "ec-geometry-editor__settings-apply";
+      applyBtn.textContent = "Appliquer";
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.className = "ec-geometry-editor__settings-reset";
+      resetBtn.textContent = "Réinitialiser";
+      resetBtn.title = "Remettre les options du chargement de la page";
+      resetBtn.addEventListener("click", () => this.resetToInitial());
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "ec-geometry-editor__settings-cancel";
+      cancelBtn.textContent = "Fermer";
+      cancelBtn.addEventListener("click", () => this.close());
+      actions.append(applyBtn, resetBtn, cancelBtn);
+      form.appendChild(actions);
+      dialog.appendChild(form);
+      return dialog;
+    }
+    /** Restaure les options du mount initial et rafraîchit le formulaire. */
+    resetToInitial() {
+      var _a;
+      this.editor.resetOptions();
+      if (!this.editor.getOptions().showSettings) {
+        this.close();
+        return;
+      }
+      this.bindViewListeners(false);
+      (_a = this.dialog) == null ? void 0 : _a.remove();
+      this.dialog = this.buildDialog();
+      this.mapHost.appendChild(this.dialog);
+      this.bindViewListeners(true);
+    }
+    /** Vue actuelle tronquée (validation HTML number + step). */
+    readCurrentView(opts) {
+      const view = this.editor.getMap().getView();
+      const zoom = roundTo(view.getZoom() ?? opts.zoom, ZOOM_DECIMALS);
+      const center = view.getCenter();
+      if (center) {
+        const [lon, lat] = toLonLat(center);
+        return {
+          lon: roundTo(lon, LON_LAT_DECIMALS),
+          lat: roundTo(lat, LON_LAT_DECIMALS),
+          zoom
+        };
+      }
+      return {
+        lon: roundTo(opts.lon, LON_LAT_DECIMALS),
+        lat: roundTo(opts.lat, LON_LAT_DECIMALS),
+        zoom
+      };
+    }
+    /**
+     * Met à jour lon / lat / zoom dans le formulaire ouvert.
+     * Ne touche pas un champ en cours d’édition (focus).
+     */
+    syncViewFieldsFromMap() {
+      if (!this.open || !this.form) return;
+      const viewState = this.readCurrentView(this.editor.getOptions());
+      this.setNumberIfIdle(this.form, "lon", viewState.lon);
+      this.setNumberIfIdle(this.form, "lat", viewState.lat);
+      this.setNumberIfIdle(this.form, "zoom", viewState.zoom);
+    }
+    setNumberIfIdle(form, name, value) {
+      const input = form.elements.namedItem(name);
+      if (!(input instanceof HTMLInputElement)) return;
+      if (document.activeElement === input) return;
+      const next = String(value);
+      if (input.value === next) return;
+      input.value = next;
+    }
+    applyForm(form) {
+      const fd = new FormData(form);
+      const num = (name) => Number(fd.get(name));
+      const bool = (name) => fd.get(name) === "on";
+      const patch = {
+        geometryType: String(fd.get("geometryType")),
+        outputFormat: String(fd.get("outputFormat")),
+        height: num("height"),
+        width: String(fd.get("width") ?? "100%"),
+        lon: roundTo(num("lon"), LON_LAT_DECIMALS),
+        lat: roundTo(num("lat"), LON_LAT_DECIMALS),
+        zoom: roundTo(num("zoom"), ZOOM_DECIMALS),
+        minZoom: num("minZoom"),
+        maxZoom: num("maxZoom"),
+        precision: num("precision"),
+        editable: bool("editable"),
+        centerOnResults: bool("centerOnResults"),
+        blockView: bool("blockView"),
+        showZoom: bool("showZoom"),
+        showAttributions: bool("showAttributions"),
+        showSettings: bool("showSettings"),
+        hide: bool("hide")
+      };
+      this.editor.setOptions(patch);
+      if (this.editor.getOptions().showSettings) {
+        this.close();
+      }
+    }
+    fieldWrap(labelText, control) {
+      const wrap2 = document.createElement("label");
+      wrap2.className = "ec-geometry-editor__settings-field";
+      const span = document.createElement("span");
+      span.textContent = labelText;
+      wrap2.append(span, control);
+      return wrap2;
+    }
+    textField(name, label, value) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.name = name;
+      input.value = value;
+      return this.fieldWrap(label, input);
+    }
+    numberField(name, label, value, step = 1) {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.name = name;
+      input.value = String(value);
+      input.step = String(step);
+      return this.fieldWrap(label, input);
+    }
+    checkField(name, label, checked) {
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = name;
+      input.checked = checked;
+      const wrap2 = document.createElement("label");
+      wrap2.className = "ec-geometry-editor__settings-field ec-geometry-editor__settings-field--check";
+      wrap2.append(input, document.createTextNode(` ${label}`));
+      return wrap2;
+    }
+    selectField(name, label, values, current) {
+      const select = document.createElement("select");
+      select.name = name;
+      for (const v of values) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        if (v === current) opt.selected = true;
+        select.appendChild(opt);
+      }
+      return this.fieldWrap(label, select);
     }
   }
   function cssSize(value) {
@@ -38997,88 +39917,103 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const tag = el.tagName.toLowerCase();
     return tag === "input" || tag === "textarea" || tag === "select";
   }
+  function mergeOptions(current, patch) {
+    return {
+      ...current,
+      ...patch,
+      tileLayers: patch.tileLayers !== void 0 ? patch.tileLayers.length ? patch.tileLayers : DEFAULT_GEOMETRY_EDITOR_OPTIONS.tileLayers : current.tileLayers,
+      customStyle: patch.customStyle === void 0 ? current.customStyle : patch.customStyle
+    };
+  }
+  function cloneResolvedOptions(opts) {
+    return {
+      ...opts,
+      tileLayers: opts.tileLayers.map((layer) => ({ ...layer }))
+    };
+  }
+  function createTileLayer(cfg) {
+    return new TileLayer({
+      source: new XYZ({
+        url: cfg.url,
+        attributions: cfg.attribution,
+        maxZoom: cfg.maxZoom ?? 19
+      }),
+      properties: { title: cfg.title ?? "Fond" }
+    });
+  }
+  function isNavigationInteraction(interaction) {
+    return interaction instanceof DragPan || interaction instanceof DragRotate || interaction instanceof DragZoom || interaction instanceof DoubleClickZoom || interaction instanceof KeyboardPan || interaction instanceof KeyboardZoom || interaction instanceof MouseWheelZoom || interaction instanceof PinchRotate || interaction instanceof PinchZoom;
+  }
   class GeometryEditor {
     constructor(element, options = {}) {
       __publicField(this, "element");
       __publicField(this, "options");
+      /** Options résolues au chargement (pour réinitialisation). */
+      __publicField(this, "initialOptions");
       __publicField(this, "map");
       __publicField(this, "source");
       __publicField(this, "mapHost");
+      __publicField(this, "vectorLayer");
       __publicField(this, "toolbarHost");
+      __publicField(this, "zoomControl", null);
+      __publicField(this, "attributionControl", null);
+      __publicField(this, "settingsPanel", null);
       __publicField(this, "drawBar", null);
       __publicField(this, "syncingFromElement", false);
       __publicField(this, "destroyed", false);
       __publicField(this, "onElementInput");
-      var _a;
       this.element = element;
-      this.options = {
-        ...DEFAULT_GEOMETRY_EDITOR_OPTIONS,
-        ...options,
-        tileLayers: ((_a = options.tileLayers) == null ? void 0 : _a.length) ? options.tileLayers : DEFAULT_GEOMETRY_EDITOR_OPTIONS.tileLayers
-      };
-      if (this.options.hide) {
-        element.hidden = true;
-        element.setAttribute("aria-hidden", "true");
-      }
+      this.options = mergeOptions(
+        { ...DEFAULT_GEOMETRY_EDITOR_OPTIONS },
+        options
+      );
+      this.initialOptions = cloneResolvedOptions(this.options);
+      this.applyElementVisibility();
       this.mapHost = document.createElement("div");
-      this.mapHost.className = [
-        "ec-geometry-editor",
-        this.options.className ?? ""
-      ].filter(Boolean).join(" ");
-      this.mapHost.style.width = cssSize(this.options.width);
-      this.mapHost.style.height = cssSize(this.options.height);
+      this.applyHostClass();
+      this.applyHostSize();
       const mapTarget = document.createElement("div");
       mapTarget.className = "ec-geometry-editor__map";
       this.mapHost.appendChild(mapTarget);
+      this.toolbarHost = null;
       if (this.options.editable) {
-        this.toolbarHost = document.createElement("div");
-        this.toolbarHost.className = "ec-geometry-editor__toolbar";
-        this.toolbarHost.setAttribute("role", "toolbar");
-        this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
-        this.mapHost.appendChild(this.toolbarHost);
-      } else {
-        this.toolbarHost = null;
+        this.ensureToolbarHost();
       }
       element.insertAdjacentElement("afterend", this.mapHost);
       this.source = new VectorSource({ wrapX: false });
-      const vectorLayer = new VectorLayer({
+      this.vectorLayer = new VectorLayer({
         source: this.source,
-        style: geometryStyleFunction
+        style: this.options.customStyle ?? geometryStyleFunction
       });
-      const baseLayers = this.options.tileLayers.map(
-        (cfg) => new TileLayer({
-          source: new XYZ({
-            url: cfg.url,
-            attributions: cfg.attribution,
-            maxZoom: cfg.maxZoom ?? 19
-          }),
-          properties: { title: cfg.title ?? "Fond" }
-        })
-      );
+      const baseLayers = this.options.tileLayers.map(createTileLayer);
+      const controls = defaults$1({ attribution: false, zoom: false });
+      const blockView = this.options.blockView;
       this.map = new Map({
         target: mapTarget,
-        layers: [...baseLayers, vectorLayer],
+        layers: [...baseLayers, this.vectorLayer],
         view: new View({
           center: fromLonLat([this.options.lon, this.options.lat]),
           zoom: this.options.zoom,
           minZoom: this.options.minZoom,
           maxZoom: this.options.maxZoom
         }),
-        controls: defaults$1({ attribution: false, zoom: false }).extend([
-          new Zoom(),
-          new Attribution({ collapsible: false })
-        ])
+        controls,
+        interactions: defaults({
+          altShiftDragRotate: !blockView,
+          doubleClickZoom: !blockView,
+          keyboard: !blockView,
+          mouseWheelZoom: !blockView,
+          shiftDragZoom: !blockView,
+          dragPan: !blockView,
+          pinchRotate: !blockView,
+          pinchZoom: !blockView
+        })
       });
+      this.applyShowZoom();
+      this.applyShowAttributions();
+      this.applyShowSettings();
       this.loadFromElement();
-      if (this.options.editable && this.toolbarHost) {
-        this.drawBar = new DrawToolsBar({
-          map: this.map,
-          source: this.source,
-          geometryType: this.options.geometryType,
-          target: this.toolbarHost,
-          onChange: () => this.serializeToElement()
-        });
-      }
+      this.applyEditable();
       this.onElementInput = () => {
         if (this.syncingFromElement || this.destroyed) return;
         this.loadFromElement();
@@ -39086,8 +40021,81 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       element.addEventListener("input", this.onElementInput);
       element.addEventListener("change", this.onElementInput);
     }
+    /**
+     * Met à jour les options à chaud (carte déjà créée).
+     * Seules les clés présentes dans `patch` sont modifiées.
+     */
+    setOptions(patch) {
+      var _a;
+      if (this.destroyed) return;
+      const prev = this.options;
+      this.options = mergeOptions(prev, patch);
+      if (patch.width !== void 0 || patch.height !== void 0) {
+        this.applyHostSize();
+        this.map.updateSize();
+      }
+      if (patch.className !== void 0 || patch.blockView !== void 0 || patch.showSettings !== void 0) {
+        this.applyHostClass();
+      }
+      if (patch.hide !== void 0) {
+        this.applyElementVisibility();
+      }
+      if (patch.lon !== void 0 || patch.lat !== void 0 || patch.zoom !== void 0 || patch.minZoom !== void 0 || patch.maxZoom !== void 0) {
+        this.applyView(patch);
+      }
+      if (patch.blockView !== void 0) {
+        this.applyBlockView(this.options.blockView);
+      }
+      if (patch.showZoom !== void 0 || patch.blockView !== void 0) {
+        this.applyShowZoom();
+      }
+      if (patch.showAttributions !== void 0) {
+        this.applyShowAttributions();
+      }
+      if (patch.showSettings !== void 0) {
+        this.applyShowSettings();
+      }
+      if (patch.tileLayers !== void 0) {
+        this.applyTileLayers(this.options.tileLayers);
+      }
+      if (patch.customStyle !== void 0) {
+        this.vectorLayer.setStyle(
+          this.options.customStyle ?? geometryStyleFunction
+        );
+        (_a = this.drawBar) == null ? void 0 : _a.setStyle(this.options.customStyle);
+      }
+      if (patch.editable !== void 0) {
+        this.applyEditable();
+      } else if (this.drawBar && patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
+        this.drawBar.setGeometryType(
+          this.options.geometryType
+        );
+      }
+      if (patch.geometryType !== void 0 || patch.outputFormat !== void 0 || patch.precision !== void 0) {
+        this.serializeToElement();
+      }
+    }
+    getOptions() {
+      return this.options;
+    }
+    /** Options présentes au chargement de l’éditeur. */
+    getInitialOptions() {
+      return this.initialOptions;
+    }
+    /**
+     * Remet toutes les options aux valeurs du chargement initial
+     * (celles passées à `mountGeometryEditor` / constructeur, fusionnées aux défauts).
+     */
+    resetOptions() {
+      if (this.destroyed) return;
+      this.setOptions(cloneResolvedOptions(this.initialOptions));
+    }
     getMap() {
       return this.map;
+    }
+    /** Couche vecteur d’édition (compat ShowGridOnMinimap). */
+    getGeometryLayer() {
+      return this.vectorLayer;
     }
     getRawData() {
       if (isFormField(this.element)) {
@@ -39138,19 +40146,1034 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
     }
     destroy() {
-      var _a;
+      var _a, _b;
       if (this.destroyed) return;
       this.destroyed = true;
       this.element.removeEventListener("input", this.onElementInput);
       this.element.removeEventListener("change", this.onElementInput);
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.drawBar = null;
+      (_b = this.settingsPanel) == null ? void 0 : _b.destroy();
+      this.settingsPanel = null;
       this.map.setTarget(void 0);
       this.mapHost.remove();
       if (this.options.hide) {
-        this.element.hidden = false;
-        this.element.removeAttribute("aria-hidden");
+        this.showSourceElement();
       }
     }
+    applyHostClass() {
+      this.mapHost.className = [
+        "ec-geometry-editor",
+        this.options.blockView ? "ec-geometry-editor--block-view" : "",
+        this.options.showSettings ? "ec-geometry-editor--has-settings" : "",
+        this.options.className ?? ""
+      ].filter(Boolean).join(" ");
+    }
+    applyHostSize() {
+      this.mapHost.style.width = cssSize(this.options.width);
+      this.mapHost.style.height = cssSize(this.options.height);
+    }
+    applyElementVisibility() {
+      if (this.options.hide) {
+        this.hideSourceElement();
+      } else {
+        this.showSourceElement();
+      }
+    }
+    /**
+     * Masque le champ source. L’attribut HTML `hidden` seul ne suffit pas :
+     * DSFR `.fr-input` impose un `display` auteur qui écrase la feuille UA de `[hidden]`.
+     */
+    hideSourceElement() {
+      this.element.hidden = true;
+      this.element.setAttribute("aria-hidden", "true");
+      this.element.classList.add(
+        "ec-geometry-editor-source--hidden",
+        "fr-hidden"
+      );
+    }
+    showSourceElement() {
+      this.element.hidden = false;
+      this.element.removeAttribute("aria-hidden");
+      this.element.classList.remove(
+        "ec-geometry-editor-source--hidden",
+        "fr-hidden"
+      );
+    }
+    applyView(patch) {
+      const view = this.map.getView();
+      if (patch.lon !== void 0 || patch.lat !== void 0) {
+        const next = fromLonLat([this.options.lon, this.options.lat]);
+        const cur = view.getCenter();
+        if (!cur || Math.abs(cur[0] - next[0]) > 1e-3 || Math.abs(cur[1] - next[1]) > 1e-3) {
+          view.setCenter(next);
+        }
+      }
+      if (patch.zoom !== void 0) {
+        const curZoom = view.getZoom();
+        if (curZoom === void 0 || Math.abs(curZoom - this.options.zoom) > 1e-4) {
+          view.setZoom(this.options.zoom);
+        }
+      }
+      if (patch.minZoom !== void 0) {
+        view.setMinZoom(this.options.minZoom);
+      }
+      if (patch.maxZoom !== void 0) {
+        view.setMaxZoom(this.options.maxZoom);
+      }
+    }
+    applyBlockView(blocked) {
+      this.map.getInteractions().forEach((interaction) => {
+        if (isNavigationInteraction(interaction)) {
+          interaction.setActive(!blocked);
+        }
+      });
+    }
+    applyShowZoom() {
+      const want = this.options.showZoom && !this.options.blockView;
+      if (want && !this.zoomControl) {
+        this.zoomControl = new Zoom();
+        this.map.addControl(this.zoomControl);
+      } else if (!want && this.zoomControl) {
+        this.map.removeControl(this.zoomControl);
+        this.zoomControl = null;
+      }
+    }
+    applyShowAttributions() {
+      const want = this.options.showAttributions;
+      if (want && !this.attributionControl) {
+        this.attributionControl = new Attribution({ collapsible: false });
+        this.map.addControl(this.attributionControl);
+      } else if (!want && this.attributionControl) {
+        this.map.removeControl(this.attributionControl);
+        this.attributionControl = null;
+      }
+    }
+    applyShowSettings() {
+      const want = this.options.showSettings;
+      if (want && !this.settingsPanel) {
+        this.settingsPanel = new SettingsPanel(this, this.mapHost);
+      } else if (!want && this.settingsPanel) {
+        this.settingsPanel.destroy();
+        this.settingsPanel = null;
+      }
+      this.applyHostClass();
+    }
+    applyTileLayers(configs) {
+      const layers = this.map.getLayers();
+      const existing = layers.getArray().filter((l) => l instanceof TileLayer);
+      for (const layer of existing) {
+        layers.remove(layer);
+      }
+      configs.forEach((cfg, index) => {
+        layers.insertAt(index, createTileLayer(cfg));
+      });
+    }
+    ensureToolbarHost() {
+      if (!this.toolbarHost) {
+        this.toolbarHost = document.createElement("div");
+        this.toolbarHost.className = "ec-geometry-editor__toolbar";
+        this.toolbarHost.setAttribute("role", "toolbar");
+        this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
+        this.mapHost.appendChild(this.toolbarHost);
+      }
+      return this.toolbarHost;
+    }
+    applyEditable() {
+      var _a;
+      if (this.options.editable) {
+        const host = this.ensureToolbarHost();
+        host.hidden = false;
+        if (!this.drawBar) {
+          this.drawBar = new DrawToolsBar({
+            map: this.map,
+            source: this.source,
+            layer: this.vectorLayer,
+            geometryType: this.options.geometryType,
+            target: host,
+            style: this.options.customStyle,
+            onChange: () => this.serializeToElement()
+          });
+        } else {
+          this.drawBar.setGeometryType(
+            this.options.geometryType
+          );
+          this.drawBar.setStyle(this.options.customStyle);
+        }
+      } else {
+        (_a = this.drawBar) == null ? void 0 : _a.destroy();
+        this.drawBar = null;
+        if (this.toolbarHost) {
+          this.toolbarHost.hidden = true;
+        }
+      }
+    }
+  }
+  class TextFeature extends FeatureFormat {
+    constructor() {
+      super();
+    }
+    /**
+     * @return {import("./Feature.js").Type} Format.
+     * @override
+     */
+    getType() {
+      return "text";
+    }
+    /**
+     * Read the feature from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../Feature.js").default} Feature.
+     * @api
+     * @override
+     */
+    readFeature(source, options) {
+      return this.readFeatureFromText(
+        getText(source),
+        this.adaptOptions(options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../Feature.js").default} Feature.
+     */
+    readFeatureFromText(text, options) {
+      return abstract();
+    }
+    /**
+     * Read the features from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @api
+     * @override
+     */
+    readFeatures(source, options) {
+      return this.readFeaturesFromText(
+        getText(source),
+        this.adaptOptions(options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<import("../Feature.js").default>} Features.
+     */
+    readFeaturesFromText(text, options) {
+      return abstract();
+    }
+    /**
+     * Read the geometry from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @api
+     * @override
+     */
+    readGeometry(source, options) {
+      return this.readGeometryFromText(
+        getText(source),
+        this.adaptOptions(options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromText(text, options) {
+      return abstract();
+    }
+    /**
+     * Read the projection from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
+     * @api
+     * @override
+     */
+    readProjection(source) {
+      return this.readProjectionFromText(getText(source));
+    }
+    /**
+     * @param {string} text Text.
+     * @protected
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
+     */
+    readProjectionFromText(text) {
+      return this.dataProjection;
+    }
+    /**
+     * Encode a feature as a string.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded feature.
+     * @api
+     * @override
+     */
+    writeFeature(feature, options) {
+      return this.writeFeatureText(feature, this.adaptOptions(options));
+    }
+    /**
+     * @abstract
+     * @param {import("../Feature.js").default} feature Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     */
+    writeFeatureText(feature, options) {
+      return abstract();
+    }
+    /**
+     * Encode an array of features as string.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded features.
+     * @api
+     * @override
+     */
+    writeFeatures(features, options) {
+      return this.writeFeaturesText(features, this.adaptOptions(options));
+    }
+    /**
+     * @abstract
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     */
+    writeFeaturesText(features, options) {
+      return abstract();
+    }
+    /**
+     * Write a single geometry.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Geometry.
+     * @api
+     * @override
+     */
+    writeGeometry(geometry, options) {
+      return this.writeGeometryText(geometry, this.adaptOptions(options));
+    }
+    /**
+     * @abstract
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     */
+    writeGeometryText(geometry, options) {
+      return abstract();
+    }
+  }
+  function getText(source) {
+    if (typeof source === "string") {
+      return source;
+    }
+    return "";
+  }
+  const GeometryConstructor = {
+    "POINT": Point,
+    "LINESTRING": LineString,
+    "POLYGON": Polygon,
+    "MULTIPOINT": MultiPoint,
+    "MULTILINESTRING": MultiLineString,
+    "MULTIPOLYGON": MultiPolygon
+  };
+  const EMPTY = "EMPTY";
+  const Z = "Z";
+  const M = "M";
+  const ZM = "ZM";
+  const TokenType = {
+    START: 0,
+    TEXT: 1,
+    LEFT_PAREN: 2,
+    RIGHT_PAREN: 3,
+    NUMBER: 4,
+    COMMA: 5,
+    EOF: 6
+  };
+  const wktTypeLookup = {
+    Point: "POINT",
+    LineString: "LINESTRING",
+    Polygon: "POLYGON",
+    MultiPoint: "MULTIPOINT",
+    MultiLineString: "MULTILINESTRING",
+    MultiPolygon: "MULTIPOLYGON",
+    GeometryCollection: "GEOMETRYCOLLECTION",
+    Circle: "CIRCLE"
+  };
+  class Lexer {
+    /**
+     * @param {string} wkt WKT string.
+     */
+    constructor(wkt) {
+      this.wkt = wkt;
+      this.index_ = -1;
+    }
+    /**
+     * @param {string} c Character.
+     * @return {boolean} Whether the character is alphabetic.
+     * @private
+     */
+    isAlpha_(c) {
+      return c >= "a" && c <= "z" || c >= "A" && c <= "Z";
+    }
+    /**
+     * @param {string} c Character.
+     * @param {boolean} [decimal] Whether the string number
+     *     contains a dot, i.e. is a decimal number.
+     * @return {boolean} Whether the character is numeric.
+     * @private
+     */
+    isNumeric_(c, decimal) {
+      decimal = decimal !== void 0 ? decimal : false;
+      return c >= "0" && c <= "9" || c == "." && !decimal;
+    }
+    /**
+     * @param {string} c Character.
+     * @return {boolean} Whether the character is whitespace.
+     * @private
+     */
+    isWhiteSpace_(c) {
+      return c == " " || c == "	" || c == "\r" || c == "\n";
+    }
+    /**
+     * @return {string} Next string character.
+     * @private
+     */
+    nextChar_() {
+      return this.wkt.charAt(++this.index_);
+    }
+    /**
+     * Fetch and return the next token.
+     * @return {Token} Next string token.
+     */
+    nextToken() {
+      const c = this.nextChar_();
+      const position = this.index_;
+      let value = c;
+      let type;
+      if (c == "(") {
+        type = TokenType.LEFT_PAREN;
+      } else if (c == ",") {
+        type = TokenType.COMMA;
+      } else if (c == ")") {
+        type = TokenType.RIGHT_PAREN;
+      } else if (this.isNumeric_(c) || c == "-") {
+        type = TokenType.NUMBER;
+        value = this.readNumber_();
+      } else if (this.isAlpha_(c)) {
+        type = TokenType.TEXT;
+        value = this.readText_();
+      } else if (this.isWhiteSpace_(c)) {
+        return this.nextToken();
+      } else if (c === "") {
+        type = TokenType.EOF;
+      } else {
+        throw new Error("Unexpected character: " + c);
+      }
+      return { position, value, type };
+    }
+    /**
+     * @return {number} Numeric token value.
+     * @private
+     */
+    readNumber_() {
+      let c;
+      const index = this.index_;
+      let decimal = false;
+      let scientificNotation = false;
+      do {
+        if (c == ".") {
+          decimal = true;
+        } else if (c == "e" || c == "E") {
+          scientificNotation = true;
+        }
+        c = this.nextChar_();
+      } while (this.isNumeric_(c, decimal) || // if we haven't detected a scientific number before, 'e' or 'E'
+      // hint that we should continue to read
+      !scientificNotation && (c == "e" || c == "E") || // once we know that we have a scientific number, both '-' and '+'
+      // are allowed
+      scientificNotation && (c == "-" || c == "+"));
+      return parseFloat(this.wkt.substring(index, this.index_--));
+    }
+    /**
+     * @return {string} String token value.
+     * @private
+     */
+    readText_() {
+      let c;
+      const index = this.index_;
+      do {
+        c = this.nextChar_();
+      } while (this.isAlpha_(c));
+      return this.wkt.substring(index, this.index_--).toUpperCase();
+    }
+  }
+  class Parser {
+    /**
+     * @param {Lexer} lexer The lexer.
+     */
+    constructor(lexer) {
+      this.lexer_ = lexer;
+      this.token_ = {
+        position: 0,
+        type: TokenType.START
+      };
+      this.layout_ = "XY";
+    }
+    /**
+     * Fetch the next token form the lexer and replace the active token.
+     * @private
+     */
+    consume_() {
+      this.token_ = this.lexer_.nextToken();
+    }
+    /**
+     * Tests if the given type matches the type of the current token.
+     * @param {TokenType} type Token type.
+     * @return {boolean} Whether the token matches the given type.
+     */
+    isTokenType(type) {
+      return this.token_.type == type;
+    }
+    /**
+     * If the given type matches the current token, consume it.
+     * @param {TokenType} type Token type.
+     * @return {boolean} Whether the token matches the given type.
+     */
+    match(type) {
+      const isMatch = this.isTokenType(type);
+      if (isMatch) {
+        this.consume_();
+      }
+      return isMatch;
+    }
+    /**
+     * Try to parse the tokens provided by the lexer.
+     * @return {import("../geom/Geometry.js").default} The geometry.
+     */
+    parse() {
+      this.consume_();
+      return this.parseGeometry_();
+    }
+    /**
+     * Try to parse the dimensional info.
+     * @return {import("../geom/Geometry.js").GeometryLayout} The layout.
+     * @private
+     */
+    parseGeometryLayout_() {
+      let layout = "XY";
+      const dimToken = this.token_;
+      if (this.isTokenType(TokenType.TEXT)) {
+        const dimInfo = dimToken.value;
+        if (dimInfo === Z) {
+          layout = "XYZ";
+        } else if (dimInfo === M) {
+          layout = "XYM";
+        } else if (dimInfo === ZM) {
+          layout = "XYZM";
+        }
+        if (layout !== "XY") {
+          this.consume_();
+        }
+      }
+      return layout;
+    }
+    /**
+     * @return {Array<import("../geom/Geometry.js").default>} A collection of geometries.
+     * @private
+     */
+    parseGeometryCollectionText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const geometries = [];
+        do {
+          geometries.push(this.parseGeometry_());
+        } while (this.match(TokenType.COMMA));
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return geometries;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<number>} All values in a point.
+     * @private
+     */
+    parsePointText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const coordinates2 = this.parsePoint_();
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<number>>} All points in a linestring.
+     * @private
+     */
+    parseLineStringText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const coordinates2 = this.parsePointList_();
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<Array<number>>>} All points in a polygon.
+     * @private
+     */
+    parsePolygonText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const coordinates2 = this.parseLineStringTextList_();
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<number>>} All points in a multipoint.
+     * @private
+     */
+    parseMultiPointText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        let coordinates2;
+        if (this.token_.type == TokenType.LEFT_PAREN) {
+          coordinates2 = this.parsePointTextList_();
+        } else {
+          coordinates2 = this.parsePointList_();
+        }
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<Array<number>>>} All linestring points
+     *                                          in a multilinestring.
+     * @private
+     */
+    parseMultiLineStringText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const coordinates2 = this.parseLineStringTextList_();
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<Array<Array<number>>>>} All polygon points in a multipolygon.
+     * @private
+     */
+    parseMultiPolygonText_() {
+      if (this.match(TokenType.LEFT_PAREN)) {
+        const coordinates2 = this.parsePolygonTextList_();
+        if (this.match(TokenType.RIGHT_PAREN)) {
+          return coordinates2;
+        }
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<number>} A point.
+     * @private
+     */
+    parsePoint_() {
+      const coordinates2 = [];
+      const dimensions = this.layout_.length;
+      for (let i = 0; i < dimensions; ++i) {
+        const token = this.token_;
+        if (this.match(TokenType.NUMBER)) {
+          coordinates2.push(
+            /** @type {number} */
+            token.value
+          );
+        } else {
+          break;
+        }
+      }
+      if (coordinates2.length == dimensions) {
+        return coordinates2;
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+    /**
+     * @return {Array<Array<number>>} An array of points.
+     * @private
+     */
+    parsePointList_() {
+      const coordinates2 = [this.parsePoint_()];
+      while (this.match(TokenType.COMMA)) {
+        coordinates2.push(this.parsePoint_());
+      }
+      return coordinates2;
+    }
+    /**
+     * @return {Array<Array<number>>} An array of points.
+     * @private
+     */
+    parsePointTextList_() {
+      const coordinates2 = [this.parsePointText_()];
+      while (this.match(TokenType.COMMA)) {
+        coordinates2.push(this.parsePointText_());
+      }
+      return coordinates2;
+    }
+    /**
+     * @return {Array<Array<Array<number>>>} An array of points.
+     * @private
+     */
+    parseLineStringTextList_() {
+      const coordinates2 = [this.parseLineStringText_()];
+      while (this.match(TokenType.COMMA)) {
+        coordinates2.push(this.parseLineStringText_());
+      }
+      return coordinates2;
+    }
+    /**
+     * @return {Array<Array<Array<Array<number>>>>} An array of points.
+     * @private
+     */
+    parsePolygonTextList_() {
+      const coordinates2 = [this.parsePolygonText_()];
+      while (this.match(TokenType.COMMA)) {
+        coordinates2.push(this.parsePolygonText_());
+      }
+      return coordinates2;
+    }
+    /**
+     * @return {boolean} Whether the token implies an empty geometry.
+     * @private
+     */
+    isEmptyGeometry_() {
+      const isEmpty2 = this.isTokenType(TokenType.TEXT) && this.token_.value == EMPTY;
+      if (isEmpty2) {
+        this.consume_();
+      }
+      return isEmpty2;
+    }
+    /**
+     * Create an error message for an unexpected token error.
+     * @return {string} Error message.
+     * @private
+     */
+    formatErrorMessage_() {
+      return "Unexpected `" + this.token_.value + "` at position " + this.token_.position + " in `" + this.lexer_.wkt + "`";
+    }
+    /**
+     * @return {import("../geom/Geometry.js").default} The geometry.
+     * @private
+     */
+    parseGeometry_() {
+      const token = this.token_;
+      if (this.match(TokenType.TEXT)) {
+        const geomType = (
+          /** @type {string} */
+          token.value
+        );
+        this.layout_ = this.parseGeometryLayout_();
+        const isEmpty2 = this.isEmptyGeometry_();
+        if (geomType == "GEOMETRYCOLLECTION") {
+          if (isEmpty2) {
+            return new GeometryCollection([]);
+          }
+          const geometries = this.parseGeometryCollectionText_();
+          return new GeometryCollection(geometries);
+        }
+        const ctor = GeometryConstructor[geomType];
+        if (!ctor) {
+          throw new Error("Invalid geometry type: " + geomType);
+        }
+        let coordinates2;
+        if (isEmpty2) {
+          if (geomType == "POINT") {
+            coordinates2 = [NaN, NaN];
+          } else {
+            coordinates2 = [];
+          }
+        } else {
+          switch (geomType) {
+            case "POINT": {
+              coordinates2 = this.parsePointText_();
+              break;
+            }
+            case "LINESTRING": {
+              coordinates2 = this.parseLineStringText_();
+              break;
+            }
+            case "POLYGON": {
+              coordinates2 = this.parsePolygonText_();
+              break;
+            }
+            case "MULTIPOINT": {
+              coordinates2 = this.parseMultiPointText_();
+              break;
+            }
+            case "MULTILINESTRING": {
+              coordinates2 = this.parseMultiLineStringText_();
+              break;
+            }
+            case "MULTIPOLYGON": {
+              coordinates2 = this.parseMultiPolygonText_();
+              break;
+            }
+          }
+        }
+        return new ctor(coordinates2, this.layout_);
+      }
+      throw new Error(this.formatErrorMessage_());
+    }
+  }
+  class WKT extends TextFeature {
+    /**
+     * @param {Options} [options] Options.
+     */
+    constructor(options) {
+      super();
+      options = options ? options : {};
+      this.splitCollection_ = options.splitCollection !== void 0 ? options.splitCollection : false;
+    }
+    /**
+     * Parse a WKT string.
+     * @param {string} wkt WKT string.
+     * @return {import("../geom/Geometry.js").default}
+     *     The geometry created.
+     * @private
+     */
+    parse_(wkt) {
+      const lexer = new Lexer(wkt);
+      const parser = new Parser(lexer);
+      return parser.parse();
+    }
+    /**
+     * @protected
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../Feature.js").default} Feature.
+     * @override
+     */
+    readFeatureFromText(text, options) {
+      const geom = this.readGeometryFromText(text, options);
+      const feature = new Feature();
+      feature.setGeometry(geom);
+      return feature;
+    }
+    /**
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<Feature>} Features.
+     * @override
+     */
+    readFeaturesFromText(text, options) {
+      let geometries = [];
+      const geometry = this.readGeometryFromText(text, options);
+      if (this.splitCollection_ && geometry.getType() == "GeometryCollection") {
+        geometries = /** @type {GeometryCollection} */
+        geometry.getGeometriesArray();
+      } else {
+        geometries = [geometry];
+      }
+      const features = [];
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        const feature = new Feature();
+        feature.setGeometry(geometries[i]);
+        features.push(feature);
+      }
+      return features;
+    }
+    /**
+     * @param {string} text Text.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @override
+     */
+    readGeometryFromText(text, options) {
+      const geometry = this.parse_(text);
+      return transformGeometryWithOptions(geometry, false, options);
+    }
+    /**
+     * @param {import("../Feature.js").default} feature Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     * @override
+     */
+    writeFeatureText(feature, options) {
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        return this.writeGeometryText(geometry, options);
+      }
+      return "";
+    }
+    /**
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     * @override
+     */
+    writeFeaturesText(features, options) {
+      if (features.length == 1) {
+        return this.writeFeatureText(features[0], options);
+      }
+      const geometries = [];
+      for (let i = 0, ii = features.length; i < ii; ++i) {
+        geometries.push(features[i].getGeometry());
+      }
+      const collection = new GeometryCollection(geometries);
+      return this.writeGeometryText(collection, options);
+    }
+    /**
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @protected
+     * @return {string} Text.
+     * @override
+     */
+    writeGeometryText(geometry, options) {
+      return encode(transformGeometryWithOptions(geometry, true, options));
+    }
+  }
+  function encodePointGeometry(geom) {
+    const coordinates2 = geom.getCoordinates();
+    if (coordinates2.length === 0) {
+      return "";
+    }
+    return coordinates2.join(" ");
+  }
+  function encodeMultiPointGeometry(geom) {
+    const array = [];
+    const components = geom.getPoints();
+    for (let i = 0, ii = components.length; i < ii; ++i) {
+      array.push("(" + encodePointGeometry(components[i]) + ")");
+    }
+    return array.join(",");
+  }
+  function encodeGeometryCollectionGeometry(geom) {
+    const array = [];
+    const geoms = geom.getGeometries();
+    for (let i = 0, ii = geoms.length; i < ii; ++i) {
+      array.push(encode(geoms[i]));
+    }
+    return array.join(",");
+  }
+  function encodeLineStringGeometry(geom) {
+    const coordinates2 = geom.getCoordinates();
+    const array = [];
+    for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+      array.push(coordinates2[i].join(" "));
+    }
+    return array.join(",");
+  }
+  function encodeMultiLineStringGeometry(geom) {
+    const array = [];
+    const components = geom.getLineStrings();
+    for (let i = 0, ii = components.length; i < ii; ++i) {
+      array.push("(" + encodeLineStringGeometry(components[i]) + ")");
+    }
+    return array.join(",");
+  }
+  function encodePolygonGeometry(geom) {
+    const array = [];
+    const rings = geom.getLinearRings();
+    for (let i = 0, ii = rings.length; i < ii; ++i) {
+      array.push("(" + encodeLineStringGeometry(rings[i]) + ")");
+    }
+    return array.join(",");
+  }
+  function encodeMultiPolygonGeometry(geom) {
+    const array = [];
+    const components = geom.getPolygons();
+    for (let i = 0, ii = components.length; i < ii; ++i) {
+      array.push("(" + encodePolygonGeometry(components[i]) + ")");
+    }
+    return array.join(",");
+  }
+  function encodeGeometryLayout(geom) {
+    const layout = geom.getLayout();
+    let dimInfo = "";
+    if (layout === "XYZ" || layout === "XYZM") {
+      dimInfo += Z;
+    }
+    if (layout === "XYM" || layout === "XYZM") {
+      dimInfo += M;
+    }
+    return dimInfo;
+  }
+  const GeometryEncoder = {
+    "Point": encodePointGeometry,
+    "LineString": encodeLineStringGeometry,
+    "Polygon": encodePolygonGeometry,
+    "MultiPoint": encodeMultiPointGeometry,
+    "MultiLineString": encodeMultiLineStringGeometry,
+    "MultiPolygon": encodeMultiPolygonGeometry,
+    "GeometryCollection": encodeGeometryCollectionGeometry
+  };
+  function encode(geom) {
+    const type = geom.getType();
+    const geometryEncoder = GeometryEncoder[type];
+    const enc = geometryEncoder(geom);
+    let wktType = wktTypeLookup[type];
+    if (typeof /** @type {?} */
+    geom.getFlatCoordinates === "function") {
+      const dimInfo = encodeGeometryLayout(
+        /** @type {import("../geom/SimpleGeometry.js").default} */
+        geom
+      );
+      if (dimInfo.length > 0) {
+        wktType += " " + dimInfo;
+      }
+    }
+    if (enc.length === 0) {
+      return wktType + " " + EMPTY;
+    }
+    return wktType + "(" + enc + ")";
+  }
+  function featureFromWkt(wkt) {
+    const geometry = new WKT().readGeometry(wkt, {
+      featureProjection: "EPSG:3857",
+      dataProjection: "EPSG:4326"
+    });
+    return new Feature({ geometry });
+  }
+  function bboxStringFromWkt(wkt) {
+    const extent = new WKT().readGeometry(wkt).getExtent();
+    return `[${extent.join(",")}]`;
+  }
+  function createSimpleStyle(opts) {
+    return new Style({
+      fill: new Fill({
+        color: opts.fill ?? "rgba(0,0,145,0.2)"
+      }),
+      stroke: new Stroke({
+        color: opts.stroke ?? "rgba(0,0,145,1)",
+        width: opts.strokeWidth ?? 2
+      })
+    });
   }
   function mountGeometryEditor(element, options) {
     const el = typeof element === "string" ? document.querySelector(element) : element;
@@ -39160,19 +41183,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const editor = new GeometryEditor(el, options);
     return {
       editor,
+      setOptions: (patch) => editor.setOptions(patch),
+      resetOptions: () => editor.resetOptions(),
       destroy: () => editor.destroy()
     };
   }
   const api = {
     mountGeometryEditor,
-    GeometryEditor
+    GeometryEditor,
+    featureFromWkt,
+    bboxStringFromWkt,
+    createSimpleStyle
   };
   if (typeof window !== "undefined") {
     window.EntreeCartoGeometryEditor = api;
   }
   exports.DEFAULT_GEOMETRY_EDITOR_OPTIONS = DEFAULT_GEOMETRY_EDITOR_OPTIONS;
   exports.GeometryEditor = GeometryEditor;
+  exports.bboxStringFromWkt = bboxStringFromWkt;
+  exports.createSimpleStyle = createSimpleStyle;
   exports.default = api;
+  exports.featureFromWkt = featureFromWkt;
   exports.mountGeometryEditor = mountGeometryEditor;
   Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: "Module" } });
   return exports;

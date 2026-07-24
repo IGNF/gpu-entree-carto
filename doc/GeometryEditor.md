@@ -49,7 +49,7 @@ Alignées sur ol-geometry-editor (principales) :
 | Option | Défaut | Description |
 |--------|--------|-------------|
 | `geometryType` | `'Geometry'` | `Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Geometry` |
-| `hide` | `true` | Masque l’élément source |
+| `hide` | `true` | Masque l’élément source (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, car DSFR `.fr-input` écrase sinon l’attribut `hidden`) |
 | `editable` | `true` | Affiche la barre d’outils à gauche dans la carte (sinon viewer seul) |
 | `tileLayers` | Plan IGN WMTS | Fonds XYZ `{ url, attribution?, title?, maxZoom? }` |
 | `width` / `height` | `100%` / `400` | Taille du conteneur carte |
@@ -61,7 +61,7 @@ Alignées sur ol-geometry-editor (principales) :
 | `className` | — | Classe CSS additionnelle sur le conteneur |
 | `blockView` | `false` | Bloque pan / zoom manuels (molette, drag, double-clic, pinch, clavier, boutons +/-). Le `fit` programmatique reste possible. |
 | `showZoom` | `true` | Affiche les boutons +/- de zoom (ignoré si `blockView` est `true`) |
-| `showSettings` | `false` | Bouton roue crantée (haut droite) : formulaire pour modifier les options à chaud ; décale le zoom en dessous |
+| `showSettings` | `false` | Bouton roue crantée (haut droite) : formulaire pour modifier les options à chaud ; décale le zoom en dessous. Longitude / latitude / zoom **courants** sont tronqués (7 / 1 décimales) pour la validation HTML, et se mettent à jour en direct quand la vue change (sauf champ en focus). Bouton **Réinitialiser** : remet les options du chargement initial (`editor.resetOptions()`). |
 | `showAttributions` | `false` | Affiche le contrôle d’attributions des couches de fond |
 | `customStyle` | `null` | Style OL (`Style` / `Style[]` / `StyleFunction`) des features et du croquis ; défaut bleu France |
 
@@ -76,6 +76,8 @@ Après création, `editor.setOptions(patch)` (ou `handle.setOptions(patch)`) app
 
 Seules les clés présentes dans `patch` sont modifiées. Un changement de `geometryType` / `outputFormat` / `precision` réécrit l’élément source.
 
+`editor.resetOptions()` (ou `handle.resetOptions()`, ou le bouton **Réinitialiser** du panneau) restaure l’ensemble des options telles qu’au montage de l’éditeur.
+
 ## Comportement
 
 - Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML** ou une **bbox** `[minX,minY,maxX,maxY]` → géométries dessinées sur la carte.
@@ -83,10 +85,16 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
-- **Modification** : activer l’outil crayon (icône geopf edit) puis déplacer les sommets / la géométrie.
+- **Modification** : activer l’outil crayon (icône geopf edit).
+  - **Ligne** : au survol, poignées **bleues** (croix + flèche courbe) **collées sur le côté** de la ligne ; translation / rotation via ces poignées.
+  - **Polygone** et **Rectangle (bbox)** : **translation** en glissant l’**intérieur** (marge depuis les bords) — pas d’icône de translation.
+  - **Polygone** : poignée **rotation** (bleue) au survol.
+  - Pendant le drag de rotation, l’icône **suit le curseur**.
+  - **Rectangle (bbox)** : carrés coins / arêtes pour redimensionner (axis-aligné, **sans rotation**).
+  - **Point** : déplacement du sommet.
 - **Suppression** : activer l’outil poubelle puis cliquer une géométrie.
 - Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
-- Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche.
+- Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche ; boutons **48×48** avec pictos +/− (masques geopf `DSFRzoomStyle`), même look que le zoom de la carte principale.
 
 ## Démo
 
@@ -104,21 +112,32 @@ npm run build:geometry-editor
 
 ## Intégration gpu-site
 
-Remplacer progressivement `ol-geometry-editor` (webpack copie déjà un vendor). Exemple :
+Les pages qui utilisaient `ol-geometry-editor` appellent directement l’API globale (pas de pont jQuery).
 
-```js
-// avant
-$field.geometryEditor({ geometryType: 'Rectangle', height: 400, … });
-
-// après
-EntreeCartoGeometryEditor.mountGeometryEditor($field[0], {
-  geometryType: 'Rectangle',
-  height: 400,
-  tileLayers: [{ url: layerSourceUrl, attribution: '…', maxZoom: 18 }],
-});
+```html
+<link rel="stylesheet" href="…/vendor/entree-carto/css/entree-carto-geometry-editor.min.css" />
+<script src="…/vendor/entree-carto/entree-carto-geometry-editor.min.js"></script>
+<script>
+  const { editor } = EntreeCartoGeometryEditor.mountGeometryEditor(fieldEl, {
+    geometryType: 'Rectangle',
+    editable: true,
+    showZoom: true,
+    height: 400,
+    tileLayers: [{ url: layerSourceUrl, attribution: '…', maxZoom: 18 }],
+  });
+  // editor.getMap()
+  // editor.getGeometryLayer()
+  // editor.destroy()
+</script>
 ```
 
-Pages concernées (recherche `ol-geometry-editor` dans gpu-site) : métadonnées document, grille admin, territoire, etc.
+Helpers du même OpenLayers que la carte (pour overlays type `ShowGridOnMinimap`) :
+
+- `EntreeCartoGeometryEditor.featureFromWkt(wkt)`
+- `EntreeCartoGeometryEditor.bboxStringFromWkt(wkt)`
+- `EntreeCartoGeometryEditor.createSimpleStyle({ fill, stroke, strokeWidth })`
+
+Pages : métadonnées (`/metadata/`), fiche document, territoire, admin grille.
 
 ## Limites actuelles
 

@@ -10,6 +10,10 @@ import Snap from 'ol/interaction/Snap'
 import { click } from 'ol/events/condition'
 import type { GeometryTypeOption } from './types'
 import { geometryDrawStyle } from './styles'
+import {
+  ModifyTransformController,
+  transformModeFor,
+} from './ModifyTransformController'
 
 type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle'
 
@@ -111,8 +115,11 @@ export class DrawToolsBar {
   private modify: Modify | null = null
   private select: Select | null = null
   private snap: Snap | null = null
+  private readonly transform: ModifyTransformController
   private readonly onFeaturePointerMove = (evt: MapBrowserEvent): void => {
     if (evt.dragging) return
+    // En mode modify, le curseur est géré par ModifyTransformController
+    if (this.activeId === 'modify') return
     const hit = this.map.hasFeatureAtPixel(evt.pixel, {
       layerFilter: (layer) => layer === this.layer,
       hitTolerance: 12,
@@ -148,6 +155,14 @@ export class DrawToolsBar {
     this.map.addInteraction(this.snap)
     this.modify.on('modifyend', () => this.onChange())
 
+    this.transform = new ModifyTransformController({
+      map: this.map,
+      source: this.source,
+      layer: this.layer,
+      mode: transformModeFor(this.geometryType),
+      onChange: () => this.onChange(),
+    })
+
     this.render()
   }
 
@@ -156,6 +171,7 @@ export class DrawToolsBar {
     if (this.geometryType === geometryType) return
     this.clearTransient()
     this.geometryType = geometryType
+    this.transform.setMode(transformModeFor(geometryType))
     this.render()
   }
 
@@ -188,6 +204,7 @@ export class DrawToolsBar {
 
   private clearTransient(): void {
     this.clearFeatureCursor()
+    this.transform.setActive(false)
     if (this.draw) {
       this.map.removeInteraction(this.draw)
       this.draw = null
@@ -217,7 +234,12 @@ export class DrawToolsBar {
     btn?.classList.add('is-active')
 
     if (tool.modify) {
-      this.modify?.setActive(true)
+      this.transform.setMode(transformModeFor(this.geometryType))
+      this.transform.setActive(true)
+      // Sommets libres : ligne / polygone / point — pas pour Rectangle (bbox)
+      if (this.transform.usesVertexModify()) {
+        this.modify?.setActive(true)
+      }
       this.map.on('pointermove', this.onFeaturePointerMove)
       return
     }
@@ -269,6 +291,7 @@ export class DrawToolsBar {
 
   destroy(): void {
     this.clearTransient()
+    this.transform.destroy()
     if (this.modify) this.map.removeInteraction(this.modify)
     if (this.snap) this.map.removeInteraction(this.snap)
     this.target.replaceChildren()

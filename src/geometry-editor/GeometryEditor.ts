@@ -64,6 +64,13 @@ function mergeOptions(
   }
 }
 
+function cloneResolvedOptions(opts: ResolvedOptions): ResolvedOptions {
+  return {
+    ...opts,
+    tileLayers: opts.tileLayers.map((layer) => ({ ...layer })),
+  }
+}
+
 function createTileLayer(cfg: TileLayerConfig): TileLayer {
   return new TileLayer({
     source: new XYZ({
@@ -96,6 +103,8 @@ function isNavigationInteraction(interaction: unknown): boolean {
 export class GeometryEditor {
   readonly element: HTMLElement
   options: ResolvedOptions
+  /** Options résolues au chargement (pour réinitialisation). */
+  private readonly initialOptions: ResolvedOptions
   readonly map: Map
   readonly source: VectorSource
   private readonly mapHost: HTMLElement
@@ -115,6 +124,7 @@ export class GeometryEditor {
       { ...DEFAULT_GEOMETRY_EDITOR_OPTIONS },
       options,
     )
+    this.initialOptions = cloneResolvedOptions(this.options)
 
     this.applyElementVisibility()
 
@@ -268,8 +278,27 @@ export class GeometryEditor {
     return this.options
   }
 
+  /** Options présentes au chargement de l’éditeur. */
+  getInitialOptions(): Readonly<ResolvedOptions> {
+    return this.initialOptions
+  }
+
+  /**
+   * Remet toutes les options aux valeurs du chargement initial
+   * (celles passées à `mountGeometryEditor` / constructeur, fusionnées aux défauts).
+   */
+  resetOptions(): void {
+    if (this.destroyed) return
+    this.setOptions(cloneResolvedOptions(this.initialOptions))
+  }
+
   getMap(): Map {
     return this.map
+  }
+
+  /** Couche vecteur d’édition (compat ShowGridOnMinimap). */
+  getGeometryLayer(): VectorLayer {
+    return this.vectorLayer
   }
 
   getRawData(): string {
@@ -338,8 +367,7 @@ export class GeometryEditor {
     this.map.setTarget(undefined)
     this.mapHost.remove()
     if (this.options.hide) {
-      this.element.hidden = false
-      this.element.removeAttribute('aria-hidden')
+      this.showSourceElement()
     }
   }
 
@@ -361,21 +389,52 @@ export class GeometryEditor {
 
   private applyElementVisibility(): void {
     if (this.options.hide) {
-      this.element.hidden = true
-      this.element.setAttribute('aria-hidden', 'true')
+      this.hideSourceElement()
     } else {
-      this.element.hidden = false
-      this.element.removeAttribute('aria-hidden')
+      this.showSourceElement()
     }
+  }
+
+  /**
+   * Masque le champ source. L’attribut HTML `hidden` seul ne suffit pas :
+   * DSFR `.fr-input` impose un `display` auteur qui écrase la feuille UA de `[hidden]`.
+   */
+  private hideSourceElement(): void {
+    this.element.hidden = true
+    this.element.setAttribute('aria-hidden', 'true')
+    this.element.classList.add(
+      'ec-geometry-editor-source--hidden',
+      'fr-hidden',
+    )
+  }
+
+  private showSourceElement(): void {
+    this.element.hidden = false
+    this.element.removeAttribute('aria-hidden')
+    this.element.classList.remove(
+      'ec-geometry-editor-source--hidden',
+      'fr-hidden',
+    )
   }
 
   private applyView(patch: GeometryEditorOptions): void {
     const view = this.map.getView()
     if (patch.lon !== undefined || patch.lat !== undefined) {
-      view.setCenter(fromLonLat([this.options.lon, this.options.lat]))
+      const next = fromLonLat([this.options.lon, this.options.lat])
+      const cur = view.getCenter()
+      if (
+        !cur ||
+        Math.abs(cur[0] - next[0]) > 1e-3 ||
+        Math.abs(cur[1] - next[1]) > 1e-3
+      ) {
+        view.setCenter(next)
+      }
     }
     if (patch.zoom !== undefined) {
-      view.setZoom(this.options.zoom)
+      const curZoom = view.getZoom()
+      if (curZoom === undefined || Math.abs(curZoom - this.options.zoom) > 1e-4) {
+        view.setZoom(this.options.zoom)
+      }
     }
     if (patch.minZoom !== undefined) {
       view.setMinZoom(this.options.minZoom)
