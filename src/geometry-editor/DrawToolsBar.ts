@@ -3,13 +3,19 @@ import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type VectorLayer from 'ol/layer/Vector'
 import type VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
+import Circle from 'ol/geom/Circle'
 import Draw, { createBox } from 'ol/interaction/Draw'
 import Modify from 'ol/interaction/Modify'
 import Select from 'ol/interaction/Select'
 import Snap from 'ol/interaction/Snap'
 import { click } from 'ol/events/condition'
 import type { GeometryTypeOption } from './types'
-import { geometryDrawStyle } from './styles'
+import {
+  circleDrawStyle,
+  discDrawStyle,
+  geometryDrawStyle,
+} from './styles'
+import { setCircleKind, type CircleKind } from './circleHelpers'
 import {
   ModifyTransformController,
   transformModeFor,
@@ -24,6 +30,8 @@ interface ToolDef {
   iconClass: string
   drawType?: DrawType
   box?: boolean
+  /** Marque Circle vs Disc après drawend */
+  circleKind?: CircleKind
   modify?: boolean
   remove?: boolean
 }
@@ -40,6 +48,12 @@ const removeTool: ToolDef = {
   label: 'Supprimer une géométrie',
   iconClass: 'ec-geometry-editor__tool--remove',
   remove: true,
+}
+
+function drawStyleFor(geometryType: GeometryTypeOption): StyleLike {
+  if (geometryType === 'Circle') return circleDrawStyle
+  if (geometryType === 'Disc') return discDrawStyle
+  return geometryDrawStyle
 }
 
 function toolsFor(geometryType: GeometryTypeOption): ToolDef[] {
@@ -63,6 +77,20 @@ function toolsFor(geometryType: GeometryTypeOption): ToolDef[] {
         iconClass: 'ec-geometry-editor__tool--polygon',
         drawType: 'Polygon',
       },
+      {
+        id: 'circle',
+        label: 'Cercle',
+        iconClass: 'ec-geometry-editor__tool--circle',
+        drawType: 'Circle',
+        circleKind: 'circle',
+      },
+      {
+        id: 'disc',
+        label: 'Disque',
+        iconClass: 'ec-geometry-editor__tool--disc',
+        drawType: 'Circle',
+        circleKind: 'disc',
+      },
       modifyTool,
       removeTool,
     ]
@@ -75,6 +103,32 @@ function toolsFor(geometryType: GeometryTypeOption): ToolDef[] {
         iconClass: 'ec-geometry-editor__tool--rectangle',
         drawType: 'Circle',
         box: true,
+      },
+      modifyTool,
+      removeTool,
+    ]
+  }
+  if (geometryType === 'Circle') {
+    return [
+      {
+        id: 'draw',
+        label: 'Cercle',
+        iconClass: 'ec-geometry-editor__tool--circle',
+        drawType: 'Circle',
+        circleKind: 'circle',
+      },
+      modifyTool,
+      removeTool,
+    ]
+  }
+  if (geometryType === 'Disc') {
+    return [
+      {
+        id: 'draw',
+        label: 'Disque',
+        iconClass: 'ec-geometry-editor__tool--disc',
+        drawType: 'Circle',
+        circleKind: 'disc',
       },
       modifyTool,
       removeTool,
@@ -110,6 +164,7 @@ export class DrawToolsBar {
   private readonly onChange: () => void
   private geometryType: GeometryTypeOption
   private drawStyle: StyleLike
+  private customStyle: StyleLike | null | undefined
   private activeId: string | null = null
   private draw: Draw | null = null
   private modify: Modify | null = null
@@ -146,9 +201,14 @@ export class DrawToolsBar {
     this.geometryType = opts.geometryType
     this.target = opts.target
     this.onChange = opts.onChange
-    this.drawStyle = opts.style ?? geometryDrawStyle
+    this.customStyle = opts.style
+    this.drawStyle = opts.style ?? drawStyleFor(opts.geometryType)
 
-    this.modify = new Modify({ source: this.source })
+    this.modify = new Modify({
+      source: this.source,
+      // Cercle / disque : gérés par ModifyTransformController (rayon / translation)
+      filter: (feature) => !(feature.getGeometry() instanceof Circle),
+    })
     this.modify.setActive(false)
     this.snap = new Snap({ source: this.source })
     this.map.addInteraction(this.modify)
@@ -172,13 +232,17 @@ export class DrawToolsBar {
     this.clearTransient()
     this.geometryType = geometryType
     this.transform.setMode(transformModeFor(geometryType))
+    if (!this.customStyle) {
+      this.drawStyle = drawStyleFor(geometryType)
+    }
     this.render()
   }
 
   /** Met à jour le style du croquis en cours. */
   setStyle(style: StyleLike | null | undefined): void {
     this.clearTransient()
-    this.drawStyle = style ?? geometryDrawStyle
+    this.customStyle = style
+    this.drawStyle = style ?? drawStyleFor(this.geometryType)
   }
 
   private render(): void {
@@ -236,7 +300,7 @@ export class DrawToolsBar {
     if (tool.modify) {
       this.transform.setMode(transformModeFor(this.geometryType))
       this.transform.setActive(true)
-      // Sommets libres : ligne / polygone / point — pas pour Rectangle (bbox)
+      // Sommets libres : ligne / polygone / point — pas pour Rectangle / Circle / Disc
       if (this.transform.usesVertexModify()) {
         this.modify?.setActive(true)
       }
@@ -272,18 +336,30 @@ export class DrawToolsBar {
       this.geometryType === 'Point' ||
       this.geometryType === 'LineString' ||
       this.geometryType === 'Polygon' ||
-      this.geometryType === 'Rectangle'
+      this.geometryType === 'Rectangle' ||
+      this.geometryType === 'Circle' ||
+      this.geometryType === 'Disc'
+
+    const sketchStyle =
+      tool.circleKind === 'circle'
+        ? circleDrawStyle
+        : tool.circleKind === 'disc'
+          ? discDrawStyle
+          : this.drawStyle
 
     this.draw = new Draw({
       source: this.source,
       type: tool.drawType,
-      style: this.drawStyle,
+      style: this.customStyle ?? sketchStyle,
       geometryFunction: tool.box ? createBox() : undefined,
     })
     this.draw.on('drawstart', () => {
       if (replaceOnDraw) this.source.clear(true)
     })
-    this.draw.on('drawend', () => {
+    this.draw.on('drawend', (evt) => {
+      if (tool.circleKind) {
+        setCircleKind(evt.feature, tool.circleKind)
+      }
       queueMicrotask(() => this.onChange())
     })
     this.map.addInteraction(this.draw)

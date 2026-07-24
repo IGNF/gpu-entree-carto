@@ -2,6 +2,7 @@ import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
 import type { Feature as OlFeature } from 'ol'
+import Circle from 'ol/geom/Circle'
 import {
   LineString,
   MultiLineString,
@@ -12,6 +13,10 @@ import {
   type Geometry as OlGeometry,
 } from 'ol/geom'
 import type { GeometryOutputFormat, GeometryTypeOption } from './types'
+import {
+  circleToPolygonFeature,
+  serializeCircleFeature,
+} from './circleHelpers'
 
 const geoJsonFormat = new GeoJSON()
 const kmlFormat = new KML()
@@ -37,6 +42,7 @@ function roundCoords(value: unknown, precision: number): unknown {
 /**
  * Sérialise les features carte → chaîne pour l’élément HTML.
  * - Rectangle → bbox JSON `[minX,minY,maxX,maxY]` (compat ol-geometry-editor)
+ * - Circle / Disc → `{ type, center: [lon,lat], radius }` (radius en m EPSG:3857)
  * - sinon GeoJSON geometry (ou FeatureCollection si plusieurs) / KML
  */
 export function serializeFeatures(
@@ -58,7 +64,10 @@ export function serializeFeatures(
   if (!features.length) return ''
 
   if (outputFormat === 'kml') {
-    return kmlFormat.writeFeatures(features, {
+    const forKml = features.map((f) =>
+      f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f,
+    )
+    return kmlFormat.writeFeatures(forKml, {
       dataProjection: 'EPSG:4326',
       featureProjection: mapProjection,
     })
@@ -74,9 +83,27 @@ export function serializeFeatures(
     }
   }
 
+  if (
+    (geometryType === 'Circle' || geometryType === 'Disc') &&
+    features.length === 1
+  ) {
+    const s = serializeCircleFeature(features[0], precision, mapProjection)
+    if (s) return s
+  }
+
+  // Une seule feature Circle/Disc (ex. mode Geometry)
+  if (features.length === 1 && features[0].getGeometry() instanceof Circle) {
+    const s = serializeCircleFeature(features[0], precision, mapProjection)
+    if (s) return s
+  }
+
   // Multi* : regroupe les géométries simples en une Multi* GeoJSON
-  const multiMerged = mergeToMultiFeature(features, geometryType)
-  const toWrite = multiMerged ? [multiMerged] : features
+  // Les cercles / disques → polygones (GeoJSON standard)
+  const prepared = features.map((f) =>
+    f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f,
+  )
+  const multiMerged = mergeToMultiFeature(prepared, geometryType)
+  const toWrite = multiMerged ? [multiMerged] : prepared
 
   const json = geoJsonFormat.writeFeaturesObject(toWrite, {
     dataProjection: 'EPSG:4326',

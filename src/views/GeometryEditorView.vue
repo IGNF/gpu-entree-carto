@@ -17,6 +17,11 @@ import type {
   GeometryTypeOption,
 } from '@/geometry-editor/types'
 import { looksLikeBbox } from '@/geometry-editor/parseGeometry'
+import {
+  circleToPolygonFeature,
+  featureFromCircleJson,
+  looksLikeCircleOrDisc,
+} from '@/geometry-editor/circleHelpers'
 import 'ol/ol.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 
@@ -31,7 +36,7 @@ const optionDocs: OptionDoc[] = [
     name: 'geometryType',
     def: "'Geometry'",
     description:
-      'Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, Rectangle, Geometry',
+      'Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, Rectangle, Circle, Disc, Geometry',
   },
   {
     name: 'hide',
@@ -107,6 +112,12 @@ const optionDocs: OptionDoc[] = [
     description: 'Affiche le contrôle d’attributions des couches de fond',
   },
   {
+    name: 'toolsToggle',
+    def: 'null',
+    description:
+      'null = outils toujours visibles à gauche ; sinon coin du bouton menu (top-left | top-right | bottom-left | bottom-right) qui ouvre / ferme la barre d’outils',
+  },
+  {
     name: 'customStyle',
     def: 'null',
     description:
@@ -124,6 +135,7 @@ const usageSnippet = `const { editor, setOptions } = EntreeCartoGeometryEditor.m
   showZoom: true,
   showSettings: false,
   showAttributions: false,
+  toolsToggle: null,
   customStyle: null,
 });
 // setOptions({ showSettings: true, blockView: true })
@@ -277,9 +289,34 @@ const sections: DemoSection[] = [
     rows: 2,
   },
   {
+    type: 'Circle',
+    title: 'Circle',
+    hint:
+      'Format custom : { type: "Circle", center: [lon, lat], radius } (rayon en mètres carte). Contour seul ; pas de rotation.',
+    sampleGeoJson: JSON.stringify(
+      { type: 'Circle', center: [2.35, 48.85], radius: 4500 },
+      null,
+      2,
+    ),
+    rows: 6,
+  },
+  {
+    type: 'Disc',
+    title: 'Disc',
+    hint:
+      'Format custom : { type: "Disc", center: [lon, lat], radius }. Rempli ; translation intérieure ; pas de rotation.',
+    sampleGeoJson: JSON.stringify(
+      { type: 'Disc', center: [2.4, 48.87], radius: 3500 },
+      null,
+      2,
+    ),
+    rows: 6,
+  },
+  {
     type: 'Geometry',
     title: 'Geometry (libre)',
-    hint: 'Point, ligne ou polygone ; plusieurs géométries possibles.',
+    hint:
+      'Point, ligne, polygone, cercle ou disque ; plusieurs géométries possibles. Carte plus haute + toolsToggle top-left (bouton outils → barre).',
     sampleGeoJson: JSON.stringify(
       {
         type: 'Polygon',
@@ -324,6 +361,17 @@ function geoJsonSampleToKml(sample: string): string {
       })
     }
     const data = JSON.parse(sample) as { type?: string }
+    if (looksLikeCircleOrDisc(data)) {
+      // featureFromCircleJson → EPSG:3857 ; pour KML démo on réécrit en 4326 via polygone
+      const feature3857 = featureFromCircleJson(data, 'EPSG:3857')
+      const polyFeat = circleToPolygonFeature(feature3857)
+      const geom = polyFeat.getGeometry()
+      geom?.transform('EPSG:3857', 'EPSG:4326')
+      return kmlFormat.writeFeatures([polyFeat], {
+        dataProjection: 'EPSG:4326',
+        featureProjection: 'EPSG:4326',
+      })
+    }
     const features =
       data?.type === 'FeatureCollection' || data?.type === 'Feature'
         ? geoJsonFormat.readFeatures(data)
@@ -399,9 +447,12 @@ onMounted(() => {
         mountGeometryEditor(el, {
           geometryType: section.type,
           outputFormat: format,
-          height: 280,
+          height: section.type === 'Geometry' ? 480 : 280,
           hide: false,
           editable: true,
+          ...(section.type === 'Geometry'
+            ? { toolsToggle: 'top-left' as const }
+            : {}),
         }),
       )
       const onInput = () => syncPairFieldHeights(section.type)
@@ -532,7 +583,8 @@ onUnmounted(() => {
             <code>[minX, minY, maxX, maxY]</code>.
           </li>
           <li>
-            Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON en geojson.
+            Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON ;
+            Circle / Disc → <code>{ type, center, radius }</code>.
           </li>
           <li>
             Sync bidirectionnelle via <code>input</code> / <code>change</code> ;

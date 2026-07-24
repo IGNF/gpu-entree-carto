@@ -7,6 +7,7 @@ export type {
   GeometryEditorOptions,
   GeometryTypeOption,
   TileLayerConfig,
+  ToolsToggleCorner,
   StyleLike,
 } from './types'
 

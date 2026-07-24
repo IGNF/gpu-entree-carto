@@ -7,6 +7,7 @@ import type {
   GeometryEditorOptions,
   GeometryOutputFormat,
   GeometryTypeOption,
+  ToolsToggleCorner,
 } from './types'
 import { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
 
@@ -18,10 +19,20 @@ const GEOMETRY_TYPES: GeometryTypeOption[] = [
   'MultiLineString',
   'MultiPolygon',
   'Rectangle',
+  'Circle',
+  'Disc',
   'Geometry',
 ]
 
 const OUTPUT_FORMATS: GeometryOutputFormat[] = ['geojson', 'kml']
+
+const TOOLS_TOGGLE_VALUES: Array<ToolsToggleCorner | ''> = [
+  '',
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+]
 
 /** Décimales lon/lat : compatible step HTML + validation navigateur. */
 const LON_LAT_DECIMALS = 7
@@ -190,6 +201,21 @@ export class SettingsPanel {
     form.appendChild(
       this.checkField('showSettings', 'Bouton réglages', opts.showSettings),
     )
+    form.appendChild(
+      this.selectField(
+        'toolsToggle',
+        'Menu outils (toolsToggle)',
+        TOOLS_TOGGLE_VALUES,
+        opts.toolsToggle ?? '',
+        {
+          '': '(toujours visibles)',
+          'top-left': 'top-left',
+          'top-right': 'top-right',
+          'bottom-left': 'bottom-left',
+          'bottom-right': 'bottom-right',
+        },
+      ),
+    )
     form.appendChild(this.checkField('hide', 'Masquer le champ source', opts.hide))
 
     const actions = document.createElement('div')
@@ -304,6 +330,10 @@ export class SettingsPanel {
       showZoom: bool('showZoom'),
       showAttributions: bool('showAttributions'),
       showSettings: bool('showSettings'),
+      toolsToggle: (() => {
+        const v = String(fd.get('toolsToggle') ?? '')
+        return v === '' ? null : (v as ToolsToggleCorner)
+      })(),
       hide: bool('hide'),
     }
 
@@ -361,13 +391,14 @@ export class SettingsPanel {
     label: string,
     values: string[],
     current: string,
+    labels?: Record<string, string>,
   ): HTMLElement {
     const select = document.createElement('select')
     select.name = name
     for (const v of values) {
       const opt = document.createElement('option')
       opt.value = v
-      opt.textContent = v
+      opt.textContent = labels?.[v] ?? v
       if (v === current) opt.selected = true
       select.appendChild(opt)
     }

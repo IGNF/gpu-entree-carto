@@ -10,7 +10,7 @@ Associe une mini-carte à un champ de formulaire ou un élément HTML pour produ
 
 OpenLayers est **embarqué** dans le bundle (contrairement à ol-geometry-editor historique qui s’appuyait sur `ol.js` du site).
 
-La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf.  
+La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** (`fr-icon-tools-fill`) dans le coin choisi ouvre / ferme alors la barre.  
 Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les masques SVG de **geopf-extensions-openlayers** (`Drawing` / `DSFRdrawingStyle.css`) — pas besoin du CSS icônes DSFR pour la toolbar.
 
 ## Usage
@@ -48,7 +48,7 @@ Alignées sur ol-geometry-editor (principales) :
 
 | Option | Défaut | Description |
 |--------|--------|-------------|
-| `geometryType` | `'Geometry'` | `Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Geometry` |
+| `geometryType` | `'Geometry'` | `Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `Geometry` |
 | `hide` | `true` | Masque l’élément source (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, car DSFR `.fr-input` écrase sinon l’attribut `hidden`) |
 | `editable` | `true` | Affiche la barre d’outils à gauche dans la carte (sinon viewer seul) |
 | `tileLayers` | Plan IGN WMTS | Fonds XYZ `{ url, attribution?, title?, maxZoom? }` |
@@ -63,13 +63,14 @@ Alignées sur ol-geometry-editor (principales) :
 | `showZoom` | `true` | Affiche les boutons +/- de zoom (ignoré si `blockView` est `true`) |
 | `showSettings` | `false` | Bouton roue crantée (haut droite) : formulaire pour modifier les options à chaud ; décale le zoom en dessous. Longitude / latitude / zoom **courants** sont tronqués (7 / 1 décimales) pour la validation HTML, et se mettent à jour en direct quand la vue change (sauf champ en focus). Bouton **Réinitialiser** : remet les options du chargement initial (`editor.resetOptions()`). |
 | `showAttributions` | `false` | Affiche le contrôle d’attributions des couches de fond |
+| `toolsToggle` | `null` | `null` : barre d’outils toujours visible à gauche. Sinon coin du **bouton menu** (`top-left` \| `top-right` \| `bottom-left` \| `bottom-right`) : un clic ouvre / ferme les outils (sous le bouton si `top-*`, au-dessus si `bottom-*`). |
 | `customStyle` | `null` | Style OL (`Style` / `Style[]` / `StyleFunction`) des features et du croquis ; défaut bleu France |
 
 ## Mise à jour à chaud
 
 Après création, `editor.setOptions(patch)` (ou `handle.setOptions(patch)`) applique un sous-ensemble d’options sans recréer la carte :
 
-- `blockView`, `showZoom`, `showSettings`, `showAttributions`, `editable`, `customStyle`, `geometryType`
+- `blockView`, `showZoom`, `showSettings`, `showAttributions`, `editable`, `customStyle`, `geometryType`, `toolsToggle`
 - `tileLayers`, `width` / `height`, `className`, `hide`
 - `lon` / `lat` / `zoom` / `minZoom` / `maxZoom`
 - `outputFormat`, `precision`, `centerOnResults`
@@ -80,9 +81,9 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 
 ## Comportement
 
-- Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML** ou une **bbox** `[minX,minY,maxX,maxY]` → géométries dessinées sur la carte.
+- Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque** `{ type: "Circle"|"Disc", center: [lon,lat], radius }` → géométries dessinées sur la carte.
 - Écoute `input` / `change` sur l’élément → met à jour la carte.
-- Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, ou KML).
+- Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
 - **Modification** : activer l’outil crayon (icône geopf edit).
@@ -91,6 +92,8 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
   - **Polygone** : poignée **rotation** (bleue) au survol.
   - Pendant le drag de rotation, l’icône **suit le curseur**.
   - **Rectangle (bbox)** : carrés coins / arêtes pour redimensionner (axis-aligné, **sans rotation**).
+  - **Cercle** : contour seul ; **translation** via poignée latérale (comme une ligne) ; **rayon** en glissant le contour ; **pas de rotation**.
+  - **Disque** : rempli ; **translation** en glissant l’intérieur (comme un polygone) ; **rayon** en glissant le contour ; **pas de rotation**.
   - **Point** : déplacement du sommet.
 - **Suppression** : activer l’outil poubelle puis cliquer une géométrie.
 - Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
@@ -98,9 +101,20 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 
 ## Démo
 
-Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
+Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
 Un **encart rétractable** (accordéon DSFR) en tête de page décrit l’utilisation et liste toutes les options.  
 Un exemple final active `showSettings` (roue crantée) et `showAttributions`.
+
+### Format Circle / Disc
+
+```json
+{ "type": "Circle", "center": [2.35, 48.85], "radius": 4500 }
+{ "type": "Disc", "center": [2.4, 48.87], "radius": 3500 }
+```
+
+- `center` : longitude / latitude (EPSG:4326)
+- `radius` : mètres dans la projection carte (EPSG:3857)
+- En **KML**, le cercle / disque est exporté comme polygone approximant (64 côtés)
 
 ## Build
 

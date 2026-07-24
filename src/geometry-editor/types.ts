@@ -11,9 +11,21 @@ export type GeometryTypeOption =
   | 'MultiLineString'
   | 'MultiPolygon'
   | 'Rectangle'
+  | 'Circle'
+  | 'Disc'
   | 'Geometry'
 
 export type GeometryOutputFormat = 'geojson' | 'kml'
+
+/**
+ * Coin où placer le bouton qui ouvre / ferme la barre d’outils de dessin.
+ * `null` → outils toujours visibles (colonne à gauche, comportement historique).
+ */
+export type ToolsToggleCorner =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
 
 export type { StyleLike }
 
@@ -55,6 +67,12 @@ export interface GeometryEditorOptions {
   /** Affiche le contrôle d’attributions des couches de fond. */
   showAttributions?: boolean
   /**
+   * Si non `null`, remplace l’affichage permanent des outils de dessin par un bouton
+   * dans le coin indiqué ; un clic ouvre / ferme la barre d’outils
+   * (dessous si `top-*`, dessus si `bottom-*`).
+   */
+  toolsToggle?: ToolsToggleCorner | null
+  /**
    * Style OpenLayers des features (et du croquis en cours).
    * `null` / omis → style bleu France par défaut.
    */
@@ -81,6 +99,7 @@ export const DEFAULT_GEOMETRY_EDITOR_OPTIONS: Required<
     | 'showZoom'
     | 'showSettings'
     | 'showAttributions'
+    | 'toolsToggle'
   >
 > & {
   tileLayers: TileLayerConfig[]
@@ -111,5 +130,6 @@ export const DEFAULT_GEOMETRY_EDITOR_OPTIONS: Required<
   showZoom: true,
   showSettings: false,
   showAttributions: false,
+  toolsToggle: null,
   customStyle: null,
 }

@@ -9,6 +9,10 @@ import {
   type Geometry as OlGeometry,
 } from 'ol/geom'
 import type { Feature as OlFeature } from 'ol'
+import {
+  featureFromCircleJson,
+  looksLikeCircleOrDisc,
+} from './circleHelpers'
 
 const geoJsonFormat = new GeoJSON()
 const kmlFormat = new KML({ extractStyles: false })
@@ -101,7 +105,9 @@ export function parseRawToFeatures(
   } else {
     try {
       const data = JSON.parse(text) as { type?: string }
-      if (data?.type === 'FeatureCollection' || data?.type === 'Feature') {
+      if (looksLikeCircleOrDisc(data)) {
+        features = [featureFromCircleJson(data, mapProjection)]
+      } else if (data?.type === 'FeatureCollection' || data?.type === 'Feature') {
         features = geoJsonFormat.readFeatures(data, {
           dataProjection: 'EPSG:4326',
           featureProjection: mapProjection,

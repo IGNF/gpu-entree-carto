@@ -3,12 +3,15 @@
  * - Ligne : poignées translation + rotation décalées sur le côté (bleu)
  * - Polygone : rotation (icône) ; translation en glissant l’intérieur (marge depuis les bords)
  * - Rectangle (bbox) : translation + redimensionnement coins / arêtes
+ * - Cercle : translation (poignée côté, comme ligne) ; rayon via drag du contour ; pas de rotation
+ * - Disque : translation (intérieur, comme polygone) ; rayon via drag du contour ; pas de rotation
  */
 import Feature from 'ol/Feature'
 import type Map from 'ol/Map'
 import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type { Coordinate } from 'ol/coordinate'
 import type { Geometry as OlGeometry } from 'ol/geom'
+import Circle from 'ol/geom/Circle'
 import { LineString, Point, Polygon } from 'ol/geom'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
@@ -18,12 +21,19 @@ import { Icon, Style } from 'ol/style'
 import type { Feature as OlFeature } from 'ol'
 import type VectorSourceType from 'ol/source/Vector'
 import type VectorLayerType from 'ol/layer/Vector'
+import { getCircleKind } from './circleHelpers'
 
-export type TransformMode = 'line-polygon' | 'bbox' | 'point'
+export type TransformMode =
+  | 'line-polygon'
+  | 'bbox'
+  | 'point'
+  | 'circle'
+  | 'disc'
 
 type HandleRole =
   | 'translate'
   | 'rotate'
+  | 'resize-radius'
   | 'resize-nw'
   | 'resize-n'
   | 'resize-ne'
@@ -48,6 +58,10 @@ const LINE_HANDLE_GAP_PX = 32
 const POLYGON_INNER_MARGIN_PX = 14
 /** Zone de maintien des poignées autour d’une LineString (px). */
 const LINE_HOVER_KEEP_PX = 28
+/** Tolérance bord cercle / disque pour resize rayon (px). */
+const CIRCLE_EDGE_TOL_PX = 12
+/** Zone de maintien autour du contour cercle (px). */
+const CIRCLE_HOVER_KEEP_PX = 28
 
 const TRANSLATE_ICON =
   'data:image/svg+xml,' +
@@ -318,6 +332,8 @@ function cursorForRole(role: HandleRole): string {
       return 'move'
     case 'rotate':
       return 'grab'
+    case 'resize-radius':
+      return 'nesw-resize'
     case 'resize-n':
     case 'resize-s':
       return 'ns-resize'
@@ -333,6 +349,46 @@ function cursorForRole(role: HandleRole): string {
     default:
       return 'pointer'
   }
+}
+
+function distToCenter(center: Coordinate, coord: Coordinate): number {
+  return Math.hypot(coord[0] - center[0], coord[1] - center[1])
+}
+
+function isNearCircleEdge(
+  circle: Circle,
+  coord: Coordinate,
+  tol: number,
+): boolean {
+  return Math.abs(distToCenter(circle.getCenter(), coord) - circle.getRadius()) <= tol
+}
+
+function isDeepInsideCircle(
+  circle: Circle,
+  coord: Coordinate,
+  margin: number,
+): boolean {
+  return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin
+}
+
+/** Poignée translate à droite du cercle (même principe que côté de ligne). */
+function circleSideTranslateAnchor(
+  circle: Circle,
+  res: number,
+): Coordinate {
+  const c = circle.getCenter()
+  const r = circle.getRadius()
+  const off = LINE_SIDE_OFFSET_PX * res
+  return [c[0] + r + off, c[1]]
+}
+
+/** Mode effectif pour une feature Circle (y compris en mode Geometry). */
+function circleModeFor(
+  feature: OlFeature,
+  mode: TransformMode,
+): 'circle' | 'disc' {
+  if (mode === 'circle' || mode === 'disc') return mode
+  return getCircleKind(feature) === 'disc' ? 'disc' : 'circle'
 }
 
 class TransformPointer extends PointerInteraction {
@@ -475,8 +531,20 @@ export class ModifyTransformController {
           }
           return undefined
         }
+        if (this.mode === 'circle' || this.mode === 'disc') {
+          if (geom instanceof Circle) {
+            found = f
+            return true
+          }
+          return undefined
+        }
+        // Geometry / line-polygon : lignes, polygones, points, cercles
+        if (geom instanceof Circle) {
+          found = f
+          return true
+        }
         const t = geom?.getType()
-        if (t === 'LineString' || t === 'Polygon') {
+        if (t === 'LineString' || t === 'Polygon' || t === 'Point') {
           found = f
           return true
         }
@@ -508,6 +576,16 @@ export class ModifyTransformController {
     }
 
     const res = resolutionOf(this.map)
+
+    if (geom instanceof Circle) {
+      const cMode = circleModeFor(feature, this.mode)
+      // Cercle : poignée translate collée au côté (comme LineString)
+      // Disque : pas d’icône — translation = drag intérieur
+      if (cMode === 'circle') {
+        add('translate', circleSideTranslateAnchor(geom, res))
+      }
+      return
+    }
 
     if (this.mode === 'bbox' && geom instanceof Polygon) {
       const extent = geom.getExtent()
@@ -554,6 +632,21 @@ export class ModifyTransformController {
     return isDeepInsidePolygon(geom, coord, margin)
   }
 
+  private isDeepInsideHoveredDisc(coord: Coordinate): boolean {
+    const geom = this.hovered?.getGeometry()
+    if (!(geom instanceof Circle)) return false
+    if (circleModeFor(this.hovered!, this.mode) !== 'disc') return false
+    const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map)
+    return isDeepInsideCircle(geom, coord, margin)
+  }
+
+  private isNearHoveredCircleEdge(coord: Coordinate): boolean {
+    const geom = this.hovered?.getGeometry()
+    if (!(geom instanceof Circle)) return false
+    const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map)
+    return isNearCircleEdge(geom, coord, tol)
+  }
+
   handleMove(evt: MapBrowserEvent): void {
     if (!this.active || this.dragging) return
 
@@ -572,7 +665,19 @@ export class ModifyTransformController {
       this.placeHandles(feature)
 
       const coord = evt.coordinate
-      if (
+      const geom = feature.getGeometry()
+      if (el && (this.mode === 'point' || geom instanceof Point)) {
+        el.style.cursor = 'move'
+      } else if (el && coord && geom instanceof Circle) {
+        const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map)
+        if (isNearCircleEdge(geom, coord, tol)) {
+          el.style.cursor = cursorForRole('resize-radius')
+        } else if (this.isDeepInsideHoveredDisc(coord)) {
+          el.style.cursor = 'move'
+        } else {
+          el.style.cursor = 'pointer'
+        }
+      } else if (
         el &&
         coord &&
         (this.mode === 'line-polygon' || this.mode === 'bbox') &&
@@ -585,16 +690,32 @@ export class ModifyTransformController {
       return
     }
 
-    // LineString : garder les poignées collées tant qu’on est près de la ligne
-    // (évite de les perdre entre la feature et les icônes)
+    // LineString / cercle : garder les poignées tant qu’on est près du contour
     const coord = evt.coordinate
     if (this.hovered && coord) {
       const geom = this.hovered.getGeometry()
+      const res = resolutionOf(this.map)
       if (geom instanceof LineString) {
-        const keep = LINE_HOVER_KEEP_PX * resolutionOf(this.map)
+        const keep = LINE_HOVER_KEEP_PX * res
         if (distToLineString(geom, coord) <= keep) {
           this.placeHandles(this.hovered)
           if (el) el.style.cursor = 'pointer'
+          return
+        }
+      }
+      if (geom instanceof Circle) {
+        const keep = CIRCLE_HOVER_KEEP_PX * res
+        const d = Math.abs(distToCenter(geom.getCenter(), coord) - geom.getRadius())
+        const inside = distToCenter(geom.getCenter(), coord) <= geom.getRadius() + keep
+        if (d <= keep || inside) {
+          this.placeHandles(this.hovered)
+          if (el) {
+            el.style.cursor = isNearCircleEdge(geom, coord, CIRCLE_EDGE_TOL_PX * res)
+              ? cursorForRole('resize-radius')
+              : this.isDeepInsideHoveredDisc(coord)
+                ? 'move'
+                : 'pointer'
+          }
           return
         }
       }
@@ -631,6 +752,44 @@ export class ModifyTransformController {
         el.style.cursor = role === 'rotate' ? 'grabbing' : cursorForRole(role)
       }
       return true
+    }
+
+    // Cercle / disque : drag du contour → rayon
+    if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
+      const geom = this.hovered.getGeometry()
+      if (geom instanceof Circle) {
+        this.dragging = {
+          role: 'resize-radius',
+          feature: this.hovered,
+          startCoord: coord.slice() as Coordinate,
+          startGeom: geom.clone(),
+          origin: geom.getCenter().slice() as Coordinate,
+          startAngle: 0,
+          startExtent: geom.getExtent().slice() as Extent,
+        }
+        const el = this.map.getTargetElement()
+        if (el) el.style.cursor = cursorForRole('resize-radius')
+        return true
+      }
+    }
+
+    // Disque : translation depuis l’intérieur (hors marge bord)
+    if (this.hovered && this.isDeepInsideHoveredDisc(coord)) {
+      const geom = this.hovered.getGeometry()
+      if (geom instanceof Circle) {
+        this.dragging = {
+          role: 'translate',
+          feature: this.hovered,
+          startCoord: coord.slice() as Coordinate,
+          startGeom: geom.clone(),
+          origin: geom.getCenter().slice() as Coordinate,
+          startAngle: 0,
+          startExtent: geom.getExtent().slice() as Extent,
+        }
+        const el = this.map.getTargetElement()
+        if (el) el.style.cursor = 'move'
+        return true
+      }
     }
 
     // Polygone / bbox : translation depuis l’intérieur (hors marge bord)
@@ -675,6 +834,15 @@ export class ModifyTransformController {
       return
     }
 
+    if (role === 'resize-radius' && startGeom instanceof Circle) {
+      const next = startGeom.clone() as Circle
+      const radius = Math.max(distToCenter(origin, coord), 1e-3)
+      next.setRadius(radius)
+      feature.setGeometry(next)
+      this.placeHandles(feature)
+      return
+    }
+
     if (role === 'rotate' && this.mode === 'line-polygon') {
       const angle = angleBetween(origin, coord) - startAngle
       const next = startGeom.clone()
@@ -707,5 +875,7 @@ export class ModifyTransformController {
 export function transformModeFor(geometryType: string): TransformMode {
   if (geometryType === 'Rectangle') return 'bbox'
   if (geometryType === 'Point' || geometryType === 'MultiPoint') return 'point'
+  if (geometryType === 'Circle') return 'circle'
+  if (geometryType === 'Disc') return 'disc'
   return 'line-polygon'
 }
