@@ -22,4 +22,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | LocationSearchWidget | `src/components/search/LocationSearchWidget.vue` | [LocationSearchWidget.md](./LocationSearchWidget.md) |
 | OverviewMapControl | `src/components/map/OverviewMapControl.vue` | [OverviewMapControl.md](./OverviewMapControl.md) |
 | TerritoriesControl | `src/components/map/TerritoriesControl.vue` | [TerritoriesControl.md](./TerritoriesControl.md) |
+| TabPanelsControl | `src/components/map/TabPanelsControl.vue` | [TabPanelsControl.md](./TabPanelsControl.md) |
+| TileLayerSwitcher | `src/components/layers/TileLayerSwitcher.vue` | [TileLayerSwitcher.md](./TileLayerSwitcher.md) |
+| TreeLayerSwitcher | `src/components/layers/TreeLayerSwitcher.vue` | [TreeLayerSwitcher.md](./TreeLayerSwitcher.md) |
 | BaseLayerSwitcher | `src/components/map/BaseLayerSwitcher.vue` | [BaseLayerSwitcher.md](./BaseLayerSwitcher.md) |

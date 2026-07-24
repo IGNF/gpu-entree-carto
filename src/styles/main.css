@@ -43,6 +43,11 @@ body {
   min-height: 0;
 }
 
+/* Carte plein cadre : panneau latéral = contrôle OL TabPanels (plus d’aside). */
+.ec-layout--map-only {
+  grid-template-columns: 1fr;
+}
+
 .ec-app .ec-layout {
   /* Sous le header démo : remplir le reste du viewport */
   min-height: 0;

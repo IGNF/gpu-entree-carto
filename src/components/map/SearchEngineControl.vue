@@ -10,6 +10,7 @@
 import { watch } from 'vue'
 import { useOlControl } from '@/composables/useOlControl'
 import { createSearchEngineAdvanced } from '@/lib/search/createSearchEngineAdvanced'
+import { tabPanelsApiRef } from '@/composables/tabPanels'
 import type { StandardViewerSearch } from '@/lib/types'
 import type Control from 'ol/control/Control'
 
@@ -54,10 +55,46 @@ function searchKey(search: StandardViewerSearch | null | undefined): string | nu
   return `${search.fullText}|${x ?? ''}|${y ?? ''}|${search.type ?? ''}`
 }
 
+function openFicheFromSearch(search: StandardViewerSearch): void {
+  const label = search.fullText?.trim()
+  const tabPanels = tabPanelsApiRef.value
+  if (!label || !tabPanels) return
+  const parts: string[] = [`<p><strong>${escapeHtml(label)}</strong></p>`]
+  if (search.type) {
+    parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`)
+  }
+  if (search.position) {
+    parts.push(
+      `<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`,
+    )
+  }
+  tabPanels.showSelection({
+    title: label,
+    bodyHtml: parts.join(''),
+    raw: {
+      fullText: label,
+      type: search.type ?? null,
+      kind: search.kind ?? null,
+      position_x: search.position?.x ?? null,
+      position_y: search.position?.y ?? null,
+      poiType: search.poiType ?? [],
+    },
+  })
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 /**
  * Rejoue une recherche sans planter IGNSearchService (poiType optionnel).
  * - Avec coords : createMarker (cerise + popup) puis géocode texte pour l’emprise.
  * - Objet location toujours avec poiType: [] si absent.
+ * - Ouvre l’onglet fiche info du TabPanels si présent.
  */
 function applyInitialSearch(
   control: SearchEngineAdvancedLike,
@@ -78,6 +115,8 @@ function applyInitialSearch(
     // Affichage immédiat (cerise + popup), indépendant du géocode
     control.createMarker([x, y], label, 'searchAtInit', true)
   }
+
+  openFicheFromSearch(search)
 
   if (!label) return
 

@@ -28,5 +28,6 @@ Sélecteur de fond de plan (radio DSFR). Bascule la visibilité des presets cré
 
 ## Notes
 
-- Composant UI panneau (pas un contrôle OL natif).
-- À terme : remplacer / enrichir via extensions Géoplateforme.
+- Ancien sélecteur radio du panneau aside démo.
+- **Préférer** [TileLayerSwitcher](./TileLayerSwitcher.md) dans l’onglet couches du [TabPanelsControl](./TabPanelsControl.md).
+- À terme : enrichir via extensions Géoplateforme (6 fonds gpu-client).

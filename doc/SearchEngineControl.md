@@ -24,6 +24,7 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 - Marqueurs / popup / emprise (`returnTrueGeometry`) gérés par geopf
 - Les recherches avancées reçoivent `searchOptions.serverUrl` (sinon geopf passe `{}` → `url.split is not a function`)
 - `initialSearch` : préremplit le champ et appelle `baseSearchEngine.search({ location })` → **cerise**, emprise, popup (pas de marqueur rouge custom)
+- Si un [TabPanelsControl](./TabPanelsControl.md) est monté : ouvre l’onglet fiche avec le libellé / attributs de la recherche
 - Accueil hors carte : [mountSearchEngine](./mountSearchEngine.md)
 - Fallback autocomplete seul : [LocationSearchWidget](./LocationSearchWidget.md)
 

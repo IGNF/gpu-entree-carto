@@ -207,6 +207,9 @@ Puis `npm install` et `make build-lib` dans entree-carto.
 - [ ] `createStandardViewer` : couches WMS/WFS, légende, fiche info, outils
 - [x] Recherche lieu accueil → `/map/` (`mountSearchEngine` + `params.search` → `SearchEngineControl.initialSearch`)
 - [ ] `ParcelViewer` complet
+- [x] Shell panneau latéral 4 onglets (`TabPanelsControl`) + switchers stubs
+- [ ] Brancher `layerConfig` / légendes depuis gpu-client-config
+- [ ] GetFeatureInfo → fiche + raw
 - [ ] Éviter le double chargement DSFR / `icons` (site `utility.min.css` + bundle) si nécessaire
 - [x] Doublon d’icônes geopf `::after` + DSFR `fr-icon-*` (fixé dans `map-controls.css`)
 - [ ] Tests d’intégration gpu-site (parcours carte, parcelle, accueil)

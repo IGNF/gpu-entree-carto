@@ -10,6 +10,10 @@
   --ec-widget-btn-padding: 4px;
   --ec-widget-btn-radius: 4px;
   --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
+  /* Largeur panneau TabPanels (1,5 × ~408px Figma) ; inset = panneau seul
+     (les onglets sont en haut : pas de reserve en bas à côté du panneau) */
+  --ec-tab-panels-width: min(38.25rem, 92vw);
+  --ec-tab-panels-inset: var(--ec-tab-panels-width);
 }
 
 .position {
@@ -91,6 +95,11 @@
   bottom: var(--ec-widget-gap);
   right: var(--ec-widget-gap);
   z-index: 0;
+}
+
+/* Panneau TabPanels ouvert : même écart (gap) qu’avec le bord de carte quand fermé */
+.ec-map-shell--tab-panels-open .position-container-bottom-right {
+  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
 }
 
 /* Annule les offsets geopf (top/bottom: 0.5em) qui décalent les boutons dans la colonne */
@@ -341,4 +350,12 @@ dialog[id^='GPterritoriesPanel-'] {
 
 .position-container-bottom-right:empty ~ .ol-scale-line {
   right: var(--ec-widget-gap);
+}
+
+.ec-map-shell--tab-panels-open .ol-scale-line {
+  right: calc(var(--ec-widget-panel-x) + var(--ec-tab-panels-inset));
+}
+
+.ec-map-shell--tab-panels-open .position-container-bottom-right:empty ~ .ol-scale-line {
+  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
 }

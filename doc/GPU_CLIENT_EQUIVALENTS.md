@@ -46,8 +46,8 @@ Les équivalents carte se trouvent ailleurs :
 
 | gpu-client | Rôle | vue-components | geopf-extensions | cartes.gouv entree-carto |
 |------------|------|----------------|------------------|--------------------------|
-| `TileLayerSwitcherControl` | 6 fonds (Plan, Ortho, Cadastre…) | Non | `LayerSwitcher` **Partiel** | `LayerSwitcher.vue` **Partiel** |
-| `TreeLayerSwitcherControl` | Arbre couches métier GPU | Non | `LayerSwitcher` + `Catalog` **Partiel** | idem **Partiel** |
+| `TileLayerSwitcherControl` | 6 fonds (Plan, Ortho, Cadastre…) | Non | `LayerSwitcher` **Partiel** | [TileLayerSwitcher](./TileLayerSwitcher.md) **Partiel** (3 fonds démo) |
+| `TreeLayerSwitcherControl` | Arbre couches métier GPU | Non | `LayerSwitcher` + `Catalog` **Partiel** | [TreeLayerSwitcher](./TreeLayerSwitcher.md) **Partiel** (stubs) |
 | Couches cadastre / régions / dép. | Couches admin | Non | `LayerWMTS/WMS` **Partiel** | couches Vue **Partiel** |
 | `createGeoportalLayer` / WMTS | Helpers fonds IGN | Non | Sources GeoPF **Oui** | via geopf **Oui** |
 
@@ -75,7 +75,7 @@ Les équivalents carte se trouvent ailleurs :
 | `FicheInfo*` (DU/SUP/SCOT/parcelle) | Fiche métier GPU | Non | — **Non** | — **Non** (métier GPU) |
 | `GpuApiClient` | API Symfony GPU | Non | — **Non** | — **Non** |
 | `MarkerControl` | Marqueur + coords | Non | markers util **Partiel** | **Partiel** |
-| `TabsPanelsControl` | Onglets fiche / couches | Non | — **Non** | UI custom **Partiel** |
+| `TabsPanelsControl` | Onglets fiche / couches | Non | — **Non** | [TabPanelsControl](./TabPanelsControl.md) **Partiel** (4 onglets) |
 | `FeaturePopupControl` | Style feature croquis | Non | Drawing styles **Partiel** | `Drawing.vue` **Partiel** |
 
 ### Parcelle

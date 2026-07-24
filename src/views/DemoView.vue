@@ -8,10 +8,8 @@ import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
 import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
 import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
-import BaseLayerSwitcher from '@/components/map/BaseLayerSwitcher.vue'
-import LegendStub from '@/components/legend/LegendStub.vue'
-import LayersTreeStub from '@/components/layers/LayersTreeStub.vue'
-import type { LegendItem, LayerTreeNode } from '@/types/stubs'
+import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
+import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerSearch } from '@/lib/types'
 import {
   createBaseLayerPresets,
@@ -49,14 +47,19 @@ const initialSearch = computed<StandardViewerSearch | null>(() => {
   }
 })
 
-const legendItems = ref<LegendItem[]>([
-  { id: 'demo-plu', title: 'Document d’urbanisme (exemple)' },
-  { id: 'demo-sup', title: 'Servitude (exemple)' },
-])
-
-const layerNodes = ref<LayerTreeNode[]>([
-  { id: 'demo-plu', title: 'Document d’urbanisme (exemple)', visible: true },
-  { id: 'demo-sup', title: 'Servitude (exemple)', visible: false },
+const layerNodes = ref<TreeLayerNode[]>([
+  {
+    id: 'demo-plu',
+    title: 'Document d’urbanisme (exemple)',
+    visible: true,
+    legend: [{ id: 'demo-plu-leg', title: 'Zonage PLU (exemple)' }],
+  },
+  {
+    id: 'demo-sup',
+    title: 'Servitude (exemple)',
+    visible: false,
+    legend: [{ id: 'demo-sup-leg', title: 'Servitude (exemple)' }],
+  },
 ])
 
 function onToggleLayer(id: string, visible: boolean) {
@@ -67,9 +70,16 @@ function onToggleLayer(id: string, visible: boolean) {
 
 <template>
   <div class="ec-demo-map">
-    <main class="ec-layout">
+    <main class="ec-layout ec-layout--map-only">
       <div class="ec-layout__map">
         <MapShell :layers="baseLayers">
+          <!-- TabPanels avant SearchEngine pour que provide() soit dispo à l’inject -->
+          <TabPanelsControl
+            v-model:base-model-value="activeBase"
+            :base-presets="presets"
+            :layer-nodes="layerNodes"
+            @toggle-layer="onToggleLayer"
+          />
           <SearchEngineControl :initial-search="initialSearch" />
           <OverviewMapControl />
           <TerritoriesControl />
@@ -78,22 +88,6 @@ function onToggleLayer(id: string, visible: boolean) {
           <ScaleLineControl />
         </MapShell>
       </div>
-
-      <aside
-        class="ec-layout__panel"
-        aria-label="Panneau cartographique"
-      >
-        <BaseLayerSwitcher
-          v-model="activeBase"
-          :presets="presets"
-        />
-        <LayersTreeStub
-          :nodes="layerNodes"
-          @toggle="onToggleLayer"
-        />
-        <hr class="fr-hr">
-        <LegendStub :items="legendItems" />
-      </aside>
     </main>
   </div>
 </template>

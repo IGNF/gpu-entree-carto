@@ -1,0 +1,261 @@
+/**
+ * Panneau latéral à onglets (droite de la carte).
+ * Boutons = même boîte que zoom / plein écran (48×48).
+ * Attention : `.ol-control button` (ol.css) force 1.375em → il faut surcharger.
+ * Ouvert : onglets collés au bord gauche du panneau.
+ */
+
+:root {
+  /* 1,5 × 25.5rem (~408px → ~612px) */
+  --ec-tab-panels-width: min(38.25rem, 92vw);
+  /*
+   * Décalage des contrôles bas-droite = largeur du panneau seul.
+   * Les onglets sont en haut : en bas, l’écart contrôles ↔ panneau
+   * doit égaler l’écart contrôles ↔ bord de carte (fermé) = --ec-widget-gap.
+   */
+  --ec-tab-panels-inset: var(--ec-tab-panels-width);
+}
+
+.ec-tab-panels.ol-control {
+  top: 0;
+  right: 0;
+  left: auto;
+  bottom: 0;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 !important;
+  margin: 0;
+  background: transparent !important;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ec-tab-panels.ol-control > * {
+  pointer-events: auto;
+}
+
+/* Colonne d’onglets — pile collée (comme zoom +/- sans gutter) */
+.ec-tab-panels__tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--ec-widget-btn-size, 48px);
+  align-self: flex-start;
+  align-items: stretch;
+  gap: 0;
+  width: var(--ec-widget-btn-size, 48px);
+  margin: var(--ec-widget-gap, 8px);
+  padding: 0;
+  background: var(--background-default-grey, #fff);
+  border: none;
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: hidden;
+}
+
+/* Collés au panneau (plus de marge à droite) */
+.ec-tab-panels.is-open .ec-tab-panels__tabs {
+  margin: var(--ec-widget-gap, 8px) 0 0 0;
+}
+
+/*
+ * Même taille que `.gpf-widget-button > .gpf-btn-icon`.
+ * Pas d’inset blanc (sinon « bordure » quand fond actif ≠ blanc).
+ * Spécificité + !important pour battre `.ol-control button { width/height: 1.375em }`.
+ */
+.ec-tab-panels.ol-control button.ec-tab-panels__tab {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+  min-width: var(--ec-widget-btn-size, 48px);
+  min-height: var(--ec-widget-btn-size, 48px);
+  margin: 0 !important;
+  padding: var(--ec-widget-btn-padding, 4px) !important;
+  border: none !important;
+  border-radius: 0;
+  outline: none;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: none;
+  background-color: var(--background-default-grey, #fff);
+  box-shadow: none;
+  color: var(--text-action-high-blue-france, #000091);
+  cursor: pointer;
+  transition: background-color 300ms;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab:hover,
+.ec-tab-panels.ol-control button.ec-tab-panels__tab:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd);
+  outline: none;
+  box-shadow: none;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active {
+  background-color: var(--background-open-blue-france, #e3e3fd);
+  box-shadow: none;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:hover,
+.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd);
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[class*='fr-icon-']::before {
+  --icon-size: 1.5rem;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[class*='fr-icon-']::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.ec-tab-panels__panel {
+  display: none;
+  flex-direction: column;
+  width: var(--ec-tab-panels-width);
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: hidden;
+}
+
+.ec-tab-panels.is-open .ec-tab-panels__panel {
+  display: flex;
+}
+
+.ec-tab-panels__panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.ec-tab-panels__pane[hidden] {
+  display: none !important;
+}
+
+/* Fiche info — bandeau bleu + pictogramme i (capture / Figma) */
+.ec-fiche-info {
+  position: relative;
+  padding-left: 0.25rem;
+}
+
+.ec-fiche-info__rail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.25rem;
+  height: 100%;
+  min-height: 4rem;
+  background: var(--background-action-high-blue-france, #000091);
+  border-radius: 0.125rem;
+}
+
+.ec-fiche-info__rail::after {
+  content: 'i';
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0;
+  border-radius: 50%;
+  background: var(--background-default-grey, #fff);
+  color: var(--text-action-high-blue-france, #000091);
+  font: 700 0.75rem/1.25rem Marianne, arial, sans-serif;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--background-action-high-blue-france, #000091);
+}
+
+.ec-fiche-info__inner {
+  padding-left: 1.5rem;
+}
+
+.ec-fiche-info__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: var(--text-title-grey, #161616);
+}
+
+.ec-fiche-info__body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-default-grey, #161616);
+}
+
+.ec-fiche-info__body p {
+  margin: 0 0 0.75rem;
+}
+
+.ec-fiche-info__body p:last-child {
+  margin-bottom: 0;
+}
+
+.ec-tab-panels__empty {
+  margin: 0;
+  color: var(--text-mention-grey, #666);
+  font-size: 0.875rem;
+}
+
+.ec-raw-info__title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.ec-raw-info__placeholder,
+.ec-raw-info__list {
+  margin: 0;
+  padding: 1rem;
+  background: var(--background-alt-grey, #f6f6f6);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.ec-raw-info__list {
+  list-style: none;
+}
+
+.ec-raw-info__list li {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border-default-grey, #ddd);
+}
+
+.ec-raw-info__list li:last-child {
+  border-bottom: none;
+}
+
+.ec-raw-info__key {
+  flex: 0 0 40%;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.ec-raw-info__val {
+  flex: 1 1 auto;
+  word-break: break-word;
+}
