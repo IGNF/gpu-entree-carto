@@ -27089,11 +27089,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$8 = {
+  const _hoisted_1$d = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27118,7 +27118,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$8, [
+        return openBlock(), createElementBlock("div", _hoisted_1$d, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -27668,12 +27668,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$7 = {
+  const _hoisted_1$c = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -27688,7 +27688,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$7);
+        return openBlock(), createElementBlock("span", _hoisted_1$c);
       };
     }
   });
@@ -27808,12 +27808,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$6 = {
+  const _hoisted_1$b = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -27827,16 +27827,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$6);
+        return openBlock(), createElementBlock("span", _hoisted_1$b);
       };
     }
   });
-  const _hoisted_1$5 = {
+  const _hoisted_1$a = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$a = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -27845,7 +27845,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$5);
+        return openBlock(), createElementBlock("span", _hoisted_1$a);
       };
     }
   });
@@ -60907,12 +60907,27 @@ Expected function or array of functions, received type ${typeof value2}.`
       ]
     });
   }
-  const _hoisted_1$4 = {
+  const TAB_PANELS_KEY = Symbol("ecTabPanels");
+  const tabPanelsApiRef = /* @__PURE__ */ shallowRef(null);
+  function registerTabPanelsApi(api) {
+    tabPanelsApiRef.value = api;
+  }
+  const TAB_PANEL_IDS = {
+    fiche: 0,
+    empty: 1,
+    layers: 2,
+    raw: 3
+  };
+  const DEFAULT_FICHE_EMPTY = {
+    title: "Aucune sélection en cours",
+    bodyHtml: "<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>"
+  };
+  const _hoisted_1$9 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -60931,6 +60946,36 @@ Expected function or array of functions, received type ${typeof value2}.`
         const y = (_b = search.position) == null ? void 0 : _b.y;
         return `${search.fullText}|${x ?? ""}|${y ?? ""}|${search.type ?? ""}`;
       }
+      function openFicheFromSearch(search) {
+        var _a, _b, _c;
+        const label = (_a = search.fullText) == null ? void 0 : _a.trim();
+        const tabPanels = tabPanelsApiRef.value;
+        if (!label || !tabPanels) return;
+        const parts = [`<p><strong>${escapeHtml(label)}</strong></p>`];
+        if (search.type) {
+          parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
+        }
+        if (search.position) {
+          parts.push(
+            `<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`
+          );
+        }
+        tabPanels.showSelection({
+          title: label,
+          bodyHtml: parts.join(""),
+          raw: {
+            fullText: label,
+            type: search.type ?? null,
+            kind: search.kind ?? null,
+            position_x: ((_b = search.position) == null ? void 0 : _b.x) ?? null,
+            position_y: ((_c = search.position) == null ? void 0 : _c.y) ?? null,
+            poiType: search.poiType ?? []
+          }
+        });
+      }
+      function escapeHtml(value2) {
+        return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
       function applyInitialSearch(control, search) {
         var _a, _b;
         const key2 = searchKey(search);
@@ -60944,6 +60989,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (hasCoords) {
           control.createMarker([x, y], label, "searchAtInit", true);
         }
+        openFicheFromSearch(search);
         if (!label) return;
         const poiType = Array.isArray(search.poiType) ? search.poiType : [];
         control.baseSearchEngine.search({
@@ -60975,7 +61021,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$4);
+        return openBlock(), createElementBlock("span", _hoisted_1$9);
       };
     }
   });
@@ -63578,12 +63624,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$3 = {
+  const _hoisted_1$8 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -63599,7 +63645,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$3);
+        return openBlock(), createElementBlock("span", _hoisted_1$8);
       };
     }
   });
@@ -67389,13 +67435,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$2 = {
+  const _hoisted_1$7 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$2 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -67445,7 +67491,95 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$2);
+        return openBlock(), createElementBlock("span", _hoisted_1$7);
+      };
+    }
+  });
+  const _hoisted_1$6 = { class: "ec-fiche-info" };
+  const _hoisted_2$5 = { class: "ec-fiche-info__inner" };
+  const _hoisted_3$5 = { class: "ec-fiche-info__title" };
+  const _hoisted_4$5 = ["innerHTML"];
+  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
+    __name: "FicheInfoPanel",
+    props: {
+      selection: {}
+    },
+    setup(__props) {
+      const props = __props;
+      const title = computed(() => {
+        var _a;
+        return ((_a = props.selection) == null ? void 0 : _a.title) ?? DEFAULT_FICHE_EMPTY.title;
+      });
+      const bodyHtml = computed(
+        () => {
+          var _a;
+          return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml;
+        }
+      );
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("article", _hoisted_1$6, [
+          _cache[0] || (_cache[0] = createBaseVNode("div", {
+            class: "ec-fiche-info__rail",
+            "aria-hidden": "true"
+          }, null, -1)),
+          createBaseVNode("div", _hoisted_2$5, [
+            createBaseVNode("h2", _hoisted_3$5, toDisplayString(title.value), 1),
+            createBaseVNode("div", {
+              class: "ec-fiche-info__body",
+              innerHTML: bodyHtml.value
+            }, null, 8, _hoisted_4$5)
+          ])
+        ]);
+      };
+    }
+  });
+  const _hoisted_1$5 = {
+    class: "ec-raw-info",
+    "aria-label": "Données brutes"
+  };
+  const _hoisted_2$4 = {
+    key: 0,
+    class: "ec-raw-info__list"
+  };
+  const _hoisted_3$4 = { class: "ec-raw-info__key" };
+  const _hoisted_4$4 = { class: "ec-raw-info__val" };
+  const _hoisted_5$3 = {
+    key: 1,
+    class: "ec-raw-info__placeholder"
+  };
+  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+    __name: "RawInfoPanel",
+    props: {
+      selection: {}
+    },
+    setup(__props) {
+      const props = __props;
+      const entries2 = computed(() => {
+        var _a;
+        const raw = (_a = props.selection) == null ? void 0 : _a.raw;
+        if (!raw || typeof raw !== "object") return [];
+        return Object.entries(raw).map(([key2, value2]) => ({
+          key: key2,
+          value: value2 === null || value2 === void 0 ? "—" : typeof value2 === "object" ? JSON.stringify(value2) : String(value2)
+        }));
+      });
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$5, [
+          _cache[1] || (_cache[1] = createBaseVNode("h2", { class: "ec-raw-info__title" }, " Attributs ", -1)),
+          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$4, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(entries2.value, (row) => {
+              return openBlock(), createElementBlock("li", {
+                key: row.key
+              }, [
+                createBaseVNode("span", _hoisted_3$4, toDisplayString(row.key), 1),
+                createBaseVNode("span", _hoisted_4$4, toDisplayString(row.value), 1)
+              ]);
+            }), 128))
+          ])) : (openBlock(), createElementBlock("div", _hoisted_5$3, [..._cache[0] || (_cache[0] = [
+            createBaseVNode("p", null, "Accédez aux informations détaillées", -1),
+            createBaseVNode("p", { class: "fr-text--sm" }, " Les attributs bruts de la sélection (GetFeatureInfo) s’afficheront ici. ", -1)
+          ])]))
+        ]);
       };
     }
   });
@@ -67522,6 +67656,369 @@ Expected function or array of functions, received type ${typeof value2}.`
       { id: "blank", label: "Blanc", layer: blank }
     ];
   }
+  function setActiveBaseLayer(presets, id) {
+    for (const preset of presets) {
+      preset.layer.setVisible(preset.id === id);
+    }
+  }
+  const _hoisted_1$4 = {
+    class: "ec-tile-switcher",
+    "aria-label": "Fonds de plan"
+  };
+  const _hoisted_2$3 = { class: "ec-tile-switcher__list" };
+  const _hoisted_3$3 = ["aria-pressed", "onClick"];
+  const _hoisted_4$3 = { class: "ec-tile-switcher__label" };
+  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
+    __name: "TileLayerSwitcher",
+    props: {
+      presets: {},
+      modelValue: {}
+    },
+    emits: ["update:modelValue"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      const emit2 = __emit;
+      function select(id) {
+        setActiveBaseLayer(props.presets, id);
+        emit2("update:modelValue", id);
+      }
+      function thumbClass(id) {
+        return `ec-tile-switcher__thumb ec-tile-switcher__thumb--${id}`;
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$4, [
+          _cache[0] || (_cache[0] = createBaseVNode("h3", { class: "ec-tile-switcher__title" }, "Fonds de plan", -1)),
+          createBaseVNode("ul", _hoisted_2$3, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.presets, (preset) => {
+              return openBlock(), createElementBlock("li", {
+                key: preset.id
+              }, [
+                createBaseVNode("button", {
+                  type: "button",
+                  class: normalizeClass(["ec-tile-switcher__tile", { "is-active": __props.modelValue === preset.id }]),
+                  "aria-pressed": __props.modelValue === preset.id,
+                  onClick: ($event) => select(preset.id)
+                }, [
+                  createBaseVNode("span", {
+                    class: normalizeClass(thumbClass(preset.id)),
+                    "aria-hidden": "true"
+                  }, null, 2),
+                  createBaseVNode("span", _hoisted_4$3, toDisplayString(preset.label), 1)
+                ], 10, _hoisted_3$3)
+              ]);
+            }), 128))
+          ])
+        ]);
+      };
+    }
+  });
+  const _export_sfc = (sfc, props) => {
+    const target2 = sfc.__vccOpts || sfc;
+    for (const [key2, val] of props) {
+      target2[key2] = val;
+    }
+    return target2;
+  };
+  const TileLayerSwitcher = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-edd3708c"]]);
+  const _hoisted_1$3 = {
+    class: "ec-tree-layers",
+    "aria-label": "Couches métier"
+  };
+  const _hoisted_2$2 = { class: "ec-tree-layers__list" };
+  const _hoisted_3$2 = { class: "fr-checkbox-group" };
+  const _hoisted_4$2 = ["id", "checked", "onChange"];
+  const _hoisted_5$2 = ["for"];
+  const _hoisted_6$1 = {
+    key: 0,
+    class: "ec-tree-layers__legend"
+  };
+  const _hoisted_7$1 = ["src"];
+  const _hoisted_8$1 = {
+    key: 1,
+    class: "ec-tree-layers__swatch ec-tree-layers__swatch--color",
+    "aria-hidden": "true"
+  };
+  const _hoisted_9 = {
+    key: 0,
+    class: "ec-tree-layers__hint"
+  };
+  const _hoisted_10 = {
+    key: 1,
+    class: "ec-tree-layers__hint"
+  };
+  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
+    __name: "TreeLayerSwitcher",
+    props: {
+      nodes: {}
+    },
+    emits: ["toggle"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      const emit2 = __emit;
+      const flatLegend = computed(() => {
+        const items = [];
+        function walk(nodes) {
+          var _a, _b;
+          for (const n of nodes) {
+            if (n.visible && ((_a = n.legend) == null ? void 0 : _a.length)) items.push(...n.legend);
+            if ((_b = n.children) == null ? void 0 : _b.length) walk(n.children);
+          }
+        }
+        walk(props.nodes);
+        return items;
+      });
+      function onChange(node, checked) {
+        emit2("toggle", node.id, checked);
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$3, [
+          _cache[0] || (_cache[0] = createBaseVNode("div", { class: "ec-tree-layers__head" }, [
+            createBaseVNode("h3", { class: "ec-tree-layers__title" }, "Afficher")
+          ], -1)),
+          createBaseVNode("ul", _hoisted_2$2, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.nodes, (node) => {
+              var _a;
+              return openBlock(), createElementBlock("li", {
+                key: node.id,
+                class: "ec-tree-layers__item"
+              }, [
+                createBaseVNode("div", _hoisted_3$2, [
+                  createBaseVNode("input", {
+                    id: `tls-${node.id}`,
+                    type: "checkbox",
+                    checked: node.visible,
+                    onChange: ($event) => onChange(node, $event.target.checked)
+                  }, null, 40, _hoisted_4$2),
+                  createBaseVNode("label", {
+                    class: "fr-label",
+                    for: `tls-${node.id}`
+                  }, toDisplayString(node.title), 9, _hoisted_5$2)
+                ]),
+                node.visible && ((_a = node.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("ul", _hoisted_6$1, [
+                  (openBlock(true), createElementBlock(Fragment, null, renderList(node.legend, (leg) => {
+                    return openBlock(), createElementBlock("li", {
+                      key: leg.id,
+                      class: "ec-tree-layers__legend-item"
+                    }, [
+                      leg.imageUrl ? (openBlock(), createElementBlock("img", {
+                        key: 0,
+                        class: "ec-tree-layers__swatch",
+                        src: leg.imageUrl,
+                        alt: ""
+                      }, null, 8, _hoisted_7$1)) : (openBlock(), createElementBlock("span", _hoisted_8$1)),
+                      createBaseVNode("span", null, toDisplayString(leg.title), 1)
+                    ]);
+                  }), 128))
+                ])) : createCommentVNode("", true)
+              ]);
+            }), 128))
+          ]),
+          !__props.nodes.length ? (openBlock(), createElementBlock("p", _hoisted_9, " Aucune couche configurée pour le moment. ")) : !flatLegend.value.length ? (openBlock(), createElementBlock("p", _hoisted_10, " Activez une couche pour afficher sa légende. ")) : createCommentVNode("", true)
+        ]);
+      };
+    }
+  });
+  const TreeLayerSwitcher = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-c4f63bd0"]]);
+  const _hoisted_1$2 = {
+    class: "ec-tab-panels__tabs",
+    role: "tablist",
+    "aria-orientation": "vertical",
+    "aria-label": "Onglets du panneau"
+  };
+  const _hoisted_2$1 = ["id", "aria-selected", "aria-controls", "title", "aria-label", "onClick"];
+  const _hoisted_3$1 = { class: "ec-tab-panels__panel" };
+  const _hoisted_4$1 = { class: "ec-tab-panels__panel-body" };
+  const _hoisted_5$1 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_6 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_7 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_8 = ["id", "hidden", "aria-labelledby"];
+  const _sfc_main$2 = /* @__PURE__ */ defineComponent({
+    __name: "TabPanelsControl",
+    props: {
+      basePresets: { default: () => [] },
+      baseModelValue: { default: "plan" },
+      layerNodes: { default: () => [] }
+    },
+    emits: ["update:baseModelValue", "toggle-layer"],
+    setup(__props, { expose: __expose, emit: __emit }) {
+      const emit2 = __emit;
+      const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+      const rootEl2 = /* @__PURE__ */ ref(null);
+      let olControl = null;
+      const isOpen = /* @__PURE__ */ ref(false);
+      const activeTab = /* @__PURE__ */ ref(null);
+      const selection = /* @__PURE__ */ ref(null);
+      const tabs = [
+        {
+          id: TAB_PANEL_IDS.fiche,
+          label: "Informations / localisation",
+          icon: "fr-icon-map-pin-2-line"
+        },
+        {
+          id: TAB_PANEL_IDS.empty,
+          label: "Onglet réservé",
+          icon: "fr-icon-road-map-line"
+        },
+        {
+          id: TAB_PANEL_IDS.layers,
+          label: "Couches et légende",
+          icon: "fr-icon-layout-grid-line"
+        },
+        {
+          id: TAB_PANEL_IDS.raw,
+          label: "Données brutes",
+          icon: "fr-icon-list-unordered"
+        }
+      ];
+      function openTab(index2) {
+        if (index2 < 0 || index2 >= tabs.length) return;
+        activeTab.value = index2;
+        isOpen.value = true;
+      }
+      function closePanels() {
+        isOpen.value = false;
+        activeTab.value = null;
+      }
+      function onTabClick(index2) {
+        if (isOpen.value && activeTab.value === index2) {
+          closePanels();
+          return;
+        }
+        openTab(index2);
+      }
+      function showSelection(next) {
+        selection.value = next;
+        openTab(TAB_PANEL_IDS.fiche);
+      }
+      function clearSelection() {
+        selection.value = null;
+      }
+      function syncShellOpenClass(open) {
+        var _a, _b;
+        const target2 = (_a = mapRef.value) == null ? void 0 : _a.getTargetElement();
+        const shell = (target2 instanceof HTMLElement ? target2.closest(".ec-map-shell") : null) ?? ((_b = rootEl2.value) == null ? void 0 : _b.closest(".ec-map-shell"));
+        shell == null ? void 0 : shell.classList.toggle("ec-map-shell--tab-panels-open", open);
+      }
+      const api = {
+        openTab,
+        closePanels,
+        showSelection,
+        clearSelection,
+        isOpen,
+        activeTab,
+        selection
+      };
+      provide(TAB_PANELS_KEY, api);
+      registerTabPanelsApi(api);
+      __expose(api);
+      watch(isOpen, (open) => syncShellOpenClass(open));
+      watch(
+        [mapRef, rootEl2],
+        ([map2, el], _prev, onCleanup) => {
+          var _a;
+          if (olControl) {
+            (_a = mapRef.value) == null ? void 0 : _a.removeControl(olControl);
+            olControl = null;
+          }
+          if (!map2 || !el) return;
+          olControl = new Control({ element: el });
+          map2.addControl(olControl);
+          syncShellOpenClass(isOpen.value);
+          onCleanup(() => {
+            syncShellOpenClass(false);
+            if (olControl && map2) {
+              map2.removeControl(olControl);
+              olControl = null;
+            }
+          });
+        },
+        { immediate: true }
+      );
+      onUnmounted(() => {
+        syncShellOpenClass(false);
+        registerTabPanelsApi(null);
+        if (olControl && mapRef.value) {
+          mapRef.value.removeControl(olControl);
+        }
+        olControl = null;
+      });
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", {
+          ref_key: "rootEl",
+          ref: rootEl2,
+          class: normalizeClass(["ec-tab-panels ol-unselectable ol-control", { "is-open": isOpen.value }]),
+          role: "complementary",
+          "aria-label": "Panneau cartographique"
+        }, [
+          createBaseVNode("div", _hoisted_1$2, [
+            (openBlock(), createElementBlock(Fragment, null, renderList(tabs, (tab) => {
+              return createBaseVNode("button", {
+                id: `ec-tab-${tab.id}`,
+                key: tab.id,
+                type: "button",
+                role: "tab",
+                class: normalizeClass(["ec-tab-panels__tab", [tab.icon, { "is-active": isOpen.value && activeTab.value === tab.id }]]),
+                "aria-selected": isOpen.value && activeTab.value === tab.id,
+                "aria-controls": `ec-tab-panel-${tab.id}`,
+                title: tab.label,
+                "aria-label": tab.label,
+                onClick: ($event) => onTabClick(tab.id)
+              }, null, 10, _hoisted_2$1);
+            }), 64))
+          ]),
+          createBaseVNode("div", _hoisted_3$1, [
+            createBaseVNode("div", _hoisted_4$1, [
+              createBaseVNode("div", {
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).fiche}`,
+                class: "ec-tab-panels__pane",
+                role: "tabpanel",
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).fiche,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).fiche}`
+              }, [
+                createVNode(_sfc_main$6, { selection: selection.value }, null, 8, ["selection"])
+              ], 8, _hoisted_5$1),
+              createBaseVNode("div", {
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).empty}`,
+                class: "ec-tab-panels__pane",
+                role: "tabpanel",
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).empty,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).empty}`
+              }, [..._cache[2] || (_cache[2] = [
+                createBaseVNode("p", { class: "ec-tab-panels__empty" }, " Contenu à venir. ", -1)
+              ])], 8, _hoisted_6),
+              createBaseVNode("div", {
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).layers}`,
+                class: "ec-tab-panels__pane",
+                role: "tabpanel",
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).layers,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).layers}`
+              }, [
+                __props.basePresets.length ? (openBlock(), createBlock(TileLayerSwitcher, {
+                  key: 0,
+                  presets: __props.basePresets,
+                  "model-value": __props.baseModelValue,
+                  "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => emit2("update:baseModelValue", $event))
+                }, null, 8, ["presets", "model-value"])) : createCommentVNode("", true),
+                createVNode(TreeLayerSwitcher, {
+                  nodes: __props.layerNodes,
+                  onToggle: _cache[1] || (_cache[1] = (id, visible) => emit2("toggle-layer", id, visible))
+                }, null, 8, ["nodes"])
+              ], 8, _hoisted_7),
+              createBaseVNode("div", {
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).raw}`,
+                class: "ec-tab-panels__pane",
+                role: "tabpanel",
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).raw,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).raw}`
+              }, [
+                createVNode(_sfc_main$5, { selection: selection.value }, null, 8, ["selection"])
+              ], 8, _hoisted_8)
+            ])
+          ])
+        ], 2);
+      };
+    }
+  });
   const _hoisted_1$1 = {
     class: "ec-embed-viewer gpu-client",
     "data-testid": "embed-map-viewer"
@@ -67534,24 +68031,37 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(__props) {
       const props = __props;
       const presets = createBaseLayerPresets();
+      const activeBase = /* @__PURE__ */ ref("plan");
       const baseLayers = computed(() => presets.map((p5) => p5.layer));
       const initialSearch = computed(() => {
         var _a;
         return ((_a = props.params) == null ? void 0 : _a.search) ?? null;
       });
+      const layerNodes = /* @__PURE__ */ ref([]);
+      function onToggleLayer(id, visible) {
+        const node = layerNodes.value.find((n) => n.id === id);
+        if (node) node.visible = visible;
+      }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$8, {
+          createVNode(_sfc_main$d, {
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
             default: withCtx(() => [
-              createVNode(_sfc_main$4, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
-              createVNode(_sfc_main$3),
-              createVNode(_sfc_main$2),
+              createVNode(_sfc_main$2, {
+                "base-model-value": activeBase.value,
+                "onUpdate:baseModelValue": _cache[0] || (_cache[0] = ($event) => activeBase.value = $event),
+                "base-presets": unref(presets),
+                "layer-nodes": layerNodes.value,
+                onToggleLayer
+              }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
+              createVNode(_sfc_main$9, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$8),
               createVNode(_sfc_main$7),
-              createVNode(_sfc_main$6),
-              createVNode(_sfc_main$5)
+              createVNode(_sfc_main$c),
+              createVNode(_sfc_main$b),
+              createVNode(_sfc_main$a)
             ]),
             _: 1
           }, 8, ["layers"])
@@ -67559,14 +68069,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _export_sfc = (sfc, props) => {
-    const target2 = sfc.__vccOpts || sfc;
-    for (const [key2, val] of props) {
-      target2[key2] = val;
-    }
-    return target2;
-  };
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-80e5210e"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-b16e86ff"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {

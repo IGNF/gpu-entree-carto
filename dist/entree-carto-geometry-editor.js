@@ -2933,13 +2933,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return transform(
       coordinate,
       "EPSG:4326",
-      "EPSG:3857"
+      projection !== void 0 ? projection : "EPSG:3857"
     );
   }
   function toLonLat(coordinate, projection) {
     const lonLat = transform(
       coordinate,
-      "EPSG:3857",
+      projection !== void 0 ? projection : "EPSG:3857",
       "EPSG:4326"
     );
     const lon = lonLat[0];
@@ -34832,6 +34832,73 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.gutter_;
     }
   }
+  const GEOMETRY_TYPE_NAMES = [
+    "Point",
+    "LineString",
+    "Polygon",
+    "MultiPoint",
+    "MultiLineString",
+    "MultiPolygon",
+    "Rectangle",
+    "Circle",
+    "Disc",
+    "MultiCircle",
+    "MultiDisc",
+    "Geometry"
+  ];
+  const FUTURE_GEOMETRY_TOOL_NAMES = [
+    "Text",
+    "Import",
+    "Export",
+    "MeasureDistance",
+    "MeasureArea"
+  ];
+  const KNOWN = new Set(GEOMETRY_TYPE_NAMES);
+  const REPLACE_ON_DRAW = /* @__PURE__ */ new Set([
+    "Point",
+    "LineString",
+    "Polygon",
+    "Rectangle",
+    "Circle",
+    "Disc"
+  ]);
+  function isGeometryTypeName(value) {
+    return KNOWN.has(value);
+  }
+  function parseGeometryTypes(geometryType) {
+    const raw = String(geometryType ?? "Geometry").split(",").map((s) => s.trim()).filter(Boolean);
+    const names = raw.filter(isGeometryTypeName);
+    if (!names.length) return ["Geometry"];
+    return names;
+  }
+  function shouldReplaceOnDraw(types) {
+    return types.length === 1 && REPLACE_ON_DRAW.has(types[0]);
+  }
+  function primaryGeometryType(types) {
+    if (types.length === 1) return types[0];
+    return "Geometry";
+  }
+  function drawToolKeys(types) {
+    const keys = /* @__PURE__ */ new Set();
+    const addFrom = (t) => {
+      if (t === "Geometry") {
+        keys.add("Point");
+        keys.add("LineString");
+        keys.add("Polygon");
+        keys.add("Circle");
+        keys.add("Disc");
+        return;
+      }
+      if (t === "Point" || t === "MultiPoint") keys.add("Point");
+      else if (t === "LineString" || t === "MultiLineString") keys.add("LineString");
+      else if (t === "Polygon" || t === "MultiPolygon") keys.add("Polygon");
+      else if (t === "Rectangle") keys.add("Rectangle");
+      else if (t === "Circle" || t === "MultiCircle") keys.add("Circle");
+      else if (t === "Disc" || t === "MultiDisc") keys.add("Disc");
+    };
+    for (const t of types) addFrom(t);
+    return [...keys];
+  }
   const DEFAULT_GEOMETRY_EDITOR_OPTIONS = {
     geometryType: "Geometry",
     hide: true,
@@ -34858,6 +34925,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     showZoom: true,
     showSettings: false,
     showAttributions: false,
+    toolsToggle: null,
     customStyle: null
   };
   class FeatureFormat {
@@ -38722,6 +38790,127 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     node.setAttribute("xunits", vec2.xunits);
     node.setAttribute("yunits", vec2.yunits);
   }
+  const EC_KIND_PROP = "ecKind";
+  function getCircleKind(feature) {
+    const k = feature.get(EC_KIND_PROP);
+    return k === "disc" ? "disc" : "circle";
+  }
+  function setCircleKind(feature, kind) {
+    feature.set(EC_KIND_PROP, kind);
+  }
+  function looksLikeCircleOrDisc(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    if (o.type !== "Circle" && o.type !== "Disc") return false;
+    if (!Array.isArray(o.center) || o.center.length < 2) return false;
+    if (typeof o.radius !== "number" || !(o.radius > 0)) return false;
+    return typeof o.center[0] === "number" && typeof o.center[1] === "number";
+  }
+  function looksLikeMultiCircleOrDisc(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    if (o.type !== "MultiCircle" && o.type !== "MultiDisc") return false;
+    if (!Array.isArray(o.geometries) || !o.geometries.length) return false;
+    return o.geometries.every(
+      (g) => g && typeof g === "object" && Array.isArray(g.center) && g.center.length >= 2 && typeof g.center[0] === "number" && typeof g.center[1] === "number" && typeof g.radius === "number" && g.radius > 0
+    );
+  }
+  function circleFromLonLatRadius(centerLonLat, radiusMeters, mapProjection = "EPSG:3857") {
+    const center = fromLonLat(centerLonLat, mapProjection);
+    return new Circle(center, radiusMeters);
+  }
+  function featureFromCircleJson(data, mapProjection = "EPSG:3857") {
+    const circle = circleFromLonLatRadius(data.center, data.radius, mapProjection);
+    const feature = new Feature({ geometry: circle });
+    setCircleKind(feature, data.type === "Disc" ? "disc" : "circle");
+    return feature;
+  }
+  function featuresFromMultiCircleJson(data, mapProjection = "EPSG:3857") {
+    const kind = data.type === "MultiDisc" ? "disc" : "circle";
+    const simpleType = kind === "disc" ? "Disc" : "Circle";
+    return data.geometries.map(
+      (g) => featureFromCircleJson(
+        { type: simpleType, center: g.center, radius: g.radius },
+        mapProjection
+      )
+    );
+  }
+  function circleParts(feature, precision, mapProjection) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Circle)) return null;
+    const [lon, lat] = toLonLat(geom.getCenter(), mapProjection);
+    const f = 10 ** precision;
+    const round = (n) => Math.round(n * f) / f;
+    return {
+      center: [round(lon), round(lat)],
+      radius: round(geom.getRadius())
+    };
+  }
+  function serializeCircleFeature(feature, precision, mapProjection = "EPSG:3857") {
+    const parts = circleParts(feature, precision, mapProjection);
+    if (!parts) return null;
+    const kind = getCircleKind(feature);
+    return JSON.stringify({
+      type: kind === "disc" ? "Disc" : "Circle",
+      center: parts.center,
+      radius: parts.radius
+    });
+  }
+  function serializeMultiCircleFeatures(features, kind, precision, mapProjection = "EPSG:3857") {
+    const geometries = [];
+    for (const feature of features) {
+      if (!(feature.getGeometry() instanceof Circle)) continue;
+      if (getCircleKind(feature) !== kind) continue;
+      const parts = circleParts(feature, precision, mapProjection);
+      if (parts) geometries.push(parts);
+    }
+    if (!geometries.length) return null;
+    return JSON.stringify({
+      type: kind === "disc" ? "MultiDisc" : "MultiCircle",
+      geometries
+    });
+  }
+  function circleToPolygonFeature(feature) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Circle)) return feature;
+    const poly = fromCircle(geom, 64);
+    const out = new Feature({ geometry: poly });
+    const props = feature.getProperties();
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "geometry") continue;
+      out.set(key, value);
+    }
+    return out;
+  }
+  function polygonApproxToCircleFeature(feature, kind) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Polygon)) return feature;
+    const extent = geom.getExtent();
+    const center = getCenter(extent);
+    const radius = Math.max(getWidth(extent), getHeight(extent)) / 2;
+    if (!(radius > 0)) return feature;
+    const out = new Feature({ geometry: new Circle(center, radius) });
+    setCircleKind(out, kind);
+    const props = feature.getProperties();
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "geometry" || key === EC_KIND_PROP) continue;
+      out.set(key, value);
+    }
+    return out;
+  }
+  function restoreCircleFeaturesForKind(features, kind) {
+    return features.map((f) => {
+      const g = f.getGeometry();
+      if (g instanceof Circle) {
+        setCircleKind(f, kind);
+        return f;
+      }
+      if (g instanceof Polygon) {
+        return polygonApproxToCircleFeature(f, kind);
+      }
+      return f;
+    });
+  }
   const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat$1 = new KML({ extractStyles: false });
   function looksLikeKml(raw) {
@@ -38788,7 +38977,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     } else {
       try {
         const data = JSON.parse(text);
-        if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
+        if (looksLikeMultiCircleOrDisc(data)) {
+          features = featuresFromMultiCircleJson(data, mapProjection);
+        } else if (looksLikeCircleOrDisc(data)) {
+          features = [featureFromCircleJson(data, mapProjection)];
+        } else if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
           features = geoJsonFormat$1.readFeatures(data, {
             dataProjection: "EPSG:4326",
             featureProjection: mapProjection
@@ -38836,13 +39029,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       mapProjection = "EPSG:3857"
     } = options;
     if (!features.length) return "";
+    const primary = primaryGeometryType(parseGeometryTypes(geometryType));
     if (outputFormat === "kml") {
-      return kmlFormat.writeFeatures(features, {
+      const forKml = features.map(
+        (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+      );
+      return kmlFormat.writeFeatures(forKml, {
         dataProjection: "EPSG:4326",
         featureProjection: mapProjection
       });
     }
-    if (geometryType === "Rectangle" && features.length === 1) {
+    if (primary === "Rectangle" && features.length === 1) {
       const geom = features[0].getGeometry();
       if (geom) {
         const clone2 = geom.clone();
@@ -38851,8 +39048,37 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return JSON.stringify(roundCoords([...e], precision));
       }
     }
-    const multiMerged = mergeToMultiFeature(features, geometryType);
-    const toWrite = multiMerged ? [multiMerged] : features;
+    if (primary === "MultiCircle") {
+      const s = serializeMultiCircleFeatures(
+        features,
+        "circle",
+        precision,
+        mapProjection
+      );
+      if (s) return s;
+    }
+    if (primary === "MultiDisc") {
+      const s = serializeMultiCircleFeatures(
+        features,
+        "disc",
+        precision,
+        mapProjection
+      );
+      if (s) return s;
+    }
+    if ((primary === "Circle" || primary === "Disc") && features.length === 1) {
+      const s = serializeCircleFeature(features[0], precision, mapProjection);
+      if (s) return s;
+    }
+    if (features.length === 1 && features[0].getGeometry() instanceof Circle) {
+      const s = serializeCircleFeature(features[0], precision, mapProjection);
+      if (s) return s;
+    }
+    const prepared = features.map(
+      (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+    );
+    const multiMerged = mergeToMultiFeature(prepared, primary);
+    const toWrite = multiMerged ? [multiMerged] : prepared;
     const json = geoJsonFormat.writeFeaturesObject(toWrite, {
       dataProjection: "EPSG:4326",
       featureProjection: mapProjection
@@ -38898,6 +39124,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       stroke: new Stroke({ color: "#fff", width: 2 })
     })
   });
+  const circleOutlineStyle = new Style({
+    fill: new Fill({ color: "rgba(0,0,0,0)" }),
+    stroke: new Stroke({ color: blue, width: 2 })
+  });
+  const discFillStyle = new Style({
+    fill: new Fill({ color: fillBlue }),
+    stroke: new Stroke({ color: blue, width: 2 })
+  });
   const geometryDrawStyle = new Style({
     fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
@@ -38906,15 +39140,39 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       fill: new Fill({ color: blue })
     })
   });
-  function geometryStyleFunction(_feature) {
+  const circleDrawStyle = new Style({
+    fill: new Fill({ color: "rgba(0,0,0,0)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  const discDrawStyle = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  function geometryStyleFunction(feature) {
+    var _a;
+    const geom = (_a = feature.getGeometry) == null ? void 0 : _a.call(feature);
+    if (geom instanceof Circle) {
+      return getCircleKind(feature) === "disc" ? discFillStyle : circleOutlineStyle;
+    }
     return geometryFeatureStyle;
   }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
-  const HANDLE_ICON_SCALE = 1.75;
-  const LINE_SIDE_OFFSET_PX = 44;
-  const LINE_HANDLE_GAP_PX = 40;
+  const HANDLE_ICON_SCALE = 1.4;
+  const LINE_SIDE_OFFSET_PX = 14;
+  const LINE_HANDLE_GAP_PX = 32;
   const POLYGON_INNER_MARGIN_PX = 14;
+  const LINE_HOVER_KEEP_PX = 28;
+  const CIRCLE_EDGE_TOL_PX = 12;
+  const CIRCLE_HOVER_KEEP_PX = 28;
   const TRANSLATE_ICON = "data:image/svg+xml," + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
       <path fill="${HANDLE_BLUE}" d="M13 5.83V11h5.17l-1.59-1.59L18 8l4 4-4 4-1.41-1.41L18.17 13H13v5.17l1.59-1.59L16 18l-4 4-4-4 1.41-1.41L11 18.17V13H5.83l1.59 1.59L6 16l-4-4 4-4 1.41 1.41L5.83 11H11V5.83L9.41 7.41 8 6l4-4 4 4-1.41 1.41L13 5.83z"/>
@@ -39015,14 +39273,62 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return true;
   }
   function lineSideAnchors(geom, res) {
-    const extent = geom.getExtent();
-    const midY = (extent[1] + extent[3]) / 2;
-    const x = extent[2] + LINE_SIDE_OFFSET_PX * res;
-    const gap = LINE_HANDLE_GAP_PX * res;
+    const coords = geom.getCoordinates();
+    if (coords.length < 2) {
+      const c = featureCentroid(geom);
+      const x = c[0] + LINE_SIDE_OFFSET_PX * res;
+      const gap2 = LINE_HANDLE_GAP_PX * res;
+      return {
+        translate: [x, c[1] + gap2 / 2],
+        rotate: [x, c[1] - gap2 / 2]
+      };
+    }
+    let total = 0;
+    const segLens = [];
+    for (let i = 0; i < coords.length - 1; i++) {
+      const len = Math.hypot(
+        coords[i + 1][0] - coords[i][0],
+        coords[i + 1][1] - coords[i][1]
+      );
+      segLens.push(len);
+      total += len;
+    }
+    let target = total / 2;
+    let mid = coords[0];
+    let tx = 1;
+    let ty = 0;
+    for (let i = 0; i < segLens.length; i++) {
+      if (target <= segLens[i] || i === segLens.length - 1) {
+        const a = coords[i];
+        const b = coords[i + 1];
+        const t = segLens[i] > 0 ? target / segLens[i] : 0;
+        mid = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const len = Math.hypot(dx, dy) || 1;
+        tx = dy / len;
+        ty = -dx / len;
+        break;
+      }
+      target -= segLens[i];
+    }
+    const off = LINE_SIDE_OFFSET_PX * res;
+    const base = [mid[0] + tx * off, mid[1] + ty * off];
+    const gap = LINE_HANDLE_GAP_PX * res / 2;
+    const tangentX = -ty;
+    const tangentY = tx;
     return {
-      translate: [x, midY + gap / 2],
-      rotate: [x, midY - gap / 2]
+      translate: [base[0] + tangentX * gap, base[1] + tangentY * gap],
+      rotate: [base[0] - tangentX * gap, base[1] - tangentY * gap]
     };
+  }
+  function distToLineString(line, coord) {
+    const coords = line.getCoordinates();
+    let min = Infinity;
+    for (let i = 0; i < coords.length - 1; i++) {
+      min = Math.min(min, distPointToSegment(coord, coords[i], coords[i + 1]));
+    }
+    return min;
   }
   function bboxPolygonFromExtent(extent) {
     const [minX, minY, maxX, maxY] = extent;
@@ -39077,6 +39383,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return "move";
       case "rotate":
         return "grab";
+      case "resize-radius":
+        return "nesw-resize";
       case "resize-n":
       case "resize-s":
         return "ns-resize";
@@ -39092,6 +39400,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       default:
         return "pointer";
     }
+  }
+  function distToCenter(center, coord) {
+    return Math.hypot(coord[0] - center[0], coord[1] - center[1]);
+  }
+  function isNearCircleEdge(circle, coord, tol) {
+    return Math.abs(distToCenter(circle.getCenter(), coord) - circle.getRadius()) <= tol;
+  }
+  function isDeepInsideCircle(circle, coord, margin) {
+    return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin;
+  }
+  function circleSideTranslateAnchor(circle, res) {
+    const c = circle.getCenter();
+    const r = circle.getRadius();
+    const off = LINE_SIDE_OFFSET_PX * res;
+    return [c[0] + r + off, c[1]];
+  }
+  function circleModeFor(feature, mode) {
+    if (mode === "circle" || mode === "disc") return mode;
+    return getCircleKind(feature) === "disc" ? "disc" : "circle";
   }
   class TransformPointer extends PointerInteraction {
     constructor(ctrl) {
@@ -39207,8 +39534,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             }
             return void 0;
           }
+          if (this.mode === "circle" || this.mode === "disc") {
+            if (geom instanceof Circle) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          if (geom instanceof Circle) {
+            found = f;
+            return true;
+          }
           const t = geom == null ? void 0 : geom.getType();
-          if (t === "LineString" || t === "Polygon") {
+          if (t === "LineString" || t === "Polygon" || t === "Point") {
             found = f;
             return true;
           }
@@ -39234,12 +39572,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.handleSource.addFeature(f);
       };
       const res = resolutionOf(this.map);
+      if (geom instanceof Circle) {
+        const cMode = circleModeFor(feature, this.mode);
+        if (cMode === "circle") {
+          add2("translate", circleSideTranslateAnchor(geom, res));
+        }
+        return;
+      }
       if (this.mode === "bbox" && geom instanceof Polygon) {
         const extent = geom.getExtent();
         const [minX, minY, maxX, maxY] = extent;
         const midX = (minX + maxX) / 2;
         const midY = (minY + maxY) / 2;
-        add2("translate", getCenter(extent));
         add2("resize-nw", [minX, maxY]);
         add2("resize-n", [midX, maxY]);
         add2("resize-ne", [maxX, maxY]);
@@ -39266,6 +39610,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("rotate", rotateAt);
       }
     }
+    isDeepInsideHoveredPolygon(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Polygon)) return false;
+      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
+      return isDeepInsidePolygon(geom, coord, margin);
+    }
+    isDeepInsideHoveredDisc(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Circle)) return false;
+      if (circleModeFor(this.hovered, this.mode) !== "disc") return false;
+      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
+      return isDeepInsideCircle(geom, coord, margin);
+    }
+    isNearHoveredCircleEdge(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Circle)) return false;
+      const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
+      return isNearCircleEdge(geom, coord, tol);
+    }
     handleMove(evt) {
       if (!this.active || this.dragging) return;
       const handle = this.findHandleAtPixel(evt.pixel);
@@ -39280,18 +39646,50 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.hovered = feature;
         }
         this.placeHandles(feature);
+        const coord2 = evt.coordinate;
         const geom = feature.getGeometry();
-        const coord = evt.coordinate;
-        if (el && geom instanceof Polygon && this.mode === "line-polygon" && coord && isDeepInsidePolygon(
-          geom,
-          coord,
-          POLYGON_INNER_MARGIN_PX * resolutionOf(this.map)
-        )) {
+        if (el && (this.mode === "point" || geom instanceof Point)) {
+          el.style.cursor = "move";
+        } else if (el && coord2 && geom instanceof Circle) {
+          const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
+          if (isNearCircleEdge(geom, coord2, tol)) {
+            el.style.cursor = cursorForRole("resize-radius");
+          } else if (this.isDeepInsideHoveredDisc(coord2)) {
+            el.style.cursor = "move";
+          } else {
+            el.style.cursor = "pointer";
+          }
+        } else if (el && coord2 && (this.mode === "line-polygon" || this.mode === "bbox") && this.isDeepInsideHoveredPolygon(coord2)) {
           el.style.cursor = "move";
         } else if (el) {
           el.style.cursor = "pointer";
         }
         return;
+      }
+      const coord = evt.coordinate;
+      if (this.hovered && coord) {
+        const geom = this.hovered.getGeometry();
+        const res = resolutionOf(this.map);
+        if (geom instanceof LineString) {
+          const keep = LINE_HOVER_KEEP_PX * res;
+          if (distToLineString(geom, coord) <= keep) {
+            this.placeHandles(this.hovered);
+            if (el) el.style.cursor = "pointer";
+            return;
+          }
+        }
+        if (geom instanceof Circle) {
+          const keep = CIRCLE_HOVER_KEEP_PX * res;
+          const d = Math.abs(distToCenter(geom.getCenter(), coord) - geom.getRadius());
+          const inside = distToCenter(geom.getCenter(), coord) <= geom.getRadius() + keep;
+          if (d <= keep || inside) {
+            this.placeHandles(this.hovered);
+            if (el) {
+              el.style.cursor = isNearCircleEdge(geom, coord, CIRCLE_EDGE_TOL_PX * res) ? cursorForRole("resize-radius") : this.isDeepInsideHoveredDisc(coord) ? "move" : "pointer";
+            }
+            return;
+          }
+        }
       }
       this.hovered = null;
       this.clearHandles();
@@ -39321,24 +39719,55 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         return true;
       }
-      if (this.mode === "line-polygon" && this.hovered) {
+      if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Circle) {
+          this.dragging = {
+            role: "resize-radius",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCenter().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = cursorForRole("resize-radius");
+          return true;
+        }
+      }
+      if (this.hovered && this.isDeepInsideHoveredDisc(coord)) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Circle) {
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCenter().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
+        }
+      }
+      if ((this.mode === "line-polygon" || this.mode === "bbox") && this.hovered && this.isDeepInsideHoveredPolygon(coord)) {
         const geom = this.hovered.getGeometry();
         if (geom instanceof Polygon) {
-          const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
-          if (isDeepInsidePolygon(geom, coord, margin)) {
-            this.dragging = {
-              role: "translate",
-              feature: this.hovered,
-              startCoord: coord.slice(),
-              startGeom: geom.clone(),
-              origin: featureCentroid(geom),
-              startAngle: 0,
-              startExtent: geom.getExtent().slice()
-            };
-            const el = this.map.getTargetElement();
-            if (el) el.style.cursor = "move";
-            return true;
-          }
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: featureCentroid(geom),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
         }
       }
       return false;
@@ -39351,6 +39780,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (role === "translate") {
         const next = startGeom.clone();
         next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
+        feature.setGeometry(next);
+        this.placeHandles(feature);
+        return;
+      }
+      if (role === "resize-radius" && startGeom instanceof Circle) {
+        const next = startGeom.clone();
+        const radius = Math.max(distToCenter(origin, coord), 1e-3);
+        next.setRadius(radius);
         feature.setGeometry(next);
         this.placeHandles(feature);
         return;
@@ -39380,13 +39817,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function transformModeFor(geometryType) {
-    if (geometryType === "Rectangle") return "bbox";
-    if (geometryType === "Point" || geometryType === "MultiPoint") return "point";
+    const types = parseGeometryTypes(geometryType);
+    if (types.length !== 1) return "line-polygon";
+    const primary = types[0];
+    if (primary === "Rectangle") return "bbox";
+    if (primary === "Point" || primary === "MultiPoint") return "point";
+    if (primary === "Circle" || primary === "MultiCircle") return "circle";
+    if (primary === "Disc" || primary === "MultiDisc") return "disc";
     return "line-polygon";
   }
   const modifyTool = {
     id: "modify",
-    label: "Modifier une géométrie",
+    label: "modifier une géométrie",
     iconClass: "ec-geometry-editor__tool--modify",
     modify: true
   };
@@ -39396,56 +39838,62 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     iconClass: "ec-geometry-editor__tool--remove",
     remove: true
   };
+  const DRAW_TOOL_DEFS = {
+    Point: {
+      id: "point",
+      label: "Point",
+      iconClass: "ec-geometry-editor__tool--point",
+      drawType: "Point"
+    },
+    LineString: {
+      id: "line",
+      label: "Ligne",
+      iconClass: "ec-geometry-editor__tool--line",
+      drawType: "LineString"
+    },
+    Polygon: {
+      id: "polygon",
+      label: "Polygone",
+      iconClass: "ec-geometry-editor__tool--polygon",
+      drawType: "Polygon"
+    },
+    Rectangle: {
+      id: "rect",
+      label: "Rectangle",
+      iconClass: "ec-geometry-editor__tool--rectangle",
+      drawType: "Circle",
+      box: true
+    },
+    Circle: {
+      id: "circle",
+      label: "Cercle",
+      iconClass: "ec-geometry-editor__tool--circle",
+      drawType: "Circle",
+      circleKind: "circle"
+    },
+    Disc: {
+      id: "disc",
+      label: "Disque",
+      iconClass: "ec-geometry-editor__tool--disc",
+      drawType: "Circle",
+      circleKind: "disc"
+    }
+  };
+  function drawStyleFor(types) {
+    if (types.length === 1 && types[0] === "Circle") return circleDrawStyle;
+    if (types.length === 1 && types[0] === "Disc") return discDrawStyle;
+    if (types.length === 1 && types[0] === "MultiCircle") return circleDrawStyle;
+    if (types.length === 1 && types[0] === "MultiDisc") return discDrawStyle;
+    return geometryDrawStyle;
+  }
   function toolsFor(geometryType) {
-    if (geometryType === "Geometry") {
-      return [
-        {
-          id: "point",
-          label: "Point",
-          iconClass: "ec-geometry-editor__tool--point",
-          drawType: "Point"
-        },
-        {
-          id: "line",
-          label: "Ligne",
-          iconClass: "ec-geometry-editor__tool--line",
-          drawType: "LineString"
-        },
-        {
-          id: "polygon",
-          label: "Polygone",
-          iconClass: "ec-geometry-editor__tool--polygon",
-          drawType: "Polygon"
-        },
-        modifyTool,
-        removeTool
-      ];
+    const types = parseGeometryTypes(geometryType);
+    const keys = drawToolKeys(types);
+    const drawTools = keys.map((k) => DRAW_TOOL_DEFS[k]);
+    if (drawTools.length === 1) {
+      return [{ ...drawTools[0], id: "draw" }, modifyTool, removeTool];
     }
-    if (geometryType === "Rectangle") {
-      return [
-        {
-          id: "rect",
-          label: "Rectangle",
-          iconClass: "ec-geometry-editor__tool--rectangle",
-          drawType: "Circle",
-          box: true
-        },
-        modifyTool,
-        removeTool
-      ];
-    }
-    const simple = geometryType.replace(/^Multi/, "");
-    const iconClass = simple === "Point" ? "ec-geometry-editor__tool--point" : simple === "LineString" ? "ec-geometry-editor__tool--line" : "ec-geometry-editor__tool--polygon";
-    return [
-      {
-        id: "draw",
-        label: geometryType,
-        iconClass,
-        drawType: simple === "Point" || simple === "LineString" || simple === "Polygon" ? simple : "Polygon"
-      },
-      modifyTool,
-      removeTool
-    ];
+    return [...drawTools, modifyTool, removeTool];
   }
   class DrawToolsBar {
     constructor(opts) {
@@ -39456,6 +39904,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onChange");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
+      __publicField(this, "customStyle");
       __publicField(this, "activeId", null);
       __publicField(this, "draw", null);
       __publicField(this, "modify", null);
@@ -39480,8 +39929,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.geometryType = opts.geometryType;
       this.target = opts.target;
       this.onChange = opts.onChange;
-      this.drawStyle = opts.style ?? geometryDrawStyle;
-      this.modify = new Modify({ source: this.source });
+      this.customStyle = opts.style;
+      this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
+      this.modify = new Modify({
+        source: this.source,
+        // Cercle / disque : gérés par ModifyTransformController (rayon / translation)
+        filter: (feature) => !(feature.getGeometry() instanceof Circle)
+      });
       this.modify.setActive(false);
       this.snap = new Snap({ source: this.source });
       this.map.addInteraction(this.modify);
@@ -39502,12 +39956,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clearTransient();
       this.geometryType = geometryType;
       this.transform.setMode(transformModeFor(geometryType));
+      if (!this.customStyle) {
+        this.drawStyle = drawStyleFor(parseGeometryTypes(geometryType));
+      }
       this.render();
     }
     /** Met à jour le style du croquis en cours. */
     setStyle(style) {
       this.clearTransient();
-      this.drawStyle = style ?? geometryDrawStyle;
+      this.customStyle = style;
+      this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType));
     }
     render() {
       this.target.replaceChildren();
@@ -39590,17 +40048,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (!tool.drawType) return;
-      const replaceOnDraw = this.geometryType === "Point" || this.geometryType === "LineString" || this.geometryType === "Polygon" || this.geometryType === "Rectangle";
+      const types = parseGeometryTypes(this.geometryType);
+      const replaceOnDraw = shouldReplaceOnDraw(types);
+      const sketchStyle = tool.circleKind === "circle" ? circleDrawStyle : tool.circleKind === "disc" ? discDrawStyle : this.drawStyle;
       this.draw = new Draw({
         source: this.source,
         type: tool.drawType,
-        style: this.drawStyle,
+        style: this.customStyle ?? sketchStyle,
         geometryFunction: tool.box ? createBox() : void 0
       });
       this.draw.on("drawstart", () => {
         if (replaceOnDraw) this.source.clear(true);
       });
-      this.draw.on("drawend", () => {
+      this.draw.on("drawend", (evt) => {
+        if (tool.circleKind) {
+          setCircleKind(evt.feature, tool.circleKind);
+        }
         queueMicrotask(() => this.onChange());
       });
       this.map.addInteraction(this.draw);
@@ -39613,17 +40076,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.target.replaceChildren();
     }
   }
-  const GEOMETRY_TYPES = [
-    "Point",
-    "LineString",
-    "Polygon",
-    "MultiPoint",
-    "MultiLineString",
-    "MultiPolygon",
-    "Rectangle",
-    "Geometry"
-  ];
   const OUTPUT_FORMATS = ["geojson", "kml"];
+  const TOOLS_TOGGLE_VALUES = [
+    "",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right"
+  ];
   const LON_LAT_DECIMALS = 7;
   const ZOOM_DECIMALS = 1;
   const LON_LAT_STEP = 10 ** -LON_LAT_DECIMALS;
@@ -39724,7 +40184,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       title.textContent = "Options";
       form.appendChild(title);
       form.appendChild(
-        this.selectField("geometryType", "Type de géométrie", GEOMETRY_TYPES, opts.geometryType)
+        this.geometryTypeField(String(opts.geometryType))
       );
       form.appendChild(
         this.selectField("outputFormat", "Format de sortie", OUTPUT_FORMATS, opts.outputFormat)
@@ -39760,6 +40220,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       form.appendChild(
         this.checkField("showSettings", "Bouton réglages", opts.showSettings)
+      );
+      form.appendChild(
+        this.selectField(
+          "toolsToggle",
+          "Menu outils (toolsToggle)",
+          TOOLS_TOGGLE_VALUES,
+          opts.toolsToggle ?? "",
+          {
+            "": "(toujours visibles)",
+            "top-left": "top-left",
+            "top-right": "top-right",
+            "bottom-left": "bottom-left",
+            "bottom-right": "bottom-right"
+          }
+        )
       );
       form.appendChild(this.checkField("hide", "Masquer le champ source", opts.hide));
       const actions = document.createElement("div");
@@ -39857,6 +40332,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         showZoom: bool("showZoom"),
         showAttributions: bool("showAttributions"),
         showSettings: bool("showSettings"),
+        toolsToggle: (() => {
+          const v = String(fd.get("toolsToggle") ?? "");
+          return v === "" ? null : v;
+        })(),
         hide: bool("hide")
       };
       this.editor.setOptions(patch);
@@ -39870,6 +40349,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const span = document.createElement("span");
       span.textContent = labelText;
       wrap2.append(span, control);
+      return wrap2;
+    }
+    geometryTypeField(current) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.name = "geometryType";
+      input.value = current;
+      input.setAttribute("list", "ec-geom-type-list");
+      input.placeholder = "Point,Circle ou Geometry…";
+      input.title = "Un type, ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)";
+      const list = document.createElement("datalist");
+      list.id = "ec-geom-type-list";
+      for (const name of GEOMETRY_TYPE_NAMES) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        list.appendChild(opt);
+      }
+      const wrap2 = this.fieldWrap("Type de géométrie", input);
+      wrap2.appendChild(list);
+      const hint = document.createElement("span");
+      hint.className = "ec-geometry-editor__settings-hint";
+      hint.textContent = "CSV autorisé : Point,Circle,Disc — comme Geometry, outils filtrés";
+      wrap2.appendChild(hint);
       return wrap2;
     }
     textField(name, label, value) {
@@ -39897,13 +40399,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       wrap2.append(input, document.createTextNode(` ${label}`));
       return wrap2;
     }
-    selectField(name, label, values, current) {
+    selectField(name, label, values, current, labels) {
       const select = document.createElement("select");
       select.name = name;
       for (const v of values) {
         const opt = document.createElement("option");
         opt.value = v;
-        opt.textContent = v;
+        opt.textContent = (labels == null ? void 0 : labels[v]) ?? v;
         if (v === current) opt.selected = true;
         select.appendChild(opt);
       }
@@ -39954,7 +40456,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "source");
       __publicField(this, "mapHost");
       __publicField(this, "vectorLayer");
-      __publicField(this, "toolbarHost");
+      /** Conteneur positionné (coin ou gauche) des contrôles d’édition. */
+      __publicField(this, "toolsRoot", null);
+      /** Barre des outils de dessin (cible de DrawToolsBar). */
+      __publicField(this, "toolbarHost", null);
+      __publicField(this, "toolsToggleBtn", null);
+      __publicField(this, "toolsMenuOpen", false);
+      __publicField(this, "toolbarDomId", `ec-geom-toolbar-${Math.random().toString(36).slice(2, 9)}`);
       __publicField(this, "zoomControl", null);
       __publicField(this, "attributionControl", null);
       __publicField(this, "settingsPanel", null);
@@ -39975,7 +40483,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const mapTarget = document.createElement("div");
       mapTarget.className = "ec-geometry-editor__map";
       this.mapHost.appendChild(mapTarget);
+      this.toolsRoot = null;
       this.toolbarHost = null;
+      this.toolsToggleBtn = null;
       if (this.options.editable) {
         this.ensureToolbarHost();
       }
@@ -40066,6 +40576,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (patch.editable !== void 0) {
         this.applyEditable();
+      } else if (patch.toolsToggle !== void 0) {
+        this.applyToolsChrome();
       } else if (this.drawBar && patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
         this.drawBar.setGeometryType(
           this.options.geometryType
@@ -40117,7 +40629,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.syncingFromElement = false;
     }
     loadFromElement() {
-      const features = parseRawToFeatures(this.getRawData());
+      let features = parseRawToFeatures(this.getRawData());
+      const primary = primaryGeometryType(
+        parseGeometryTypes(this.options.geometryType)
+      );
+      if (primary === "Circle" || primary === "MultiCircle") {
+        features = restoreCircleFeaturesForKind(features, "circle");
+      } else if (primary === "Disc" || primary === "MultiDisc") {
+        features = restoreCircleFeaturesForKind(features, "disc");
+      }
       this.source.clear(true);
       if (features.length) {
         this.source.addFeatures(features);
@@ -40162,10 +40682,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     applyHostClass() {
+      const corner = this.options.toolsToggle;
       this.mapHost.className = [
         "ec-geometry-editor",
         this.options.blockView ? "ec-geometry-editor--block-view" : "",
         this.options.showSettings ? "ec-geometry-editor--has-settings" : "",
+        corner ? `ec-geometry-editor--tools-toggle-${corner}` : "",
         this.options.className ?? ""
       ].filter(Boolean).join(" ");
     }
@@ -40270,20 +40792,75 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
     }
     ensureToolbarHost() {
+      this.applyToolsChrome();
+      return this.toolbarHost;
+    }
+    setToolsMenuOpen(open) {
+      this.toolsMenuOpen = open;
+      if (this.toolsToggleBtn) {
+        this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        this.toolsToggleBtn.classList.toggle("is-active", open);
+      }
+      if (this.toolbarHost && this.options.toolsToggle) {
+        this.toolbarHost.hidden = !open;
+      }
+      if (this.toolsRoot) {
+        this.toolsRoot.classList.toggle("is-open", open);
+      }
+    }
+    /**
+     * Positionne le chrome outils (toujours visibles à gauche, ou bouton + panneau
+     * selon `toolsToggle`).
+     */
+    applyToolsChrome() {
+      if (!this.toolsRoot) {
+        this.toolsRoot = document.createElement("div");
+        this.toolsRoot.className = "ec-geometry-editor__tools-root";
+        this.mapHost.appendChild(this.toolsRoot);
+      }
       if (!this.toolbarHost) {
         this.toolbarHost = document.createElement("div");
         this.toolbarHost.className = "ec-geometry-editor__toolbar";
         this.toolbarHost.setAttribute("role", "toolbar");
         this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
-        this.mapHost.appendChild(this.toolbarHost);
       }
-      return this.toolbarHost;
+      const corner = this.options.toolsToggle;
+      if (corner) {
+        if (!this.toolsToggleBtn) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle fr-icon-tools-fill";
+          btn.title = "Outils de dessin";
+          btn.setAttribute("aria-label", "Outils de dessin");
+          btn.setAttribute("aria-expanded", "false");
+          btn.setAttribute("aria-controls", this.toolbarDomId);
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.setToolsMenuOpen(!this.toolsMenuOpen);
+          });
+          this.toolsToggleBtn = btn;
+        }
+        this.toolbarHost.id = this.toolbarDomId;
+        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost);
+        this.toolsRoot.dataset.corner = corner;
+        this.setToolsMenuOpen(this.toolsMenuOpen);
+      } else {
+        this.toolsMenuOpen = false;
+        this.toolsToggleBtn = null;
+        this.toolbarHost.removeAttribute("id");
+        this.toolbarHost.hidden = false;
+        this.toolsRoot.replaceChildren(this.toolbarHost);
+        delete this.toolsRoot.dataset.corner;
+        this.toolsRoot.classList.remove("is-open");
+      }
+      this.applyHostClass();
     }
     applyEditable() {
       var _a;
       if (this.options.editable) {
         const host = this.ensureToolbarHost();
-        host.hidden = false;
+        if (this.toolsRoot) this.toolsRoot.hidden = false;
+        host.hidden = Boolean(this.options.toolsToggle) && !this.toolsMenuOpen;
         if (!this.drawBar) {
           this.drawBar = new DrawToolsBar({
             map: this.map,
@@ -40303,11 +40880,94 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else {
         (_a = this.drawBar) == null ? void 0 : _a.destroy();
         this.drawBar = null;
-        if (this.toolbarHost) {
-          this.toolbarHost.hidden = true;
+        this.setToolsMenuOpen(false);
+        if (this.toolsRoot) {
+          this.toolsRoot.hidden = true;
         }
       }
     }
+  }
+  function attachGeometryTools(map, options) {
+    const geometryType = options.geometryType ?? "Geometry";
+    const ownsSource = !options.source;
+    const source = options.source ?? new VectorSource({ wrapX: false });
+    let layer = options.layer;
+    let ownsLayer = false;
+    if (!layer) {
+      layer = new VectorLayer({
+        source,
+        style: options.style ?? geometryStyleFunction,
+        zIndex: options.zIndex ?? 500,
+        className: "ec-geometry-editor__sketch-layer"
+      });
+      layer.set("ec-geometry-tools", true);
+      map.addLayer(layer);
+      ownsLayer = true;
+    } else if (options.style !== void 0) {
+      layer.setStyle(options.style ?? geometryStyleFunction);
+    }
+    const notify = () => {
+      var _a;
+      (_a = options.onChange) == null ? void 0 : _a.call(
+        options,
+        source.getFeatures()
+      );
+    };
+    const drawBar = new DrawToolsBar({
+      map,
+      source,
+      layer,
+      geometryType,
+      target: options.target,
+      style: options.style,
+      onChange: notify
+    });
+    return {
+      map,
+      source,
+      layer,
+      drawBar,
+      getFeatures: () => source.getFeatures(),
+      setFeatures: (features) => {
+        source.clear(true);
+        if (features.length) source.addFeatures(features);
+        notify();
+      },
+      load: (raw) => {
+        let features = parseRawToFeatures(raw);
+        const primary = primaryGeometryType(parseGeometryTypes(geometryType));
+        if (primary === "Circle" || primary === "MultiCircle") {
+          features = restoreCircleFeaturesForKind(features, "circle");
+        } else if (primary === "Disc" || primary === "MultiDisc") {
+          features = restoreCircleFeaturesForKind(features, "disc");
+        }
+        source.clear(true);
+        if (features.length) source.addFeatures(features);
+        notify();
+      },
+      serialize: (opts = {}) => serializeFeatures(source.getFeatures(), {
+        geometryType: opts.geometryType ?? geometryType,
+        outputFormat: opts.outputFormat ?? "geojson",
+        precision: opts.precision ?? 7
+      }),
+      setGeometryType: (next) => {
+        drawBar.setGeometryType(next);
+      },
+      setStyle: (style) => {
+        layer.setStyle(style ?? geometryStyleFunction);
+        drawBar.setStyle(style);
+      },
+      destroy: () => {
+        drawBar.destroy();
+        if (ownsLayer) {
+          map.removeLayer(layer);
+        }
+        if (ownsSource) {
+          source.clear(true);
+        }
+        options.target.replaceChildren();
+      }
+    };
   }
   class TextFeature extends FeatureFormat {
     constructor() {
@@ -41188,21 +41848,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       destroy: () => editor.destroy()
     };
   }
-  const api = {
+  const publicApi = {
     mountGeometryEditor,
+    attachGeometryTools,
     GeometryEditor,
     featureFromWkt,
     bboxStringFromWkt,
     createSimpleStyle
   };
   if (typeof window !== "undefined") {
-    window.EntreeCartoGeometryEditor = api;
+    window.EntreeCartoGeometryEditor = publicApi;
   }
   exports.DEFAULT_GEOMETRY_EDITOR_OPTIONS = DEFAULT_GEOMETRY_EDITOR_OPTIONS;
+  exports.FUTURE_GEOMETRY_TOOL_NAMES = FUTURE_GEOMETRY_TOOL_NAMES;
+  exports.GEOMETRY_TYPE_NAMES = GEOMETRY_TYPE_NAMES;
   exports.GeometryEditor = GeometryEditor;
+  exports.attachGeometryTools = attachGeometryTools;
   exports.bboxStringFromWkt = bboxStringFromWkt;
   exports.createSimpleStyle = createSimpleStyle;
-  exports.default = api;
+  exports.default = publicApi;
   exports.featureFromWkt = featureFromWkt;
   exports.mountGeometryEditor = mountGeometryEditor;
   Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: "Module" } });
