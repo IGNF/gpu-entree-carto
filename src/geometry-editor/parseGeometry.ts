@@ -11,7 +11,9 @@ import {
 import type { Feature as OlFeature } from 'ol'
 import {
   featureFromCircleJson,
+  featuresFromMultiCircleJson,
   looksLikeCircleOrDisc,
+  looksLikeMultiCircleOrDisc,
 } from './circleHelpers'
 
 const geoJsonFormat = new GeoJSON()
@@ -105,7 +107,9 @@ export function parseRawToFeatures(
   } else {
     try {
       const data = JSON.parse(text) as { type?: string }
-      if (looksLikeCircleOrDisc(data)) {
+      if (looksLikeMultiCircleOrDisc(data)) {
+        features = featuresFromMultiCircleJson(data, mapProjection)
+      } else if (looksLikeCircleOrDisc(data)) {
         features = [featureFromCircleJson(data, mapProjection)]
       } else if (data?.type === 'FeatureCollection' || data?.type === 'Feature') {
         features = geoJsonFormat.readFeatures(data, {

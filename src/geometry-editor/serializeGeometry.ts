@@ -16,7 +16,12 @@ import type { GeometryOutputFormat, GeometryTypeOption } from './types'
 import {
   circleToPolygonFeature,
   serializeCircleFeature,
+  serializeMultiCircleFeatures,
 } from './circleHelpers'
+import {
+  parseGeometryTypes,
+  primaryGeometryType,
+} from './geometryTypeUtils'
 
 const geoJsonFormat = new GeoJSON()
 const kmlFormat = new KML()
@@ -42,7 +47,8 @@ function roundCoords(value: unknown, precision: number): unknown {
 /**
  * Sérialise les features carte → chaîne pour l’élément HTML.
  * - Rectangle → bbox JSON `[minX,minY,maxX,maxY]` (compat ol-geometry-editor)
- * - Circle / Disc → `{ type, center: [lon,lat], radius }` (radius en m EPSG:3857)
+ * - Circle / Disc → `{ type, center: [lon,lat], radius }`
+ * - MultiCircle / MultiDisc → `{ type, geometries: [{ center, radius }, ...] }`
  * - sinon GeoJSON geometry (ou FeatureCollection si plusieurs) / KML
  */
 export function serializeFeatures(
@@ -63,6 +69,8 @@ export function serializeFeatures(
 
   if (!features.length) return ''
 
+  const primary = primaryGeometryType(parseGeometryTypes(geometryType))
+
   if (outputFormat === 'kml') {
     const forKml = features.map((f) =>
       f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f,
@@ -73,7 +81,7 @@ export function serializeFeatures(
     })
   }
 
-  if (geometryType === 'Rectangle' && features.length === 1) {
+  if (primary === 'Rectangle' && features.length === 1) {
     const geom = features[0].getGeometry()
     if (geom) {
       const clone = geom.clone()
@@ -83,26 +91,46 @@ export function serializeFeatures(
     }
   }
 
+  if (primary === 'MultiCircle') {
+    const s = serializeMultiCircleFeatures(
+      features,
+      'circle',
+      precision,
+      mapProjection,
+    )
+    if (s) return s
+  }
+
+  if (primary === 'MultiDisc') {
+    const s = serializeMultiCircleFeatures(
+      features,
+      'disc',
+      precision,
+      mapProjection,
+    )
+    if (s) return s
+  }
+
   if (
-    (geometryType === 'Circle' || geometryType === 'Disc') &&
+    (primary === 'Circle' || primary === 'Disc') &&
     features.length === 1
   ) {
     const s = serializeCircleFeature(features[0], precision, mapProjection)
     if (s) return s
   }
 
-  // Une seule feature Circle/Disc (ex. mode Geometry)
+  // Une seule feature Circle/Disc (ex. mode Geometry / CSV)
   if (features.length === 1 && features[0].getGeometry() instanceof Circle) {
     const s = serializeCircleFeature(features[0], precision, mapProjection)
     if (s) return s
   }
 
-  // Multi* : regroupe les géométries simples en une Multi* GeoJSON
-  // Les cercles / disques → polygones (GeoJSON standard)
+  // Multi* classiques : regroupe en Multi* GeoJSON
+  // Les cercles / disques → polygones (GeoJSON standard) hors MultiCircle/MultiDisc
   const prepared = features.map((f) =>
     f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f,
   )
-  const multiMerged = mergeToMultiFeature(prepared, geometryType)
+  const multiMerged = mergeToMultiFeature(prepared, primary)
   const toWrite = multiMerged ? [multiMerged] : prepared
 
   const json = geoJsonFormat.writeFeaturesObject(toWrite, {
@@ -123,7 +151,7 @@ export function serializeFeatures(
 
 function mergeToMultiFeature(
   features: OlFeature<OlGeometry>[],
-  geometryType: GeometryTypeOption,
+  geometryType: string,
 ): OlFeature<OlGeometry> | null {
   if (geometryType === 'MultiPoint') {
     const points = features

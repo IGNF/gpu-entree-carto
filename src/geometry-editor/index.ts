@@ -6,10 +6,12 @@ import type { GeometryEditorOptions } from './types'
 export type {
   GeometryEditorOptions,
   GeometryTypeOption,
+  GeometryTypeName,
   TileLayerConfig,
   ToolsToggleCorner,
   StyleLike,
 } from './types'
+export { GEOMETRY_TYPE_NAMES } from './types'
 
 export { GeometryEditor } from './GeometryEditor'
 export { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'

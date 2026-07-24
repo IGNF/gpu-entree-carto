@@ -2,18 +2,17 @@
  * Options alignées sur ol-geometry-editor (sous-ensemble utile + format KML).
  */
 import type { StyleLike } from 'ol/style/Style'
+import type { GeometryTypeName } from './geometryTypeUtils'
 
-export type GeometryTypeOption =
-  | 'Point'
-  | 'LineString'
-  | 'Polygon'
-  | 'MultiPoint'
-  | 'MultiLineString'
-  | 'MultiPolygon'
-  | 'Rectangle'
-  | 'Circle'
-  | 'Disc'
-  | 'Geometry'
+export type { GeometryTypeName } from './geometryTypeUtils'
+export { GEOMETRY_TYPE_NAMES } from './geometryTypeUtils'
+
+/**
+ * Type(s) de géométrie autorisé(s).
+ * Un seul nom (`'Polygon'`, `'MultiCircle'`, …) ou plusieurs séparés par des virgules
+ * (`'Point,Circle,Disc'`) pour n’afficher que ces outils (comme `Geometry`, mais filtré).
+ */
+export type GeometryTypeOption = GeometryTypeName | (string & {})
 
 export type GeometryOutputFormat = 'geojson' | 'kml'
 
@@ -37,6 +36,10 @@ export interface TileLayerConfig {
 }
 
 export interface GeometryEditorOptions {
+  /**
+   * Type(s) de géométrie : un nom, ou une liste séparée par des virgules
+   * (ex. `'Point,LineString,Circle'`).
+   */
   geometryType?: GeometryTypeOption
   /** Masquer le champ / élément source. */
   hide?: boolean

@@ -48,7 +48,7 @@ Alignées sur ol-geometry-editor (principales) :
 
 | Option | Défaut | Description |
 |--------|--------|-------------|
-| `geometryType` | `'Geometry'` | `Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `Geometry` |
+| `geometryType` | `'Geometry'` | Un type (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `MultiCircle`, `MultiDisc`, `Geometry`) **ou plusieurs séparés par des virgules** (`Point,Circle,Disc`) : mêmes outils que `Geometry`, mais filtrés. |
 | `hide` | `true` | Masque l’élément source (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, car DSFR `.fr-input` écrase sinon l’attribut `hidden`) |
 | `editable` | `true` | Affiche la barre d’outils à gauche dans la carte (sinon viewer seul) |
 | `tileLayers` | Plan IGN WMTS | Fonds XYZ `{ url, attribution?, title?, maxZoom? }` |
@@ -81,7 +81,7 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 
 ## Comportement
 
-- Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque** `{ type: "Circle"|"Disc", center: [lon,lat], radius }` → géométries dessinées sur la carte.
+- Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque / multi** `{ type: "Circle"|"Disc"|"MultiCircle"|"MultiDisc", … }` → géométries dessinées sur la carte.
 - Écoute `input` / `change` sur l’élément → met à jour la carte.
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
@@ -101,20 +101,35 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 
 ## Démo
 
-Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
+Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `MultiCircle`, `MultiDisc`, CSV, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
 Un **encart rétractable** (accordéon DSFR) en tête de page décrit l’utilisation et liste toutes les options.  
 Un exemple final active `showSettings` (roue crantée) et `showAttributions`.
 
-### Format Circle / Disc
+### Format Circle / Disc / MultiCircle / MultiDisc
 
 ```json
 { "type": "Circle", "center": [2.35, 48.85], "radius": 4500 }
 { "type": "Disc", "center": [2.4, 48.87], "radius": 3500 }
+{
+  "type": "MultiCircle",
+  "geometries": [
+    { "center": [2.32, 48.85], "radius": 2500 },
+    { "center": [2.4, 48.88], "radius": 1800 }
+  ]
+}
 ```
 
 - `center` : longitude / latitude (EPSG:4326)
 - `radius` : mètres dans la projection carte (EPSG:3857)
 - En **KML**, le cercle / disque est exporté comme polygone approximant (64 côtés)
+
+### `geometryType` multi-valeurs
+
+```js
+mountGeometryEditor('#field', { geometryType: 'Point,Circle,Disc' })
+```
+
+Affiche uniquement les outils listés (+ modifier / supprimer), comme `Geometry` mais de façon explicite. `MultiPoint` / `MultiCircle` / etc. dans la liste exposent l’outil de dessin correspondant (sans remplacer la géométrie précédente).
 
 ## Build
 

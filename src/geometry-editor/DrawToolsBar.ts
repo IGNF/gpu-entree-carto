@@ -17,6 +17,12 @@ import {
 } from './styles'
 import { setCircleKind, type CircleKind } from './circleHelpers'
 import {
+  drawToolKeys,
+  parseGeometryTypes,
+  shouldReplaceOnDraw,
+  type GeometryTypeName,
+} from './geometryTypeUtils'
+import {
   ModifyTransformController,
   transformModeFor,
 } from './ModifyTransformController'
@@ -38,7 +44,7 @@ interface ToolDef {
 
 const modifyTool: ToolDef = {
   id: 'modify',
-  label: 'Modifier une géométrie',
+  label: 'modifier une géométrie',
   iconClass: 'ec-geometry-editor__tool--modify',
   modify: true,
 }
@@ -50,110 +56,68 @@ const removeTool: ToolDef = {
   remove: true,
 }
 
-function drawStyleFor(geometryType: GeometryTypeOption): StyleLike {
-  if (geometryType === 'Circle') return circleDrawStyle
-  if (geometryType === 'Disc') return discDrawStyle
+const DRAW_TOOL_DEFS: Record<
+  ReturnType<typeof drawToolKeys>[number],
+  ToolDef
+> = {
+  Point: {
+    id: 'point',
+    label: 'Point',
+    iconClass: 'ec-geometry-editor__tool--point',
+    drawType: 'Point',
+  },
+  LineString: {
+    id: 'line',
+    label: 'Ligne',
+    iconClass: 'ec-geometry-editor__tool--line',
+    drawType: 'LineString',
+  },
+  Polygon: {
+    id: 'polygon',
+    label: 'Polygone',
+    iconClass: 'ec-geometry-editor__tool--polygon',
+    drawType: 'Polygon',
+  },
+  Rectangle: {
+    id: 'rect',
+    label: 'Rectangle',
+    iconClass: 'ec-geometry-editor__tool--rectangle',
+    drawType: 'Circle',
+    box: true,
+  },
+  Circle: {
+    id: 'circle',
+    label: 'Cercle',
+    iconClass: 'ec-geometry-editor__tool--circle',
+    drawType: 'Circle',
+    circleKind: 'circle',
+  },
+  Disc: {
+    id: 'disc',
+    label: 'Disque',
+    iconClass: 'ec-geometry-editor__tool--disc',
+    drawType: 'Circle',
+    circleKind: 'disc',
+  },
+}
+
+function drawStyleFor(types: GeometryTypeName[]): StyleLike {
+  if (types.length === 1 && types[0] === 'Circle') return circleDrawStyle
+  if (types.length === 1 && types[0] === 'Disc') return discDrawStyle
+  if (types.length === 1 && types[0] === 'MultiCircle') return circleDrawStyle
+  if (types.length === 1 && types[0] === 'MultiDisc') return discDrawStyle
   return geometryDrawStyle
 }
 
 function toolsFor(geometryType: GeometryTypeOption): ToolDef[] {
-  if (geometryType === 'Geometry') {
-    return [
-      {
-        id: 'point',
-        label: 'Point',
-        iconClass: 'ec-geometry-editor__tool--point',
-        drawType: 'Point',
-      },
-      {
-        id: 'line',
-        label: 'Ligne',
-        iconClass: 'ec-geometry-editor__tool--line',
-        drawType: 'LineString',
-      },
-      {
-        id: 'polygon',
-        label: 'Polygone',
-        iconClass: 'ec-geometry-editor__tool--polygon',
-        drawType: 'Polygon',
-      },
-      {
-        id: 'circle',
-        label: 'Cercle',
-        iconClass: 'ec-geometry-editor__tool--circle',
-        drawType: 'Circle',
-        circleKind: 'circle',
-      },
-      {
-        id: 'disc',
-        label: 'Disque',
-        iconClass: 'ec-geometry-editor__tool--disc',
-        drawType: 'Circle',
-        circleKind: 'disc',
-      },
-      modifyTool,
-      removeTool,
-    ]
+  const types = parseGeometryTypes(geometryType)
+  const keys = drawToolKeys(types)
+  const drawTools = keys.map((k) => DRAW_TOOL_DEFS[k])
+  // Un seul outil de dessin : id `draw` pour compat aria / activation
+  if (drawTools.length === 1) {
+    return [{ ...drawTools[0], id: 'draw' }, modifyTool, removeTool]
   }
-  if (geometryType === 'Rectangle') {
-    return [
-      {
-        id: 'rect',
-        label: 'Rectangle',
-        iconClass: 'ec-geometry-editor__tool--rectangle',
-        drawType: 'Circle',
-        box: true,
-      },
-      modifyTool,
-      removeTool,
-    ]
-  }
-  if (geometryType === 'Circle') {
-    return [
-      {
-        id: 'draw',
-        label: 'Cercle',
-        iconClass: 'ec-geometry-editor__tool--circle',
-        drawType: 'Circle',
-        circleKind: 'circle',
-      },
-      modifyTool,
-      removeTool,
-    ]
-  }
-  if (geometryType === 'Disc') {
-    return [
-      {
-        id: 'draw',
-        label: 'Disque',
-        iconClass: 'ec-geometry-editor__tool--disc',
-        drawType: 'Circle',
-        circleKind: 'disc',
-      },
-      modifyTool,
-      removeTool,
-    ]
-  }
-  const simple = geometryType.replace(/^Multi/, '') as DrawType
-  const iconClass =
-    simple === 'Point'
-      ? 'ec-geometry-editor__tool--point'
-      : simple === 'LineString'
-        ? 'ec-geometry-editor__tool--line'
-        : 'ec-geometry-editor__tool--polygon'
-  return [
-    {
-      id: 'draw',
-      label: geometryType,
-      iconClass,
-      drawType:
-        simple === 'Point' || simple === 'LineString' || simple === 'Polygon'
-          ? simple
-          : 'Polygon',
-    },
-    modifyTool,
-    removeTool,
-  ]
+  return [...drawTools, modifyTool, removeTool]
 }
 
 export class DrawToolsBar {
@@ -202,7 +166,8 @@ export class DrawToolsBar {
     this.target = opts.target
     this.onChange = opts.onChange
     this.customStyle = opts.style
-    this.drawStyle = opts.style ?? drawStyleFor(opts.geometryType)
+    this.drawStyle =
+      opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType))
 
     this.modify = new Modify({
       source: this.source,
@@ -233,7 +198,7 @@ export class DrawToolsBar {
     this.geometryType = geometryType
     this.transform.setMode(transformModeFor(geometryType))
     if (!this.customStyle) {
-      this.drawStyle = drawStyleFor(geometryType)
+      this.drawStyle = drawStyleFor(parseGeometryTypes(geometryType))
     }
     this.render()
   }
@@ -242,7 +207,8 @@ export class DrawToolsBar {
   setStyle(style: StyleLike | null | undefined): void {
     this.clearTransient()
     this.customStyle = style
-    this.drawStyle = style ?? drawStyleFor(this.geometryType)
+    this.drawStyle =
+      style ?? drawStyleFor(parseGeometryTypes(this.geometryType))
   }
 
   private render(): void {
@@ -332,13 +298,8 @@ export class DrawToolsBar {
 
     if (!tool.drawType) return
 
-    const replaceOnDraw =
-      this.geometryType === 'Point' ||
-      this.geometryType === 'LineString' ||
-      this.geometryType === 'Polygon' ||
-      this.geometryType === 'Rectangle' ||
-      this.geometryType === 'Circle' ||
-      this.geometryType === 'Disc'
+    const types = parseGeometryTypes(this.geometryType)
+    const replaceOnDraw = shouldReplaceOnDraw(types)
 
     const sketchStyle =
       tool.circleKind === 'circle'

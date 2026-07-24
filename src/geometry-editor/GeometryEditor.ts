@@ -124,12 +124,6 @@ export class GeometryEditor {
   private syncingFromElement = false
   private destroyed = false
   private readonly onElementInput: () => void
-  private readonly onDocPointerDown = (evt: PointerEvent): void => {
-    if (!this.toolsMenuOpen || !this.toolsRoot) return
-    const t = evt.target
-    if (t instanceof Node && this.toolsRoot.contains(t)) return
-    this.setToolsMenuOpen(false)
-  }
 
   constructor(element: HTMLElement, options: GeometryEditorOptions = {}) {
     this.element = element
@@ -381,7 +375,6 @@ export class GeometryEditor {
     this.drawBar = null
     this.settingsPanel?.destroy()
     this.settingsPanel = null
-    document.removeEventListener('pointerdown', this.onDocPointerDown, true)
     this.map.setTarget(undefined)
     this.mapHost.remove()
     if (this.options.hide) {
@@ -533,11 +526,6 @@ export class GeometryEditor {
     if (this.toolsRoot) {
       this.toolsRoot.classList.toggle('is-open', open)
     }
-    if (open) {
-      document.addEventListener('pointerdown', this.onDocPointerDown, true)
-    } else {
-      document.removeEventListener('pointerdown', this.onDocPointerDown, true)
-    }
   }
 
   /**
@@ -580,7 +568,6 @@ export class GeometryEditor {
       this.toolsRoot.dataset.corner = corner
       this.setToolsMenuOpen(this.toolsMenuOpen)
     } else {
-      document.removeEventListener('pointerdown', this.onDocPointerDown, true)
       this.toolsMenuOpen = false
       this.toolsToggleBtn = null
       this.toolbarHost.removeAttribute('id')

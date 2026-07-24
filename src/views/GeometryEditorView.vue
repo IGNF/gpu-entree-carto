@@ -20,7 +20,9 @@ import { looksLikeBbox } from '@/geometry-editor/parseGeometry'
 import {
   circleToPolygonFeature,
   featureFromCircleJson,
+  featuresFromMultiCircleJson,
   looksLikeCircleOrDisc,
+  looksLikeMultiCircleOrDisc,
 } from '@/geometry-editor/circleHelpers'
 import 'ol/ol.css'
 import '@/geometry-editor/styles/geometry-editor.css'
@@ -36,7 +38,7 @@ const optionDocs: OptionDoc[] = [
     name: 'geometryType',
     def: "'Geometry'",
     description:
-      'Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, Rectangle, Circle, Disc, Geometry',
+      'Un type (Point, …, MultiCircle, MultiDisc, Geometry) ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)',
   },
   {
     name: 'hide',
@@ -144,6 +146,8 @@ const usageSnippet = `const { editor, setOptions } = EntreeCartoGeometryEditor.m
 
 interface DemoSection {
   type: GeometryTypeOption
+  /** Identifiant DOM (défaut = type) */
+  slug?: string
   title: string
   hint: string
   sampleGeoJson: string
@@ -313,6 +317,55 @@ const sections: DemoSection[] = [
     rows: 6,
   },
   {
+    type: 'MultiCircle',
+    title: 'MultiCircle',
+    hint:
+      'Plusieurs cercles ; format { type: "MultiCircle", geometries: [{ center, radius }, …] }.',
+    sampleGeoJson: JSON.stringify(
+      {
+        type: 'MultiCircle',
+        geometries: [
+          { center: [2.32, 48.85], radius: 2500 },
+          { center: [2.4, 48.88], radius: 1800 },
+        ],
+      },
+      null,
+      2,
+    ),
+    rows: 10,
+  },
+  {
+    type: 'MultiDisc',
+    title: 'MultiDisc',
+    hint:
+      'Plusieurs disques ; format { type: "MultiDisc", geometries: [{ center, radius }, …] }.',
+    sampleGeoJson: JSON.stringify(
+      {
+        type: 'MultiDisc',
+        geometries: [
+          { center: [2.3, 48.84], radius: 2200 },
+          { center: [2.38, 48.89], radius: 1600 },
+        ],
+      },
+      null,
+      2,
+    ),
+    rows: 10,
+  },
+  {
+    type: 'Point,Circle,Disc',
+    slug: 'point-circle-disc',
+    title: 'Point,Circle,Disc (CSV)',
+    hint:
+      'geometryType multi-valeurs : seuls les outils Point / Cercle / Disque (+ modifier / supprimer).',
+    sampleGeoJson: JSON.stringify(
+      { type: 'Point', coordinates: [2.35, 48.86] },
+      null,
+      2,
+    ),
+    rows: 4,
+  },
+  {
     type: 'Geometry',
     title: 'Geometry (libre)',
     hint:
@@ -361,6 +414,18 @@ function geoJsonSampleToKml(sample: string): string {
       })
     }
     const data = JSON.parse(sample) as { type?: string }
+    if (looksLikeMultiCircleOrDisc(data)) {
+      const feats3857 = featuresFromMultiCircleJson(data, 'EPSG:3857')
+      const polys = feats3857.map((f) => {
+        const polyFeat = circleToPolygonFeature(f)
+        polyFeat.getGeometry()?.transform('EPSG:3857', 'EPSG:4326')
+        return polyFeat
+      })
+      return kmlFormat.writeFeatures(polys, {
+        dataProjection: 'EPSG:4326',
+        featureProjection: 'EPSG:4326',
+      })
+    }
     if (looksLikeCircleOrDisc(data)) {
       // featureFromCircleJson → EPSG:3857 ; pour KML démo on réécrit en 4326 via polygone
       const feature3857 = featureFromCircleJson(data, 'EPSG:3857')
@@ -387,6 +452,10 @@ function geoJsonSampleToKml(sample: string): string {
   } catch {
     return ''
   }
+}
+
+function sectionSlug(section: DemoSection): string {
+  return section.slug ?? String(section.type)
 }
 
 function fieldKey(type: GeometryTypeOption, format: FormatKey): string {
@@ -447,10 +516,13 @@ onMounted(() => {
         mountGeometryEditor(el, {
           geometryType: section.type,
           outputFormat: format,
-          height: section.type === 'Geometry' ? 480 : 280,
+          height:
+            section.type === 'Geometry' || String(section.type).includes(',')
+              ? 480
+              : 280,
           hide: false,
           editable: true,
-          ...(section.type === 'Geometry'
+          ...(section.type === 'Geometry' || String(section.type).includes(',')
             ? { toolsToggle: 'top-left' as const }
             : {}),
         }),
@@ -633,7 +705,7 @@ onUnmounted(() => {
 
     <section
       v-for="section in sections"
-      :key="section.type"
+      :key="sectionSlug(section)"
       class="fr-mb-5w"
     >
       <h2 class="fr-h5">
@@ -654,10 +726,10 @@ onUnmounted(() => {
           </h3>
           <label
             class="fr-label"
-            :for="`ec-geom-${section.type}-${fmt.key}`"
+            :for="`ec-geom-${sectionSlug(section)}-${fmt.key}`"
           >Données {{ fmt.label }}</label>
           <textarea
-            :id="`ec-geom-${section.type}-${fmt.key}`"
+            :id="`ec-geom-${sectionSlug(section)}-${fmt.key}`"
             :ref="(el) => setFieldRef(section.type, fmt.key, el)"
             class="fr-input ec-demo-geometry__field"
             :rows="Math.max(section.rows, 6)"

@@ -295,6 +295,12 @@
   font-size: 0.75rem;
 }
 
+.ec-geometry-editor__settings-hint {
+  color: var(--text-mention-grey, #666);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
 .ec-geometry-editor__settings-field--check {
   flex-direction: row;
   align-items: center;

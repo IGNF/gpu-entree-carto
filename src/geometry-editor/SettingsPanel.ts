@@ -9,20 +9,7 @@ import type {
   GeometryTypeOption,
   ToolsToggleCorner,
 } from './types'
-import { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
-
-const GEOMETRY_TYPES: GeometryTypeOption[] = [
-  'Point',
-  'LineString',
-  'Polygon',
-  'MultiPoint',
-  'MultiLineString',
-  'MultiPolygon',
-  'Rectangle',
-  'Circle',
-  'Disc',
-  'Geometry',
-]
+import { DEFAULT_GEOMETRY_EDITOR_OPTIONS, GEOMETRY_TYPE_NAMES } from './types'
 
 const OUTPUT_FORMATS: GeometryOutputFormat[] = ['geojson', 'kml']
 
@@ -162,7 +149,7 @@ export class SettingsPanel {
     form.appendChild(title)
 
     form.appendChild(
-      this.selectField('geometryType', 'Type de géométrie', GEOMETRY_TYPES, opts.geometryType),
+      this.geometryTypeField(String(opts.geometryType)),
     )
     form.appendChild(
       this.selectField('outputFormat', 'Format de sortie', OUTPUT_FORMATS, opts.outputFormat),
@@ -349,6 +336,34 @@ export class SettingsPanel {
     const span = document.createElement('span')
     span.textContent = labelText
     wrap.append(span, control)
+    return wrap
+  }
+
+  private geometryTypeField(current: string): HTMLElement {
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.name = 'geometryType'
+    input.value = current
+    input.setAttribute('list', 'ec-geom-type-list')
+    input.placeholder = 'Point,Circle ou Geometry…'
+    input.title =
+      'Un type, ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)'
+
+    const list = document.createElement('datalist')
+    list.id = 'ec-geom-type-list'
+    for (const name of GEOMETRY_TYPE_NAMES) {
+      const opt = document.createElement('option')
+      opt.value = name
+      list.appendChild(opt)
+    }
+
+    const wrap = this.fieldWrap('Type de géométrie', input)
+    wrap.appendChild(list)
+    const hint = document.createElement('span')
+    hint.className = 'ec-geometry-editor__settings-hint'
+    hint.textContent =
+      'CSV autorisé : Point,Circle,Disc — comme Geometry, outils filtrés'
+    wrap.appendChild(hint)
     return wrap
   }
 

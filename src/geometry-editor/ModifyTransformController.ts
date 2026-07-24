@@ -22,6 +22,7 @@ import type { Feature as OlFeature } from 'ol'
 import type VectorSourceType from 'ol/source/Vector'
 import type VectorLayerType from 'ol/layer/Vector'
 import { getCircleKind } from './circleHelpers'
+import { parseGeometryTypes } from './geometryTypeUtils'
 
 export type TransformMode =
   | 'line-polygon'
@@ -873,9 +874,12 @@ export class ModifyTransformController {
 }
 
 export function transformModeFor(geometryType: string): TransformMode {
-  if (geometryType === 'Rectangle') return 'bbox'
-  if (geometryType === 'Point' || geometryType === 'MultiPoint') return 'point'
-  if (geometryType === 'Circle') return 'circle'
-  if (geometryType === 'Disc') return 'disc'
+  const types = parseGeometryTypes(geometryType)
+  if (types.length !== 1) return 'line-polygon'
+  const primary = types[0]
+  if (primary === 'Rectangle') return 'bbox'
+  if (primary === 'Point' || primary === 'MultiPoint') return 'point'
+  if (primary === 'Circle' || primary === 'MultiCircle') return 'circle'
+  if (primary === 'Disc' || primary === 'MultiDisc') return 'disc'
   return 'line-polygon'
 }
