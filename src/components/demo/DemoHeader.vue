@@ -10,11 +10,13 @@ const route = useRoute()
 const links = [
   { name: 'home', to: '/', label: 'Accueil' },
   { name: 'map', to: '/map', label: 'Carte' },
+  { name: 'geometry-editor', to: '/geometry-editor', label: 'Géométries' },
 ] as const
 
 const isActive = computed(() => (name: string) => {
   if (name === 'home') return route.name === 'home'
-  return route.name === 'map'
+  if (name === 'map') return route.name === 'map'
+  return route.name === 'geometry-editor'
 })
 </script>
 

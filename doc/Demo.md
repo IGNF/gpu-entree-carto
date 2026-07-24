@@ -8,10 +8,11 @@ Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours
 |-------|-----|------|
 | `/` | `HomeView.vue` | Accueil type gpu-site : `mountSearchEngine` → `/map?…` |
 | `/map` | `DemoView.vue` | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) ; centrage si query `municipality` / `position_*` / `type` |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone |
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR) : liens **Accueil** et **Carte**, comme le menu principal gpu-site (sous-ensemble).
+`DemoHeader.vue` (DSFR) : liens **Accueil**, **Carte**, **Géométries**.
 
 ## Flux localisation
 

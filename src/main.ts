@@ -9,6 +9,7 @@ import VueDsfr from '@gouvminint/vue-dsfr'
 import App from './App.vue'
 import HomeView from './views/HomeView.vue'
 import DemoView from './views/DemoView.vue'
+import GeometryEditorView from './views/GeometryEditorView.vue'
 import './styles/main.css'
 
 const router = createRouter({
@@ -16,6 +17,11 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/map', name: 'map', component: DemoView },
+    {
+      path: '/geometry-editor',
+      name: 'geometry-editor',
+      component: GeometryEditorView,
+    },
   ],
 })
 

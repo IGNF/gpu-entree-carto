@@ -10,9 +10,10 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:demo && npm run build:lib",
+    "build": "npm run build:demo && npm run build:lib && npm run build:geometry-editor",
     "build:demo": "vue-tsc --noEmit && vite build",
     "build:lib": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.lib.config.ts && LIB_MINIFY=1 vite build --config vite.lib.config.ts",
+    "build:geometry-editor": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.geometry-editor.config.ts && LIB_MINIFY=1 vite build --config vite.geometry-editor.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
