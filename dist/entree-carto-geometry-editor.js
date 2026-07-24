@@ -40446,6 +40446,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function isNavigationInteraction(interaction) {
     return interaction instanceof DragPan || interaction instanceof DragRotate || interaction instanceof DragZoom || interaction instanceof DoubleClickZoom || interaction instanceof KeyboardPan || interaction instanceof KeyboardZoom || interaction instanceof MouseWheelZoom || interaction instanceof PinchRotate || interaction instanceof PinchZoom;
   }
+  function getJQuery() {
+    const w = window;
+    const jq = w.jQuery ?? w.$;
+    return typeof jq === "function" ? jq : null;
+  }
   class GeometryEditor {
     constructor(element, options = {}) {
       __publicField(this, "element");
@@ -40469,6 +40474,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "drawBar", null);
       __publicField(this, "syncingFromElement", false);
       __publicField(this, "destroyed", false);
+      __publicField(this, "jqueryListening", false);
+      /** Évite un double load si listeners natif + jQuery voient le même événement. */
+      __publicField(this, "lastLoadedRaw", null);
       __publicField(this, "onElementInput");
       this.element = element;
       this.options = mergeOptions(
@@ -40528,8 +40536,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (this.syncingFromElement || this.destroyed) return;
         this.loadFromElement();
       };
-      element.addEventListener("input", this.onElementInput);
-      element.addEventListener("change", this.onElementInput);
+      this.bindElementListeners();
+    }
+    /**
+     * Écoute native + pont jQuery : gpu-site fait souvent
+     * `$field.val(x).trigger('change')`, qui ne notifie pas addEventListener.
+     */
+    bindElementListeners() {
+      this.element.addEventListener("input", this.onElementInput);
+      this.element.addEventListener("change", this.onElementInput);
+      const jq = getJQuery();
+      if (jq) {
+        jq(this.element).on(
+          "input.ecGeometryEditor change.ecGeometryEditor",
+          this.onElementInput
+        );
+        this.jqueryListening = true;
+      }
+    }
+    unbindElementListeners() {
+      this.element.removeEventListener("input", this.onElementInput);
+      this.element.removeEventListener("change", this.onElementInput);
+      if (this.jqueryListening) {
+        const jq = getJQuery();
+        if (jq) {
+          jq(this.element).off(".ecGeometryEditor");
+        }
+        this.jqueryListening = false;
+      }
     }
     /**
      * Met à jour les options à chaud (carte déjà créée).
@@ -40629,7 +40663,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.syncingFromElement = false;
     }
     loadFromElement() {
-      let features = parseRawToFeatures(this.getRawData());
+      const raw = this.getRawData();
+      if (raw === this.lastLoadedRaw) return;
+      this.lastLoadedRaw = raw;
+      let features = parseRawToFeatures(raw);
       const primary = primaryGeometryType(
         parseGeometryTypes(this.options.geometryType)
       );
@@ -40653,6 +40690,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         precision: this.options.precision,
         outputFormat: this.options.outputFormat
       });
+      this.lastLoadedRaw = raw;
       this.setRawData(raw);
       this.map.dispatchEvent({ type: "change:geometry", geometry: raw });
     }
@@ -40669,8 +40707,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       var _a, _b;
       if (this.destroyed) return;
       this.destroyed = true;
-      this.element.removeEventListener("input", this.onElementInput);
-      this.element.removeEventListener("change", this.onElementInput);
+      this.unbindElementListeners();
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
       this.drawBar = null;
       (_b = this.settingsPanel) == null ? void 0 : _b.destroy();

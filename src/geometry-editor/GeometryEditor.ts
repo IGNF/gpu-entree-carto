@@ -102,6 +102,27 @@ function isNavigationInteraction(interaction: unknown): boolean {
   )
 }
 
+/** jQuery optionnel (gpu-site) — typage minimal pour .on / .off. */
+function getJQuery():
+  | ((el: HTMLElement) => {
+      on: (events: string, handler: () => void) => void
+      off: (events: string) => void
+    })
+  | null {
+  const w = window as Window & {
+    jQuery?: (el: HTMLElement) => {
+      on: (events: string, handler: () => void) => void
+      off: (events: string) => void
+    }
+    $?: (el: HTMLElement) => {
+      on: (events: string, handler: () => void) => void
+      off: (events: string) => void
+    }
+  }
+  const jq = w.jQuery ?? w.$
+  return typeof jq === 'function' ? jq : null
+}
+
 /**
  * Éditeur de géométries rattaché à un champ / élément HTML
  * (remplacement DSFR d’ol-geometry-editor, OpenLayers embarqué).
@@ -128,6 +149,9 @@ export class GeometryEditor {
   private drawBar: DrawToolsBar | null = null
   private syncingFromElement = false
   private destroyed = false
+  private jqueryListening = false
+  /** Évite un double load si listeners natif + jQuery voient le même événement. */
+  private lastLoadedRaw: string | null = null
   private readonly onElementInput: () => void
 
   constructor(element: HTMLElement, options: GeometryEditorOptions = {}) {
@@ -200,8 +224,36 @@ export class GeometryEditor {
       if (this.syncingFromElement || this.destroyed) return
       this.loadFromElement()
     }
-    element.addEventListener('input', this.onElementInput)
-    element.addEventListener('change', this.onElementInput)
+    this.bindElementListeners()
+  }
+
+  /**
+   * Écoute native + pont jQuery : gpu-site fait souvent
+   * `$field.val(x).trigger('change')`, qui ne notifie pas addEventListener.
+   */
+  private bindElementListeners(): void {
+    this.element.addEventListener('input', this.onElementInput)
+    this.element.addEventListener('change', this.onElementInput)
+    const jq = getJQuery()
+    if (jq) {
+      jq(this.element).on(
+        'input.ecGeometryEditor change.ecGeometryEditor',
+        this.onElementInput,
+      )
+      this.jqueryListening = true
+    }
+  }
+
+  private unbindElementListeners(): void {
+    this.element.removeEventListener('input', this.onElementInput)
+    this.element.removeEventListener('change', this.onElementInput)
+    if (this.jqueryListening) {
+      const jq = getJQuery()
+      if (jq) {
+        jq(this.element).off('.ecGeometryEditor')
+      }
+      this.jqueryListening = false
+    }
   }
 
   /**
@@ -339,7 +391,10 @@ export class GeometryEditor {
   }
 
   loadFromElement(): void {
-    let features = parseRawToFeatures(this.getRawData())
+    const raw = this.getRawData()
+    if (raw === this.lastLoadedRaw) return
+    this.lastLoadedRaw = raw
+    let features = parseRawToFeatures(raw)
     const primary = primaryGeometryType(
       parseGeometryTypes(this.options.geometryType),
     )
@@ -364,6 +419,7 @@ export class GeometryEditor {
       precision: this.options.precision,
       outputFormat: this.options.outputFormat,
     })
+    this.lastLoadedRaw = raw
     this.setRawData(raw)
     // Événement custom (compat ol-geometry-editor : map.on('change:geometry'))
     this.map.dispatchEvent({ type: 'change:geometry', geometry: raw } as never)
@@ -382,8 +438,7 @@ export class GeometryEditor {
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
-    this.element.removeEventListener('input', this.onElementInput)
-    this.element.removeEventListener('change', this.onElementInput)
+    this.unbindElementListeners()
     this.drawBar?.destroy()
     this.drawBar = null
     this.settingsPanel?.destroy()

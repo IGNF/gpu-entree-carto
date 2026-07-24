@@ -82,7 +82,7 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 ## Comportement
 
 - Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque / multi** `{ type: "Circle"|"Disc"|"MultiCircle"|"MultiDisc", … }` → géométries dessinées sur la carte.
-- Écoute `input` / `change` sur l’élément → met à jour la carte.
+- Écoute `input` / `change` sur l’élément → met à jour la carte (écoute native **et** pont jQuery : `$el.trigger('change')` est pris en charge).
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
