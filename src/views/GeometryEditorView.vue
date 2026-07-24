@@ -485,14 +485,19 @@ function setSettingsDemoRef(el: unknown): void {
   settingsDemoField = el instanceof HTMLTextAreaElement ? el : null
 }
 
-/** Aligne les textareas GeoJSON / KML d’une ligne sur la plus haute. */
+const FIELD_MAX_HEIGHT_PX = 280
+
+/** Aligne les textareas GeoJSON / KML d’une ligne sur la plus haute (plafonnée). */
 function syncPairFieldHeights(type: GeometryTypeOption): void {
   const geo = fieldEls.get(fieldKey(type, 'geojson'))
   const kml = fieldEls.get(fieldKey(type, 'kml'))
   if (!geo || !kml) return
   geo.style.height = 'auto'
   kml.style.height = 'auto'
-  const h = Math.max(geo.scrollHeight, kml.scrollHeight)
+  const h = Math.min(
+    Math.max(geo.scrollHeight, kml.scrollHeight),
+    FIELD_MAX_HEIGHT_PX,
+  )
   geo.style.height = `${h}px`
   kml.style.height = `${h}px`
 }
@@ -784,6 +789,7 @@ onUnmounted(() => {
 .ec-demo-geometry__field {
   box-sizing: border-box;
   width: 100%;
+  max-height: 280px;
   resize: vertical;
   overflow: auto;
 }

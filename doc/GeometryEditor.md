@@ -171,3 +171,20 @@ Pages : métadonnées (`/metadata/`), fiche document, territoire, admin grille.
 ## Limites actuelles
 
 - Pas encore de `tileLayerSwitcher` / `allowCapture` (prévus si besoin).
+- Outils croquis avancés (texte, import/export, mesures, popup style) : roadmap `_local/TODO_LIST.txt` ; types réservés `FUTURE_GEOMETRY_TOOL_NAMES`.
+
+## Carte principale (map-attached)
+
+Outre `mountGeometryEditor` (mini-carte + champ HTML), le même moteur de dessin s’attache à une **Map OL existante** :
+
+```js
+const host = document.querySelector('#sketch-toolbar');
+const tools = EntreeCartoGeometryEditor.attachGeometryTools(map, {
+  target: host,
+  geometryType: 'Point,LineString,Polygon',
+  onChange: (features) => { /* … */ },
+});
+// tools.serialize() / tools.load(raw) / tools.destroy()
+```
+
+`GeometryEditor` (formulaire) reste la façade gpu-site ; `attachGeometryTools` prépare le croquis type gpu-client sur la carte principale (sans second `ol.Map`).

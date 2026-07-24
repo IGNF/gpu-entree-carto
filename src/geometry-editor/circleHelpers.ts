@@ -7,7 +7,8 @@
  */
 import Feature from 'ol/Feature'
 import Circle from 'ol/geom/Circle'
-import { fromCircle } from 'ol/geom/Polygon'
+import Polygon, { fromCircle } from 'ol/geom/Polygon'
+import { getCenter, getHeight, getWidth } from 'ol/extent'
 import { fromLonLat, toLonLat } from 'ol/proj'
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
@@ -159,6 +160,57 @@ export function circleToPolygonFeature(
   if (!(geom instanceof Circle)) return feature
   const poly = fromCircle(geom, 64)
   const out = new Feature({ geometry: poly })
-  out.setProperties(feature.getProperties())
+  // getProperties() inclut `geometry` : ne pas la recopier (sinon on écrase le polygone
+  // par le Circle d’origine → plantage du writer KML OL).
+  const props = feature.getProperties()
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'geometry') continue
+    out.set(key, value)
+  }
   return out
+}
+
+/**
+ * Inverse approx. d’un polygone (souvent issu de KML / fromCircle) → Circle.
+ * Utilisé au chargement quand geometryType est Circle / Disc / Multi*.
+ */
+export function polygonApproxToCircleFeature(
+  feature: OlFeature<OlGeometry>,
+  kind: CircleKind,
+): OlFeature<OlGeometry> {
+  const geom = feature.getGeometry()
+  if (!(geom instanceof Polygon)) return feature
+  const extent = geom.getExtent()
+  const center = getCenter(extent)
+  const radius = Math.max(getWidth(extent), getHeight(extent)) / 2
+  if (!(radius > 0)) return feature
+  const out = new Feature({ geometry: new Circle(center, radius) })
+  setCircleKind(out, kind)
+  const props = feature.getProperties()
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'geometry' || key === EC_KIND_PROP) continue
+    out.set(key, value)
+  }
+  return out
+}
+
+/**
+ * Après parse KML (polygones), restaure des Circles + ecKind selon le mode
+ * Circle / Disc / MultiCircle / MultiDisc — affichage + outils de modification.
+ */
+export function restoreCircleFeaturesForKind(
+  features: OlFeature<OlGeometry>[],
+  kind: CircleKind,
+): OlFeature<OlGeometry>[] {
+  return features.map((f) => {
+    const g = f.getGeometry()
+    if (g instanceof Circle) {
+      setCircleKind(f, kind)
+      return f
+    }
+    if (g instanceof Polygon) {
+      return polygonApproxToCircleFeature(f, kind)
+    }
+    return f
+  })
 }

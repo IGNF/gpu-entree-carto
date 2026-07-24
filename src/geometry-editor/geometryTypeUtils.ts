@@ -19,6 +19,20 @@ export const GEOMETRY_TYPE_NAMES = [
 
 export type GeometryTypeName = (typeof GEOMETRY_TYPE_NAMES)[number]
 
+/**
+ * Outils croquis prévus (carte principale / gpu-client DrawBar) — pas encore
+ * branchés dans DrawToolsBar. Réservés pour la roadmap TODO_LIST.
+ */
+export const FUTURE_GEOMETRY_TOOL_NAMES = [
+  'Text',
+  'Import',
+  'Export',
+  'MeasureDistance',
+  'MeasureArea',
+] as const
+
+export type FutureGeometryToolName = (typeof FUTURE_GEOMETRY_TOOL_NAMES)[number]
+
 const KNOWN = new Set<string>(GEOMETRY_TYPE_NAMES)
 
 /** Types dessinables « simples » (outil unique, remplace la géométrie). */

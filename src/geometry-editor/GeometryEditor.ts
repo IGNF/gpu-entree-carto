@@ -32,6 +32,11 @@ import { serializeFeatures } from './serializeGeometry'
 import { geometryStyleFunction } from './styles'
 import { DrawToolsBar } from './DrawToolsBar'
 import { SettingsPanel } from './SettingsPanel'
+import { restoreCircleFeaturesForKind } from './circleHelpers'
+import {
+  parseGeometryTypes,
+  primaryGeometryType,
+} from './geometryTypeUtils'
 
 type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS &
   GeometryEditorOptions
@@ -334,7 +339,15 @@ export class GeometryEditor {
   }
 
   loadFromElement(): void {
-    const features = parseRawToFeatures(this.getRawData())
+    let features = parseRawToFeatures(this.getRawData())
+    const primary = primaryGeometryType(
+      parseGeometryTypes(this.options.geometryType),
+    )
+    if (primary === 'Circle' || primary === 'MultiCircle') {
+      features = restoreCircleFeaturesForKind(features, 'circle')
+    } else if (primary === 'Disc' || primary === 'MultiDisc') {
+      features = restoreCircleFeaturesForKind(features, 'disc')
+    }
     this.source.clear(true)
     if (features.length) {
       this.source.addFeatures(features)

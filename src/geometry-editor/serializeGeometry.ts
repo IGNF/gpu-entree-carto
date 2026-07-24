@@ -72,6 +72,7 @@ export function serializeFeatures(
   const primary = primaryGeometryType(parseGeometryTypes(geometryType))
 
   if (outputFormat === 'kml') {
+    // Circle non supporté par le writer KML OL → polygone approximant
     const forKml = features.map((f) =>
       f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f,
     )
