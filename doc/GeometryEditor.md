@@ -27,6 +27,7 @@ Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les ma
     hide: true,
   });
   // editor.getMap()
+  // editor.setOptions({ blockView: true, showZoom: false })
   // editor.destroy()
 </script>
 ```
@@ -38,6 +39,7 @@ const editor = new EntreeCartoGeometryEditor.GeometryEditor(
   document.getElementById('extent'),
   { geometryType: 'Polygon' },
 );
+editor.setOptions({ editable: false, blockView: true });
 ```
 
 ## Options
@@ -57,6 +59,22 @@ Alignées sur ol-geometry-editor (principales) :
 | `precision` | `7` | Décimales GeoJSON / bbox |
 | `outputFormat` | `'geojson'` | `'geojson'` \| `'kml'` (écriture) |
 | `className` | — | Classe CSS additionnelle sur le conteneur |
+| `blockView` | `false` | Bloque pan / zoom manuels (molette, drag, double-clic, pinch, clavier, boutons +/-). Le `fit` programmatique reste possible. |
+| `showZoom` | `true` | Affiche les boutons +/- de zoom (ignoré si `blockView` est `true`) |
+| `showSettings` | `false` | Bouton roue crantée (haut droite) : formulaire pour modifier les options à chaud ; décale le zoom en dessous |
+| `showAttributions` | `false` | Affiche le contrôle d’attributions des couches de fond |
+| `customStyle` | `null` | Style OL (`Style` / `Style[]` / `StyleFunction`) des features et du croquis ; défaut bleu France |
+
+## Mise à jour à chaud
+
+Après création, `editor.setOptions(patch)` (ou `handle.setOptions(patch)`) applique un sous-ensemble d’options sans recréer la carte :
+
+- `blockView`, `showZoom`, `showSettings`, `showAttributions`, `editable`, `customStyle`, `geometryType`
+- `tileLayers`, `width` / `height`, `className`, `hide`
+- `lon` / `lat` / `zoom` / `minZoom` / `maxZoom`
+- `outputFormat`, `precision`, `centerOnResults`
+
+Seules les clés présentes dans `patch` sont modifiées. Un changement de `geometryType` / `outputFormat` / `precision` réécrit l’élément source.
 
 ## Comportement
 
@@ -72,7 +90,9 @@ Alignées sur ol-geometry-editor (principales) :
 
 ## Démo
 
-Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.
+Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
+Un **encart rétractable** (accordéon DSFR) en tête de page décrit l’utilisation et liste toutes les options.  
+Un exemple final active `showSettings` (roue crantée) et `showAttributions`.
 
 ## Build
 
@@ -103,4 +123,3 @@ Pages concernées (recherche `ol-geometry-editor` dans gpu-site) : métadonnées
 ## Limites actuelles
 
 - Pas encore de `tileLayerSwitcher` / `allowCapture` (prévus si besoin).
-- Styles de dessin fixes (bleu France) ; pas de `style` OL custom en option pour l’instant.

@@ -3,12 +3,19 @@ import './styles/geometry-editor.css'
 import { GeometryEditor } from './GeometryEditor'
 import type { GeometryEditorOptions } from './types'
 
-export type { GeometryEditorOptions, GeometryTypeOption, TileLayerConfig } from './types'
+export type {
+  GeometryEditorOptions,
+  GeometryTypeOption,
+  TileLayerConfig,
+  StyleLike,
+} from './types'
+
 export { GeometryEditor } from './GeometryEditor'
 export { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
 
 export interface MountGeometryEditorHandle {
   editor: GeometryEditor
+  setOptions: (patch: GeometryEditorOptions) => void
   destroy: () => void
 }
 
@@ -29,6 +36,7 @@ export function mountGeometryEditor(
   const editor = new GeometryEditor(el, options)
   return {
     editor,
+    setOptions: (patch) => editor.setOptions(patch),
     destroy: () => editor.destroy(),
   }
 }

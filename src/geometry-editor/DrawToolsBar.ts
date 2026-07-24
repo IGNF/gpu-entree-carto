@@ -2,6 +2,7 @@ import type Map from 'ol/Map'
 import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type VectorLayer from 'ol/layer/Vector'
 import type VectorSource from 'ol/source/Vector'
+import type { StyleLike } from 'ol/style/Style'
 import Draw, { createBox } from 'ol/interaction/Draw'
 import Modify from 'ol/interaction/Modify'
 import Select from 'ol/interaction/Select'
@@ -103,7 +104,8 @@ export class DrawToolsBar {
   private readonly layer: VectorLayer
   private readonly target: HTMLElement
   private readonly onChange: () => void
-  private readonly geometryType: GeometryTypeOption
+  private geometryType: GeometryTypeOption
+  private drawStyle: StyleLike
   private activeId: string | null = null
   private draw: Draw | null = null
   private modify: Modify | null = null
@@ -128,6 +130,8 @@ export class DrawToolsBar {
     geometryType: GeometryTypeOption
     target: HTMLElement
     onChange: () => void
+    /** Style du croquis ; défaut bleu France. */
+    style?: StyleLike | null
   }) {
     this.map = opts.map
     this.source = opts.source
@@ -135,6 +139,7 @@ export class DrawToolsBar {
     this.geometryType = opts.geometryType
     this.target = opts.target
     this.onChange = opts.onChange
+    this.drawStyle = opts.style ?? geometryDrawStyle
 
     this.modify = new Modify({ source: this.source })
     this.modify.setActive(false)
@@ -144,6 +149,20 @@ export class DrawToolsBar {
     this.modify.on('modifyend', () => this.onChange())
 
     this.render()
+  }
+
+  /** Met à jour le type de géométrie (recrée les boutons). */
+  setGeometryType(geometryType: GeometryTypeOption): void {
+    if (this.geometryType === geometryType) return
+    this.clearTransient()
+    this.geometryType = geometryType
+    this.render()
+  }
+
+  /** Met à jour le style du croquis en cours. */
+  setStyle(style: StyleLike | null | undefined): void {
+    this.clearTransient()
+    this.drawStyle = style ?? geometryDrawStyle
   }
 
   private render(): void {
@@ -236,7 +255,7 @@ export class DrawToolsBar {
     this.draw = new Draw({
       source: this.source,
       type: tool.drawType,
-      style: geometryDrawStyle,
+      style: this.drawStyle,
       geometryFunction: tool.box ? createBox() : undefined,
     })
     this.draw.on('drawstart', () => {

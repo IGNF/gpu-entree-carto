@@ -3,6 +3,16 @@ import View from 'ol/View'
 import { defaults as defaultControls } from 'ol/control'
 import Zoom from 'ol/control/Zoom'
 import Attribution from 'ol/control/Attribution'
+import { defaults as defaultInteractions } from 'ol/interaction'
+import DragPan from 'ol/interaction/DragPan'
+import DragRotate from 'ol/interaction/DragRotate'
+import DragZoom from 'ol/interaction/DragZoom'
+import DoubleClickZoom from 'ol/interaction/DoubleClickZoom'
+import KeyboardPan from 'ol/interaction/KeyboardPan'
+import KeyboardZoom from 'ol/interaction/KeyboardZoom'
+import MouseWheelZoom from 'ol/interaction/MouseWheelZoom'
+import PinchRotate from 'ol/interaction/PinchRotate'
+import PinchZoom from 'ol/interaction/PinchZoom'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
@@ -14,11 +24,16 @@ import {
   DEFAULT_GEOMETRY_EDITOR_OPTIONS,
   type GeometryEditorOptions,
   type GeometryTypeOption,
+  type TileLayerConfig,
 } from './types'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
 import { geometryStyleFunction } from './styles'
 import { DrawToolsBar } from './DrawToolsBar'
+import { SettingsPanel } from './SettingsPanel'
+
+type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS &
+  GeometryEditorOptions
 
 function cssSize(value: string | number): string {
   return typeof value === 'number' ? `${value}px` : value
@@ -29,17 +44,66 @@ function isFormField(el: HTMLElement): boolean {
   return tag === 'input' || tag === 'textarea' || tag === 'select'
 }
 
+function mergeOptions(
+  current: ResolvedOptions,
+  patch: GeometryEditorOptions,
+): ResolvedOptions {
+  return {
+    ...current,
+    ...patch,
+    tileLayers:
+      patch.tileLayers !== undefined
+        ? patch.tileLayers.length
+          ? patch.tileLayers
+          : DEFAULT_GEOMETRY_EDITOR_OPTIONS.tileLayers
+        : current.tileLayers,
+    customStyle:
+      patch.customStyle === undefined
+        ? current.customStyle
+        : patch.customStyle,
+  }
+}
+
+function createTileLayer(cfg: TileLayerConfig): TileLayer {
+  return new TileLayer({
+    source: new XYZ({
+      url: cfg.url,
+      attributions: cfg.attribution,
+      maxZoom: cfg.maxZoom ?? 19,
+    }),
+    properties: { title: cfg.title ?? 'Fond' },
+  })
+}
+
+function isNavigationInteraction(interaction: unknown): boolean {
+  return (
+    interaction instanceof DragPan ||
+    interaction instanceof DragRotate ||
+    interaction instanceof DragZoom ||
+    interaction instanceof DoubleClickZoom ||
+    interaction instanceof KeyboardPan ||
+    interaction instanceof KeyboardZoom ||
+    interaction instanceof MouseWheelZoom ||
+    interaction instanceof PinchRotate ||
+    interaction instanceof PinchZoom
+  )
+}
+
 /**
  * Éditeur de géométries rattaché à un champ / élément HTML
  * (remplacement DSFR d’ol-geometry-editor, OpenLayers embarqué).
  */
 export class GeometryEditor {
   readonly element: HTMLElement
-  readonly options: typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS & GeometryEditorOptions
+  options: ResolvedOptions
   readonly map: Map
   readonly source: VectorSource
   private readonly mapHost: HTMLElement
-  private readonly toolbarHost: HTMLElement | null
+  private readonly vectorLayer: VectorLayer
+  private toolbarHost: HTMLElement | null
+  private zoomControl: Zoom | null = null
+  private attributionControl: Attribution | null = null
+  private settingsPanel: SettingsPanel | null = null
   private drawBar: DrawToolsBar | null = null
   private syncingFromElement = false
   private destroyed = false
@@ -47,92 +111,66 @@ export class GeometryEditor {
 
   constructor(element: HTMLElement, options: GeometryEditorOptions = {}) {
     this.element = element
-    this.options = {
-      ...DEFAULT_GEOMETRY_EDITOR_OPTIONS,
-      ...options,
-      tileLayers:
-        options.tileLayers?.length
-          ? options.tileLayers
-          : DEFAULT_GEOMETRY_EDITOR_OPTIONS.tileLayers,
-    }
+    this.options = mergeOptions(
+      { ...DEFAULT_GEOMETRY_EDITOR_OPTIONS },
+      options,
+    )
 
-    if (this.options.hide) {
-      element.hidden = true
-      element.setAttribute('aria-hidden', 'true')
-    }
+    this.applyElementVisibility()
 
     this.mapHost = document.createElement('div')
-    this.mapHost.className = [
-      'ec-geometry-editor',
-      this.options.className ?? '',
-    ]
-      .filter(Boolean)
-      .join(' ')
-    this.mapHost.style.width = cssSize(this.options.width)
-    this.mapHost.style.height = cssSize(this.options.height)
+    this.applyHostClass()
+    this.applyHostSize()
 
     const mapTarget = document.createElement('div')
     mapTarget.className = 'ec-geometry-editor__map'
     this.mapHost.appendChild(mapTarget)
 
+    this.toolbarHost = null
     if (this.options.editable) {
-      this.toolbarHost = document.createElement('div')
-      this.toolbarHost.className = 'ec-geometry-editor__toolbar'
-      this.toolbarHost.setAttribute('role', 'toolbar')
-      this.toolbarHost.setAttribute('aria-label', 'Outils de dessin')
-      // Overlay dans la carte (pas sous la carte)
-      this.mapHost.appendChild(this.toolbarHost)
-    } else {
-      this.toolbarHost = null
+      this.ensureToolbarHost()
     }
 
     element.insertAdjacentElement('afterend', this.mapHost)
 
     this.source = new VectorSource({ wrapX: false })
-    const vectorLayer = new VectorLayer({
+    this.vectorLayer = new VectorLayer({
       source: this.source,
-      style: geometryStyleFunction,
+      style: this.options.customStyle ?? geometryStyleFunction,
     })
 
-    const baseLayers = this.options.tileLayers.map(
-      (cfg) =>
-        new TileLayer({
-          source: new XYZ({
-            url: cfg.url,
-            attributions: cfg.attribution,
-            maxZoom: cfg.maxZoom ?? 19,
-          }),
-          properties: { title: cfg.title ?? 'Fond' },
-        }),
-    )
+    const baseLayers = this.options.tileLayers.map(createTileLayer)
 
+    const controls = defaultControls({ attribution: false, zoom: false })
+
+    const blockView = this.options.blockView
     this.map = new Map({
       target: mapTarget,
-      layers: [...baseLayers, vectorLayer],
+      layers: [...baseLayers, this.vectorLayer],
       view: new View({
         center: fromLonLat([this.options.lon, this.options.lat]),
         zoom: this.options.zoom,
         minZoom: this.options.minZoom,
         maxZoom: this.options.maxZoom,
       }),
-      controls: defaultControls({ attribution: false, zoom: false }).extend([
-        new Zoom(),
-        new Attribution({ collapsible: false }),
-      ]),
+      controls,
+      interactions: defaultInteractions({
+        altShiftDragRotate: !blockView,
+        doubleClickZoom: !blockView,
+        keyboard: !blockView,
+        mouseWheelZoom: !blockView,
+        shiftDragZoom: !blockView,
+        dragPan: !blockView,
+        pinchRotate: !blockView,
+        pinchZoom: !blockView,
+      }),
     })
 
+    this.applyShowZoom()
+    this.applyShowAttributions()
+    this.applyShowSettings()
     this.loadFromElement()
-
-    if (this.options.editable && this.toolbarHost) {
-      this.drawBar = new DrawToolsBar({
-        map: this.map,
-        source: this.source,
-        layer: vectorLayer,
-        geometryType: this.options.geometryType as GeometryTypeOption,
-        target: this.toolbarHost,
-        onChange: () => this.serializeToElement(),
-      })
-    }
+    this.applyEditable()
 
     this.onElementInput = () => {
       if (this.syncingFromElement || this.destroyed) return
@@ -140,6 +178,94 @@ export class GeometryEditor {
     }
     element.addEventListener('input', this.onElementInput)
     element.addEventListener('change', this.onElementInput)
+  }
+
+  /**
+   * Met à jour les options à chaud (carte déjà créée).
+   * Seules les clés présentes dans `patch` sont modifiées.
+   */
+  setOptions(patch: GeometryEditorOptions): void {
+    if (this.destroyed) return
+    const prev = this.options
+    this.options = mergeOptions(prev, patch)
+
+    if (patch.width !== undefined || patch.height !== undefined) {
+      this.applyHostSize()
+      this.map.updateSize()
+    }
+
+    if (
+      patch.className !== undefined ||
+      patch.blockView !== undefined ||
+      patch.showSettings !== undefined
+    ) {
+      this.applyHostClass()
+    }
+
+    if (patch.hide !== undefined) {
+      this.applyElementVisibility()
+    }
+
+    if (
+      patch.lon !== undefined ||
+      patch.lat !== undefined ||
+      patch.zoom !== undefined ||
+      patch.minZoom !== undefined ||
+      patch.maxZoom !== undefined
+    ) {
+      this.applyView(patch)
+    }
+
+    if (patch.blockView !== undefined) {
+      this.applyBlockView(this.options.blockView)
+    }
+
+    if (patch.showZoom !== undefined || patch.blockView !== undefined) {
+      this.applyShowZoom()
+    }
+
+    if (patch.showAttributions !== undefined) {
+      this.applyShowAttributions()
+    }
+
+    if (patch.showSettings !== undefined) {
+      this.applyShowSettings()
+    }
+
+    if (patch.tileLayers !== undefined) {
+      this.applyTileLayers(this.options.tileLayers)
+    }
+
+    if (patch.customStyle !== undefined) {
+      this.vectorLayer.setStyle(
+        this.options.customStyle ?? geometryStyleFunction,
+      )
+      this.drawBar?.setStyle(this.options.customStyle)
+    }
+
+    if (patch.editable !== undefined) {
+      this.applyEditable()
+    } else if (
+      this.drawBar &&
+      patch.geometryType !== undefined &&
+      patch.geometryType !== prev.geometryType
+    ) {
+      this.drawBar.setGeometryType(
+        this.options.geometryType as GeometryTypeOption,
+      )
+    }
+
+    if (
+      patch.geometryType !== undefined ||
+      patch.outputFormat !== undefined ||
+      patch.precision !== undefined
+    ) {
+      this.serializeToElement()
+    }
+  }
+
+  getOptions(): Readonly<ResolvedOptions> {
+    return this.options
   }
 
   getMap(): Map {
@@ -206,11 +332,148 @@ export class GeometryEditor {
     this.element.removeEventListener('input', this.onElementInput)
     this.element.removeEventListener('change', this.onElementInput)
     this.drawBar?.destroy()
+    this.drawBar = null
+    this.settingsPanel?.destroy()
+    this.settingsPanel = null
     this.map.setTarget(undefined)
     this.mapHost.remove()
     if (this.options.hide) {
       this.element.hidden = false
       this.element.removeAttribute('aria-hidden')
+    }
+  }
+
+  private applyHostClass(): void {
+    this.mapHost.className = [
+      'ec-geometry-editor',
+      this.options.blockView ? 'ec-geometry-editor--block-view' : '',
+      this.options.showSettings ? 'ec-geometry-editor--has-settings' : '',
+      this.options.className ?? '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  private applyHostSize(): void {
+    this.mapHost.style.width = cssSize(this.options.width)
+    this.mapHost.style.height = cssSize(this.options.height)
+  }
+
+  private applyElementVisibility(): void {
+    if (this.options.hide) {
+      this.element.hidden = true
+      this.element.setAttribute('aria-hidden', 'true')
+    } else {
+      this.element.hidden = false
+      this.element.removeAttribute('aria-hidden')
+    }
+  }
+
+  private applyView(patch: GeometryEditorOptions): void {
+    const view = this.map.getView()
+    if (patch.lon !== undefined || patch.lat !== undefined) {
+      view.setCenter(fromLonLat([this.options.lon, this.options.lat]))
+    }
+    if (patch.zoom !== undefined) {
+      view.setZoom(this.options.zoom)
+    }
+    if (patch.minZoom !== undefined) {
+      view.setMinZoom(this.options.minZoom)
+    }
+    if (patch.maxZoom !== undefined) {
+      view.setMaxZoom(this.options.maxZoom)
+    }
+  }
+
+  private applyBlockView(blocked: boolean): void {
+    this.map.getInteractions().forEach((interaction) => {
+      if (isNavigationInteraction(interaction)) {
+        interaction.setActive(!blocked)
+      }
+    })
+  }
+
+  private applyShowZoom(): void {
+    const want = this.options.showZoom && !this.options.blockView
+    if (want && !this.zoomControl) {
+      this.zoomControl = new Zoom()
+      this.map.addControl(this.zoomControl)
+    } else if (!want && this.zoomControl) {
+      this.map.removeControl(this.zoomControl)
+      this.zoomControl = null
+    }
+  }
+
+  private applyShowAttributions(): void {
+    const want = this.options.showAttributions
+    if (want && !this.attributionControl) {
+      this.attributionControl = new Attribution({ collapsible: false })
+      this.map.addControl(this.attributionControl)
+    } else if (!want && this.attributionControl) {
+      this.map.removeControl(this.attributionControl)
+      this.attributionControl = null
+    }
+  }
+
+  private applyShowSettings(): void {
+    const want = this.options.showSettings
+    if (want && !this.settingsPanel) {
+      this.settingsPanel = new SettingsPanel(this, this.mapHost)
+    } else if (!want && this.settingsPanel) {
+      this.settingsPanel.destroy()
+      this.settingsPanel = null
+    }
+    this.applyHostClass()
+  }
+
+  private applyTileLayers(configs: TileLayerConfig[]): void {
+    const layers = this.map.getLayers()
+    const existing = layers.getArray().filter((l) => l instanceof TileLayer)
+    for (const layer of existing) {
+      layers.remove(layer)
+    }
+    configs.forEach((cfg, index) => {
+      layers.insertAt(index, createTileLayer(cfg))
+    })
+  }
+
+  private ensureToolbarHost(): HTMLElement {
+    if (!this.toolbarHost) {
+      this.toolbarHost = document.createElement('div')
+      this.toolbarHost.className = 'ec-geometry-editor__toolbar'
+      this.toolbarHost.setAttribute('role', 'toolbar')
+      this.toolbarHost.setAttribute('aria-label', 'Outils de dessin')
+      this.mapHost.appendChild(this.toolbarHost)
+    }
+    return this.toolbarHost
+  }
+
+  private applyEditable(): void {
+    if (this.options.editable) {
+      const host = this.ensureToolbarHost()
+      host.hidden = false
+      if (!this.drawBar) {
+        this.drawBar = new DrawToolsBar({
+          map: this.map,
+          source: this.source,
+          layer: this.vectorLayer,
+          geometryType: this.options.geometryType as GeometryTypeOption,
+          target: host,
+          style: this.options.customStyle,
+          onChange: () => this.serializeToElement(),
+        })
+      } else {
+        this.drawBar.setGeometryType(
+          this.options.geometryType as GeometryTypeOption,
+        )
+        this.drawBar.setStyle(this.options.customStyle)
+      }
+    } else {
+      this.drawBar?.destroy()
+      this.drawBar = null
+      if (this.toolbarHost) {
+        this.toolbarHost.hidden = true
+      }
     }
   }
 }

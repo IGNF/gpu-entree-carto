@@ -130,15 +130,123 @@
   mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01IDJWMEgxNVYySDIwVjRIMThWMTlDMTggMTkuNTUyMyAxNy41NTIzIDIwIDE3IDIwSDNDMi40NDc3MiAyMCAyIDE5LjU1MjMgMiAxOVY0SDBWMkg1Wk00IDRWMThIMTZWNEg0Wk03IDdIOVYxNUg3VjdaTTExIDdIMTNWMTVIMTFWN1oiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
 }
 
-.ec-geometry-editor .ol-control {
-  background: transparent;
+/* Réglages — roue crantée */
+.ec-geometry-editor__tool--settings::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z'/%3E%3C/svg%3E");
 }
 
-/* Zoom en haut à droite — laisse la place à la toolbar gauche */
+.ec-geometry-editor--block-view .ol-viewport {
+  cursor: default;
+}
+
+/* Réglages en haut à droite (même boîte 48×48 que le croquis) */
+.ec-geometry-editor__settings {
+  position: absolute;
+  top: var(--ec-geom-btn-gap);
+  right: var(--ec-geom-btn-gap);
+  z-index: 3;
+  width: var(--ec-geom-btn-size);
+  border-radius: var(--ec-geom-btn-radius);
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.ec-geometry-editor__settings > .ec-geometry-editor__tool {
+  border-radius: var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__settings-dialog {
+  position: absolute;
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+  right: var(--ec-geom-btn-gap);
+  z-index: 4;
+  box-sizing: border-box;
+  width: min(20rem, calc(100% - 1rem));
+  max-height: calc(100% - var(--ec-geom-btn-size) - 2rem);
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: var(--ec-geom-btn-radius);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  color: var(--text-default-grey, #161616);
+}
+
+.ec-geometry-editor__settings-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.ec-geometry-editor__settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-geometry-editor__settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.ec-geometry-editor__settings-field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ec-geometry-editor__settings-field input[type='text'],
+.ec-geometry-editor__settings-field input[type='number'],
+.ec-geometry-editor__settings-field select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.ec-geometry-editor__settings-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.ec-geometry-editor__settings-apply,
+.ec-geometry-editor__settings-cancel {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.ec-geometry-editor__settings-apply {
+  background: var(--background-action-high-blue-france, #000091);
+  color: #fff;
+}
+
+.ec-geometry-editor__settings-cancel {
+  background: var(--background-alt-grey, #f6f6f6);
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+/* Zoom en haut à droite — décale sous la roue si réglages visibles */
 .ec-geometry-editor .ol-zoom {
   top: 0.5rem;
   right: 0.5rem;
   left: auto;
+}
+
+.ec-geometry-editor--has-settings .ol-zoom {
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
 }
 
 .ec-geometry-editor .ol-zoom button {
@@ -150,4 +258,10 @@
   border: none;
   border-radius: 0.25rem;
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-geometry-editor .ol-attribution {
+  bottom: 0;
+  right: 0;
+  font-size: 0.7rem;
 }

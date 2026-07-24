@@ -1,6 +1,8 @@
 /**
  * Options alignées sur ol-geometry-editor (sous-ensemble utile + format KML).
  */
+import type { StyleLike } from 'ol/style/Style'
+
 export type GeometryTypeOption =
   | 'Point'
   | 'LineString'
@@ -12,6 +14,8 @@ export type GeometryTypeOption =
   | 'Geometry'
 
 export type GeometryOutputFormat = 'geojson' | 'kml'
+
+export type { StyleLike }
 
 export interface TileLayerConfig {
   url: string
@@ -39,6 +43,22 @@ export interface GeometryEditorOptions {
   outputFormat?: GeometryOutputFormat
   /** Classe CSS du conteneur carte. */
   className?: string
+  /**
+   * Bloque le pan / zoom manuel (molette, drag, double-clic, pinch, clavier, contrôle +/-).
+   * Le recentrage programmatique (`centerOnResults` / `fitToFeatures`) reste possible.
+   */
+  blockView?: boolean
+  /** Affiche les boutons +/- de zoom (ignoré si `blockView` est true). */
+  showZoom?: boolean
+  /** Affiche le bouton réglages (roue crantée) pour modifier les options à chaud. */
+  showSettings?: boolean
+  /** Affiche le contrôle d’attributions des couches de fond. */
+  showAttributions?: boolean
+  /**
+   * Style OpenLayers des features (et du croquis en cours).
+   * `null` / omis → style bleu France par défaut.
+   */
+  customStyle?: StyleLike | null
 }
 
 export const DEFAULT_GEOMETRY_EDITOR_OPTIONS: Required<
@@ -57,8 +77,15 @@ export const DEFAULT_GEOMETRY_EDITOR_OPTIONS: Required<
     | 'centerOnResults'
     | 'precision'
     | 'outputFormat'
+    | 'blockView'
+    | 'showZoom'
+    | 'showSettings'
+    | 'showAttributions'
   >
-> & { tileLayers: TileLayerConfig[] } = {
+> & {
+  tileLayers: TileLayerConfig[]
+  customStyle: StyleLike | null
+} = {
   geometryType: 'Geometry',
   hide: true,
   editable: true,
@@ -80,4 +107,9 @@ export const DEFAULT_GEOMETRY_EDITOR_OPTIONS: Required<
   centerOnResults: true,
   precision: 7,
   outputFormat: 'geojson',
+  blockView: false,
+  showZoom: true,
+  showSettings: false,
+  showAttributions: false,
+  customStyle: null,
 }

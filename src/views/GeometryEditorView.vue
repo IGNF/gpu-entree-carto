@@ -20,6 +20,116 @@ import { looksLikeBbox } from '@/geometry-editor/parseGeometry'
 import 'ol/ol.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 
+interface OptionDoc {
+  name: string
+  def: string
+  description: string
+}
+
+const optionDocs: OptionDoc[] = [
+  {
+    name: 'geometryType',
+    def: "'Geometry'",
+    description:
+      'Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, Rectangle, Geometry',
+  },
+  {
+    name: 'hide',
+    def: 'true',
+    description: 'Masque l’élément HTML source (champ / textarea)',
+  },
+  {
+    name: 'editable',
+    def: 'true',
+    description: 'Affiche la barre d’outils à gauche dans la carte (sinon viewer seul)',
+  },
+  {
+    name: 'tileLayers',
+    def: 'Plan IGN WMTS',
+    description: 'Fonds XYZ : { url, attribution?, title?, maxZoom? }[]',
+  },
+  {
+    name: 'width / height',
+    def: "'100%' / 400",
+    description: 'Taille du conteneur carte (px ou CSS)',
+  },
+  {
+    name: 'lon / lat / zoom',
+    def: '2 / 46.5 / 5',
+    description: 'Vue initiale (EPSG:4326)',
+  },
+  {
+    name: 'minZoom / maxZoom',
+    def: '4 / 19',
+    description: 'Limites de zoom',
+  },
+  {
+    name: 'centerOnResults',
+    def: 'true',
+    description: 'Recadre la vue après chargement / édition',
+  },
+  {
+    name: 'precision',
+    def: '7',
+    description: 'Décimales GeoJSON / bbox à l’écriture',
+  },
+  {
+    name: 'outputFormat',
+    def: "'geojson'",
+    description: "'geojson' | 'kml' (format écrit dans l’élément)",
+  },
+  {
+    name: 'className',
+    def: '—',
+    description: 'Classe CSS additionnelle sur le conteneur carte',
+  },
+  {
+    name: 'blockView',
+    def: 'false',
+    description:
+      'Bloque pan / zoom manuels (molette, drag, double-clic, pinch, clavier, boutons +/-). Le fit programmatique reste possible.',
+  },
+  {
+    name: 'showZoom',
+    def: 'true',
+    description:
+      'Affiche les boutons +/- de zoom (ignoré si blockView est true)',
+  },
+  {
+    name: 'showSettings',
+    def: 'false',
+    description:
+      'Affiche le bouton roue crantée (haut droite) pour modifier les options à chaud via un formulaire',
+  },
+  {
+    name: 'showAttributions',
+    def: 'false',
+    description: 'Affiche le contrôle d’attributions des couches de fond',
+  },
+  {
+    name: 'customStyle',
+    def: 'null',
+    description:
+      'Style OpenLayers (Style / Style[] / StyleFunction) des features et du croquis ; défaut bleu France',
+  },
+]
+
+const usageSnippet = `const { editor, setOptions } = EntreeCartoGeometryEditor.mountGeometryEditor('#extent', {
+  geometryType: 'Rectangle',
+  height: 400,
+  editable: true,
+  hide: true,
+  outputFormat: 'geojson',
+  blockView: false,
+  showZoom: true,
+  showSettings: false,
+  showAttributions: false,
+  customStyle: null,
+});
+// setOptions({ showSettings: true, blockView: true })
+// editor.getMap()
+// editor.destroy()`
+
 interface DemoSection {
   type: GeometryTypeOption
   title: string
@@ -238,6 +348,8 @@ function fieldKey(type: GeometryTypeOption, format: FormatKey): string {
 const fieldEls = new Map<string, HTMLTextAreaElement>()
 const handles: MountGeometryEditorHandle[] = []
 const pairSyncCleanups: Array<() => void> = []
+let settingsDemoField: HTMLTextAreaElement | null = null
+let settingsDemoHandle: MountGeometryEditorHandle | null = null
 
 function setFieldRef(
   type: GeometryTypeOption,
@@ -250,6 +362,10 @@ function setFieldRef(
   } else {
     fieldEls.delete(key)
   }
+}
+
+function setSettingsDemoRef(el: unknown): void {
+  settingsDemoField = el instanceof HTMLTextAreaElement ? el : null
 }
 
 /** Aligne les textareas GeoJSON / KML d’une ligne sur la plus haute. */
@@ -299,6 +415,34 @@ onMounted(() => {
     syncAllPairHeights()
     requestAnimationFrame(syncAllPairHeights)
   })
+
+  if (settingsDemoField) {
+    settingsDemoField.value = JSON.stringify(
+      {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [2.25, 48.82],
+            [2.42, 48.82],
+            [2.42, 48.9],
+            [2.25, 48.9],
+            [2.25, 48.82],
+          ],
+        ],
+      },
+      null,
+      2,
+    )
+    settingsDemoHandle = mountGeometryEditor(settingsDemoField, {
+      geometryType: 'Geometry',
+      height: 400,
+      hide: false,
+      editable: true,
+      showSettings: true,
+      showAttributions: true,
+      showZoom: true,
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -306,6 +450,8 @@ onUnmounted(() => {
   pairSyncCleanups.length = 0
   for (const h of handles) h.destroy()
   handles.length = 0
+  settingsDemoHandle?.destroy()
+  settingsDemoHandle = null
 })
 </script>
 
@@ -320,6 +466,118 @@ onUnmounted(() => {
       (style cartes.gouv / geopf Drawing). Remplace <code>ol-geometry-editor</code>.
       Chaque type est illustré en <strong>GeoJSON</strong> et en <strong>KML</strong>.
     </p>
+
+    <div class="fr-accordions-group fr-mb-5w">
+      <DsfrAccordion
+        id="ec-geom-docs"
+        title="Utilisation et options"
+        title-tag="h2"
+        :selected="false"
+      >
+        <h3 class="fr-h6">
+          Utilisation
+        </h3>
+        <p class="fr-text--sm">
+          Associer une mini-carte à un champ HTML via
+          <code>mountGeometryEditor(élément, options)</code>
+          ou <code>new GeometryEditor(…)</code>.
+          API globale : <code>window.EntreeCartoGeometryEditor</code>.
+          Bundle : <code>dist/entree-carto-geometry-editor[.min].js</code>
+          + CSS associé.
+        </p>
+        <pre class="ec-demo-geometry__code fr-mb-3w"><code>{{ usageSnippet }}</code></pre>
+
+        <h3 class="fr-h6">
+          Mise à jour à chaud
+        </h3>
+        <p class="fr-text--sm fr-mb-3w">
+          Après montage : <code>editor.setOptions(patch)</code> ou
+          <code>handle.setOptions(patch)</code> pour changer le comportement
+          sans recréer la carte (<code>blockView</code>, <code>showZoom</code>,
+          <code>editable</code>, <code>customStyle</code>, <code>geometryType</code>,
+          fonds, taille, vue, formats, etc.).
+        </p>
+
+        <h3 class="fr-h6">
+          Barre d’outils
+        </h3>
+        <ul class="fr-text--sm fr-mb-3w">
+          <li>
+            Overlay vertical <strong>à gauche dans la carte</strong>
+            (boutons 48×48 type cartes.gouv / geopf Drawing).
+          </li>
+          <li>
+            <strong>Dessin</strong> : activer l’outil géométrie (point / ligne / polygone / rectangle).
+            Sur les types simples, un nouveau croquis remplace le précédent.
+          </li>
+          <li>
+            <strong>Modifier</strong> (crayon) : déplacer les sommets / la géométrie
+            (inactif tant que l’outil n’est pas sélectionné).
+          </li>
+          <li>
+            <strong>Supprimer</strong> (poubelle) : cliquer une feature
+            (<code>cursor: pointer</code> au survol).
+          </li>
+          <li>
+            Sans outil actif : navigation seule (sauf si <code>blockView: true</code>).
+          </li>
+        </ul>
+
+        <h3 class="fr-h6">
+          Données
+        </h3>
+        <ul class="fr-text--sm fr-mb-3w">
+          <li>
+            Lecture : GeoJSON (geometry / Feature / FeatureCollection), KML, ou bbox
+            <code>[minX, minY, maxX, maxY]</code>.
+          </li>
+          <li>
+            Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON en geojson.
+          </li>
+          <li>
+            Sync bidirectionnelle via <code>input</code> / <code>change</code> ;
+            événement carte <code>change:geometry</code>.
+          </li>
+          <li>
+            Les <code>Multi*</code> sont éclatés à l’édition et recombinés à l’écriture.
+          </li>
+        </ul>
+
+        <h3 class="fr-h6">
+          Options
+        </h3>
+        <div class="fr-table fr-table--no-caption fr-mb-0">
+          <table>
+            <caption class="fr-sr-only">
+              Options de mountGeometryEditor / GeometryEditor
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">
+                  Option
+                </th>
+                <th scope="col">
+                  Défaut
+                </th>
+                <th scope="col">
+                  Description
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="opt in optionDocs"
+                :key="opt.name"
+              >
+                <td><code>{{ opt.name }}</code></td>
+                <td><code>{{ opt.def }}</code></td>
+                <td>{{ opt.description }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </DsfrAccordion>
+    </div>
 
     <section
       v-for="section in sections"
@@ -355,6 +613,27 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
+
+    <section class="fr-mb-5w">
+      <h2 class="fr-h5">
+        Réglages à la volée (<code>showSettings</code>)
+      </h2>
+      <p class="fr-text--sm fr-mb-2w">
+        Une seule carte avec le bouton roue crantée (haut droite) pour ajuster
+        les options. Attributions activées (<code>showAttributions: true</code>).
+        Le zoom est décalé sous le bouton réglages.
+      </p>
+      <label
+        class="fr-label"
+        for="ec-geom-settings-demo"
+      >GeoJSON</label>
+      <textarea
+        id="ec-geom-settings-demo"
+        :ref="setSettingsDemoRef"
+        class="fr-input ec-demo-geometry__field"
+        rows="8"
+      />
+    </section>
   </div>
 </template>
 
@@ -383,6 +662,32 @@ onUnmounted(() => {
   width: 100%;
   resize: vertical;
   overflow: auto;
+}
+
+.ec-demo-geometry__code {
+  margin: 0;
+  padding: 1rem;
+  overflow: auto;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  background: var(--background-alt-grey, #f6f6f6);
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+}
+
+.ec-demo-geometry__code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+}
+
+.ec-demo-geometry :deep(.fr-table) {
+  margin-bottom: 0;
+}
+
+.ec-demo-geometry :deep(.fr-table td),
+.ec-demo-geometry :deep(.fr-table th) {
+  font-size: 0.875rem;
+  vertical-align: top;
 }
 
 @media (max-width: 48rem) {
