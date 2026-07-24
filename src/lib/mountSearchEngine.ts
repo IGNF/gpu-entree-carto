@@ -4,6 +4,7 @@ import { defaults as defaultControls } from 'ol/control'
 import { fromLonLat } from 'ol/proj'
 import type Control from 'ol/control/Control'
 import { createSearchEngineAdvanced } from '@/lib/search/createSearchEngineAdvanced'
+import { attachStandalonePopoverSync } from '@/lib/search/attachStandalonePopoverSync'
 import {
   locationFromGeolocation,
   locationFromGeopfFeature,
@@ -136,9 +137,12 @@ export function mountSearchEngine(
     formListeners.push({ form, listener })
   }
 
+  const detachPopovers = attachStandalonePopoverSync(container)
+
   return {
     destroy() {
       redirected = true
+      detachPopovers()
       control.un?.(['select', 'search'], onCombined)
       control.un?.('searchengineadvanced:geolocation:click', onGeolocate)
       for (const { form, listener } of formListeners) {

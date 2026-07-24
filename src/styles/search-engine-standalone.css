@@ -23,7 +23,7 @@
   overflow: visible !important;
 }
 
-/* Widget en flux : barre seule ; overlays en absolute */
+/* Widget en flux : barre seule ; overlays en fixed (JS) */
 .ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] {
   position: relative !important;
   top: auto !important;
@@ -45,21 +45,20 @@
 }
 
 /*
- * Suggestions : overlay sous la barre (ne pousse pas le layout).
- * Ne pas absouluter les listes internes — uniquement le conteneur.
+ * Panneaux hors flux + hors overflow des bannières (gpu-site).
+ * top / left / width / max-height : posés en JS (attachStandalonePopoverSync).
  */
-.ec-search-engine-standalone .GPautoCompleteContainer {
-  position: absolute !important;
-  left: 0;
-  right: 0;
-  top: 100%;
-  width: 100% !important;
+.ec-search-engine-standalone .GPautoCompleteContainer,
+.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer,
+.ec-search-engine-standalone .GPAdvancedContainer {
+  position: fixed !important;
+  z-index: 10000;
   margin: 0 !important;
-  z-index: 200;
+  right: auto !important;
   background: var(--background-default-grey, #fff);
   box-shadow: 0 2px 6px 0 rgba(0, 0, 18, 0.16);
-  max-height: min(50vh, 20rem);
   overflow: auto;
+  box-sizing: border-box;
 }
 
 /* Conteneur visible (geopf retire gpf-hidden au focus / résultats) */
@@ -74,19 +73,4 @@
   position: static !important;
   margin: 0 !important;
   width: 100% !important;
-}
-
-.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer,
-.ec-search-engine-standalone .GPAdvancedContainer {
-  position: absolute !important;
-  left: 0;
-  right: 0;
-  top: 100%;
-  width: 100% !important;
-  max-width: 100% !important;
-  z-index: 210;
-  background: var(--background-default-grey, #fff);
-  box-shadow: 0 2px 6px 0 rgba(0, 0, 18, 0.16);
-  max-height: min(70vh, 28rem);
-  overflow: auto;
 }

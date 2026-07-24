@@ -153,6 +153,8 @@ Renommage optionnel ultérieur en `map_config.js.twig`.
 
 Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-client (`.ol-control`, panneaux, etc.).
 
+**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Le bundle entree-carto inclut aussi geopf DSFR + `icons.min.css`. Les boutons geopf avec `fr-icon-*` (fermer, supprimer…) peignaient l’icône deux fois (`::before` DSFR + `::after` geopf à 100 % du bouton). Corrigé dans `map-controls.css` (neutralisation de `::after` si `fr-icon-*` est présent).
+
 ---
 
 ## Ordre de chargement des scripts (cartographie)
@@ -205,7 +207,8 @@ Puis `npm install` et `make build-lib` dans entree-carto.
 - [ ] `createStandardViewer` : couches WMS/WFS, légende, fiche info, outils
 - [x] Recherche lieu accueil → `/map/` (`mountSearchEngine` + `params.search` → `SearchEngineControl.initialSearch`)
 - [ ] `ParcelViewer` complet
-- [ ] Éviter le double chargement DSFR (site + bundle) si nécessaire
+- [ ] Éviter le double chargement DSFR / `icons` (site `utility.min.css` + bundle) si nécessaire
+- [x] Doublon d’icônes geopf `::after` + DSFR `fr-icon-*` (fixé dans `map-controls.css`)
 - [ ] Tests d’intégration gpu-site (parcours carte, parcelle, accueil)
 
 ---

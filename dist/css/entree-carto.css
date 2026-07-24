@@ -1145,6 +1145,18 @@ dialog[id^="GPterritoriesPanel-"] {
   z-index: 0;
 }
 
+/* Annule les offsets geopf (top/bottom: 0.5em) qui décalent les boutons dans la colonne */
+.position-container-bottom-right [id^='GPzoom-'] {
+  top: 0;
+  left: auto;
+}
+
+.position-container-bottom-right [id^='GPfullScreen-'] {
+  /* geopf : bottom: 0.5em → remonte le bouton ; on aligne sur le bas (échelle) */
+  bottom: 0;
+  left: auto;
+}
+
 /* Boutons geopf : état actif = fond bleu (cartes.gouv), pas la barre ::after */
 .gpf-widget-button {
   width: var(--ec-widget-btn-size);
@@ -1249,6 +1261,36 @@ dialog[id^="GPterritoriesPanel-"] {
 
 .GPsearchInputSubmit::before {
   margin: 0 auto !important;
+}
+
+/*
+ * Doublon d’icônes (surtout sous gpu-site / DSFR hôte) :
+ * geopf pose une couche picto sur ::after (width/height: 100 % du bouton) ;
+ * les classes DSFR fr-icon-* appliquent le même mask sur ::before et ::after.
+ * → grande icône (::after) + petite (::before). On garde uniquement ::before.
+ * Les boutons sans fr-icon-* (zoom, fullscreen, search…) continuent d’utiliser ::after.
+ */
+.gpf-btn--primary[class*='fr-icon-']::after,
+.gpf-btn--secondary[class*='fr-icon-']::after,
+.gpf-btn--tertiary[class*='fr-icon-']::after,
+.gpf-btn[class*='fr-icon-']::after {
+  content: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  background: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Plein écran : icône uniquement via ::after geopf (pas de sprite / label OL) */
+.ol-custom-full-screen button.gpf-btn-icon {
+  background-image: none !important;
+  font-size: 0;
+  line-height: 0;
+}
+
+.ol-custom-full-screen button.gpf-btn-icon > span {
+  display: none;
 }
 
 /* Territories — titres longs dans les tuiles */
@@ -1425,7 +1467,7 @@ dialog[id^='GPterritoriesPanel-'] {
   overflow: visible !important;
 }
 
-/* Widget en flux : barre seule ; overlays en absolute */
+/* Widget en flux : barre seule ; overlays en fixed (JS) */
 .ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] {
   position: relative !important;
   top: auto !important;
@@ -1447,21 +1489,20 @@ dialog[id^='GPterritoriesPanel-'] {
 }
 
 /*
- * Suggestions : overlay sous la barre (ne pousse pas le layout).
- * Ne pas absouluter les listes internes — uniquement le conteneur.
+ * Panneaux hors flux + hors overflow des bannières (gpu-site).
+ * top / left / width / max-height : posés en JS (attachStandalonePopoverSync).
  */
-.ec-search-engine-standalone .GPautoCompleteContainer {
-  position: absolute !important;
-  left: 0;
-  right: 0;
-  top: 100%;
-  width: 100% !important;
+.ec-search-engine-standalone .GPautoCompleteContainer,
+.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer,
+.ec-search-engine-standalone .GPAdvancedContainer {
+  position: fixed !important;
+  z-index: 10000;
   margin: 0 !important;
-  z-index: 200;
+  right: auto !important;
   background: var(--background-default-grey, #fff);
   box-shadow: 0 2px 6px 0 rgba(0, 0, 18, 0.16);
-  max-height: min(50vh, 20rem);
   overflow: auto;
+  box-sizing: border-box;
 }
 
 /* Conteneur visible (geopf retire gpf-hidden au focus / résultats) */
@@ -1476,19 +1517,4 @@ dialog[id^='GPterritoriesPanel-'] {
   position: static !important;
   margin: 0 !important;
   width: 100% !important;
-}
-
-.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer,
-.ec-search-engine-standalone .GPAdvancedContainer {
-  position: absolute !important;
-  left: 0;
-  right: 0;
-  top: 100%;
-  width: 100% !important;
-  max-width: 100% !important;
-  z-index: 210;
-  background: var(--background-default-grey, #fff);
-  box-shadow: 0 2px 6px 0 rgba(0, 0, 18, 0.16);
-  max-height: min(70vh, 28rem);
-  overflow: auto;
 }

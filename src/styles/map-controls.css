@@ -211,6 +211,36 @@
   margin: 0 auto !important;
 }
 
+/*
+ * Doublon d’icônes (surtout sous gpu-site / DSFR hôte) :
+ * geopf pose une couche picto sur ::after (width/height: 100 % du bouton) ;
+ * les classes DSFR fr-icon-* appliquent le même mask sur ::before et ::after.
+ * → grande icône (::after) + petite (::before). On garde uniquement ::before.
+ * Les boutons sans fr-icon-* (zoom, fullscreen, search…) continuent d’utiliser ::after.
+ */
+.gpf-btn--primary[class*='fr-icon-']::after,
+.gpf-btn--secondary[class*='fr-icon-']::after,
+.gpf-btn--tertiary[class*='fr-icon-']::after,
+.gpf-btn[class*='fr-icon-']::after {
+  content: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  background: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Plein écran : icône uniquement via ::after geopf (pas de sprite / label OL) */
+.ol-custom-full-screen button.gpf-btn-icon {
+  background-image: none !important;
+  font-size: 0;
+  line-height: 0;
+}
+
+.ol-custom-full-screen button.gpf-btn-icon > span {
+  display: none;
+}
+
 /* Territories — titres longs dans les tuiles */
 .gpf-tile .fr-tile__title,
 .gpf-tile .fr-tile__title .fr-label {

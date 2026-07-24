@@ -23,7 +23,7 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 - Carte OL minimale invisible (requis par geopf pour coords / géoloc / marqueurs)
 - À la validation → `municipality`, `position_x`, `position_y`, `type` vers `mapUrl`
 - Écoute : `select`, `search`, `searchengineadvanced:geolocation:click` + `search` des forms avancés
-- Suggestions et panneau **Avancée** en `position: absolute` (ne déplacent pas le layout) — `search-engine-standalone.css`
+- Suggestions / panneau **Avancée** en `position: fixed`, ancrés à la barre (`attachStandalonePopoverSync`) — visibles malgré `overflow` des bannières gpu-site, suivent scroll / resize
 
 ## Exemple gpu-site
 
