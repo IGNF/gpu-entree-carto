@@ -20,7 +20,7 @@ import '@/styles/map-controls.css'
 import '@/styles/search-engine-standalone.css'
 
 export interface MountSearchEngineOptions {
-  /** redirect (défaut) : POST/GET vers mapUrl ; emit : callback seul. */
+  /** redirect (défaut) : POST/GET formulaire vers mapUrl ; emit : callback seul (SPA). */
   mode?: 'redirect' | 'emit'
   mapUrl?: string
   method?: 'GET' | 'POST'

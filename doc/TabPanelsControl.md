@@ -16,6 +16,7 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 - Un seul onglet actif à la fois.
 - À l’ouverture, `.ec-map-shell--tab-panels-open` décale zoom, plein écran et échelle de `--ec-tab-panels-inset` (= largeur panneau) + le même `--ec-widget-gap` qu’au bord de carte lorsque le panneau est fermé.
 - Conteneur pleine hauteur avec `pointer-events: none !important` (OpenLayers pose `pointer-events: auto` en inline) ; seuls les enfants (onglets / panneau) reçoivent les clics — sinon zoom / plein écran bas-droite sont masqués.
+- Infobulles style geopf au survol (`aria-label` → `::after`, à gauche des boutons) ; masquées si l’onglet est actif.
 
 ## Onglets
 
@@ -47,7 +48,7 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 
 ## Intégration localisation
 
-`SearchEngineControl` appelle `showSelection` après `initialSearch` (accueil → carte). GetFeatureInfo branchera plus tard sur la même API.
+`SearchEngineControl` appelle `showSelection` **avant** de poser le marker (`initialSearch` / accueil → carte), puis recentre hors de la zone couverte par le panneau pour garder la popup geopf visible. GetFeatureInfo branchera plus tard sur la même API.
 
 ## Dépendances
 

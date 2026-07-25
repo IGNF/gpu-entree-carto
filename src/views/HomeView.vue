@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
  * Page d’accueil démo (équivalent banner gpu-site) :
- * SearchEngineAdvanced hors carte → navigation vers /map avec la localisation.
+ * SearchEngineAdvanced hors carte → /map via handoff mémoire + router (SPA).
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { mountSearchEngine, type MountedSearchEngine } from '@/lib/mountSearchEngine'
+import { prepareLocationHandoff } from '@/lib/search/locationSearch'
 import type { AutocompleteLocation } from '@/lib/types'
 
 const router = useRouter()
@@ -18,17 +19,8 @@ onMounted(() => {
     mode: 'emit',
     placeholder: 'Rechercher une adresse, une ville, un lieu...',
     onSelect: (location: AutocompleteLocation) => {
-      void router.push({
-        name: 'map',
-        query: {
-          municipality: location.fullText,
-          position_x: String(location.position.x),
-          position_y: String(location.position.y),
-          type: location.type ?? '',
-          kind: location.kind ?? '',
-          poiType: location.poiType?.join(',') ?? '',
-        },
-      })
+      prepareLocationHandoff(location)
+      void router.push({ name: 'map' })
     },
   })
 })
@@ -45,10 +37,10 @@ onBeforeUnmount(() => {
       <div class="fr-container fr-py-8v">
         <div class="fr-grid-row fr-grid-row--center fr-grid-row--middle fr-p-4w">
           <div class="fr-col-12 fr-col-lg-6">
-            <p class="fr-text--lead ec-home__banner-lead">
+            <p class="ec-home__banner-lead fr-text--lead">
               Rechercher par lieu
             </p>
-            <p class="fr-text--sm ec-home__banner-hint">
+            <p class="ec-home__banner-hint fr-text--sm">
               Même contrôle que sur la carte (recherche avancée incluse).
               La validation ouvre la démonstration cartographique centrée sur le résultat.
             </p>

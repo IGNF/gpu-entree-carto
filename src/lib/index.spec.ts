@@ -4,6 +4,8 @@ import Geocode from '@/lib/services/Geocode'
 import {
   toLocationRedirectParams,
   zoomForLocationSearch,
+  prepareLocationHandoff,
+  takeLocationHandoff,
 } from '@/lib/search/locationSearch'
 import config from '@/lib/config'
 import packageJson from '../../package.json'
@@ -51,5 +53,19 @@ describe('lib exports unitaires', () => {
       position_y: '48.8',
       type: 'PositionOfInterest',
     })
+  })
+
+  it('handoff localisation SPA (mémoire, une seule consommation)', () => {
+    prepareLocationHandoff({
+      fullText: 'Ma localisation',
+      type: 'geolocate',
+      position: { x: 2.3, y: 48.8 },
+    })
+    expect(takeLocationHandoff()).toEqual({
+      fullText: 'Ma localisation',
+      type: 'geolocate',
+      position: { x: 2.3, y: 48.8 },
+    })
+    expect(takeLocationHandoff()).toBeNull()
   })
 })

@@ -10,9 +10,9 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 
 | Option | Type | Défaut | Description |
 |--------|------|--------|-------------|
-| `mode` | `'redirect' \| 'emit'` | `'redirect'` | Redirection carte ou callback seul |
-| `mapUrl` | `string` | `'/map/'` | URL cible |
-| `method` | `'GET' \| 'POST'` | `'POST'` | Méthode (gpu-site = POST) |
+| `mode` | `'redirect' \| 'emit'` | `'redirect'` | Formulaire HTML vers la carte, ou callback seul (SPA) |
+| `mapUrl` | `string` | `'/map/'` | URL cible (`redirect`) |
+| `method` | `'GET' \| 'POST'` | `'POST'` | Méthode formulaire (`redirect`, gpu-site = POST) |
 | `placeholder` | `string` | adresse / ville / lieu… | Placeholder barre |
 | `serviceBaseUrl` | `string` | `https://data.geopf.fr` | Base services |
 | `onSelect` | `(loc) => void` | — | Callback à la validation |
@@ -21,9 +21,26 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 
 - UX identique à la carte : autocomplete, **Avancée** (INSEE, lieux, coords, parcelles), **Me géolocaliser**
 - Carte OL minimale invisible (requis par geopf pour coords / géoloc / marqueurs)
-- À la validation → `municipality`, `position_x`, `position_y`, `type` vers `mapUrl`
+- **`redirect`** : formulaire `municipality` / `position_x` / `position_y` / `type` (compat gpu-site)
+- **`emit`** (démo SPA) : `onSelect` + `prepareLocationHandoff` / `router.push` — objet `StandardViewerSearch` en mémoire, sans query ni POST
+- **Me géolocaliser** → `type: 'geolocate'`, coords EPSG:4326 ; sur la carte, [SearchEngineControl](./SearchEngineControl.md) repose le marker + ouvre la fiche (sans re-géocoder le libellé)
 - Écoute : `select`, `search`, `searchengineadvanced:geolocation:click` + `search` des forms avancés
 - Suggestions / panneau **Avancée** en `position: fixed`, ancrés à la barre (`attachStandalonePopoverSync`) — visibles malgré `overflow` des bannières gpu-site, suivent scroll / resize
+
+## Exemple démo SPA
+
+```js
+import { prepareLocationHandoff } from '…/locationSearch'
+
+gpu.mountSearchEngine(el, {
+  mode: 'emit',
+  onSelect: (location) => {
+    prepareLocationHandoff(location)
+    router.push({ name: 'map' })
+  },
+})
+// Sur /map : takeLocationHandoff() → SearchEngineControl initialSearch
+```
 
 ## Exemple gpu-site
 

@@ -192,7 +192,6 @@ onUnmounted(() => {
         :class="[tab.icon, { 'is-active': isOpen && activeTab === tab.id }]"
         :aria-selected="isOpen && activeTab === tab.id"
         :aria-controls="`ec-tab-panel-${tab.id}`"
-        :title="tab.label"
         :aria-label="tab.label"
         @click="onTabClick(tab.id)"
       />

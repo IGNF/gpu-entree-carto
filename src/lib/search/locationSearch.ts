@@ -133,7 +133,8 @@ export function locationFromGeolocation(
 }
 
 /**
- * Navigue vers la page carte avec les paramètres de localisation (contrat gpu-site).
+ * Navigue vers la page carte via formulaire HTML (intégration site hôte / gpu-site).
+ * Pour la démo SPA, préférer `prepareLocationHandoff` + `router.push` (pas de POST / query).
  */
 export function redirectToMapWithLocation(
   location: LocationPayload,
@@ -170,4 +171,36 @@ export function redirectToMapWithLocation(
   }
   document.body.appendChild(form)
   form.submit()
+}
+
+/** Handoff SPA synchrone : objet déjà au format `initialSearch` (pas de sérialisation). */
+let pendingLocationSearch: StandardViewerSearch | null = null
+
+/** Enregistre la localisation pour la prochaine vue carte (même document SPA). */
+export function prepareLocationHandoff(
+  location: LocationPayload,
+): StandardViewerSearch {
+  const search = locationPayloadToSearch(location)
+  pendingLocationSearch = search
+  return search
+}
+
+/** Lit et consomme le handoff (une seule fois). */
+export function takeLocationHandoff(): StandardViewerSearch | null {
+  const search = pendingLocationSearch
+  pendingLocationSearch = null
+  return search
+}
+
+/** Payload localisation → prop `initialSearch` du SearchEngineControl. */
+export function locationPayloadToSearch(
+  location: LocationPayload,
+): StandardViewerSearch {
+  return {
+    fullText: location.fullText,
+    type: location.type,
+    kind: location.kind,
+    poiType: location.poiType,
+    position: location.position,
+  }
 }

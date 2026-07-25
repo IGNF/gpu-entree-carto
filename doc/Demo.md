@@ -6,8 +6,8 @@ Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours
 
 | Route | Vue | Rôle |
 |-------|-----|------|
-| `/` | `HomeView.vue` | Accueil type gpu-site : `mountSearchEngine` → `/map?…` |
-| `/map` | `DemoView.vue` | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage si query `municipality` / `position_*` / `type` |
+| `/` | `HomeView.vue` | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA) |
+| `/map` | `DemoView.vue` | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire |
 | `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone |
 | `/sketch` | `SketchDemoView.vue` | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte) |
 
@@ -18,8 +18,10 @@ Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours
 ## Flux localisation
 
 1. Recherche validée sur `/` (`mountSearchEngine` en mode `emit`)
-2. Navigation SPA vers `/map` avec query
-3. `SearchEngineControl` + `initialSearch` rejoue le géocode geopf (cerise, emprise, popup) et ouvre l’onglet fiche du TabPanels
+2. `prepareLocationHandoff` (objet `StandardViewerSearch` en mémoire) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
+3. `DemoView` lit `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
+
+Sur **gpu-site** (pages distinctes) : `mode: 'redirect'` + formulaire POST (`municipality`, `position_x`, …) puis injection serveur de `params.search`.
 
 ## GitLab Pages
 

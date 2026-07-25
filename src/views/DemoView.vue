@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
@@ -13,6 +12,9 @@ import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerSearch } from '@/lib/types'
 import {
+  takeLocationHandoff,
+} from '@/lib/search/locationSearch'
+import {
   createBaseLayerPresets,
   type BaseLayerId,
 } from '@/ol/baseLayers'
@@ -21,33 +23,12 @@ import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 
-const route = useRoute()
 const presets = createBaseLayerPresets()
 const activeBase = ref<BaseLayerId>('plan')
 const baseLayers = computed(() => presets.map((p) => p.layer))
 
-/** Recherche issue de l’accueil (query municipality / position / type). */
-const initialSearch = computed<StandardViewerSearch | null>(() => {
-  const municipality = String(route.query.municipality ?? '').trim()
-  if (!municipality) return null
-  const x = Number(route.query.position_x)
-  const y = Number(route.query.position_y)
-  const type = String(route.query.type ?? '').trim()
-  const kind = String(route.query.kind ?? '').trim()
-  const poiTypeRaw = String(route.query.poiType ?? '').trim()
-  const poiType = poiTypeRaw
-    ? poiTypeRaw.split(',').map((s) => s.trim()).filter(Boolean)
-    : []
-  return {
-    fullText: municipality,
-    type: type || undefined,
-    kind: kind || undefined,
-    poiType,
-    position:
-      Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined,
-  }
-})
-
+/** Recherche issue de l’accueil (handoff mémoire SPA — pas de query ni POST). */
+const initialSearch = ref<StandardViewerSearch | null>(takeLocationHandoff())
 const layerNodes = ref<TreeLayerNode[]>([
   {
     id: 'demo-plu',

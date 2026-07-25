@@ -61,7 +61,14 @@
   border: none;
   border-radius: var(--ec-widget-btn-radius, 4px);
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
-  overflow: hidden;
+  /* visible : infobulles ::after (sinon clipées) */
+  overflow: visible;
+  z-index: 1;
+}
+
+.ec-tab-panels__tabs:has(> .ec-tab-panels__tab[aria-label]:hover),
+.ec-tab-panels__tabs:has(> .ec-tab-panels__tab[aria-label]:focus-visible) {
+  z-index: 3;
 }
 
 /* Collés au panneau (plus de marge à droite) */
@@ -76,6 +83,7 @@
  */
 .ec-tab-panels.ol-control button.ec-tab-panels__tab {
   box-sizing: border-box;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,6 +105,18 @@
   color: var(--text-action-high-blue-france, #000091);
   cursor: pointer;
   transition: background-color 300ms;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab:first-child {
+  border-radius: var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0 0;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab:last-child {
+  border-radius: 0 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px);
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab:only-child {
+  border-radius: var(--ec-widget-btn-radius, 4px);
 }
 
 .ec-tab-panels.ol-control button.ec-tab-panels__tab:hover,
@@ -123,11 +143,93 @@
   margin: 0;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[class*='fr-icon-']::after {
+/* Masque le doublon DSFR ::after (sauf infobulle au survol) */
+.ec-tab-panels.ol-control
+  button.ec-tab-panels__tab[class*='fr-icon-']:not(:hover):not(:focus-visible)::after {
   content: none !important;
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+}
+
+/*
+ * Infobulles à gauche (onglets à droite de la carte) — même rendu geopf,
+ * via ::after (le picto DSFR reste sur ::before).
+ * `right: 100%` = tip collé au bord du bouton (pas translate(%) de la bulle).
+ */
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-label]:hover::after,
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-label]:focus-visible::after {
+  content: attr(aria-label) !important;
+  display: block !important;
+  box-sizing: border-box;
+  position: absolute;
+  top: var(--ec-widget-btn-padding, 4px);
+  right: 100%;
+  left: auto;
+  z-index: 2000;
+  width: fit-content !important;
+  height: auto !important;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0.5rem 1.25rem 0.5rem 0.5rem !important;
+  border: none;
+  border-radius: 0;
+  color: var(--text-default-grey, #161616);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-align: left;
+  pointer-events: none;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position:
+    calc(100% - 0.125rem) 50%,
+    100% 50%,
+    calc(100% - 0.375rem) 100%,
+    0 100%;
+  background-size:
+    0.375rem 0.5rem,
+    0.375rem 0.5rem,
+    1px 100%,
+    calc(100% - 0.5rem) 100%;
+  background-image:
+    conic-gradient(
+      from 236.31deg at 100% 50%,
+      transparent 0deg,
+      var(--background-overlap-grey, #fff) 0deg,
+      var(--background-overlap-grey, #fff) 67.38deg,
+      transparent 67.38deg
+    ),
+    conic-gradient(
+      from 236.31deg at 100% 50%,
+      transparent 0deg,
+      var(--border-default-grey, #ddd) 0deg,
+      var(--border-default-grey, #ddd) 67.38deg,
+      transparent 67.38deg
+    ),
+    linear-gradient(90deg, var(--border-default-grey, #ddd), var(--border-default-grey, #ddd)),
+    linear-gradient(
+      90deg,
+      var(--background-overlap-grey, #fff),
+      var(--background-overlap-grey, #fff)
+    );
+  -webkit-mask: none !important;
+  mask: none !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
+  transform: none;
+}
+
+/* Pas d’infobulle si l’onglet est déjà actif (comme geopf aria-pressed) */
+.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:hover::after,
+.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:focus-visible::after,
+.ec-tab-panels.ol-control
+  button.ec-tab-panels__tab[aria-selected='true']:hover::after,
+.ec-tab-panels.ol-control
+  button.ec-tab-panels__tab[aria-selected='true']:focus-visible::after {
+  content: none !important;
+  display: none !important;
 }
 
 .ec-tab-panels__panel {

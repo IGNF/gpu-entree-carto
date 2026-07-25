@@ -219,6 +219,24 @@
   max-width: min(420px, calc(100% - 12px));
 }
 
+/*
+ * Popup résultat SearchEngineAdvanced : l’appendice (::before bordure + ::after fond)
+ * laisse parfois un trait gris (bordure basse de la bulle) entre bulle et pointe.
+ * On aligne ::after pour couvrir ce pixel ; marges <p> neutralisées (contenu HTML).
+ */
+.ec-map-shell .GPSearchPopup::after {
+  bottom: -16px;
+  border-top-width: 16px;
+}
+
+.ec-map-shell .GPPopupContent p {
+  margin: 0;
+}
+
+.ec-map-shell .GPPopupContent p + p {
+  margin-top: 0.25rem;
+}
+
 .gpf-widget[id^='GPsearchEngine-Advanced'] .GPSearchBar .GPInputGroup,
 .gpf-widget[id^='GPsearchEngine-Advanced'] .GPSearchBar .GPInputGroup > input,
 .gpf-widget[id^='GPsearchEngine-Advanced'] button[id^='GPshowSearchEnginePicto-'].fr-btn {
