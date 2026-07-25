@@ -9907,7 +9907,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     RESOLUTION: "resolution",
     ROTATION: "rotation"
   };
-  function clamp(value2, min, max) {
+  function clamp$1(value2, min, max) {
     return Math.min(Math.max(value2, min), max);
   }
   function squaredSegmentDistance(x, y, x1, y1, x2, y2) {
@@ -10031,8 +10031,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           minY = (maxY + minY) / 2;
           maxY = minY;
         }
-        let x = clamp(center[0], minX, maxX);
-        let y = clamp(center[1], minY, maxY);
+        let x = clamp$1(center[0], minX, maxX);
+        let y = clamp$1(center[1], minY, maxY);
         if (isMoving && smooth && resolution) {
           const ratio = 30 * resolution;
           x += -ratio * Math.log(1 + Math.max(0, minX - center[0]) / ratio) + ratio * Math.log(1 + Math.max(0, center[0] - maxX) / ratio);
@@ -10231,7 +10231,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return false;
   }
-  function getArea(extent) {
+  function getArea$1(extent) {
     let area = 0;
     if (!isEmpty(extent)) {
       area = getWidth(extent) * getHeight(extent);
@@ -10581,7 +10581,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
     const tangentB = [(pB[0] - p0[0]) / lenB, (pB[1] - p0[1]) / lenB];
     let angle = lenA === 0 || lenB === 0 ? 0 : Math.acos(
-      clamp(tangentB[0] * tangentA[0] + tangentB[1] * tangentA[1], -1, 1)
+      clamp$1(tangentB[0] * tangentA[0] + tangentB[1] * tangentA[1], -1, 1)
     );
     angle = Math.max(angle, 1e-5);
     const isClockwise = tangentB[0] * orthoA[0] + tangentB[1] * orthoA[1] > 0;
@@ -10608,6 +10608,140 @@ Expected function or array of functions, received type ${typeof value2}.`
     const deltaLonBy2 = toRadians(c2[0] - c1[0]) / 2;
     const a = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function getLengthInternal(coordinates2, radius) {
+    let length = 0;
+    for (let i = 0, ii = coordinates2.length; i < ii - 1; ++i) {
+      length += getDistance(coordinates2[i], coordinates2[i + 1], radius);
+    }
+    return length;
+  }
+  function getLength(geometry, options) {
+    options = options || {};
+    const radius = options.radius || DEFAULT_RADIUS;
+    const projection = options.projection || "EPSG:3857";
+    const type = geometry.getType();
+    if (type !== "GeometryCollection") {
+      geometry = geometry.clone().transform(projection, "EPSG:4326");
+    }
+    let length = 0;
+    let coordinates2, coords, i, ii, j, jj;
+    switch (type) {
+      case "Point":
+      case "MultiPoint": {
+        break;
+      }
+      case "LineString":
+      case "LinearRing": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        length = getLengthInternal(coordinates2, radius);
+        break;
+      }
+      case "MultiLineString":
+      case "Polygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          length += getLengthInternal(coordinates2[i], radius);
+        }
+        break;
+      }
+      case "MultiPolygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coords = coordinates2[i];
+          for (j = 0, jj = coords.length; j < jj; ++j) {
+            length += getLengthInternal(coords[j], radius);
+          }
+        }
+        break;
+      }
+      case "GeometryCollection": {
+        const geometries = (
+          /** @type {import("./geom/GeometryCollection.js").default} */
+          geometry.getGeometries()
+        );
+        for (i = 0, ii = geometries.length; i < ii; ++i) {
+          length += getLength(geometries[i], options);
+        }
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return length;
+  }
+  function getAreaInternal(coordinates2, radius) {
+    let area = 0;
+    const len = coordinates2.length;
+    let x1 = coordinates2[len - 1][0];
+    let y1 = coordinates2[len - 1][1];
+    for (let i = 0; i < len; i++) {
+      const x2 = coordinates2[i][0];
+      const y2 = coordinates2[i][1];
+      area += toRadians(x2 - x1) * (2 + Math.sin(toRadians(y1)) + Math.sin(toRadians(y2)));
+      x1 = x2;
+      y1 = y2;
+    }
+    return area * radius * radius / 2;
+  }
+  function getArea(geometry, options) {
+    options = options || {};
+    const radius = options.radius || DEFAULT_RADIUS;
+    const projection = options.projection || "EPSG:3857";
+    const type = geometry.getType();
+    if (type !== "GeometryCollection") {
+      geometry = geometry.clone().transform(projection, "EPSG:4326");
+    }
+    let area = 0;
+    let coordinates2, coords, i, ii, j, jj;
+    switch (type) {
+      case "Point":
+      case "MultiPoint":
+      case "LineString":
+      case "MultiLineString":
+      case "LinearRing": {
+        break;
+      }
+      case "Polygon": {
+        coordinates2 = /** @type {import("./geom/Polygon.js").default} */
+        geometry.getCoordinates();
+        area = Math.abs(getAreaInternal(coordinates2[0], radius));
+        for (i = 1, ii = coordinates2.length; i < ii; ++i) {
+          area -= Math.abs(getAreaInternal(coordinates2[i], radius));
+        }
+        break;
+      }
+      case "MultiPolygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coords = coordinates2[i];
+          area += Math.abs(getAreaInternal(coords[0], radius));
+          for (j = 1, jj = coords.length; j < jj; ++j) {
+            area -= Math.abs(getAreaInternal(coords[j], radius));
+          }
+        }
+        break;
+      }
+      case "GeometryCollection": {
+        const geometries = (
+          /** @type {import("./geom/GeometryCollection.js").default} */
+          geometry.getGeometries()
+        );
+        for (i = 0, ii = geometries.length; i < ii; ++i) {
+          area += getArea(geometries[i], options);
+        }
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return area;
   }
   function offset(c1, distance2, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
@@ -13555,7 +13689,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       result = Math.max(result, minResolution);
       result /= Math.log(1 + ratio * Math.max(0, minResolution / resolution - 1)) / ratio + 1;
     }
-    return clamp(result, minResolution / 2, maxResolution * 2);
+    return clamp$1(result, minResolution / 2, maxResolution * 2);
   }
   function createSnapToResolutions(resolutions, smooth, maxExtent, showFullExtent) {
     smooth = smooth !== void 0 ? smooth : true;
@@ -13579,7 +13713,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
-              return clamp(resolution, minResolution, cappedMaxRes);
+              return clamp$1(resolution, minResolution, cappedMaxRes);
             }
             return getSmoothClampedResolution(
               resolution,
@@ -13619,7 +13753,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
-              return clamp(resolution, minResolution, cappedMaxRes);
+              return clamp$1(resolution, minResolution, cappedMaxRes);
             }
             return getSmoothClampedResolution(
               resolution,
@@ -13638,7 +13772,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           );
           const zoomLevel = Math.max(minZoomLevel, cappedZoomLevel);
           const newResolution = maxResolution / Math.pow(power, zoomLevel);
-          return clamp(newResolution, minResolution, cappedMaxRes);
+          return clamp$1(newResolution, minResolution, cappedMaxRes);
         }
         return void 0;
       })
@@ -13663,7 +13797,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             showFullExtent
           ) : maxResolution;
           if (!smooth || !isMoving) {
-            return clamp(resolution, minResolution, cappedMaxRes);
+            return clamp$1(resolution, minResolution, cappedMaxRes);
           }
           return getSmoothClampedResolution(
             resolution,
@@ -14553,13 +14687,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (this.resolutions_.length === 1) {
           return this.resolutions_[0];
         }
-        const baseLevel = clamp(
+        const baseLevel = clamp$1(
           Math.floor(zoom),
           0,
           this.resolutions_.length - 2
         );
         const zoomFactor = this.resolutions_[baseLevel] / this.resolutions_[baseLevel + 1];
-        return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp(zoom - baseLevel, 0, 1));
+        return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp$1(zoom - baseLevel, 0, 1));
       }
       return this.maxResolution_ / Math.pow(this.zoomFactor_, zoom - this.minZoom_);
     }
@@ -17113,7 +17247,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (view.getAnimating()) {
         view.cancelAnimations();
       }
-      let delta = -clamp(
+      let delta = -clamp$1(
         this.totalDelta_,
         -this.maxDelta_ * this.deltaPerZoom_,
         this.maxDelta_ * this.deltaPerZoom_
@@ -17457,7 +17591,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         managed: managed === void 0 ? true : managed
       };
       const zIndex = this.getZIndex();
-      state.opacity = clamp(Math.round(this.getOpacity() * 100) / 100, 0, 1);
+      state.opacity = clamp$1(Math.round(this.getOpacity() * 100) / 100, 0, 1);
       state.visible = this.getVisible();
       state.extent = this.getExtent();
       state.zIndex = zIndex === void 0 && !state.managed ? Infinity : zIndex;
@@ -18811,10 +18945,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         const alpha = rgb[4];
         const rgbDivider = 100 / 255;
         return [
-          clamp(toColorComponent(rgb[1], rgbDivider) + 0.5 | 0, 0, 255),
-          clamp(toColorComponent(rgb[2], rgbDivider) + 0.5 | 0, 0, 255),
-          clamp(toColorComponent(rgb[3], rgbDivider) + 0.5 | 0, 0, 255),
-          alpha !== void 0 ? clamp(toColorComponent(alpha, 100), 0, 1) : 1
+          clamp$1(toColorComponent(rgb[1], rgbDivider) + 0.5 | 0, 0, 255),
+          clamp$1(toColorComponent(rgb[2], rgbDivider) + 0.5 | 0, 0, 255),
+          clamp$1(toColorComponent(rgb[3], rgbDivider) + 0.5 | 0, 0, 255),
+          alpha !== void 0 ? clamp$1(toColorComponent(alpha, 100), 0, 1) : 1
         ];
       }
       throwInvalidColor(color);
@@ -18913,9 +19047,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const g = b1(x * -0.943766287 + y * 1.916279586 + z * 0.027607165);
     const b = b1(x * 0.069407491 - y * 0.22898585 + z * 1.159737864);
     return [
-      clamp(r + 0.5 | 0, 0, 255),
-      clamp(g + 0.5 | 0, 0, 255),
-      clamp(b + 0.5 | 0, 0, 255),
+      clamp$1(r + 0.5 | 0, 0, 255),
+      clamp$1(g + 0.5 | 0, 0, 255),
+      clamp$1(b + 0.5 | 0, 0, 255),
       color[3]
     ];
   }
@@ -27948,6 +28082,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  const mapPinIcon = "data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20width='40'%20height='40'%20fill='%23ffffff'%3e%3cpath%20d='M18.364%2017.364L12%2023.7279L5.63604%2017.364C2.12132%2013.8492%202.12132%208.15076%205.63604%204.63604C9.15076%201.12132%2014.8492%201.12132%2018.364%204.63604C21.8787%208.15076%2021.8787%2013.8492%2018.364%2017.364ZM12%2013C13.1046%2013%2014%2012.1046%2014%2011C14%209.89543%2013.1046%209%2012%209C10.8954%209%2010%209.89543%2010%2011C10%2012.1046%2010.8954%2013%2012%2013Z'%3e%3c/path%3e%3c/svg%3e";
   var checkDsfr = function() {
     var style = getComputedStyle(document.documentElement);
     var color = style.getPropertyValue("--blue-france-sun-113-625");
@@ -45307,7 +45442,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (imageData) {
       const x = Math.floor(Math.round(pixel[0]) * HIT_DETECT_RESOLUTION);
       const y = Math.floor(Math.round(pixel[1]) * HIT_DETECT_RESOLUTION);
-      const index2 = (clamp(x, 0, imageData.width - 1) + clamp(y, 0, imageData.height - 1) * imageData.width) * 4;
+      const index2 = (clamp$1(x, 0, imageData.width - 1) + clamp$1(y, 0, imageData.height - 1) * imageData.width) * 4;
       const r = imageData.data[index2];
       const g = imageData.data[index2 + 1];
       const b = imageData.data[index2 + 2];
@@ -48238,7 +48373,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.changed();
     }
   }
-  const mapPinIcon = "data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20width='40'%20height='40'%20fill='%23ffffff'%3e%3cpath%20d='M18.364%2017.364L12%2023.7279L5.63604%2017.364C2.12132%2013.8492%202.12132%208.15076%205.63604%204.63604C9.15076%201.12132%2014.8492%201.12132%2018.364%204.63604C21.8787%208.15076%2021.8787%2013.8492%2018.364%2017.364ZM12%2013C13.1046%2013%2014%2012.1046%2014%2011C14%209.89543%2013.1046%209%2012%209C10.8954%209%2010%209.89543%2010%2011C10%2012.1046%2010.8954%2013%2012%2013Z'%3e%3c/path%3e%3c/svg%3e";
   class Tile extends Target {
     /**
      * @param {import("./tilecoord.js").TileCoord} tileCoord Tile coordinate.
@@ -48945,7 +49079,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         0,
         Math.ceil(
           Math.log2(
-            getArea(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
+            getArea$1(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
           )
         )
       ) : 0);
@@ -49232,7 +49366,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const maxTargetExtent = this.targetTileGrid_.getExtent();
       let maxSourceExtent = this.sourceTileGrid_.getExtent();
       const limitedTargetExtent = maxTargetExtent ? getIntersection(targetExtent, maxTargetExtent) : targetExtent;
-      if (getArea(limitedTargetExtent) === 0) {
+      if (getArea$1(limitedTargetExtent) === 0) {
         this.state = TileState.EMPTY;
         return;
       }
@@ -49274,12 +49408,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       let sourceExtent = this.triangulation_.calculateSourceExtent();
       if (maxSourceExtent) {
         if (sourceProj.canWrapX()) {
-          sourceExtent[1] = clamp(
+          sourceExtent[1] = clamp$1(
             sourceExtent[1],
             maxSourceExtent[1],
             maxSourceExtent[3]
           );
-          sourceExtent[3] = clamp(
+          sourceExtent[3] = clamp$1(
             sourceExtent[3],
             maxSourceExtent[1],
             maxSourceExtent[3]
@@ -49288,7 +49422,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           sourceExtent = getIntersection(sourceExtent, maxSourceExtent);
         }
       }
-      if (!getArea(sourceExtent)) {
+      if (!getArea$1(sourceExtent)) {
         this.state = TileState.EMPTY;
       } else {
         let worldWidth = 0;
@@ -61075,6 +61209,50 @@ Expected function or array of functions, received type ${typeof value2}.`
       function escapeHtml(value2) {
         return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
+      function tabPanelsRightInset() {
+        const el = document.querySelector(".ec-tab-panels.is-open");
+        if (!(el instanceof HTMLElement)) return 40;
+        return Math.ceil(el.getBoundingClientRect().width) + 24;
+      }
+      function pinMarkerStyle() {
+        const make = (color) => new Style({
+          image: new Icon({
+            src: mapPinIcon,
+            color,
+            anchor: [0.5, 1]
+          }),
+          stroke: new Stroke({ color, width: 2 }),
+          fill: new Fill({ color: "rgba(0, 0, 0, 0.1)" })
+        });
+        return [make([255, 255, 255, 1]), make([0, 0, 145, 1])];
+      }
+      function refitPopupForOpenPanels(control) {
+        var _a, _b, _c, _d, _e;
+        if (!((_a = tabPanelsApiRef.value) == null ? void 0 : _a.isOpen.value)) return;
+        const map2 = control.getMap();
+        if (!map2) return;
+        const source = ((_b = control.layer) == null ? void 0 : _b.getSource()) ?? null;
+        let feature = (_c = control.popup) == null ? void 0 : _c.get("feature");
+        if (!feature) {
+          feature = source == null ? void 0 : source.getFeatures()[0];
+        }
+        const geometry = feature == null ? void 0 : feature.getGeometry();
+        if (!feature || !geometry) return;
+        if (source && !source.getFeatures().includes(feature)) {
+          source.clear();
+          source.addFeature(feature);
+        }
+        feature.setStyle(pinMarkerStyle());
+        const selected = (_d = control.selectInteraction) == null ? void 0 : _d.getFeatures();
+        if (selected && !selected.getArray().includes(feature)) {
+          selected.push(feature);
+        }
+        map2.getView().fit(geometry.getExtent(), {
+          padding: [72, tabPanelsRightInset(), 72, 72],
+          maxZoom: 15
+        });
+        (_e = control._setPopupInfo) == null ? void 0 : _e.call(control, feature);
+      }
       function applyInitialSearch(control, search) {
         var _a, _b;
         const key2 = searchKey(search);
@@ -61085,11 +61263,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         const x = Number((_a = search.position) == null ? void 0 : _a.x);
         const y = Number((_b = search.position) == null ? void 0 : _b.y);
         const hasCoords = Number.isFinite(x) && Number.isFinite(y);
-        if (hasCoords) {
-          control.createMarker([x, y], label, "searchAtInit", true);
-        }
+        const isGeolocate = search.type === "geolocate";
         openFicheFromSearch(search);
-        if (!label) return;
+        if (hasCoords) {
+          const popupHtml = isGeolocate ? `<strong>${escapeHtml(label)}</strong><br/>${x}, ${y}` : label;
+          control.createMarker(
+            [x, y],
+            popupHtml,
+            isGeolocate ? "geolocate" : "searchAtInit",
+            true
+          );
+          requestAnimationFrame(() => refitPopupForOpenPanels(control));
+        }
+        if (!label || isGeolocate) return;
         const poiType = Array.isArray(search.poiType) ? search.poiType : [];
         control.baseSearchEngine.search({
           location: {
@@ -61108,6 +61294,22 @@ Expected function or array of functions, received type ${typeof value2}.`
           collapsible: props.collapsible,
           serviceBaseUrl: props.serviceBaseUrl
         })
+      );
+      watch(
+        controlRef,
+        (control, _prev, onCleanup) => {
+          if (!control) return;
+          const advanced = control;
+          const onSearch = () => {
+            requestAnimationFrame(() => refitPopupForOpenPanels(advanced));
+          };
+          advanced.on("search", onSearch);
+          onCleanup(() => {
+            var _a;
+            return (_a = advanced.un) == null ? void 0 : _a.call(advanced, "search", onSearch);
+          });
+        },
+        { immediate: true }
       );
       watch(
         [controlRef, () => props.initialSearch],
@@ -61616,7 +61818,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         resolution,
         opt_direction || 0
       );
-      return clamp(z, this.minZoom, this.maxZoom);
+      return clamp$1(z, this.minZoom, this.maxZoom);
     }
     /**
      * The tile with the provided tile coordinate intersects the given viewport.
@@ -68057,7 +68259,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let px = x1;
     let py = y1;
     if (dx !== 0 || dy !== 0) {
-      along = clamp(((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy), 0, 1);
+      along = clamp$1(((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy), 0, 1);
       px += dx * along;
       py += dy * along;
     }
@@ -71640,6 +71842,395 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const t of types) addFrom(t);
     return [...keys];
   }
+  const SKETCH_TEXT_PROP = "ec-sketch-text";
+  const DEFAULTS$1 = {
+    text: "Texte",
+    fontSize: 14,
+    fontColor: "#000091",
+    strokeColor: "#ffffff",
+    rotation: 0
+  };
+  function clampRotationDeg(value2) {
+    if (!Number.isFinite(value2)) return DEFAULTS$1.rotation;
+    let deg = (value2 % 360 + 360) % 360;
+    if (deg > 180) deg -= 360;
+    return Math.round(deg * 10) / 10;
+  }
+  function sketchTextHitRadiusPx(attrs) {
+    const halfH = attrs.fontSize * 1.33 * 0.55;
+    const halfW = Math.max(attrs.text.length * attrs.fontSize * 0.35, 14);
+    return Math.hypot(halfW, halfH) + 6;
+  }
+  function sketchTextRotateAnchor(point, attrs, mapResolution) {
+    const c = point.getCoordinates();
+    const halfHPx = attrs.fontSize * 1.33 * 0.55;
+    const iconClearancePx = 22;
+    const dist = (halfHPx + iconClearancePx) * mapResolution;
+    const rad = attrs.rotation * Math.PI / 180;
+    return [c[0] - Math.sin(rad) * dist, c[1] + Math.cos(rad) * dist];
+  }
+  function isSketchTextFeature(feature) {
+    return Boolean(feature.get(SKETCH_TEXT_PROP)) || Boolean(feature.get("text"));
+  }
+  function isNearSketchText(feature, coord, mapResolution) {
+    if (!isSketchTextFeature(feature)) return false;
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Point$1)) return false;
+    const attrs = getSketchTextAttrs(feature);
+    const radius = sketchTextHitRadiusPx(attrs) * mapResolution;
+    const c = geom.getCoordinates();
+    return Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= radius;
+  }
+  function sketchTextStyle(attrs = {}) {
+    const text2 = attrs.text || DEFAULTS$1.text;
+    const fontSize = attrs.fontSize ?? DEFAULTS$1.fontSize;
+    const fontColor = attrs.fontColor || DEFAULTS$1.fontColor;
+    const strokeColor = attrs.strokeColor || DEFAULTS$1.strokeColor;
+    const rotationDeg = attrs.rotation ?? DEFAULTS$1.rotation;
+    return new Style({
+      text: new Text({
+        text: text2,
+        font: `${fontSize}pt Marianne, Calibri, sans-serif`,
+        fill: new Fill({ color: fontColor }),
+        stroke: new Stroke({ color: strokeColor, width: 3 }),
+        textAlign: "center",
+        textBaseline: "middle",
+        rotation: rotationDeg * Math.PI / 180,
+        rotateWithView: false
+      })
+    });
+  }
+  function getSketchTextAttrs(feature) {
+    var _a, _b;
+    const stored = feature.get(SKETCH_TEXT_PROP);
+    const fromStyle = feature.getStyle();
+    let text2 = (stored == null ? void 0 : stored.text) ?? String(feature.get("text") ?? DEFAULTS$1.text);
+    let fontSize = (stored == null ? void 0 : stored.fontSize) ?? DEFAULTS$1.fontSize;
+    let fontColor = (stored == null ? void 0 : stored.fontColor) ?? DEFAULTS$1.fontColor;
+    let strokeColor = (stored == null ? void 0 : stored.strokeColor) ?? DEFAULTS$1.strokeColor;
+    let rotation = (stored == null ? void 0 : stored.rotation) ?? DEFAULTS$1.rotation;
+    if (fromStyle instanceof Style) {
+      const t = fromStyle.getText();
+      if (t) {
+        const rawText = t.getText();
+        if (typeof rawText === "string" && rawText) text2 = rawText;
+        else if (Array.isArray(rawText) && rawText.length) text2 = rawText.join("");
+        const fill = (_a = t.getFill()) == null ? void 0 : _a.getColor();
+        if (typeof fill === "string") fontColor = fill;
+        const stroke = (_b = t.getStroke()) == null ? void 0 : _b.getColor();
+        if (typeof stroke === "string" && (stored == null ? void 0 : stored.strokeColor) === void 0) {
+          strokeColor = stroke;
+        }
+        const font = t.getFont() || "";
+        const m = /(\d+(?:\.\d+)?)\s*pt/i.exec(font);
+        if (m) fontSize = Number(m[1]);
+        if ((stored == null ? void 0 : stored.rotation) === void 0) {
+          const rad = t.getRotation();
+          if (typeof rad === "number" && Number.isFinite(rad)) {
+            rotation = clampRotationDeg(rad * 180 / Math.PI);
+          }
+        }
+      }
+    }
+    return {
+      text: text2,
+      fontSize,
+      fontColor,
+      strokeColor,
+      rotation: clampRotationDeg(rotation)
+    };
+  }
+  function applySketchTextStyle(feature, attrs) {
+    const normalized = {
+      ...DEFAULTS$1,
+      ...attrs,
+      strokeColor: attrs.strokeColor || DEFAULTS$1.strokeColor,
+      rotation: clampRotationDeg(attrs.rotation)
+    };
+    feature.set(SKETCH_TEXT_PROP, { ...normalized });
+    feature.set("text", normalized.text);
+    feature.setStyle(sketchTextStyle(normalized));
+    feature.changed();
+  }
+  const FEATURE_STYLE_PROP = "ec-feature-style";
+  const DEFAULTS = {
+    kind: "polygon",
+    strokeColor: "#000091",
+    strokeWidth: 2,
+    fillColor: "rgba(0, 0, 145, 0.2)",
+    radius: 6,
+    text: "Texte",
+    fontSize: 14,
+    fontColor: "#000091",
+    textStrokeColor: "#ffffff",
+    textStrokeWidth: 3,
+    rotation: 0,
+    lineDash: 0,
+    lineCap: "round",
+    lineJoin: "round",
+    lineDashOffset: 0,
+    miterLimit: 10,
+    fontFamily: "Marianne, Calibri, sans-serif",
+    fontBold: false,
+    fontItalic: false,
+    pointShape: "circle",
+    pointRotation: 0,
+    zIndex: 0
+  };
+  function defaultFeatureStyleAttrs(kind) {
+    const base = { ...DEFAULTS, kind };
+    if (kind === "circle") {
+      return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
+    }
+    if (kind === "point") {
+      return { ...base, fillColor: "#000091", strokeColor: "#ffffff" };
+    }
+    if (kind === "text") {
+      return {
+        ...base,
+        strokeColor: "#ffffff",
+        strokeWidth: 0,
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    if (kind === "line") {
+      return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
+    }
+    return base;
+  }
+  function featureStyleKindOf(feature) {
+    if (isSketchTextFeature(feature)) return "text";
+    const geom = feature.getGeometry();
+    if (!geom) return "polygon";
+    if (geom instanceof Circle) {
+      return getCircleKind(feature) === "disc" ? "disc" : "circle";
+    }
+    const t = geom.getType();
+    if (t === "Point" || t === "MultiPoint") return "point";
+    if (t === "LineString" || t === "MultiLineString") return "line";
+    return "polygon";
+  }
+  function coerceAttrs(kind, partial) {
+    const defaults2 = defaultFeatureStyleAttrs(kind);
+    if (!partial || typeof partial !== "object") return defaults2;
+    const { fontWeight, fontStyle, ...rest } = partial;
+    const merged = { ...defaults2, ...rest, kind };
+    if (typeof rest.fontBold !== "boolean" && fontWeight != null) {
+      merged.fontBold = fontWeight === "bold" || fontWeight === "700" || fontWeight === "600" || fontWeight === "500";
+    }
+    if (typeof rest.fontItalic !== "boolean" && fontStyle != null) {
+      merged.fontItalic = fontStyle === "italic" || fontStyle === "oblique";
+    }
+    return merged;
+  }
+  function cssFont(attrs) {
+    const style = attrs.fontItalic ? "italic" : "normal";
+    const weight = attrs.fontBold ? "bold" : "normal";
+    return `${style} ${weight} ${attrs.fontSize}pt ${attrs.fontFamily}`;
+  }
+  function getFeatureStyleAttrs(feature) {
+    const kind = featureStyleKindOf(feature);
+    const stored = feature.get(FEATURE_STYLE_PROP);
+    const textStored = feature.get(SKETCH_TEXT_PROP);
+    const base = coerceAttrs(kind, stored);
+    return {
+      ...base,
+      kind,
+      text: (stored == null ? void 0 : stored.text) ?? (textStored == null ? void 0 : textStored.text) ?? String(feature.get("text") ?? base.text),
+      fontSize: (stored == null ? void 0 : stored.fontSize) ?? (textStored == null ? void 0 : textStored.fontSize) ?? base.fontSize,
+      fontColor: (stored == null ? void 0 : stored.fontColor) ?? (textStored == null ? void 0 : textStored.fontColor) ?? base.fontColor,
+      textStrokeColor: (stored == null ? void 0 : stored.textStrokeColor) ?? (textStored == null ? void 0 : textStored.strokeColor) ?? base.textStrokeColor,
+      rotation: clampRotationDeg(
+        (stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation
+      )
+    };
+  }
+  function strokeFromAttrs(attrs) {
+    const dash = attrs.lineDash > 0 ? [attrs.lineDash, attrs.lineDash] : void 0;
+    return new Stroke({
+      color: attrs.strokeColor,
+      width: attrs.strokeWidth,
+      lineCap: attrs.lineCap,
+      lineJoin: attrs.lineJoin,
+      lineDash: dash,
+      lineDashOffset: attrs.lineDashOffset,
+      miterLimit: attrs.miterLimit
+    });
+  }
+  function pointImageFromAttrs(attrs) {
+    const fill = new Fill({ color: attrs.fillColor });
+    const stroke = new Stroke({
+      color: attrs.strokeColor,
+      width: attrs.strokeWidth
+    });
+    const rotation = attrs.pointRotation * Math.PI / 180;
+    if (attrs.pointShape === "square") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 4,
+        radius: attrs.radius,
+        angle: Math.PI / 4,
+        rotation
+      });
+    }
+    if (attrs.pointShape === "triangle") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 3,
+        radius: attrs.radius,
+        rotation
+      });
+    }
+    if (attrs.pointShape === "star") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 5,
+        radius: attrs.radius,
+        radius2: attrs.radius / 2,
+        rotation
+      });
+    }
+    return new CircleStyle({
+      radius: attrs.radius,
+      fill,
+      stroke
+    });
+  }
+  function buildFeatureStyle(attrs) {
+    if (attrs.kind === "text") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        text: new Text({
+          text: attrs.text || DEFAULTS.text,
+          font: cssFont(attrs),
+          fill: new Fill({ color: attrs.fontColor }),
+          stroke: new Stroke({
+            color: attrs.textStrokeColor,
+            width: attrs.textStrokeWidth
+          }),
+          textAlign: "center",
+          textBaseline: "middle",
+          rotation: clampRotationDeg(attrs.rotation) * Math.PI / 180,
+          rotateWithView: false
+        })
+      });
+    }
+    if (attrs.kind === "point") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        image: pointImageFromAttrs(attrs)
+      });
+    }
+    if (attrs.kind === "line") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        stroke: strokeFromAttrs(attrs)
+      });
+    }
+    return new Style({
+      zIndex: attrs.zIndex || void 0,
+      fill: new Fill({ color: attrs.fillColor }),
+      stroke: strokeFromAttrs(attrs),
+      image: new CircleStyle({
+        radius: 5,
+        fill: new Fill({ color: attrs.strokeColor })
+      })
+    });
+  }
+  function applyFeatureStyle(feature, attrs) {
+    const kind = attrs.kind || featureStyleKindOf(feature);
+    const normalized = coerceAttrs(kind, {
+      ...attrs,
+      kind,
+      rotation: clampRotationDeg(attrs.rotation)
+    });
+    feature.set(FEATURE_STYLE_PROP, { ...normalized });
+    if (kind === "text") {
+      feature.set(SKETCH_TEXT_PROP, {
+        text: normalized.text,
+        fontSize: normalized.fontSize,
+        fontColor: normalized.fontColor,
+        strokeColor: normalized.textStrokeColor,
+        rotation: normalized.rotation
+      });
+      feature.set("text", normalized.text);
+    }
+    feature.setStyle(buildFeatureStyle(normalized));
+    feature.changed();
+  }
+  function restoreFeatureStyleFromProperties(feature) {
+    const stored = feature.get(FEATURE_STYLE_PROP);
+    const text2 = feature.get(SKETCH_TEXT_PROP) || feature.get("text");
+    if (!stored && !text2) return false;
+    applyFeatureStyle(feature, getFeatureStyleAttrs(feature));
+    return true;
+  }
+  function restoreFeaturesStyles(features) {
+    for (const f of features) restoreFeatureStyleFromProperties(f);
+  }
+  function featureStylePopupAnchorCandidates(feature) {
+    const geom = feature.getGeometry();
+    if (!geom) return [];
+    if (geom instanceof Point$1) return [geom.getCoordinates()];
+    if (geom instanceof MultiPoint) return geom.getCoordinates();
+    if (geom instanceof Circle) return [geom.getCenter()];
+    if (geom instanceof LineString) {
+      const coords = geom.getCoordinates();
+      return coords.length ? coords : [];
+    }
+    if (geom instanceof MultiLineString) {
+      return geom.getCoordinates().flat();
+    }
+    if (geom instanceof Polygon) {
+      const interior = geom.getInteriorPoint().getCoordinates().slice(0, 2);
+      const ring = geom.getCoordinates()[0] || [];
+      const verts = ring.length > 1 ? ring.slice(0, -1) : ring;
+      return [interior, ...verts];
+    }
+    if (geom instanceof MultiPolygon) {
+      const out = [];
+      for (const poly2 of geom.getPolygons()) {
+        const interior = poly2.getInteriorPoint().getCoordinates().slice(0, 2);
+        out.push(interior);
+        const ring = poly2.getCoordinates()[0] || [];
+        if (ring.length > 1) out.push(...ring.slice(0, -1));
+        else out.push(...ring);
+      }
+      return out;
+    }
+    const extent = geom.getExtent();
+    return [[(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]];
+  }
+  function featureStylePopupAnchor(feature, mapSize, getPixel) {
+    const candidates = featureStylePopupAnchorCandidates(feature);
+    if (!candidates.length) return null;
+    if (!mapSize || !getPixel) {
+      return candidates[0];
+    }
+    const scored = candidates.map((c, index2) => {
+      const p5 = getPixel(c);
+      const onScreen = Boolean(
+        p5 && p5[0] >= 0 && p5[1] >= 0 && p5[0] <= mapSize[0] && p5[1] <= mapSize[1]
+      );
+      return {
+        c,
+        p: p5,
+        onScreen,
+        index: index2,
+        // Plus haut à l’écran = meilleur pour une popup au-dessus
+        topRank: p5 ? p5[1] : Number.POSITIVE_INFINITY
+      };
+    });
+    const pool = scored.filter((s) => s.onScreen);
+    const use = pool.length ? pool : scored;
+    const interior = use.find((s) => s.index === 0);
+    if (interior && interior.onScreen) return interior.c;
+    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
+    return use[0].c;
+  }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
   const HANDLE_ICON_SCALE = 1.4;
@@ -71664,6 +72255,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
     </svg>`
   );
+  const STYLE_EDIT_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9 .83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.36-.61-.36-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+    </svg>`
+  );
+  const STYLE_EDIT_GAP_PX = 36;
   function styleForRole(role) {
     if (role === "translate") {
       return new Style({
@@ -71679,6 +72276,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       return new Style({
         image: new Icon({
           src: ROTATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    if (role === "style-edit") {
+      return new Style({
+        image: new Icon({
+          src: STYLE_EDIT_ICON,
           anchor: [0.5, 0.5],
           scale: HANDLE_ICON_SCALE
         }),
@@ -71722,6 +72329,18 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function resolutionOf(map2) {
     return map2.getView().getResolution() ?? 1;
+  }
+  const HANDLE_VIEWPORT_MARGIN_PX = 28;
+  function clampHandleToViewport(map2, coord) {
+    const size = map2.getSize();
+    if (!size) return coord;
+    const pixel = map2.getPixelFromCoordinate(coord);
+    if (!pixel) return coord;
+    const m = HANDLE_VIEWPORT_MARGIN_PX;
+    const x = Math.min(Math.max(m, pixel[0]), Math.max(m, size[0] - m));
+    const y = Math.min(Math.max(m, pixel[1]), Math.max(m, size[1] - m));
+    if (x === pixel[0] && y === pixel[1]) return coord;
+    return map2.getCoordinateFromPixel([x, y]);
   }
   function distPointToSegment(p5, a, b) {
     const dx = b[0] - a[0];
@@ -71859,6 +72478,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         return "move";
       case "rotate":
         return "grab";
+      case "style-edit":
+        return "pointer";
       case "resize-radius":
         return "nesw-resize";
       case "resize-n":
@@ -71909,6 +72530,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "dataSource");
       __publicField(this, "dataLayer");
       __publicField(this, "onChange");
+      __publicField(this, "onStyleEdit");
+      __publicField(this, "styleEditEnabled");
       __publicField(this, "mode");
       __publicField(this, "active", false);
       __publicField(this, "handleSource", new VectorSource({ wrapX: false }));
@@ -71916,11 +72539,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "pointer");
       __publicField(this, "hovered", null);
       __publicField(this, "dragging", null);
+      __publicField(this, "onViewChange", () => {
+        if (!this.active || this.dragging || !this.hovered) return;
+        this.placeHandles(this.hovered);
+      });
       this.map = opts.map;
       this.dataSource = opts.source;
       this.dataLayer = opts.layer;
       this.mode = opts.mode;
       this.onChange = opts.onChange;
+      this.onStyleEdit = opts.onStyleEdit ?? null;
+      this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.handleLayer = new VectorLayer({
         source: this.handleSource,
         // Au-dessus des couches données / tuiles
@@ -71944,9 +72573,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (active) {
         this.map.addLayer(this.handleLayer);
         this.map.addInteraction(this.pointer);
+        this.map.getView().on("change:center", this.onViewChange);
+        this.map.getView().on("change:resolution", this.onViewChange);
+        this.map.on("change:size", this.onViewChange);
       } else {
         this.map.removeInteraction(this.pointer);
         this.map.removeLayer(this.handleLayer);
+        this.map.getView().un("change:center", this.onViewChange);
+        this.map.getView().un("change:resolution", this.onViewChange);
+        this.map.un("change:size", this.onViewChange);
         this.clearHandles();
         this.hovered = null;
         this.dragging = null;
@@ -72027,10 +72662,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         },
         {
           layerFilter: (layer) => layer === this.dataLayer,
-          hitTolerance: 10
+          hitTolerance: 28
         }
       );
-      return found;
+      if (found) return found;
+      const coord = this.map.getCoordinateFromPixel(pixel);
+      if (!coord) return null;
+      const res = resolutionOf(this.map);
+      for (const f of this.dataSource.getFeatures()) {
+        const feature = f;
+        if (!isNearSketchText(feature, coord, res)) continue;
+        if (this.mode === "point" || this.mode === "line-polygon") return feature;
+      }
+      return null;
     }
     /**
      * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
@@ -72039,8 +72683,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.clearHandles();
       const geom = feature.getGeometry();
       if (!geom) return;
-      const add2 = (role, coord) => {
-        const f = new Feature({ geometry: new Point$1(coord) });
+      const add2 = (role, coord, free = false) => {
+        const at = free ? coord : clampHandleToViewport(this.map, coord);
+        const f = new Feature({ geometry: new Point$1(at) });
         f.set("role", role);
         this.handleSource.addFeature(f);
       };
@@ -72048,7 +72693,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (geom instanceof Circle) {
         const cMode = circleModeFor(feature, this.mode);
         if (cMode === "circle") {
-          add2("translate", circleSideTranslateAnchor(geom, res));
+          const t = circleSideTranslateAnchor(geom, res);
+          add2("translate", t);
+          if (this.styleEditEnabled) {
+            add2("style-edit", [
+              t[0],
+              t[1] + STYLE_EDIT_GAP_PX * res
+            ]);
+          }
+        } else if (this.styleEditEnabled) {
+          const c = geom.getCenter();
+          add2("style-edit", [
+            c[0],
+            c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)
+          ]);
         }
         return;
       }
@@ -72065,13 +72723,46 @@ Expected function or array of functions, received type ${typeof value2}.`
         add2("resize-s", [midX, minY]);
         add2("resize-sw", [minX, minY]);
         add2("resize-w", [minX, midY]);
+        if (this.styleEditEnabled) {
+          add2("style-edit", [
+            midX,
+            maxY + STYLE_EDIT_GAP_PX * res
+          ]);
+        }
+        return;
+      }
+      if (this.mode !== "line-polygon" && this.mode !== "point") return;
+      if (geom instanceof Point$1 && isSketchTextFeature(feature)) {
+        const attrs = getSketchTextAttrs(feature);
+        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? sketchTextRotateAnchor(geom, attrs, res);
+        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          const rad = attrs.rotation * Math.PI / 180;
+          const gap = STYLE_EDIT_GAP_PX * res;
+          add2("style-edit", [
+            rotateAt[0] + Math.cos(rad) * gap,
+            rotateAt[1] + Math.sin(rad) * gap
+          ]);
+        }
+        return;
+      }
+      if (geom instanceof Point$1 && this.styleEditEnabled) {
+        const c = geom.getCoordinates();
+        add2("style-edit", [c[0], c[1] + STYLE_EDIT_GAP_PX * res]);
         return;
       }
       if (this.mode !== "line-polygon") return;
       if (geom instanceof LineString) {
         const anchors = lineSideAnchors(geom, res);
         add2("translate", anchors.translate);
-        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate);
+        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
+          add2("style-edit", [
+            r[0] - STYLE_EDIT_GAP_PX * res,
+            r[1]
+          ]);
+        }
         return;
       }
       if (geom instanceof Polygon) {
@@ -72080,7 +72771,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         const span = Math.max(getHeight(extent), getWidth(extent), 1);
         const defaultOffset = Math.max(span * 0.12, 36 * res);
         const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
-        add2("rotate", rotateAt);
+        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          add2("style-edit", [
+            rotateAt[0] - STYLE_EDIT_GAP_PX * res,
+            rotateAt[1]
+          ]);
+        }
       }
     }
     isDeepInsideHoveredPolygon(coord) {
@@ -72121,7 +72818,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.placeHandles(feature);
         const coord2 = evt.coordinate;
         const geom = feature.getGeometry();
-        if (el && (this.mode === "point" || geom instanceof Point$1)) {
+        if (el && coord2 && geom instanceof Point$1 && isSketchTextFeature(feature) && isNearSketchText(feature, coord2, resolutionOf(this.map))) {
+          el.style.cursor = "move";
+        } else if (el && (this.mode === "point" || geom instanceof Point$1) && !isSketchTextFeature(feature)) {
           el.style.cursor = "move";
         } else if (el && coord2 && geom instanceof Circle) {
           const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
@@ -72143,6 +72842,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (this.hovered && coord) {
         const geom = this.hovered.getGeometry();
         const res = resolutionOf(this.map);
+        if (geom instanceof Point$1 && isSketchTextFeature(this.hovered)) {
+          const keep = (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res;
+          const c = geom.getCoordinates();
+          if (Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= keep) {
+            this.placeHandles(this.hovered);
+            if (el) {
+              el.style.cursor = isNearSketchText(this.hovered, coord, res) ? "move" : "pointer";
+            }
+            return;
+          }
+        }
         if (geom instanceof LineString) {
           const keep = LINE_HOVER_KEEP_PX * res;
           if (distToLineString(geom, coord) <= keep) {
@@ -72169,7 +72879,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (el) el.style.cursor = "";
     }
     handleDown(evt) {
-      if (!this.active || this.mode === "point") return false;
+      if (!this.active) return false;
       const coord = evt.coordinate;
       if (!coord) return false;
       const handle = this.findHandleAtPixel(evt.pixel);
@@ -72184,7 +72894,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           startGeom: geom.clone(),
           origin: featureCentroid(geom),
           startAngle: angleBetween(featureCentroid(geom), coord),
-          startExtent: geom.getExtent().slice()
+          startExtent: geom.getExtent().slice(),
+          startTextRotation: isSketchTextFeature(this.hovered) ? getSketchTextAttrs(this.hovered).rotation : 0
         };
         const el = this.map.getTargetElement();
         if (el) {
@@ -72192,6 +72903,25 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return true;
       }
+      if (this.hovered && isSketchTextFeature(this.hovered) && isNearSketchText(this.hovered, coord, resolutionOf(this.map))) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Point$1) {
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCoordinates().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: getSketchTextAttrs(this.hovered).rotation
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
+        }
+      }
+      if (this.mode === "point") return false;
       if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
         const geom = this.hovered.getGeometry();
         if (geom instanceof Circle) {
@@ -72202,7 +72932,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             startGeom: geom.clone(),
             origin: geom.getCenter().slice(),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = cursorForRole("resize-radius");
@@ -72219,7 +72950,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             startGeom: geom.clone(),
             origin: geom.getCenter().slice(),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = "move";
@@ -72236,7 +72968,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             startGeom: geom.clone(),
             origin: featureCentroid(geom),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = "move";
@@ -72249,12 +72982,24 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!this.dragging) return;
       const coord = evt.coordinate;
       if (!coord) return;
-      const { role, feature, startCoord, startGeom, origin, startAngle, startExtent } = this.dragging;
+      const {
+        role,
+        feature,
+        startCoord,
+        startGeom,
+        origin,
+        startAngle,
+        startExtent,
+        startTextRotation
+      } = this.dragging;
       if (role === "translate") {
         const next = startGeom.clone();
         next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
         feature.setGeometry(next);
         this.placeHandles(feature);
+        return;
+      }
+      if (role === "style-edit") {
         return;
       }
       if (role === "resize-radius" && startGeom instanceof Circle) {
@@ -72263,6 +73008,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         next.setRadius(radius);
         feature.setGeometry(next);
         this.placeHandles(feature);
+        return;
+      }
+      if (role === "rotate" && startGeom instanceof Point$1 && isSketchTextFeature(feature)) {
+        const deltaDeg = (angleBetween(origin, coord) - startAngle) * 180 / Math.PI;
+        const styleAttrs = getFeatureStyleAttrs(feature);
+        applyFeatureStyle(feature, {
+          ...styleAttrs,
+          kind: "text",
+          rotation: startTextRotation - deltaDeg
+        });
+        this.placeHandles(feature, { rotateAt: coord });
         return;
       }
       if (role === "rotate" && this.mode === "line-polygon") {
@@ -72281,9 +73037,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     handleUp(_evt) {
+      var _a;
       if (!this.dragging) return false;
-      const feature = this.dragging.feature;
+      const { role, feature, startCoord } = this.dragging;
+      const endCoord = _evt.coordinate;
       this.dragging = null;
+      if (role === "style-edit") {
+        const moved2 = endCoord && Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1]);
+        const res = resolutionOf(this.map);
+        if (!moved2 || moved2 < 8 * res) {
+          (_a = this.onStyleEdit) == null ? void 0 : _a.call(this, feature);
+        }
+        this.placeHandles(feature);
+        return false;
+      }
       this.placeHandles(feature);
       this.onChange();
       return false;
@@ -72301,13 +73068,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const modifyTool = {
     id: "modify",
-    label: "modifier une géométrie",
+    label: "Modifier",
     iconClass: "ec-geometry-editor__tool--modify",
     modify: true
   };
   const removeTool = {
     id: "remove",
-    label: "Supprimer une géométrie",
+    label: "Supprimer",
     iconClass: "ec-geometry-editor__tool--remove",
     remove: true
   };
@@ -72379,6 +73146,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "onChange");
       __publicField(this, "onClearAll");
       __publicField(this, "showClearAll");
+      __publicField(this, "extraTools");
+      __publicField(this, "onExtraTool");
+      __publicField(this, "onFeatureCreated");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -72388,6 +73158,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "snap", null);
       __publicField(this, "transform");
       __publicField(this, "removeEdgeTolPx", 12);
+      /** Masque le croquis Draw tant que le pointeur est hors de la carte. */
+      __publicField(this, "pointerOnMap", true);
+      __publicField(this, "mapHoverBound", false);
+      __publicField(this, "onMapPointerEnter", () => {
+        this.pointerOnMap = true;
+        this.map.render();
+      });
+      __publicField(this, "onMapPointerLeave", () => {
+        this.pointerOnMap = false;
+        this.map.render();
+      });
       __publicField(this, "onRemoveClick", (evt) => {
         if (evt.dragging) return;
         const res = this.map.getView().getResolution() ?? 1;
@@ -72444,12 +73225,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.onChange = opts.onChange;
       this.showClearAll = Boolean(opts.clearAll);
       this.onClearAll = opts.onClearAll ?? null;
+      this.extraTools = opts.extraTools ?? [];
+      this.onExtraTool = opts.onExtraTool ?? null;
+      this.onFeatureCreated = opts.onFeatureCreated ?? null;
       this.customStyle = opts.style;
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
       this.modify = new Modify({
         source: this.source,
-        // Cercle / disque : gérés par ModifyTransformController (rayon / translation)
-        filter: (feature) => !(feature.getGeometry() instanceof Circle)
+        // Cercle / disque / texte : gérés par ModifyTransformController
+        filter: (feature) => !(feature.getGeometry() instanceof Circle) && !isSketchTextFeature(feature)
       });
       this.modify.setActive(false);
       this.snap = new Snap({ source: this.source });
@@ -72461,9 +73245,35 @@ Expected function or array of functions, received type ${typeof value2}.`
         source: this.source,
         layer: this.layer,
         mode: transformModeFor(this.geometryType),
-        onChange: () => this.onChange()
+        onChange: () => this.onChange(),
+        onStyleEdit: opts.onStyleEdit
       });
       this.render();
+    }
+    bindMapHover() {
+      if (this.mapHoverBound) return;
+      const el = this.map.getTargetElement();
+      if (!el) return;
+      el.addEventListener("pointerenter", this.onMapPointerEnter);
+      el.addEventListener("pointerleave", this.onMapPointerLeave);
+      this.mapHoverBound = true;
+    }
+    unbindMapHover() {
+      if (!this.mapHoverBound) return;
+      const el = this.map.getTargetElement();
+      el == null ? void 0 : el.removeEventListener("pointerenter", this.onMapPointerEnter);
+      el == null ? void 0 : el.removeEventListener("pointerleave", this.onMapPointerLeave);
+      this.mapHoverBound = false;
+      this.pointerOnMap = true;
+    }
+    wrapDrawStyle(base) {
+      return (feature, resolution) => {
+        if (!this.pointerOnMap) return [];
+        if (typeof base === "function") {
+          return base(feature, resolution);
+        }
+        return base;
+      };
     }
     /** Met à jour le type de géométrie (recrée les boutons). */
     setGeometryType(geometryType) {
@@ -72483,18 +73293,110 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType));
     }
     toolsList() {
-      const tools = toolsFor(this.geometryType);
-      return this.showClearAll ? [...tools, clearAllTool] : tools;
+      const toDef = (t) => ({
+        id: t.id,
+        label: t.label,
+        iconClass: t.iconClass,
+        action: t.mode === "action",
+        extraToggle: t.mode === "toggle"
+      });
+      const extrasById = new globalThis.Map(
+        this.extraTools.map((t) => [t.id, toDef(t)])
+      );
+      const pickExtras = (...ids) => ids.flatMap((id) => {
+        const t = extrasById.get(id);
+        return t ? [t] : [];
+      });
+      const core = toolsFor(this.geometryType);
+      const drawTools = core.filter((t) => !t.modify && !t.remove);
+      const modify = core.find((t) => t.modify);
+      const remove2 = core.find((t) => t.remove);
+      const groups = [];
+      const measures = pickExtras("measure-distance", "measure-area");
+      if (measures.length) groups.push(measures);
+      const session = pickExtras("save", "undo", "redo");
+      if (session.length) groups.push(session);
+      const drawGroup = [...drawTools, ...pickExtras("text")];
+      if (drawGroup.length) groups.push(drawGroup);
+      const editGroup = [];
+      if (modify) editGroup.push(modify);
+      if (remove2) editGroup.push(remove2);
+      if (this.showClearAll) editGroup.push(clearAllTool);
+      if (editGroup.length) groups.push(editGroup);
+      const io = pickExtras("export", "import");
+      if (io.length) groups.push(io);
+      const placed = new Set(groups.flat().map((t) => t.id));
+      const leftovers = this.extraTools.filter((t) => !placed.has(t.id)).map(toDef);
+      if (leftovers.length) groups.push(leftovers);
+      const sep = () => ({
+        id: "separator",
+        label: "",
+        iconClass: "ec-geometry-editor__toolbar-sep",
+        separator: true
+      });
+      const out = [];
+      for (let i = 0; i < groups.length; i++) {
+        if (i > 0) out.push(sep());
+        out.push(...groups[i]);
+      }
+      return out;
+    }
+    /** Active / désactive visuellement un bouton extra (enabled). */
+    setExtraEnabled(id, enabled) {
+      const btn = this.target.querySelector(
+        `button[data-tool-id="${id}"]`
+      );
+      if (!btn) return;
+      btn.disabled = !enabled;
+      btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    }
+    /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
+    setSaveState(state) {
+      const btn = this.target.querySelector(
+        'button[data-tool-id="save"]'
+      );
+      if (!btn) return;
+      btn.classList.toggle("ec-geometry-editor__tool--save-saved", state === "saved");
+      btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
+      const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
+      if (badge instanceof HTMLElement) {
+        badge.hidden = state === "idle";
+        badge.dataset.state = state;
+      }
+    }
+    /** Désactive tout outil transient (dessin, measure externe, etc.). */
+    clearActiveTool() {
+      this.clearTransient();
+    }
+    getActiveId() {
+      return this.activeId;
     }
     render() {
       this.target.replaceChildren();
+      let sepIndex = 0;
       for (const tool of this.toolsList()) {
+        if (tool.separator) {
+          const sep = document.createElement("div");
+          sep.className = "ec-geometry-editor__toolbar-sep";
+          sep.setAttribute("role", "separator");
+          sep.setAttribute("aria-hidden", "true");
+          sep.dataset.sepIndex = String(sepIndex++);
+          this.target.appendChild(sep);
+          continue;
+        }
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        if (tool.id === "save") {
+          const badge = document.createElement("span");
+          badge.className = "ec-geometry-editor__tool-badge";
+          badge.setAttribute("aria-hidden", "true");
+          badge.hidden = true;
+          btn.appendChild(badge);
+        }
         btn.addEventListener("click", () => this.activate(tool));
         this.target.appendChild(btn);
       }
@@ -72505,8 +73407,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (target2) target2.style.cursor = "";
     }
     clearTransient() {
-      var _a;
+      var _a, _b;
+      const prev = this.activeId;
       this.clearFeatureCursor();
+      this.unbindMapHover();
       this.transform.setActive(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
@@ -72519,9 +73423,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
+      if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
+        (_b = this.onExtraTool) == null ? void 0 : _b.call(this, prev, false);
+      }
     }
     activate(tool) {
-      var _a;
+      var _a, _b, _c;
       if (tool.clearAll) {
         this.clearTransient();
         if (this.onClearAll) {
@@ -72530,6 +73437,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           this.source.clear(true);
           this.onChange();
         }
+        return;
+      }
+      if (tool.action) {
+        (_a = this.onExtraTool) == null ? void 0 : _a.call(this, tool.id, true);
         return;
       }
       const already = this.activeId === tool.id;
@@ -72541,11 +73452,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
+      if (tool.extraToggle) {
+        (_b = this.onExtraTool) == null ? void 0 : _b.call(this, tool.id, true);
+        return;
+      }
       if (tool.modify) {
         this.transform.setMode(transformModeFor(this.geometryType));
         this.transform.setActive(true);
         if (this.transform.usesVertexModify()) {
-          (_a = this.modify) == null ? void 0 : _a.setActive(true);
+          (_c = this.modify) == null ? void 0 : _c.setActive(true);
         }
         this.map.on("pointermove", this.onFeaturePointerMove);
         return;
@@ -72559,10 +73474,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
       const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle);
       this.draw = new Draw({
         source: this.source,
         type: tool.drawType,
-        style: this.customStyle ?? sketchStyle,
+        style: drawStyle,
         geometryFunction: tool.box ? createBox() : void 0
       });
       this.draw.on("drawstart", () => {
@@ -72572,9 +73488,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (tool.circleKind) {
           setCircleKind(evt.feature, tool.circleKind);
         }
-        queueMicrotask(() => this.onChange());
+        queueMicrotask(() => {
+          var _a2;
+          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
+          this.onChange();
+        });
       });
       this.map.addInteraction(this.draw);
+      this.bindMapHover();
     }
     destroy() {
       this.clearTransient();
@@ -75736,7 +76657,1209 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return null;
   }
+  const GEOJSON$2 = new GeoJSON();
+  const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
+  const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
+  function projectionOf(map2) {
+    return map2.getView().getProjection();
+  }
+  function cloneForKmlExport(features) {
+    return features.map((f) => {
+      const c = f.clone();
+      for (const key2 of STYLE_PROP_KEYS) {
+        const v = c.get(key2);
+        if (v && typeof v === "object") {
+          c.set(key2, JSON.stringify(v));
+        }
+      }
+      return c;
+    });
+  }
+  function hydrateImportedSketchFeatures(features) {
+    for (const f of features) {
+      for (const key2 of STYLE_PROP_KEYS) {
+        const v = f.get(key2);
+        if (typeof v === "string") {
+          try {
+            f.set(key2, JSON.parse(v));
+          } catch {
+          }
+        }
+      }
+    }
+    restoreFeaturesStyles(features);
+  }
+  function readSketchFile(map2, text2, format) {
+    const opts = {
+      featureProjection: projectionOf(map2),
+      dataProjection: "EPSG:4326"
+    };
+    const features = format === "kml" ? KML_FMT.readFeatures(text2, opts) : GEOJSON$2.readFeatures(JSON.parse(text2), opts);
+    hydrateImportedSketchFeatures(features);
+    return features;
+  }
+  function writeSketchFile(map2, source, format) {
+    const features = source.getFeatures();
+    const opts = {
+      featureProjection: projectionOf(map2),
+      dataProjection: "EPSG:4326"
+    };
+    if (format === "kml") {
+      return KML_FMT.writeFeatures(cloneForKmlExport(features), opts);
+    }
+    return JSON.stringify(GEOJSON$2.writeFeaturesObject(features, opts), null, 2);
+  }
+  function downloadBlob(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function pickSketchFile(accept, onFile) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      var _a;
+      const file = (_a = input.files) == null ? void 0 : _a[0];
+      input.remove();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") onFile(reader.result, file.name);
+      };
+      reader.readAsText(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+  function formatFromFilename(name2) {
+    return /\.kml$/i.test(name2) ? "kml" : "geojson";
+  }
+  const GEOJSON$1 = new GeoJSON();
+  const MAX = 50;
+  class SketchHistory {
+    constructor(source, getProjection) {
+      __publicField(this, "undoStack", []);
+      __publicField(this, "redoStack", []);
+      __publicField(this, "suppress", false);
+      this.source = source;
+      this.getProjection = getProjection;
+    }
+    /** Enregistre l’état courant (avant mutation ou après stabilisation). */
+    push() {
+      if (this.suppress) return;
+      const snap2 = this.snapshot();
+      const last = this.undoStack[this.undoStack.length - 1];
+      if (snap2 === last) return;
+      this.undoStack.push(snap2);
+      if (this.undoStack.length > MAX) this.undoStack.shift();
+      this.redoStack = [];
+    }
+    canUndo() {
+      return this.undoStack.length > 1;
+    }
+    canRedo() {
+      return this.redoStack.length > 0;
+    }
+    undo() {
+      if (!this.canUndo()) return false;
+      const current = this.undoStack.pop();
+      this.redoStack.push(current);
+      const prev = this.undoStack[this.undoStack.length - 1];
+      this.restore(prev);
+      return true;
+    }
+    redo() {
+      if (!this.canRedo()) return false;
+      const next = this.redoStack.pop();
+      this.undoStack.push(next);
+      this.restore(next);
+      return true;
+    }
+    /** Après restoreFromLocalStorage / setFeatures externe. */
+    resetFromSource() {
+      this.undoStack = [this.snapshot()];
+      this.redoStack = [];
+    }
+    snapshot() {
+      const features = this.source.getFeatures();
+      const projection = this.getProjection();
+      return JSON.stringify(
+        GEOJSON$1.writeFeaturesObject(features, {
+          featureProjection: projection,
+          dataProjection: "EPSG:4326"
+        })
+      );
+    }
+    restore(raw) {
+      this.suppress = true;
+      try {
+        const features = GEOJSON$1.readFeatures(JSON.parse(raw), {
+          featureProjection: this.getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        hydrateImportedSketchFeatures(features);
+        this.source.clear(true);
+        if (features.length) this.source.addFeatures(features);
+      } finally {
+        this.suppress = false;
+      }
+    }
+  }
+  function clamp01(n) {
+    if (!Number.isFinite(n)) return 1;
+    return Math.min(1, Math.max(0, n));
+  }
+  function parseColor(value2, fallback = { r: 0, g: 0, b: 145, a: 1 }) {
+    const v = (value2 || "").trim();
+    if (!v || v === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
+    const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(v);
+    if (hex) {
+      let h = hex[1];
+      if (h.length === 3) {
+        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      }
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+      return { r, g, b, a: clamp01(a) };
+    }
+    const rgba = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v);
+    if (rgba) {
+      return {
+        r: Math.round(Number(rgba[1])),
+        g: Math.round(Number(rgba[2])),
+        b: Math.round(Number(rgba[3])),
+        a: clamp01(rgba[4] !== void 0 ? Number(rgba[4]) : 1)
+      };
+    }
+    return { ...fallback };
+  }
+  function toRgbaString(c) {
+    const a = Math.round(clamp01(c.a) * 1e3) / 1e3;
+    if (a <= 0) return "rgba(0, 0, 0, 0)";
+    if (a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
+    return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
+  }
+  function toHexRgb(c) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+    return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+  }
+  class SketchColorPicker {
+    constructor(label, initial = "rgba(0, 0, 145, 1)") {
+      __publicField(this, "root");
+      __publicField(this, "swatch");
+      __publicField(this, "panel");
+      __publicField(this, "hexInput");
+      __publicField(this, "hueInput");
+      __publicField(this, "alphaInput");
+      __publicField(this, "alphaValue");
+      __publicField(this, "color");
+      __publicField(this, "open", false);
+      __publicField(this, "onChange", null);
+      __publicField(this, "onDocDown", (evt) => {
+        if (!this.open) return;
+        const t = evt.target;
+        if (this.root.contains(t) || this.panel.contains(t)) return;
+        this.closePanel();
+      });
+      this.color = parseColor(initial);
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-color";
+      this.root.innerHTML = `
+      <span class="ec-sketch-color__label">${label}</span>
+      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}" aria-haspopup="dialog" aria-expanded="false"></button>
+    `;
+      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
+      this.swatch.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.open) this.closePanel();
+        else this.openPanel();
+      });
+      this.panel = document.createElement("div");
+      this.panel.className = "ec-sketch-color__panel";
+      this.panel.hidden = true;
+      this.panel.setAttribute("role", "dialog");
+      this.panel.setAttribute("aria-label", label);
+      this.panel.innerHTML = `
+      <p class="ec-sketch-color__panel-title">${label}</p>
+      <label class="ec-sketch-color__hue-field">
+        <span>Couleur</span>
+        <input type="color" class="ec-sketch-color__hue" />
+      </label>
+      <label class="ec-sketch-color__hex-field">
+        <span>Hexadécimal</span>
+        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" />
+      </label>
+      <label class="ec-sketch-color__alpha-field">
+        <span>Opacité (<output class="ec-sketch-color__alpha-value">100</output>%)</span>
+        <input type="range" min="0" max="100" step="1" class="ec-sketch-color__alpha" />
+      </label>
+    `;
+      this.hueInput = this.panel.querySelector(".ec-sketch-color__hue");
+      this.hexInput = this.panel.querySelector(".ec-sketch-color__hex");
+      this.alphaInput = this.panel.querySelector(".ec-sketch-color__alpha");
+      this.alphaValue = this.panel.querySelector(".ec-sketch-color__alpha-value");
+      this.hueInput.addEventListener("input", () => {
+        const c = parseColor(this.hueInput.value);
+        this.color = { ...c, a: this.color.a };
+        this.syncUi(false);
+        this.emit();
+      });
+      this.hexInput.addEventListener("input", () => {
+        const next = parseColor(this.hexInput.value, this.color);
+        const raw = this.hexInput.value.trim();
+        if (raw === "transparent" || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw) || /^rgba?\(/i.test(raw)) {
+          this.color = next;
+          this.syncUi(true);
+          this.emit();
+        }
+      });
+      this.hexInput.addEventListener("change", () => {
+        this.color = parseColor(this.hexInput.value, this.color);
+        this.syncUi(true);
+        this.emit();
+      });
+      this.alphaInput.addEventListener("input", () => {
+        this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
+        this.alphaValue.textContent = this.alphaInput.value;
+        this.paintSwatch();
+        this.emit();
+      });
+      document.body.appendChild(this.panel);
+      this.syncUi(true);
+    }
+    setOnChange(cb) {
+      this.onChange = cb;
+    }
+    getValue() {
+      return toRgbaString(this.color);
+    }
+    setValue(value2) {
+      this.color = parseColor(value2);
+      this.syncUi(true);
+    }
+    close() {
+      this.closePanel();
+    }
+    destroy() {
+      this.closePanel();
+      this.panel.remove();
+      this.root.remove();
+    }
+    /** Inclure le panneau dans les tests « clic intérieur ». */
+    containsNode(node) {
+      if (!node) return false;
+      return this.root.contains(node) || this.panel.contains(node);
+    }
+    emit() {
+      var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    syncUi(syncHue) {
+      if (syncHue) this.hueInput.value = toHexRgb(this.color);
+      this.hexInput.value = toHexRgb(this.color);
+      const pct = Math.round(this.color.a * 100);
+      this.alphaInput.value = String(pct);
+      this.alphaValue.textContent = String(pct);
+      this.paintSwatch();
+    }
+    paintSwatch() {
+      this.swatch.style.backgroundColor = toRgbaString(this.color);
+      this.swatch.classList.toggle("is-transparent", this.color.a <= 1e-3);
+    }
+    openPanel() {
+      this.open = true;
+      this.swatch.setAttribute("aria-expanded", "true");
+      this.panel.hidden = false;
+      const rect = this.swatch.getBoundingClientRect();
+      this.panel.style.position = "fixed";
+      this.panel.style.zIndex = "10050";
+      let left = rect.left;
+      let top = rect.bottom + 4;
+      this.panel.style.left = `${left}px`;
+      this.panel.style.top = `${top}px`;
+      requestAnimationFrame(() => {
+        const pr = this.panel.getBoundingClientRect();
+        if (pr.right > window.innerWidth - 8) {
+          left = Math.max(8, window.innerWidth - pr.width - 8);
+        }
+        if (pr.bottom > window.innerHeight - 8) {
+          top = Math.max(8, rect.top - pr.height - 4);
+        }
+        this.panel.style.left = `${left}px`;
+        this.panel.style.top = `${top}px`;
+        try {
+          if (typeof this.hueInput.showPicker === "function") {
+            this.hueInput.showPicker();
+          } else {
+            this.hueInput.focus();
+            this.hueInput.click();
+          }
+        } catch {
+          this.hueInput.focus();
+        }
+      });
+      document.addEventListener("pointerdown", this.onDocDown, true);
+    }
+    closePanel() {
+      this.open = false;
+      this.swatch.setAttribute("aria-expanded", "false");
+      this.panel.hidden = true;
+      document.removeEventListener("pointerdown", this.onDocDown, true);
+    }
+  }
+  const BASIC_BY_KIND = {
+    text: ["text", "fontSize", "fontColor", "textStrokeColor", "rotation"],
+    point: ["radius", "fillColor", "strokeColor", "strokeWidth"],
+    line: ["strokeColor", "strokeWidth"],
+    polygon: ["fillColor", "strokeColor", "strokeWidth"],
+    circle: ["strokeColor", "strokeWidth"],
+    disc: ["fillColor", "strokeColor", "strokeWidth"]
+  };
+  const ADVANCED_BY_KIND = {
+    text: ["fontFamily", "fontBold", "fontItalic", "textStrokeWidth", "zIndex"],
+    point: ["pointShape", "pointRotation", "zIndex"],
+    line: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    polygon: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    circle: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    disc: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"]
+  };
+  class SketchFeatureStylePopup {
+    constructor(map2) {
+      __publicField(this, "root");
+      __publicField(this, "basicFields");
+      __publicField(this, "advancedFields");
+      __publicField(this, "advancedToggle");
+      __publicField(this, "colorPickers");
+      __publicField(this, "els");
+      __publicField(this, "feature", null);
+      __publicField(this, "kind", "polygon");
+      __publicField(this, "onCommit", null);
+      __publicField(this, "openFlag", false);
+      __publicField(this, "advancedOpen", false);
+      __publicField(this, "outsideDown", false);
+      __publicField(this, "mapDragged", false);
+      __publicField(this, "repositionBound", false);
+      __publicField(this, "scrollGuardBound", false);
+      __publicField(this, "mapResizeObserver", null);
+      __publicField(this, "repositionRaf", 0);
+      __publicField(this, "onMapPointerDrag", () => {
+        this.mapDragged = true;
+      });
+      __publicField(this, "onPopupWheel", (evt) => {
+        evt.stopPropagation();
+        const scroll = this.root.querySelector(
+          ".ec-sketch-style-popup__scroll"
+        );
+        if (!scroll) {
+          evt.preventDefault();
+          return;
+        }
+        const canScroll = scroll.scrollHeight > scroll.clientHeight + 1;
+        if (!canScroll) {
+          evt.preventDefault();
+          return;
+        }
+        const delta = evt.deltaY;
+        const atTop = scroll.scrollTop <= 0 && delta < 0;
+        const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0;
+        if (atTop || atBottom) evt.preventDefault();
+      });
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.openFlag) return;
+        const t = evt.target;
+        if (this.containsUi(t)) return;
+        this.outsideDown = true;
+        this.mapDragged = false;
+      });
+      __publicField(this, "onDocPointerUp", () => {
+        if (!this.outsideDown) return;
+        this.outsideDown = false;
+        if (this.mapDragged) {
+          this.mapDragged = false;
+          return;
+        }
+        this.hide();
+      });
+      __publicField(this, "onViewChange", () => {
+        if (!this.openFlag) return;
+        this.scheduleReposition(false);
+      });
+      __publicField(this, "onWindowResize", () => {
+        if (!this.openFlag) return;
+        this.scheduleReposition(true);
+      });
+      this.map = map2;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-style-popup";
+      this.root.hidden = true;
+      this.root.innerHTML = `
+      <div class="ec-sketch-style-popup__scroll">
+        <div class="ec-sketch-style-popup__fields" data-section="basic"></div>
+        <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__advanced-toggle" aria-expanded="false">
+          Options avancées
+        </button>
+        <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
+        <div class="ec-sketch-style-popup__actions">
+          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
+          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+        </div>
+      </div>
+    `;
+      this.basicFields = this.root.querySelector('[data-section="basic"]');
+      this.advancedFields = this.root.querySelector('[data-section="advanced"]');
+      this.advancedToggle = this.root.querySelector(
+        ".ec-sketch-style-popup__advanced-toggle"
+      );
+      this.basicFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field" data-field="text">
+        <span>Texte</span>
+        <input type="text" class="fr-input" data-input="text" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="fontSize">
+        <span>Taille (<output data-output="fontSize">14</output> pt)</span>
+        <input type="range" min="8" max="72" step="1" value="14" data-input="fontSize" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fontColor" data-color-slot="fontColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="textStrokeColor" data-color-slot="textStrokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="rotation">
+        <span>Rotation (<output data-output="rotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="rotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="radius">
+        <span>Rayon (<output data-output="radius">6</output> px)</span>
+        <input type="range" min="1" max="48" step="1" value="6" data-input="radius" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fillColor" data-color-slot="fillColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="strokeColor" data-color-slot="strokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="strokeWidth">
+        <span>Épaisseur (<output data-output="strokeWidth">2</output> px)</span>
+        <input type="range" min="0" max="40" step="1" value="2" data-input="strokeWidth" />
+      </label>
+    `;
+      this.advancedFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDash">
+        <span>Tirets (<output data-output="lineDash">0</output> px, 0 = plein)</span>
+        <input type="range" min="0" max="64" step="1" value="0" data-input="lineDash" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineCap">
+        <span>Extrémités</span>
+        <select class="fr-select" data-input="lineCap">
+          <option value="butt">Coupées</option>
+          <option value="round">Arrondies</option>
+          <option value="square">Carrées</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineJoin">
+        <span>Jonctions (coins du tracé)</span>
+        <select class="fr-select" data-input="lineJoin">
+          <option value="round">Arrondi</option>
+          <option value="bevel">Biseau</option>
+          <option value="miter">Pointe</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDashOffset">
+        <span>Décalage tirets (<output data-output="lineDashOffset">0</output>)</span>
+        <input type="range" min="0" max="100" step="1" value="0" data-input="lineDashOffset" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="miterLimit">
+        <span>Limite des pointes (<output data-output="miterLimit">10</output>)</span>
+        <input type="range" min="1" max="50" step="0.5" value="10" data-input="miterLimit" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="fontFamily">
+        <span>Police</span>
+        <input type="text" class="fr-input" data-input="fontFamily" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontBold">
+        <input type="checkbox" data-input="fontBold" />
+        <span>Gras</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontItalic">
+        <input type="checkbox" data-input="fontItalic" />
+        <span>Italique</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="textStrokeWidth">
+        <span>Épaisseur contour texte (<output data-output="textStrokeWidth">3</output> px)</span>
+        <input type="range" min="0" max="20" step="1" value="3" data-input="textStrokeWidth" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="pointShape">
+        <span>Forme du point</span>
+        <select class="fr-select" data-input="pointShape">
+          <option value="circle">Cercle</option>
+          <option value="square">Carré</option>
+          <option value="triangle">Triangle</option>
+          <option value="star">Étoile</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="pointRotation">
+        <span>Rotation symbole (<output data-output="pointRotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="pointRotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="zIndex">
+        <span>zIndex</span>
+        <input type="number" min="0" max="9999" class="fr-input" data-input="zIndex" />
+      </label>
+    `;
+      this.colorPickers = {
+        fontColor: new SketchColorPicker("Couleur du texte", "#000091"),
+        textStrokeColor: new SketchColorPicker("Contour du texte", "#ffffff"),
+        fillColor: new SketchColorPicker("Remplissage", "rgba(0, 0, 145, 0.2)"),
+        strokeColor: new SketchColorPicker("Contour", "#000091")
+      };
+      for (const [key2, picker] of Object.entries(this.colorPickers)) {
+        const slot = this.basicFields.querySelector(`[data-color-slot="${key2}"]`);
+        slot == null ? void 0 : slot.appendChild(picker.root);
+        picker.setOnChange(() => this.applyFromForm());
+      }
+      this.els = {
+        text: this.root.querySelector('[data-input="text"]'),
+        fontSize: this.root.querySelector('[data-input="fontSize"]'),
+        fontSizeValue: this.root.querySelector('[data-output="fontSize"]'),
+        rotation: this.root.querySelector('[data-input="rotation"]'),
+        rotationValue: this.root.querySelector('[data-output="rotation"]'),
+        strokeWidth: this.root.querySelector('[data-input="strokeWidth"]'),
+        strokeWidthValue: this.root.querySelector('[data-output="strokeWidth"]'),
+        radius: this.root.querySelector('[data-input="radius"]'),
+        radiusValue: this.root.querySelector('[data-output="radius"]'),
+        lineDash: this.root.querySelector('[data-input="lineDash"]'),
+        lineDashValue: this.root.querySelector('[data-output="lineDash"]'),
+        lineCap: this.root.querySelector('[data-input="lineCap"]'),
+        lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
+        lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
+        lineDashOffsetValue: this.root.querySelector(
+          '[data-output="lineDashOffset"]'
+        ),
+        miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
+        miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
+        fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
+        fontBold: this.root.querySelector('[data-input="fontBold"]'),
+        fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
+        textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
+        textStrokeWidthValue: this.root.querySelector(
+          '[data-output="textStrokeWidth"]'
+        ),
+        pointShape: this.root.querySelector('[data-input="pointShape"]'),
+        pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
+        pointRotationValue: this.root.querySelector(
+          '[data-output="pointRotation"]'
+        ),
+        zIndex: this.root.querySelector('[data-input="zIndex"]')
+      };
+      const syncOutputs = () => {
+        this.els.fontSizeValue.textContent = this.els.fontSize.value;
+        this.els.rotationValue.textContent = this.els.rotation.value;
+        this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+        this.els.radiusValue.textContent = this.els.radius.value;
+        this.els.lineDashValue.textContent = this.els.lineDash.value;
+        this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+        this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+        this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+        this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      };
+      const live = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.applyFromForm();
+      };
+      for (const input of Object.values(this.els)) {
+        if (input instanceof HTMLOutputElement) continue;
+        input.addEventListener("input", live);
+        input.addEventListener("change", live);
+      }
+      this.advancedToggle.addEventListener("click", () => {
+        this.setAdvancedOpen(!this.advancedOpen);
+        this.reposition();
+      });
+      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+        var _a;
+        this.applyFromForm();
+        (_a = this.onCommit) == null ? void 0 : _a.call(this);
+        this.hide();
+      });
+      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
+      document.body.appendChild(this.root);
+    }
+    scheduleReposition(updateMapSize) {
+      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+      this.repositionRaf = requestAnimationFrame(() => {
+        this.repositionRaf = 0;
+        if (updateMapSize) this.map.updateSize();
+        this.reposition();
+      });
+    }
+    open(feature, onCommit) {
+      this.unbindOutside();
+      this.feature = feature;
+      this.onCommit = onCommit ?? null;
+      this.kind = featureStyleKindOf(feature);
+      this.setAdvancedOpen(false);
+      const attrs = getFeatureStyleAttrs(feature);
+      this.syncFieldsVisibility();
+      this.fillForm(attrs);
+      this.syncDependentFields();
+      applyFeatureStyle(feature, attrs);
+      this.root.hidden = false;
+      this.openFlag = true;
+      this.reposition();
+      this.bindOutside();
+      this.bindScrollGuard();
+      if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
+        this.els.text.focus();
+        this.els.text.select();
+      }
+    }
+    hide() {
+      this.unbindOutside();
+      this.unbindScrollGuard();
+      this.setAdvancedOpen(false);
+      this.root.hidden = true;
+      this.openFlag = false;
+      this.feature = null;
+      this.onCommit = null;
+      this.outsideDown = false;
+      this.mapDragged = false;
+      for (const p5 of Object.values(this.colorPickers)) p5.close();
+    }
+    destroy() {
+      this.hide();
+      for (const p5 of Object.values(this.colorPickers)) p5.destroy();
+      this.root.remove();
+    }
+    setAdvancedOpen(open) {
+      this.advancedOpen = open;
+      this.advancedFields.hidden = !open;
+      this.advancedToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      this.advancedToggle.textContent = open ? "Masquer les options avancées" : "Options avancées";
+    }
+    containsUi(node) {
+      if (!node) return false;
+      if (this.root.contains(node)) return true;
+      return Object.values(this.colorPickers).some((p5) => p5.containsNode(node));
+    }
+    bindOutside() {
+      var _a, _b;
+      this.map.on("pointerdrag", this.onMapPointerDrag);
+      this.map.getView().on("change:center", this.onViewChange);
+      this.map.getView().on("change:resolution", this.onViewChange);
+      this.map.on("change:size", this.onViewChange);
+      window.addEventListener("resize", this.onWindowResize);
+      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", this.onWindowResize);
+      window.addEventListener("scroll", this.onViewChange, true);
+      document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      document.addEventListener("pointerup", this.onDocPointerUp, true);
+      const mapEl = this.map.getTargetElement();
+      if (mapEl && typeof ResizeObserver !== "undefined") {
+        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
+        this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize());
+        this.mapResizeObserver.observe(mapEl);
+      }
+      this.repositionBound = true;
+    }
+    unbindOutside() {
+      var _a, _b;
+      this.map.un("pointerdrag", this.onMapPointerDrag);
+      if (this.repositionBound) {
+        this.map.getView().un("change:center", this.onViewChange);
+        this.map.getView().un("change:resolution", this.onViewChange);
+        this.map.un("change:size", this.onViewChange);
+        window.removeEventListener("resize", this.onWindowResize);
+        (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", this.onWindowResize);
+        window.removeEventListener("scroll", this.onViewChange, true);
+        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
+        this.mapResizeObserver = null;
+      }
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("pointerup", this.onDocPointerUp, true);
+      if (this.repositionRaf) {
+        cancelAnimationFrame(this.repositionRaf);
+        this.repositionRaf = 0;
+      }
+      this.repositionBound = false;
+    }
+    bindScrollGuard() {
+      if (this.scrollGuardBound) return;
+      this.root.addEventListener("wheel", this.onPopupWheel, {
+        passive: false,
+        capture: true
+      });
+      this.scrollGuardBound = true;
+    }
+    unbindScrollGuard() {
+      if (!this.scrollGuardBound) return;
+      this.root.removeEventListener("wheel", this.onPopupWheel, true);
+      this.scrollGuardBound = false;
+    }
+    /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+    reposition() {
+      if (!this.feature || this.root.hidden) return;
+      const mapSize = this.map.getSize();
+      const anchor = featureStylePopupAnchor(
+        this.feature,
+        mapSize,
+        (c) => this.map.getPixelFromCoordinate(c)
+      );
+      if (!anchor) return;
+      const pixel = this.map.getPixelFromCoordinate(anchor);
+      if (!pixel) return;
+      const mapEl = this.map.getTargetElement();
+      if (!mapEl) return;
+      const mapRect = mapEl.getBoundingClientRect();
+      const tipX = mapRect.left + pixel[0];
+      const tipY = mapRect.top + pixel[1];
+      this.root.style.position = "fixed";
+      this.root.style.zIndex = "10040";
+      this.root.style.left = "0";
+      this.root.style.top = "0";
+      this.root.style.visibility = "hidden";
+      this.root.hidden = false;
+      requestAnimationFrame(() => {
+        const pr = this.root.getBoundingClientRect();
+        const gap = 20;
+        const tipPad = 18;
+        let below = false;
+        let top = tipY - pr.height - gap;
+        if (top < 8) {
+          top = tipY + gap;
+          below = true;
+        }
+        let tipLocalX = pr.width / 2;
+        let left = tipX - tipLocalX;
+        const minLeft = 8;
+        const maxLeft = window.innerWidth - pr.width - 8;
+        if (left < minLeft) {
+          left = minLeft;
+          tipLocalX = tipX - left;
+        } else if (left > maxLeft) {
+          left = maxLeft;
+          tipLocalX = tipX - left;
+        }
+        tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad);
+        left = tipX - tipLocalX;
+        left = Math.min(Math.max(minLeft, left), maxLeft);
+        tipLocalX = tipX - left;
+        top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8);
+        if (!below && top + 4 > tipY) below = true;
+        this.root.style.left = `${left}px`;
+        this.root.style.top = `${top}px`;
+        this.root.style.setProperty("--ec-tip-x", `${tipLocalX}px`);
+        this.root.style.visibility = "visible";
+        this.root.classList.toggle("ec-sketch-style-popup--below", below);
+      });
+    }
+    syncFieldsVisibility() {
+      const basic = new Set(BASIC_BY_KIND[this.kind]);
+      const advanced = new Set(ADVANCED_BY_KIND[this.kind]);
+      for (const label of this.basicFields.querySelectorAll("[data-field]")) {
+        label.hidden = !basic.has(label.dataset.field);
+      }
+      for (const label of this.advancedFields.querySelectorAll("[data-field]")) {
+        label.hidden = !advanced.has(label.dataset.field);
+      }
+      const hasAdvanced = advanced.size > 0;
+      this.advancedToggle.hidden = !hasAdvanced;
+      if (!hasAdvanced) this.setAdvancedOpen(false);
+      else this.advancedFields.hidden = !this.advancedOpen;
+    }
+    /** Désactive les champs devenus non pertinents. */
+    syncDependentFields() {
+      const dash = Number(this.els.lineDash.value) || 0;
+      const dashOffsetField = this.els.lineDashOffset.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.lineDashOffset.disabled = dash <= 0;
+      dashOffsetField == null ? void 0 : dashOffsetField.classList.toggle("is-disabled", dash <= 0);
+      const join = this.els.lineJoin.value;
+      const miterField = this.els.miterLimit.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.miterLimit.disabled = join !== "miter";
+      miterField == null ? void 0 : miterField.classList.toggle("is-disabled", join !== "miter");
+      const shape = this.els.pointShape.value;
+      const rotField = this.els.pointRotation.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.pointRotation.disabled = shape === "circle";
+      rotField == null ? void 0 : rotField.classList.toggle("is-disabled", shape === "circle");
+    }
+    fillForm(attrs) {
+      this.els.text.value = attrs.text;
+      this.els.fontSize.value = String(attrs.fontSize);
+      this.els.fontSizeValue.textContent = this.els.fontSize.value;
+      this.colorPickers.fontColor.setValue(attrs.fontColor);
+      this.colorPickers.textStrokeColor.setValue(attrs.textStrokeColor);
+      this.els.rotation.value = String(Math.round(attrs.rotation));
+      this.els.rotationValue.textContent = this.els.rotation.value;
+      this.colorPickers.strokeColor.setValue(attrs.strokeColor);
+      this.els.strokeWidth.value = String(attrs.strokeWidth);
+      this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+      this.colorPickers.fillColor.setValue(attrs.fillColor);
+      this.els.radius.value = String(attrs.radius);
+      this.els.radiusValue.textContent = this.els.radius.value;
+      this.els.lineDash.value = String(attrs.lineDash);
+      this.els.lineDashValue.textContent = this.els.lineDash.value;
+      this.els.lineCap.value = attrs.lineCap;
+      this.els.lineJoin.value = attrs.lineJoin;
+      this.els.lineDashOffset.value = String(attrs.lineDashOffset);
+      this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+      this.els.miterLimit.value = String(attrs.miterLimit);
+      this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+      this.els.fontFamily.value = attrs.fontFamily;
+      this.els.fontBold.checked = attrs.fontBold;
+      this.els.fontItalic.checked = attrs.fontItalic;
+      this.els.textStrokeWidth.value = String(attrs.textStrokeWidth);
+      this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+      this.els.pointShape.value = attrs.pointShape;
+      this.els.pointRotation.value = String(attrs.pointRotation);
+      this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      this.els.zIndex.value = String(attrs.zIndex);
+    }
+    applyFromForm() {
+      if (!this.feature) return;
+      const base = defaultFeatureStyleAttrs(this.kind);
+      const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
+      const shape = this.els.pointShape.value || base.pointShape;
+      const join = this.els.lineJoin.value || base.lineJoin;
+      const attrs = {
+        ...base,
+        text: this.els.text.value.trim() || base.text,
+        fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
+        fontColor: this.colorPickers.fontColor.getValue(),
+        textStrokeColor: this.colorPickers.textStrokeColor.getValue(),
+        rotation: Number(this.els.rotation.value) || 0,
+        strokeColor: this.colorPickers.strokeColor.getValue(),
+        strokeWidth: clamp(Number(this.els.strokeWidth.value), 0, 40, base.strokeWidth),
+        fillColor: this.colorPickers.fillColor.getValue(),
+        radius: clamp(Number(this.els.radius.value), 1, 48, base.radius),
+        lineDash: dash,
+        lineCap: this.els.lineCap.value || base.lineCap,
+        lineJoin: join,
+        lineDashOffset: dash <= 0 ? 0 : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
+        miterLimit: join !== "miter" ? base.miterLimit : clamp(Number(this.els.miterLimit.value), 1, 50, base.miterLimit),
+        fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
+        fontBold: this.els.fontBold.checked,
+        fontItalic: this.els.fontItalic.checked,
+        textStrokeWidth: clamp(
+          Number(this.els.textStrokeWidth.value),
+          0,
+          20,
+          base.textStrokeWidth
+        ),
+        pointShape: shape,
+        pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
+        zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
+      };
+      applyFeatureStyle(this.feature, attrs);
+    }
+  }
+  function clamp(n, min, max, fallback) {
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  }
+  function formatMapLength(map2, line) {
+    const proj = map2.getView().getProjection();
+    const clone2 = line.clone().transform(proj, "EPSG:4326");
+    const length = getLength(clone2, { projection: "EPSG:4326" });
+    if (length > 1e3) return `${Math.round(length / 1e3 * 100) / 100} km`;
+    return `${Math.round(length * 100) / 100} m`;
+  }
+  function formatMapArea(map2, polygon) {
+    const proj = map2.getView().getProjection();
+    const clone2 = polygon.clone().transform(proj, "EPSG:4326");
+    const area = getArea(clone2, { projection: "EPSG:4326" });
+    if (area > 1e5) {
+      return `${Math.round(area / 1e6 * 100) / 100} km²`;
+    }
+    return `${Math.round(area * 100) / 100} m²`;
+  }
+  function measureAnchor(_map, geom) {
+    if (geom.getType() === "Polygon") {
+      return geom.getInteriorPoint().getCoordinates();
+    }
+    return geom.getCoordinateAt(0.5);
+  }
+  const MEASURE_STYLE = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.08)" }),
+    stroke: new Stroke({
+      color: "#000091",
+      width: 2,
+      lineDash: [8, 8]
+    }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: "#000091" })
+    })
+  });
+  class SketchMeasureController {
+    constructor(map2, zIndex = 510) {
+      __publicField(this, "layer");
+      __publicField(this, "source");
+      __publicField(this, "draw", null);
+      __publicField(this, "overlays", new globalThis.Map());
+      __publicField(this, "mode", null);
+      __publicField(this, "pointerOnMap", true);
+      __publicField(this, "mapHoverBound", false);
+      __publicField(this, "onMapPointerEnter", () => {
+        this.pointerOnMap = true;
+        this.map.render();
+      });
+      __publicField(this, "onMapPointerLeave", () => {
+        this.pointerOnMap = false;
+        this.map.render();
+      });
+      this.map = map2;
+      this.source = new VectorSource({ wrapX: false });
+      this.layer = new VectorLayer({
+        source: this.source,
+        style: MEASURE_STYLE,
+        zIndex,
+        className: "ec-sketch-measure-layer",
+        properties: { "ec-measure": true }
+      });
+      map2.addLayer(this.layer);
+    }
+    isActive() {
+      return this.mode !== null;
+    }
+    getMode() {
+      return this.mode;
+    }
+    activate(mode2) {
+      this.deactivateDraw();
+      this.mode = mode2;
+      this.pointerOnMap = true;
+      this.draw = new Draw({
+        source: this.source,
+        type: mode2 === "distance" ? "LineString" : "Polygon",
+        style: () => this.pointerOnMap ? MEASURE_STYLE : []
+      });
+      this.draw.on("drawend", (evt) => {
+        const feature = evt.feature;
+        queueMicrotask(() => this.attachLabel(feature));
+      });
+      this.map.addInteraction(this.draw);
+      const el = this.map.getTargetElement();
+      if (el && !this.mapHoverBound) {
+        el.addEventListener("pointerenter", this.onMapPointerEnter);
+        el.addEventListener("pointerleave", this.onMapPointerLeave);
+        this.mapHoverBound = true;
+      }
+    }
+    /** Désactive le dessin ; conserve les mesures déjà tracées. */
+    deactivateDraw() {
+      if (this.mapHoverBound) {
+        const el = this.map.getTargetElement();
+        el == null ? void 0 : el.removeEventListener("pointerenter", this.onMapPointerEnter);
+        el == null ? void 0 : el.removeEventListener("pointerleave", this.onMapPointerLeave);
+        this.mapHoverBound = false;
+        this.pointerOnMap = true;
+      }
+      if (this.draw) {
+        this.map.removeInteraction(this.draw);
+        this.draw = null;
+      }
+      this.mode = null;
+    }
+    clear() {
+      this.deactivateDraw();
+      for (const overlay of this.overlays.values()) {
+        this.map.removeOverlay(overlay);
+      }
+      this.overlays.clear();
+      this.source.clear(true);
+    }
+    destroy() {
+      this.clear();
+      this.map.removeLayer(this.layer);
+    }
+    attachLabel(feature) {
+      var _a;
+      const geom = feature.getGeometry();
+      if (!geom) return;
+      const type = geom.getType();
+      if (type !== "LineString" && type !== "Polygon") return;
+      const root = document.createElement("div");
+      root.className = "GPSearchPopup ec-sketch-measure-popup";
+      const content = document.createElement("div");
+      content.className = "GPPopupContent ec-sketch-measure-popup__content";
+      content.textContent = this.formatFeature(feature);
+      const btns = document.createElement("div");
+      btns.className = "GPButtonGroups gpf-btns-group";
+      const remove2 = document.createElement("button");
+      remove2.type = "button";
+      remove2.title = remove2.ariaLabel = "Supprimer la mesure";
+      remove2.textContent = "Supprimer";
+      remove2.className = "GPButton gpf-btn fr-icon-delete-line fr-btn fr-btn--sm gpf-btn--tertiary fr-btn--tertiary-no-outline";
+      btns.appendChild(remove2);
+      root.appendChild(content);
+      root.appendChild(btns);
+      const overlay = new Overlay({
+        element: root,
+        positioning: "bottom-center",
+        offset: [0, -8],
+        stopEvent: true
+      });
+      overlay.setPosition(
+        measureAnchor(this.map, geom)
+      );
+      this.map.addOverlay(overlay);
+      this.overlays.set(feature, overlay);
+      remove2.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.removeFeature(feature);
+      });
+      (_a = feature.getGeometry()) == null ? void 0 : _a.on("change", () => {
+        const g = feature.getGeometry();
+        if (!g) return;
+        content.textContent = this.formatFeature(feature);
+        overlay.setPosition(
+          measureAnchor(this.map, g)
+        );
+      });
+    }
+    formatFeature(feature) {
+      const geom = feature.getGeometry();
+      if (!geom) return "";
+      if (geom.getType() === "LineString") {
+        return formatMapLength(this.map, geom);
+      }
+      if (geom.getType() === "Polygon") {
+        return formatMapArea(this.map, geom);
+      }
+      return "";
+    }
+    removeFeature(feature) {
+      const overlay = this.overlays.get(feature);
+      if (overlay) {
+        this.map.removeOverlay(overlay);
+        this.overlays.delete(feature);
+      }
+      if (this.source.hasFeature(feature)) {
+        this.source.removeFeature(feature);
+      }
+    }
+    /** Clic pour supprimer une mesure (outil remove dédié optionnel). */
+    removeAtPixel(evt) {
+      const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+        layerFilter: (l) => l === this.layer,
+        hitTolerance: 10
+      });
+      const feature = hits[0];
+      if (!feature || !this.source.hasFeature(feature)) return false;
+      this.removeFeature(feature);
+      return true;
+    }
+  }
+  class SketchExportDialog {
+    constructor(host) {
+      __publicField(this, "root");
+      __publicField(this, "select");
+      __publicField(this, "resolve", null);
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.root.contains(evt.target)) {
+          this.close(null);
+        }
+      });
+      __publicField(this, "onKeyDown", (evt) => {
+        if (evt.key === "Escape") this.close(null);
+      });
+      this.host = host;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-export-dialog";
+      this.root.setAttribute("role", "dialog");
+      this.root.setAttribute("aria-label", "Exporter le croquis");
+      this.root.hidden = true;
+      this.root.innerHTML = `
+      <p class="ec-sketch-export-dialog__title">Exporter le croquis</p>
+      <label class="ec-sketch-export-dialog__field">
+        <span>Format</span>
+        <select class="ec-sketch-export-dialog__format fr-select">
+          <option value="geojson">GeoJSON</option>
+          <option value="kml">KML</option>
+        </select>
+      </label>
+      <div class="ec-sketch-export-dialog__actions">
+        <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-export-dialog__cancel">Annuler</button>
+        <button type="button" class="fr-btn fr-btn--sm ec-sketch-export-dialog__ok">Exporter</button>
+      </div>
+    `;
+      this.select = this.root.querySelector(".ec-sketch-export-dialog__format");
+      this.root.querySelector(".ec-sketch-export-dialog__cancel").addEventListener("click", () => this.close(null));
+      this.root.querySelector(".ec-sketch-export-dialog__ok").addEventListener("click", () => {
+        const v = this.select.value === "kml" ? "kml" : "geojson";
+        this.close(v);
+      });
+      this.host.appendChild(this.root);
+    }
+    /** Ouvre la boîte ; résout avec le format choisi ou `null` si annulé. */
+    open(defaultFormat = "geojson") {
+      if (this.resolve) this.finish(null);
+      return new Promise((resolve) => {
+        this.resolve = resolve;
+        this.select.value = defaultFormat;
+        this.root.hidden = false;
+        document.addEventListener("pointerdown", this.onDocPointerDown, true);
+        document.addEventListener("keydown", this.onKeyDown, true);
+        queueMicrotask(() => this.select.focus());
+      });
+    }
+    destroy() {
+      this.finish(null);
+      this.root.remove();
+    }
+    close(format) {
+      this.finish(format);
+    }
+    finish(format) {
+      this.root.hidden = true;
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("keydown", this.onKeyDown, true);
+      const r = this.resolve;
+      this.resolve = null;
+      r == null ? void 0 : r(format);
+    }
+  }
   const GEOJSON = new GeoJSON();
+  const EXTRA_DEFS = {
+    Text: {
+      id: "text",
+      label: "Texte",
+      iconClass: "ec-geometry-editor__tool--text",
+      mode: "toggle"
+    },
+    Import: {
+      id: "import",
+      label: "Importer",
+      iconClass: "ec-geometry-editor__tool--import",
+      mode: "action"
+    },
+    Export: {
+      id: "export",
+      label: "Exporter",
+      iconClass: "ec-geometry-editor__tool--export",
+      mode: "action"
+    },
+    MeasureDistance: {
+      id: "measure-distance",
+      label: "Mesurer une distance",
+      iconClass: "ec-geometry-editor__tool--measure-distance",
+      mode: "toggle"
+    },
+    MeasureArea: {
+      id: "measure-area",
+      label: "Mesurer une surface",
+      iconClass: "ec-geometry-editor__tool--measure-area",
+      mode: "toggle"
+    }
+  };
   class SketchControl extends Control {
     constructor(options = {}) {
       const toolsRoot = document.createElement("div");
@@ -75752,7 +77875,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "onChangeCb");
       __publicField(this, "localStorageKey");
       __publicField(this, "clearAll");
+      __publicField(this, "historyEnabled");
       __publicField(this, "extraTools");
+      __publicField(this, "enableFeatureStyleEditor");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
@@ -75762,7 +77887,38 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "toolsMenuOpen", false);
       __publicField(this, "toolbarDomId", `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`);
       __publicField(this, "drawBar", null);
-      __publicField(this, "saveTimer", null);
+      __publicField(this, "history", null);
+      __publicField(this, "stylePopup", null);
+      __publicField(this, "textDraw", null);
+      __publicField(this, "textPointerOnMap", true);
+      __publicField(this, "textMapHoverBound", false);
+      __publicField(this, "exportDialog", null);
+      __publicField(this, "measure", null);
+      /** Snapshot GeoJSON du dernier enregistrement local (null = jamais enregistré). */
+      __publicField(this, "savedSnapshot", null);
+      __publicField(this, "onTextMapPointerEnter", () => {
+        var _a;
+        this.textPointerOnMap = true;
+        (_a = this.getMap()) == null ? void 0 : _a.render();
+      });
+      __publicField(this, "onTextMapPointerLeave", () => {
+        var _a;
+        this.textPointerOnMap = false;
+        (_a = this.getMap()) == null ? void 0 : _a.render();
+      });
+      __publicField(this, "onTextSelectClick", (evt) => {
+        if (evt.dragging || !this.enableFeatureStyleEditor) return;
+        const map2 = this.getMap();
+        if (!map2 || !this.layer) return;
+        const hits = map2.getFeaturesAtPixel(evt.pixel, {
+          layerFilter: (l) => l === this.layer,
+          hitTolerance: 14
+        });
+        const feature = hits.find((f) => isSketchTextFeature(f));
+        if (feature && this.stylePopup) {
+          this.stylePopup.open(feature, () => this.notifyChange());
+        }
+      });
       this.geometryType = options.geometryType ?? "Geometry";
       this.toolsToggle = options.toolsToggle ?? null;
       this.position = options.position ?? null;
@@ -75771,7 +77927,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.onChangeCb = options.onChange;
       this.localStorageKey = options.localStorageKey ?? null;
       this.clearAll = Boolean(options.clearAll);
+      this.historyEnabled = Boolean(options.history);
       this.extraTools = options.extraTools ?? [];
+      this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor);
       this.source = options.source ?? new VectorSource({ wrapX: false });
       this.layer = options.layer ?? null;
       this.ownsLayer = !options.layer;
@@ -75783,12 +77941,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.applyToolsChrome();
     }
     setMap(map2) {
+      var _a;
       const prev = this.getMap();
-      if (prev && this.drawBar) {
-        this.teardownDrawBar();
-      }
-      if (prev && this.ownsLayer && this.layer) {
-        prev.removeLayer(this.layer);
+      if (prev) {
+        this.teardownExtras(prev);
+        if (this.drawBar) this.teardownDrawBar();
+        if (this.ownsLayer && this.layer) prev.removeLayer(this.layer);
       }
       super.setMap(map2);
       if (!map2) {
@@ -75799,11 +77957,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.mountDrawBar(map2);
       this.placeInGeopfContainer(map2);
       this.restoreFromLocalStorage();
+      (_a = this.history) == null ? void 0 : _a.resetFromSource();
+      if (this.localStorageKey && this.source.getFeatures().length) {
+        this.savedSnapshot = this.sketchSnapshot();
+      }
+      this.syncHistoryButtons();
+      this.syncSaveButtonState();
     }
     getSource() {
       return this.source;
     }
-    /** Élément DOM du contrôle (chrome outils). */
     getElement() {
       return this.toolsRoot;
     }
@@ -75817,15 +77980,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       return this.source.getFeatures();
     }
     setFeatures(features) {
+      var _a;
       this.source.clear(true);
       if (features.length) this.source.addFeatures(features);
+      (_a = this.history) == null ? void 0 : _a.push();
       this.notifyChange();
     }
     clearFeatures() {
+      var _a, _b;
       this.source.clear(true);
+      (_a = this.measure) == null ? void 0 : _a.clear();
+      (_b = this.history) == null ? void 0 : _b.push();
       this.notifyChange();
     }
+    /** Enregistrement manuel localStorage. */
+    saveLocal() {
+      this.saveToLocalStorage();
+    }
     load(raw) {
+      var _a;
       let features = parseRawToFeatures(raw);
       const primary = primaryGeometryType(parseGeometryTypes(this.geometryType));
       if (primary === "Circle" || primary === "MultiCircle") {
@@ -75835,6 +78008,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       this.source.clear(true);
       if (features.length) this.source.addFeatures(features);
+      (_a = this.history) == null ? void 0 : _a.push();
       this.notifyChange();
     }
     serialize(opts) {
@@ -75863,6 +78037,38 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
       }
     }
+    buildExtraTools() {
+      const list = [];
+      if (this.historyEnabled) {
+        list.push(
+          {
+            id: "undo",
+            label: "Annuler",
+            iconClass: "ec-geometry-editor__tool--undo",
+            mode: "action"
+          },
+          {
+            id: "redo",
+            label: "Rétablir",
+            iconClass: "ec-geometry-editor__tool--redo",
+            mode: "action"
+          }
+        );
+      }
+      if (this.localStorageKey) {
+        list.push({
+          id: "save",
+          label: "Enregistrer localement",
+          iconClass: "ec-geometry-editor__tool--save",
+          mode: "action"
+        });
+      }
+      for (const key2 of this.extraTools) {
+        const def2 = EXTRA_DEFS[key2];
+        if (def2) list.push({ ...def2 });
+      }
+      return list;
+    }
     ensureLayer(map2) {
       if (this.layer) {
         if (this.style !== void 0) {
@@ -75887,9 +78093,26 @@ Expected function or array of functions, received type ${typeof value2}.`
       map2.addLayer(this.layer);
     }
     mountDrawBar(map2) {
-      var _a;
+      var _a, _b, _c, _d;
       if (!this.layer) return;
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map2.getView().getProjection()) : null;
+      (_b = this.stylePopup) == null ? void 0 : _b.destroy();
+      this.stylePopup = null;
+      if (this.enableFeatureStyleEditor) {
+        this.stylePopup = new SketchFeatureStylePopup(map2);
+      }
+      (_c = this.exportDialog) == null ? void 0 : _c.destroy();
+      this.exportDialog = null;
+      if (this.extraTools.includes("Export")) {
+        const mapEl = map2.getTargetElement();
+        if (mapEl) this.exportDialog = new SketchExportDialog(mapEl);
+      }
+      (_d = this.measure) == null ? void 0 : _d.destroy();
+      this.measure = null;
+      if (this.extraTools.includes("MeasureDistance") || this.extraTools.includes("MeasureArea")) {
+        this.measure = new SketchMeasureController(map2, this.zIndex + 10);
+      }
       this.drawBar = new DrawToolsBar({
         map: map2,
         source: this.source,
@@ -75898,11 +78121,162 @@ Expected function or array of functions, received type ${typeof value2}.`
         target: this.toolbarHost,
         style: this.style,
         clearAll: this.clearAll,
-        onChange: () => this.notifyChange(),
-        onClearAll: () => this.clearFeatures()
+        extraTools: this.buildExtraTools(),
+        onChange: () => {
+          var _a2;
+          (_a2 = this.history) == null ? void 0 : _a2.push();
+          this.notifyChange();
+        },
+        onClearAll: () => this.clearFeatures(),
+        onExtraTool: (id, active) => this.handleExtraTool(id, active),
+        onFeatureCreated: (feature) => this.openStylePopup(feature),
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature) => this.openStylePopup(feature) : void 0
       });
-      void this.extraTools;
       this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+      this.syncHistoryButtons();
+    }
+    openStylePopup(feature) {
+      if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
+      this.stylePopup.open(feature, () => this.notifyChange());
+    }
+    handleExtraTool(id, active) {
+      var _a, _b, _c, _d, _e, _f;
+      const map2 = this.getMap();
+      if (!map2) return;
+      if (id === "undo") {
+        if ((_a = this.history) == null ? void 0 : _a.undo()) this.notifyChange();
+        this.syncHistoryButtons();
+        return;
+      }
+      if (id === "redo") {
+        if ((_b = this.history) == null ? void 0 : _b.redo()) this.notifyChange();
+        this.syncHistoryButtons();
+        return;
+      }
+      if (id === "save") {
+        this.saveToLocalStorage();
+        return;
+      }
+      if (id === "import") {
+        this.runImport();
+        return;
+      }
+      if (id === "export") {
+        this.runExport();
+        return;
+      }
+      if (!active) {
+        this.stopTextDraw();
+        (_c = this.measure) == null ? void 0 : _c.deactivateDraw();
+        return;
+      }
+      this.stopTextDraw();
+      (_d = this.measure) == null ? void 0 : _d.deactivateDraw();
+      if (id === "text") {
+        this.startTextDraw();
+        return;
+      }
+      if (id === "measure-distance") {
+        (_e = this.measure) == null ? void 0 : _e.activate("distance");
+        return;
+      }
+      if (id === "measure-area") {
+        (_f = this.measure) == null ? void 0 : _f.activate("area");
+      }
+    }
+    startTextDraw() {
+      const map2 = this.getMap();
+      if (!map2) return;
+      this.stopTextDraw();
+      const textDefaults = {
+        text: "Texte",
+        fontSize: 14,
+        fontColor: "#000091",
+        strokeColor: "#ffffff",
+        rotation: 0
+      };
+      const baseStyle = sketchTextStyle(textDefaults);
+      this.textPointerOnMap = true;
+      this.textDraw = new Draw({
+        source: this.source,
+        type: "Point",
+        style: () => this.textPointerOnMap ? baseStyle : []
+      });
+      this.textDraw.on("drawend", (evt) => {
+        applySketchTextStyle(evt.feature, textDefaults);
+        queueMicrotask(() => {
+          var _a;
+          this.openStylePopup(evt.feature);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        });
+      });
+      map2.addInteraction(this.textDraw);
+      const el = map2.getTargetElement();
+      if (el && !this.textMapHoverBound) {
+        el.addEventListener("pointerenter", this.onTextMapPointerEnter);
+        el.addEventListener("pointerleave", this.onTextMapPointerLeave);
+        this.textMapHoverBound = true;
+      }
+      if (this.enableFeatureStyleEditor) {
+        map2.on("singleclick", this.onTextSelectClick);
+      }
+    }
+    stopTextDraw() {
+      var _a;
+      const map2 = this.getMap();
+      if (this.textMapHoverBound) {
+        const el = map2 == null ? void 0 : map2.getTargetElement();
+        el == null ? void 0 : el.removeEventListener("pointerenter", this.onTextMapPointerEnter);
+        el == null ? void 0 : el.removeEventListener("pointerleave", this.onTextMapPointerLeave);
+        this.textMapHoverBound = false;
+        this.textPointerOnMap = true;
+      }
+      if (this.textDraw && map2) {
+        map2.removeInteraction(this.textDraw);
+        this.textDraw = null;
+      }
+      map2 == null ? void 0 : map2.un("singleclick", this.onTextSelectClick);
+      (_a = this.stylePopup) == null ? void 0 : _a.hide();
+    }
+    runImport() {
+      const map2 = this.getMap();
+      if (!map2) return;
+      pickSketchFile(".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml", (text2, name2) => {
+        var _a;
+        try {
+          const format = formatFromFilename(name2);
+          const features = readSketchFile(map2, text2, format);
+          this.source.addFeatures(features);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        } catch (err) {
+          console.warn("[SketchControl] import failed", err);
+        }
+      });
+    }
+    async runExport() {
+      const map2 = this.getMap();
+      if (!map2) return;
+      const dialog = this.exportDialog;
+      if (!dialog) return;
+      const format = await dialog.open("geojson");
+      if (!format) return;
+      try {
+        const content = writeSketchFile(map2, this.source, format);
+        downloadBlob(
+          format === "kml" ? "croquis.kml" : "croquis.geojson",
+          content,
+          format === "kml" ? "application/vnd.google-earth.kml+xml" : "application/geo+json"
+        );
+      } catch (err) {
+        console.warn("[SketchControl] export failed", err);
+      }
+    }
+    syncHistoryButtons() {
+      if (!this.drawBar || !this.history) return;
+      this.drawBar.setExtraEnabled("undo", this.history.canUndo());
+      this.drawBar.setExtraEnabled("redo", this.history.canRedo());
     }
     teardownDrawBar() {
       var _a;
@@ -75910,18 +78284,41 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.drawBar = null;
       this.toolbarHost.replaceChildren();
     }
+    teardownExtras(map2) {
+      var _a, _b, _c;
+      this.stopTextDraw();
+      (_a = this.stylePopup) == null ? void 0 : _a.destroy();
+      this.stylePopup = null;
+      (_b = this.exportDialog) == null ? void 0 : _b.destroy();
+      this.exportDialog = null;
+      (_c = this.measure) == null ? void 0 : _c.destroy();
+      this.measure = null;
+      this.history = null;
+    }
     notifyChange() {
       var _a;
       (_a = this.onChangeCb) == null ? void 0 : _a.call(this, this.getFeatures());
-      this.scheduleSave();
+      this.syncHistoryButtons();
+      this.syncSaveButtonState();
     }
-    scheduleSave() {
-      if (!this.localStorageKey) return;
-      if (this.saveTimer) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => {
-        this.saveTimer = null;
-        this.saveToLocalStorage();
-      }, 200);
+    sketchSnapshot() {
+      var _a;
+      const features = this.getFeatures();
+      return JSON.stringify(
+        GEOJSON.writeFeaturesObject(features, {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        })
+      );
+    }
+    syncSaveButtonState() {
+      if (!this.localStorageKey || !this.drawBar) return;
+      if (this.savedSnapshot === null) {
+        this.drawBar.setSaveState("idle");
+        return;
+      }
+      const dirty = this.sketchSnapshot() !== this.savedSnapshot;
+      this.drawBar.setSaveState(dirty ? "dirty" : "saved");
     }
     saveToLocalStorage() {
       var _a;
@@ -75930,6 +78327,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         const features = this.getFeatures();
         if (!features.length) {
           localStorage.removeItem(this.localStorageKey);
+          this.savedSnapshot = this.sketchSnapshot();
+          this.syncSaveButtonState();
           return;
         }
         const json = GEOJSON.writeFeaturesObject(features, {
@@ -75937,6 +78336,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           dataProjection: "EPSG:4326"
         });
         localStorage.setItem(this.localStorageKey, JSON.stringify(json));
+        this.savedSnapshot = JSON.stringify(json);
+        this.syncSaveButtonState();
       } catch (err) {
         console.warn("[SketchControl] localStorage save failed", err);
       }
@@ -75951,6 +78352,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
           dataProjection: "EPSG:4326"
         });
+        hydrateImportedSketchFeatures(features);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } catch (err) {
@@ -76000,11 +78402,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.toolsRoot.classList.remove("is-open");
       }
     }
-    /**
-     * Place le contrôle dans le conteneur geopf du coin demandé (carte principale),
-     * au-dessus de la minimap via `order: -2`.
-     * Retente si le conteneur n’existe pas encore (ordre d’ajout des contrôles).
-     */
     placeInGeopfContainer(map2, attempt = 0) {
       const corner = this.position ?? this.toolsToggle;
       if (!corner) return;
@@ -76036,9 +78433,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       toolsToggle: { default: void 0 },
       localStorageKey: { default: "entree-carto-sketch" },
       clearAll: { type: Boolean, default: true },
+      history: { type: Boolean, default: true },
       zIndex: { default: 500 },
       style: { type: [Object, Array, Function, null], default: null },
-      extraTools: { default: () => [] }
+      extraTools: { default: () => [
+        "Text",
+        "Import",
+        "Export",
+        "MeasureDistance",
+        "MeasureArea"
+      ] },
+      enableFeatureStyleEditor: { type: Boolean, default: true }
     },
     setup(__props) {
       const props = __props;
@@ -76049,9 +78454,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           position: props.position,
           localStorageKey: props.localStorageKey,
           clearAll: props.clearAll,
+          history: props.history,
           zIndex: props.zIndex,
           style: props.style,
-          extraTools: props.extraTools
+          extraTools: props.extraTools,
+          enableFeatureStyleEditor: props.enableFeatureStyleEditor
         })
       );
       return (_ctx, _cache) => {
@@ -76389,7 +78796,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-orientation": "vertical",
     "aria-label": "Onglets du panneau"
   };
-  const _hoisted_2$1 = ["id", "aria-selected", "aria-controls", "title", "aria-label", "onClick"];
+  const _hoisted_2$1 = ["id", "aria-selected", "aria-controls", "aria-label", "onClick"];
   const _hoisted_3$1 = { class: "ec-tab-panels__panel" };
   const _hoisted_4$1 = { class: "ec-tab-panels__panel-body" };
   const _hoisted_5$1 = ["id", "hidden", "aria-labelledby"];
@@ -76524,7 +78931,6 @@ Expected function or array of functions, received type ${typeof value2}.`
                 class: normalizeClass(["ec-tab-panels__tab", [tab.icon, { "is-active": isOpen.value && activeTab.value === tab.id }]]),
                 "aria-selected": isOpen.value && activeTab.value === tab.id,
                 "aria-controls": `ec-tab-panel-${tab.id}`,
-                title: tab.label,
                 "aria-label": tab.label,
                 onClick: ($event) => onTabClick(tab.id)
               }, null, 10, _hoisted_2$1);

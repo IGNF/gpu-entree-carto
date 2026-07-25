@@ -698,7 +698,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
   }
-  const Property$2 = {
+  const Property$3 = {
     LENGTH: "length"
   };
   class CollectionEvent extends BaseEvent {
@@ -795,7 +795,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getLength() {
-      return this.get(Property$2.LENGTH);
+      return this.get(Property$3.LENGTH);
     }
     /**
      * Insert an element at the provided index.
@@ -904,7 +904,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     updateLength_() {
-      this.set(Property$2.LENGTH, this.array_.length);
+      this.set(Property$3.LENGTH, this.array_.length);
     }
     /**
      * @private
@@ -1694,7 +1694,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     RESOLUTION: "resolution",
     ROTATION: "rotation"
   };
-  function clamp(value, min, max) {
+  function clamp$1(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
   function squaredSegmentDistance(x, y, x1, y1, x2, y2) {
@@ -1818,8 +1818,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           minY = (maxY + minY) / 2;
           maxY = minY;
         }
-        let x = clamp(center[0], minX, maxX);
-        let y = clamp(center[1], minY, maxY);
+        let x = clamp$1(center[0], minX, maxX);
+        let y = clamp$1(center[1], minY, maxY);
         if (isMoving && smooth && resolution) {
           const ratio = 30 * resolution;
           x += -ratio * Math.log(1 + Math.max(0, minX - center[0]) / ratio) + ratio * Math.log(1 + Math.max(0, center[0] - maxX) / ratio);
@@ -2011,7 +2011,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return false;
   }
-  function getArea(extent) {
+  function getArea$1(extent) {
     let area = 0;
     if (!isEmpty(extent)) {
       area = getWidth(extent) * getHeight(extent);
@@ -2327,7 +2327,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
     const tangentB = [(pB[0] - p0[0]) / lenB, (pB[1] - p0[1]) / lenB];
     let angle = lenA === 0 || lenB === 0 ? 0 : Math.acos(
-      clamp(tangentB[0] * tangentA[0] + tangentB[1] * tangentA[1], -1, 1)
+      clamp$1(tangentB[0] * tangentA[0] + tangentB[1] * tangentA[1], -1, 1)
     );
     angle = Math.max(angle, 1e-5);
     const isClockwise = tangentB[0] * orthoA[0] + tangentB[1] * orthoA[1] > 0;
@@ -2354,6 +2354,140 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const deltaLonBy2 = toRadians(c2[0] - c1[0]) / 2;
     const a = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function getLengthInternal(coordinates2, radius) {
+    let length = 0;
+    for (let i = 0, ii = coordinates2.length; i < ii - 1; ++i) {
+      length += getDistance(coordinates2[i], coordinates2[i + 1], radius);
+    }
+    return length;
+  }
+  function getLength(geometry, options) {
+    options = options || {};
+    const radius = options.radius || DEFAULT_RADIUS;
+    const projection = options.projection || "EPSG:3857";
+    const type = geometry.getType();
+    if (type !== "GeometryCollection") {
+      geometry = geometry.clone().transform(projection, "EPSG:4326");
+    }
+    let length = 0;
+    let coordinates2, coords, i, ii, j, jj;
+    switch (type) {
+      case "Point":
+      case "MultiPoint": {
+        break;
+      }
+      case "LineString":
+      case "LinearRing": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        length = getLengthInternal(coordinates2, radius);
+        break;
+      }
+      case "MultiLineString":
+      case "Polygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          length += getLengthInternal(coordinates2[i], radius);
+        }
+        break;
+      }
+      case "MultiPolygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coords = coordinates2[i];
+          for (j = 0, jj = coords.length; j < jj; ++j) {
+            length += getLengthInternal(coords[j], radius);
+          }
+        }
+        break;
+      }
+      case "GeometryCollection": {
+        const geometries = (
+          /** @type {import("./geom/GeometryCollection.js").default} */
+          geometry.getGeometries()
+        );
+        for (i = 0, ii = geometries.length; i < ii; ++i) {
+          length += getLength(geometries[i], options);
+        }
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return length;
+  }
+  function getAreaInternal(coordinates2, radius) {
+    let area = 0;
+    const len = coordinates2.length;
+    let x1 = coordinates2[len - 1][0];
+    let y1 = coordinates2[len - 1][1];
+    for (let i = 0; i < len; i++) {
+      const x2 = coordinates2[i][0];
+      const y2 = coordinates2[i][1];
+      area += toRadians(x2 - x1) * (2 + Math.sin(toRadians(y1)) + Math.sin(toRadians(y2)));
+      x1 = x2;
+      y1 = y2;
+    }
+    return area * radius * radius / 2;
+  }
+  function getArea(geometry, options) {
+    options = options || {};
+    const radius = options.radius || DEFAULT_RADIUS;
+    const projection = options.projection || "EPSG:3857";
+    const type = geometry.getType();
+    if (type !== "GeometryCollection") {
+      geometry = geometry.clone().transform(projection, "EPSG:4326");
+    }
+    let area = 0;
+    let coordinates2, coords, i, ii, j, jj;
+    switch (type) {
+      case "Point":
+      case "MultiPoint":
+      case "LineString":
+      case "MultiLineString":
+      case "LinearRing": {
+        break;
+      }
+      case "Polygon": {
+        coordinates2 = /** @type {import("./geom/Polygon.js").default} */
+        geometry.getCoordinates();
+        area = Math.abs(getAreaInternal(coordinates2[0], radius));
+        for (i = 1, ii = coordinates2.length; i < ii; ++i) {
+          area -= Math.abs(getAreaInternal(coordinates2[i], radius));
+        }
+        break;
+      }
+      case "MultiPolygon": {
+        coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
+        geometry.getCoordinates();
+        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coords = coordinates2[i];
+          area += Math.abs(getAreaInternal(coords[0], radius));
+          for (j = 1, jj = coords.length; j < jj; ++j) {
+            area -= Math.abs(getAreaInternal(coords[j], radius));
+          }
+        }
+        break;
+      }
+      case "GeometryCollection": {
+        const geometries = (
+          /** @type {import("./geom/GeometryCollection.js").default} */
+          geometry.getGeometries()
+        );
+        for (i = 0, ii = geometries.length; i < ii; ++i) {
+          area += getArea(geometries[i], options);
+        }
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return area;
   }
   function warn(...args) {
     console.warn(...args);
@@ -5242,7 +5376,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       result = Math.max(result, minResolution);
       result /= Math.log(1 + ratio * Math.max(0, minResolution / resolution - 1)) / ratio + 1;
     }
-    return clamp(result, minResolution / 2, maxResolution * 2);
+    return clamp$1(result, minResolution / 2, maxResolution * 2);
   }
   function createSnapToResolutions(resolutions, smooth, maxExtent, showFullExtent) {
     smooth = smooth !== void 0 ? smooth : true;
@@ -5266,7 +5400,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
-              return clamp(resolution, minResolution, cappedMaxRes);
+              return clamp$1(resolution, minResolution, cappedMaxRes);
             }
             return getSmoothClampedResolution(
               resolution,
@@ -5306,7 +5440,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
-              return clamp(resolution, minResolution, cappedMaxRes);
+              return clamp$1(resolution, minResolution, cappedMaxRes);
             }
             return getSmoothClampedResolution(
               resolution,
@@ -5325,7 +5459,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
           const zoomLevel = Math.max(minZoomLevel, cappedZoomLevel);
           const newResolution = maxResolution / Math.pow(power, zoomLevel);
-          return clamp(newResolution, minResolution, cappedMaxRes);
+          return clamp$1(newResolution, minResolution, cappedMaxRes);
         }
         return void 0;
       })
@@ -5350,7 +5484,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             showFullExtent
           ) : maxResolution;
           if (!smooth || !isMoving) {
-            return clamp(resolution, minResolution, cappedMaxRes);
+            return clamp$1(resolution, minResolution, cappedMaxRes);
           }
           return getSmoothClampedResolution(
             resolution,
@@ -6240,13 +6374,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (this.resolutions_.length === 1) {
           return this.resolutions_[0];
         }
-        const baseLevel = clamp(
+        const baseLevel = clamp$1(
           Math.floor(zoom),
           0,
           this.resolutions_.length - 2
         );
         const zoomFactor = this.resolutions_[baseLevel] / this.resolutions_[baseLevel + 1];
-        return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp(zoom - baseLevel, 0, 1));
+        return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp$1(zoom - baseLevel, 0, 1));
       }
       return this.maxResolution_ / Math.pow(this.zoomFactor_, zoom - this.minZoom_);
     }
@@ -6923,6 +7057,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return [centerX, centerY];
   }
   const CLASS_HIDDEN = "ol-hidden";
+  const CLASS_SELECTABLE = "ol-selectable";
   const CLASS_UNSELECTABLE = "ol-unselectable";
   const CLASS_CONTROL = "ol-control";
   const CLASS_COLLAPSED = "ol-collapsed";
@@ -7015,6 +7150,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     canvas.width = 1;
     canvas.height = 1;
     context.clearRect(0, 0, 1, 1);
+  }
+  function outerWidth(element) {
+    let width = element.offsetWidth;
+    const style = getComputedStyle(element);
+    width += parseInt(style.marginLeft, 10) + parseInt(style.marginRight, 10);
+    return width;
+  }
+  function outerHeight(element) {
+    let height = element.offsetHeight;
+    const style = getComputedStyle(element);
+    height += parseInt(style.marginTop, 10) + parseInt(style.marginBottom, 10);
+    return height;
   }
   function replaceNode(newNode, oldNode) {
     const parent = oldNode.parentNode;
@@ -8786,7 +8933,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (view.getAnimating()) {
         view.cancelAnimations();
       }
-      let delta = -clamp(
+      let delta = -clamp$1(
         this.totalDelta_,
         -this.maxDelta_ * this.deltaPerZoom_,
         this.maxDelta_ * this.deltaPerZoom_
@@ -9130,7 +9277,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         managed: managed === void 0 ? true : managed
       };
       const zIndex = this.getZIndex();
-      state.opacity = clamp(Math.round(this.getOpacity() * 100) / 100, 0, 1);
+      state.opacity = clamp$1(Math.round(this.getOpacity() * 100) / 100, 0, 1);
       state.visible = this.getVisible();
       state.extent = this.getExtent();
       state.zIndex = zIndex === void 0 && !state.managed ? Infinity : zIndex;
@@ -9392,7 +9539,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.layer = layer;
     }
   }
-  const Property$1 = {
+  const Property$2 = {
     LAYERS: "layers"
   };
   class LayerGroup extends BaseLayer {
@@ -9413,7 +9560,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.un;
       this.layersListenerKeys_ = [];
       this.listenerKeys_ = {};
-      this.addChangeListener(Property$1.LAYERS, this.handleLayersChanged_);
+      this.addChangeListener(Property$2.LAYERS, this.handleLayersChanged_);
       if (layers) {
         if (Array.isArray(layers)) {
           layers = new Collection(layers.slice(), { unique: true });
@@ -9534,7 +9681,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     getLayers() {
       return (
         /** @type {!Collection<import("./Base.js").default>} */
-        this.get(Property$1.LAYERS)
+        this.get(Property$2.LAYERS)
       );
     }
     /**
@@ -9555,7 +9702,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
         }
       }
-      this.set(Property$1.LAYERS, layers);
+      this.set(Property$2.LAYERS, layers);
     }
     /**
      * @param {Array<import("./Layer.js").default>} [array] Array of layers (to be modified in place).
@@ -10484,10 +10631,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const alpha = rgb[4];
         const rgbDivider = 100 / 255;
         return [
-          clamp(toColorComponent(rgb[1], rgbDivider) + 0.5 | 0, 0, 255),
-          clamp(toColorComponent(rgb[2], rgbDivider) + 0.5 | 0, 0, 255),
-          clamp(toColorComponent(rgb[3], rgbDivider) + 0.5 | 0, 0, 255),
-          alpha !== void 0 ? clamp(toColorComponent(alpha, 100), 0, 1) : 1
+          clamp$1(toColorComponent(rgb[1], rgbDivider) + 0.5 | 0, 0, 255),
+          clamp$1(toColorComponent(rgb[2], rgbDivider) + 0.5 | 0, 0, 255),
+          clamp$1(toColorComponent(rgb[3], rgbDivider) + 0.5 | 0, 0, 255),
+          alpha !== void 0 ? clamp$1(toColorComponent(alpha, 100), 0, 1) : 1
         ];
       }
       throwInvalidColor(color);
@@ -10586,9 +10733,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const g = b1(x * -0.943766287 + y * 1.916279586 + z * 0.027607165);
     const b = b1(x * 0.069407491 - y * 0.22898585 + z * 1.159737864);
     return [
-      clamp(r + 0.5 | 0, 0, 255),
-      clamp(g + 0.5 | 0, 0, 255),
-      clamp(b + 0.5 | 0, 0, 255),
+      clamp$1(r + 0.5 | 0, 0, 255),
+      clamp$1(g + 0.5 | 0, 0, 255),
+      clamp$1(b + 0.5 | 0, 0, 255),
       color[3]
     ];
   }
@@ -15665,7 +15812,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return requireSize(value, property);
   }
-  const Property = {
+  const Property$1 = {
     RENDER_ORDER: "renderOrder"
   };
   class BaseVectorLayer extends Layer {
@@ -15725,7 +15872,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     getRenderOrder() {
       return (
         /** @type {import("../render.js").OrderFunction|null|undefined} */
-        this.get(Property.RENDER_ORDER)
+        this.get(Property$1.RENDER_ORDER)
       );
     }
     /**
@@ -15777,7 +15924,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      *     Render order.
      */
     setRenderOrder(renderOrder) {
-      this.set(Property.RENDER_ORDER, renderOrder);
+      this.set(Property$1.RENDER_ORDER, renderOrder);
     }
     /**
      * Set the style for features.  This can be a single style object, an array
@@ -17520,6 +17667,374 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       overlays,
       values
     };
+  }
+  const Property = {
+    ELEMENT: "element",
+    MAP: "map",
+    OFFSET: "offset",
+    POSITION: "position",
+    POSITIONING: "positioning"
+  };
+  class Overlay extends BaseObject {
+    /**
+     * @param {Options} options Overlay options.
+     */
+    constructor(options) {
+      super();
+      this.on;
+      this.once;
+      this.un;
+      this.options = options;
+      this.id = options.id;
+      this.insertFirst = options.insertFirst !== void 0 ? options.insertFirst : true;
+      this.stopEvent = options.stopEvent !== void 0 ? options.stopEvent : true;
+      this.element = document.createElement("div");
+      this.element.className = options.className !== void 0 ? options.className : "ol-overlay-container " + CLASS_SELECTABLE;
+      this.element.style.position = "absolute";
+      this.element.style.pointerEvents = "auto";
+      this.autoPan = options.autoPan === true ? {} : options.autoPan || void 0;
+      this.rendered = {
+        transform_: "",
+        visible: true
+      };
+      this.mapPostrenderListenerKey = null;
+      this.addChangeListener(Property.ELEMENT, this.handleElementChanged);
+      this.addChangeListener(Property.MAP, this.handleMapChanged);
+      this.addChangeListener(Property.OFFSET, this.handleOffsetChanged);
+      this.addChangeListener(Property.POSITION, this.handlePositionChanged);
+      this.addChangeListener(Property.POSITIONING, this.handlePositioningChanged);
+      if (options.element !== void 0) {
+        this.setElement(options.element);
+      }
+      this.setOffset(options.offset !== void 0 ? options.offset : [0, 0]);
+      this.setPositioning(options.positioning || "top-left");
+      if (options.position !== void 0) {
+        this.setPosition(options.position);
+      }
+    }
+    /**
+     * Get the DOM element of this overlay.
+     * @return {HTMLElement|undefined} The Element containing the overlay.
+     * @observable
+     * @api
+     */
+    getElement() {
+      return (
+        /** @type {HTMLElement|undefined} */
+        this.get(Property.ELEMENT)
+      );
+    }
+    /**
+     * Get the overlay identifier which is set on constructor.
+     * @return {number|string|undefined} Id.
+     * @api
+     */
+    getId() {
+      return this.id;
+    }
+    /**
+     * Get the map associated with this overlay.
+     * @return {import("./Map.js").default|null} The map that the
+     * overlay is part of.
+     * @observable
+     * @api
+     */
+    getMap() {
+      return (
+        /** @type {import("./Map.js").default|null} */
+        this.get(Property.MAP) || null
+      );
+    }
+    /**
+     * Get the offset of this overlay.
+     * @return {Array<number>} The offset.
+     * @observable
+     * @api
+     */
+    getOffset() {
+      return (
+        /** @type {Array<number>} */
+        this.get(Property.OFFSET)
+      );
+    }
+    /**
+     * Get the current position of this overlay.
+     * @return {import("./coordinate.js").Coordinate|undefined} The spatial point that the overlay is
+     *     anchored at.
+     * @observable
+     * @api
+     */
+    getPosition() {
+      return (
+        /** @type {import("./coordinate.js").Coordinate|undefined} */
+        this.get(Property.POSITION)
+      );
+    }
+    /**
+     * Get the current positioning of this overlay.
+     * @return {Positioning} How the overlay is positioned
+     *     relative to its point on the map.
+     * @observable
+     * @api
+     */
+    getPositioning() {
+      return (
+        /** @type {Positioning} */
+        this.get(Property.POSITIONING)
+      );
+    }
+    /**
+     * @protected
+     */
+    handleElementChanged() {
+      removeChildren(this.element);
+      const element = this.getElement();
+      if (element) {
+        this.element.appendChild(element);
+      }
+    }
+    /**
+     * @protected
+     */
+    handleMapChanged() {
+      var _a;
+      if (this.mapPostrenderListenerKey) {
+        (_a = this.element) == null ? void 0 : _a.remove();
+        unlistenByKey(this.mapPostrenderListenerKey);
+        this.mapPostrenderListenerKey = null;
+      }
+      const map = this.getMap();
+      if (map) {
+        this.mapPostrenderListenerKey = listen(
+          map,
+          MapEventType.POSTRENDER,
+          this.render,
+          this
+        );
+        this.updatePixelPosition();
+        const container = this.stopEvent ? map.getOverlayContainerStopEvent() : map.getOverlayContainer();
+        if (this.insertFirst) {
+          container.insertBefore(this.element, container.childNodes[0] || null);
+        } else {
+          container.appendChild(this.element);
+        }
+        this.performAutoPan();
+      }
+    }
+    /**
+     * @protected
+     */
+    render() {
+      this.updatePixelPosition();
+    }
+    /**
+     * @protected
+     */
+    handleOffsetChanged() {
+      this.updatePixelPosition();
+    }
+    /**
+     * @protected
+     */
+    handlePositionChanged() {
+      this.updatePixelPosition();
+      this.performAutoPan();
+    }
+    /**
+     * @protected
+     */
+    handlePositioningChanged() {
+      this.updatePixelPosition();
+    }
+    /**
+     * Set the DOM element to be associated with this overlay.
+     * @param {HTMLElement|undefined} element The Element containing the overlay.
+     * @observable
+     * @api
+     */
+    setElement(element) {
+      this.set(Property.ELEMENT, element);
+    }
+    /**
+     * Set the map to be associated with this overlay.
+     * @param {import("./Map.js").default|null} map The map that the
+     * overlay is part of. Pass `null` to just remove the overlay from the current map.
+     * @observable
+     * @api
+     */
+    setMap(map) {
+      this.set(Property.MAP, map);
+    }
+    /**
+     * Set the offset for this overlay.
+     * @param {Array<number>} offset Offset.
+     * @observable
+     * @api
+     */
+    setOffset(offset) {
+      this.set(Property.OFFSET, offset);
+    }
+    /**
+     * Set the position for this overlay. If the position is `undefined` the
+     * overlay is hidden.
+     * @param {import("./coordinate.js").Coordinate|undefined} position The spatial point that the overlay
+     *     is anchored at.
+     * @observable
+     * @api
+     */
+    setPosition(position) {
+      this.set(Property.POSITION, position);
+    }
+    /**
+     * Pan the map so that the overlay is entirely visible in the current viewport
+     * (if necessary) using the configured autoPan parameters
+     * @protected
+     */
+    performAutoPan() {
+      if (this.autoPan) {
+        this.panIntoView(this.autoPan);
+      }
+    }
+    /**
+     * Pan the map so that the overlay is entirely visible in the current viewport
+     * (if necessary).
+     * @param {PanIntoViewOptions} [panIntoViewOptions] Options for the pan action
+     * @api
+     */
+    panIntoView(panIntoViewOptions) {
+      const map = this.getMap();
+      if (!map || !map.getTargetElement() || !this.get(Property.POSITION)) {
+        return;
+      }
+      const mapRect = this.getRect(map.getTargetElement(), map.getSize());
+      const element = this.getElement();
+      const overlayRect = this.getRect(element, [
+        outerWidth(element),
+        outerHeight(element)
+      ]);
+      panIntoViewOptions = panIntoViewOptions || {};
+      const myMargin = panIntoViewOptions.margin === void 0 ? 20 : panIntoViewOptions.margin;
+      if (!containsExtent(mapRect, overlayRect)) {
+        const offsetLeft = overlayRect[0] - mapRect[0];
+        const offsetRight = mapRect[2] - overlayRect[2];
+        const offsetTop = overlayRect[1] - mapRect[1];
+        const offsetBottom = mapRect[3] - overlayRect[3];
+        const delta = [0, 0];
+        if (offsetLeft < 0) {
+          delta[0] = offsetLeft - myMargin;
+        } else if (offsetRight < 0) {
+          delta[0] = Math.abs(offsetRight) + myMargin;
+        }
+        if (offsetTop < 0) {
+          delta[1] = offsetTop - myMargin;
+        } else if (offsetBottom < 0) {
+          delta[1] = Math.abs(offsetBottom) + myMargin;
+        }
+        if (delta[0] !== 0 || delta[1] !== 0) {
+          const center = (
+            /** @type {import("./coordinate.js").Coordinate} */
+            map.getView().getCenterInternal()
+          );
+          const centerPx = map.getPixelFromCoordinateInternal(center);
+          if (!centerPx) {
+            return;
+          }
+          const newCenterPx = [centerPx[0] + delta[0], centerPx[1] + delta[1]];
+          const panOptions = panIntoViewOptions.animation || {};
+          map.getView().animateInternal({
+            center: map.getCoordinateFromPixelInternal(newCenterPx),
+            duration: panOptions.duration,
+            easing: panOptions.easing
+          });
+        }
+      }
+    }
+    /**
+     * Get the extent of an element relative to the document
+     * @param {HTMLElement} element The element.
+     * @param {import("./size.js").Size} size The size of the element.
+     * @return {import("./extent.js").Extent} The extent.
+     * @protected
+     */
+    getRect(element, size) {
+      const box = element.getBoundingClientRect();
+      const offsetX = box.left + window.pageXOffset;
+      const offsetY = box.top + window.pageYOffset;
+      return [offsetX, offsetY, offsetX + size[0], offsetY + size[1]];
+    }
+    /**
+     * Set the positioning for this overlay.
+     * @param {Positioning} positioning how the overlay is
+     *     positioned relative to its point on the map.
+     * @observable
+     * @api
+     */
+    setPositioning(positioning) {
+      this.set(Property.POSITIONING, positioning);
+    }
+    /**
+     * Modify the visibility of the element.
+     * @param {boolean} visible Element visibility.
+     * @protected
+     */
+    setVisible(visible) {
+      if (this.rendered.visible !== visible) {
+        this.element.style.display = visible ? "" : "none";
+        this.rendered.visible = visible;
+      }
+    }
+    /**
+     * Update pixel position.
+     * @protected
+     */
+    updatePixelPosition() {
+      const map = this.getMap();
+      const position = this.getPosition();
+      if (!map || !map.isRendered() || !position) {
+        this.setVisible(false);
+        return;
+      }
+      const pixel = map.getPixelFromCoordinate(position);
+      const mapSize = map.getSize();
+      this.updateRenderedPosition(pixel, mapSize);
+    }
+    /**
+     * @param {import("./pixel.js").Pixel} pixel The pixel location.
+     * @param {import("./size.js").Size|undefined} mapSize The map size.
+     * @protected
+     */
+    updateRenderedPosition(pixel, mapSize) {
+      const style = this.element.style;
+      const offset = this.getOffset();
+      const positioning = this.getPositioning();
+      this.setVisible(true);
+      const x = `${pixel[0] + offset[0]}px`;
+      const y = `${pixel[1] + offset[1]}px`;
+      let posX = "0%";
+      let posY = "0%";
+      if (positioning == "bottom-right" || positioning == "center-right" || positioning == "top-right") {
+        posX = "-100%";
+      } else if (positioning == "bottom-center" || positioning == "center-center" || positioning == "top-center") {
+        posX = "-50%";
+      }
+      if (positioning == "bottom-left" || positioning == "bottom-center" || positioning == "bottom-right") {
+        posY = "-100%";
+      } else if (positioning == "center-left" || positioning == "center-center" || positioning == "center-right") {
+        posY = "-50%";
+      }
+      const transform2 = `translate(${posX}, ${posY}) translate(${x}, ${y})`;
+      if (this.rendered.transform_ != transform2) {
+        this.rendered.transform_ = transform2;
+        style.transform = transform2;
+      }
+    }
+    /**
+     * returns the options this Overlay has been created with
+     * @return {Options} overlay options
+     */
+    getOptions() {
+      return this.options;
+    }
   }
   class Feature extends BaseObject {
     /**
@@ -23994,7 +24509,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (imageData) {
       const x = Math.floor(Math.round(pixel[0]) * HIT_DETECT_RESOLUTION);
       const y = Math.floor(Math.round(pixel[1]) * HIT_DETECT_RESOLUTION);
-      const index = (clamp(x, 0, imageData.width - 1) + clamp(y, 0, imageData.height - 1) * imageData.width) * 4;
+      const index = (clamp$1(x, 0, imageData.width - 1) + clamp$1(y, 0, imageData.height - 1) * imageData.width) * 4;
       const r = imageData.data[index];
       const g = imageData.data[index + 1];
       const b = imageData.data[index + 2];
@@ -27396,7 +27911,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let px = x1;
     let py = y1;
     if (dx !== 0 || dy !== 0) {
-      along = clamp(((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy), 0, 1);
+      along = clamp$1(((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy), 0, 1);
       px += dx * along;
       py += dy * along;
     }
@@ -31539,7 +32054,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         0,
         Math.ceil(
           Math.log2(
-            getArea(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
+            getArea$1(targetExtent) / (destinationResolution * destinationResolution * 256 * 256)
           )
         )
       ) : 0);
@@ -31826,7 +32341,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const maxTargetExtent = this.targetTileGrid_.getExtent();
       let maxSourceExtent = this.sourceTileGrid_.getExtent();
       const limitedTargetExtent = maxTargetExtent ? getIntersection(targetExtent, maxTargetExtent) : targetExtent;
-      if (getArea(limitedTargetExtent) === 0) {
+      if (getArea$1(limitedTargetExtent) === 0) {
         this.state = TileState.EMPTY;
         return;
       }
@@ -31868,12 +32383,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let sourceExtent = this.triangulation_.calculateSourceExtent();
       if (maxSourceExtent) {
         if (sourceProj.canWrapX()) {
-          sourceExtent[1] = clamp(
+          sourceExtent[1] = clamp$1(
             sourceExtent[1],
             maxSourceExtent[1],
             maxSourceExtent[3]
           );
-          sourceExtent[3] = clamp(
+          sourceExtent[3] = clamp$1(
             sourceExtent[3],
             maxSourceExtent[1],
             maxSourceExtent[3]
@@ -31882,7 +32397,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           sourceExtent = getIntersection(sourceExtent, maxSourceExtent);
         }
       }
-      if (!getArea(sourceExtent)) {
+      if (!getArea$1(sourceExtent)) {
         this.state = TileState.EMPTY;
       } else {
         let worldWidth = 0;
@@ -33609,7 +34124,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         resolution,
         opt_direction || 0
       );
-      return clamp(z, this.minZoom, this.maxZoom);
+      return clamp$1(z, this.minZoom, this.maxZoom);
     }
     /**
      * The tile with the provided tile coordinate intersects the given viewport.
@@ -38774,6 +39289,395 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return geometryFeatureStyle;
   }
+  const SKETCH_TEXT_PROP = "ec-sketch-text";
+  const DEFAULTS$1 = {
+    text: "Texte",
+    fontSize: 14,
+    fontColor: "#000091",
+    strokeColor: "#ffffff",
+    rotation: 0
+  };
+  function clampRotationDeg(value) {
+    if (!Number.isFinite(value)) return DEFAULTS$1.rotation;
+    let deg = (value % 360 + 360) % 360;
+    if (deg > 180) deg -= 360;
+    return Math.round(deg * 10) / 10;
+  }
+  function sketchTextHitRadiusPx(attrs) {
+    const halfH = attrs.fontSize * 1.33 * 0.55;
+    const halfW = Math.max(attrs.text.length * attrs.fontSize * 0.35, 14);
+    return Math.hypot(halfW, halfH) + 6;
+  }
+  function sketchTextRotateAnchor(point, attrs, mapResolution) {
+    const c = point.getCoordinates();
+    const halfHPx = attrs.fontSize * 1.33 * 0.55;
+    const iconClearancePx = 22;
+    const dist = (halfHPx + iconClearancePx) * mapResolution;
+    const rad = attrs.rotation * Math.PI / 180;
+    return [c[0] - Math.sin(rad) * dist, c[1] + Math.cos(rad) * dist];
+  }
+  function isSketchTextFeature(feature) {
+    return Boolean(feature.get(SKETCH_TEXT_PROP)) || Boolean(feature.get("text"));
+  }
+  function isNearSketchText(feature, coord, mapResolution) {
+    if (!isSketchTextFeature(feature)) return false;
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Point)) return false;
+    const attrs = getSketchTextAttrs(feature);
+    const radius = sketchTextHitRadiusPx(attrs) * mapResolution;
+    const c = geom.getCoordinates();
+    return Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= radius;
+  }
+  function sketchTextStyle(attrs = {}) {
+    const text = attrs.text || DEFAULTS$1.text;
+    const fontSize = attrs.fontSize ?? DEFAULTS$1.fontSize;
+    const fontColor = attrs.fontColor || DEFAULTS$1.fontColor;
+    const strokeColor = attrs.strokeColor || DEFAULTS$1.strokeColor;
+    const rotationDeg = attrs.rotation ?? DEFAULTS$1.rotation;
+    return new Style({
+      text: new Text({
+        text,
+        font: `${fontSize}pt Marianne, Calibri, sans-serif`,
+        fill: new Fill({ color: fontColor }),
+        stroke: new Stroke({ color: strokeColor, width: 3 }),
+        textAlign: "center",
+        textBaseline: "middle",
+        rotation: rotationDeg * Math.PI / 180,
+        rotateWithView: false
+      })
+    });
+  }
+  function getSketchTextAttrs(feature) {
+    var _a, _b;
+    const stored = feature.get(SKETCH_TEXT_PROP);
+    const fromStyle = feature.getStyle();
+    let text = (stored == null ? void 0 : stored.text) ?? String(feature.get("text") ?? DEFAULTS$1.text);
+    let fontSize = (stored == null ? void 0 : stored.fontSize) ?? DEFAULTS$1.fontSize;
+    let fontColor = (stored == null ? void 0 : stored.fontColor) ?? DEFAULTS$1.fontColor;
+    let strokeColor = (stored == null ? void 0 : stored.strokeColor) ?? DEFAULTS$1.strokeColor;
+    let rotation = (stored == null ? void 0 : stored.rotation) ?? DEFAULTS$1.rotation;
+    if (fromStyle instanceof Style) {
+      const t = fromStyle.getText();
+      if (t) {
+        const rawText = t.getText();
+        if (typeof rawText === "string" && rawText) text = rawText;
+        else if (Array.isArray(rawText) && rawText.length) text = rawText.join("");
+        const fill = (_a = t.getFill()) == null ? void 0 : _a.getColor();
+        if (typeof fill === "string") fontColor = fill;
+        const stroke = (_b = t.getStroke()) == null ? void 0 : _b.getColor();
+        if (typeof stroke === "string" && (stored == null ? void 0 : stored.strokeColor) === void 0) {
+          strokeColor = stroke;
+        }
+        const font = t.getFont() || "";
+        const m = /(\d+(?:\.\d+)?)\s*pt/i.exec(font);
+        if (m) fontSize = Number(m[1]);
+        if ((stored == null ? void 0 : stored.rotation) === void 0) {
+          const rad = t.getRotation();
+          if (typeof rad === "number" && Number.isFinite(rad)) {
+            rotation = clampRotationDeg(rad * 180 / Math.PI);
+          }
+        }
+      }
+    }
+    return {
+      text,
+      fontSize,
+      fontColor,
+      strokeColor,
+      rotation: clampRotationDeg(rotation)
+    };
+  }
+  function applySketchTextStyle(feature, attrs) {
+    const normalized = {
+      ...DEFAULTS$1,
+      ...attrs,
+      strokeColor: attrs.strokeColor || DEFAULTS$1.strokeColor,
+      rotation: clampRotationDeg(attrs.rotation)
+    };
+    feature.set(SKETCH_TEXT_PROP, { ...normalized });
+    feature.set("text", normalized.text);
+    feature.setStyle(sketchTextStyle(normalized));
+    feature.changed();
+  }
+  const FEATURE_STYLE_PROP = "ec-feature-style";
+  const DEFAULTS = {
+    kind: "polygon",
+    strokeColor: "#000091",
+    strokeWidth: 2,
+    fillColor: "rgba(0, 0, 145, 0.2)",
+    radius: 6,
+    text: "Texte",
+    fontSize: 14,
+    fontColor: "#000091",
+    textStrokeColor: "#ffffff",
+    textStrokeWidth: 3,
+    rotation: 0,
+    lineDash: 0,
+    lineCap: "round",
+    lineJoin: "round",
+    lineDashOffset: 0,
+    miterLimit: 10,
+    fontFamily: "Marianne, Calibri, sans-serif",
+    fontBold: false,
+    fontItalic: false,
+    pointShape: "circle",
+    pointRotation: 0,
+    zIndex: 0
+  };
+  function defaultFeatureStyleAttrs(kind) {
+    const base = { ...DEFAULTS, kind };
+    if (kind === "circle") {
+      return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
+    }
+    if (kind === "point") {
+      return { ...base, fillColor: "#000091", strokeColor: "#ffffff" };
+    }
+    if (kind === "text") {
+      return {
+        ...base,
+        strokeColor: "#ffffff",
+        strokeWidth: 0,
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    if (kind === "line") {
+      return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
+    }
+    return base;
+  }
+  function featureStyleKindOf(feature) {
+    if (isSketchTextFeature(feature)) return "text";
+    const geom = feature.getGeometry();
+    if (!geom) return "polygon";
+    if (geom instanceof Circle) {
+      return getCircleKind(feature) === "disc" ? "disc" : "circle";
+    }
+    const t = geom.getType();
+    if (t === "Point" || t === "MultiPoint") return "point";
+    if (t === "LineString" || t === "MultiLineString") return "line";
+    return "polygon";
+  }
+  function coerceAttrs(kind, partial) {
+    const defaults2 = defaultFeatureStyleAttrs(kind);
+    if (!partial || typeof partial !== "object") return defaults2;
+    const { fontWeight, fontStyle, ...rest } = partial;
+    const merged = { ...defaults2, ...rest, kind };
+    if (typeof rest.fontBold !== "boolean" && fontWeight != null) {
+      merged.fontBold = fontWeight === "bold" || fontWeight === "700" || fontWeight === "600" || fontWeight === "500";
+    }
+    if (typeof rest.fontItalic !== "boolean" && fontStyle != null) {
+      merged.fontItalic = fontStyle === "italic" || fontStyle === "oblique";
+    }
+    return merged;
+  }
+  function cssFont(attrs) {
+    const style = attrs.fontItalic ? "italic" : "normal";
+    const weight = attrs.fontBold ? "bold" : "normal";
+    return `${style} ${weight} ${attrs.fontSize}pt ${attrs.fontFamily}`;
+  }
+  function getFeatureStyleAttrs(feature) {
+    const kind = featureStyleKindOf(feature);
+    const stored = feature.get(FEATURE_STYLE_PROP);
+    const textStored = feature.get(SKETCH_TEXT_PROP);
+    const base = coerceAttrs(kind, stored);
+    return {
+      ...base,
+      kind,
+      text: (stored == null ? void 0 : stored.text) ?? (textStored == null ? void 0 : textStored.text) ?? String(feature.get("text") ?? base.text),
+      fontSize: (stored == null ? void 0 : stored.fontSize) ?? (textStored == null ? void 0 : textStored.fontSize) ?? base.fontSize,
+      fontColor: (stored == null ? void 0 : stored.fontColor) ?? (textStored == null ? void 0 : textStored.fontColor) ?? base.fontColor,
+      textStrokeColor: (stored == null ? void 0 : stored.textStrokeColor) ?? (textStored == null ? void 0 : textStored.strokeColor) ?? base.textStrokeColor,
+      rotation: clampRotationDeg(
+        (stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation
+      )
+    };
+  }
+  function strokeFromAttrs(attrs) {
+    const dash = attrs.lineDash > 0 ? [attrs.lineDash, attrs.lineDash] : void 0;
+    return new Stroke({
+      color: attrs.strokeColor,
+      width: attrs.strokeWidth,
+      lineCap: attrs.lineCap,
+      lineJoin: attrs.lineJoin,
+      lineDash: dash,
+      lineDashOffset: attrs.lineDashOffset,
+      miterLimit: attrs.miterLimit
+    });
+  }
+  function pointImageFromAttrs(attrs) {
+    const fill = new Fill({ color: attrs.fillColor });
+    const stroke = new Stroke({
+      color: attrs.strokeColor,
+      width: attrs.strokeWidth
+    });
+    const rotation = attrs.pointRotation * Math.PI / 180;
+    if (attrs.pointShape === "square") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 4,
+        radius: attrs.radius,
+        angle: Math.PI / 4,
+        rotation
+      });
+    }
+    if (attrs.pointShape === "triangle") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 3,
+        radius: attrs.radius,
+        rotation
+      });
+    }
+    if (attrs.pointShape === "star") {
+      return new RegularShape({
+        fill,
+        stroke,
+        points: 5,
+        radius: attrs.radius,
+        radius2: attrs.radius / 2,
+        rotation
+      });
+    }
+    return new CircleStyle({
+      radius: attrs.radius,
+      fill,
+      stroke
+    });
+  }
+  function buildFeatureStyle(attrs) {
+    if (attrs.kind === "text") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        text: new Text({
+          text: attrs.text || DEFAULTS.text,
+          font: cssFont(attrs),
+          fill: new Fill({ color: attrs.fontColor }),
+          stroke: new Stroke({
+            color: attrs.textStrokeColor,
+            width: attrs.textStrokeWidth
+          }),
+          textAlign: "center",
+          textBaseline: "middle",
+          rotation: clampRotationDeg(attrs.rotation) * Math.PI / 180,
+          rotateWithView: false
+        })
+      });
+    }
+    if (attrs.kind === "point") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        image: pointImageFromAttrs(attrs)
+      });
+    }
+    if (attrs.kind === "line") {
+      return new Style({
+        zIndex: attrs.zIndex || void 0,
+        stroke: strokeFromAttrs(attrs)
+      });
+    }
+    return new Style({
+      zIndex: attrs.zIndex || void 0,
+      fill: new Fill({ color: attrs.fillColor }),
+      stroke: strokeFromAttrs(attrs),
+      image: new CircleStyle({
+        radius: 5,
+        fill: new Fill({ color: attrs.strokeColor })
+      })
+    });
+  }
+  function applyFeatureStyle(feature, attrs) {
+    const kind = attrs.kind || featureStyleKindOf(feature);
+    const normalized = coerceAttrs(kind, {
+      ...attrs,
+      kind,
+      rotation: clampRotationDeg(attrs.rotation)
+    });
+    feature.set(FEATURE_STYLE_PROP, { ...normalized });
+    if (kind === "text") {
+      feature.set(SKETCH_TEXT_PROP, {
+        text: normalized.text,
+        fontSize: normalized.fontSize,
+        fontColor: normalized.fontColor,
+        strokeColor: normalized.textStrokeColor,
+        rotation: normalized.rotation
+      });
+      feature.set("text", normalized.text);
+    }
+    feature.setStyle(buildFeatureStyle(normalized));
+    feature.changed();
+  }
+  function restoreFeatureStyleFromProperties(feature) {
+    const stored = feature.get(FEATURE_STYLE_PROP);
+    const text = feature.get(SKETCH_TEXT_PROP) || feature.get("text");
+    if (!stored && !text) return false;
+    applyFeatureStyle(feature, getFeatureStyleAttrs(feature));
+    return true;
+  }
+  function restoreFeaturesStyles(features) {
+    for (const f of features) restoreFeatureStyleFromProperties(f);
+  }
+  function featureStylePopupAnchorCandidates(feature) {
+    const geom = feature.getGeometry();
+    if (!geom) return [];
+    if (geom instanceof Point) return [geom.getCoordinates()];
+    if (geom instanceof MultiPoint) return geom.getCoordinates();
+    if (geom instanceof Circle) return [geom.getCenter()];
+    if (geom instanceof LineString) {
+      const coords = geom.getCoordinates();
+      return coords.length ? coords : [];
+    }
+    if (geom instanceof MultiLineString) {
+      return geom.getCoordinates().flat();
+    }
+    if (geom instanceof Polygon) {
+      const interior = geom.getInteriorPoint().getCoordinates().slice(0, 2);
+      const ring = geom.getCoordinates()[0] || [];
+      const verts = ring.length > 1 ? ring.slice(0, -1) : ring;
+      return [interior, ...verts];
+    }
+    if (geom instanceof MultiPolygon) {
+      const out = [];
+      for (const poly of geom.getPolygons()) {
+        const interior = poly.getInteriorPoint().getCoordinates().slice(0, 2);
+        out.push(interior);
+        const ring = poly.getCoordinates()[0] || [];
+        if (ring.length > 1) out.push(...ring.slice(0, -1));
+        else out.push(...ring);
+      }
+      return out;
+    }
+    const extent = geom.getExtent();
+    return [[(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]];
+  }
+  function featureStylePopupAnchor(feature, mapSize, getPixel) {
+    const candidates = featureStylePopupAnchorCandidates(feature);
+    if (!candidates.length) return null;
+    if (!mapSize || !getPixel) {
+      return candidates[0];
+    }
+    const scored = candidates.map((c, index) => {
+      const p = getPixel(c);
+      const onScreen = Boolean(
+        p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1]
+      );
+      return {
+        c,
+        p,
+        onScreen,
+        index,
+        // Plus haut à l’écran = meilleur pour une popup au-dessus
+        topRank: p ? p[1] : Number.POSITIVE_INFINITY
+      };
+    });
+    const pool = scored.filter((s) => s.onScreen);
+    const use = pool.length ? pool : scored;
+    const interior = use.find((s) => s.index === 0);
+    if (interior && interior.onScreen) return interior.c;
+    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
+    return use[0].c;
+  }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
   const HANDLE_ICON_SCALE = 1.4;
@@ -38798,6 +39702,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
     </svg>`
   );
+  const STYLE_EDIT_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9 .83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.36-.61-.36-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+    </svg>`
+  );
+  const STYLE_EDIT_GAP_PX = 36;
   function styleForRole(role) {
     if (role === "translate") {
       return new Style({
@@ -38813,6 +39723,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return new Style({
         image: new Icon({
           src: ROTATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    if (role === "style-edit") {
+      return new Style({
+        image: new Icon({
+          src: STYLE_EDIT_ICON,
           anchor: [0.5, 0.5],
           scale: HANDLE_ICON_SCALE
         }),
@@ -38856,6 +39776,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function resolutionOf(map) {
     return map.getView().getResolution() ?? 1;
+  }
+  const HANDLE_VIEWPORT_MARGIN_PX = 28;
+  function clampHandleToViewport(map, coord) {
+    const size = map.getSize();
+    if (!size) return coord;
+    const pixel = map.getPixelFromCoordinate(coord);
+    if (!pixel) return coord;
+    const m = HANDLE_VIEWPORT_MARGIN_PX;
+    const x = Math.min(Math.max(m, pixel[0]), Math.max(m, size[0] - m));
+    const y = Math.min(Math.max(m, pixel[1]), Math.max(m, size[1] - m));
+    if (x === pixel[0] && y === pixel[1]) return coord;
+    return map.getCoordinateFromPixel([x, y]);
   }
   function distPointToSegment(p, a, b) {
     const dx = b[0] - a[0];
@@ -38993,6 +39925,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return "move";
       case "rotate":
         return "grab";
+      case "style-edit":
+        return "pointer";
       case "resize-radius":
         return "nesw-resize";
       case "resize-n":
@@ -39043,6 +39977,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "dataSource");
       __publicField(this, "dataLayer");
       __publicField(this, "onChange");
+      __publicField(this, "onStyleEdit");
+      __publicField(this, "styleEditEnabled");
       __publicField(this, "mode");
       __publicField(this, "active", false);
       __publicField(this, "handleSource", new VectorSource({ wrapX: false }));
@@ -39050,11 +39986,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "pointer");
       __publicField(this, "hovered", null);
       __publicField(this, "dragging", null);
+      __publicField(this, "onViewChange", () => {
+        if (!this.active || this.dragging || !this.hovered) return;
+        this.placeHandles(this.hovered);
+      });
       this.map = opts.map;
       this.dataSource = opts.source;
       this.dataLayer = opts.layer;
       this.mode = opts.mode;
       this.onChange = opts.onChange;
+      this.onStyleEdit = opts.onStyleEdit ?? null;
+      this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.handleLayer = new VectorLayer({
         source: this.handleSource,
         // Au-dessus des couches données / tuiles
@@ -39078,9 +40020,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (active) {
         this.map.addLayer(this.handleLayer);
         this.map.addInteraction(this.pointer);
+        this.map.getView().on("change:center", this.onViewChange);
+        this.map.getView().on("change:resolution", this.onViewChange);
+        this.map.on("change:size", this.onViewChange);
       } else {
         this.map.removeInteraction(this.pointer);
         this.map.removeLayer(this.handleLayer);
+        this.map.getView().un("change:center", this.onViewChange);
+        this.map.getView().un("change:resolution", this.onViewChange);
+        this.map.un("change:size", this.onViewChange);
         this.clearHandles();
         this.hovered = null;
         this.dragging = null;
@@ -39161,10 +40109,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         },
         {
           layerFilter: (layer) => layer === this.dataLayer,
-          hitTolerance: 10
+          hitTolerance: 28
         }
       );
-      return found;
+      if (found) return found;
+      const coord = this.map.getCoordinateFromPixel(pixel);
+      if (!coord) return null;
+      const res = resolutionOf(this.map);
+      for (const f of this.dataSource.getFeatures()) {
+        const feature = f;
+        if (!isNearSketchText(feature, coord, res)) continue;
+        if (this.mode === "point" || this.mode === "line-polygon") return feature;
+      }
+      return null;
     }
     /**
      * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
@@ -39173,8 +40130,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clearHandles();
       const geom = feature.getGeometry();
       if (!geom) return;
-      const add2 = (role, coord) => {
-        const f = new Feature({ geometry: new Point(coord) });
+      const add2 = (role, coord, free = false) => {
+        const at = free ? coord : clampHandleToViewport(this.map, coord);
+        const f = new Feature({ geometry: new Point(at) });
         f.set("role", role);
         this.handleSource.addFeature(f);
       };
@@ -39182,7 +40140,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (geom instanceof Circle) {
         const cMode = circleModeFor(feature, this.mode);
         if (cMode === "circle") {
-          add2("translate", circleSideTranslateAnchor(geom, res));
+          const t = circleSideTranslateAnchor(geom, res);
+          add2("translate", t);
+          if (this.styleEditEnabled) {
+            add2("style-edit", [
+              t[0],
+              t[1] + STYLE_EDIT_GAP_PX * res
+            ]);
+          }
+        } else if (this.styleEditEnabled) {
+          const c = geom.getCenter();
+          add2("style-edit", [
+            c[0],
+            c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)
+          ]);
         }
         return;
       }
@@ -39199,13 +40170,46 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("resize-s", [midX, minY]);
         add2("resize-sw", [minX, minY]);
         add2("resize-w", [minX, midY]);
+        if (this.styleEditEnabled) {
+          add2("style-edit", [
+            midX,
+            maxY + STYLE_EDIT_GAP_PX * res
+          ]);
+        }
+        return;
+      }
+      if (this.mode !== "line-polygon" && this.mode !== "point") return;
+      if (geom instanceof Point && isSketchTextFeature(feature)) {
+        const attrs = getSketchTextAttrs(feature);
+        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? sketchTextRotateAnchor(geom, attrs, res);
+        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          const rad = attrs.rotation * Math.PI / 180;
+          const gap = STYLE_EDIT_GAP_PX * res;
+          add2("style-edit", [
+            rotateAt[0] + Math.cos(rad) * gap,
+            rotateAt[1] + Math.sin(rad) * gap
+          ]);
+        }
+        return;
+      }
+      if (geom instanceof Point && this.styleEditEnabled) {
+        const c = geom.getCoordinates();
+        add2("style-edit", [c[0], c[1] + STYLE_EDIT_GAP_PX * res]);
         return;
       }
       if (this.mode !== "line-polygon") return;
       if (geom instanceof LineString) {
         const anchors = lineSideAnchors(geom, res);
         add2("translate", anchors.translate);
-        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate);
+        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
+          add2("style-edit", [
+            r[0] - STYLE_EDIT_GAP_PX * res,
+            r[1]
+          ]);
+        }
         return;
       }
       if (geom instanceof Polygon) {
@@ -39214,7 +40218,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const span = Math.max(getHeight(extent), getWidth(extent), 1);
         const defaultOffset = Math.max(span * 0.12, 36 * res);
         const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
-        add2("rotate", rotateAt);
+        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
+        if (this.styleEditEnabled) {
+          add2("style-edit", [
+            rotateAt[0] - STYLE_EDIT_GAP_PX * res,
+            rotateAt[1]
+          ]);
+        }
       }
     }
     isDeepInsideHoveredPolygon(coord) {
@@ -39255,7 +40265,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.placeHandles(feature);
         const coord2 = evt.coordinate;
         const geom = feature.getGeometry();
-        if (el && (this.mode === "point" || geom instanceof Point)) {
+        if (el && coord2 && geom instanceof Point && isSketchTextFeature(feature) && isNearSketchText(feature, coord2, resolutionOf(this.map))) {
+          el.style.cursor = "move";
+        } else if (el && (this.mode === "point" || geom instanceof Point) && !isSketchTextFeature(feature)) {
           el.style.cursor = "move";
         } else if (el && coord2 && geom instanceof Circle) {
           const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
@@ -39277,6 +40289,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.hovered && coord) {
         const geom = this.hovered.getGeometry();
         const res = resolutionOf(this.map);
+        if (geom instanceof Point && isSketchTextFeature(this.hovered)) {
+          const keep = (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res;
+          const c = geom.getCoordinates();
+          if (Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= keep) {
+            this.placeHandles(this.hovered);
+            if (el) {
+              el.style.cursor = isNearSketchText(this.hovered, coord, res) ? "move" : "pointer";
+            }
+            return;
+          }
+        }
         if (geom instanceof LineString) {
           const keep = LINE_HOVER_KEEP_PX * res;
           if (distToLineString(geom, coord) <= keep) {
@@ -39303,7 +40326,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (el) el.style.cursor = "";
     }
     handleDown(evt) {
-      if (!this.active || this.mode === "point") return false;
+      if (!this.active) return false;
       const coord = evt.coordinate;
       if (!coord) return false;
       const handle = this.findHandleAtPixel(evt.pixel);
@@ -39318,7 +40341,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           startGeom: geom.clone(),
           origin: featureCentroid(geom),
           startAngle: angleBetween(featureCentroid(geom), coord),
-          startExtent: geom.getExtent().slice()
+          startExtent: geom.getExtent().slice(),
+          startTextRotation: isSketchTextFeature(this.hovered) ? getSketchTextAttrs(this.hovered).rotation : 0
         };
         const el = this.map.getTargetElement();
         if (el) {
@@ -39326,6 +40350,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         return true;
       }
+      if (this.hovered && isSketchTextFeature(this.hovered) && isNearSketchText(this.hovered, coord, resolutionOf(this.map))) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Point) {
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCoordinates().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: getSketchTextAttrs(this.hovered).rotation
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
+        }
+      }
+      if (this.mode === "point") return false;
       if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
         const geom = this.hovered.getGeometry();
         if (geom instanceof Circle) {
@@ -39336,7 +40379,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             startGeom: geom.clone(),
             origin: geom.getCenter().slice(),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = cursorForRole("resize-radius");
@@ -39353,7 +40397,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             startGeom: geom.clone(),
             origin: geom.getCenter().slice(),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = "move";
@@ -39370,7 +40415,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             startGeom: geom.clone(),
             origin: featureCentroid(geom),
             startAngle: 0,
-            startExtent: geom.getExtent().slice()
+            startExtent: geom.getExtent().slice(),
+            startTextRotation: 0
           };
           const el = this.map.getTargetElement();
           if (el) el.style.cursor = "move";
@@ -39383,12 +40429,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.dragging) return;
       const coord = evt.coordinate;
       if (!coord) return;
-      const { role, feature, startCoord, startGeom, origin, startAngle, startExtent } = this.dragging;
+      const {
+        role,
+        feature,
+        startCoord,
+        startGeom,
+        origin,
+        startAngle,
+        startExtent,
+        startTextRotation
+      } = this.dragging;
       if (role === "translate") {
         const next = startGeom.clone();
         next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
         feature.setGeometry(next);
         this.placeHandles(feature);
+        return;
+      }
+      if (role === "style-edit") {
         return;
       }
       if (role === "resize-radius" && startGeom instanceof Circle) {
@@ -39397,6 +40455,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         next.setRadius(radius);
         feature.setGeometry(next);
         this.placeHandles(feature);
+        return;
+      }
+      if (role === "rotate" && startGeom instanceof Point && isSketchTextFeature(feature)) {
+        const deltaDeg = (angleBetween(origin, coord) - startAngle) * 180 / Math.PI;
+        const styleAttrs = getFeatureStyleAttrs(feature);
+        applyFeatureStyle(feature, {
+          ...styleAttrs,
+          kind: "text",
+          rotation: startTextRotation - deltaDeg
+        });
+        this.placeHandles(feature, { rotateAt: coord });
         return;
       }
       if (role === "rotate" && this.mode === "line-polygon") {
@@ -39415,9 +40484,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     handleUp(_evt) {
+      var _a;
       if (!this.dragging) return false;
-      const feature = this.dragging.feature;
+      const { role, feature, startCoord } = this.dragging;
+      const endCoord = _evt.coordinate;
       this.dragging = null;
+      if (role === "style-edit") {
+        const moved = endCoord && Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1]);
+        const res = resolutionOf(this.map);
+        if (!moved || moved < 8 * res) {
+          (_a = this.onStyleEdit) == null ? void 0 : _a.call(this, feature);
+        }
+        this.placeHandles(feature);
+        return false;
+      }
       this.placeHandles(feature);
       this.onChange();
       return false;
@@ -39435,13 +40515,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   const modifyTool = {
     id: "modify",
-    label: "modifier une géométrie",
+    label: "Modifier",
     iconClass: "ec-geometry-editor__tool--modify",
     modify: true
   };
   const removeTool = {
     id: "remove",
-    label: "Supprimer une géométrie",
+    label: "Supprimer",
     iconClass: "ec-geometry-editor__tool--remove",
     remove: true
   };
@@ -39513,6 +40593,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onChange");
       __publicField(this, "onClearAll");
       __publicField(this, "showClearAll");
+      __publicField(this, "extraTools");
+      __publicField(this, "onExtraTool");
+      __publicField(this, "onFeatureCreated");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -39522,6 +40605,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "snap", null);
       __publicField(this, "transform");
       __publicField(this, "removeEdgeTolPx", 12);
+      /** Masque le croquis Draw tant que le pointeur est hors de la carte. */
+      __publicField(this, "pointerOnMap", true);
+      __publicField(this, "mapHoverBound", false);
+      __publicField(this, "onMapPointerEnter", () => {
+        this.pointerOnMap = true;
+        this.map.render();
+      });
+      __publicField(this, "onMapPointerLeave", () => {
+        this.pointerOnMap = false;
+        this.map.render();
+      });
       __publicField(this, "onRemoveClick", (evt) => {
         if (evt.dragging) return;
         const res = this.map.getView().getResolution() ?? 1;
@@ -39578,12 +40672,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.onChange = opts.onChange;
       this.showClearAll = Boolean(opts.clearAll);
       this.onClearAll = opts.onClearAll ?? null;
+      this.extraTools = opts.extraTools ?? [];
+      this.onExtraTool = opts.onExtraTool ?? null;
+      this.onFeatureCreated = opts.onFeatureCreated ?? null;
       this.customStyle = opts.style;
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
       this.modify = new Modify({
         source: this.source,
-        // Cercle / disque : gérés par ModifyTransformController (rayon / translation)
-        filter: (feature) => !(feature.getGeometry() instanceof Circle)
+        // Cercle / disque / texte : gérés par ModifyTransformController
+        filter: (feature) => !(feature.getGeometry() instanceof Circle) && !isSketchTextFeature(feature)
       });
       this.modify.setActive(false);
       this.snap = new Snap({ source: this.source });
@@ -39595,9 +40692,35 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         source: this.source,
         layer: this.layer,
         mode: transformModeFor(this.geometryType),
-        onChange: () => this.onChange()
+        onChange: () => this.onChange(),
+        onStyleEdit: opts.onStyleEdit
       });
       this.render();
+    }
+    bindMapHover() {
+      if (this.mapHoverBound) return;
+      const el = this.map.getTargetElement();
+      if (!el) return;
+      el.addEventListener("pointerenter", this.onMapPointerEnter);
+      el.addEventListener("pointerleave", this.onMapPointerLeave);
+      this.mapHoverBound = true;
+    }
+    unbindMapHover() {
+      if (!this.mapHoverBound) return;
+      const el = this.map.getTargetElement();
+      el == null ? void 0 : el.removeEventListener("pointerenter", this.onMapPointerEnter);
+      el == null ? void 0 : el.removeEventListener("pointerleave", this.onMapPointerLeave);
+      this.mapHoverBound = false;
+      this.pointerOnMap = true;
+    }
+    wrapDrawStyle(base) {
+      return (feature, resolution) => {
+        if (!this.pointerOnMap) return [];
+        if (typeof base === "function") {
+          return base(feature, resolution);
+        }
+        return base;
+      };
     }
     /** Met à jour le type de géométrie (recrée les boutons). */
     setGeometryType(geometryType) {
@@ -39617,18 +40740,110 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType));
     }
     toolsList() {
-      const tools = toolsFor(this.geometryType);
-      return this.showClearAll ? [...tools, clearAllTool] : tools;
+      const toDef = (t) => ({
+        id: t.id,
+        label: t.label,
+        iconClass: t.iconClass,
+        action: t.mode === "action",
+        extraToggle: t.mode === "toggle"
+      });
+      const extrasById = new globalThis.Map(
+        this.extraTools.map((t) => [t.id, toDef(t)])
+      );
+      const pickExtras = (...ids) => ids.flatMap((id) => {
+        const t = extrasById.get(id);
+        return t ? [t] : [];
+      });
+      const core = toolsFor(this.geometryType);
+      const drawTools = core.filter((t) => !t.modify && !t.remove);
+      const modify = core.find((t) => t.modify);
+      const remove = core.find((t) => t.remove);
+      const groups = [];
+      const measures = pickExtras("measure-distance", "measure-area");
+      if (measures.length) groups.push(measures);
+      const session = pickExtras("save", "undo", "redo");
+      if (session.length) groups.push(session);
+      const drawGroup = [...drawTools, ...pickExtras("text")];
+      if (drawGroup.length) groups.push(drawGroup);
+      const editGroup = [];
+      if (modify) editGroup.push(modify);
+      if (remove) editGroup.push(remove);
+      if (this.showClearAll) editGroup.push(clearAllTool);
+      if (editGroup.length) groups.push(editGroup);
+      const io = pickExtras("export", "import");
+      if (io.length) groups.push(io);
+      const placed = new Set(groups.flat().map((t) => t.id));
+      const leftovers = this.extraTools.filter((t) => !placed.has(t.id)).map(toDef);
+      if (leftovers.length) groups.push(leftovers);
+      const sep = () => ({
+        id: "separator",
+        label: "",
+        iconClass: "ec-geometry-editor__toolbar-sep",
+        separator: true
+      });
+      const out = [];
+      for (let i = 0; i < groups.length; i++) {
+        if (i > 0) out.push(sep());
+        out.push(...groups[i]);
+      }
+      return out;
+    }
+    /** Active / désactive visuellement un bouton extra (enabled). */
+    setExtraEnabled(id, enabled) {
+      const btn = this.target.querySelector(
+        `button[data-tool-id="${id}"]`
+      );
+      if (!btn) return;
+      btn.disabled = !enabled;
+      btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    }
+    /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
+    setSaveState(state) {
+      const btn = this.target.querySelector(
+        'button[data-tool-id="save"]'
+      );
+      if (!btn) return;
+      btn.classList.toggle("ec-geometry-editor__tool--save-saved", state === "saved");
+      btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
+      const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
+      if (badge instanceof HTMLElement) {
+        badge.hidden = state === "idle";
+        badge.dataset.state = state;
+      }
+    }
+    /** Désactive tout outil transient (dessin, measure externe, etc.). */
+    clearActiveTool() {
+      this.clearTransient();
+    }
+    getActiveId() {
+      return this.activeId;
     }
     render() {
       this.target.replaceChildren();
+      let sepIndex = 0;
       for (const tool of this.toolsList()) {
+        if (tool.separator) {
+          const sep = document.createElement("div");
+          sep.className = "ec-geometry-editor__toolbar-sep";
+          sep.setAttribute("role", "separator");
+          sep.setAttribute("aria-hidden", "true");
+          sep.dataset.sepIndex = String(sepIndex++);
+          this.target.appendChild(sep);
+          continue;
+        }
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        if (tool.id === "save") {
+          const badge = document.createElement("span");
+          badge.className = "ec-geometry-editor__tool-badge";
+          badge.setAttribute("aria-hidden", "true");
+          badge.hidden = true;
+          btn.appendChild(badge);
+        }
         btn.addEventListener("click", () => this.activate(tool));
         this.target.appendChild(btn);
       }
@@ -39639,8 +40854,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (target) target.style.cursor = "";
     }
     clearTransient() {
-      var _a;
+      var _a, _b;
+      const prev = this.activeId;
       this.clearFeatureCursor();
+      this.unbindMapHover();
       this.transform.setActive(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
@@ -39653,9 +40870,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
+      if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
+        (_b = this.onExtraTool) == null ? void 0 : _b.call(this, prev, false);
+      }
     }
     activate(tool) {
-      var _a;
+      var _a, _b, _c;
       if (tool.clearAll) {
         this.clearTransient();
         if (this.onClearAll) {
@@ -39664,6 +40884,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.source.clear(true);
           this.onChange();
         }
+        return;
+      }
+      if (tool.action) {
+        (_a = this.onExtraTool) == null ? void 0 : _a.call(this, tool.id, true);
         return;
       }
       const already = this.activeId === tool.id;
@@ -39675,11 +40899,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
+      if (tool.extraToggle) {
+        (_b = this.onExtraTool) == null ? void 0 : _b.call(this, tool.id, true);
+        return;
+      }
       if (tool.modify) {
         this.transform.setMode(transformModeFor(this.geometryType));
         this.transform.setActive(true);
         if (this.transform.usesVertexModify()) {
-          (_a = this.modify) == null ? void 0 : _a.setActive(true);
+          (_c = this.modify) == null ? void 0 : _c.setActive(true);
         }
         this.map.on("pointermove", this.onFeaturePointerMove);
         return;
@@ -39693,10 +40921,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
       const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle);
       this.draw = new Draw({
         source: this.source,
         type: tool.drawType,
-        style: this.customStyle ?? sketchStyle,
+        style: drawStyle,
         geometryFunction: tool.box ? createBox() : void 0
       });
       this.draw.on("drawstart", () => {
@@ -39706,9 +40935,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (tool.circleKind) {
           setCircleKind(evt.feature, tool.circleKind);
         }
-        queueMicrotask(() => this.onChange());
+        queueMicrotask(() => {
+          var _a2;
+          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
+          this.onChange();
+        });
       });
       this.map.addInteraction(this.draw);
+      this.bindMapHover();
     }
     destroy() {
       this.clearTransient();
@@ -39718,7 +40952,1209 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.target.replaceChildren();
     }
   }
+  const GEOJSON$2 = new GeoJSON();
+  const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
+  const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
+  function projectionOf(map) {
+    return map.getView().getProjection();
+  }
+  function cloneForKmlExport(features) {
+    return features.map((f) => {
+      const c = f.clone();
+      for (const key of STYLE_PROP_KEYS) {
+        const v = c.get(key);
+        if (v && typeof v === "object") {
+          c.set(key, JSON.stringify(v));
+        }
+      }
+      return c;
+    });
+  }
+  function hydrateImportedSketchFeatures(features) {
+    for (const f of features) {
+      for (const key of STYLE_PROP_KEYS) {
+        const v = f.get(key);
+        if (typeof v === "string") {
+          try {
+            f.set(key, JSON.parse(v));
+          } catch {
+          }
+        }
+      }
+    }
+    restoreFeaturesStyles(features);
+  }
+  function readSketchFile(map, text, format) {
+    const opts = {
+      featureProjection: projectionOf(map),
+      dataProjection: "EPSG:4326"
+    };
+    const features = format === "kml" ? KML_FMT.readFeatures(text, opts) : GEOJSON$2.readFeatures(JSON.parse(text), opts);
+    hydrateImportedSketchFeatures(features);
+    return features;
+  }
+  function writeSketchFile(map, source, format) {
+    const features = source.getFeatures();
+    const opts = {
+      featureProjection: projectionOf(map),
+      dataProjection: "EPSG:4326"
+    };
+    if (format === "kml") {
+      return KML_FMT.writeFeatures(cloneForKmlExport(features), opts);
+    }
+    return JSON.stringify(GEOJSON$2.writeFeaturesObject(features, opts), null, 2);
+  }
+  function downloadBlob(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function pickSketchFile(accept, onFile) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      var _a;
+      const file = (_a = input.files) == null ? void 0 : _a[0];
+      input.remove();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") onFile(reader.result, file.name);
+      };
+      reader.readAsText(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+  function formatFromFilename(name) {
+    return /\.kml$/i.test(name) ? "kml" : "geojson";
+  }
+  const GEOJSON$1 = new GeoJSON();
+  const MAX = 50;
+  class SketchHistory {
+    constructor(source, getProjection) {
+      __publicField(this, "undoStack", []);
+      __publicField(this, "redoStack", []);
+      __publicField(this, "suppress", false);
+      this.source = source;
+      this.getProjection = getProjection;
+    }
+    /** Enregistre l’état courant (avant mutation ou après stabilisation). */
+    push() {
+      if (this.suppress) return;
+      const snap2 = this.snapshot();
+      const last = this.undoStack[this.undoStack.length - 1];
+      if (snap2 === last) return;
+      this.undoStack.push(snap2);
+      if (this.undoStack.length > MAX) this.undoStack.shift();
+      this.redoStack = [];
+    }
+    canUndo() {
+      return this.undoStack.length > 1;
+    }
+    canRedo() {
+      return this.redoStack.length > 0;
+    }
+    undo() {
+      if (!this.canUndo()) return false;
+      const current = this.undoStack.pop();
+      this.redoStack.push(current);
+      const prev = this.undoStack[this.undoStack.length - 1];
+      this.restore(prev);
+      return true;
+    }
+    redo() {
+      if (!this.canRedo()) return false;
+      const next = this.redoStack.pop();
+      this.undoStack.push(next);
+      this.restore(next);
+      return true;
+    }
+    /** Après restoreFromLocalStorage / setFeatures externe. */
+    resetFromSource() {
+      this.undoStack = [this.snapshot()];
+      this.redoStack = [];
+    }
+    snapshot() {
+      const features = this.source.getFeatures();
+      const projection = this.getProjection();
+      return JSON.stringify(
+        GEOJSON$1.writeFeaturesObject(features, {
+          featureProjection: projection,
+          dataProjection: "EPSG:4326"
+        })
+      );
+    }
+    restore(raw) {
+      this.suppress = true;
+      try {
+        const features = GEOJSON$1.readFeatures(JSON.parse(raw), {
+          featureProjection: this.getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        hydrateImportedSketchFeatures(features);
+        this.source.clear(true);
+        if (features.length) this.source.addFeatures(features);
+      } finally {
+        this.suppress = false;
+      }
+    }
+  }
+  function clamp01(n) {
+    if (!Number.isFinite(n)) return 1;
+    return Math.min(1, Math.max(0, n));
+  }
+  function parseColor(value, fallback = { r: 0, g: 0, b: 145, a: 1 }) {
+    const v = (value || "").trim();
+    if (!v || v === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
+    const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(v);
+    if (hex) {
+      let h = hex[1];
+      if (h.length === 3) {
+        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      }
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+      return { r, g, b, a: clamp01(a) };
+    }
+    const rgba = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v);
+    if (rgba) {
+      return {
+        r: Math.round(Number(rgba[1])),
+        g: Math.round(Number(rgba[2])),
+        b: Math.round(Number(rgba[3])),
+        a: clamp01(rgba[4] !== void 0 ? Number(rgba[4]) : 1)
+      };
+    }
+    return { ...fallback };
+  }
+  function toRgbaString(c) {
+    const a = Math.round(clamp01(c.a) * 1e3) / 1e3;
+    if (a <= 0) return "rgba(0, 0, 0, 0)";
+    if (a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
+    return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
+  }
+  function toHexRgb(c) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+    return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+  }
+  class SketchColorPicker {
+    constructor(label, initial = "rgba(0, 0, 145, 1)") {
+      __publicField(this, "root");
+      __publicField(this, "swatch");
+      __publicField(this, "panel");
+      __publicField(this, "hexInput");
+      __publicField(this, "hueInput");
+      __publicField(this, "alphaInput");
+      __publicField(this, "alphaValue");
+      __publicField(this, "color");
+      __publicField(this, "open", false);
+      __publicField(this, "onChange", null);
+      __publicField(this, "onDocDown", (evt) => {
+        if (!this.open) return;
+        const t = evt.target;
+        if (this.root.contains(t) || this.panel.contains(t)) return;
+        this.closePanel();
+      });
+      this.color = parseColor(initial);
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-color";
+      this.root.innerHTML = `
+      <span class="ec-sketch-color__label">${label}</span>
+      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}" aria-haspopup="dialog" aria-expanded="false"></button>
+    `;
+      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
+      this.swatch.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.open) this.closePanel();
+        else this.openPanel();
+      });
+      this.panel = document.createElement("div");
+      this.panel.className = "ec-sketch-color__panel";
+      this.panel.hidden = true;
+      this.panel.setAttribute("role", "dialog");
+      this.panel.setAttribute("aria-label", label);
+      this.panel.innerHTML = `
+      <p class="ec-sketch-color__panel-title">${label}</p>
+      <label class="ec-sketch-color__hue-field">
+        <span>Couleur</span>
+        <input type="color" class="ec-sketch-color__hue" />
+      </label>
+      <label class="ec-sketch-color__hex-field">
+        <span>Hexadécimal</span>
+        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" />
+      </label>
+      <label class="ec-sketch-color__alpha-field">
+        <span>Opacité (<output class="ec-sketch-color__alpha-value">100</output>%)</span>
+        <input type="range" min="0" max="100" step="1" class="ec-sketch-color__alpha" />
+      </label>
+    `;
+      this.hueInput = this.panel.querySelector(".ec-sketch-color__hue");
+      this.hexInput = this.panel.querySelector(".ec-sketch-color__hex");
+      this.alphaInput = this.panel.querySelector(".ec-sketch-color__alpha");
+      this.alphaValue = this.panel.querySelector(".ec-sketch-color__alpha-value");
+      this.hueInput.addEventListener("input", () => {
+        const c = parseColor(this.hueInput.value);
+        this.color = { ...c, a: this.color.a };
+        this.syncUi(false);
+        this.emit();
+      });
+      this.hexInput.addEventListener("input", () => {
+        const next = parseColor(this.hexInput.value, this.color);
+        const raw = this.hexInput.value.trim();
+        if (raw === "transparent" || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw) || /^rgba?\(/i.test(raw)) {
+          this.color = next;
+          this.syncUi(true);
+          this.emit();
+        }
+      });
+      this.hexInput.addEventListener("change", () => {
+        this.color = parseColor(this.hexInput.value, this.color);
+        this.syncUi(true);
+        this.emit();
+      });
+      this.alphaInput.addEventListener("input", () => {
+        this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
+        this.alphaValue.textContent = this.alphaInput.value;
+        this.paintSwatch();
+        this.emit();
+      });
+      document.body.appendChild(this.panel);
+      this.syncUi(true);
+    }
+    setOnChange(cb) {
+      this.onChange = cb;
+    }
+    getValue() {
+      return toRgbaString(this.color);
+    }
+    setValue(value) {
+      this.color = parseColor(value);
+      this.syncUi(true);
+    }
+    close() {
+      this.closePanel();
+    }
+    destroy() {
+      this.closePanel();
+      this.panel.remove();
+      this.root.remove();
+    }
+    /** Inclure le panneau dans les tests « clic intérieur ». */
+    containsNode(node) {
+      if (!node) return false;
+      return this.root.contains(node) || this.panel.contains(node);
+    }
+    emit() {
+      var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    syncUi(syncHue) {
+      if (syncHue) this.hueInput.value = toHexRgb(this.color);
+      this.hexInput.value = toHexRgb(this.color);
+      const pct = Math.round(this.color.a * 100);
+      this.alphaInput.value = String(pct);
+      this.alphaValue.textContent = String(pct);
+      this.paintSwatch();
+    }
+    paintSwatch() {
+      this.swatch.style.backgroundColor = toRgbaString(this.color);
+      this.swatch.classList.toggle("is-transparent", this.color.a <= 1e-3);
+    }
+    openPanel() {
+      this.open = true;
+      this.swatch.setAttribute("aria-expanded", "true");
+      this.panel.hidden = false;
+      const rect = this.swatch.getBoundingClientRect();
+      this.panel.style.position = "fixed";
+      this.panel.style.zIndex = "10050";
+      let left = rect.left;
+      let top = rect.bottom + 4;
+      this.panel.style.left = `${left}px`;
+      this.panel.style.top = `${top}px`;
+      requestAnimationFrame(() => {
+        const pr = this.panel.getBoundingClientRect();
+        if (pr.right > window.innerWidth - 8) {
+          left = Math.max(8, window.innerWidth - pr.width - 8);
+        }
+        if (pr.bottom > window.innerHeight - 8) {
+          top = Math.max(8, rect.top - pr.height - 4);
+        }
+        this.panel.style.left = `${left}px`;
+        this.panel.style.top = `${top}px`;
+        try {
+          if (typeof this.hueInput.showPicker === "function") {
+            this.hueInput.showPicker();
+          } else {
+            this.hueInput.focus();
+            this.hueInput.click();
+          }
+        } catch {
+          this.hueInput.focus();
+        }
+      });
+      document.addEventListener("pointerdown", this.onDocDown, true);
+    }
+    closePanel() {
+      this.open = false;
+      this.swatch.setAttribute("aria-expanded", "false");
+      this.panel.hidden = true;
+      document.removeEventListener("pointerdown", this.onDocDown, true);
+    }
+  }
+  const BASIC_BY_KIND = {
+    text: ["text", "fontSize", "fontColor", "textStrokeColor", "rotation"],
+    point: ["radius", "fillColor", "strokeColor", "strokeWidth"],
+    line: ["strokeColor", "strokeWidth"],
+    polygon: ["fillColor", "strokeColor", "strokeWidth"],
+    circle: ["strokeColor", "strokeWidth"],
+    disc: ["fillColor", "strokeColor", "strokeWidth"]
+  };
+  const ADVANCED_BY_KIND = {
+    text: ["fontFamily", "fontBold", "fontItalic", "textStrokeWidth", "zIndex"],
+    point: ["pointShape", "pointRotation", "zIndex"],
+    line: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    polygon: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    circle: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    disc: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"]
+  };
+  class SketchFeatureStylePopup {
+    constructor(map) {
+      __publicField(this, "root");
+      __publicField(this, "basicFields");
+      __publicField(this, "advancedFields");
+      __publicField(this, "advancedToggle");
+      __publicField(this, "colorPickers");
+      __publicField(this, "els");
+      __publicField(this, "feature", null);
+      __publicField(this, "kind", "polygon");
+      __publicField(this, "onCommit", null);
+      __publicField(this, "openFlag", false);
+      __publicField(this, "advancedOpen", false);
+      __publicField(this, "outsideDown", false);
+      __publicField(this, "mapDragged", false);
+      __publicField(this, "repositionBound", false);
+      __publicField(this, "scrollGuardBound", false);
+      __publicField(this, "mapResizeObserver", null);
+      __publicField(this, "repositionRaf", 0);
+      __publicField(this, "onMapPointerDrag", () => {
+        this.mapDragged = true;
+      });
+      __publicField(this, "onPopupWheel", (evt) => {
+        evt.stopPropagation();
+        const scroll = this.root.querySelector(
+          ".ec-sketch-style-popup__scroll"
+        );
+        if (!scroll) {
+          evt.preventDefault();
+          return;
+        }
+        const canScroll = scroll.scrollHeight > scroll.clientHeight + 1;
+        if (!canScroll) {
+          evt.preventDefault();
+          return;
+        }
+        const delta = evt.deltaY;
+        const atTop = scroll.scrollTop <= 0 && delta < 0;
+        const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0;
+        if (atTop || atBottom) evt.preventDefault();
+      });
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.openFlag) return;
+        const t = evt.target;
+        if (this.containsUi(t)) return;
+        this.outsideDown = true;
+        this.mapDragged = false;
+      });
+      __publicField(this, "onDocPointerUp", () => {
+        if (!this.outsideDown) return;
+        this.outsideDown = false;
+        if (this.mapDragged) {
+          this.mapDragged = false;
+          return;
+        }
+        this.hide();
+      });
+      __publicField(this, "onViewChange", () => {
+        if (!this.openFlag) return;
+        this.scheduleReposition(false);
+      });
+      __publicField(this, "onWindowResize", () => {
+        if (!this.openFlag) return;
+        this.scheduleReposition(true);
+      });
+      this.map = map;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-style-popup";
+      this.root.hidden = true;
+      this.root.innerHTML = `
+      <div class="ec-sketch-style-popup__scroll">
+        <div class="ec-sketch-style-popup__fields" data-section="basic"></div>
+        <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__advanced-toggle" aria-expanded="false">
+          Options avancées
+        </button>
+        <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
+        <div class="ec-sketch-style-popup__actions">
+          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
+          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+        </div>
+      </div>
+    `;
+      this.basicFields = this.root.querySelector('[data-section="basic"]');
+      this.advancedFields = this.root.querySelector('[data-section="advanced"]');
+      this.advancedToggle = this.root.querySelector(
+        ".ec-sketch-style-popup__advanced-toggle"
+      );
+      this.basicFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field" data-field="text">
+        <span>Texte</span>
+        <input type="text" class="fr-input" data-input="text" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="fontSize">
+        <span>Taille (<output data-output="fontSize">14</output> pt)</span>
+        <input type="range" min="8" max="72" step="1" value="14" data-input="fontSize" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fontColor" data-color-slot="fontColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="textStrokeColor" data-color-slot="textStrokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="rotation">
+        <span>Rotation (<output data-output="rotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="rotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="radius">
+        <span>Rayon (<output data-output="radius">6</output> px)</span>
+        <input type="range" min="1" max="48" step="1" value="6" data-input="radius" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fillColor" data-color-slot="fillColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="strokeColor" data-color-slot="strokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="strokeWidth">
+        <span>Épaisseur (<output data-output="strokeWidth">2</output> px)</span>
+        <input type="range" min="0" max="40" step="1" value="2" data-input="strokeWidth" />
+      </label>
+    `;
+      this.advancedFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDash">
+        <span>Tirets (<output data-output="lineDash">0</output> px, 0 = plein)</span>
+        <input type="range" min="0" max="64" step="1" value="0" data-input="lineDash" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineCap">
+        <span>Extrémités</span>
+        <select class="fr-select" data-input="lineCap">
+          <option value="butt">Coupées</option>
+          <option value="round">Arrondies</option>
+          <option value="square">Carrées</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineJoin">
+        <span>Jonctions (coins du tracé)</span>
+        <select class="fr-select" data-input="lineJoin">
+          <option value="round">Arrondi</option>
+          <option value="bevel">Biseau</option>
+          <option value="miter">Pointe</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDashOffset">
+        <span>Décalage tirets (<output data-output="lineDashOffset">0</output>)</span>
+        <input type="range" min="0" max="100" step="1" value="0" data-input="lineDashOffset" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="miterLimit">
+        <span>Limite des pointes (<output data-output="miterLimit">10</output>)</span>
+        <input type="range" min="1" max="50" step="0.5" value="10" data-input="miterLimit" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="fontFamily">
+        <span>Police</span>
+        <input type="text" class="fr-input" data-input="fontFamily" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontBold">
+        <input type="checkbox" data-input="fontBold" />
+        <span>Gras</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontItalic">
+        <input type="checkbox" data-input="fontItalic" />
+        <span>Italique</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="textStrokeWidth">
+        <span>Épaisseur contour texte (<output data-output="textStrokeWidth">3</output> px)</span>
+        <input type="range" min="0" max="20" step="1" value="3" data-input="textStrokeWidth" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="pointShape">
+        <span>Forme du point</span>
+        <select class="fr-select" data-input="pointShape">
+          <option value="circle">Cercle</option>
+          <option value="square">Carré</option>
+          <option value="triangle">Triangle</option>
+          <option value="star">Étoile</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="pointRotation">
+        <span>Rotation symbole (<output data-output="pointRotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="pointRotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="zIndex">
+        <span>zIndex</span>
+        <input type="number" min="0" max="9999" class="fr-input" data-input="zIndex" />
+      </label>
+    `;
+      this.colorPickers = {
+        fontColor: new SketchColorPicker("Couleur du texte", "#000091"),
+        textStrokeColor: new SketchColorPicker("Contour du texte", "#ffffff"),
+        fillColor: new SketchColorPicker("Remplissage", "rgba(0, 0, 145, 0.2)"),
+        strokeColor: new SketchColorPicker("Contour", "#000091")
+      };
+      for (const [key, picker] of Object.entries(this.colorPickers)) {
+        const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`);
+        slot == null ? void 0 : slot.appendChild(picker.root);
+        picker.setOnChange(() => this.applyFromForm());
+      }
+      this.els = {
+        text: this.root.querySelector('[data-input="text"]'),
+        fontSize: this.root.querySelector('[data-input="fontSize"]'),
+        fontSizeValue: this.root.querySelector('[data-output="fontSize"]'),
+        rotation: this.root.querySelector('[data-input="rotation"]'),
+        rotationValue: this.root.querySelector('[data-output="rotation"]'),
+        strokeWidth: this.root.querySelector('[data-input="strokeWidth"]'),
+        strokeWidthValue: this.root.querySelector('[data-output="strokeWidth"]'),
+        radius: this.root.querySelector('[data-input="radius"]'),
+        radiusValue: this.root.querySelector('[data-output="radius"]'),
+        lineDash: this.root.querySelector('[data-input="lineDash"]'),
+        lineDashValue: this.root.querySelector('[data-output="lineDash"]'),
+        lineCap: this.root.querySelector('[data-input="lineCap"]'),
+        lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
+        lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
+        lineDashOffsetValue: this.root.querySelector(
+          '[data-output="lineDashOffset"]'
+        ),
+        miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
+        miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
+        fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
+        fontBold: this.root.querySelector('[data-input="fontBold"]'),
+        fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
+        textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
+        textStrokeWidthValue: this.root.querySelector(
+          '[data-output="textStrokeWidth"]'
+        ),
+        pointShape: this.root.querySelector('[data-input="pointShape"]'),
+        pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
+        pointRotationValue: this.root.querySelector(
+          '[data-output="pointRotation"]'
+        ),
+        zIndex: this.root.querySelector('[data-input="zIndex"]')
+      };
+      const syncOutputs = () => {
+        this.els.fontSizeValue.textContent = this.els.fontSize.value;
+        this.els.rotationValue.textContent = this.els.rotation.value;
+        this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+        this.els.radiusValue.textContent = this.els.radius.value;
+        this.els.lineDashValue.textContent = this.els.lineDash.value;
+        this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+        this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+        this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+        this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      };
+      const live = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.applyFromForm();
+      };
+      for (const input of Object.values(this.els)) {
+        if (input instanceof HTMLOutputElement) continue;
+        input.addEventListener("input", live);
+        input.addEventListener("change", live);
+      }
+      this.advancedToggle.addEventListener("click", () => {
+        this.setAdvancedOpen(!this.advancedOpen);
+        this.reposition();
+      });
+      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+        var _a;
+        this.applyFromForm();
+        (_a = this.onCommit) == null ? void 0 : _a.call(this);
+        this.hide();
+      });
+      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
+      document.body.appendChild(this.root);
+    }
+    scheduleReposition(updateMapSize) {
+      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+      this.repositionRaf = requestAnimationFrame(() => {
+        this.repositionRaf = 0;
+        if (updateMapSize) this.map.updateSize();
+        this.reposition();
+      });
+    }
+    open(feature, onCommit) {
+      this.unbindOutside();
+      this.feature = feature;
+      this.onCommit = onCommit ?? null;
+      this.kind = featureStyleKindOf(feature);
+      this.setAdvancedOpen(false);
+      const attrs = getFeatureStyleAttrs(feature);
+      this.syncFieldsVisibility();
+      this.fillForm(attrs);
+      this.syncDependentFields();
+      applyFeatureStyle(feature, attrs);
+      this.root.hidden = false;
+      this.openFlag = true;
+      this.reposition();
+      this.bindOutside();
+      this.bindScrollGuard();
+      if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
+        this.els.text.focus();
+        this.els.text.select();
+      }
+    }
+    hide() {
+      this.unbindOutside();
+      this.unbindScrollGuard();
+      this.setAdvancedOpen(false);
+      this.root.hidden = true;
+      this.openFlag = false;
+      this.feature = null;
+      this.onCommit = null;
+      this.outsideDown = false;
+      this.mapDragged = false;
+      for (const p of Object.values(this.colorPickers)) p.close();
+    }
+    destroy() {
+      this.hide();
+      for (const p of Object.values(this.colorPickers)) p.destroy();
+      this.root.remove();
+    }
+    setAdvancedOpen(open) {
+      this.advancedOpen = open;
+      this.advancedFields.hidden = !open;
+      this.advancedToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      this.advancedToggle.textContent = open ? "Masquer les options avancées" : "Options avancées";
+    }
+    containsUi(node) {
+      if (!node) return false;
+      if (this.root.contains(node)) return true;
+      return Object.values(this.colorPickers).some((p) => p.containsNode(node));
+    }
+    bindOutside() {
+      var _a, _b;
+      this.map.on("pointerdrag", this.onMapPointerDrag);
+      this.map.getView().on("change:center", this.onViewChange);
+      this.map.getView().on("change:resolution", this.onViewChange);
+      this.map.on("change:size", this.onViewChange);
+      window.addEventListener("resize", this.onWindowResize);
+      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", this.onWindowResize);
+      window.addEventListener("scroll", this.onViewChange, true);
+      document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      document.addEventListener("pointerup", this.onDocPointerUp, true);
+      const mapEl = this.map.getTargetElement();
+      if (mapEl && typeof ResizeObserver !== "undefined") {
+        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
+        this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize());
+        this.mapResizeObserver.observe(mapEl);
+      }
+      this.repositionBound = true;
+    }
+    unbindOutside() {
+      var _a, _b;
+      this.map.un("pointerdrag", this.onMapPointerDrag);
+      if (this.repositionBound) {
+        this.map.getView().un("change:center", this.onViewChange);
+        this.map.getView().un("change:resolution", this.onViewChange);
+        this.map.un("change:size", this.onViewChange);
+        window.removeEventListener("resize", this.onWindowResize);
+        (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", this.onWindowResize);
+        window.removeEventListener("scroll", this.onViewChange, true);
+        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
+        this.mapResizeObserver = null;
+      }
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("pointerup", this.onDocPointerUp, true);
+      if (this.repositionRaf) {
+        cancelAnimationFrame(this.repositionRaf);
+        this.repositionRaf = 0;
+      }
+      this.repositionBound = false;
+    }
+    bindScrollGuard() {
+      if (this.scrollGuardBound) return;
+      this.root.addEventListener("wheel", this.onPopupWheel, {
+        passive: false,
+        capture: true
+      });
+      this.scrollGuardBound = true;
+    }
+    unbindScrollGuard() {
+      if (!this.scrollGuardBound) return;
+      this.root.removeEventListener("wheel", this.onPopupWheel, true);
+      this.scrollGuardBound = false;
+    }
+    /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+    reposition() {
+      if (!this.feature || this.root.hidden) return;
+      const mapSize = this.map.getSize();
+      const anchor = featureStylePopupAnchor(
+        this.feature,
+        mapSize,
+        (c) => this.map.getPixelFromCoordinate(c)
+      );
+      if (!anchor) return;
+      const pixel = this.map.getPixelFromCoordinate(anchor);
+      if (!pixel) return;
+      const mapEl = this.map.getTargetElement();
+      if (!mapEl) return;
+      const mapRect = mapEl.getBoundingClientRect();
+      const tipX = mapRect.left + pixel[0];
+      const tipY = mapRect.top + pixel[1];
+      this.root.style.position = "fixed";
+      this.root.style.zIndex = "10040";
+      this.root.style.left = "0";
+      this.root.style.top = "0";
+      this.root.style.visibility = "hidden";
+      this.root.hidden = false;
+      requestAnimationFrame(() => {
+        const pr = this.root.getBoundingClientRect();
+        const gap = 20;
+        const tipPad = 18;
+        let below = false;
+        let top = tipY - pr.height - gap;
+        if (top < 8) {
+          top = tipY + gap;
+          below = true;
+        }
+        let tipLocalX = pr.width / 2;
+        let left = tipX - tipLocalX;
+        const minLeft = 8;
+        const maxLeft = window.innerWidth - pr.width - 8;
+        if (left < minLeft) {
+          left = minLeft;
+          tipLocalX = tipX - left;
+        } else if (left > maxLeft) {
+          left = maxLeft;
+          tipLocalX = tipX - left;
+        }
+        tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad);
+        left = tipX - tipLocalX;
+        left = Math.min(Math.max(minLeft, left), maxLeft);
+        tipLocalX = tipX - left;
+        top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8);
+        if (!below && top + 4 > tipY) below = true;
+        this.root.style.left = `${left}px`;
+        this.root.style.top = `${top}px`;
+        this.root.style.setProperty("--ec-tip-x", `${tipLocalX}px`);
+        this.root.style.visibility = "visible";
+        this.root.classList.toggle("ec-sketch-style-popup--below", below);
+      });
+    }
+    syncFieldsVisibility() {
+      const basic = new Set(BASIC_BY_KIND[this.kind]);
+      const advanced = new Set(ADVANCED_BY_KIND[this.kind]);
+      for (const label of this.basicFields.querySelectorAll("[data-field]")) {
+        label.hidden = !basic.has(label.dataset.field);
+      }
+      for (const label of this.advancedFields.querySelectorAll("[data-field]")) {
+        label.hidden = !advanced.has(label.dataset.field);
+      }
+      const hasAdvanced = advanced.size > 0;
+      this.advancedToggle.hidden = !hasAdvanced;
+      if (!hasAdvanced) this.setAdvancedOpen(false);
+      else this.advancedFields.hidden = !this.advancedOpen;
+    }
+    /** Désactive les champs devenus non pertinents. */
+    syncDependentFields() {
+      const dash = Number(this.els.lineDash.value) || 0;
+      const dashOffsetField = this.els.lineDashOffset.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.lineDashOffset.disabled = dash <= 0;
+      dashOffsetField == null ? void 0 : dashOffsetField.classList.toggle("is-disabled", dash <= 0);
+      const join = this.els.lineJoin.value;
+      const miterField = this.els.miterLimit.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.miterLimit.disabled = join !== "miter";
+      miterField == null ? void 0 : miterField.classList.toggle("is-disabled", join !== "miter");
+      const shape = this.els.pointShape.value;
+      const rotField = this.els.pointRotation.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.pointRotation.disabled = shape === "circle";
+      rotField == null ? void 0 : rotField.classList.toggle("is-disabled", shape === "circle");
+    }
+    fillForm(attrs) {
+      this.els.text.value = attrs.text;
+      this.els.fontSize.value = String(attrs.fontSize);
+      this.els.fontSizeValue.textContent = this.els.fontSize.value;
+      this.colorPickers.fontColor.setValue(attrs.fontColor);
+      this.colorPickers.textStrokeColor.setValue(attrs.textStrokeColor);
+      this.els.rotation.value = String(Math.round(attrs.rotation));
+      this.els.rotationValue.textContent = this.els.rotation.value;
+      this.colorPickers.strokeColor.setValue(attrs.strokeColor);
+      this.els.strokeWidth.value = String(attrs.strokeWidth);
+      this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+      this.colorPickers.fillColor.setValue(attrs.fillColor);
+      this.els.radius.value = String(attrs.radius);
+      this.els.radiusValue.textContent = this.els.radius.value;
+      this.els.lineDash.value = String(attrs.lineDash);
+      this.els.lineDashValue.textContent = this.els.lineDash.value;
+      this.els.lineCap.value = attrs.lineCap;
+      this.els.lineJoin.value = attrs.lineJoin;
+      this.els.lineDashOffset.value = String(attrs.lineDashOffset);
+      this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+      this.els.miterLimit.value = String(attrs.miterLimit);
+      this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+      this.els.fontFamily.value = attrs.fontFamily;
+      this.els.fontBold.checked = attrs.fontBold;
+      this.els.fontItalic.checked = attrs.fontItalic;
+      this.els.textStrokeWidth.value = String(attrs.textStrokeWidth);
+      this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+      this.els.pointShape.value = attrs.pointShape;
+      this.els.pointRotation.value = String(attrs.pointRotation);
+      this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      this.els.zIndex.value = String(attrs.zIndex);
+    }
+    applyFromForm() {
+      if (!this.feature) return;
+      const base = defaultFeatureStyleAttrs(this.kind);
+      const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
+      const shape = this.els.pointShape.value || base.pointShape;
+      const join = this.els.lineJoin.value || base.lineJoin;
+      const attrs = {
+        ...base,
+        text: this.els.text.value.trim() || base.text,
+        fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
+        fontColor: this.colorPickers.fontColor.getValue(),
+        textStrokeColor: this.colorPickers.textStrokeColor.getValue(),
+        rotation: Number(this.els.rotation.value) || 0,
+        strokeColor: this.colorPickers.strokeColor.getValue(),
+        strokeWidth: clamp(Number(this.els.strokeWidth.value), 0, 40, base.strokeWidth),
+        fillColor: this.colorPickers.fillColor.getValue(),
+        radius: clamp(Number(this.els.radius.value), 1, 48, base.radius),
+        lineDash: dash,
+        lineCap: this.els.lineCap.value || base.lineCap,
+        lineJoin: join,
+        lineDashOffset: dash <= 0 ? 0 : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
+        miterLimit: join !== "miter" ? base.miterLimit : clamp(Number(this.els.miterLimit.value), 1, 50, base.miterLimit),
+        fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
+        fontBold: this.els.fontBold.checked,
+        fontItalic: this.els.fontItalic.checked,
+        textStrokeWidth: clamp(
+          Number(this.els.textStrokeWidth.value),
+          0,
+          20,
+          base.textStrokeWidth
+        ),
+        pointShape: shape,
+        pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
+        zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
+      };
+      applyFeatureStyle(this.feature, attrs);
+    }
+  }
+  function clamp(n, min, max, fallback) {
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  }
+  function formatMapLength(map, line) {
+    const proj = map.getView().getProjection();
+    const clone2 = line.clone().transform(proj, "EPSG:4326");
+    const length = getLength(clone2, { projection: "EPSG:4326" });
+    if (length > 1e3) return `${Math.round(length / 1e3 * 100) / 100} km`;
+    return `${Math.round(length * 100) / 100} m`;
+  }
+  function formatMapArea(map, polygon) {
+    const proj = map.getView().getProjection();
+    const clone2 = polygon.clone().transform(proj, "EPSG:4326");
+    const area = getArea(clone2, { projection: "EPSG:4326" });
+    if (area > 1e5) {
+      return `${Math.round(area / 1e6 * 100) / 100} km²`;
+    }
+    return `${Math.round(area * 100) / 100} m²`;
+  }
+  function measureAnchor(_map, geom) {
+    if (geom.getType() === "Polygon") {
+      return geom.getInteriorPoint().getCoordinates();
+    }
+    return geom.getCoordinateAt(0.5);
+  }
+  const MEASURE_STYLE = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.08)" }),
+    stroke: new Stroke({
+      color: "#000091",
+      width: 2,
+      lineDash: [8, 8]
+    }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: "#000091" })
+    })
+  });
+  class SketchMeasureController {
+    constructor(map, zIndex = 510) {
+      __publicField(this, "layer");
+      __publicField(this, "source");
+      __publicField(this, "draw", null);
+      __publicField(this, "overlays", new globalThis.Map());
+      __publicField(this, "mode", null);
+      __publicField(this, "pointerOnMap", true);
+      __publicField(this, "mapHoverBound", false);
+      __publicField(this, "onMapPointerEnter", () => {
+        this.pointerOnMap = true;
+        this.map.render();
+      });
+      __publicField(this, "onMapPointerLeave", () => {
+        this.pointerOnMap = false;
+        this.map.render();
+      });
+      this.map = map;
+      this.source = new VectorSource({ wrapX: false });
+      this.layer = new VectorLayer({
+        source: this.source,
+        style: MEASURE_STYLE,
+        zIndex,
+        className: "ec-sketch-measure-layer",
+        properties: { "ec-measure": true }
+      });
+      map.addLayer(this.layer);
+    }
+    isActive() {
+      return this.mode !== null;
+    }
+    getMode() {
+      return this.mode;
+    }
+    activate(mode) {
+      this.deactivateDraw();
+      this.mode = mode;
+      this.pointerOnMap = true;
+      this.draw = new Draw({
+        source: this.source,
+        type: mode === "distance" ? "LineString" : "Polygon",
+        style: () => this.pointerOnMap ? MEASURE_STYLE : []
+      });
+      this.draw.on("drawend", (evt) => {
+        const feature = evt.feature;
+        queueMicrotask(() => this.attachLabel(feature));
+      });
+      this.map.addInteraction(this.draw);
+      const el = this.map.getTargetElement();
+      if (el && !this.mapHoverBound) {
+        el.addEventListener("pointerenter", this.onMapPointerEnter);
+        el.addEventListener("pointerleave", this.onMapPointerLeave);
+        this.mapHoverBound = true;
+      }
+    }
+    /** Désactive le dessin ; conserve les mesures déjà tracées. */
+    deactivateDraw() {
+      if (this.mapHoverBound) {
+        const el = this.map.getTargetElement();
+        el == null ? void 0 : el.removeEventListener("pointerenter", this.onMapPointerEnter);
+        el == null ? void 0 : el.removeEventListener("pointerleave", this.onMapPointerLeave);
+        this.mapHoverBound = false;
+        this.pointerOnMap = true;
+      }
+      if (this.draw) {
+        this.map.removeInteraction(this.draw);
+        this.draw = null;
+      }
+      this.mode = null;
+    }
+    clear() {
+      this.deactivateDraw();
+      for (const overlay of this.overlays.values()) {
+        this.map.removeOverlay(overlay);
+      }
+      this.overlays.clear();
+      this.source.clear(true);
+    }
+    destroy() {
+      this.clear();
+      this.map.removeLayer(this.layer);
+    }
+    attachLabel(feature) {
+      var _a;
+      const geom = feature.getGeometry();
+      if (!geom) return;
+      const type = geom.getType();
+      if (type !== "LineString" && type !== "Polygon") return;
+      const root = document.createElement("div");
+      root.className = "GPSearchPopup ec-sketch-measure-popup";
+      const content = document.createElement("div");
+      content.className = "GPPopupContent ec-sketch-measure-popup__content";
+      content.textContent = this.formatFeature(feature);
+      const btns = document.createElement("div");
+      btns.className = "GPButtonGroups gpf-btns-group";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.title = remove.ariaLabel = "Supprimer la mesure";
+      remove.textContent = "Supprimer";
+      remove.className = "GPButton gpf-btn fr-icon-delete-line fr-btn fr-btn--sm gpf-btn--tertiary fr-btn--tertiary-no-outline";
+      btns.appendChild(remove);
+      root.appendChild(content);
+      root.appendChild(btns);
+      const overlay = new Overlay({
+        element: root,
+        positioning: "bottom-center",
+        offset: [0, -8],
+        stopEvent: true
+      });
+      overlay.setPosition(
+        measureAnchor(this.map, geom)
+      );
+      this.map.addOverlay(overlay);
+      this.overlays.set(feature, overlay);
+      remove.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.removeFeature(feature);
+      });
+      (_a = feature.getGeometry()) == null ? void 0 : _a.on("change", () => {
+        const g = feature.getGeometry();
+        if (!g) return;
+        content.textContent = this.formatFeature(feature);
+        overlay.setPosition(
+          measureAnchor(this.map, g)
+        );
+      });
+    }
+    formatFeature(feature) {
+      const geom = feature.getGeometry();
+      if (!geom) return "";
+      if (geom.getType() === "LineString") {
+        return formatMapLength(this.map, geom);
+      }
+      if (geom.getType() === "Polygon") {
+        return formatMapArea(this.map, geom);
+      }
+      return "";
+    }
+    removeFeature(feature) {
+      const overlay = this.overlays.get(feature);
+      if (overlay) {
+        this.map.removeOverlay(overlay);
+        this.overlays.delete(feature);
+      }
+      if (this.source.hasFeature(feature)) {
+        this.source.removeFeature(feature);
+      }
+    }
+    /** Clic pour supprimer une mesure (outil remove dédié optionnel). */
+    removeAtPixel(evt) {
+      const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+        layerFilter: (l) => l === this.layer,
+        hitTolerance: 10
+      });
+      const feature = hits[0];
+      if (!feature || !this.source.hasFeature(feature)) return false;
+      this.removeFeature(feature);
+      return true;
+    }
+  }
+  class SketchExportDialog {
+    constructor(host) {
+      __publicField(this, "root");
+      __publicField(this, "select");
+      __publicField(this, "resolve", null);
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.root.contains(evt.target)) {
+          this.close(null);
+        }
+      });
+      __publicField(this, "onKeyDown", (evt) => {
+        if (evt.key === "Escape") this.close(null);
+      });
+      this.host = host;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-export-dialog";
+      this.root.setAttribute("role", "dialog");
+      this.root.setAttribute("aria-label", "Exporter le croquis");
+      this.root.hidden = true;
+      this.root.innerHTML = `
+      <p class="ec-sketch-export-dialog__title">Exporter le croquis</p>
+      <label class="ec-sketch-export-dialog__field">
+        <span>Format</span>
+        <select class="ec-sketch-export-dialog__format fr-select">
+          <option value="geojson">GeoJSON</option>
+          <option value="kml">KML</option>
+        </select>
+      </label>
+      <div class="ec-sketch-export-dialog__actions">
+        <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-export-dialog__cancel">Annuler</button>
+        <button type="button" class="fr-btn fr-btn--sm ec-sketch-export-dialog__ok">Exporter</button>
+      </div>
+    `;
+      this.select = this.root.querySelector(".ec-sketch-export-dialog__format");
+      this.root.querySelector(".ec-sketch-export-dialog__cancel").addEventListener("click", () => this.close(null));
+      this.root.querySelector(".ec-sketch-export-dialog__ok").addEventListener("click", () => {
+        const v = this.select.value === "kml" ? "kml" : "geojson";
+        this.close(v);
+      });
+      this.host.appendChild(this.root);
+    }
+    /** Ouvre la boîte ; résout avec le format choisi ou `null` si annulé. */
+    open(defaultFormat = "geojson") {
+      if (this.resolve) this.finish(null);
+      return new Promise((resolve) => {
+        this.resolve = resolve;
+        this.select.value = defaultFormat;
+        this.root.hidden = false;
+        document.addEventListener("pointerdown", this.onDocPointerDown, true);
+        document.addEventListener("keydown", this.onKeyDown, true);
+        queueMicrotask(() => this.select.focus());
+      });
+    }
+    destroy() {
+      this.finish(null);
+      this.root.remove();
+    }
+    close(format) {
+      this.finish(format);
+    }
+    finish(format) {
+      this.root.hidden = true;
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("keydown", this.onKeyDown, true);
+      const r = this.resolve;
+      this.resolve = null;
+      r == null ? void 0 : r(format);
+    }
+  }
   const GEOJSON = new GeoJSON();
+  const EXTRA_DEFS = {
+    Text: {
+      id: "text",
+      label: "Texte",
+      iconClass: "ec-geometry-editor__tool--text",
+      mode: "toggle"
+    },
+    Import: {
+      id: "import",
+      label: "Importer",
+      iconClass: "ec-geometry-editor__tool--import",
+      mode: "action"
+    },
+    Export: {
+      id: "export",
+      label: "Exporter",
+      iconClass: "ec-geometry-editor__tool--export",
+      mode: "action"
+    },
+    MeasureDistance: {
+      id: "measure-distance",
+      label: "Mesurer une distance",
+      iconClass: "ec-geometry-editor__tool--measure-distance",
+      mode: "toggle"
+    },
+    MeasureArea: {
+      id: "measure-area",
+      label: "Mesurer une surface",
+      iconClass: "ec-geometry-editor__tool--measure-area",
+      mode: "toggle"
+    }
+  };
   class SketchControl extends Control {
     constructor(options = {}) {
       const toolsRoot = document.createElement("div");
@@ -39734,7 +42170,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onChangeCb");
       __publicField(this, "localStorageKey");
       __publicField(this, "clearAll");
+      __publicField(this, "historyEnabled");
       __publicField(this, "extraTools");
+      __publicField(this, "enableFeatureStyleEditor");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
@@ -39744,7 +42182,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "toolsMenuOpen", false);
       __publicField(this, "toolbarDomId", `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`);
       __publicField(this, "drawBar", null);
-      __publicField(this, "saveTimer", null);
+      __publicField(this, "history", null);
+      __publicField(this, "stylePopup", null);
+      __publicField(this, "textDraw", null);
+      __publicField(this, "textPointerOnMap", true);
+      __publicField(this, "textMapHoverBound", false);
+      __publicField(this, "exportDialog", null);
+      __publicField(this, "measure", null);
+      /** Snapshot GeoJSON du dernier enregistrement local (null = jamais enregistré). */
+      __publicField(this, "savedSnapshot", null);
+      __publicField(this, "onTextMapPointerEnter", () => {
+        var _a;
+        this.textPointerOnMap = true;
+        (_a = this.getMap()) == null ? void 0 : _a.render();
+      });
+      __publicField(this, "onTextMapPointerLeave", () => {
+        var _a;
+        this.textPointerOnMap = false;
+        (_a = this.getMap()) == null ? void 0 : _a.render();
+      });
+      __publicField(this, "onTextSelectClick", (evt) => {
+        if (evt.dragging || !this.enableFeatureStyleEditor) return;
+        const map = this.getMap();
+        if (!map || !this.layer) return;
+        const hits = map.getFeaturesAtPixel(evt.pixel, {
+          layerFilter: (l) => l === this.layer,
+          hitTolerance: 14
+        });
+        const feature = hits.find((f) => isSketchTextFeature(f));
+        if (feature && this.stylePopup) {
+          this.stylePopup.open(feature, () => this.notifyChange());
+        }
+      });
       this.geometryType = options.geometryType ?? "Geometry";
       this.toolsToggle = options.toolsToggle ?? null;
       this.position = options.position ?? null;
@@ -39753,7 +42222,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.onChangeCb = options.onChange;
       this.localStorageKey = options.localStorageKey ?? null;
       this.clearAll = Boolean(options.clearAll);
+      this.historyEnabled = Boolean(options.history);
       this.extraTools = options.extraTools ?? [];
+      this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor);
       this.source = options.source ?? new VectorSource({ wrapX: false });
       this.layer = options.layer ?? null;
       this.ownsLayer = !options.layer;
@@ -39765,12 +42236,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.applyToolsChrome();
     }
     setMap(map) {
+      var _a;
       const prev = this.getMap();
-      if (prev && this.drawBar) {
-        this.teardownDrawBar();
-      }
-      if (prev && this.ownsLayer && this.layer) {
-        prev.removeLayer(this.layer);
+      if (prev) {
+        this.teardownExtras(prev);
+        if (this.drawBar) this.teardownDrawBar();
+        if (this.ownsLayer && this.layer) prev.removeLayer(this.layer);
       }
       super.setMap(map);
       if (!map) {
@@ -39781,11 +42252,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.mountDrawBar(map);
       this.placeInGeopfContainer(map);
       this.restoreFromLocalStorage();
+      (_a = this.history) == null ? void 0 : _a.resetFromSource();
+      if (this.localStorageKey && this.source.getFeatures().length) {
+        this.savedSnapshot = this.sketchSnapshot();
+      }
+      this.syncHistoryButtons();
+      this.syncSaveButtonState();
     }
     getSource() {
       return this.source;
     }
-    /** Élément DOM du contrôle (chrome outils). */
     getElement() {
       return this.toolsRoot;
     }
@@ -39799,15 +42275,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.source.getFeatures();
     }
     setFeatures(features) {
+      var _a;
       this.source.clear(true);
       if (features.length) this.source.addFeatures(features);
+      (_a = this.history) == null ? void 0 : _a.push();
       this.notifyChange();
     }
     clearFeatures() {
+      var _a, _b;
       this.source.clear(true);
+      (_a = this.measure) == null ? void 0 : _a.clear();
+      (_b = this.history) == null ? void 0 : _b.push();
       this.notifyChange();
     }
+    /** Enregistrement manuel localStorage. */
+    saveLocal() {
+      this.saveToLocalStorage();
+    }
     load(raw) {
+      var _a;
       let features = parseRawToFeatures(raw);
       const primary = primaryGeometryType(parseGeometryTypes(this.geometryType));
       if (primary === "Circle" || primary === "MultiCircle") {
@@ -39817,6 +42303,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.source.clear(true);
       if (features.length) this.source.addFeatures(features);
+      (_a = this.history) == null ? void 0 : _a.push();
       this.notifyChange();
     }
     serialize(opts) {
@@ -39845,6 +42332,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
       }
     }
+    buildExtraTools() {
+      const list = [];
+      if (this.historyEnabled) {
+        list.push(
+          {
+            id: "undo",
+            label: "Annuler",
+            iconClass: "ec-geometry-editor__tool--undo",
+            mode: "action"
+          },
+          {
+            id: "redo",
+            label: "Rétablir",
+            iconClass: "ec-geometry-editor__tool--redo",
+            mode: "action"
+          }
+        );
+      }
+      if (this.localStorageKey) {
+        list.push({
+          id: "save",
+          label: "Enregistrer localement",
+          iconClass: "ec-geometry-editor__tool--save",
+          mode: "action"
+        });
+      }
+      for (const key of this.extraTools) {
+        const def = EXTRA_DEFS[key];
+        if (def) list.push({ ...def });
+      }
+      return list;
+    }
     ensureLayer(map) {
       if (this.layer) {
         if (this.style !== void 0) {
@@ -39869,9 +42388,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       map.addLayer(this.layer);
     }
     mountDrawBar(map) {
-      var _a;
+      var _a, _b, _c, _d;
       if (!this.layer) return;
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map.getView().getProjection()) : null;
+      (_b = this.stylePopup) == null ? void 0 : _b.destroy();
+      this.stylePopup = null;
+      if (this.enableFeatureStyleEditor) {
+        this.stylePopup = new SketchFeatureStylePopup(map);
+      }
+      (_c = this.exportDialog) == null ? void 0 : _c.destroy();
+      this.exportDialog = null;
+      if (this.extraTools.includes("Export")) {
+        const mapEl = map.getTargetElement();
+        if (mapEl) this.exportDialog = new SketchExportDialog(mapEl);
+      }
+      (_d = this.measure) == null ? void 0 : _d.destroy();
+      this.measure = null;
+      if (this.extraTools.includes("MeasureDistance") || this.extraTools.includes("MeasureArea")) {
+        this.measure = new SketchMeasureController(map, this.zIndex + 10);
+      }
       this.drawBar = new DrawToolsBar({
         map,
         source: this.source,
@@ -39880,11 +42416,162 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         target: this.toolbarHost,
         style: this.style,
         clearAll: this.clearAll,
-        onChange: () => this.notifyChange(),
-        onClearAll: () => this.clearFeatures()
+        extraTools: this.buildExtraTools(),
+        onChange: () => {
+          var _a2;
+          (_a2 = this.history) == null ? void 0 : _a2.push();
+          this.notifyChange();
+        },
+        onClearAll: () => this.clearFeatures(),
+        onExtraTool: (id, active) => this.handleExtraTool(id, active),
+        onFeatureCreated: (feature) => this.openStylePopup(feature),
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature) => this.openStylePopup(feature) : void 0
       });
-      void this.extraTools;
       this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+      this.syncHistoryButtons();
+    }
+    openStylePopup(feature) {
+      if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
+      this.stylePopup.open(feature, () => this.notifyChange());
+    }
+    handleExtraTool(id, active) {
+      var _a, _b, _c, _d, _e, _f;
+      const map = this.getMap();
+      if (!map) return;
+      if (id === "undo") {
+        if ((_a = this.history) == null ? void 0 : _a.undo()) this.notifyChange();
+        this.syncHistoryButtons();
+        return;
+      }
+      if (id === "redo") {
+        if ((_b = this.history) == null ? void 0 : _b.redo()) this.notifyChange();
+        this.syncHistoryButtons();
+        return;
+      }
+      if (id === "save") {
+        this.saveToLocalStorage();
+        return;
+      }
+      if (id === "import") {
+        this.runImport();
+        return;
+      }
+      if (id === "export") {
+        this.runExport();
+        return;
+      }
+      if (!active) {
+        this.stopTextDraw();
+        (_c = this.measure) == null ? void 0 : _c.deactivateDraw();
+        return;
+      }
+      this.stopTextDraw();
+      (_d = this.measure) == null ? void 0 : _d.deactivateDraw();
+      if (id === "text") {
+        this.startTextDraw();
+        return;
+      }
+      if (id === "measure-distance") {
+        (_e = this.measure) == null ? void 0 : _e.activate("distance");
+        return;
+      }
+      if (id === "measure-area") {
+        (_f = this.measure) == null ? void 0 : _f.activate("area");
+      }
+    }
+    startTextDraw() {
+      const map = this.getMap();
+      if (!map) return;
+      this.stopTextDraw();
+      const textDefaults = {
+        text: "Texte",
+        fontSize: 14,
+        fontColor: "#000091",
+        strokeColor: "#ffffff",
+        rotation: 0
+      };
+      const baseStyle = sketchTextStyle(textDefaults);
+      this.textPointerOnMap = true;
+      this.textDraw = new Draw({
+        source: this.source,
+        type: "Point",
+        style: () => this.textPointerOnMap ? baseStyle : []
+      });
+      this.textDraw.on("drawend", (evt) => {
+        applySketchTextStyle(evt.feature, textDefaults);
+        queueMicrotask(() => {
+          var _a;
+          this.openStylePopup(evt.feature);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        });
+      });
+      map.addInteraction(this.textDraw);
+      const el = map.getTargetElement();
+      if (el && !this.textMapHoverBound) {
+        el.addEventListener("pointerenter", this.onTextMapPointerEnter);
+        el.addEventListener("pointerleave", this.onTextMapPointerLeave);
+        this.textMapHoverBound = true;
+      }
+      if (this.enableFeatureStyleEditor) {
+        map.on("singleclick", this.onTextSelectClick);
+      }
+    }
+    stopTextDraw() {
+      var _a;
+      const map = this.getMap();
+      if (this.textMapHoverBound) {
+        const el = map == null ? void 0 : map.getTargetElement();
+        el == null ? void 0 : el.removeEventListener("pointerenter", this.onTextMapPointerEnter);
+        el == null ? void 0 : el.removeEventListener("pointerleave", this.onTextMapPointerLeave);
+        this.textMapHoverBound = false;
+        this.textPointerOnMap = true;
+      }
+      if (this.textDraw && map) {
+        map.removeInteraction(this.textDraw);
+        this.textDraw = null;
+      }
+      map == null ? void 0 : map.un("singleclick", this.onTextSelectClick);
+      (_a = this.stylePopup) == null ? void 0 : _a.hide();
+    }
+    runImport() {
+      const map = this.getMap();
+      if (!map) return;
+      pickSketchFile(".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml", (text, name) => {
+        var _a;
+        try {
+          const format = formatFromFilename(name);
+          const features = readSketchFile(map, text, format);
+          this.source.addFeatures(features);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        } catch (err) {
+          console.warn("[SketchControl] import failed", err);
+        }
+      });
+    }
+    async runExport() {
+      const map = this.getMap();
+      if (!map) return;
+      const dialog = this.exportDialog;
+      if (!dialog) return;
+      const format = await dialog.open("geojson");
+      if (!format) return;
+      try {
+        const content = writeSketchFile(map, this.source, format);
+        downloadBlob(
+          format === "kml" ? "croquis.kml" : "croquis.geojson",
+          content,
+          format === "kml" ? "application/vnd.google-earth.kml+xml" : "application/geo+json"
+        );
+      } catch (err) {
+        console.warn("[SketchControl] export failed", err);
+      }
+    }
+    syncHistoryButtons() {
+      if (!this.drawBar || !this.history) return;
+      this.drawBar.setExtraEnabled("undo", this.history.canUndo());
+      this.drawBar.setExtraEnabled("redo", this.history.canRedo());
     }
     teardownDrawBar() {
       var _a;
@@ -39892,18 +42579,41 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.drawBar = null;
       this.toolbarHost.replaceChildren();
     }
+    teardownExtras(map) {
+      var _a, _b, _c;
+      this.stopTextDraw();
+      (_a = this.stylePopup) == null ? void 0 : _a.destroy();
+      this.stylePopup = null;
+      (_b = this.exportDialog) == null ? void 0 : _b.destroy();
+      this.exportDialog = null;
+      (_c = this.measure) == null ? void 0 : _c.destroy();
+      this.measure = null;
+      this.history = null;
+    }
     notifyChange() {
       var _a;
       (_a = this.onChangeCb) == null ? void 0 : _a.call(this, this.getFeatures());
-      this.scheduleSave();
+      this.syncHistoryButtons();
+      this.syncSaveButtonState();
     }
-    scheduleSave() {
-      if (!this.localStorageKey) return;
-      if (this.saveTimer) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => {
-        this.saveTimer = null;
-        this.saveToLocalStorage();
-      }, 200);
+    sketchSnapshot() {
+      var _a;
+      const features = this.getFeatures();
+      return JSON.stringify(
+        GEOJSON.writeFeaturesObject(features, {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        })
+      );
+    }
+    syncSaveButtonState() {
+      if (!this.localStorageKey || !this.drawBar) return;
+      if (this.savedSnapshot === null) {
+        this.drawBar.setSaveState("idle");
+        return;
+      }
+      const dirty = this.sketchSnapshot() !== this.savedSnapshot;
+      this.drawBar.setSaveState(dirty ? "dirty" : "saved");
     }
     saveToLocalStorage() {
       var _a;
@@ -39912,6 +42622,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const features = this.getFeatures();
         if (!features.length) {
           localStorage.removeItem(this.localStorageKey);
+          this.savedSnapshot = this.sketchSnapshot();
+          this.syncSaveButtonState();
           return;
         }
         const json = GEOJSON.writeFeaturesObject(features, {
@@ -39919,6 +42631,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           dataProjection: "EPSG:4326"
         });
         localStorage.setItem(this.localStorageKey, JSON.stringify(json));
+        this.savedSnapshot = JSON.stringify(json);
+        this.syncSaveButtonState();
       } catch (err) {
         console.warn("[SketchControl] localStorage save failed", err);
       }
@@ -39933,6 +42647,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
           dataProjection: "EPSG:4326"
         });
+        hydrateImportedSketchFeatures(features);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } catch (err) {
@@ -39982,11 +42697,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.toolsRoot.classList.remove("is-open");
       }
     }
-    /**
-     * Place le contrôle dans le conteneur geopf du coin demandé (carte principale),
-     * au-dessus de la minimap via `order: -2`.
-     * Retente si le conteneur n’existe pas encore (ordre d’ajout des contrôles).
-     */
     placeInGeopfContainer(map, attempt = 0) {
       const corner = this.position ?? this.toolsToggle;
       if (!corner) return;
@@ -40794,7 +43504,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       onChange: options.onChange,
       localStorageKey: options.localStorageKey,
       clearAll: options.clearAll,
-      extraTools: options.extraTools
+      history: options.history,
+      extraTools: options.extraTools,
+      enableFeatureStyleEditor: options.enableFeatureStyleEditor
     });
     map.addControl(sketch);
     if (options.target) {
