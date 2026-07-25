@@ -28705,7 +28705,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
-        btn.title = tool.label;
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
@@ -31956,6 +31955,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const toolsRoot = document.createElement("div");
       toolsRoot.className = "ec-sketch-control ec-geometry-editor__tools-root";
       toolsRoot.setAttribute("aria-label", "Croquis");
+      toolsRoot.id = `GPsketch-${Date.now()}`;
       super({ element: toolsRoot });
       __publicField(this, "geometryType");
       __publicField(this, "toolsToggle");
@@ -32174,6 +32174,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.toolsMenuOpen = open;
       if (this.toolsToggleBtn) {
         this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        this.toolsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
         this.toolsToggleBtn.classList.toggle("is-active", open);
       }
       if (this.toolsToggle) {
@@ -32187,10 +32188,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (!this.toolsToggleBtn) {
           const btn = document.createElement("button");
           btn.type = "button";
-          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle fr-icon-tools-fill";
-          btn.title = "Outils de dessin";
+          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle";
           btn.setAttribute("aria-label", "Outils de dessin");
           btn.setAttribute("aria-expanded", "false");
+          btn.setAttribute("aria-pressed", "false");
           btn.setAttribute("aria-controls", this.toolbarDomId);
           btn.addEventListener("click", (e) => {
             e.stopPropagation();

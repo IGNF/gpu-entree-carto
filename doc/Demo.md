@@ -20,3 +20,20 @@ Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours
 1. Recherche validée sur `/` (`mountSearchEngine` en mode `emit`)
 2. Navigation SPA vers `/map` avec query
 3. `SearchEngineControl` + `initialSearch` rejoue le géocode geopf (cerise, emprise, popup) et ouvre l’onglet fiche du TabPanels
+
+## GitLab Pages
+
+La démo est publiée par le job CI `pages` (branche par défaut) :
+
+1. `npm run build:demo` avec `base` dérivé de `CI_PAGES_URL`
+2. Artefact `public/` (+ `404.html` = `index.html` pour le routage SPA)
+
+Après le pipeline vert : **Deploy → Pages** (ou l’URL `$CI_PAGES_URL`, typiquement du type  
+`https://gpu.pages.gpf-tech.ign.fr/entree-carto/`).
+
+En local, simuler le sous-chemin :
+
+```bash
+CI_PAGES_URL=https://example.pages.host/entree-carto npm run build:demo
+npm run preview
+```

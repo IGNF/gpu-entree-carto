@@ -3,7 +3,7 @@
  * Démo standalone — entree-carto-geometry-editor
  * Un exemple par type : GeoJSON et KML côte à côte.
  */
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
@@ -26,6 +26,9 @@ import {
 } from '@/geometry-editor/circleHelpers'
 import 'ol/ol.css'
 import '@/geometry-editor/styles/geometry-editor.css'
+
+/** Index ouvert dans DsfrAccordionsGroup (-1 = fermé). */
+const docsAccordionOpen = ref(-1)
 
 interface OptionDoc {
   name: string
@@ -565,12 +568,14 @@ onUnmounted(() => {
       Chaque type est illustré en <strong>GeoJSON</strong> et en <strong>KML</strong>.
     </p>
 
-    <div class="fr-accordions-group fr-mb-5w">
+    <DsfrAccordionsGroup
+      v-model="docsAccordionOpen"
+      class="fr-mb-5w"
+    >
       <DsfrAccordion
         id="ec-geom-docs"
         title="Utilisation et options"
         title-tag="h2"
-        :selected="false"
       >
         <h3 class="fr-h6">
           Utilisation
@@ -677,7 +682,7 @@ onUnmounted(() => {
           </table>
         </div>
       </DsfrAccordion>
-    </div>
+    </DsfrAccordionsGroup>
 
     <section
       v-for="section in sections"

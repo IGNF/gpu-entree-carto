@@ -5,9 +5,33 @@
 # Container Scanning customization: https://docs.gitlab.com/user/application_security/container_scanning/#customizing-analyzer-behavior
 # Note that environment variables can be set in several places
 # See https://docs.gitlab.com/ci/variables/#cicd-variable-precedence
+
+image: node:22-bookworm
+
 stages:
-- test
+  - test
+  - deploy
+
 sast:
   stage: test
 include:
-- template: Security/SAST.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+
+# Démo Vue (Vite) → GitLab Pages
+# URL : $CI_PAGES_URL (souvent https://gpu.pages.gpf-tech.ign.fr/entree-carto)
+pages:
+  stage: deploy
+  interruptible: true
+  script:
+    - npm ci
+    - npm run build:demo
+    # Artefact Pages = dossier `public/` (le `public/` source Vite est déjà fusionné dans dist/)
+    - rm -rf public
+    - mv dist public
+    # SPA : chemins profonds (/map, /sketch…) servent index.html
+    - cp public/index.html public/404.html
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

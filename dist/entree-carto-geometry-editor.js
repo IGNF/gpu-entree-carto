@@ -7839,9 +7839,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return tabIndexCandidate.hasAttribute("tabindex") ? focus(event) : true;
   };
   const always$1 = TRUE;
-  const click = function(mapBrowserEvent) {
-    return mapBrowserEvent.type == MapBrowserEventType.CLICK;
-  };
   const mouseActionButton = function(mapBrowserEvent) {
     const originalEvent = mapBrowserEvent.originalEvent;
     return "pointerId" in originalEvent && originalEvent.button == 0 && !(WEBKIT && MAC && originalEvent.ctrlKey);
@@ -27537,7 +27534,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           useSpatialIndex: false,
           wrapX: options.wrapX ? options.wrapX : false
         }),
-        style: options.style ? options.style : getDefaultStyleFunction$2(),
+        style: options.style ? options.style : getDefaultStyleFunction$1(),
         updateWhileInteracting: true
       });
       this.geometryName_ = options.geometryName;
@@ -28406,7 +28403,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.overlay_.setMap(active ? map : null);
     }
   }
-  function getDefaultStyleFunction$2() {
+  function getDefaultStyleFunction$1() {
     const styles = createEditingStyle();
     return function(feature, resolution) {
       return styles[feature.getGeometry().getType()];
@@ -28543,7 +28540,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           useSpatialIndex: false,
           wrapX: !!options.wrapX
         }),
-        style: options.style ? options.style : getDefaultStyleFunction$1(),
+        style: options.style ? options.style : getDefaultStyleFunction(),
         updateWhileAnimating: true,
         updateWhileInteracting: true
       });
@@ -30129,406 +30126,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       closestOnSegment(coordinate, tempSegment$1)
     );
   }
-  function getDefaultStyleFunction$1() {
+  function getDefaultStyleFunction() {
     const style = createEditingStyle();
     return function(feature, resolution) {
       return style["Point"];
-    };
-  }
-  const SelectEventType = {
-    /**
-     * Triggered when feature(s) has been (de)selected.
-     * @event SelectEvent#select
-     * @api
-     */
-    SELECT: "select"
-  };
-  class SelectEvent extends BaseEvent {
-    /**
-     * @param {SelectEventType} type The event type.
-     * @param {Array<import("../Feature.js").default>} selected Selected features.
-     * @param {Array<import("../Feature.js").default>} deselected Deselected features.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Associated
-     *     {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
-     */
-    constructor(type, selected, deselected, mapBrowserEvent) {
-      super(type);
-      this.selected = selected;
-      this.deselected = deselected;
-      this.mapBrowserEvent = mapBrowserEvent;
-    }
-  }
-  const originalFeatureStyles = {};
-  class Select extends Interaction {
-    /**
-     * @param {Options} [options] Options.
-     */
-    constructor(options) {
-      super();
-      this.on;
-      this.once;
-      this.un;
-      options = options ? options : {};
-      this.boundAddFeature_ = this.addFeature_.bind(this);
-      this.boundRemoveFeature_ = this.removeFeature_.bind(this);
-      this.condition_ = options.condition ? options.condition : singleClick;
-      this.addCondition_ = options.addCondition ? options.addCondition : never;
-      this.removeCondition_ = options.removeCondition ? options.removeCondition : never;
-      this.toggleCondition_ = options.toggleCondition ? options.toggleCondition : shiftKeyOnly;
-      this.multi_ = options.multi ? options.multi : false;
-      this.filter_ = options.filter ? options.filter : TRUE;
-      this.hitTolerance_ = options.hitTolerance ? options.hitTolerance : 0;
-      this.style_ = options.style !== void 0 ? options.style : getDefaultStyleFunction();
-      this.features_ = options.features || new Collection();
-      let layerFilter;
-      if (options.layers) {
-        if (typeof options.layers === "function") {
-          layerFilter = options.layers;
-        } else {
-          const layers = options.layers;
-          layerFilter = function(layer) {
-            return layers.includes(layer);
-          };
-        }
-      } else {
-        layerFilter = TRUE;
-      }
-      this.layerFilter_ = layerFilter;
-      this.featureLayerAssociation_ = {};
-    }
-    /**
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("../layer/Layer.js").default} layer Layer.
-     * @private
-     */
-    addFeatureLayerAssociation_(feature, layer) {
-      this.featureLayerAssociation_[getUid(feature)] = layer;
-    }
-    /**
-     * Get the selected features.
-     * @return {Collection<Feature>} Features collection.
-     * @api
-     */
-    getFeatures() {
-      return this.features_;
-    }
-    /**
-     * Returns the Hit-detection tolerance.
-     * @return {number} Hit tolerance in pixels.
-     * @api
-     */
-    getHitTolerance() {
-      return this.hitTolerance_;
-    }
-    /**
-     * Returns the associated {@link module:ol/layer/Vector~VectorLayer vector layer} of
-     * a selected feature.
-     * @param {import("../Feature.js").default} feature Feature
-     * @return {import('../layer/Vector.js').default} Layer.
-     * @api
-     */
-    getLayer(feature) {
-      return (
-        /** @type {import('../layer/Vector.js').default} */
-        this.featureLayerAssociation_[getUid(feature)]
-      );
-    }
-    /**
-     * Hit-detection tolerance. Pixels inside the radius around the given position
-     * will be checked for features.
-     * @param {number} hitTolerance Hit tolerance in pixels.
-     * @api
-     */
-    setHitTolerance(hitTolerance) {
-      this.hitTolerance_ = hitTolerance;
-    }
-    /**
-     * Remove the interaction from its current map, if any,  and attach it to a new
-     * map, if any. Pass `null` to just remove the interaction from the current map.
-     * @param {import("../Map.js").default|null} map Map.
-     * @api
-     * @override
-     */
-    setMap(map) {
-      const currentMap = this.getMap();
-      if (currentMap && this.style_) {
-        this.features_.forEach(this.restorePreviousStyle_.bind(this));
-      }
-      super.setMap(map);
-      if (map) {
-        this.features_.addEventListener(
-          CollectionEventType.ADD,
-          this.boundAddFeature_
-        );
-        this.features_.addEventListener(
-          CollectionEventType.REMOVE,
-          this.boundRemoveFeature_
-        );
-        if (this.style_) {
-          this.features_.forEach(this.applySelectedStyle_.bind(this));
-        }
-      } else {
-        this.features_.removeEventListener(
-          CollectionEventType.ADD,
-          this.boundAddFeature_
-        );
-        this.features_.removeEventListener(
-          CollectionEventType.REMOVE,
-          this.boundRemoveFeature_
-        );
-      }
-    }
-    /**
-     * @param {import("../Collection.js").CollectionEvent<Feature>} evt Event.
-     * @private
-     */
-    addFeature_(evt) {
-      const feature = evt.element;
-      if (this.style_) {
-        this.applySelectedStyle_(feature);
-      }
-      if (!this.getLayer(feature)) {
-        const layer = this.findLayerOfFeature_(feature);
-        if (layer) {
-          this.addFeatureLayerAssociation_(feature, layer);
-        }
-      }
-    }
-    /**
-     * @param {import("../Collection.js").CollectionEvent<Feature>} evt Event.
-     * @private
-     */
-    removeFeature_(evt) {
-      if (this.style_) {
-        this.restorePreviousStyle_(evt.element);
-      }
-      this.removeFeatureLayerAssociation_(evt.element);
-    }
-    /**
-     * @param {Feature} feature Feature of which to get the layer
-     * @return {VectorLayer} layer, if one was found.
-     * @private
-     */
-    findLayerOfFeature_(feature) {
-      const layer = (
-        /** @type {VectorLayer} */
-        this.getMap().getAllLayers().find(function(layer2) {
-          if (layer2 instanceof VectorLayer && layer2.getSource() && layer2.getSource().hasFeature(feature)) {
-            return layer2;
-          }
-        })
-      );
-      return layer;
-    }
-    /**
-     * @return {import("../style/Style.js").StyleLike|null} Select style.
-     */
-    getStyle() {
-      return this.style_;
-    }
-    /**
-     * @param {Feature} feature Feature
-     * @private
-     */
-    applySelectedStyle_(feature) {
-      const key = getUid(feature);
-      if (!(key in originalFeatureStyles)) {
-        originalFeatureStyles[key] = feature.getStyle();
-      }
-      feature.setStyle(this.style_);
-    }
-    /**
-     * @param {Feature} feature Feature
-     * @private
-     */
-    restorePreviousStyle_(feature) {
-      const interactions = this.getMap().getInteractions().getArray();
-      for (let i = interactions.length - 1; i >= 0; --i) {
-        const interaction = interactions[i];
-        if (interaction !== this && interaction instanceof Select && interaction.getStyle() && interaction.getFeatures().getArray().lastIndexOf(feature) !== -1) {
-          feature.setStyle(interaction.getStyle());
-          return;
-        }
-      }
-      const key = getUid(feature);
-      feature.setStyle(originalFeatureStyles[key]);
-      delete originalFeatureStyles[key];
-    }
-    /**
-     * @param {Feature} feature Feature.
-     * @private
-     */
-    removeFeatureLayerAssociation_(feature) {
-      delete this.featureLayerAssociation_[getUid(feature)];
-    }
-    /**
-     * Try to select a feature as if it was clicked and `addCondition` evaluated to True.
-     * Unlike modifying `select.getFeatures()` directly, this respects the `filter` and `layers` options (except `multi`, which is ignored).
-     * The {@link module:ol/interaction/Select~SelectEvent} fired by this won't have a mapBrowserEvent property
-     * @param {Feature} feature The feature to select
-     * @return {boolean} True if the feature was selected
-     * @api
-     */
-    selectFeature(feature) {
-      const layer = this.findLayerOfFeature_(feature);
-      if (!this.layerFilter_(layer) || !this.filter_(feature, layer)) {
-        return false;
-      }
-      const features = this.getFeatures();
-      if (features.getArray().includes(feature)) {
-        return false;
-      }
-      this.addFeatureLayerAssociation_(feature, layer);
-      features.push(feature);
-      this.dispatchEvent(
-        new SelectEvent(SelectEventType.SELECT, [feature], [], void 0)
-      );
-      return true;
-    }
-    /**
-     * Try to deselect a feature as if it was clicked.
-     * Compared to `select.getFeatures().remove(feature)` this causes a SelectEvent.
-     * The {@link module:ol/interaction/Select~SelectEvent} fired by this won't have a mapBrowserEvent property
-     * @param {Feature} feature The feature to deselect
-     * @return {boolean} True if the feature was deselected
-     * @api
-     */
-    deselectFeature(feature) {
-      const features = this.getFeatures();
-      const index = features.getArray().indexOf(feature);
-      if (index === -1) {
-        return false;
-      }
-      features.removeAt(index);
-      this.dispatchEvent(
-        new SelectEvent(SelectEventType.SELECT, [], [feature], void 0)
-      );
-      return true;
-    }
-    /**
-     * Try to toggle a feature as if it was clicked and `toggleCondition` was True.
-     * Unlike modifying `select.getFeatures()` directly, this respects the `filter` and `layers` options (except `multi`, which is ignored).
-     * The {@link module:ol/interaction/Select~SelectEvent} fired by this won't have a mapBrowserEvent property
-     * @param {Feature} feature The feature to deselect
-     * @api
-     */
-    toggleFeature(feature) {
-      if (!this.deselectFeature(feature)) {
-        this.selectFeature(feature);
-      }
-    }
-    /**
-     * Deselect all features as if a user deselected them.
-     * Compared to `select.getFeatures().clear()` this causes a SelectEvent.
-     * The {@link module:ol/interaction/Select~SelectEvent} fired by this won't have a mapBrowserEvent property
-     * @api
-     */
-    clearSelection() {
-      const features = this.getFeatures();
-      if (features.getLength() !== 0) {
-        const deselected = features.getArray().slice();
-        features.clear();
-        this.dispatchEvent(
-          new SelectEvent(SelectEventType.SELECT, [], deselected, void 0)
-        );
-      }
-    }
-    /**
-     * Handles the {@link module:ol/MapBrowserEvent~MapBrowserEvent map browser event} and may change the
-     * selected state of features.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Map browser event.
-     * @return {boolean} `false` to stop event propagation.
-     * @override
-     */
-    handleEvent(mapBrowserEvent) {
-      if (!this.condition_(mapBrowserEvent)) {
-        return true;
-      }
-      const add2 = this.addCondition_(mapBrowserEvent);
-      const remove = this.removeCondition_(mapBrowserEvent);
-      const toggle = this.toggleCondition_(mapBrowserEvent);
-      const set = !add2 && !remove && !toggle;
-      const map = mapBrowserEvent.map;
-      const features = this.getFeatures();
-      const deselected = [];
-      const selected = [];
-      if (set) {
-        map.forEachFeatureAtPixel(
-          mapBrowserEvent.pixel,
-          (feature, layer) => {
-            if (!(feature instanceof Feature) || !this.filter_(feature, layer)) {
-              return;
-            }
-            this.addFeatureLayerAssociation_(feature, layer);
-            selected.push(feature);
-            return !this.multi_;
-          },
-          {
-            layerFilter: this.layerFilter_,
-            hitTolerance: this.hitTolerance_
-          }
-        );
-        for (let i = features.getLength() - 1; i >= 0; --i) {
-          const feature = features.item(i);
-          const index = selected.indexOf(feature);
-          if (index === -1) {
-            features.removeAt(i);
-            deselected.push(feature);
-          } else {
-            selected.splice(index, 1);
-          }
-        }
-        if (selected.length !== 0) {
-          features.extend(selected);
-        }
-      } else {
-        map.forEachFeatureAtPixel(
-          mapBrowserEvent.pixel,
-          (feature, layer) => {
-            if (!(feature instanceof Feature) || !this.filter_(feature, layer)) {
-              return;
-            }
-            const hasFeature = features.getArray().includes(feature);
-            if (hasFeature && (remove || toggle)) {
-              deselected.push(feature);
-            } else if (!hasFeature && (add2 || toggle)) {
-              this.addFeatureLayerAssociation_(feature, layer);
-              selected.push(feature);
-            }
-            return !this.multi_;
-          },
-          {
-            layerFilter: this.layerFilter_,
-            hitTolerance: this.hitTolerance_
-          }
-        );
-        for (let j = deselected.length - 1; j >= 0; --j) {
-          features.remove(deselected[j]);
-        }
-        features.extend(selected);
-      }
-      if (selected.length > 0 || deselected.length > 0) {
-        this.dispatchEvent(
-          new SelectEvent(
-            SelectEventType.SELECT,
-            selected,
-            deselected,
-            mapBrowserEvent
-          )
-        );
-      }
-      return true;
-    }
-  }
-  function getDefaultStyleFunction() {
-    const styles = createEditingStyle();
-    extend$2(styles["Polygon"], styles["LineString"]);
-    extend$2(styles["GeometryCollection"], styles["LineString"]);
-    return function(feature) {
-      if (!feature.getGeometry()) {
-        return null;
-      }
-      return styles[feature.getGeometry().getType()];
     };
   }
   const SnapEventType = {
@@ -34840,8 +34441,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "MultiLineString",
     "MultiPolygon",
     "Rectangle",
+    /** @deprecated Préférer `Disc` — encore accepté (outil Disc). */
     "Circle",
     "Disc",
+    /** @deprecated Préférer `MultiDisc` — encore accepté (outil Disc). */
     "MultiCircle",
     "MultiDisc",
     "Geometry"
@@ -34885,7 +34488,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         keys.add("Point");
         keys.add("LineString");
         keys.add("Polygon");
-        keys.add("Circle");
         keys.add("Disc");
         return;
       }
@@ -34893,8 +34495,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       else if (t === "LineString" || t === "MultiLineString") keys.add("LineString");
       else if (t === "Polygon" || t === "MultiPolygon") keys.add("Polygon");
       else if (t === "Rectangle") keys.add("Rectangle");
-      else if (t === "Circle" || t === "MultiCircle") keys.add("Circle");
-      else if (t === "Disc" || t === "MultiDisc") keys.add("Disc");
+      else if (t === "Disc" || t === "MultiDisc" || t === "Circle" || t === "MultiCircle") {
+        keys.add("Disc");
+      }
     };
     for (const t of types) addFrom(t);
     return [...keys];
@@ -38798,6 +38401,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function setCircleKind(feature, kind) {
     feature.set(EC_KIND_PROP, kind);
   }
+  function distToCircleCenter(circle, coord) {
+    const c = circle.getCenter();
+    return Math.hypot(coord[0] - c[0], coord[1] - c[1]);
+  }
+  function isNearCircleEdge(circle, coord, tol) {
+    return Math.abs(distToCircleCenter(circle, coord) - circle.getRadius()) <= tol;
+  }
   function looksLikeCircleOrDisc(data) {
     if (!data || typeof data !== "object") return false;
     const o = data;
@@ -39140,7 +38750,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       fill: new Fill({ color: blue })
     })
   });
-  const circleDrawStyle = new Style({
+  new Style({
     fill: new Fill({ color: "rgba(0,0,0,0)" }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
@@ -39403,9 +39013,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function distToCenter(center, coord) {
     return Math.hypot(coord[0] - center[0], coord[1] - center[1]);
-  }
-  function isNearCircleEdge(circle, coord, tol) {
-    return Math.abs(distToCenter(circle.getCenter(), coord) - circle.getRadius()) <= tol;
   }
   function isDeepInsideCircle(circle, coord, margin) {
     return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin;
@@ -39838,6 +39445,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     iconClass: "ec-geometry-editor__tool--remove",
     remove: true
   };
+  const clearAllTool = {
+    id: "clear-all",
+    label: "Tout supprimer",
+    iconClass: "ec-geometry-editor__tool--clear-all",
+    clearAll: true
+  };
   const DRAW_TOOL_DEFS = {
     Point: {
       id: "point",
@@ -39864,26 +39477,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       drawType: "Circle",
       box: true
     },
-    Circle: {
-      id: "circle",
-      label: "Cercle",
-      iconClass: "ec-geometry-editor__tool--circle",
-      drawType: "Circle",
-      circleKind: "circle"
-    },
     Disc: {
       id: "disc",
       label: "Disque",
-      iconClass: "ec-geometry-editor__tool--disc",
+      // Picto contour (ex-Circle) — un seul outil cercle/disque
+      iconClass: "ec-geometry-editor__tool--circle",
       drawType: "Circle",
       circleKind: "disc"
     }
   };
   function drawStyleFor(types) {
-    if (types.length === 1 && types[0] === "Circle") return circleDrawStyle;
-    if (types.length === 1 && types[0] === "Disc") return discDrawStyle;
-    if (types.length === 1 && types[0] === "MultiCircle") return circleDrawStyle;
-    if (types.length === 1 && types[0] === "MultiDisc") return discDrawStyle;
+    if (types.length === 1 && (types[0] === "Disc" || types[0] === "MultiDisc")) {
+      return discDrawStyle;
+    }
+    if (types.length === 1 && (types[0] === "Circle" || types[0] === "MultiCircle")) {
+      return discDrawStyle;
+    }
     return geometryDrawStyle;
   }
   function toolsFor(geometryType) {
@@ -39902,26 +39511,64 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "layer");
       __publicField(this, "target");
       __publicField(this, "onChange");
+      __publicField(this, "onClearAll");
+      __publicField(this, "showClearAll");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
       __publicField(this, "activeId", null);
       __publicField(this, "draw", null);
       __publicField(this, "modify", null);
-      __publicField(this, "select", null);
       __publicField(this, "snap", null);
       __publicField(this, "transform");
+      __publicField(this, "removeEdgeTolPx", 12);
+      __publicField(this, "onRemoveClick", (evt) => {
+        if (evt.dragging) return;
+        const res = this.map.getView().getResolution() ?? 1;
+        const edgeTol = this.removeEdgeTolPx * res;
+        const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+          layerFilter: (layer) => layer === this.layer,
+          hitTolerance: this.removeEdgeTolPx
+        });
+        for (const feature of hits) {
+          if (!this.source.hasFeature(feature)) continue;
+          const geom = feature.getGeometry();
+          if (geom instanceof Circle && getCircleKind(feature) === "circle") {
+            if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue;
+          }
+          this.source.removeFeature(feature);
+          this.onChange();
+          return;
+        }
+      });
       __publicField(this, "onFeaturePointerMove", (evt) => {
         if (evt.dragging) return;
         if (this.activeId === "modify") return;
+        const target = this.map.getTargetElement();
+        if (!target) return;
+        if (this.activeId === "remove") {
+          const res = this.map.getView().getResolution() ?? 1;
+          const edgeTol = this.removeEdgeTolPx * res;
+          const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+            layerFilter: (layer) => layer === this.layer,
+            hitTolerance: this.removeEdgeTolPx
+          });
+          const canRemove = hits.some((feature) => {
+            if (!this.source.hasFeature(feature)) return false;
+            const geom = feature.getGeometry();
+            if (geom instanceof Circle && getCircleKind(feature) === "circle") {
+              return isNearCircleEdge(geom, evt.coordinate, edgeTol);
+            }
+            return true;
+          });
+          target.style.cursor = canRemove ? "pointer" : "";
+          return;
+        }
         const hit = this.map.hasFeatureAtPixel(evt.pixel, {
           layerFilter: (layer) => layer === this.layer,
           hitTolerance: 12
         });
-        const target = this.map.getTargetElement();
-        if (target) {
-          target.style.cursor = hit ? "pointer" : "";
-        }
+        target.style.cursor = hit ? "pointer" : "";
       });
       this.map = opts.map;
       this.source = opts.source;
@@ -39929,6 +39576,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.geometryType = opts.geometryType;
       this.target = opts.target;
       this.onChange = opts.onChange;
+      this.showClearAll = Boolean(opts.clearAll);
+      this.onClearAll = opts.onClearAll ?? null;
       this.customStyle = opts.style;
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
       this.modify = new Modify({
@@ -39967,13 +39616,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.customStyle = style;
       this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType));
     }
+    toolsList() {
+      const tools = toolsFor(this.geometryType);
+      return this.showClearAll ? [...tools, clearAllTool] : tools;
+    }
     render() {
       this.target.replaceChildren();
-      for (const tool of toolsFor(this.geometryType)) {
+      for (const tool of this.toolsList()) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
-        btn.title = tool.label;
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
@@ -39994,10 +39646,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.map.removeInteraction(this.draw);
         this.draw = null;
       }
-      if (this.select) {
-        this.map.removeInteraction(this.select);
-        this.select = null;
-      }
+      this.map.un("singleclick", this.onRemoveClick);
       this.activeId = null;
       (_a = this.modify) == null ? void 0 : _a.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
@@ -40007,6 +39656,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     activate(tool) {
       var _a;
+      if (tool.clearAll) {
+        this.clearTransient();
+        if (this.onClearAll) {
+          this.onClearAll();
+        } else {
+          this.source.clear(true);
+          this.onChange();
+        }
+        return;
+      }
       const already = this.activeId === tool.id;
       this.clearTransient();
       if (already) return;
@@ -40027,30 +39686,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (tool.remove) {
         this.map.on("pointermove", this.onFeaturePointerMove);
-        this.select = new Select({
-          condition: click,
-          hitTolerance: 12,
-          layers: [this.layer],
-          style: null
-        });
-        this.select.on("select", (e) => {
-          var _a2;
-          const selected = [...e.selected];
-          for (const f of selected) {
-            if (this.source.hasFeature(f)) {
-              this.source.removeFeature(f);
-            }
-          }
-          (_a2 = this.select) == null ? void 0 : _a2.getFeatures().clear();
-          this.onChange();
-        });
-        this.map.addInteraction(this.select);
+        this.map.on("singleclick", this.onRemoveClick);
         return;
       }
       if (!tool.drawType) return;
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
-      const sketchStyle = tool.circleKind === "circle" ? circleDrawStyle : tool.circleKind === "disc" ? discDrawStyle : this.drawStyle;
+      const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
       this.draw = new Draw({
         source: this.source,
         type: tool.drawType,
@@ -40074,6 +39716,293 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.modify) this.map.removeInteraction(this.modify);
       if (this.snap) this.map.removeInteraction(this.snap);
       this.target.replaceChildren();
+    }
+  }
+  const GEOJSON = new GeoJSON();
+  class SketchControl extends Control {
+    constructor(options = {}) {
+      const toolsRoot = document.createElement("div");
+      toolsRoot.className = "ec-sketch-control ec-geometry-editor__tools-root";
+      toolsRoot.setAttribute("aria-label", "Croquis");
+      toolsRoot.id = `GPsketch-${Date.now()}`;
+      super({ element: toolsRoot });
+      __publicField(this, "geometryType");
+      __publicField(this, "toolsToggle");
+      __publicField(this, "position");
+      __publicField(this, "style");
+      __publicField(this, "zIndex");
+      __publicField(this, "onChangeCb");
+      __publicField(this, "localStorageKey");
+      __publicField(this, "clearAll");
+      __publicField(this, "extraTools");
+      __publicField(this, "source");
+      __publicField(this, "layer");
+      __publicField(this, "ownsLayer");
+      __publicField(this, "toolsRoot");
+      __publicField(this, "toolbarHost");
+      __publicField(this, "toolsToggleBtn", null);
+      __publicField(this, "toolsMenuOpen", false);
+      __publicField(this, "toolbarDomId", `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`);
+      __publicField(this, "drawBar", null);
+      __publicField(this, "saveTimer", null);
+      this.geometryType = options.geometryType ?? "Geometry";
+      this.toolsToggle = options.toolsToggle ?? null;
+      this.position = options.position ?? null;
+      this.style = options.style;
+      this.zIndex = options.zIndex ?? 500;
+      this.onChangeCb = options.onChange;
+      this.localStorageKey = options.localStorageKey ?? null;
+      this.clearAll = Boolean(options.clearAll);
+      this.extraTools = options.extraTools ?? [];
+      this.source = options.source ?? new VectorSource({ wrapX: false });
+      this.layer = options.layer ?? null;
+      this.ownsLayer = !options.layer;
+      this.toolsRoot = toolsRoot;
+      this.toolbarHost = document.createElement("div");
+      this.toolbarHost.className = "ec-geometry-editor__toolbar";
+      this.toolbarHost.setAttribute("role", "toolbar");
+      this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
+      this.applyToolsChrome();
+    }
+    setMap(map) {
+      const prev = this.getMap();
+      if (prev && this.drawBar) {
+        this.teardownDrawBar();
+      }
+      if (prev && this.ownsLayer && this.layer) {
+        prev.removeLayer(this.layer);
+      }
+      super.setMap(map);
+      if (!map) {
+        this.layer = this.ownsLayer ? null : this.layer;
+        return;
+      }
+      this.ensureLayer(map);
+      this.mountDrawBar(map);
+      this.placeInGeopfContainer(map);
+      this.restoreFromLocalStorage();
+    }
+    getSource() {
+      return this.source;
+    }
+    /** Élément DOM du contrôle (chrome outils). */
+    getElement() {
+      return this.toolsRoot;
+    }
+    getLayer() {
+      return this.layer;
+    }
+    getDrawBar() {
+      return this.drawBar;
+    }
+    getFeatures() {
+      return this.source.getFeatures();
+    }
+    setFeatures(features) {
+      this.source.clear(true);
+      if (features.length) this.source.addFeatures(features);
+      this.notifyChange();
+    }
+    clearFeatures() {
+      this.source.clear(true);
+      this.notifyChange();
+    }
+    load(raw) {
+      let features = parseRawToFeatures(raw);
+      const primary = primaryGeometryType(parseGeometryTypes(this.geometryType));
+      if (primary === "Circle" || primary === "MultiCircle") {
+        features = restoreCircleFeaturesForKind(features, "circle");
+      } else if (primary === "Disc" || primary === "MultiDisc") {
+        features = restoreCircleFeaturesForKind(features, "disc");
+      }
+      this.source.clear(true);
+      if (features.length) this.source.addFeatures(features);
+      this.notifyChange();
+    }
+    serialize(opts) {
+      return serializeFeatures(this.getFeatures(), {
+        geometryType: (opts == null ? void 0 : opts.geometryType) ?? this.geometryType,
+        outputFormat: (opts == null ? void 0 : opts.outputFormat) ?? "geojson",
+        precision: (opts == null ? void 0 : opts.precision) ?? 7
+      });
+    }
+    setGeometryType(geometryType) {
+      var _a;
+      this.geometryType = geometryType;
+      (_a = this.drawBar) == null ? void 0 : _a.setGeometryType(geometryType);
+    }
+    setStyle(style) {
+      var _a, _b;
+      this.style = style;
+      (_a = this.layer) == null ? void 0 : _a.setStyle(style ?? geometryStyleFunction);
+      (_b = this.drawBar) == null ? void 0 : _b.setStyle(style);
+    }
+    setToolsToggle(corner) {
+      this.toolsToggle = corner;
+      this.applyToolsChrome();
+      const map = this.getMap();
+      if (map && this.drawBar) {
+        this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+      }
+    }
+    ensureLayer(map) {
+      if (this.layer) {
+        if (this.style !== void 0) {
+          this.layer.setStyle(this.style ?? geometryStyleFunction);
+        }
+        if (!map.getLayers().getArray().includes(this.layer)) {
+          map.addLayer(this.layer);
+        }
+        return;
+      }
+      this.layer = new VectorLayer({
+        source: this.source,
+        style: this.style ?? geometryStyleFunction,
+        zIndex: this.zIndex,
+        className: "ec-sketch-control__layer",
+        properties: {
+          "ec-sketch": true,
+          "ec-geometry-tools": true
+        }
+      });
+      this.ownsLayer = true;
+      map.addLayer(this.layer);
+    }
+    mountDrawBar(map) {
+      var _a;
+      if (!this.layer) return;
+      (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.drawBar = new DrawToolsBar({
+        map,
+        source: this.source,
+        layer: this.layer,
+        geometryType: this.geometryType,
+        target: this.toolbarHost,
+        style: this.style,
+        clearAll: this.clearAll,
+        onChange: () => this.notifyChange(),
+        onClearAll: () => this.clearFeatures()
+      });
+      void this.extraTools;
+      this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+    }
+    teardownDrawBar() {
+      var _a;
+      (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.drawBar = null;
+      this.toolbarHost.replaceChildren();
+    }
+    notifyChange() {
+      var _a;
+      (_a = this.onChangeCb) == null ? void 0 : _a.call(this, this.getFeatures());
+      this.scheduleSave();
+    }
+    scheduleSave() {
+      if (!this.localStorageKey) return;
+      if (this.saveTimer) clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => {
+        this.saveTimer = null;
+        this.saveToLocalStorage();
+      }, 200);
+    }
+    saveToLocalStorage() {
+      var _a;
+      if (!this.localStorageKey || typeof localStorage === "undefined") return;
+      try {
+        const features = this.getFeatures();
+        if (!features.length) {
+          localStorage.removeItem(this.localStorageKey);
+          return;
+        }
+        const json = GEOJSON.writeFeaturesObject(features, {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        localStorage.setItem(this.localStorageKey, JSON.stringify(json));
+      } catch (err) {
+        console.warn("[SketchControl] localStorage save failed", err);
+      }
+    }
+    restoreFromLocalStorage() {
+      var _a;
+      if (!this.localStorageKey || typeof localStorage === "undefined") return;
+      try {
+        const raw = localStorage.getItem(this.localStorageKey);
+        if (!raw) return;
+        const features = GEOJSON.readFeatures(JSON.parse(raw), {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        this.source.clear(true);
+        if (features.length) this.source.addFeatures(features);
+      } catch (err) {
+        console.warn("[SketchControl] localStorage restore failed", err);
+      }
+    }
+    setToolsMenuOpen(open) {
+      this.toolsMenuOpen = open;
+      if (this.toolsToggleBtn) {
+        this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        this.toolsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
+        this.toolsToggleBtn.classList.toggle("is-active", open);
+      }
+      if (this.toolsToggle) {
+        this.toolbarHost.hidden = !open;
+      }
+      this.toolsRoot.classList.toggle("is-open", open);
+    }
+    applyToolsChrome() {
+      const corner = this.toolsToggle;
+      if (corner) {
+        if (!this.toolsToggleBtn) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle";
+          btn.setAttribute("aria-label", "Outils de dessin");
+          btn.setAttribute("aria-expanded", "false");
+          btn.setAttribute("aria-pressed", "false");
+          btn.setAttribute("aria-controls", this.toolbarDomId);
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.setToolsMenuOpen(!this.toolsMenuOpen);
+          });
+          this.toolsToggleBtn = btn;
+        }
+        this.toolbarHost.id = this.toolbarDomId;
+        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost);
+        this.toolsRoot.dataset.corner = corner;
+        this.setToolsMenuOpen(this.toolsMenuOpen);
+      } else {
+        this.toolsMenuOpen = false;
+        this.toolsToggleBtn = null;
+        this.toolbarHost.removeAttribute("id");
+        this.toolbarHost.hidden = false;
+        this.toolsRoot.replaceChildren(this.toolbarHost);
+        delete this.toolsRoot.dataset.corner;
+        this.toolsRoot.classList.remove("is-open");
+      }
+    }
+    /**
+     * Place le contrôle dans le conteneur geopf du coin demandé (carte principale),
+     * au-dessus de la minimap via `order: -2`.
+     * Retente si le conteneur n’existe pas encore (ordre d’ajout des contrôles).
+     */
+    placeInGeopfContainer(map, attempt = 0) {
+      const corner = this.position ?? this.toolsToggle;
+      if (!corner) return;
+      const target = map.getTargetElement();
+      if (!(target instanceof HTMLElement)) return;
+      const container = target.querySelector(`.position-container-${corner}`);
+      if (!(container instanceof HTMLElement)) {
+        if (attempt < 20) {
+          requestAnimationFrame(() => this.placeInGeopfContainer(map, attempt + 1));
+        }
+        return;
+      }
+      this.toolsRoot.classList.add("ec-sketch-control--geopf-slot");
+      if (this.toolsRoot.parentElement !== container) {
+        container.appendChild(this.toolsRoot);
+      }
     }
   }
   const OUTPUT_FORMATS = ["geojson", "kml"];
@@ -40117,8 +40046,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.button = document.createElement("button");
       this.button.type = "button";
       this.button.className = "ec-geometry-editor__tool ec-geometry-editor__tool--settings";
-      this.button.title = "Options de la carte";
       this.button.setAttribute("aria-label", "Options de la carte");
+      this.button.setAttribute("aria-pressed", "false");
       this.button.setAttribute("aria-expanded", "false");
       this.button.setAttribute("aria-haspopup", "dialog");
       this.button.addEventListener("click", () => this.toggle());
@@ -40133,6 +40062,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.open) return;
       this.open = true;
       this.button.setAttribute("aria-expanded", "true");
+      this.button.setAttribute("aria-pressed", "true");
       this.button.classList.add("is-active");
       this.dialog = this.buildDialog();
       this.mapHost.appendChild(this.dialog);
@@ -40144,6 +40074,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.open) return;
       this.open = false;
       this.button.setAttribute("aria-expanded", "false");
+      this.button.setAttribute("aria-pressed", "false");
       this.button.classList.remove("is-active");
       this.bindViewListeners(false);
       (_a = this.dialog) == null ? void 0 : _a.remove();
@@ -40357,8 +40288,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       input.name = "geometryType";
       input.value = current;
       input.setAttribute("list", "ec-geom-type-list");
-      input.placeholder = "Point,Circle ou Geometry…";
-      input.title = "Un type, ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)";
+      input.placeholder = "Point,Disc ou Geometry…";
+      input.title = "Un type, ou plusieurs séparés par des virgules (ex. Point,Disc)";
       const list = document.createElement("datalist");
       list.id = "ec-geom-type-list";
       for (const name of GEOMETRY_TYPE_NAMES) {
@@ -40370,7 +40301,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       wrap2.appendChild(list);
       const hint = document.createElement("span");
       hint.className = "ec-geometry-editor__settings-hint";
-      hint.textContent = "CSV autorisé : Point,Circle,Disc — comme Geometry, outils filtrés";
+      hint.textContent = "CSV autorisé : Point,Disc — comme Geometry, outils filtrés (Circle → outil Disc)";
       wrap2.appendChild(hint);
       return wrap2;
     }
@@ -40461,17 +40392,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "source");
       __publicField(this, "mapHost");
       __publicField(this, "vectorLayer");
-      /** Conteneur positionné (coin ou gauche) des contrôles d’édition. */
-      __publicField(this, "toolsRoot", null);
-      /** Barre des outils de dessin (cible de DrawToolsBar). */
-      __publicField(this, "toolbarHost", null);
-      __publicField(this, "toolsToggleBtn", null);
-      __publicField(this, "toolsMenuOpen", false);
-      __publicField(this, "toolbarDomId", `ec-geom-toolbar-${Math.random().toString(36).slice(2, 9)}`);
       __publicField(this, "zoomControl", null);
       __publicField(this, "attributionControl", null);
       __publicField(this, "settingsPanel", null);
-      __publicField(this, "drawBar", null);
+      __publicField(this, "sketch", null);
       __publicField(this, "syncingFromElement", false);
       __publicField(this, "destroyed", false);
       __publicField(this, "jqueryListening", false);
@@ -40491,12 +40415,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const mapTarget = document.createElement("div");
       mapTarget.className = "ec-geometry-editor__map";
       this.mapHost.appendChild(mapTarget);
-      this.toolsRoot = null;
-      this.toolbarHost = null;
-      this.toolsToggleBtn = null;
-      if (this.options.editable) {
-        this.ensureToolbarHost();
-      }
       element.insertAdjacentElement("afterend", this.mapHost);
       this.source = new VectorSource({ wrapX: false });
       this.vectorLayer = new VectorLayer({
@@ -40570,7 +40488,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Seules les clés présentes dans `patch` sont modifiées.
      */
     setOptions(patch) {
-      var _a;
+      var _a, _b;
       if (this.destroyed) return;
       const prev = this.options;
       this.options = mergeOptions(prev, patch);
@@ -40606,14 +40524,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.vectorLayer.setStyle(
           this.options.customStyle ?? geometryStyleFunction
         );
-        (_a = this.drawBar) == null ? void 0 : _a.setStyle(this.options.customStyle);
+        (_a = this.sketch) == null ? void 0 : _a.setStyle(this.options.customStyle);
       }
       if (patch.editable !== void 0) {
         this.applyEditable();
       } else if (patch.toolsToggle !== void 0) {
-        this.applyToolsChrome();
-      } else if (this.drawBar && patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
-        this.drawBar.setGeometryType(
+        this.applyHostClass();
+        (_b = this.sketch) == null ? void 0 : _b.setToolsToggle(
+          this.options.toolsToggle ?? null
+        );
+      } else if (this.sketch && patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
+        this.sketch.setGeometryType(
           this.options.geometryType
         );
       }
@@ -40704,13 +40625,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
     }
     destroy() {
-      var _a, _b;
+      var _a;
       if (this.destroyed) return;
       this.destroyed = true;
       this.unbindElementListeners();
-      (_a = this.drawBar) == null ? void 0 : _a.destroy();
-      this.drawBar = null;
-      (_b = this.settingsPanel) == null ? void 0 : _b.destroy();
+      if (this.sketch) {
+        this.map.removeControl(this.sketch);
+        this.sketch = null;
+      }
+      (_a = this.settingsPanel) == null ? void 0 : _a.destroy();
       this.settingsPanel = null;
       this.map.setTarget(void 0);
       this.mapHost.remove();
@@ -40828,181 +40751,86 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         layers.insertAt(index, createTileLayer(cfg));
       });
     }
-    ensureToolbarHost() {
-      this.applyToolsChrome();
-      return this.toolbarHost;
-    }
-    setToolsMenuOpen(open) {
-      this.toolsMenuOpen = open;
-      if (this.toolsToggleBtn) {
-        this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
-        this.toolsToggleBtn.classList.toggle("is-active", open);
-      }
-      if (this.toolbarHost && this.options.toolsToggle) {
-        this.toolbarHost.hidden = !open;
-      }
-      if (this.toolsRoot) {
-        this.toolsRoot.classList.toggle("is-open", open);
-      }
-    }
-    /**
-     * Positionne le chrome outils (toujours visibles à gauche, ou bouton + panneau
-     * selon `toolsToggle`).
-     */
-    applyToolsChrome() {
-      if (!this.toolsRoot) {
-        this.toolsRoot = document.createElement("div");
-        this.toolsRoot.className = "ec-geometry-editor__tools-root";
-        this.mapHost.appendChild(this.toolsRoot);
-      }
-      if (!this.toolbarHost) {
-        this.toolbarHost = document.createElement("div");
-        this.toolbarHost.className = "ec-geometry-editor__toolbar";
-        this.toolbarHost.setAttribute("role", "toolbar");
-        this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
-      }
-      const corner = this.options.toolsToggle;
-      if (corner) {
-        if (!this.toolsToggleBtn) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle fr-icon-tools-fill";
-          btn.title = "Outils de dessin";
-          btn.setAttribute("aria-label", "Outils de dessin");
-          btn.setAttribute("aria-expanded", "false");
-          btn.setAttribute("aria-controls", this.toolbarDomId);
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            this.setToolsMenuOpen(!this.toolsMenuOpen);
-          });
-          this.toolsToggleBtn = btn;
-        }
-        this.toolbarHost.id = this.toolbarDomId;
-        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost);
-        this.toolsRoot.dataset.corner = corner;
-        this.setToolsMenuOpen(this.toolsMenuOpen);
-      } else {
-        this.toolsMenuOpen = false;
-        this.toolsToggleBtn = null;
-        this.toolbarHost.removeAttribute("id");
-        this.toolbarHost.hidden = false;
-        this.toolsRoot.replaceChildren(this.toolbarHost);
-        delete this.toolsRoot.dataset.corner;
-        this.toolsRoot.classList.remove("is-open");
-      }
-      this.applyHostClass();
-    }
     applyEditable() {
-      var _a;
       if (this.options.editable) {
-        const host = this.ensureToolbarHost();
-        if (this.toolsRoot) this.toolsRoot.hidden = false;
-        host.hidden = Boolean(this.options.toolsToggle) && !this.toolsMenuOpen;
-        if (!this.drawBar) {
-          this.drawBar = new DrawToolsBar({
-            map: this.map,
+        if (!this.sketch) {
+          this.sketch = new SketchControl({
+            geometryType: this.options.geometryType,
+            toolsToggle: this.options.toolsToggle ?? null,
             source: this.source,
             layer: this.vectorLayer,
-            geometryType: this.options.geometryType,
-            target: host,
             style: this.options.customStyle,
+            // GeometryEditor : pas de localStorage / clearAll / extraTools
             onChange: () => this.serializeToElement()
           });
+          this.map.addControl(this.sketch);
+          this.mapHost.appendChild(this.sketch.getElement());
         } else {
-          this.drawBar.setGeometryType(
+          this.sketch.setGeometryType(
             this.options.geometryType
           );
-          this.drawBar.setStyle(this.options.customStyle);
+          this.sketch.setToolsToggle(
+            this.options.toolsToggle ?? null
+          );
+          this.sketch.setStyle(this.options.customStyle);
         }
-      } else {
-        (_a = this.drawBar) == null ? void 0 : _a.destroy();
-        this.drawBar = null;
-        this.setToolsMenuOpen(false);
-        if (this.toolsRoot) {
-          this.toolsRoot.hidden = true;
-        }
+        this.applyHostClass();
+      } else if (this.sketch) {
+        this.map.removeControl(this.sketch);
+        this.sketch = null;
+        this.applyHostClass();
       }
     }
   }
   function attachGeometryTools(map, options) {
-    const geometryType = options.geometryType ?? "Geometry";
-    const ownsSource = !options.source;
-    const source = options.source ?? new VectorSource({ wrapX: false });
-    let layer = options.layer;
-    let ownsLayer = false;
-    if (!layer) {
-      layer = new VectorLayer({
-        source,
-        style: options.style ?? geometryStyleFunction,
-        zIndex: options.zIndex ?? 500,
-        className: "ec-geometry-editor__sketch-layer"
-      });
-      layer.set("ec-geometry-tools", true);
-      map.addLayer(layer);
-      ownsLayer = true;
-    } else if (options.style !== void 0) {
-      layer.setStyle(options.style ?? geometryStyleFunction);
-    }
-    const notify = () => {
-      var _a;
-      (_a = options.onChange) == null ? void 0 : _a.call(
-        options,
-        source.getFeatures()
-      );
-    };
-    const drawBar = new DrawToolsBar({
-      map,
-      source,
-      layer,
-      geometryType,
-      target: options.target,
+    const sketch = new SketchControl({
+      geometryType: options.geometryType ?? "Geometry",
+      toolsToggle: options.target ? null : options.toolsToggle ?? null,
+      position: options.position,
+      source: options.source,
+      layer: options.layer,
       style: options.style,
-      onChange: notify
+      zIndex: options.zIndex,
+      onChange: options.onChange,
+      localStorageKey: options.localStorageKey,
+      clearAll: options.clearAll,
+      extraTools: options.extraTools
     });
+    map.addControl(sketch);
+    if (options.target) {
+      const toolbar = sketch.getElement().querySelector(".ec-geometry-editor__toolbar");
+      if (toolbar instanceof HTMLElement) {
+        options.target.replaceChildren(toolbar);
+      }
+      sketch.getElement().hidden = true;
+    }
+    const layer = sketch.getLayer();
+    if (!layer) {
+      map.removeControl(sketch);
+      throw new Error("[attachGeometryTools] couche croquis indisponible");
+    }
     return {
       map,
-      source,
+      source: sketch.getSource(),
       layer,
-      drawBar,
-      getFeatures: () => source.getFeatures(),
-      setFeatures: (features) => {
-        source.clear(true);
-        if (features.length) source.addFeatures(features);
-        notify();
-      },
-      load: (raw) => {
-        let features = parseRawToFeatures(raw);
-        const primary = primaryGeometryType(parseGeometryTypes(geometryType));
-        if (primary === "Circle" || primary === "MultiCircle") {
-          features = restoreCircleFeaturesForKind(features, "circle");
-        } else if (primary === "Disc" || primary === "MultiDisc") {
-          features = restoreCircleFeaturesForKind(features, "disc");
+      get drawBar() {
+        const bar = sketch.getDrawBar();
+        if (!bar) {
+          throw new Error("[attachGeometryTools] DrawToolsBar indisponible");
         }
-        source.clear(true);
-        if (features.length) source.addFeatures(features);
-        notify();
+        return bar;
       },
-      serialize: (opts = {}) => serializeFeatures(source.getFeatures(), {
-        geometryType: opts.geometryType ?? geometryType,
-        outputFormat: opts.outputFormat ?? "geojson",
-        precision: opts.precision ?? 7
-      }),
-      setGeometryType: (next) => {
-        drawBar.setGeometryType(next);
-      },
-      setStyle: (style) => {
-        layer.setStyle(style ?? geometryStyleFunction);
-        drawBar.setStyle(style);
-      },
+      sketch,
+      getFeatures: () => sketch.getFeatures(),
+      setFeatures: (features) => sketch.setFeatures(features),
+      load: (raw) => sketch.load(raw),
+      serialize: (opts) => sketch.serialize(opts),
+      setGeometryType: (next) => sketch.setGeometryType(next),
+      setStyle: (style) => sketch.setStyle(style),
       destroy: () => {
-        drawBar.destroy();
-        if (ownsLayer) {
-          map.removeLayer(layer);
-        }
-        if (ownsSource) {
-          source.clear(true);
-        }
-        options.target.replaceChildren();
+        var _a;
+        map.removeControl(sketch);
+        (_a = options.target) == null ? void 0 : _a.replaceChildren();
       }
     };
   }
@@ -41889,6 +41717,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     mountGeometryEditor,
     attachGeometryTools,
     GeometryEditor,
+    SketchControl,
     featureFromWkt,
     bboxStringFromWkt,
     createSimpleStyle
@@ -41900,6 +41729,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports.FUTURE_GEOMETRY_TOOL_NAMES = FUTURE_GEOMETRY_TOOL_NAMES;
   exports.GEOMETRY_TYPE_NAMES = GEOMETRY_TYPE_NAMES;
   exports.GeometryEditor = GeometryEditor;
+  exports.SketchControl = SketchControl;
   exports.attachGeometryTools = attachGeometryTools;
   exports.bboxStringFromWkt = bboxStringFromWkt;
   exports.createSimpleStyle = createSimpleStyle;

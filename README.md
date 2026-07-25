@@ -14,6 +14,7 @@ Objectif : proposer une carte interactive d’urbanisme (documents, couches, lé
 | Remplace quoi ? | [gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client) (jQuery / stack historique) |
 | Stack | **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR |
 | Démo locale | `make dev` puis ouvrir l’URL Vite |
+| Démo en ligne | GitLab Pages (job CI `pages`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
 
 ---
 

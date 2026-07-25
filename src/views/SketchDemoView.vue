@@ -11,6 +11,9 @@ import {
 import 'ol/ol.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 
+/** Index ouvert dans DsfrAccordionsGroup (-1 = fermé). */
+const docsAccordionOpen = ref(-1)
+
 interface OptionDoc {
   name: string
   def: string
@@ -153,12 +156,14 @@ onUnmounted(() => {
       <code>mountSketch</code>.
     </p>
 
-    <div class="fr-accordions-group fr-mb-5w">
+    <DsfrAccordionsGroup
+      v-model="docsAccordionOpen"
+      class="fr-mb-5w"
+    >
       <DsfrAccordion
         id="ec-sketch-docs"
         title="Utilisation et options"
         title-tag="h2"
-        :selected="false"
       >
         <h3 class="fr-h6">
           Intégration HTML
@@ -220,7 +225,7 @@ onUnmounted(() => {
           </li>
         </ul>
       </DsfrAccordion>
-    </div>
+    </DsfrAccordionsGroup>
 
     <div
       ref="mapHost"

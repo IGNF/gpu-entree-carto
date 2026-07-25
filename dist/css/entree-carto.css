@@ -482,6 +482,596 @@ dialog[id^="GPterritoriesPanel-"] {
     position: absolute;
 }
 
+/**
+ * Styles standalone — mini-carte d’édition géométrique.
+ * Toolbar overlay à gauche, boutons 48×48 type cartes.gouv / geopf Drawing.
+ * Pictos : masques SVG issus de geopf-extensions-openlayers (DSFRdrawingStyle).
+ */
+
+.ec-geometry-editor {
+  --ec-geom-btn-size: 48px;
+  --ec-geom-btn-gap: 8px;
+  --ec-geom-btn-padding: 4px;
+  --ec-geom-btn-radius: 4px;
+  position: relative;
+  display: block;
+  min-height: 240px;
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+/* Champ source masqué (hide) — !important pour gagner sur .fr-input / display auteur */
+.ec-geometry-editor-source--hidden {
+  display: none !important;
+}
+
+.ec-geometry-editor__map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Colonne d’outils dans la carte (positionnée via tools-root) */
+.ec-geometry-editor__tools-root {
+  /* Vars aussi hors .ec-geometry-editor (SketchControl carte principale) */
+  --ec-geom-btn-size: var(--ec-widget-btn-size, 48px);
+  --ec-geom-btn-gap: var(--ec-widget-gap, 8px);
+  --ec-geom-btn-padding: var(--ec-widget-btn-padding, 4px);
+  --ec-geom-btn-radius: var(--ec-widget-btn-radius, 4px);
+  position: absolute;
+  top: var(--ec-geom-btn-gap);
+  left: var(--ec-geom-btn-gap);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.ec-geometry-editor__tools-root > * {
+  pointer-events: auto;
+}
+
+.ec-geometry-editor__tools-root[data-corner] {
+  gap: var(--ec-geom-btn-gap);
+}
+
+.ec-geometry-editor__tools-root[data-corner='top-left'] {
+  top: var(--ec-geom-btn-gap);
+  left: var(--ec-geom-btn-gap);
+  right: auto;
+  bottom: auto;
+  flex-direction: column;
+}
+
+.ec-geometry-editor__tools-root[data-corner='top-right'] {
+  top: var(--ec-geom-btn-gap);
+  right: var(--ec-geom-btn-gap);
+  left: auto;
+  bottom: auto;
+  flex-direction: column;
+}
+
+.ec-geometry-editor__tools-root[data-corner='bottom-left'] {
+  top: auto;
+  left: var(--ec-geom-btn-gap);
+  right: auto;
+  bottom: var(--ec-geom-btn-gap);
+  flex-direction: column-reverse;
+}
+
+.ec-geometry-editor__tools-root[data-corner='bottom-right'] {
+  top: auto;
+  right: var(--ec-geom-btn-gap);
+  left: auto;
+  bottom: var(--ec-geom-btn-gap);
+  flex-direction: column-reverse;
+}
+
+.ec-geometry-editor__toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: var(--ec-geom-btn-size);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--ec-geom-btn-radius);
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  /* visible : infobulles ::before (sinon clipées) */
+  overflow: visible;
+}
+
+.ec-geometry-editor__toolbar[hidden] {
+  display: none !important;
+}
+
+.ec-geometry-editor__tool--tools-toggle {
+  border-radius: var(--ec-geom-btn-radius);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-geometry-editor__tool {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-geom-btn-size) !important;
+  height: var(--ec-geom-btn-size) !important;
+  min-width: var(--ec-geom-btn-size);
+  min-height: var(--ec-geom-btn-size);
+  margin: 0 !important;
+  padding: 4px !important;
+  border: none !important;
+  border-radius: 0;
+  outline: none;
+  background-color: var(--background-default-grey, #fff);
+  color: var(--text-action-high-blue-france, #000091);
+  cursor: pointer;
+  transition: background-color 300ms;
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:first-child {
+  border-radius: var(--ec-geom-btn-radius) var(--ec-geom-btn-radius) 0 0;
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:last-child {
+  border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:only-child {
+  border-radius: var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__tool:hover,
+.ec-geometry-editor__tool:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd);
+  outline: none;
+}
+
+.ec-geometry-editor__tool.is-active,
+.ec-geometry-editor__tool[aria-pressed='true'] {
+  background-color: var(--background-open-blue-france, #e3e3fd);
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+/* Pictogramme via masque (couleur = currentColor) */
+.ec-geometry-editor__tool::after {
+  content: '';
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Point — geopf drawing-tool-point */
+.ec-geometry-editor__tool--point::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMjIiIHZpZXdCb3g9IjAgMCAxOCAyMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMjEuNzI3OUwyLjYzNiAxNS4zNjM5QzEuMzc3MzQgMTQuMTA1MiAwLjUyMDE4NyAxMi41MDE2IDAuMTcyOTI4IDEwLjc1NThDLTAuMTc0MzMgOS4wMDk5NSAwLjAwMzkwNjg1IDcuMjAwMzUgMC42ODUwOTkgNS41NTU4MkMxLjM2NjI5IDMuOTExMjkgMi41MTk4NCAyLjUwNTY5IDMuOTk5ODggMS41MTY3N0M1LjQ3OTkyIDAuNTI3ODM4IDcuMjE5OTggMCA5IDBDMTAuNzggMCAxMi41MjAxIDAuNTI3ODM4IDE0LjAwMDEgMS41MTY3N0MxNS40ODAyIDIuNTA1NjkgMTYuNjMzNyAzLjkxMTI5IDE3LjMxNDkgNS41NTU4MkMxNy45OTYxIDcuMjAwMzUgMTguMTc0MyA5LjAwOTk1IDE3LjgyNzEgMTAuNzU1OEMxNy40Nzk4IDEyLjUwMTYgMTYuNjIyNyAxNC4xMDUyIDE1LjM2NCAxNS4zNjM5TDkgMjEuNzI3OVpNMTMuOTUgMTMuOTQ5OUMxNC45Mjg5IDEyLjk3MDkgMTUuNTk1NSAxMS43MjM2IDE1Ljg2NTYgMTAuMzY1OEMxNi4xMzU2IDkuMDA3OTUgMTUuOTk2OSA3LjYwMDUyIDE1LjQ2NzEgNi4zMjE0OEMxNC45MzczIDUuMDQyNDQgMTQuMDQgMy45NDkyMyAxMi44ODg5IDMuMTgwMDlDMTEuNzM3OCAyLjQxMDk1IDEwLjM4NDQgMi4wMDA0MyA5IDIuMDAwNDNDNy42MTU1NyAyLjAwMDQzIDYuMjYyMjIgMi40MTA5NSA1LjExMTA5IDMuMTgwMDlDMy45NTk5NiAzLjk0OTIzIDMuMDYyNzUgNS4wNDI0NCAyLjUzMjkyIDYuMzIxNDhDMi4wMDMwOCA3LjYwMDUyIDEuODY0NDIgOS4wMDc5NSAyLjEzNDQ1IDEwLjM2NThDMi40MDQ0OSAxMS43MjM2IDMuMDcxMTEgMTIuOTcwOSA0LjA1IDEzLjk0OTlMOSAxOC44OTk5TDEzLjk1IDEzLjk0OTlaTTkgMTAuOTk5OUM4LjQ2OTU3IDEwLjk5OTkgNy45NjA4NiAxMC43ODkyIDcuNTg1NzkgMTAuNDE0MUM3LjIxMDcyIDEwLjAzOTEgNyA5LjUzMDM1IDcgOC45OTk5MkM3IDguNDY5NDkgNy4yMTA3MiA3Ljk2MDc4IDcuNTg1NzkgNy41ODU3MUM3Ljk2MDg2IDcuMjEwNjQgOC40Njk1NyA2Ljk5OTkyIDkgNi45OTk5MkM5LjUzMDQ0IDYuOTk5OTIgMTAuMDM5MSA3LjIxMDY0IDEwLjQxNDIgNy41ODU3MUMxMC43ODkzIDcuOTYwNzggMTEgOC40Njk0OSAxMSA4Ljk5OTkyQzExIDkuNTMwMzUgMTAuNzg5MyAxMC4wMzkxIDEwLjQxNDIgMTAuNDE0MUMxMC4wMzkxIDEwLjc4OTIgOS41MzA0NCAxMC45OTk5IDkgMTAuOTk5OVoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMjIiIHZpZXdCb3g9IjAgMCAxOCAyMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkgMjEuNzI3OUwyLjYzNiAxNS4zNjM5QzEuMzc3MzQgMTQuMTA1MiAwLjUyMDE4NyAxMi41MDE2IDAuMTcyOTI4IDEwLjc1NThDLTAuMTc0MzMgOS4wMDk5NSAwLjAwMzkwNjg1IDcuMjAwMzUgMC42ODUwOTkgNS41NTU4MkMxLjM2NjI5IDMuOTExMjkgMi41MTk4NCAyLjUwNTY5IDMuOTk5ODggMS41MTY3N0M1LjQ3OTkyIDAuNTI3ODM4IDcuMjE5OTggMCA5IDBDMTAuNzggMCAxMi41MjAxIDAuNTI3ODM4IDE0LjAwMDEgMS41MTY3N0MxNS40ODAyIDIuNTA1NjkgMTYuNjMzNyAzLjkxMTI5IDE3LjMxNDkgNS41NTU4MkMxNy45OTYxIDcuMjAwMzUgMTguMTc0MyA5LjAwOTk1IDE3LjgyNzEgMTAuNzU1OEMxNy40Nzk4IDEyLjUwMTYgMTYuNjIyNyAxNC4xMDUyIDE1LjM2NCAxNS4zNjM5TDkgMjEuNzI3OVpNMTMuOTUgMTMuOTQ5OUMxNC45Mjg5IDEyLjk3MDkgMTUuNTk1NSAxMS43MjM2IDE1Ljg2NTYgMTAuMzY1OEMxNi4xMzU2IDkuMDA3OTUgMTUuOTk2OSA3LjYwMDUyIDE1LjQ2NzEgNi4zMjE0OEMxNC45MzczIDUuMDQyNDQgMTQuMDQgMy45NDkyMyAxMi44ODg5IDMuMTgwMDlDMTEuNzM3OCAyLjQxMDk1IDEwLjM4NDQgMi4wMDA0MyA5IDIuMDAwNDNDNy42MTU1NyAyLjAwMDQzIDYuMjYyMjIgMi40MTA5NSA1LjExMTA5IDMuMTgwMDlDMy45NTk5NiAzLjk0OTIzIDMuMDYyNzUgNS4wNDI0NCAyLjUzMjkyIDYuMzIxNDhDMi4wMDMwOCA3LjYwMDUyIDEuODY0NDIgOS4wMDc5NSAyLjEzNDQ1IDEwLjM2NThDMi40MDQ0OSAxMS43MjM2IDMuMDcxMTEgMTIuOTcwOSA0LjA1IDEzLjk0OTlMOSAxOC44OTk5TDEzLjk1IDEzLjk0OTlaTTkgMTAuOTk5OUM4LjQ2OTU3IDEwLjk5OTkgNy45NjA4NiAxMC43ODkyIDcuNTg1NzkgMTAuNDE0MUM3LjIxMDcyIDEwLjAzOTEgNyA5LjUzMDM1IDcgOC45OTk5MkM3IDguNDY5NDkgNy4yMTA3MiA3Ljk2MDc4IDcuNTg1NzkgNy41ODU3MUM3Ljk2MDg2IDcuMjEwNjQgOC40Njk1NyA2Ljk5OTkyIDkgNi45OTk5MkM5LjUzMDQ0IDYuOTk5OTIgMTAuMDM5MSA3LjIxMDY0IDEwLjQxNDIgNy41ODU3MUMxMC43ODkzIDcuOTYwNzggMTEgOC40Njk0OSAxMSA4Ljk5OTkyQzExIDkuNTMwMzUgMTAuNzg5MyAxMC4wMzkxIDEwLjQxNDIgMTAuNDE0MUMxMC4wMzkxIDEwLjc4OTIgOS41MzA0NCAxMC45OTk5IDkgMTAuOTk5OVoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+}
+
+/* Ligne — geopf drawing-tool-line */
+.ec-geometry-editor__tool--line::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkiIGhlaWdodD0iMTkiIHZpZXdCb3g9IjAgMCAxOSAxOSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE1Ljg3IDBDMTQuNTYgMCAxMy40NiAwLjg0IDEzLjA1IDIuMDJIMTJDMTAuMzQgMi4wMiA5IDMuMzYgOSA1LjAyVjEzLjAyQzkgMTMuNTcgOC41NSAxNC4wMiA4IDE0LjAySDUuODNDNS40MiAxMi44NSA0LjMxIDEyLjAyIDMgMTIuMDJDMS4zNCAxMi4wMiAwIDEzLjM2IDAgMTUuMDJDMCAxNi42OCAxLjM0IDE4LjAyIDMgMTguMDJDNC4zMSAxOC4wMiA1LjQyIDE3LjE5IDUuODMgMTYuMDJIOEM5LjY2IDE2LjAyIDExIDE0LjY4IDExIDEzLjAyVjUuMDJDMTEgNC40NyAxMS40NSA0LjAyIDEyIDQuMDJIMTMuMDZDMTMuNDggNS4xNyAxNC41NyA2IDE1Ljg3IDZDMTcuNTMgNiAxOC44NyA0LjY2IDE4Ljg3IDNDMTguODcgMS4zNCAxNy41MyAwIDE1Ljg3IDBaTTMgMTYuMDJDMi40NSAxNi4wMiAyIDE1LjU3IDIgMTUuMDJDMiAxNC40NyAyLjQ1IDE0LjAyIDMgMTQuMDJDMy41NSAxNC4wMiA0IDE0LjQ3IDQgMTUuMDJDNCAxNS41NyAzLjU1IDE2LjAyIDMgMTYuMDJaTTE1Ljg3IDRDMTUuMzUgNCAxNC45NCAzLjYgMTQuODkgMy4wOVYyLjlDMTQuOTQgMi4zOSAxNS4zNSAxLjk5IDE1Ljg3IDEuOTlDMTYuNDIgMS45OSAxNi44NyAyLjQ0IDE2Ljg3IDIuOTlDMTYuODcgMy41NCAxNi40MiAzLjk5IDE1Ljg3IDMuOTlWNFoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkiIGhlaWdodD0iMTkiIHZpZXdCb3g9IjAgMCAxOSAxOSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE1Ljg3IDBDMTQuNTYgMCAxMy40NiAwLjg0IDEzLjA1IDIuMDJIMTJDMTAuMzQgMi4wMiA5IDMuMzYgOSA1LjAyVjEzLjAyQzkgMTMuNTcgOC41NSAxNC4wMiA4IDE0LjAySDUuODNDNS40MiAxMi44NSA0LjMxIDEyLjAyIDMgMTIuMDJDMS4zNCAxMi4wMiAwIDEzLjM2IDAgMTUuMDJDMCAxNi42OCAxLjM0IDE4LjAyIDMgMTguMDJDNC4zMSAxOC4wMiA1LjQyIDE3LjE5IDUuODMgMTYuMDJIOEM5LjY2IDE2LjAyIDExIDE0LjY4IDExIDEzLjAyVjUuMDJDMTEgNC40NyAxMS40NSA0LjAyIDEyIDQuMDJIMTMuMDZDMTMuNDggNS4xNyAxNC41NyA2IDE1Ljg3IDZDMTcuNTMgNiAxOC44NyA0LjY2IDE4Ljg3IDNDMTguODcgMS4zNCAxNy41MyAwIDE1Ljg3IDBaTTMgMTYuMDJDMi40NSAxNi4wMiAyIDE1LjU3IDIgMTUuMDJDMiAxNC40NyAyLjQ1IDE0LjAyIDMgMTQuMDJDMy41NSAxNC4wMiA0IDE0LjQ3IDQgMTUuMDJDNCAxNS41NyAzLjU1IDE2LjAyIDMgMTYuMDJaTTE1Ljg3IDRDMTUuMzUgNCAxNC45NCAzLjYgMTQuODkgMy4wOVYyLjlDMTQuOTQgMi4zOSAxNS4zNSAxLjk5IDE1Ljg3IDEuOTlDMTYuNDIgMS45OSAxNi44NyAyLjQ0IDE2Ljg3IDIuOTlDMTYuODcgMy41NCAxNi40MiAzLjk5IDE1Ljg3IDMuOTlWNFoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+}
+
+/* Polygone — geopf drawing-tool-polygon */
+.ec-geometry-editor__tool--polygon::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIiIGhlaWdodD0iMjIiIHZpZXdCb3g9IjAgMCAyMiAyMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTExLjAwMDQgMy4wMzA0M0wxOS41MzA5IDkuMjI4MjJMMTYuMjcyNSAxOS4yNTY0SDUuNzI4MjFMMi40Njk4NCA5LjIyODIyTDExLjAwMDQgMy4wMzA0M1pNMjEuNzQ3MyA4LjUwODA2TDExLjAwMDQgMC42OTk5NTFMMC4yNTM0MTggOC41MDgwNkw0LjM1ODM4IDIxLjE0MThIMTcuNjQyM0wyMS43NDczIDguNTA4MDZaIiBmaWxsPSIjMDAwMDkxIi8+Cjwvc3ZnPgo=');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIiIGhlaWdodD0iMjIiIHZpZXdCb3g9IjAgMCAyMiAyMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTExLjAwMDQgMy4wMzA0M0wxOS41MzA5IDkuMjI4MjJMMTYuMjcyNSAxOS4yNTY0SDUuNzI4MjFMMi40Njk4NCA5LjIyODIyTDExLjAwMDQgMy4wMzA0M1pNMjEuNzQ3MyA4LjUwODA2TDExLjAwMDQgMC42OTk5NTFMMC4yNTM0MTggOC41MDgwNkw0LjM1ODM4IDIxLjE0MThIMTcuNjQyM0wyMS43NDczIDguNTA4MDZaIiBmaWxsPSIjMDAwMDkxIi8+Cjwvc3ZnPgo=');
+}
+
+/* Rectangle */
+.ec-geometry-editor__tool--rectangle::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm2 0h14v14H5V5z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm2 0h14v14H5V5z'/%3E%3C/svg%3E");
+}
+
+/* Cercle (contour) */
+.ec-geometry-editor__tool--circle::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z'/%3E%3C/svg%3E");
+}
+
+/* Disque (plein) */
+.ec-geometry-editor__tool--disc::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8' fill='%23000'/%3E%3C/svg%3E");
+}
+
+/* Tout supprimer (SketchControl option clearAll) */
+.ec-geometry-editor__tool--clear-all::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.54 6.46a1 1 0 0 1 0 1.41L13.41 12l2.13 2.13a1 1 0 0 1-1.41 1.41L12 13.41l-2.13 2.13a1 1 0 0 1-1.41-1.41L10.59 12 8.46 9.87a1 1 0 0 1 1.41-1.41L12 10.59l2.13-2.13a1 1 0 0 1 1.41 0z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.54 6.46a1 1 0 0 1 0 1.41L13.41 12l2.13 2.13a1 1 0 0 1-1.41 1.41L12 13.41l-2.13 2.13a1 1 0 0 1-1.41-1.41L10.59 12 8.46 9.87a1 1 0 0 1 1.41-1.41L12 10.59l2.13-2.13a1 1 0 0 1 1.41 0z'/%3E%3C/svg%3E");
+}
+
+/* Menu outils (toolsToggle) — picto sur ::after (comme les autres outils ;
+   ::before = infobulle geopf) */
+.ec-geometry-editor__tool--tools-toggle::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5.32943 3.27158C6.56252 2.8332 7.9923 3.10749 8.97927 4.09446C9.96652 5.08171 10.2407 6.51202 9.80178 7.74535L20.6465 18.5902L18.5252 20.7115L7.67936 9.86709C6.44627 10.3055 5.01649 10.0312 4.02952 9.04421C3.04227 8.05696 2.7681 6.62665 3.20701 5.39332L5.44373 7.63C6.02952 8.21578 6.97927 8.21578 7.56505 7.63C8.15084 7.04421 8.15084 6.09446 7.56505 5.50868L5.32943 3.27158ZM15.6968 5.15512L18.8788 3.38735L20.293 4.80157L18.5252 7.98355L16.7574 8.3371L14.6361 10.4585L13.2219 9.04421L15.3432 6.92289L15.6968 5.15512ZM8.62572 12.9333L10.747 15.0547L5.79729 20.0044C5.2115 20.5902 4.26175 20.5902 3.67597 20.0044C3.12464 19.4531 3.09221 18.5793 3.57867 17.9901L3.67597 17.8831L8.62572 12.9333Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5.32943 3.27158C6.56252 2.8332 7.9923 3.10749 8.97927 4.09446C9.96652 5.08171 10.2407 6.51202 9.80178 7.74535L20.6465 18.5902L18.5252 20.7115L7.67936 9.86709C6.44627 10.3055 5.01649 10.0312 4.02952 9.04421C3.04227 8.05696 2.7681 6.62665 3.20701 5.39332L5.44373 7.63C6.02952 8.21578 6.97927 8.21578 7.56505 7.63C8.15084 7.04421 8.15084 6.09446 7.56505 5.50868L5.32943 3.27158ZM15.6968 5.15512L18.8788 3.38735L20.293 4.80157L18.5252 7.98355L16.7574 8.3371L14.6361 10.4585L13.2219 9.04421L15.3432 6.92289L15.6968 5.15512ZM8.62572 12.9333L10.747 15.0547L5.79729 20.0044C5.2115 20.5902 4.26175 20.5902 3.67597 20.0044C3.12464 19.4531 3.09221 18.5793 3.57867 17.9901L3.67597 17.8831L8.62572 12.9333Z'/%3E%3C/svg%3E");
+}
+
+/*
+ * Infobulles — même rendu que geopf `.gpf-btn-icon[aria-label]:hover::before`
+ * (zoom, territoire, minimap, plein écran). Pictos outils = ::after.
+ *
+ * Position : `left: 100%` / `right: 100%` (relatif au bouton), pas
+ * `translate(100%)` (relatif à la largeur de la bulle → écart variable selon le libellé).
+ */
+.ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__tool[aria-label]:focus-visible::before {
+  content: attr(aria-label);
+  position: absolute;
+  top: var(--ec-geom-btn-padding);
+  left: 100%;
+  right: auto;
+  z-index: 2000;
+  width: fit-content;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  color: var(--text-default-grey, #161616);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: 0.125rem 50%, 0 50%, 0.375rem 100%, 0.375rem 100%;
+  background-size:
+    0.375rem 0.5rem,
+    0.375rem 0.5rem,
+    1px 100%,
+    calc(100% - 0.5rem) 100%;
+  background-image:
+    conic-gradient(
+      from 56.31deg at 0 50%,
+      transparent 0deg,
+      var(--background-overlap-grey, #fff) 0deg,
+      var(--background-overlap-grey, #fff) 67.38deg,
+      transparent 67.38deg
+    ),
+    conic-gradient(
+      from 56.31deg at 0 50%,
+      transparent 0deg,
+      var(--border-default-grey, #ddd) 0deg,
+      var(--border-default-grey, #ddd) 67.38deg,
+      transparent 67.38deg
+    ),
+    linear-gradient(90deg, var(--border-default-grey, #ddd), var(--border-default-grey, #ddd)),
+    linear-gradient(
+      90deg,
+      var(--background-overlap-grey, #fff),
+      var(--background-overlap-grey, #fff)
+    );
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
+  transform: none;
+}
+
+/* Coin droit : bulle à gauche du bouton */
+.ec-geometry-editor__tools-root[data-corner='top-right']
+  .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__tools-root[data-corner='top-right']
+  .ec-geometry-editor__tool[aria-label]:focus-visible::before,
+.ec-geometry-editor__tools-root[data-corner='bottom-right']
+  .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__tools-root[data-corner='bottom-right']
+  .ec-geometry-editor__tool[aria-label]:focus-visible::before,
+.ec-geometry-editor__settings
+  .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__settings
+  .ec-geometry-editor__tool[aria-label]:focus-visible::before {
+  left: auto;
+  right: 100%;
+  padding: 0.5rem 1.25rem 0.5rem 0.5rem;
+  background-position: calc(100% - 0.125rem) 50%, 100% 50%, calc(100% - 0.375rem) 100%, 0 100%;
+  background-size:
+    0.375rem 0.5rem,
+    0.375rem 0.5rem,
+    1px 100%,
+    calc(100% - 0.5rem) 100%;
+  background-image:
+    conic-gradient(
+      from 236.31deg at 100% 50%,
+      transparent 0deg,
+      var(--background-overlap-grey, #fff) 0deg,
+      var(--background-overlap-grey, #fff) 67.38deg,
+      transparent 67.38deg
+    ),
+    conic-gradient(
+      from 236.31deg at 100% 50%,
+      transparent 0deg,
+      var(--border-default-grey, #ddd) 0deg,
+      var(--border-default-grey, #ddd) 67.38deg,
+      transparent 67.38deg
+    ),
+    linear-gradient(90deg, var(--border-default-grey, #ddd), var(--border-default-grey, #ddd)),
+    linear-gradient(
+      90deg,
+      var(--background-overlap-grey, #fff),
+      var(--background-overlap-grey, #fff)
+    );
+  transform: none;
+}
+
+/* Pas d’infobulle si l’outil / le menu est déjà actif (comme geopf) */
+.ec-geometry-editor__tool[aria-pressed='true']:hover::before,
+.ec-geometry-editor__tool[aria-pressed='true']:focus-visible::before,
+.ec-geometry-editor__tool.is-active:hover::before,
+.ec-geometry-editor__tool.is-active:focus-visible::before {
+  content: none;
+}
+
+.ec-geometry-editor__tools-root:has(
+  > .ec-geometry-editor__tool[aria-label]:hover,
+  > .ec-geometry-editor__toolbar > .ec-geometry-editor__tool[aria-label]:hover
+) {
+  z-index: 3;
+}
+
+/* Modifier — geopf drawing-tool-edit */
+.ec-geometry-editor__tool--modify::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAxOCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zLjQxNCAxNEwxMy41NTYgMy44NTc5NkwxMi4xNDIgMi40NDM5NkwyIDEyLjU4NlYxNEgzLjQxNFpNNC4yNDMgMTZIMFYxMS43NTdMMTEuNDM1IDAuMzIxOTYxQzExLjgyNTUgLTAuMDY4NDIwNyAxMi40NTg1IC0wLjA2ODQyMDcgMTIuODQ5IDAuMzIxOTYxTDE1LjY3OCAzLjE1MDk2QzE2LjA2ODQgMy41NDE0NiAxNi4wNjg0IDQuMTc0NDYgMTUuNjc4IDQuNTY0OTZMNC4yNDMgMTZaTTAgMThIMThWMjBIMFYxOFoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAxOCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0zLjQxNCAxNEwxMy41NTYgMy44NTc5NkwxMi4xNDIgMi40NDM5NkwyIDEyLjU4NlYxNEgzLjQxNFpNNC4yNDMgMTZIMFYxMS43NTdMMTEuNDM1IDAuMzIxOTYxQzExLjgyNTUgLTAuMDY4NDIwNyAxMi40NTg1IC0wLjA2ODQyMDcgMTIuODQ5IDAuMzIxOTYxTDE1LjY3OCAzLjE1MDk2QzE2LjA2ODQgMy41NDE0NiAxNi4wNjg0IDQuMTc0NDYgMTUuNjc4IDQuNTY0OTZMNC4yNDMgMTZaTTAgMThIMThWMjBIMFYxOFoiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+}
+
+/* Supprimer — geopf drawing-tool-remove */
+.ec-geometry-editor__tool--remove::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01IDJWMEgxNVYySDIwVjRIMThWMTlDMTggMTkuNTUyMyAxNy41NTIzIDIwIDE3IDIwSDNDMi40NDc3MiAyMCAyIDE5LjU1MjMgMiAxOVY0SDBWMkg1Wk00IDRWMThIMTZWNEg0Wk03IDdIOVYxNUg3VjdaTTExIDdIMTNWMTVIMTFWN1oiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01IDJWMEgxNVYySDIwVjRIMThWMTlDMTggMTkuNTUyMyAxNy41NTIzIDIwIDE3IDIwSDNDMi40NDc3MiAyMCAyIDE5LjU1MjMgMiAxOVY0SDBWMkg1Wk00IDRWMThIMTZWNEg0Wk03IDdIOVYxNUg3VjdaTTExIDdIMTNWMTVIMTFWN1oiIGZpbGw9IiMwMDAwOTEiLz4KPC9zdmc+Cg==');
+}
+
+/* Réglages — roue crantée */
+.ec-geometry-editor__tool--settings::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor--block-view .ol-viewport {
+  cursor: default;
+}
+
+/* Réglages en haut à droite (même boîte 48×48 que le croquis) */
+.ec-geometry-editor__settings {
+  position: absolute;
+  top: var(--ec-geom-btn-gap);
+  right: var(--ec-geom-btn-gap);
+  z-index: 3;
+  width: var(--ec-geom-btn-size);
+  border-radius: var(--ec-geom-btn-radius);
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.ec-geometry-editor__settings > .ec-geometry-editor__tool {
+  border-radius: var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__settings-dialog {
+  position: absolute;
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+  right: var(--ec-geom-btn-gap);
+  z-index: 4;
+  box-sizing: border-box;
+  width: min(20rem, calc(100% - 1rem));
+  max-height: calc(100% - var(--ec-geom-btn-size) - 2rem);
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: var(--ec-geom-btn-radius);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  color: var(--text-default-grey, #161616);
+}
+
+.ec-geometry-editor__settings-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.ec-geometry-editor__settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-geometry-editor__settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.ec-geometry-editor__settings-hint {
+  color: var(--text-mention-grey, #666);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.ec-geometry-editor__settings-field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ec-geometry-editor__settings-field input[type='text'],
+.ec-geometry-editor__settings-field input[type='number'],
+.ec-geometry-editor__settings-field select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.ec-geometry-editor__settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.ec-geometry-editor__settings-apply,
+.ec-geometry-editor__settings-reset,
+.ec-geometry-editor__settings-cancel {
+  flex: 1 1 calc(33% - 0.35rem);
+  min-width: 5.5rem;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.ec-geometry-editor__settings-apply {
+  background: var(--background-action-high-blue-france, #000091);
+  color: #fff;
+}
+
+.ec-geometry-editor__settings-reset {
+  background: var(--background-contrast-blue-france, #e3e3fd);
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+.ec-geometry-editor__settings-cancel {
+  background: var(--background-alt-grey, #f6f6f6);
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+/* Zoom — même look que GeoportalZoom (carte principale) : 48×48, masques +/− */
+.ec-geometry-editor .ol-zoom {
+  top: var(--ec-geom-btn-gap);
+  right: var(--ec-geom-btn-gap);
+  left: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: var(--background-default-grey, #fff);
+  border-radius: var(--ec-geom-btn-radius);
+  overflow: hidden;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-geometry-editor--has-settings .ol-zoom {
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+}
+
+/* toolsToggle en haut à droite : décaler zoom (et réglages déjà en haut) */
+.ec-geometry-editor--tools-toggle-top-right .ol-zoom {
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+}
+
+.ec-geometry-editor--tools-toggle-top-right.ec-geometry-editor--has-settings .ol-zoom {
+  top: calc(
+    var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap) +
+      var(--ec-geom-btn-size) + var(--ec-geom-btn-gap)
+  );
+}
+
+.ec-geometry-editor--tools-toggle-top-right .ec-geometry-editor__settings {
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+}
+
+.ec-geometry-editor--tools-toggle-top-right .ec-geometry-editor__settings-dialog {
+  top: calc(
+    var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap) +
+      var(--ec-geom-btn-size) + var(--ec-geom-btn-gap)
+  );
+}
+
+.ec-geometry-editor .ol-zoom button {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-geom-btn-size) !important;
+  height: var(--ec-geom-btn-size) !important;
+  margin: 0 !important;
+  padding: var(--ec-geom-btn-padding) !important;
+  font-size: 0 !important;
+  line-height: 0;
+  color: transparent !important;
+  background-color: var(--background-default-grey, #fff) !important;
+  border: none !important;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 300ms;
+}
+
+.ec-geometry-editor .ol-zoom button::after {
+  content: '';
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: var(--text-action-high-blue-france, #000091);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Pictos geopf DSFRzoomStyle */
+.ec-geometry-editor .ol-zoom .ol-zoom-in::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik0xMSAxMVY1SDEzVjExSDE5VjEzSDEzVjE5SDExVjEzSDVWMTFIMTFaIj48L3BhdGg+PC9zdmc+Cg==');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik0xMSAxMVY1SDEzVjExSDE5VjEzSDEzVjE5SDExVjEzSDVWMTFIMTFaIj48L3BhdGg+PC9zdmc+Cg==');
+}
+
+.ec-geometry-editor .ol-zoom .ol-zoom-out::after {
+  -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik01IDExVjEzSDE5VjExSDVaIj48L3BhdGg+PC9zdmc+');
+  mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik01IDExVjEzSDE5VjExSDVaIj48L3BhdGg+PC9zdmc+');
+}
+
+/* Séparateur horizontal (comme geopf sur le bouton −) */
+.ec-geometry-editor .ol-zoom .ol-zoom-out::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--ec-geom-btn-padding);
+  right: var(--ec-geom-btn-padding);
+  height: 1px;
+  background-color: var(--border-default-grey, #ddd);
+}
+
+.ec-geometry-editor .ol-zoom button:hover,
+.ec-geometry-editor .ol-zoom button:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd) !important;
+  outline: none;
+}
+
+.ec-geometry-editor .ol-attribution {
+  bottom: 0;
+  right: 0;
+  font-size: 0.7rem;
+}
+
+/* Poignées transform au-dessus du reste de la carte */
+.ec-geometry-editor__transform-handles {
+  z-index: 5;
+}
 
 .ec-tile-switcher[data-v-edd3708c] {
   margin: 0 0 1.25rem;
@@ -630,7 +1220,12 @@ dialog[id^="GPterritoriesPanel-"] {
   border: none;
   border-radius: 0;
   box-shadow: none;
-  pointer-events: none;
+  /*
+   * OpenLayers Control pose `pointer-events: auto` en style inline sur
+   * l’élément — sans !important, le bandeau pleine hauteur masque zoom /
+   * plein écran (bas-droite) : pas de cursor, clics morts.
+   */
+  pointer-events: none !important;
   z-index: 2;
 }
 
@@ -1595,7 +2190,8 @@ dialog[id^="GPterritoriesPanel-"] {
 }
 
 .position:has(> .gpf-widget-button > .gpf-btn-icon[aria-label]:hover),
-.position:has(> .gpf-widget > .gpf-btn-icon[aria-label]:hover) {
+.position:has(> .gpf-widget > .gpf-btn-icon[aria-label]:hover),
+.position:has(> .ec-sketch-control .ec-geometry-editor__tool[aria-label]:hover) {
   z-index: 3;
 }
 
@@ -1610,6 +2206,18 @@ dialog[id^="GPterritoriesPanel-"] {
   position: relative !important;
   left: auto;
   bottom: auto;
+}
+
+/* SketchControl : slot geopf uniquement (styles boutons = geometry-editor.css) */
+.position-container-bottom-left > .ec-sketch-control--geopf-slot {
+  order: -2;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0;
 }
 
 .position-container-bottom-left > .gpf-widget[id^='GPoverviewMap-'] .ol-overviewmap-map {
@@ -1674,6 +2282,16 @@ dialog[id^="GPterritoriesPanel-"] {
 
 .ol-custom-full-screen button.gpf-btn-icon > span {
   display: none;
+}
+
+/*
+ * Infobulle plein écran : le bouton a font-size:0 (masquer le label OL),
+ * la bulle ::before doit retrouver la taille des autres contrôles.
+ */
+.ol-custom-full-screen button.gpf-btn-icon[aria-label]:hover::before,
+.ol-custom-full-screen button.gpf-btn-icon[aria-label]:focus:focus-visible::before {
+  font-size: 0.75rem;
+  line-height: 1.25;
 }
 
 /* Territories — titres longs dans les tuiles */
@@ -1786,13 +2404,13 @@ dialog[id^='GPterritoriesPanel-'] {
   right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
 }
 
-.ec-embed-viewer[data-v-b16e86ff] {
+.ec-embed-viewer[data-v-d9f18abc] {
   position: relative;
   width: 100%;
   height: 100%;
   min-height: 500px;
 }
-.ec-embed-viewer__map[data-v-b16e86ff] {
+.ec-embed-viewer__map[data-v-d9f18abc] {
   width: 100%;
   height: 100%;
 }

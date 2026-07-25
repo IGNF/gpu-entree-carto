@@ -9923,9 +9923,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         y1 += dy * t;
       }
     }
-    return squaredDistance(x, y, x1, y1);
+    return squaredDistance$1(x, y, x1, y1);
   }
-  function squaredDistance(x1, y1, x2, y2) {
+  function squaredDistance$1(x1, y1, x2, y2) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     return dx * dx + dy * dy;
@@ -10472,6 +10472,48 @@ Expected function or array of functions, received type ${typeof value2}.`
     coordinate[1] += +delta[1];
     return coordinate;
   }
+  function closestOnCircle(coordinate, circle) {
+    const r = circle.getRadius();
+    const center = circle.getCenter();
+    const x0 = center[0];
+    const y0 = center[1];
+    const x1 = coordinate[0];
+    const y1 = coordinate[1];
+    let dx = x1 - x0;
+    const dy = y1 - y0;
+    if (dx === 0 && dy === 0) {
+      dx = 1;
+    }
+    const d = Math.sqrt(dx * dx + dy * dy);
+    const x = x0 + r * dx / d;
+    const y = y0 + r * dy / d;
+    return [x, y];
+  }
+  function closestOnSegment(coordinate, segment) {
+    const x0 = coordinate[0];
+    const y0 = coordinate[1];
+    const start2 = segment[0];
+    const end = segment[1];
+    const x1 = start2[0];
+    const y1 = start2[1];
+    const x2 = end[0];
+    const y2 = end[1];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const along = dx === 0 && dy === 0 ? 0 : (dx * (x0 - x1) + dy * (y0 - y1)) / (dx * dx + dy * dy || 0);
+    let x, y;
+    if (along <= 0) {
+      x = x1;
+      y = y1;
+    } else if (along >= 1) {
+      x = x2;
+      y = y2;
+    } else {
+      x = x1 + along * dx;
+      y = y1 + along * dy;
+    }
+    return [x, y];
+  }
   function equals(coordinate1, coordinate2) {
     let equals2 = true;
     for (let i = coordinate1.length - 1; i >= 0; --i) {
@@ -10496,6 +10538,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     coordinate[1] *= scale2;
     return coordinate;
   }
+  function squaredDistance(coord1, coord2) {
+    const dx = coord1[0] - coord2[0];
+    const dy = coord1[1] - coord2[1];
+    return dx * dx + dy * dy;
+  }
+  function distance(coord1, coord2) {
+    return Math.sqrt(squaredDistance(coord1, coord2));
+  }
+  function squaredDistanceToSegment(coordinate, segment) {
+    return squaredDistance(coordinate, closestOnSegment(coordinate, segment));
+  }
   function wrapX$1(coordinate, projection) {
     if (projection.canWrapX()) {
       const worldWidth = getWidth(projection.getExtent());
@@ -10517,7 +10570,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return worldsAway;
   }
-  function angleBetween(p0, pA, pB) {
+  function angleBetween$1(p0, pA, pB) {
     const lenA = Math.sqrt(
       (pA[0] - p0[0]) * (pA[0] - p0[0]) + (pA[1] - p0[1]) * (pA[1] - p0[1])
     );
@@ -10556,11 +10609,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     const a = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
-  function offset(c1, distance, bearing, radius) {
+  function offset(c1, distance2, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
     const lat1 = toRadians(c1[1]);
     const lon1 = toRadians(c1[0]);
-    const dByR = distance / radius;
+    const dByR = distance2 / radius;
     const lat = Math.asin(
       Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(bearing)
     );
@@ -11177,13 +11230,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     return transform$1(
       coordinate,
       "EPSG:4326",
-      "EPSG:3857"
+      projection !== void 0 ? projection : "EPSG:3857"
     );
   }
   function toLonLat(coordinate, projection) {
     const lonLat = transform$1(
       coordinate,
-      projection,
+      projection !== void 0 ? projection : "EPSG:3857",
       "EPSG:4326"
     );
     const lon = lonLat[0];
@@ -12060,7 +12113,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (offset2 += stride; offset2 < end; offset2 += stride) {
       const x2 = flatCoordinates[offset2];
       const y2 = flatCoordinates[offset2 + 1];
-      const squaredDelta = squaredDistance(x1, y1, x2, y2);
+      const squaredDelta = squaredDistance$1(x1, y1, x2, y2);
       if (squaredDelta > max) {
         max = squaredDelta;
       }
@@ -12089,20 +12142,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (offset2 == end) {
       return minSquaredDistance;
     }
-    let i, squaredDistance$1;
+    let i, squaredDistance2;
     if (maxDelta === 0) {
-      squaredDistance$1 = squaredDistance(
+      squaredDistance2 = squaredDistance$1(
         x,
         y,
         flatCoordinates[offset2],
         flatCoordinates[offset2 + 1]
       );
-      if (squaredDistance$1 < minSquaredDistance) {
+      if (squaredDistance2 < minSquaredDistance) {
         for (i = 0; i < stride; ++i) {
           closestPoint[i] = flatCoordinates[offset2 + i];
         }
         closestPoint.length = stride;
-        return squaredDistance$1;
+        return squaredDistance2;
       }
       return minSquaredDistance;
     }
@@ -12118,9 +12171,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         y,
         tmpPoint2
       );
-      squaredDistance$1 = squaredDistance(x, y, tmpPoint2[0], tmpPoint2[1]);
-      if (squaredDistance$1 < minSquaredDistance) {
-        minSquaredDistance = squaredDistance$1;
+      squaredDistance2 = squaredDistance$1(x, y, tmpPoint2[0], tmpPoint2[1]);
+      if (squaredDistance2 < minSquaredDistance) {
+        minSquaredDistance = squaredDistance2;
         for (i = 0; i < stride; ++i) {
           closestPoint[i] = tmpPoint2[i];
         }
@@ -12128,7 +12181,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         index2 += stride;
       } else {
         index2 += stride * Math.max(
-          (Math.sqrt(squaredDistance$1) - Math.sqrt(minSquaredDistance)) / maxDelta | 0,
+          (Math.sqrt(squaredDistance2) - Math.sqrt(minSquaredDistance)) / maxDelta | 0,
           1
         );
       }
@@ -12143,9 +12196,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         y,
         tmpPoint2
       );
-      squaredDistance$1 = squaredDistance(x, y, tmpPoint2[0], tmpPoint2[1]);
-      if (squaredDistance$1 < minSquaredDistance) {
-        minSquaredDistance = squaredDistance$1;
+      squaredDistance2 = squaredDistance$1(x, y, tmpPoint2[0], tmpPoint2[1]);
+      if (squaredDistance2 < minSquaredDistance) {
+        minSquaredDistance = squaredDistance2;
         for (i = 0; i < stride; ++i) {
           closestPoint[i] = tmpPoint2[i];
         }
@@ -12628,19 +12681,19 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     closestPointXY(x, y, closestPoint, minSquaredDistance) {
       const flatCoordinates = this.flatCoordinates;
-      const squaredDistance$1 = squaredDistance(
+      const squaredDistance2 = squaredDistance$1(
         x,
         y,
         flatCoordinates[0],
         flatCoordinates[1]
       );
-      if (squaredDistance$1 < minSquaredDistance) {
+      if (squaredDistance2 < minSquaredDistance) {
         const stride = this.stride;
         for (let i = 0; i < stride; ++i) {
           closestPoint[i] = flatCoordinates[i];
         }
         closestPoint.length = stride;
-        return squaredDistance$1;
+        return squaredDistance2;
       }
       return minSquaredDistance;
     }
@@ -12841,6 +12894,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     return false;
+  }
+  function getIntersectionPoint(segment1, segment2) {
+    const [a, b] = segment1;
+    const [c, d] = segment2;
+    const t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    const u = ((a[0] - c[0]) * (a[1] - b[1]) - (a[1] - c[1]) * (a[0] - b[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+      return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    }
+    return void 0;
   }
   function intersectsLineString(flatCoordinates, offset2, end, stride, extent, coordinatesExtent) {
     coordinatesExtent = coordinatesExtent ?? extendFlatCoordinates(createEmpty(), flatCoordinates, offset2, end, stride);
@@ -13443,6 +13506,38 @@ Expected function or array of functions, received type ${typeof value2}.`
       minY
     ];
     return new Polygon(flatCoordinates, "XY", [flatCoordinates.length]);
+  }
+  function fromCircle(circle, sides, angle) {
+    sides = sides ? sides : 32;
+    const stride = circle.getStride();
+    const layout = circle.getLayout();
+    const center = circle.getCenter();
+    const arrayLength = stride * (sides + 1);
+    const flatCoordinates = new Array(arrayLength);
+    for (let i = 0; i < arrayLength; i += stride) {
+      flatCoordinates[i] = 0;
+      flatCoordinates[i + 1] = 0;
+      for (let j = 2; j < stride; j++) {
+        flatCoordinates[i + j] = center[j];
+      }
+    }
+    const ends = [flatCoordinates.length];
+    const polygon = new Polygon(flatCoordinates, layout, ends);
+    makeRegular(polygon, center, circle.getRadius());
+    return polygon;
+  }
+  function makeRegular(polygon, center, radius, angle) {
+    const flatCoordinates = polygon.getFlatCoordinates();
+    const stride = polygon.getStride();
+    const sides = flatCoordinates.length / stride - 1;
+    const startAngle = 0;
+    for (let i = 0; i <= sides; ++i) {
+      const offset2 = i * stride;
+      const angle2 = startAngle + modulo(i, sides) * 2 * Math.PI / sides;
+      flatCoordinates[offset2] = center[0] + radius * Math.cos(angle2);
+      flatCoordinates[offset2 + 1] = center[1] + radius * Math.sin(angle2);
+    }
+    polygon.changed();
   }
   function getViewportClampedResolution(resolution, maxExtent, viewportSize, showFullExtent) {
     const xResolution = getWidth(maxExtent) / viewportSize[0];
@@ -16050,6 +16145,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       return pass;
     };
   }
+  const altKeyOnly = function(mapBrowserEvent) {
+    const originalEvent = mapBrowserEvent.originalEvent;
+    return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey) && !originalEvent.shiftKey;
+  };
   const altShiftKeysOnly = function(mapBrowserEvent) {
     const originalEvent = mapBrowserEvent.originalEvent;
     return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey) && originalEvent.shiftKey;
@@ -16304,13 +16403,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       const view = map2.getView();
       if (this.targetPointers.length === 0) {
         if (!this.noKinetic_ && this.kinetic_ && this.kinetic_.end()) {
-          const distance = this.kinetic_.getDistance();
+          const distance2 = this.kinetic_.getDistance();
           const angle = this.kinetic_.getAngle();
           const center = view.getCenterInternal();
           const centerpx = map2.getPixelFromCoordinateInternal(center);
           const dest = map2.getCoordinateFromPixelInternal([
-            centerpx[0] - distance * Math.cos(angle),
-            centerpx[1] - distance * Math.sin(angle)
+            centerpx[0] - distance2 * Math.cos(angle),
+            centerpx[1] - distance2 * Math.sin(angle)
           ]);
           view.animateInternal({
             center: view.getConstrainedCenter(dest),
@@ -17169,11 +17268,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       const touch1 = this.targetPointers[1];
       const dx = touch0.clientX - touch1.clientX;
       const dy = touch0.clientY - touch1.clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const distance2 = Math.sqrt(dx * dx + dy * dy);
       if (this.lastDistance_ !== void 0) {
-        scaleDelta = this.lastDistance_ / distance;
+        scaleDelta = this.lastDistance_ / distance2;
       }
-      this.lastDistance_ = distance;
+      this.lastDistance_ = distance2;
       const map2 = mapBrowserEvent.map;
       const view = map2.getView();
       if (scaleDelta != 1) {
@@ -18972,7 +19071,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       mapState: false
     };
   }
-  function parse$1(encoded, expectedType, context) {
+  function parse$2(encoded, expectedType, context) {
     switch (typeof encoded) {
       case "boolean": {
         if (isType(expectedType, StringType)) {
@@ -19341,7 +19440,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const argCount = encoded.length - 1;
     const args = new Array(argCount);
     for (let i = 0; i < argCount; ++i) {
-      const expression = parse$1(encoded[i + 1], returnType, context);
+      const expression = parse$2(encoded[i + 1], returnType, context);
       args[i] = expression;
     }
     return args;
@@ -19351,7 +19450,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const argCount = encoded.length - 1;
       const args = new Array(argCount);
       for (let i = 0; i < argCount; ++i) {
-        const expression = parse$1(encoded[i + 1], argType, context);
+        const expression = parse$2(encoded[i + 1], argType, context);
         args[i] = expression;
       }
       return args;
@@ -19378,12 +19477,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   function withMatchArgs(encoded, returnType, context) {
     const argsCount = encoded.length - 1;
     const inputType = StringType | NumberType | BooleanType;
-    const input = parse$1(encoded[1], inputType, context);
-    const fallback = parse$1(encoded[encoded.length - 1], returnType, context);
+    const input = parse$2(encoded[1], inputType, context);
+    const fallback = parse$2(encoded[encoded.length - 1], returnType, context);
     const args = new Array(argsCount - 2);
     for (let i = 0; i < argsCount - 2; i += 2) {
       try {
-        const match2 = parse$1(encoded[i + 2], input.type, context);
+        const match2 = parse$2(encoded[i + 2], input.type, context);
         args[i] = match2;
       } catch (err) {
         throw new Error(
@@ -19391,7 +19490,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
       }
       try {
-        const output = parse$1(encoded[i + 3], fallback.type, context);
+        const output = parse$2(encoded[i + 3], fallback.type, context);
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
@@ -19425,7 +19524,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const interpolation = new LiteralExpression(NumberType, base);
     let input;
     try {
-      input = parse$1(encoded[2], NumberType, context);
+      input = parse$2(encoded[2], NumberType, context);
     } catch (err) {
       throw new Error(
         `failed to parse argument 1 in interpolate expression: ${err.message}`
@@ -19434,7 +19533,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const args = new Array(encoded.length - 3);
     for (let i = 0; i < args.length; i += 2) {
       try {
-        const stop = parse$1(encoded[i + 3], NumberType, context);
+        const stop = parse$2(encoded[i + 3], NumberType, context);
         args[i] = stop;
       } catch (err) {
         throw new Error(
@@ -19442,7 +19541,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
       }
       try {
-        const output = parse$1(encoded[i + 4], returnType, context);
+        const output = parse$2(encoded[i + 4], returnType, context);
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
@@ -19453,11 +19552,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     return [interpolation, input, ...args];
   }
   function withCaseArgs(encoded, returnType, context) {
-    const fallback = parse$1(encoded[encoded.length - 1], returnType, context);
+    const fallback = parse$2(encoded[encoded.length - 1], returnType, context);
     const args = new Array(encoded.length - 1);
     for (let i = 0; i < args.length - 1; i += 2) {
       try {
-        const condition = parse$1(encoded[i + 1], BooleanType, context);
+        const condition = parse$2(encoded[i + 1], BooleanType, context);
         args[i] = condition;
       } catch (err) {
         throw new Error(
@@ -19465,7 +19564,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
       }
       try {
-        const output = parse$1(encoded[i + 2], fallback.type, context);
+        const output = parse$2(encoded[i + 2], fallback.type, context);
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
@@ -19504,7 +19603,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const args = new Array(haystack.length);
     for (let i = 0; i < args.length; i++) {
       try {
-        const arg = parse$1(haystack[i], needleType, context);
+        const arg = parse$2(haystack[i], needleType, context);
         args[i] = arg;
       } catch (err) {
         throw new Error(
@@ -19512,13 +19611,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
       }
     }
-    const needle = parse$1(encoded[1], needleType, context);
+    const needle = parse$2(encoded[1], needleType, context);
     return [needle, ...args];
   }
   function withPaletteArgs(encoded, returnType, context) {
     let index2;
     try {
-      index2 = parse$1(encoded[1], NumberType, context);
+      index2 = parse$2(encoded[1], NumberType, context);
     } catch (err) {
       throw new Error(
         `failed to parse first argument in palette expression: ${err.message}`
@@ -19532,7 +19631,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (let i = 0; i < parsedColors.length; i++) {
       let color;
       try {
-        color = parse$1(colors[i], ColorType, context);
+        color = parse$2(colors[i], ColorType, context);
       } catch (err) {
         throw new Error(
           `failed to parse color at index ${i} in palette expression: ${err.message}`
@@ -19611,7 +19710,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   function buildExpression(encoded, type, context) {
-    const expression = parse$1(encoded, type, context);
+    const expression = parse$2(encoded, type, context);
     return compileExpression(expression);
   }
   function compileExpression(expression, context) {
@@ -22484,7 +22583,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function createEditingStyle() {
     const styles = {};
     const white = [255, 255, 255, 1];
-    const blue = [0, 153, 255, 1];
+    const blue2 = [0, 153, 255, 1];
     const width = 3;
     styles["Polygon"] = [
       new Style({
@@ -22503,7 +22602,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }),
       new Style({
         stroke: new Stroke({
-          color: blue,
+          color: blue2,
           width
         })
       })
@@ -22515,7 +22614,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         image: new CircleStyle({
           radius: width * 2,
           fill: new Fill({
-            color: blue
+            color: blue2
           }),
           stroke: new Stroke({
             color: white,
@@ -27089,11 +27188,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$d = {
+  const _hoisted_1$e = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27118,7 +27217,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$d, [
+        return openBlock(), createElementBlock("div", _hoisted_1$e, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -27668,12 +27767,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$c = {
+  const _hoisted_1$d = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$c = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -27688,7 +27787,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$c);
+        return openBlock(), createElementBlock("span", _hoisted_1$d);
       };
     }
   });
@@ -27808,12 +27907,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$b = {
+  const _hoisted_1$c = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -27827,16 +27926,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$b);
+        return openBlock(), createElementBlock("span", _hoisted_1$c);
       };
     }
   });
-  const _hoisted_1$a = {
+  const _hoisted_1$b = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$a = /* @__PURE__ */ defineComponent({
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -27845,7 +27944,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$a);
+        return openBlock(), createElementBlock("span", _hoisted_1$b);
       };
     }
   });
@@ -30207,14 +30306,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       const flatCoordinates = this.flatCoordinates;
       const stride = this.stride;
       for (let i = 0, ii = flatCoordinates.length; i < ii; i += stride) {
-        const squaredDistance$1 = squaredDistance(
+        const squaredDistance2 = squaredDistance$1(
           x,
           y,
           flatCoordinates[i],
           flatCoordinates[i + 1]
         );
-        if (squaredDistance$1 < minSquaredDistance) {
-          minSquaredDistance = squaredDistance$1;
+        if (squaredDistance2 < minSquaredDistance) {
+          minSquaredDistance = squaredDistance2;
           for (let j = 0; j < stride; ++j) {
             closestPoint[j] = flatCoordinates[i + j];
           }
@@ -39255,7 +39354,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const originalDocument = document2;
     const currentScript = originalDocument.currentScript;
     window2.DocumentFragment;
-    const HTMLTemplateElement = window2.HTMLTemplateElement, Node = window2.Node, Element2 = window2.Element, NodeFilter = window2.NodeFilter, _window$NamedNodeMap = window2.NamedNodeMap;
+    const HTMLTemplateElement = window2.HTMLTemplateElement, Node2 = window2.Node, Element2 = window2.Element, NodeFilter = window2.NodeFilter, _window$NamedNodeMap = window2.NamedNodeMap;
     _window$NamedNodeMap === void 0 ? window2.NamedNodeMap || window2.MozNamedAttrMap : _window$NamedNodeMap;
     window2.HTMLFormElement;
     const DOMParser2 = window2.DOMParser, trustedTypes = window2.trustedTypes;
@@ -39267,8 +39366,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     const getParentNode = lookupGetter(ElementPrototype, "parentNode");
     const getShadowRoot = lookupGetter(ElementPrototype, "shadowRoot");
     const getAttributes = lookupGetter(ElementPrototype, "attributes");
-    const getNodeType = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeType") : null;
-    const getNodeName = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeName") : null;
+    const getNodeType = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeType") : null;
+    const getNodeName = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeName") : null;
     if (typeof HTMLTemplateElement === "function") {
       const template = document2.createElement("template");
       if (template.content && template.content.ownerDocument) {
@@ -42464,7 +42563,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (nextX === void 0 || nextY === void 0) {
       return [x + nx * offset2, y + ny * offset2];
     }
-    const joinAngle = angleBetween([x, y], [prevX, prevY], [nextX, nextY]);
+    const joinAngle = angleBetween$1([x, y], [prevX, prevY], [nextX, nextY]);
     if (Math.cos(joinAngle) > 0.998) {
       return [x + tx * offset2, y + ty * offset2];
     }
@@ -44139,19 +44238,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (distanceSq > maxDistanceSq) {
           break;
         }
-        let distance = distances[distanceSq];
-        if (!distance) {
-          distance = [];
-          distances[distanceSq] = distance;
+        let distance2 = distances[distanceSq];
+        if (!distance2) {
+          distance2 = [];
+          distances[distanceSq] = distance2;
         }
-        distance.push(((radius + i) * size + (radius + j)) * 4 + 3);
+        distance2.push(((radius + i) * size + (radius + j)) * 4 + 3);
         if (i > 0) {
-          distance.push(((radius - i) * size + (radius + j)) * 4 + 3);
+          distance2.push(((radius - i) * size + (radius + j)) * 4 + 3);
         }
         if (j > 0) {
-          distance.push(((radius + i) * size + (radius - j)) * 4 + 3);
+          distance2.push(((radius + i) * size + (radius - j)) * 4 + 3);
           if (i > 0) {
-            distance.push(((radius - i) * size + (radius - j)) * 4 + 3);
+            distance2.push(((radius - i) * size + (radius - j)) * 4 + 3);
           }
         }
       }
@@ -46511,7 +46610,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.multi_ = options.multi ? options.multi : false;
       this.filter_ = options.filter ? options.filter : TRUE;
       this.hitTolerance_ = options.hitTolerance ? options.hitTolerance : 0;
-      this.style_ = options.style !== void 0 ? options.style : getDefaultStyleFunction();
+      this.style_ = options.style !== void 0 ? options.style : getDefaultStyleFunction$2();
       this.features_ = options.features || new Collection();
       let layerFilter;
       if (options.layers) {
@@ -46853,7 +46952,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return true;
     }
   }
-  function getDefaultStyleFunction() {
+  function getDefaultStyleFunction$2() {
     const styles = createEditingStyle();
     extend$4(styles["Polygon"], styles["LineString"]);
     extend$4(styles["GeometryCollection"], styles["LineString"]);
@@ -53229,7 +53328,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function testProj(code) {
     return code[0] === "+";
   }
-  function parse(code) {
+  function parse$1(code) {
     if (testObj(code)) {
       if (testDef(code)) {
         return defs[code];
@@ -53937,7 +54036,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         throw error;
       }
     };
-    var json = parse(srsCode);
+    var json = parse$1(srsCode);
     if (typeof json !== "object") {
       callback("Could not parse to valid json: " + srsCode);
       return;
@@ -59431,11 +59530,11 @@ Expected function or array of functions, received type ${typeof value2}.`
      *
      * @returns {String} distance in km
      */
-    convertDistance: function(distance) {
+    convertDistance: function(distance2) {
       var d = "";
-      var distanceKm = parseInt(distance / 1e3, 10);
+      var distanceKm = parseInt(distance2 / 1e3, 10);
       if (!distanceKm) {
-        d = parseInt(distance, 10) + " m";
+        d = parseInt(distance2, 10) + " m";
       } else {
         d = distanceKm + " km";
       }
@@ -60922,12 +61021,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     title: "Aucune sélection en cours",
     bodyHtml: "<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>"
   };
-  const _hoisted_1$9 = {
+  const _hoisted_1$a = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$a = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -61021,7 +61120,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$9);
+        return openBlock(), createElementBlock("span", _hoisted_1$a);
       };
     }
   });
@@ -61164,7 +61263,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
      * @return {boolean} Callback succeeded.
      */
-    forEachTileCoordParentTileRange(tileCoord, callback, tempTileRange, tempExtent) {
+    forEachTileCoordParentTileRange(tileCoord, callback, tempTileRange, tempExtent2) {
       let tileRange, x, y;
       let tileCoordExtent = null;
       let z = tileCoord[0] - 1;
@@ -61172,7 +61271,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         x = tileCoord[1];
         y = tileCoord[2];
       } else {
-        tileCoordExtent = this.getTileCoordExtent(tileCoord, tempExtent);
+        tileCoordExtent = this.getTileCoordExtent(tileCoord, tempExtent2);
       }
       while (z >= this.minZoom) {
         if (x !== void 0 && y !== void 0) {
@@ -61259,7 +61358,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @param {import("../extent.js").Extent} [tempExtent] Temporary import("../extent.js").Extent object.
      * @return {import("../TileRange.js").default|null} Tile range.
      */
-    getTileCoordChildTileRange(tileCoord, tempTileRange, tempExtent) {
+    getTileCoordChildTileRange(tileCoord, tempTileRange, tempExtent2) {
       if (tileCoord[0] < this.maxZoom) {
         if (this.zoomFactor_ === 2) {
           const minX = tileCoord[1] * 2;
@@ -61274,7 +61373,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         const tileCoordExtent = this.getTileCoordExtent(
           tileCoord,
-          tempExtent || this.tmpExtent_
+          tempExtent2 || this.tmpExtent_
         );
         return this.getTileRangeForExtentAndZ(
           tileCoordExtent,
@@ -61357,7 +61456,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @return {import("../extent.js").Extent} Extent.
      * @api
      */
-    getTileCoordExtent(tileCoord, tempExtent) {
+    getTileCoordExtent(tileCoord, tempExtent2) {
       const origin = this.getOrigin(tileCoord[0]);
       const resolution = this.getResolution(tileCoord[0]);
       const tileSize = toSize(this.getTileSize(tileCoord[0]), this.tmpSize_);
@@ -61365,7 +61464,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const minY = origin[1] - (tileCoord[2] + 1) * tileSize[1] * resolution;
       const maxX = minX + tileSize[0] * resolution;
       const maxY = minY + tileSize[1] * resolution;
-      return createOrUpdate$2(minX, minY, maxX, maxY, tempExtent);
+      return createOrUpdate$2(minX, minY, maxX, maxY, tempExtent2);
     }
     /**
      * Get the tile coordinate for the given map coordinate and resolution.  This
@@ -63624,12 +63723,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$8 = {
+  const _hoisted_1$9 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -63645,7 +63744,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$8);
+        return openBlock(), createElementBlock("span", _hoisted_1$9);
       };
     }
   });
@@ -67435,13 +67534,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$7 = {
+  const _hoisted_1$8 = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -67489,6 +67588,8471 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
         }),
         { afterCreate: patchTerritoriesPanel }
+      );
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("span", _hoisted_1$8);
+      };
+    }
+  });
+  class Circle extends SimpleGeometry {
+    /**
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     *     For internal use, flat coordinates in combination with `layout` and no
+     *     `radius` are also accepted.
+     * @param {number} [radius] Radius in units of the projection.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(center, radius, layout) {
+      super();
+      if (layout !== void 0 && radius === void 0) {
+        this.setFlatCoordinates(layout, center);
+      } else {
+        radius = radius ? radius : 0;
+        this.setCenterAndRadius(center, radius, layout);
+      }
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!Circle} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const circle = new Circle(
+        this.flatCoordinates.slice(),
+        void 0,
+        this.layout
+      );
+      circle.applyProperties(this);
+      return circle;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      const squaredDistance2 = dx * dx + dy * dy;
+      if (squaredDistance2 < minSquaredDistance) {
+        if (squaredDistance2 === 0) {
+          for (let i = 0; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        } else {
+          const delta = this.getRadius() / Math.sqrt(squaredDistance2);
+          closestPoint[0] = flatCoordinates[0] + delta * dx;
+          closestPoint[1] = flatCoordinates[1] + delta * dy;
+          for (let i = 2; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        }
+        closestPoint.length = this.stride;
+        return squaredDistance2;
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     * @override
+     */
+    containsXY(x, y) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      return dx * dx + dy * dy <= this.getRadiusSquared_();
+    }
+    /**
+     * Return the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @return {import("../coordinate.js").Coordinate} Center.
+     * @api
+     */
+    getCenter() {
+      return this.flatCoordinates.slice(0, this.stride);
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      const flatCoordinates = this.flatCoordinates;
+      const radius = flatCoordinates[this.stride] - flatCoordinates[0];
+      return createOrUpdate$2(
+        flatCoordinates[0] - radius,
+        flatCoordinates[1] - radius,
+        flatCoordinates[0] + radius,
+        flatCoordinates[1] + radius,
+        extent
+      );
+    }
+    /**
+     * Return the radius of the circle.
+     * @return {number} Radius.
+     * @api
+     */
+    getRadius() {
+      return Math.sqrt(this.getRadiusSquared_());
+    }
+    /**
+     * @private
+     * @return {number} Radius squared.
+     */
+    getRadiusSquared_() {
+      const dx = this.flatCoordinates[this.stride] - this.flatCoordinates[0];
+      const dy = this.flatCoordinates[this.stride + 1] - this.flatCoordinates[1];
+      return dx * dx + dy * dy;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "Circle";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      const circleExtent = this.getExtent();
+      if (intersects$1(extent, circleExtent)) {
+        const center = this.getCenter();
+        if (extent[0] <= center[0] && extent[2] >= center[0]) {
+          return true;
+        }
+        if (extent[1] <= center[1] && extent[3] >= center[1]) {
+          return true;
+        }
+        return forEachCorner(extent, this.intersectsCoordinate.bind(this));
+      }
+      return false;
+    }
+    /**
+     * Set the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @param {import("../coordinate.js").Coordinate} center Center.
+     * @api
+     */
+    setCenter(center) {
+      const stride = this.stride;
+      const radius = this.flatCoordinates[stride] - this.flatCoordinates[0];
+      const flatCoordinates = center.slice();
+      flatCoordinates[stride] = flatCoordinates[0] + radius;
+      for (let i = 1; i < stride; ++i) {
+        flatCoordinates[stride + i] = center[i];
+      }
+      this.setFlatCoordinates(this.layout, flatCoordinates);
+      this.changed();
+    }
+    /**
+     * Set the center (as {@link module:ol/coordinate~Coordinate coordinate}) and the radius (as
+     * number) of the circle.
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     * @param {number} radius Radius.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     */
+    setCenterAndRadius(center, radius, layout) {
+      this.setLayout(layout, center, 0);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      const flatCoordinates = this.flatCoordinates;
+      let offset2 = deflateCoordinate(flatCoordinates, 0, center, this.stride);
+      flatCoordinates[offset2++] = flatCoordinates[0] + radius;
+      for (let i = 1, ii = this.stride; i < ii; ++i) {
+        flatCoordinates[offset2++] = flatCoordinates[i];
+      }
+      flatCoordinates.length = offset2;
+      this.changed();
+    }
+    /**
+     * @override
+     */
+    getCoordinates() {
+      return null;
+    }
+    /**
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+    }
+    /**
+     * Set the radius of the circle. The radius is in the units of the projection.
+     * @param {number} radius Radius.
+     * @api
+     */
+    setRadius(radius) {
+      this.flatCoordinates[this.stride] = this.flatCoordinates[0] + radius;
+      this.changed();
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @param {number} angle Rotation angle in counter-clockwise radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     * @override
+     */
+    rotate(angle, anchor) {
+      const center = this.getCenter();
+      const stride = this.getStride();
+      this.setCenter(
+        rotate(center, 0, center.length, stride, angle, anchor, center)
+      );
+      this.changed();
+    }
+  }
+  Circle.prototype.transform;
+  function getCoordinate(coordinates2, index2) {
+    const count = coordinates2.length;
+    if (index2 < 0) {
+      return coordinates2[index2 + count];
+    }
+    if (index2 >= count) {
+      return coordinates2[index2 - count];
+    }
+    return coordinates2[index2];
+  }
+  function interpolateCoordinate(coordinates2, index2) {
+    const count = coordinates2.length;
+    let startIndex = Math.floor(index2);
+    const along = index2 - startIndex;
+    if (startIndex >= count) {
+      startIndex -= count;
+    } else if (startIndex < 0) {
+      startIndex += count;
+    }
+    let endIndex = startIndex + 1;
+    if (endIndex >= count) {
+      endIndex -= count;
+    }
+    const start2 = coordinates2[startIndex];
+    const x0 = start2[0];
+    const y0 = start2[1];
+    const end = coordinates2[endIndex];
+    const dx = end[0] - x0;
+    const dy = end[1] - y0;
+    return [x0 + dx * along, y0 + dy * along];
+  }
+  const sharedUpdateInfo = {
+    index: -1,
+    endIndex: NaN,
+    closestTargetDistance: Infinity
+  };
+  function getTraceTargetUpdate(coordinate, traceState, map2, snapTolerance) {
+    const x = coordinate[0];
+    const y = coordinate[1];
+    let closestTargetDistance = Infinity;
+    let newTargetIndex = -1;
+    let newEndIndex = NaN;
+    for (let targetIndex = 0; targetIndex < traceState.targets.length; ++targetIndex) {
+      const target2 = traceState.targets[targetIndex];
+      const coordinates2 = target2.coordinates;
+      let minSegmentDistance = Infinity;
+      let endIndex;
+      for (let coordinateIndex = 0; coordinateIndex < coordinates2.length - 1; ++coordinateIndex) {
+        const start2 = coordinates2[coordinateIndex];
+        const end = coordinates2[coordinateIndex + 1];
+        const rel = getPointSegmentRelationship(x, y, start2, end);
+        if (rel.squaredDistance < minSegmentDistance) {
+          minSegmentDistance = rel.squaredDistance;
+          endIndex = coordinateIndex + rel.along;
+        }
+      }
+      if (minSegmentDistance < closestTargetDistance) {
+        closestTargetDistance = minSegmentDistance;
+        if (target2.ring && traceState.targetIndex === targetIndex) {
+          if (target2.endIndex > target2.startIndex) {
+            if (endIndex < target2.startIndex) {
+              endIndex += coordinates2.length;
+            }
+          } else if (target2.endIndex < target2.startIndex) {
+            if (endIndex > target2.startIndex) {
+              endIndex -= coordinates2.length;
+            }
+          }
+        }
+        newEndIndex = endIndex;
+        newTargetIndex = targetIndex;
+      }
+    }
+    const newTarget = traceState.targets[newTargetIndex];
+    let considerBothDirections = newTarget.ring;
+    if (traceState.targetIndex === newTargetIndex && considerBothDirections) {
+      const newCoordinate = interpolateCoordinate(
+        newTarget.coordinates,
+        newEndIndex
+      );
+      const pixel = map2.getPixelFromCoordinate(newCoordinate);
+      const startPx = map2.getPixelFromCoordinate(traceState.startCoord);
+      if (distance(pixel, startPx) > snapTolerance) {
+        considerBothDirections = false;
+      }
+    }
+    if (considerBothDirections) {
+      const coordinates2 = newTarget.coordinates;
+      const count = coordinates2.length;
+      const startIndex = newTarget.startIndex;
+      const endIndex = newEndIndex;
+      if (startIndex < endIndex) {
+        const forwardDistance = getCumulativeSquaredDistance(
+          coordinates2,
+          startIndex,
+          endIndex
+        );
+        const reverseDistance = getCumulativeSquaredDistance(
+          coordinates2,
+          startIndex,
+          endIndex - count
+        );
+        if (reverseDistance < forwardDistance) {
+          newEndIndex -= count;
+        }
+      } else {
+        const reverseDistance = getCumulativeSquaredDistance(
+          coordinates2,
+          startIndex,
+          endIndex
+        );
+        const forwardDistance = getCumulativeSquaredDistance(
+          coordinates2,
+          startIndex,
+          endIndex + count
+        );
+        if (forwardDistance < reverseDistance) {
+          newEndIndex += count;
+        }
+      }
+    }
+    sharedUpdateInfo.index = newTargetIndex;
+    sharedUpdateInfo.endIndex = newEndIndex;
+    sharedUpdateInfo.closestTargetDistance = closestTargetDistance;
+    return sharedUpdateInfo;
+  }
+  function getTraceTargets(coordinate, features) {
+    const targets = [];
+    for (let i = 0; i < features.length; ++i) {
+      const feature = features[i];
+      const geometry = feature.getGeometry();
+      appendGeometryTraceTargets(coordinate, geometry, targets);
+    }
+    return targets;
+  }
+  function appendGeometryTraceTargets(coordinate, geometry, targets) {
+    if (geometry instanceof LineString) {
+      appendTraceTarget(coordinate, geometry.getCoordinates(), false, targets);
+      return;
+    }
+    if (geometry instanceof MultiLineString) {
+      const coordinates2 = geometry.getCoordinates();
+      for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+        appendTraceTarget(coordinate, coordinates2[i], false, targets);
+      }
+      return;
+    }
+    if (geometry instanceof Polygon) {
+      const coordinates2 = geometry.getCoordinates();
+      for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+        appendTraceTarget(coordinate, coordinates2[i], true, targets);
+      }
+      return;
+    }
+    if (geometry instanceof MultiPolygon) {
+      const polys = geometry.getCoordinates();
+      for (let i = 0, ii = polys.length; i < ii; ++i) {
+        const coordinates2 = polys[i];
+        for (let j = 0, jj = coordinates2.length; j < jj; ++j) {
+          appendTraceTarget(coordinate, coordinates2[j], true, targets);
+        }
+      }
+      return;
+    }
+    if (geometry instanceof GeometryCollection) {
+      const geometries = geometry.getGeometries();
+      for (let i = 0; i < geometries.length; ++i) {
+        appendGeometryTraceTargets(coordinate, geometries[i], targets);
+      }
+      return;
+    }
+  }
+  function appendTraceTarget(coordinate, coordinates2, ring, targets) {
+    const x = coordinate[0];
+    const y = coordinate[1];
+    for (let i = 0, ii = coordinates2.length - 1; i < ii; ++i) {
+      const start2 = coordinates2[i];
+      const end = coordinates2[i + 1];
+      const rel = getPointSegmentRelationship(x, y, start2, end);
+      if (rel.squaredDistance === 0) {
+        const index2 = i + rel.along;
+        targets.push({
+          coordinates: coordinates2,
+          ring,
+          startIndex: index2,
+          endIndex: index2
+        });
+        return;
+      }
+    }
+  }
+  function getSquaredDistance(a, b) {
+    return squaredDistance$1(a[0], a[1], b[0], b[1]);
+  }
+  function getCumulativeSquaredDistance(coordinates2, startIndex, endIndex) {
+    let lowIndex, highIndex;
+    if (startIndex < endIndex) {
+      lowIndex = startIndex;
+      highIndex = endIndex;
+    } else {
+      lowIndex = endIndex;
+      highIndex = startIndex;
+    }
+    const lowWholeIndex = Math.ceil(lowIndex);
+    const highWholeIndex = Math.floor(highIndex);
+    if (lowWholeIndex > highWholeIndex) {
+      const start2 = interpolateCoordinate(coordinates2, lowIndex);
+      const end = interpolateCoordinate(coordinates2, highIndex);
+      return getSquaredDistance(start2, end);
+    }
+    let sd = 0;
+    if (lowIndex < lowWholeIndex) {
+      const start2 = interpolateCoordinate(coordinates2, lowIndex);
+      const end = getCoordinate(coordinates2, lowWholeIndex);
+      sd += getSquaredDistance(start2, end);
+    }
+    if (highWholeIndex < highIndex) {
+      const start2 = getCoordinate(coordinates2, highWholeIndex);
+      const end = interpolateCoordinate(coordinates2, highIndex);
+      sd += getSquaredDistance(start2, end);
+    }
+    for (let i = lowWholeIndex; i < highWholeIndex - 1; ++i) {
+      const start2 = getCoordinate(coordinates2, i);
+      const end = getCoordinate(coordinates2, i + 1);
+      sd += getSquaredDistance(start2, end);
+    }
+    return sd;
+  }
+  const sharedRel = { along: 0, squaredDistance: 0 };
+  function getPointSegmentRelationship(x, y, start2, end) {
+    const x1 = start2[0];
+    const y1 = start2[1];
+    const x2 = end[0];
+    const y2 = end[1];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    let along = 0;
+    let px = x1;
+    let py = y1;
+    if (dx !== 0 || dy !== 0) {
+      along = clamp(((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy), 0, 1);
+      px += dx * along;
+      py += dy * along;
+    }
+    sharedRel.along = along;
+    sharedRel.squaredDistance = toFixed(squaredDistance$1(x, y, px, py), 10);
+    return sharedRel;
+  }
+  const DrawEventType = {
+    /**
+     * Triggered upon feature draw start
+     * @event DrawEvent#drawstart
+     * @api
+     */
+    DRAWSTART: "drawstart",
+    /**
+     * Triggered upon feature draw end
+     * @event DrawEvent#drawend
+     * @api
+     */
+    DRAWEND: "drawend",
+    /**
+     * Triggered upon feature draw abortion
+     * @event DrawEvent#drawabort
+     * @api
+     */
+    DRAWABORT: "drawabort"
+  };
+  class DrawEvent extends BaseEvent {
+    /**
+     * @param {DrawEventType} type Type.
+     * @param {Feature} feature The feature drawn.
+     */
+    constructor(type, feature) {
+      super(type);
+      this.feature = feature;
+    }
+  }
+  class Draw extends PointerInteraction {
+    /**
+     * @param {Options} options Options.
+     */
+    constructor(options) {
+      const pointerOptions = (
+        /** @type {import("./Pointer.js").Options} */
+        options
+      );
+      if (!pointerOptions.stopDown) {
+        pointerOptions.stopDown = FALSE;
+      }
+      super(pointerOptions);
+      this.on;
+      this.once;
+      this.un;
+      this.options_ = options;
+      this.shouldHandle_ = false;
+      this.downPx_ = null;
+      this.downTimeout_;
+      this.lastDragTime_;
+      this.pointerType_;
+      this.freehand_ = false;
+      this.source_ = options.source ? options.source : null;
+      this.features_ = options.features ? options.features : null;
+      this.snapTolerance_ = options.snapTolerance ? options.snapTolerance : 12;
+      this.type_ = /** @type {import("../geom/Geometry.js").Type} */
+      options.type;
+      this.mode_ = getMode(this.type_);
+      this.stopClick_ = !!options.stopClick;
+      this.ignoreNextUpEvent_ = false;
+      this.minPoints_ = options.minPoints ? options.minPoints : this.mode_ === "Polygon" ? 3 : 2;
+      this.maxPoints_ = this.mode_ === "Circle" ? 2 : options.maxPoints ? options.maxPoints : Infinity;
+      this.finishCondition_ = options.finishCondition ? options.finishCondition : TRUE;
+      this.geometryLayout_ = options.geometryLayout ? options.geometryLayout : "XY";
+      let geometryFunction = options.geometryFunction;
+      if (!geometryFunction) {
+        const mode2 = this.mode_;
+        if (mode2 === "Circle") {
+          geometryFunction = (coordinates2, geometry, projection) => {
+            const circle = geometry ? (
+              /** @type {Circle} */
+              geometry
+            ) : new Circle([NaN, NaN]);
+            const center = fromUserCoordinate(coordinates2[0]);
+            const squaredLength = squaredDistance(
+              center,
+              fromUserCoordinate(coordinates2[coordinates2.length - 1])
+            );
+            circle.setCenterAndRadius(
+              center,
+              Math.sqrt(squaredLength),
+              this.geometryLayout_
+            );
+            return circle;
+          };
+        } else {
+          let Constructor;
+          if (mode2 === "Point") {
+            Constructor = Point$1;
+          } else if (mode2 === "LineString") {
+            Constructor = LineString;
+          } else if (mode2 === "Polygon") {
+            Constructor = Polygon;
+          }
+          geometryFunction = (coordinates2, geometry, projection) => {
+            if (geometry) {
+              if (mode2 === "Polygon") {
+                if (coordinates2[0].length) {
+                  geometry.setCoordinates(
+                    [coordinates2[0].concat([coordinates2[0][0]])],
+                    this.geometryLayout_
+                  );
+                } else {
+                  geometry.setCoordinates([], this.geometryLayout_);
+                }
+              } else {
+                geometry.setCoordinates(coordinates2, this.geometryLayout_);
+              }
+            } else {
+              geometry = new Constructor(coordinates2, this.geometryLayout_);
+            }
+            return geometry;
+          };
+        }
+      }
+      this.geometryFunction_ = geometryFunction;
+      this.dragVertexDelay_ = options.dragVertexDelay !== void 0 ? options.dragVertexDelay : 500;
+      this.finishCoordinate_ = null;
+      this.sketchFeature_ = null;
+      this.sketchPoint_ = null;
+      this.sketchCoords_ = null;
+      this.sketchLine_ = null;
+      this.sketchLineCoords_ = null;
+      this.squaredClickTolerance_ = options.clickTolerance ? options.clickTolerance * options.clickTolerance : 36;
+      this.overlay_ = new VectorLayer({
+        source: new VectorSource({
+          useSpatialIndex: false,
+          wrapX: options.wrapX ? options.wrapX : false
+        }),
+        style: options.style ? options.style : getDefaultStyleFunction$1(),
+        updateWhileInteracting: true
+      });
+      this.geometryName_ = options.geometryName;
+      this.condition_ = options.condition ? options.condition : noModifierKeys;
+      this.freehandCondition_;
+      if (options.freehand) {
+        this.freehandCondition_ = always$1;
+      } else {
+        this.freehandCondition_ = options.freehandCondition ? options.freehandCondition : shiftKeyOnly;
+      }
+      this.traceCondition_;
+      this.setTrace(options.trace || false);
+      this.traceState_ = { active: false };
+      this.traceSource_ = options.traceSource || options.source || null;
+      this.addChangeListener(InteractionProperty.ACTIVE, this.updateState_);
+    }
+    /**
+     * Toggle tracing mode or set a tracing condition.
+     *
+     * @param {boolean|import("../events/condition.js").Condition} trace A boolean to toggle tracing mode or an event
+     *     condition that will be checked when a feature is clicked to determine if tracing should be active.
+     */
+    setTrace(trace) {
+      let condition;
+      if (!trace) {
+        condition = never;
+      } else if (trace === true) {
+        condition = always$1;
+      } else {
+        condition = trace;
+      }
+      this.traceCondition_ = condition;
+    }
+    /**
+     * Remove the interaction from its current map and attach it to the new map.
+     * Subclasses may set up event handlers to get notified about changes to
+     * the map here.
+     * @param {import("../Map.js").default} map Map.
+     * @override
+     */
+    setMap(map2) {
+      super.setMap(map2);
+      this.updateState_();
+    }
+    /**
+     * Set whether the drawing is done in freehand mode.
+     *
+     * @param {boolean} freehand Freehand drawing.
+     * @api
+     */
+    setFreehand(freehand) {
+      this.freehand_ = freehand;
+      if (this.freehand_) {
+        this.freehandCondition_ = always$1;
+      } else {
+        this.freehandCondition_ = this.options_ && this.options_.freehandCondition ? this.options_.freehandCondition : shiftKeyOnly;
+      }
+    }
+    /**
+     * Get the overlay layer that this interaction renders sketch features to.
+     * @return {VectorLayer} Overlay layer.
+     * @api
+     */
+    getOverlay() {
+      return this.overlay_;
+    }
+    /**
+     * Get if this interaction is in freehand mode.
+     * @return {boolean} Freehand drawing.
+     * @api
+     */
+    getFreehand() {
+      return this.freehand_;
+    }
+    /**
+     * Handles the {@link module:ol/MapBrowserEvent~MapBrowserEvent map browser event} and may actually draw or finish the drawing.
+     * @param {import("../MapBrowserEvent.js").default<PointerEvent>} event Map browser event.
+     * @return {boolean} `false` to stop event propagation.
+     * @api
+     * @override
+     */
+    handleEvent(event) {
+      if (event.originalEvent.type === EventType.CONTEXTMENU) {
+        event.originalEvent.preventDefault();
+      }
+      this.freehand_ = this.mode_ !== "Point" && this.freehandCondition_(event);
+      let move = event.type === MapBrowserEventType.POINTERMOVE;
+      let pass = true;
+      if (!this.freehand_ && this.lastDragTime_ && event.type === MapBrowserEventType.POINTERDRAG) {
+        const now = Date.now();
+        if (now - this.lastDragTime_ >= this.dragVertexDelay_) {
+          this.downPx_ = event.pixel;
+          this.shouldHandle_ = !this.freehand_;
+          move = true;
+        } else {
+          this.lastDragTime_ = void 0;
+        }
+        if (this.shouldHandle_ && this.downTimeout_ !== void 0) {
+          clearTimeout(this.downTimeout_);
+          this.downTimeout_ = void 0;
+        }
+      }
+      if (this.freehand_ && event.type === MapBrowserEventType.POINTERDRAG && this.sketchFeature_ !== null) {
+        this.addToDrawing_(event.coordinate);
+        pass = false;
+      } else if (this.freehand_ && event.type === MapBrowserEventType.POINTERDOWN) {
+        pass = false;
+      } else if (move && this.getPointerCount() < 2) {
+        pass = event.type === MapBrowserEventType.POINTERMOVE;
+        if (pass && this.freehand_) {
+          this.handlePointerMove_(event);
+          if (this.shouldHandle_) {
+            event.originalEvent.preventDefault();
+          }
+        } else if (event.originalEvent.pointerType === "mouse" || event.type === MapBrowserEventType.POINTERDRAG && this.downTimeout_ === void 0) {
+          this.handlePointerMove_(event);
+        }
+      } else if (event.type === MapBrowserEventType.DBLCLICK) {
+        pass = false;
+      }
+      return super.handleEvent(event) && pass;
+    }
+    /**
+     * Handle pointer down events.
+     * @param {import("../MapBrowserEvent.js").default<PointerEvent>} event Event.
+     * @return {boolean} If the event was consumed.
+     * @override
+     */
+    handleDownEvent(event) {
+      this.shouldHandle_ = !this.freehand_;
+      if (this.freehand_) {
+        this.downPx_ = event.pixel;
+        if (!this.finishCoordinate_) {
+          this.startDrawing_(event.coordinate);
+        }
+        return true;
+      }
+      if (!this.condition_(event)) {
+        this.lastDragTime_ = void 0;
+        return false;
+      }
+      this.lastDragTime_ = Date.now();
+      this.downTimeout_ = setTimeout(() => {
+        this.handlePointerMove_(
+          new MapBrowserEvent(
+            MapBrowserEventType.POINTERMOVE,
+            event.map,
+            event.originalEvent,
+            false,
+            event.frameState
+          )
+        );
+      }, this.dragVertexDelay_);
+      this.downPx_ = event.pixel;
+      return true;
+    }
+    /**
+     * @private
+     */
+    deactivateTrace_() {
+      this.traceState_ = { active: false };
+    }
+    /**
+     * Activate or deactivate trace state based on a browser event.
+     * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @private
+     */
+    toggleTraceState_(event) {
+      if (!this.traceSource_ || !this.traceCondition_(event)) {
+        return;
+      }
+      if (this.traceState_.active) {
+        this.deactivateTrace_();
+        return;
+      }
+      const map2 = this.getMap();
+      const lowerLeft = map2.getCoordinateFromPixel([
+        event.pixel[0] - this.snapTolerance_,
+        event.pixel[1] + this.snapTolerance_
+      ]);
+      const upperRight = map2.getCoordinateFromPixel([
+        event.pixel[0] + this.snapTolerance_,
+        event.pixel[1] - this.snapTolerance_
+      ]);
+      const extent = boundingExtent([lowerLeft, upperRight]);
+      const features = this.traceSource_.getFeaturesInExtent(extent);
+      if (features.length === 0) {
+        return;
+      }
+      const targets = getTraceTargets(event.coordinate, features);
+      if (targets.length) {
+        this.traceState_ = {
+          active: true,
+          startCoord: event.coordinate.slice(),
+          targets,
+          targetIndex: -1
+        };
+      }
+    }
+    /**
+     * @param {TraceTarget} target The trace target.
+     * @param {number} endIndex The new end index of the trace.
+     * @private
+     */
+    addOrRemoveTracedCoordinates_(target2, endIndex) {
+      const previouslyForward = target2.startIndex <= target2.endIndex;
+      const currentlyForward = target2.startIndex <= endIndex;
+      if (previouslyForward === currentlyForward) {
+        if (previouslyForward && endIndex > target2.endIndex || !previouslyForward && endIndex < target2.endIndex) {
+          this.addTracedCoordinates_(target2, target2.endIndex, endIndex);
+        } else if (previouslyForward && endIndex < target2.endIndex || !previouslyForward && endIndex > target2.endIndex) {
+          this.removeTracedCoordinates_(endIndex, target2.endIndex);
+        }
+      } else {
+        this.removeTracedCoordinates_(target2.startIndex, target2.endIndex);
+        this.addTracedCoordinates_(target2, target2.startIndex, endIndex);
+      }
+    }
+    /**
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @private
+     */
+    removeTracedCoordinates_(fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return;
+      }
+      let remove2 = 0;
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end = Math.floor(toIndex);
+        if (end === toIndex) {
+          end -= 1;
+        }
+        remove2 = end - start2 + 1;
+      } else {
+        const start2 = Math.floor(fromIndex);
+        let end = Math.ceil(toIndex);
+        if (end === toIndex) {
+          end += 1;
+        }
+        remove2 = start2 - end + 1;
+      }
+      if (remove2 > 0) {
+        this.removeLastPoints_(remove2);
+      }
+    }
+    /**
+     * @param {TraceTarget} target The trace target.
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @private
+     */
+    addTracedCoordinates_(target2, fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return;
+      }
+      const coordinates2 = [];
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end = Math.floor(toIndex);
+        if (end === toIndex) {
+          end -= 1;
+        }
+        for (let i = start2; i <= end; ++i) {
+          coordinates2.push(getCoordinate(target2.coordinates, i));
+        }
+      } else {
+        const start2 = Math.floor(fromIndex);
+        let end = Math.ceil(toIndex);
+        if (end === toIndex) {
+          end += 1;
+        }
+        for (let i = start2; i >= end; --i) {
+          coordinates2.push(getCoordinate(target2.coordinates, i));
+        }
+      }
+      if (coordinates2.length) {
+        this.appendCoordinates(coordinates2);
+      }
+    }
+    /**
+     * Update the trace.
+     * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @private
+     */
+    updateTrace_(event) {
+      const traceState = this.traceState_;
+      if (!traceState.active) {
+        return;
+      }
+      if (traceState.targetIndex === -1) {
+        const startPx = event.map.getPixelFromCoordinate(traceState.startCoord);
+        if (distance(startPx, event.pixel) < this.snapTolerance_) {
+          return;
+        }
+      }
+      const updatedTraceTarget = getTraceTargetUpdate(
+        event.coordinate,
+        traceState,
+        this.getMap(),
+        this.snapTolerance_
+      );
+      if (traceState.targetIndex !== updatedTraceTarget.index) {
+        if (traceState.targetIndex !== -1) {
+          const oldTarget = traceState.targets[traceState.targetIndex];
+          this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
+        }
+        const newTarget = traceState.targets[updatedTraceTarget.index];
+        this.addTracedCoordinates_(
+          newTarget,
+          newTarget.startIndex,
+          updatedTraceTarget.endIndex
+        );
+      } else {
+        const target3 = traceState.targets[traceState.targetIndex];
+        this.addOrRemoveTracedCoordinates_(target3, updatedTraceTarget.endIndex);
+      }
+      traceState.targetIndex = updatedTraceTarget.index;
+      const target2 = traceState.targets[traceState.targetIndex];
+      target2.endIndex = updatedTraceTarget.endIndex;
+      const coordinate = interpolateCoordinate(
+        target2.coordinates,
+        target2.endIndex
+      );
+      const pixel = this.getMap().getPixelFromCoordinate(coordinate);
+      event.coordinate = coordinate;
+      event.pixel = [Math.round(pixel[0]), Math.round(pixel[1])];
+    }
+    /**
+     * Handle drag events.
+     * @param {import("../MapBrowserEvent.js").default<PointerEvent>} event Event.
+     * @override
+     */
+    handleDragEvent(event) {
+      this.ignoreNextUpEvent_ = true;
+      super.handleDragEvent(event);
+    }
+    /**
+     * Handle pointer up events.
+     * @param {import("../MapBrowserEvent.js").default<PointerEvent>} event Event.
+     * @return {boolean} If the event was consumed.
+     * @override
+     */
+    handleUpEvent(event) {
+      let pass = true;
+      if (this.getPointerCount() === 0) {
+        if (this.downTimeout_) {
+          clearTimeout(this.downTimeout_);
+          this.downTimeout_ = void 0;
+        }
+        this.handlePointerMove_(event);
+        const tracing = this.traceState_.active;
+        if (!this.ignoreNextUpEvent_) {
+          this.toggleTraceState_(event);
+        }
+        if (this.shouldHandle_) {
+          const startingToDraw = !this.finishCoordinate_;
+          if (startingToDraw) {
+            this.startDrawing_(event.coordinate);
+          }
+          if (!startingToDraw && this.freehand_) {
+            this.finishDrawing();
+          } else if (!this.freehand_ && (!startingToDraw || this.mode_ === "Point")) {
+            if (this.atFinish_(event.pixel, tracing)) {
+              if (this.finishCondition_(event)) {
+                this.finishDrawing();
+              }
+            } else {
+              this.addToDrawing_(event.coordinate);
+            }
+          }
+          pass = false;
+        } else if (this.freehand_) {
+          this.abortDrawing();
+        }
+      }
+      this.ignoreNextUpEvent_ = false;
+      if (!pass && this.stopClick_) {
+        event.preventDefault();
+      }
+      return pass;
+    }
+    /**
+     * Handle move events.
+     * @param {import("../MapBrowserEvent.js").default<PointerEvent>} event A move event.
+     * @private
+     */
+    handlePointerMove_(event) {
+      this.pointerType_ = event.originalEvent.pointerType;
+      if (this.downPx_ && (!this.freehand_ && this.shouldHandle_ || this.freehand_ && !this.shouldHandle_)) {
+        const downPx = this.downPx_;
+        const clickPx = event.pixel;
+        const dx = downPx[0] - clickPx[0];
+        const dy = downPx[1] - clickPx[1];
+        const squaredDistance2 = dx * dx + dy * dy;
+        this.shouldHandle_ = this.freehand_ ? squaredDistance2 > this.squaredClickTolerance_ : squaredDistance2 <= this.squaredClickTolerance_;
+        if (!this.shouldHandle_) {
+          return;
+        }
+      }
+      if (!this.finishCoordinate_) {
+        this.createOrUpdateSketchPoint_(event.coordinate.slice());
+        return;
+      }
+      this.updateTrace_(event);
+      this.modifyDrawing_(event.coordinate);
+    }
+    /**
+     * Determine if an event is within the snapping tolerance of the start coord.
+     * @param {import("../pixel.js").Pixel} pixel Pixel.
+     * @param {boolean} [tracing] Drawing in trace mode (only stop if at the starting point).
+     * @return {boolean} The event is within the snapping tolerance of the start.
+     * @private
+     */
+    atFinish_(pixel, tracing) {
+      let at = false;
+      if (this.sketchFeature_) {
+        let potentiallyDone = false;
+        let potentiallyFinishCoordinates = [this.finishCoordinate_];
+        const mode2 = this.mode_;
+        if (mode2 === "Point") {
+          at = true;
+        } else if (mode2 === "Circle") {
+          at = this.sketchCoords_.length === 2;
+        } else if (mode2 === "LineString") {
+          potentiallyDone = !tracing && this.sketchCoords_.length > this.minPoints_;
+        } else if (mode2 === "Polygon") {
+          const sketchCoords = (
+            /** @type {PolyCoordType} */
+            this.sketchCoords_
+          );
+          potentiallyDone = sketchCoords[0].length > this.minPoints_;
+          potentiallyFinishCoordinates = [
+            sketchCoords[0][0],
+            sketchCoords[0][sketchCoords[0].length - 2]
+          ];
+          if (tracing) {
+            potentiallyFinishCoordinates = [sketchCoords[0][0]];
+          } else {
+            potentiallyFinishCoordinates = [
+              sketchCoords[0][0],
+              sketchCoords[0][sketchCoords[0].length - 2]
+            ];
+          }
+        }
+        if (potentiallyDone) {
+          const map2 = this.getMap();
+          for (let i = 0, ii = potentiallyFinishCoordinates.length; i < ii; i++) {
+            const finishCoordinate = potentiallyFinishCoordinates[i];
+            const finishPixel = map2.getPixelFromCoordinate(finishCoordinate);
+            const dx = pixel[0] - finishPixel[0];
+            const dy = pixel[1] - finishPixel[1];
+            const snapTolerance = this.freehand_ ? 1 : this.snapTolerance_;
+            at = Math.sqrt(dx * dx + dy * dy) <= snapTolerance;
+            if (at) {
+              this.finishCoordinate_ = finishCoordinate;
+              break;
+            }
+          }
+        }
+      }
+      return at;
+    }
+    /**
+     * @param {import("../coordinate.js").Coordinate} coordinates Coordinate.
+     * @private
+     */
+    createOrUpdateSketchPoint_(coordinates2) {
+      if (!this.sketchPoint_) {
+        this.sketchPoint_ = new Feature(new Point$1(coordinates2));
+        this.updateSketchFeatures_();
+      } else {
+        const sketchPointGeom = this.sketchPoint_.getGeometry();
+        sketchPointGeom.setCoordinates(coordinates2);
+      }
+    }
+    /**
+     * @param {import("../geom/Polygon.js").default} geometry Polygon geometry.
+     * @private
+     */
+    createOrUpdateCustomSketchLine_(geometry) {
+      if (!this.sketchLine_) {
+        this.sketchLine_ = new Feature();
+      }
+      const ring = geometry.getLinearRing(0);
+      let sketchLineGeom = this.sketchLine_.getGeometry();
+      if (!sketchLineGeom) {
+        sketchLineGeom = new LineString(
+          ring.getFlatCoordinates(),
+          ring.getLayout()
+        );
+        this.sketchLine_.setGeometry(sketchLineGeom);
+      } else {
+        sketchLineGeom.setFlatCoordinates(
+          ring.getLayout(),
+          ring.getFlatCoordinates()
+        );
+        sketchLineGeom.changed();
+      }
+    }
+    /**
+     * Start the drawing.
+     * @param {import("../coordinate.js").Coordinate} start Start coordinate.
+     * @private
+     */
+    startDrawing_(start2) {
+      const projection = this.getMap().getView().getProjection();
+      const stride = getStrideForLayout(this.geometryLayout_);
+      while (start2.length < stride) {
+        start2.push(0);
+      }
+      this.finishCoordinate_ = start2;
+      if (this.mode_ === "Point") {
+        this.sketchCoords_ = start2.slice();
+      } else if (this.mode_ === "Polygon") {
+        this.sketchCoords_ = [[start2.slice(), start2.slice()]];
+        this.sketchLineCoords_ = this.sketchCoords_[0];
+      } else {
+        this.sketchCoords_ = [start2.slice(), start2.slice()];
+      }
+      if (this.sketchLineCoords_) {
+        this.sketchLine_ = new Feature(new LineString(this.sketchLineCoords_));
+      }
+      const geometry = this.geometryFunction_(
+        this.sketchCoords_,
+        void 0,
+        projection
+      );
+      this.sketchFeature_ = new Feature();
+      if (this.geometryName_) {
+        this.sketchFeature_.setGeometryName(this.geometryName_);
+      }
+      this.sketchFeature_.setGeometry(geometry);
+      this.updateSketchFeatures_();
+      this.dispatchEvent(
+        new DrawEvent(DrawEventType.DRAWSTART, this.sketchFeature_)
+      );
+    }
+    /**
+     * Modify the drawing.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @private
+     */
+    modifyDrawing_(coordinate) {
+      const map2 = this.getMap();
+      const geometry = this.sketchFeature_.getGeometry();
+      const projection = map2.getView().getProjection();
+      const stride = getStrideForLayout(this.geometryLayout_);
+      let coordinates2, last;
+      while (coordinate.length < stride) {
+        coordinate.push(0);
+      }
+      if (this.mode_ === "Point") {
+        last = this.sketchCoords_;
+      } else if (this.mode_ === "Polygon") {
+        coordinates2 = /** @type {PolyCoordType} */
+        this.sketchCoords_[0];
+        last = coordinates2[coordinates2.length - 1];
+        if (this.atFinish_(map2.getPixelFromCoordinate(coordinate))) {
+          coordinate = this.finishCoordinate_.slice();
+        }
+      } else {
+        coordinates2 = this.sketchCoords_;
+        last = coordinates2[coordinates2.length - 1];
+      }
+      last[0] = coordinate[0];
+      last[1] = coordinate[1];
+      this.geometryFunction_(
+        /** @type {!LineCoordType} */
+        this.sketchCoords_,
+        geometry,
+        projection
+      );
+      if (this.sketchPoint_) {
+        const sketchPointGeom = this.sketchPoint_.getGeometry();
+        sketchPointGeom.setCoordinates(coordinate);
+      }
+      if (geometry.getType() === "Polygon" && this.mode_ !== "Polygon") {
+        this.createOrUpdateCustomSketchLine_(
+          /** @type {Polygon} */
+          geometry
+        );
+      } else if (this.sketchLineCoords_) {
+        const sketchLineGeom = this.sketchLine_.getGeometry();
+        sketchLineGeom.setCoordinates(this.sketchLineCoords_);
+      }
+      this.updateSketchFeatures_();
+    }
+    /**
+     * Add a new coordinate to the drawing.
+     * @param {!PointCoordType} coordinate Coordinate
+     * @return {Feature<import("../geom/SimpleGeometry.js").default>} The sketch feature.
+     * @private
+     */
+    addToDrawing_(coordinate) {
+      const geometry = this.sketchFeature_.getGeometry();
+      const projection = this.getMap().getView().getProjection();
+      let done;
+      let coordinates2;
+      const mode2 = this.mode_;
+      if (mode2 === "LineString" || mode2 === "Circle") {
+        this.finishCoordinate_ = coordinate.slice();
+        coordinates2 = /** @type {LineCoordType} */
+        this.sketchCoords_;
+        if (coordinates2.length >= this.maxPoints_) {
+          if (this.freehand_) {
+            coordinates2.pop();
+          } else {
+            done = true;
+          }
+        }
+        coordinates2.push(coordinate.slice());
+        this.geometryFunction_(coordinates2, geometry, projection);
+      } else if (mode2 === "Polygon") {
+        coordinates2 = /** @type {PolyCoordType} */
+        this.sketchCoords_[0];
+        if (coordinates2.length >= this.maxPoints_) {
+          if (this.freehand_) {
+            coordinates2.pop();
+          } else {
+            done = true;
+          }
+        }
+        coordinates2.push(coordinate.slice());
+        if (done) {
+          this.finishCoordinate_ = coordinates2[0];
+        }
+        this.geometryFunction_(this.sketchCoords_, geometry, projection);
+      }
+      this.createOrUpdateSketchPoint_(coordinate.slice());
+      this.updateSketchFeatures_();
+      if (done) {
+        return this.finishDrawing();
+      }
+      return this.sketchFeature_;
+    }
+    /**
+     * @param {number} n The number of points to remove.
+     */
+    removeLastPoints_(n) {
+      if (!this.sketchFeature_) {
+        return;
+      }
+      const geometry = this.sketchFeature_.getGeometry();
+      const projection = this.getMap().getView().getProjection();
+      const mode2 = this.mode_;
+      for (let i = 0; i < n; ++i) {
+        let coordinates2;
+        if (mode2 === "LineString" || mode2 === "Circle") {
+          coordinates2 = /** @type {LineCoordType} */
+          this.sketchCoords_;
+          coordinates2.splice(-2, 1);
+          if (coordinates2.length >= 2) {
+            this.finishCoordinate_ = coordinates2[coordinates2.length - 2].slice();
+            const finishCoordinate = this.finishCoordinate_.slice();
+            coordinates2[coordinates2.length - 1] = finishCoordinate;
+            this.createOrUpdateSketchPoint_(finishCoordinate);
+          }
+          this.geometryFunction_(coordinates2, geometry, projection);
+          if (geometry.getType() === "Polygon" && this.sketchLine_) {
+            this.createOrUpdateCustomSketchLine_(
+              /** @type {Polygon} */
+              geometry
+            );
+          }
+        } else if (mode2 === "Polygon") {
+          coordinates2 = /** @type {PolyCoordType} */
+          this.sketchCoords_[0];
+          coordinates2.splice(-2, 1);
+          const sketchLineGeom = this.sketchLine_.getGeometry();
+          if (coordinates2.length >= 2) {
+            const finishCoordinate = coordinates2[coordinates2.length - 2].slice();
+            coordinates2[coordinates2.length - 1] = finishCoordinate;
+            this.createOrUpdateSketchPoint_(finishCoordinate);
+          }
+          sketchLineGeom.setCoordinates(coordinates2);
+          this.geometryFunction_(this.sketchCoords_, geometry, projection);
+        }
+        if (coordinates2.length === 1) {
+          this.abortDrawing();
+          break;
+        }
+      }
+      this.updateSketchFeatures_();
+    }
+    /**
+     * Remove last point of the feature currently being drawn. Does not do anything when
+     * drawing POINT or MULTI_POINT geometries.
+     * @api
+     */
+    removeLastPoint() {
+      this.removeLastPoints_(1);
+    }
+    /**
+     * Stop drawing and add the sketch feature to the target layer.
+     * The {@link module:ol/interaction/Draw~DrawEventType.DRAWEND} event is
+     * dispatched before inserting the feature.
+     * @return {Feature<import("../geom/SimpleGeometry.js").default>|null} The drawn feature.
+     * @api
+     */
+    finishDrawing() {
+      const sketchFeature = this.abortDrawing_();
+      if (!sketchFeature) {
+        return null;
+      }
+      let coordinates2 = this.sketchCoords_;
+      const geometry = sketchFeature.getGeometry();
+      const projection = this.getMap().getView().getProjection();
+      if (this.mode_ === "LineString") {
+        coordinates2.pop();
+        this.geometryFunction_(coordinates2, geometry, projection);
+      } else if (this.mode_ === "Polygon") {
+        coordinates2[0].pop();
+        this.geometryFunction_(coordinates2, geometry, projection);
+        coordinates2 = geometry.getCoordinates();
+      }
+      if (this.type_ === "MultiPoint") {
+        sketchFeature.setGeometry(
+          new MultiPoint([
+            /** @type {PointCoordType} */
+            coordinates2
+          ])
+        );
+      } else if (this.type_ === "MultiLineString") {
+        sketchFeature.setGeometry(
+          new MultiLineString([
+            /** @type {LineCoordType} */
+            coordinates2
+          ])
+        );
+      } else if (this.type_ === "MultiPolygon") {
+        sketchFeature.setGeometry(
+          new MultiPolygon([
+            /** @type {PolyCoordType} */
+            coordinates2
+          ])
+        );
+      }
+      this.dispatchEvent(new DrawEvent(DrawEventType.DRAWEND, sketchFeature));
+      if (this.features_) {
+        this.features_.push(sketchFeature);
+      }
+      if (this.source_) {
+        this.source_.addFeature(sketchFeature);
+      }
+      return sketchFeature;
+    }
+    /**
+     * Stop drawing without adding the sketch feature to the target layer.
+     * @return {Feature<import("../geom/SimpleGeometry.js").default>|null} The sketch feature (or null if none).
+     * @private
+     */
+    abortDrawing_() {
+      this.finishCoordinate_ = null;
+      const sketchFeature = this.sketchFeature_;
+      this.sketchFeature_ = null;
+      this.sketchPoint_ = null;
+      this.sketchLine_ = null;
+      this.overlay_.getSource().clear(true);
+      this.deactivateTrace_();
+      return sketchFeature;
+    }
+    /**
+     * Stop drawing without adding the sketch feature to the target layer.
+     * @api
+     */
+    abortDrawing() {
+      const sketchFeature = this.abortDrawing_();
+      if (sketchFeature) {
+        this.dispatchEvent(new DrawEvent(DrawEventType.DRAWABORT, sketchFeature));
+      }
+    }
+    /**
+     * Append coordinates to the end of the geometry that is currently being drawn.
+     * This can be used when drawing LineStrings or Polygons. Coordinates will
+     * either be appended to the current LineString or the outer ring of the current
+     * Polygon. If no geometry is being drawn, a new one will be created.
+     * @param {!LineCoordType} coordinates Linear coordinates to be appended to
+     * the coordinate array.
+     * @api
+     */
+    appendCoordinates(coordinates2) {
+      const mode2 = this.mode_;
+      const newDrawing = !this.sketchFeature_;
+      if (newDrawing) {
+        this.startDrawing_(coordinates2[0]);
+      }
+      let sketchCoords;
+      if (mode2 === "LineString" || mode2 === "Circle") {
+        sketchCoords = /** @type {LineCoordType} */
+        this.sketchCoords_;
+      } else if (mode2 === "Polygon") {
+        sketchCoords = this.sketchCoords_ && this.sketchCoords_.length ? (
+          /** @type {PolyCoordType} */
+          this.sketchCoords_[0]
+        ) : [];
+      } else {
+        return;
+      }
+      if (newDrawing) {
+        sketchCoords.shift();
+      }
+      sketchCoords.pop();
+      for (let i = 0; i < coordinates2.length; i++) {
+        this.addToDrawing_(coordinates2[i]);
+      }
+      const ending = coordinates2[coordinates2.length - 1];
+      this.sketchFeature_ = this.addToDrawing_(ending);
+      this.modifyDrawing_(ending);
+    }
+    /**
+     * Initiate draw mode by starting from an existing geometry which will
+     * receive new additional points. This only works on features with
+     * `LineString` geometries, where the interaction will extend lines by adding
+     * points to the end of the coordinates array.
+     * This will change the original feature, instead of drawing a copy.
+     *
+     * The function will dispatch a `drawstart` event.
+     *
+     * @param {!Feature<LineString>} feature Feature to be extended.
+     * @api
+     */
+    extend(feature) {
+      const geometry = feature.getGeometry();
+      const lineString = geometry;
+      this.sketchFeature_ = feature;
+      this.sketchCoords_ = lineString.getCoordinates();
+      const last = this.sketchCoords_[this.sketchCoords_.length - 1];
+      this.finishCoordinate_ = last.slice();
+      this.sketchCoords_.push(last.slice());
+      this.sketchPoint_ = new Feature(new Point$1(last));
+      this.updateSketchFeatures_();
+      this.dispatchEvent(
+        new DrawEvent(DrawEventType.DRAWSTART, this.sketchFeature_)
+      );
+    }
+    /**
+     * Redraw the sketch features.
+     * @private
+     */
+    updateSketchFeatures_() {
+      const sketchFeatures = [];
+      if (this.sketchFeature_) {
+        sketchFeatures.push(this.sketchFeature_);
+      }
+      if (this.sketchLine_) {
+        sketchFeatures.push(this.sketchLine_);
+      }
+      if (this.sketchPoint_) {
+        sketchFeatures.push(this.sketchPoint_);
+      }
+      const overlaySource = this.overlay_.getSource();
+      overlaySource.clear(true);
+      overlaySource.addFeatures(sketchFeatures);
+    }
+    /**
+     * @private
+     */
+    updateState_() {
+      const map2 = this.getMap();
+      const active = this.getActive();
+      if (!map2 || !active) {
+        this.abortDrawing();
+      }
+      this.overlay_.setMap(active ? map2 : null);
+    }
+  }
+  function getDefaultStyleFunction$1() {
+    const styles = createEditingStyle();
+    return function(feature, resolution) {
+      return styles[feature.getGeometry().getType()];
+    };
+  }
+  function createBox() {
+    return function(coordinates2, geometry, projection) {
+      const extent = boundingExtent(
+        /** @type {LineCoordType} */
+        [
+          coordinates2[0],
+          coordinates2[coordinates2.length - 1]
+        ].map(function(coordinate) {
+          return fromUserCoordinate(coordinate);
+        })
+      );
+      const boxCoordinates = [
+        [
+          getBottomLeft(extent),
+          getBottomRight(extent),
+          getTopRight(extent),
+          getTopLeft(extent),
+          getBottomLeft(extent)
+        ]
+      ];
+      if (geometry) {
+        geometry.setCoordinates(boxCoordinates);
+      } else {
+        geometry = new Polygon(boxCoordinates);
+      }
+      return geometry;
+    };
+  }
+  function getMode(type) {
+    switch (type) {
+      case "Point":
+      case "MultiPoint":
+        return "Point";
+      case "LineString":
+      case "MultiLineString":
+        return "LineString";
+      case "Polygon":
+      case "MultiPolygon":
+        return "Polygon";
+      case "Circle":
+        return "Circle";
+      default:
+        throw new Error("Invalid type: " + type);
+    }
+  }
+  const CIRCLE_CENTER_INDEX = 0;
+  const CIRCLE_CIRCUMFERENCE_INDEX = 1;
+  const tempExtent = [0, 0, 0, 0];
+  const tempSegment$1 = [];
+  const ModifyEventType = {
+    /**
+     * Triggered upon feature modification start
+     * @event ModifyEvent#modifystart
+     * @api
+     */
+    MODIFYSTART: "modifystart",
+    /**
+     * Triggered upon feature modification end
+     * @event ModifyEvent#modifyend
+     * @api
+     */
+    MODIFYEND: "modifyend"
+  };
+  function getCoordinatesArray(coordinates2, geometryType, depth) {
+    let coordinatesArray;
+    switch (geometryType) {
+      case "LineString":
+        coordinatesArray = coordinates2;
+        break;
+      case "MultiLineString":
+      case "Polygon":
+        coordinatesArray = coordinates2[depth[0]];
+        break;
+      case "MultiPolygon":
+        coordinatesArray = coordinates2[depth[1]][depth[0]];
+        break;
+    }
+    return coordinatesArray;
+  }
+  class ModifyEvent extends BaseEvent {
+    /**
+     * @param {ModifyEventType} type Type.
+     * @param {Collection<Feature>} features
+     * The features modified.
+     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent
+     * Associated {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
+     */
+    constructor(type, features, mapBrowserEvent) {
+      super(type);
+      this.features = features;
+      this.mapBrowserEvent = mapBrowserEvent;
+    }
+  }
+  class Modify extends PointerInteraction {
+    /**
+     * @param {Options} options Options.
+     */
+    constructor(options) {
+      super(
+        /** @type {import("./Pointer.js").Options} */
+        options
+      );
+      this.handleSourceAdd_ = this.handleSourceAdd_.bind(this);
+      this.handleSourceRemove_ = this.handleSourceRemove_.bind(this);
+      this.handleExternalCollectionAdd_ = this.handleExternalCollectionAdd_.bind(this);
+      this.handleExternalCollectionRemove_ = this.handleExternalCollectionRemove_.bind(this);
+      this.handleFeatureChange_ = this.handleFeatureChange_.bind(this);
+      this.on;
+      this.once;
+      this.un;
+      this.condition_ = options.condition ? options.condition : primaryAction;
+      this.defaultDeleteCondition_ = function(mapBrowserEvent) {
+        return altKeyOnly(mapBrowserEvent) && singleClick(mapBrowserEvent);
+      };
+      this.deleteCondition_ = options.deleteCondition ? options.deleteCondition : this.defaultDeleteCondition_;
+      this.insertVertexCondition_ = options.insertVertexCondition ? options.insertVertexCondition : always$1;
+      this.vertexFeature_ = null;
+      this.vertexSegments_ = null;
+      this.lastCoordinate_ = [0, 0];
+      this.ignoreNextSingleClick_ = false;
+      this.featuresBeingModified_ = null;
+      this.rBush_ = new RBush();
+      this.pixelTolerance_ = options.pixelTolerance !== void 0 ? options.pixelTolerance : 10;
+      this.snappedToVertex_ = false;
+      this.changingFeature_ = false;
+      this.dragSegments_ = [];
+      this.overlay_ = new VectorLayer({
+        source: new VectorSource({
+          useSpatialIndex: false,
+          wrapX: !!options.wrapX
+        }),
+        style: options.style ? options.style : getDefaultStyleFunction(),
+        updateWhileAnimating: true,
+        updateWhileInteracting: true
+      });
+      this.SEGMENT_WRITERS_ = {
+        Point: this.writePointGeometry_.bind(this),
+        LineString: this.writeLineStringGeometry_.bind(this),
+        LinearRing: this.writeLineStringGeometry_.bind(this),
+        Polygon: this.writePolygonGeometry_.bind(this),
+        MultiPoint: this.writeMultiPointGeometry_.bind(this),
+        MultiLineString: this.writeMultiLineStringGeometry_.bind(this),
+        MultiPolygon: this.writeMultiPolygonGeometry_.bind(this),
+        Circle: this.writeCircleGeometry_.bind(this),
+        GeometryCollection: this.writeGeometryCollectionGeometry_.bind(this)
+      };
+      this.source_ = null;
+      this.traceSource_ = options.traceSource || options.source || null;
+      this.traceCondition_;
+      this.setTrace(options.trace || false);
+      this.traceState_ = { active: false };
+      this.traceSegments_ = null;
+      this.hitDetection_ = null;
+      this.filterFunctionWasSupplied_ = options.filter != void 0 ? true : false;
+      this.filter_ = options.filter ? options.filter : () => true;
+      this.coordinatesEqual_ = options.sharedVerticesEqual ? options.sharedVerticesEqual : equals;
+      if (!(options.features || options.source)) {
+        throw new Error(
+          "The modify interaction requires features collection or a source"
+        );
+      }
+      let features;
+      if (options.features) {
+        features = options.features.getArray();
+        options.features.addEventListener(
+          CollectionEventType.ADD,
+          this.handleExternalCollectionAdd_
+        );
+        options.features.addEventListener(
+          CollectionEventType.REMOVE,
+          this.handleExternalCollectionRemove_
+        );
+        this.featuresCollection_ = options.features;
+      } else if (options.source) {
+        features = options.source.getFeatures();
+        options.source.addEventListener(
+          VectorEventType.ADDFEATURE,
+          this.handleSourceAdd_
+        );
+        options.source.addEventListener(
+          VectorEventType.REMOVEFEATURE,
+          this.handleSourceRemove_
+        );
+        this.source_ = options.source;
+      }
+      features.forEach((feature) => {
+        feature.addEventListener(EventType.CHANGE, this.handleFeatureChange_);
+        if (this.filterFunctionWasSupplied_) {
+          feature.addEventListener(
+            ObjectEventType.PROPERTYCHANGE,
+            this.handleFeatureChange_
+          );
+        }
+      });
+      if (options.hitDetection) {
+        this.hitDetection_ = options.hitDetection;
+      }
+      this.features_ = [];
+      features.filter(this.filter_).forEach((feature) => this.addFeature_(feature));
+      this.lastPointerEvent_ = null;
+      this.delta_ = [0, 0];
+      this.snapToPointer_ = options.snapToPointer === void 0 ? !this.hitDetection_ : options.snapToPointer;
+    }
+    /**
+     * Toggle tracing mode or set a tracing condition.
+     *
+     * @param {boolean|import("../events/condition.js").Condition} trace A boolean to toggle tracing mode or an event
+     *     condition that will be checked when a feature is clicked to determine if tracing should be active.
+     */
+    setTrace(trace) {
+      let condition;
+      if (!trace) {
+        condition = never;
+      } else if (trace === true) {
+        condition = always$1;
+      } else {
+        condition = trace;
+      }
+      this.traceCondition_ = condition;
+    }
+    /**
+     * Called when a feature is added to the internal features collection
+     * @param {Feature} feature Feature.
+     * @private
+     */
+    addFeature_(feature) {
+      this.features_.push(feature);
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        const writer = this.SEGMENT_WRITERS_[geometry.getType()];
+        if (writer) {
+          writer(feature, geometry);
+        }
+      }
+      const map2 = this.getMap();
+      if (map2 && map2.isRendered() && this.getActive()) {
+        this.handlePointerAtPixel_(this.lastCoordinate_);
+      }
+    }
+    /**
+     * @param {import("../MapBrowserEvent.js").default} evt Map browser event.
+     * @param {Array<SegmentData>} segments The segments subject to modification.
+     * @private
+     */
+    willModifyFeatures_(evt, segments) {
+      if (!this.featuresBeingModified_) {
+        this.featuresBeingModified_ = new Collection();
+        const features = this.featuresBeingModified_.getArray();
+        for (let i = 0, ii = segments.length; i < ii; ++i) {
+          const feature = segments[i].feature;
+          if (feature && !features.includes(feature)) {
+            this.featuresBeingModified_.push(feature);
+          }
+        }
+        if (this.featuresBeingModified_.getLength() === 0) {
+          this.featuresBeingModified_ = null;
+        } else {
+          this.dispatchEvent(
+            new ModifyEvent(
+              ModifyEventType.MODIFYSTART,
+              this.featuresBeingModified_,
+              evt
+            )
+          );
+        }
+      }
+    }
+    /**
+     * Removes a feature from the internal features collection and updates internal state
+     * accordingly.
+     * @param {Feature} feature Feature.
+     * @private
+     */
+    removeFeature_(feature) {
+      const itemIndex = this.features_.indexOf(feature);
+      this.features_.splice(itemIndex, 1);
+      this.removeFeatureSegmentData_(feature);
+      if (this.vertexFeature_ && this.features_.length === 0) {
+        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.vertexFeature_ = null;
+      }
+    }
+    /**
+     * @param {Feature} feature Feature.
+     * @private
+     */
+    removeFeatureSegmentData_(feature) {
+      const rBush = this.rBush_;
+      const nodesToRemove = [];
+      rBush.forEach(
+        /**
+         * @param {SegmentData} node RTree node.
+         */
+        function(node) {
+          if (feature === node.feature) {
+            nodesToRemove.push(node);
+          }
+        }
+      );
+      for (let i = nodesToRemove.length - 1; i >= 0; --i) {
+        const nodeToRemove = nodesToRemove[i];
+        for (let j = this.dragSegments_.length - 1; j >= 0; --j) {
+          if (this.dragSegments_[j][0] === nodeToRemove) {
+            this.dragSegments_.splice(j, 1);
+          }
+        }
+        rBush.remove(nodeToRemove);
+      }
+    }
+    /**
+     * Activate or deactivate the interaction.
+     * @param {boolean} active Active.
+     * @observable
+     * @api
+     * @override
+     */
+    setActive(active) {
+      if (this.vertexFeature_ && !active) {
+        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.vertexFeature_ = null;
+      }
+      super.setActive(active);
+    }
+    /**
+     * Remove the interaction from its current map and attach it to the new map.
+     * Subclasses may set up event handlers to get notified about changes to
+     * the map here.
+     * @param {import("../Map.js").default} map Map.
+     * @override
+     */
+    setMap(map2) {
+      this.overlay_.setMap(map2);
+      super.setMap(map2);
+    }
+    /**
+     * Get the overlay layer that this interaction renders the modification point or vertex to.
+     * @return {VectorLayer} Overlay layer.
+     * @api
+     */
+    getOverlay() {
+      return this.overlay_;
+    }
+    /**
+     * @param {import("../source/Vector.js").VectorSourceEvent} event Event.
+     * @private
+     */
+    handleSourceAdd_(event) {
+      const feature = event.feature;
+      if (feature) {
+        this.externalAddFeatureHandler_(feature);
+      }
+    }
+    /**
+     * @param {import("../source/Vector.js").VectorSourceEvent} event Event.
+     * @private
+     */
+    handleSourceRemove_(event) {
+      const feature = event.feature;
+      if (feature) {
+        this.externalRemoveFeatureHandler_(feature);
+      }
+    }
+    /**
+     * @param {import("../Collection.js").CollectionEvent} event Event.
+     * @private
+     */
+    handleExternalCollectionAdd_(event) {
+      const feature = event.element;
+      if (feature) {
+        this.externalAddFeatureHandler_(feature);
+      }
+    }
+    /**
+     * @param {import("../Collection.js").CollectionEvent} event Event.
+     * @private
+     */
+    handleExternalCollectionRemove_(event) {
+      const feature = event.element;
+      if (feature) {
+        this.externalRemoveFeatureHandler_(feature);
+      }
+    }
+    /**
+     * Common handler for event signaling addition of feature to the supplied features source
+     * or collection.
+     * @param {Feature} feature Feature.
+     */
+    externalAddFeatureHandler_(feature) {
+      feature.addEventListener(EventType.CHANGE, this.handleFeatureChange_);
+      if (this.filterFunctionWasSupplied_) {
+        feature.addEventListener(
+          ObjectEventType.PROPERTYCHANGE,
+          this.handleFeatureChange_
+        );
+      }
+      if (this.filter_(feature)) {
+        this.addFeature_(feature);
+      }
+    }
+    /**
+     * Common handler for event signaling removal of feature from the supplied features source
+     * or collection.
+     * @param {Feature} feature Feature.
+     */
+    externalRemoveFeatureHandler_(feature) {
+      feature.removeEventListener(EventType.CHANGE, this.handleFeatureChange_);
+      if (this.filterFunctionWasSupplied_) {
+        feature.removeEventListener(
+          ObjectEventType.PROPERTYCHANGE,
+          this.handleFeatureChange_
+        );
+      }
+      this.removeFeature_(feature);
+    }
+    /**
+     * Listener for features in external source or features collection.  Ensures the feature filter
+     * is re-run and segment data is updated.
+     * @param {import("../events/Event.js").default | import("../Object.js").ObjectEvent} evt Event.
+     * @private
+     */
+    handleFeatureChange_(evt) {
+      if (!this.changingFeature_) {
+        const feature = (
+          /** @type {Feature} */
+          evt.target
+        );
+        this.removeFeature_(feature);
+        this.filter_(feature) && this.addFeature_(feature);
+      }
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {Point} geometry Geometry.
+     * @private
+     */
+    writePointGeometry_(feature, geometry) {
+      const coordinates2 = geometry.getCoordinates();
+      const segmentData = {
+        feature,
+        geometry,
+        segment: [coordinates2, coordinates2]
+      };
+      this.rBush_.insert(geometry.getExtent(), segmentData);
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/MultiPoint.js").default} geometry Geometry.
+     * @private
+     */
+    writeMultiPointGeometry_(feature, geometry) {
+      const points = geometry.getCoordinates();
+      for (let i = 0, ii = points.length; i < ii; ++i) {
+        const coordinates2 = points[i];
+        const segmentData = {
+          feature,
+          geometry,
+          depth: [i],
+          index: i,
+          segment: [coordinates2, coordinates2]
+        };
+        this.rBush_.insert(geometry.getExtent(), segmentData);
+      }
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/LineString.js").default} geometry Geometry.
+     * @private
+     */
+    writeLineStringGeometry_(feature, geometry) {
+      const coordinates2 = geometry.getCoordinates();
+      for (let i = 0, ii = coordinates2.length - 1; i < ii; ++i) {
+        const segment = coordinates2.slice(i, i + 2);
+        const segmentData = {
+          feature,
+          geometry,
+          index: i,
+          segment
+        };
+        this.rBush_.insert(boundingExtent(segment), segmentData);
+      }
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/MultiLineString.js").default} geometry Geometry.
+     * @private
+     */
+    writeMultiLineStringGeometry_(feature, geometry) {
+      const lines = geometry.getCoordinates();
+      for (let j = 0, jj = lines.length; j < jj; ++j) {
+        const coordinates2 = lines[j];
+        for (let i = 0, ii = coordinates2.length - 1; i < ii; ++i) {
+          const segment = coordinates2.slice(i, i + 2);
+          const segmentData = {
+            feature,
+            geometry,
+            depth: [j],
+            index: i,
+            segment
+          };
+          this.rBush_.insert(boundingExtent(segment), segmentData);
+        }
+      }
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/Polygon.js").default} geometry Geometry.
+     * @private
+     */
+    writePolygonGeometry_(feature, geometry) {
+      const rings = geometry.getCoordinates();
+      for (let j = 0, jj = rings.length; j < jj; ++j) {
+        const coordinates2 = rings[j];
+        for (let i = 0, ii = coordinates2.length - 1; i < ii; ++i) {
+          const segment = coordinates2.slice(i, i + 2);
+          const segmentData = {
+            feature,
+            geometry,
+            depth: [j],
+            index: i,
+            segment
+          };
+          this.rBush_.insert(boundingExtent(segment), segmentData);
+        }
+      }
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/MultiPolygon.js").default} geometry Geometry.
+     * @private
+     */
+    writeMultiPolygonGeometry_(feature, geometry) {
+      const polygons = geometry.getCoordinates();
+      for (let k = 0, kk = polygons.length; k < kk; ++k) {
+        const rings = polygons[k];
+        for (let j = 0, jj = rings.length; j < jj; ++j) {
+          const coordinates2 = rings[j];
+          for (let i = 0, ii = coordinates2.length - 1; i < ii; ++i) {
+            const segment = coordinates2.slice(i, i + 2);
+            const segmentData = {
+              feature,
+              geometry,
+              depth: [j, k],
+              index: i,
+              segment
+            };
+            this.rBush_.insert(boundingExtent(segment), segmentData);
+          }
+        }
+      }
+    }
+    /**
+     * We convert a circle into two segments.  The segment at index
+     * {@link CIRCLE_CENTER_INDEX} is the
+     * circle's center (a point).  The segment at index
+     * {@link CIRCLE_CIRCUMFERENCE_INDEX} is
+     * the circumference, and is not a line segment.
+     *
+     * @param {Feature} feature Feature.
+     * @param {import("../geom/Circle.js").default} geometry Geometry.
+     * @private
+     */
+    writeCircleGeometry_(feature, geometry) {
+      const coordinates2 = geometry.getCenter();
+      const centerSegmentData = {
+        feature,
+        geometry,
+        index: CIRCLE_CENTER_INDEX,
+        segment: [coordinates2, coordinates2]
+      };
+      const circumferenceSegmentData = {
+        feature,
+        geometry,
+        index: CIRCLE_CIRCUMFERENCE_INDEX,
+        segment: [coordinates2, coordinates2]
+      };
+      const featureSegments = [centerSegmentData, circumferenceSegmentData];
+      centerSegmentData.featureSegments = featureSegments;
+      circumferenceSegmentData.featureSegments = featureSegments;
+      this.rBush_.insert(createOrUpdateFromCoordinate(coordinates2), centerSegmentData);
+      let circleGeometry = (
+        /** @type {import("../geom/Geometry.js").default} */
+        geometry
+      );
+      this.rBush_.insert(circleGeometry.getExtent(), circumferenceSegmentData);
+    }
+    /**
+     * @param {Feature} feature Feature
+     * @param {import("../geom/GeometryCollection.js").default} geometry Geometry.
+     * @private
+     */
+    writeGeometryCollectionGeometry_(feature, geometry) {
+      const geometries = geometry.getGeometriesArray();
+      for (let i = 0; i < geometries.length; ++i) {
+        const geometry2 = geometries[i];
+        const writer = this.SEGMENT_WRITERS_[geometry2.getType()];
+        writer(feature, geometry2);
+      }
+    }
+    /**
+     * @param {import("../coordinate.js").Coordinate} coordinates Coordinates.
+     * @param {Array<Feature>} features The features being modified.
+     * @param {Array<import("../geom/SimpleGeometry.js").default>} geometries The geometries being modified.
+     * @param {boolean} existing The vertex represents an existing vertex.
+     * @return {Feature} Vertex feature.
+     * @private
+     */
+    createOrUpdateVertexFeature_(coordinates2, features, geometries, existing) {
+      let vertexFeature = this.vertexFeature_;
+      if (!vertexFeature) {
+        vertexFeature = new Feature(new Point$1(coordinates2));
+        this.vertexFeature_ = vertexFeature;
+        this.overlay_.getSource().addFeature(vertexFeature);
+      } else {
+        const geometry = vertexFeature.getGeometry();
+        geometry.setCoordinates(coordinates2);
+      }
+      vertexFeature.set("features", features);
+      vertexFeature.set("geometries", geometries);
+      vertexFeature.set("existing", existing);
+      return vertexFeature;
+    }
+    /**
+     * Handles the {@link module:ol/MapBrowserEvent~MapBrowserEvent map browser event} and may modify the geometry.
+     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Map browser event.
+     * @return {boolean} `false` to stop event propagation.
+     * @override
+     */
+    handleEvent(mapBrowserEvent) {
+      if (!mapBrowserEvent.originalEvent) {
+        return true;
+      }
+      this.lastPointerEvent_ = mapBrowserEvent;
+      let handled;
+      if (!mapBrowserEvent.map.getView().getInteracting() && mapBrowserEvent.type == MapBrowserEventType.POINTERMOVE && !this.handlingDownUpSequence) {
+        this.handlePointerMove_(mapBrowserEvent);
+      }
+      if (this.vertexFeature_ && this.deleteCondition_(mapBrowserEvent)) {
+        if (mapBrowserEvent.type != MapBrowserEventType.SINGLECLICK || !this.ignoreNextSingleClick_) {
+          handled = this.removePoint();
+        } else {
+          handled = true;
+        }
+      }
+      if (mapBrowserEvent.type == MapBrowserEventType.SINGLECLICK) {
+        this.ignoreNextSingleClick_ = false;
+      }
+      return super.handleEvent(mapBrowserEvent) && !handled;
+    }
+    /**
+     * @param {import("../coordinate.js").Coordinate} pixelCoordinate Pixel coordinate.
+     * @return {Array<SegmentData>|undefined} Insert vertices and update drag segments.
+     * @private
+     */
+    findInsertVerticesAndUpdateDragSegments_(pixelCoordinate) {
+      this.handlePointerAtPixel_(pixelCoordinate);
+      this.dragSegments_.length = 0;
+      this.featuresBeingModified_ = null;
+      const vertexFeature = this.vertexFeature_;
+      if (!vertexFeature) {
+        return;
+      }
+      this.getMap().getView().getProjection();
+      const insertVertices = [];
+      const vertex = this.vertexFeature_.getGeometry().getCoordinates();
+      const vertexExtent = boundingExtent([vertex]);
+      const segmentDataMatches = this.rBush_.getInExtent(vertexExtent);
+      const componentSegments = {};
+      segmentDataMatches.sort(compareIndexes);
+      for (let i = 0, ii = segmentDataMatches.length; i < ii; ++i) {
+        const segmentDataMatch = segmentDataMatches[i];
+        const segment = segmentDataMatch.segment;
+        let uid2 = getUid(segmentDataMatch.geometry);
+        const depth = segmentDataMatch.depth;
+        if (depth) {
+          uid2 += "-" + depth.join("-");
+        }
+        if (!componentSegments[uid2]) {
+          componentSegments[uid2] = new Array(2);
+        }
+        if (segmentDataMatch.geometry.getType() === "Circle" && segmentDataMatch.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+          const closestVertex = closestOnSegmentData(
+            pixelCoordinate,
+            segmentDataMatch
+          );
+          if (this.coordinatesEqual_(closestVertex, vertex) && !componentSegments[uid2][0]) {
+            this.dragSegments_.push([segmentDataMatch, 0]);
+            componentSegments[uid2][0] = segmentDataMatch;
+          }
+          continue;
+        }
+        if (this.coordinatesEqual_(segment[0], vertex) && !componentSegments[uid2][0]) {
+          this.dragSegments_.push([segmentDataMatch, 0]);
+          componentSegments[uid2][0] = segmentDataMatch;
+          continue;
+        }
+        if (this.coordinatesEqual_(segment[1], vertex) && !componentSegments[uid2][1]) {
+          if (componentSegments[uid2][0] && componentSegments[uid2][0].index === 0) {
+            let coordinates2 = segmentDataMatch.geometry.getCoordinates();
+            switch (segmentDataMatch.geometry.getType()) {
+              // prevent dragging closed linestrings by the connecting node
+              case "LineString":
+              case "MultiLineString":
+                continue;
+              // if dragging the first vertex of a polygon, ensure the other segment
+              // belongs to the closing vertex of the linear ring
+              case "MultiPolygon":
+                coordinates2 = coordinates2[depth[1]];
+              /* falls through */
+              case "Polygon":
+                if (segmentDataMatch.index !== coordinates2[depth[0]].length - 2) {
+                  continue;
+                }
+                break;
+            }
+          }
+          this.dragSegments_.push([segmentDataMatch, 1]);
+          componentSegments[uid2][1] = segmentDataMatch;
+          continue;
+        }
+        if (getUid(segment) in this.vertexSegments_ && !componentSegments[uid2][0] && !componentSegments[uid2][1]) {
+          insertVertices.push(segmentDataMatch);
+        }
+      }
+      return insertVertices;
+    }
+    /**
+     * @private
+     */
+    deactivateTrace_() {
+      this.traceState_ = { active: false };
+    }
+    /**
+     * Update the trace.
+     * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @private
+     */
+    updateTrace_(event) {
+      const traceState = this.traceState_;
+      if (!traceState.active) {
+        return;
+      }
+      if (traceState.targetIndex === -1) {
+        const startPx = event.map.getPixelFromCoordinate(traceState.startCoord);
+        if (distance(startPx, event.pixel) < this.pixelTolerance_) {
+          return;
+        }
+      }
+      const updatedTraceTarget = getTraceTargetUpdate(
+        event.coordinate,
+        traceState,
+        event.map,
+        this.pixelTolerance_
+      );
+      if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / event.map.getView().getResolution() > this.pixelTolerance_) {
+        return;
+      }
+      if (traceState.targetIndex !== updatedTraceTarget.index) {
+        if (traceState.targetIndex !== -1) {
+          const oldTarget = traceState.targets[traceState.targetIndex];
+          this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
+        } else {
+          for (const traceSegment of this.traceSegments_) {
+            const segmentData = traceSegment[0];
+            const geometry = segmentData.geometry;
+            const index2 = traceSegment[1];
+            const coordinates2 = geometry.getCoordinates();
+            const coordinatesArray = getCoordinatesArray(
+              coordinates2,
+              geometry.getType(),
+              segmentData.depth
+            );
+            coordinatesArray.splice(segmentData.index + index2, 1);
+            geometry.setCoordinates(coordinates2);
+            if (index2 === 0) {
+              segmentData.index -= 1;
+            }
+          }
+        }
+        const newTarget = traceState.targets[updatedTraceTarget.index];
+        this.addTracedCoordinates_(
+          newTarget,
+          newTarget.startIndex,
+          updatedTraceTarget.endIndex
+        );
+      } else {
+        const target3 = traceState.targets[traceState.targetIndex];
+        this.addOrRemoveTracedCoordinates_(target3, updatedTraceTarget.endIndex);
+      }
+      traceState.targetIndex = updatedTraceTarget.index;
+      const target2 = traceState.targets[traceState.targetIndex];
+      target2.endIndex = updatedTraceTarget.endIndex;
+    }
+    getTraceCandidates_(event) {
+      const map2 = this.getMap();
+      const tolerance = this.pixelTolerance_;
+      const lowerLeft = map2.getCoordinateFromPixel([
+        event.pixel[0] - tolerance,
+        event.pixel[1] + tolerance
+      ]);
+      const upperRight = map2.getCoordinateFromPixel([
+        event.pixel[0] + tolerance,
+        event.pixel[1] - tolerance
+      ]);
+      const extent = boundingExtent([lowerLeft, upperRight]);
+      const features = this.traceSource_.getFeaturesInExtent(extent);
+      return features;
+    }
+    /**
+     * Activate or deactivate trace state based on a browser event.
+     * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @private
+     */
+    toggleTraceState_(event) {
+      if (!this.traceSource_ || !this.traceCondition_(event)) {
+        return;
+      }
+      if (this.traceState_.active) {
+        this.deactivateTrace_();
+        this.traceSegments_ = null;
+        return;
+      }
+      const features = this.getTraceCandidates_(event);
+      if (features.length === 0) {
+        return;
+      }
+      const targets = getTraceTargets(event.coordinate, features);
+      if (targets.length) {
+        this.traceState_ = {
+          active: true,
+          startCoord: event.coordinate.slice(),
+          targets,
+          targetIndex: -1
+        };
+      }
+    }
+    /**
+     * @param {import('./tracing.js').TraceTarget} target The trace target.
+     * @param {number} endIndex The new end index of the trace.
+     * @private
+     */
+    addOrRemoveTracedCoordinates_(target2, endIndex) {
+      const previouslyForward = target2.startIndex <= target2.endIndex;
+      const currentlyForward = target2.startIndex <= endIndex;
+      if (previouslyForward === currentlyForward) {
+        if (previouslyForward && endIndex > target2.endIndex || !previouslyForward && endIndex < target2.endIndex) {
+          this.addTracedCoordinates_(target2, target2.endIndex, endIndex);
+        } else if (previouslyForward && endIndex < target2.endIndex || !previouslyForward && endIndex > target2.endIndex) {
+          this.removeTracedCoordinates_(endIndex, target2.endIndex);
+        }
+      } else {
+        this.removeTracedCoordinates_(target2.startIndex, target2.endIndex);
+        this.addTracedCoordinates_(target2, target2.startIndex, endIndex);
+      }
+    }
+    /**
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @private
+     */
+    removeTracedCoordinates_(fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return;
+      }
+      let remove2 = 0;
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end = Math.floor(toIndex);
+        if (end === toIndex) {
+          end -= 1;
+        }
+        remove2 = end - start2 + 1;
+      } else {
+        const start2 = Math.floor(fromIndex);
+        let end = Math.ceil(toIndex);
+        if (end === toIndex) {
+          end += 1;
+        }
+        remove2 = start2 - end + 1;
+      }
+      if (remove2 > 0) {
+        for (const traceSegment of this.traceSegments_) {
+          const segmentData = traceSegment[0];
+          const geometry = segmentData.geometry;
+          const index2 = traceSegment[1];
+          let removeIndex = traceSegment[0].index + 1;
+          if (index2 === 1) {
+            removeIndex -= remove2;
+          }
+          const coordinates2 = geometry.getCoordinates();
+          const coordinatesArray = getCoordinatesArray(
+            coordinates2,
+            geometry.getType(),
+            segmentData.depth
+          );
+          coordinatesArray.splice(removeIndex, remove2);
+          geometry.setCoordinates(coordinates2);
+          if (index2 === 1) {
+            segmentData.index -= remove2;
+          }
+        }
+      }
+    }
+    /**
+     * @param {import('./tracing.js').TraceTarget} target The trace target.
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @private
+     */
+    addTracedCoordinates_(target2, fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return;
+      }
+      const newCoordinates = [];
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end = Math.floor(toIndex);
+        if (end === toIndex) {
+          end -= 1;
+        }
+        for (let i = start2; i <= end; ++i) {
+          newCoordinates.push(getCoordinate(target2.coordinates, i));
+        }
+      } else {
+        const start2 = Math.floor(fromIndex);
+        let end = Math.ceil(toIndex);
+        if (end === toIndex) {
+          end += 1;
+        }
+        for (let i = start2; i >= end; --i) {
+          newCoordinates.push(getCoordinate(target2.coordinates, i));
+        }
+      }
+      if (newCoordinates.length) {
+        for (const traceSegment of this.traceSegments_) {
+          const segmentData = traceSegment[0];
+          const geometry = segmentData.geometry;
+          const index2 = traceSegment[1];
+          const insertIndex = segmentData.index + 1;
+          if (index2 === 0) {
+            newCoordinates.reverse();
+          }
+          const coordinates2 = geometry.getCoordinates();
+          const coordinatesArray = getCoordinatesArray(
+            coordinates2,
+            geometry.getType(),
+            segmentData.depth
+          );
+          coordinatesArray.splice(insertIndex, 0, ...newCoordinates);
+          geometry.setCoordinates(coordinates2);
+          if (index2 === 1) {
+            segmentData.index += newCoordinates.length;
+          }
+        }
+      }
+    }
+    /**
+     * @param {import('../coordinate.js').Coordinate} vertex Vertex.
+     * @param {DragSegment} dragSegment Drag segment.
+     */
+    updateGeometry_(vertex, dragSegment) {
+      const segmentData = dragSegment[0];
+      const depth = segmentData.depth;
+      let coordinates2;
+      const segment = segmentData.segment;
+      const geometry = segmentData.geometry;
+      const index2 = dragSegment[1];
+      const stride = geometry.getStride();
+      for (let i = 2; i < stride; ++i) {
+        vertex[i] = segment[index2][i];
+      }
+      vertex.length = stride;
+      switch (geometry.getType()) {
+        case "Point":
+          coordinates2 = vertex;
+          segment[0] = vertex;
+          segment[1] = vertex;
+          break;
+        case "MultiPoint":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[segmentData.index] = vertex;
+          segment[0] = vertex;
+          segment[1] = vertex;
+          break;
+        case "LineString":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[segmentData.index + index2] = vertex;
+          segment[index2] = vertex;
+          break;
+        case "MultiLineString":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[depth[0]][segmentData.index + index2] = vertex;
+          segment[index2] = vertex;
+          break;
+        case "Polygon": {
+          coordinates2 = geometry.getCoordinates();
+          const ring = coordinates2[depth[0]];
+          const targetIndex = segmentData.index + index2;
+          if (ring[targetIndex][0] === vertex[0] && ring[targetIndex][1] === vertex[1]) {
+            coordinates2 = null;
+          } else {
+            ring[targetIndex] = vertex;
+            if (targetIndex === 0) {
+              ring[ring.length - 1] = vertex;
+            } else if (targetIndex === ring.length - 1) {
+              ring[0] = vertex;
+            }
+          }
+          segment[index2] = vertex;
+          break;
+        }
+        case "MultiPolygon": {
+          coordinates2 = geometry.getCoordinates();
+          const mRing = coordinates2[depth[1]][depth[0]];
+          const mTargetIndex = segmentData.index + index2;
+          if (mRing[mTargetIndex][0] === vertex[0] && mRing[mTargetIndex][1] === vertex[1]) {
+            coordinates2 = null;
+          } else {
+            mRing[mTargetIndex] = vertex;
+            if (mTargetIndex === 0) {
+              mRing[mRing.length - 1] = vertex;
+            } else if (mTargetIndex === mRing.length - 1) {
+              mRing[0] = vertex;
+            }
+          }
+          segment[index2] = vertex;
+          break;
+        }
+        case "Circle":
+          const circle = (
+            /** @type {import("../geom/Circle.js").default} */
+            geometry
+          );
+          segment[0] = vertex;
+          segment[1] = vertex;
+          if (segmentData.index === CIRCLE_CENTER_INDEX) {
+            this.changingFeature_ = true;
+            circle.setCenter(vertex);
+            this.changingFeature_ = false;
+          } else {
+            this.changingFeature_ = true;
+            this.getMap().getView().getProjection();
+            let radius = distance(
+              fromUserCoordinate(circle.getCenter()),
+              fromUserCoordinate(vertex)
+            );
+            circle.setRadius(radius);
+            this.changingFeature_ = false;
+          }
+          break;
+      }
+      if (coordinates2) {
+        this.setGeometryCoordinates_(geometry, coordinates2);
+      }
+    }
+    /**
+     * Handle pointer drag events.
+     * @param {import("../MapBrowserEvent.js").default} evt Event.
+     * @override
+     */
+    handleDragEvent(evt) {
+      this.ignoreNextSingleClick_ = false;
+      this.willModifyFeatures_(
+        evt,
+        this.dragSegments_.map(([segment]) => segment)
+      );
+      const vertex = [
+        evt.coordinate[0] + this.delta_[0],
+        evt.coordinate[1] + this.delta_[1]
+      ];
+      const features = [];
+      const geometries = [];
+      const startTraceCoord = this.traceState_.active && !this.traceSegments_ ? this.traceState_.startCoord : null;
+      if (startTraceCoord) {
+        this.traceSegments_ = [];
+        for (const dragSegment of this.dragSegments_) {
+          const segmentData = dragSegment[0];
+          const eligibleForTracing = distance(
+            closestOnSegment(startTraceCoord, segmentData.segment),
+            startTraceCoord
+          ) / evt.map.getView().getResolution() < 1;
+          if (eligibleForTracing) {
+            this.traceSegments_.push(dragSegment);
+          }
+        }
+      }
+      for (let i = 0, ii = this.dragSegments_.length; i < ii; ++i) {
+        const dragSegment = this.dragSegments_[i];
+        const segmentData = dragSegment[0];
+        const feature = segmentData.feature;
+        if (!features.includes(feature)) {
+          features.push(feature);
+        }
+        const geometry = segmentData.geometry;
+        if (!geometries.includes(geometry)) {
+          geometries.push(geometry);
+        }
+        this.updateGeometry_(vertex, dragSegment);
+      }
+      this.updateTrace_(evt);
+      this.createOrUpdateVertexFeature_(vertex, features, geometries, true);
+    }
+    /**
+     * Handle pointer down events.
+     * @param {import("../MapBrowserEvent.js").default} evt Event.
+     * @return {boolean} If the event was consumed.
+     * @override
+     */
+    handleDownEvent(evt) {
+      if (!this.condition_(evt)) {
+        return false;
+      }
+      const pixelCoordinate = evt.coordinate;
+      const insertVertices = this.findInsertVerticesAndUpdateDragSegments_(pixelCoordinate);
+      if ((insertVertices == null ? void 0 : insertVertices.length) && this.insertVertexCondition_(evt)) {
+        this.willModifyFeatures_(evt, insertVertices);
+        if (this.vertexFeature_) {
+          const vertex = this.vertexFeature_.getGeometry().getCoordinates();
+          for (let j = insertVertices.length - 1; j >= 0; --j) {
+            this.insertVertex_(insertVertices[j], vertex);
+          }
+          this.ignoreNextSingleClick_ = true;
+        }
+      }
+      return !!this.vertexFeature_;
+    }
+    /**
+     * Handle pointer up events.
+     * @param {import("../MapBrowserEvent.js").default} evt Event.
+     * @return {boolean} If the event was consumed.
+     * @override
+     */
+    handleUpEvent(evt) {
+      for (let i = this.dragSegments_.length - 1; i >= 0; --i) {
+        const segmentData = this.dragSegments_[i][0];
+        const geometry = segmentData.geometry;
+        if (geometry.getType() === "Circle") {
+          const circle = (
+            /** @type {import("../geom/Circle.js").default} */
+            geometry
+          );
+          const coordinates2 = circle.getCenter();
+          const centerSegmentData = segmentData.featureSegments[0];
+          const circumferenceSegmentData = segmentData.featureSegments[1];
+          centerSegmentData.segment[0] = coordinates2;
+          centerSegmentData.segment[1] = coordinates2;
+          circumferenceSegmentData.segment[0] = coordinates2;
+          circumferenceSegmentData.segment[1] = coordinates2;
+          this.rBush_.update(createOrUpdateFromCoordinate(coordinates2), centerSegmentData);
+          let circleGeometry = circle;
+          this.rBush_.update(
+            circleGeometry.getExtent(),
+            circumferenceSegmentData
+          );
+        } else {
+          this.rBush_.update(boundingExtent(segmentData.segment), segmentData);
+        }
+      }
+      if (this.featuresBeingModified_) {
+        this.toggleTraceState_(evt);
+        this.dispatchEvent(
+          new ModifyEvent(
+            ModifyEventType.MODIFYEND,
+            this.featuresBeingModified_,
+            evt
+          )
+        );
+        this.featuresBeingModified_ = null;
+      }
+      return false;
+    }
+    /**
+     * @param {import("../MapBrowserEvent.js").default} evt Event.
+     * @private
+     */
+    handlePointerMove_(evt) {
+      this.lastCoordinate_ = evt.coordinate;
+      this.handlePointerAtPixel_(this.lastCoordinate_);
+    }
+    /**
+     * @param {import("../coordinate.js").Coordinate} pixelCoordinate The pixel Coordinate.
+     * @private
+     */
+    handlePointerAtPixel_(pixelCoordinate) {
+      const map2 = this.getMap();
+      const pixel = map2.getPixelFromCoordinate(pixelCoordinate);
+      map2.getView().getProjection();
+      const sortByDistance = function(a, b) {
+        return projectedDistanceToSegmentDataSquared(pixelCoordinate, a) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b);
+      };
+      let nodes;
+      let hitPointGeometry;
+      if (this.hitDetection_) {
+        const layerFilter = typeof this.hitDetection_ === "object" ? (layer) => layer === this.hitDetection_ : void 0;
+        map2.forEachFeatureAtPixel(
+          pixel,
+          (feature, layer, geometry) => {
+            if (geometry && geometry.getType() === "Point") {
+              geometry = new Point$1(
+                toUserCoordinate(geometry.getCoordinates())
+              );
+            }
+            const geom = geometry || feature.getGeometry();
+            if (geom && geom.getType() === "Point" && feature instanceof Feature && this.features_.includes(feature)) {
+              hitPointGeometry = /** @type {Point} */
+              geom;
+              const coordinate = (
+                /** @type {Point} */
+                feature.getGeometry().getFlatCoordinates().slice(0, 2)
+              );
+              nodes = [
+                {
+                  feature,
+                  geometry: hitPointGeometry,
+                  segment: [coordinate, coordinate]
+                }
+              ];
+            }
+            return true;
+          },
+          { layerFilter }
+        );
+      }
+      if (!nodes) {
+        const viewExtent = fromUserExtent(
+          createOrUpdateFromCoordinate(pixelCoordinate, tempExtent)
+        );
+        const buffer$12 = map2.getView().getResolution() * this.pixelTolerance_;
+        const box = toUserExtent(
+          buffer(viewExtent, buffer$12, tempExtent)
+        );
+        nodes = this.rBush_.getInExtent(box);
+      }
+      if (nodes && nodes.length > 0) {
+        const node = nodes.sort(sortByDistance)[0];
+        const closestSegment = node.segment;
+        let vertex = closestOnSegmentData(pixelCoordinate, node);
+        const vertexPixel = map2.getPixelFromCoordinate(vertex);
+        let dist = distance(pixel, vertexPixel);
+        if (hitPointGeometry || dist <= this.pixelTolerance_) {
+          const vertexSegments = {};
+          vertexSegments[getUid(closestSegment)] = true;
+          if (!this.snapToPointer_) {
+            this.delta_[0] = vertex[0] - pixelCoordinate[0];
+            this.delta_[1] = vertex[1] - pixelCoordinate[1];
+          }
+          if (node.geometry.getType() === "Circle" && node.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+            this.snappedToVertex_ = true;
+            this.createOrUpdateVertexFeature_(
+              vertex,
+              [node.feature],
+              [node.geometry],
+              this.snappedToVertex_
+            );
+          } else {
+            const pixel1 = map2.getPixelFromCoordinate(closestSegment[0]);
+            const pixel2 = map2.getPixelFromCoordinate(closestSegment[1]);
+            const squaredDist1 = squaredDistance(vertexPixel, pixel1);
+            const squaredDist2 = squaredDistance(vertexPixel, pixel2);
+            dist = Math.sqrt(Math.min(squaredDist1, squaredDist2));
+            this.snappedToVertex_ = dist <= this.pixelTolerance_;
+            if (!this.snappedToVertex_ && !this.insertVertexCondition_(this.lastPointerEvent_)) {
+              if (this.vertexFeature_) {
+                this.overlay_.getSource().removeFeature(this.vertexFeature_);
+                this.vertexFeature_ = null;
+              }
+              return;
+            }
+            if (this.snappedToVertex_) {
+              vertex = squaredDist1 > squaredDist2 ? closestSegment[1] : closestSegment[0];
+            }
+            this.createOrUpdateVertexFeature_(
+              vertex,
+              [node.feature],
+              [node.geometry],
+              this.snappedToVertex_
+            );
+            const geometries = {};
+            geometries[getUid(node.geometry)] = true;
+            for (let i = 1, ii = nodes.length; i < ii; ++i) {
+              const segment = nodes[i].segment;
+              if (this.coordinatesEqual_(closestSegment[0], segment[0]) && this.coordinatesEqual_(closestSegment[1], segment[1]) || this.coordinatesEqual_(closestSegment[0], segment[1]) && this.coordinatesEqual_(closestSegment[1], segment[0])) {
+                const geometryUid = getUid(nodes[i].geometry);
+                if (!(geometryUid in geometries)) {
+                  geometries[geometryUid] = true;
+                  vertexSegments[getUid(segment)] = true;
+                }
+              } else {
+                break;
+              }
+            }
+          }
+          this.vertexSegments_ = vertexSegments;
+          return;
+        }
+      }
+      if (this.vertexFeature_) {
+        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.vertexFeature_ = null;
+      }
+    }
+    /**
+     * @param {SegmentData} segmentData Segment data.
+     * @param {import("../coordinate.js").Coordinate} vertex Vertex.
+     * @return {boolean} A vertex was inserted.
+     * @private
+     */
+    insertVertex_(segmentData, vertex) {
+      const segment = segmentData.segment;
+      const feature = segmentData.feature;
+      const geometry = segmentData.geometry;
+      const depth = segmentData.depth;
+      const index2 = segmentData.index;
+      let coordinates2;
+      while (vertex.length < geometry.getStride()) {
+        vertex.push(0);
+      }
+      switch (geometry.getType()) {
+        case "MultiLineString":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[depth[0]].splice(index2 + 1, 0, vertex);
+          break;
+        case "Polygon":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[depth[0]].splice(index2 + 1, 0, vertex);
+          break;
+        case "MultiPolygon":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2[depth[1]][depth[0]].splice(index2 + 1, 0, vertex);
+          break;
+        case "LineString":
+          coordinates2 = geometry.getCoordinates();
+          coordinates2.splice(index2 + 1, 0, vertex);
+          break;
+        default:
+          return false;
+      }
+      this.setGeometryCoordinates_(geometry, coordinates2);
+      const rTree = this.rBush_;
+      rTree.remove(segmentData);
+      this.updateSegmentIndices_(geometry, index2, depth, 1);
+      const newSegmentData = {
+        segment: [segment[0], vertex],
+        feature,
+        geometry,
+        depth,
+        index: index2
+      };
+      rTree.insert(boundingExtent(newSegmentData.segment), newSegmentData);
+      this.dragSegments_.push([newSegmentData, 1]);
+      const newSegmentData2 = {
+        segment: [vertex, segment[1]],
+        feature,
+        geometry,
+        depth,
+        index: index2 + 1
+      };
+      rTree.insert(boundingExtent(newSegmentData2.segment), newSegmentData2);
+      this.dragSegments_.push([newSegmentData2, 0]);
+      return true;
+    }
+    /**
+     * @param {import("../coordinate.js").Coordinate} coordinate The coordinate.
+     * @return {import("../coordinate.js").Coordinate} The updated pointer coordinate.
+     * @private
+     */
+    updatePointer_(coordinate) {
+      var _a;
+      if (coordinate) {
+        this.findInsertVerticesAndUpdateDragSegments_(coordinate);
+      }
+      return (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+    }
+    /**
+     * Get the current pointer position.
+     * @return {import("../coordinate.js").Coordinate | null} The current pointer coordinate.
+     */
+    getPoint() {
+      var _a;
+      const coordinate = (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+      if (!coordinate) {
+        return null;
+      }
+      return toUserCoordinate(
+        coordinate,
+        this.getMap().getView().getProjection()
+      );
+    }
+    /**
+     * Check if a point can be removed from the current linestring or polygon at the current
+     * pointer position.
+     * @return {boolean} A point can be deleted at the current pointer position.
+     * @api
+     */
+    canRemovePoint() {
+      if (!this.vertexFeature_) {
+        return false;
+      }
+      if (this.vertexFeature_.get("geometries").every(
+        (geometry) => geometry.getType() === "Circle" || geometry.getType().endsWith("Point")
+      )) {
+        return false;
+      }
+      const coordinate = this.vertexFeature_.getGeometry().getCoordinates();
+      const segments = this.rBush_.getInExtent(boundingExtent([coordinate]));
+      return segments.some(
+        ({ segment }) => this.coordinatesEqual_(segment[0], coordinate) || this.coordinatesEqual_(segment[1], coordinate)
+      );
+    }
+    /**
+     * Removes the vertex currently being pointed from the current linestring or polygon.
+     * @param {import('../coordinate.js').Coordinate} [coordinate] If provided, the pointer
+     * will be set to the provided coordinate. If not, the current pointer coordinate will be used.
+     * @return {boolean} True when a vertex was removed.
+     * @api
+     */
+    removePoint(coordinate) {
+      if (coordinate) {
+        coordinate = fromUserCoordinate(
+          coordinate,
+          this.getMap().getView().getProjection()
+        );
+        this.updatePointer_(coordinate);
+      }
+      if (!this.lastPointerEvent_ || this.lastPointerEvent_ && this.lastPointerEvent_.type != MapBrowserEventType.POINTERDRAG) {
+        const evt = this.lastPointerEvent_;
+        this.willModifyFeatures_(
+          evt,
+          this.dragSegments_.map(([segment]) => segment)
+        );
+        const removed = this.removeVertex_();
+        if (this.featuresBeingModified_) {
+          this.dispatchEvent(
+            new ModifyEvent(
+              ModifyEventType.MODIFYEND,
+              this.featuresBeingModified_,
+              evt
+            )
+          );
+        }
+        this.featuresBeingModified_ = null;
+        return removed;
+      }
+      return false;
+    }
+    /**
+     * Removes a vertex from all matching features.
+     * @return {boolean} True when a vertex was removed.
+     * @private
+     */
+    removeVertex_() {
+      const dragSegments = this.dragSegments_;
+      const segmentsByFeature = {};
+      let deleted = false;
+      let component, coordinates2, dragSegment, geometry, i, index2, left;
+      let newIndex2, right, segmentData, uid2;
+      for (i = dragSegments.length - 1; i >= 0; --i) {
+        dragSegment = dragSegments[i];
+        segmentData = dragSegment[0];
+        uid2 = getUid(segmentData.feature);
+        if (segmentData.depth) {
+          uid2 += "-" + segmentData.depth.join("-");
+        }
+        if (!(uid2 in segmentsByFeature)) {
+          segmentsByFeature[uid2] = {};
+        }
+        if (dragSegment[1] === 0) {
+          segmentsByFeature[uid2].right = segmentData;
+          segmentsByFeature[uid2].index = segmentData.index;
+        } else if (dragSegment[1] == 1) {
+          segmentsByFeature[uid2].left = segmentData;
+          segmentsByFeature[uid2].index = segmentData.index + 1;
+        }
+      }
+      for (uid2 in segmentsByFeature) {
+        right = segmentsByFeature[uid2].right;
+        left = segmentsByFeature[uid2].left;
+        index2 = segmentsByFeature[uid2].index;
+        newIndex2 = index2 - 1;
+        if (left !== void 0) {
+          segmentData = left;
+        } else {
+          segmentData = right;
+        }
+        if (newIndex2 < 0) {
+          newIndex2 = 0;
+        }
+        geometry = segmentData.geometry;
+        coordinates2 = geometry.getCoordinates();
+        component = coordinates2;
+        deleted = false;
+        switch (geometry.getType()) {
+          case "MultiLineString":
+            if (coordinates2[segmentData.depth[0]].length > 2) {
+              coordinates2[segmentData.depth[0]].splice(index2, 1);
+              deleted = true;
+            }
+            break;
+          case "LineString":
+            if (coordinates2.length > 2) {
+              coordinates2.splice(index2, 1);
+              deleted = true;
+            }
+            break;
+          case "MultiPolygon":
+            component = component[segmentData.depth[1]];
+          /* falls through */
+          case "Polygon":
+            component = component[segmentData.depth[0]];
+            if (component.length > 4) {
+              if (index2 == component.length - 1) {
+                index2 = 0;
+              }
+              component.splice(index2, 1);
+              deleted = true;
+              if (index2 === 0) {
+                component.pop();
+                component.push(component[0]);
+                newIndex2 = component.length - 1;
+              }
+            }
+            break;
+        }
+        if (deleted) {
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          const segments = [];
+          if (left !== void 0) {
+            this.rBush_.remove(left);
+            segments.push(left.segment[0]);
+          }
+          if (right !== void 0) {
+            this.rBush_.remove(right);
+            segments.push(right.segment[1]);
+          }
+          if (left !== void 0 && right !== void 0) {
+            const newSegmentData = {
+              depth: segmentData.depth,
+              feature: segmentData.feature,
+              geometry: segmentData.geometry,
+              index: newIndex2,
+              segment: segments
+            };
+            this.rBush_.insert(
+              boundingExtent(newSegmentData.segment),
+              newSegmentData
+            );
+          }
+          this.updateSegmentIndices_(geometry, index2, segmentData.depth, -1);
+          if (this.vertexFeature_) {
+            this.overlay_.getSource().removeFeature(this.vertexFeature_);
+            this.vertexFeature_ = null;
+          }
+          dragSegments.length = 0;
+        }
+      }
+      return deleted;
+    }
+    /**
+     * Check if a point can be inserted to the current linestring or polygon at the current
+     * pointer position.
+     * @return {boolean} A point can be inserted at the current pointer position.
+     * @api
+     */
+    canInsertPoint() {
+      if (!this.vertexFeature_) {
+        return false;
+      }
+      if (this.vertexFeature_.get("geometries").every(
+        (geometry) => geometry.getType() === "Circle" || geometry.getType().endsWith("Point")
+      )) {
+        return false;
+      }
+      const coordinate = this.vertexFeature_.getGeometry().getCoordinates();
+      const segments = this.rBush_.getInExtent(boundingExtent([coordinate]));
+      return segments.some(
+        ({ segment }) => !(this.coordinatesEqual_(segment[0], coordinate) || this.coordinatesEqual_(segment[1], coordinate))
+      );
+    }
+    /**
+     * Inserts the vertex currently being pointed to the current linestring or polygon.
+     * @param {import('../coordinate.js').Coordinate} [coordinate] If provided, the pointer
+     * will be set to the provided coordinate. If not, the current pointer coordinate will be used.
+     * @return {boolean} A vertex was inserted.
+     * @api
+     */
+    insertPoint(coordinate) {
+      var _a;
+      const pixelCoordinate = coordinate ? fromUserCoordinate(coordinate, this.getMap().getView().getProjection()) : (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+      if (!pixelCoordinate) {
+        return false;
+      }
+      const insertVertices = this.findInsertVerticesAndUpdateDragSegments_(pixelCoordinate);
+      return insertVertices.reduce(
+        (prev, segmentData) => prev || this.insertVertex_(segmentData, pixelCoordinate),
+        false
+      );
+    }
+    /**
+     * @param {import("../geom/SimpleGeometry.js").default} geometry Geometry.
+     * @param {Array} coordinates Coordinates.
+     * @private
+     */
+    setGeometryCoordinates_(geometry, coordinates2) {
+      this.changingFeature_ = true;
+      geometry.setCoordinates(coordinates2);
+      this.changingFeature_ = false;
+    }
+    /**
+     * @param {import("../geom/SimpleGeometry.js").default} geometry Geometry.
+     * @param {number} index Index.
+     * @param {Array<number>|undefined} depth Depth.
+     * @param {number} delta Delta (1 or -1).
+     * @private
+     */
+    updateSegmentIndices_(geometry, index2, depth, delta) {
+      this.rBush_.forEachInExtent(
+        geometry.getExtent(),
+        function(segmentDataMatch) {
+          if (segmentDataMatch.geometry === geometry && (depth === void 0 || segmentDataMatch.depth === void 0 || equals$2(segmentDataMatch.depth, depth)) && segmentDataMatch.index > index2) {
+            segmentDataMatch.index += delta;
+          }
+        }
+      );
+    }
+    /**
+     * @override
+     */
+    disposeInternal() {
+      super.disposeInternal();
+      if (this.featuresCollection_) {
+        this.featuresCollection_.removeEventListener(
+          CollectionEventType.ADD,
+          this.handleExternalCollectionAdd_
+        );
+        this.featuresCollection_.removeEventListener(
+          CollectionEventType.REMOVE,
+          this.handleExternalCollectionRemove_
+        );
+        for (const feature of this.featuresCollection_.getArray()) {
+          feature.removeEventListener(
+            EventType.CHANGE,
+            this.handleFeatureChange_
+          );
+          if (this.filterFunctionWasSupplied_) {
+            feature.removeEventListener(
+              ObjectEventType.PROPERTYCHANGE,
+              this.handleFeatureChange_
+            );
+          }
+        }
+      } else if (this.source_) {
+        this.source_.removeEventListener(
+          VectorEventType.ADDFEATURE,
+          this.handleSourceAdd_
+        );
+        this.source_.removeEventListener(
+          VectorEventType.REMOVEFEATURE,
+          this.handleSourceRemove_
+        );
+        for (const feature of this.source_.getFeatures()) {
+          feature.removeEventListener(
+            EventType.CHANGE,
+            this.handleFeatureChange_
+          );
+          if (this.filterFunctionWasSupplied_) {
+            feature.removeEventListener(
+              ObjectEventType.PROPERTYCHANGE,
+              this.handleFeatureChange_
+            );
+          }
+        }
+      }
+    }
+  }
+  function compareIndexes(a, b) {
+    return a.index - b.index;
+  }
+  function projectedDistanceToSegmentDataSquared(pointCoordinates, segmentData, projection) {
+    const geometry = segmentData.geometry;
+    if (geometry.getType() === "Circle") {
+      let circleGeometry = (
+        /** @type {import("../geom/Circle.js").default} */
+        geometry
+      );
+      if (segmentData.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+        const distanceToCenterSquared = squaredDistance(
+          circleGeometry.getCenter(),
+          fromUserCoordinate(pointCoordinates)
+        );
+        const distanceToCircumference = Math.sqrt(distanceToCenterSquared) - circleGeometry.getRadius();
+        return distanceToCircumference * distanceToCircumference;
+      }
+    }
+    const coordinate = fromUserCoordinate(pointCoordinates);
+    tempSegment$1[0] = fromUserCoordinate(segmentData.segment[0]);
+    tempSegment$1[1] = fromUserCoordinate(segmentData.segment[1]);
+    return squaredDistanceToSegment(coordinate, tempSegment$1);
+  }
+  function closestOnSegmentData(pointCoordinates, segmentData, projection) {
+    const geometry = segmentData.geometry;
+    if (geometry.getType() === "Circle" && segmentData.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+      let circleGeometry = (
+        /** @type {import("../geom/Circle.js").default} */
+        geometry
+      );
+      return toUserCoordinate(
+        circleGeometry.getClosestPoint(
+          fromUserCoordinate(pointCoordinates)
+        )
+      );
+    }
+    const coordinate = fromUserCoordinate(pointCoordinates);
+    tempSegment$1[0] = fromUserCoordinate(segmentData.segment[0]);
+    tempSegment$1[1] = fromUserCoordinate(segmentData.segment[1]);
+    return toUserCoordinate(
+      closestOnSegment(coordinate, tempSegment$1)
+    );
+  }
+  function getDefaultStyleFunction() {
+    const style = createEditingStyle();
+    return function(feature, resolution) {
+      return style["Point"];
+    };
+  }
+  const SnapEventType = {
+    /**
+     * Triggered upon snapping to vertex or edge
+     * @event SnapEvent#snap
+     * @api
+     */
+    SNAP: "snap",
+    /**
+     * Triggered if no longer snapped
+     * @event SnapEvent#unsnap
+     * @api
+     */
+    UNSNAP: "unsnap"
+  };
+  class SnapEvent extends BaseEvent {
+    /**
+     * @param {SnapEventType} type Type.
+     * @param {Object} options Options.
+     * @param {import("../coordinate.js").Coordinate} options.vertex The snapped vertex.
+     * @param {import("../coordinate.js").Coordinate} options.vertexPixel The pixel of the snapped vertex.
+     * @param {import("../Feature.js").default} options.feature The feature being snapped.
+     * @param {Array<import("../coordinate.js").Coordinate>|null} options.segment Segment, or `null` if snapped to a vertex.
+     */
+    constructor(type, options) {
+      super(type);
+      this.vertex = options.vertex;
+      this.vertexPixel = options.vertexPixel;
+      this.feature = options.feature;
+      this.segment = options.segment;
+    }
+  }
+  const GEOMETRY_SEGMENTERS = {
+    /**
+     * @param {import("../geom/Circle.js").default} geometry Geometry.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {Array<Segment>} Segments
+     */
+    Circle(geometry, projection) {
+      let circleGeometry = geometry;
+      const polygon = fromCircle(circleGeometry);
+      return GEOMETRY_SEGMENTERS.Polygon(polygon);
+    },
+    /**
+     * @param {import("../geom/GeometryCollection.js").default} geometry Geometry.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @return {Array<Segment>} Segments
+     */
+    GeometryCollection(geometry, projection) {
+      const segments = [];
+      const geometries = geometry.getGeometriesArray();
+      for (let i = 0; i < geometries.length; ++i) {
+        const segmenter = this[geometries[i].getType()];
+        if (segmenter) {
+          segments.push(segmenter(geometries[i], projection));
+        }
+      }
+      return segments.flat();
+    },
+    /**
+     * @param {import("../geom/LineString.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    LineString(geometry) {
+      const segments = [];
+      const coordinates2 = geometry.getFlatCoordinates();
+      const stride = geometry.getStride();
+      for (let i = 0, ii = coordinates2.length - stride; i < ii; i += stride) {
+        segments.push([
+          coordinates2.slice(i, i + 2),
+          coordinates2.slice(i + stride, i + stride + 2)
+        ]);
+      }
+      return segments;
+    },
+    /**
+     * @param {import("../geom/MultiLineString.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    MultiLineString(geometry) {
+      const segments = [];
+      const coordinates2 = geometry.getFlatCoordinates();
+      const stride = geometry.getStride();
+      const ends = geometry.getEnds();
+      let offset2 = 0;
+      for (let i = 0, ii = ends.length; i < ii; ++i) {
+        const end = ends[i];
+        for (let j = offset2, jj = end - stride; j < jj; j += stride) {
+          segments.push([
+            coordinates2.slice(j, j + 2),
+            coordinates2.slice(j + stride, j + stride + 2)
+          ]);
+        }
+        offset2 = end;
+      }
+      return segments;
+    },
+    /**
+     * @param {import("../geom/MultiPoint.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    MultiPoint(geometry) {
+      const segments = [];
+      const coordinates2 = geometry.getFlatCoordinates();
+      const stride = geometry.getStride();
+      for (let i = 0, ii = coordinates2.length; i < ii; i += stride) {
+        segments.push([coordinates2.slice(i, i + 2)]);
+      }
+      return segments;
+    },
+    /**
+     * @param {import("../geom/MultiPolygon.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    MultiPolygon(geometry) {
+      const segments = [];
+      const coordinates2 = geometry.getFlatCoordinates();
+      const stride = geometry.getStride();
+      const endss = geometry.getEndss();
+      let offset2 = 0;
+      for (let i = 0, ii = endss.length; i < ii; ++i) {
+        const ends = endss[i];
+        for (let j = 0, jj = ends.length; j < jj; ++j) {
+          const end = ends[j];
+          for (let k = offset2, kk = end - stride; k < kk; k += stride) {
+            segments.push([
+              coordinates2.slice(k, k + 2),
+              coordinates2.slice(k + stride, k + stride + 2)
+            ]);
+          }
+          offset2 = end;
+        }
+      }
+      return segments;
+    },
+    /**
+     * @param {import("../geom/Point.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    Point(geometry) {
+      return [[geometry.getFlatCoordinates().slice(0, 2)]];
+    },
+    /**
+     * @param {import("../geom/Polygon.js").default} geometry Geometry.
+     * @return {Array<Segment>} Segments
+     */
+    Polygon(geometry) {
+      const segments = [];
+      const coordinates2 = geometry.getFlatCoordinates();
+      const stride = geometry.getStride();
+      const ends = geometry.getEnds();
+      let offset2 = 0;
+      for (let i = 0, ii = ends.length; i < ii; ++i) {
+        const end = ends[i];
+        for (let j = offset2, jj = end - stride; j < jj; j += stride) {
+          segments.push([
+            coordinates2.slice(j, j + 2),
+            coordinates2.slice(j + stride, j + stride + 2)
+          ]);
+        }
+        offset2 = end;
+      }
+      return segments;
+    }
+  };
+  function getFeatureFromEvent(evt) {
+    if (
+      /** @type {import("../source/Vector.js").VectorSourceEvent} */
+      evt.feature
+    ) {
+      return (
+        /** @type {import("../source/Vector.js").VectorSourceEvent} */
+        evt.feature
+      );
+    }
+    if (
+      /** @type {import("../Collection.js").CollectionEvent<import("../Feature.js").default>} */
+      evt.element
+    ) {
+      return (
+        /** @type {import("../Collection.js").CollectionEvent<import("../Feature.js").default>} */
+        evt.element
+      );
+    }
+    return null;
+  }
+  const tempSegment = [];
+  const tempExtents = [];
+  const tempSegmentData = [];
+  class Snap extends PointerInteraction {
+    /**
+     * @param {Options} [options] Options.
+     */
+    constructor(options) {
+      options = options ? options : {};
+      super({
+        handleDownEvent: TRUE,
+        stopDown: FALSE
+      });
+      this.on;
+      this.once;
+      this.un;
+      this.source_ = options.source ? options.source : null;
+      this.vertex_ = options.vertex !== void 0 ? options.vertex : true;
+      this.edge_ = options.edge !== void 0 ? options.edge : true;
+      this.intersection_ = options.intersection !== void 0 ? options.intersection : false;
+      this.features_ = options.features ? options.features : null;
+      this.featuresListenerKeys_ = [];
+      this.featureChangeListenerKeys_ = {};
+      this.indexedFeaturesExtents_ = {};
+      this.pendingFeatures_ = {};
+      this.pixelTolerance_ = options.pixelTolerance !== void 0 ? options.pixelTolerance : 10;
+      this.rBush_ = new RBush();
+      this.snapped_ = null;
+      this.segmenters_ = Object.assign(
+        {},
+        GEOMETRY_SEGMENTERS,
+        options.segmenters
+      );
+    }
+    /**
+     * Add a feature to the collection of features that we may snap to.
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {boolean} [register] Whether to listen to the feature change or not
+     *     Defaults to `true`.
+     * @api
+     */
+    addFeature(feature, register2) {
+      register2 = register2 !== void 0 ? register2 : true;
+      const feature_uid = getUid(feature);
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        const segmenter = this.segmenters_[geometry.getType()];
+        if (segmenter) {
+          this.indexedFeaturesExtents_[feature_uid] = geometry.getExtent(createEmpty());
+          const segments = segmenter.call(
+            this.segmenters_,
+            geometry,
+            this.getMap().getView().getProjection()
+          );
+          let segmentCount = segments.length;
+          for (let i = 0; i < segmentCount; ++i) {
+            const segment = segments[i];
+            tempExtents[i] = boundingExtent(segment);
+            tempSegmentData[i] = {
+              feature,
+              segment
+            };
+          }
+          if (this.intersection_) {
+            for (let j = 0, jj = segments.length; j < jj; ++j) {
+              const segment = segments[j];
+              if (segment.length === 1) {
+                continue;
+              }
+              const extent = tempExtents[j];
+              for (let k = 0, kk = j - 1; k < kk; ++k) {
+                const otherSegment = segments[k];
+                if (otherSegment.length === 1 || !intersects$1(extent, tempExtents[k])) {
+                  continue;
+                }
+                const intersection = getIntersectionPoint(segment, otherSegment);
+                if (!intersection) {
+                  continue;
+                }
+                const intersectionSegment = [intersection];
+                tempExtents[segmentCount] = boundingExtent(intersectionSegment);
+                tempSegmentData[segmentCount++] = {
+                  feature,
+                  intersectionFeature: feature,
+                  segment: intersectionSegment
+                };
+              }
+              const otherSegments = this.rBush_.getInExtent(tempExtents[j]);
+              for (let k = 0, kk = otherSegments.length; k < kk; ++k) {
+                const otherSegment = otherSegments[k].segment;
+                if (otherSegment.length === 1) {
+                  continue;
+                }
+                const intersection = getIntersectionPoint(segment, otherSegment);
+                if (!intersection) {
+                  continue;
+                }
+                const intersectionSegment = [intersection];
+                tempExtents[segmentCount] = boundingExtent(intersectionSegment);
+                tempSegmentData[segmentCount++] = {
+                  feature,
+                  intersectionFeature: otherSegments[k].feature,
+                  segment: intersectionSegment
+                };
+              }
+            }
+          }
+          if (segmentCount === 1) {
+            this.rBush_.insert(tempExtents[0], tempSegmentData[0]);
+          } else {
+            tempExtents.length = segmentCount;
+            tempSegmentData.length = segmentCount;
+            this.rBush_.load(tempExtents, tempSegmentData);
+          }
+        }
+      }
+      if (register2) {
+        if (this.featureChangeListenerKeys_[feature_uid]) {
+          unlistenByKey(this.featureChangeListenerKeys_[feature_uid]);
+        }
+        this.featureChangeListenerKeys_[feature_uid] = listen(
+          feature,
+          EventType.CHANGE,
+          this.handleFeatureChange_,
+          this
+        );
+      }
+    }
+    /**
+     * @return {import("../Collection.js").default<import("../Feature.js").default>|Array<import("../Feature.js").default>} Features.
+     * @private
+     */
+    getFeatures_() {
+      let features;
+      if (this.features_) {
+        features = this.features_;
+      } else if (this.source_) {
+        features = this.source_.getFeatures();
+      }
+      return features;
+    }
+    /**
+     * Checks if two snap data sets are equal.
+     * Compares the segment and the feature.
+     *
+     * @param {SnappedInfo} data1 The first snap data set.
+     * @param {SnappedInfo} data2 The second snap data set.
+     * @return {boolean} `true` if the data sets are equal, otherwise `false`.
+     * @private
+     */
+    areSnapDataEqual_(data1, data2) {
+      return data1.segment === data2.segment && data1.feature === data2.feature;
+    }
+    /**
+     * @param {import("../MapBrowserEvent.js").default} evt Map browser event.
+     * @return {boolean} `false` to stop event propagation.
+     * @api
+     * @override
+     */
+    handleEvent(evt) {
+      const result = this.snapTo(evt.pixel, evt.coordinate, evt.map);
+      if (result) {
+        evt.coordinate = result.vertex.slice(0, 2);
+        evt.pixel = result.vertexPixel;
+        if (this.snapped_ && !this.areSnapDataEqual_(this.snapped_, result)) {
+          this.dispatchEvent(new SnapEvent(SnapEventType.UNSNAP, this.snapped_));
+        }
+        this.snapped_ = {
+          vertex: evt.coordinate,
+          vertexPixel: evt.pixel,
+          feature: result.feature,
+          segment: result.segment
+        };
+        this.dispatchEvent(new SnapEvent(SnapEventType.SNAP, this.snapped_));
+      } else if (this.snapped_) {
+        this.dispatchEvent(new SnapEvent(SnapEventType.UNSNAP, this.snapped_));
+        this.snapped_ = null;
+      }
+      return super.handleEvent(evt);
+    }
+    /**
+     * @param {import("../source/Vector.js").VectorSourceEvent|import("../Collection.js").CollectionEvent<import("../Feature.js").default>} evt Event.
+     * @private
+     */
+    handleFeatureAdd_(evt) {
+      const feature = getFeatureFromEvent(evt);
+      if (feature) {
+        this.addFeature(feature);
+      }
+    }
+    /**
+     * @param {import("../source/Vector.js").VectorSourceEvent|import("../Collection.js").CollectionEvent<import("../Feature.js").default>} evt Event.
+     * @private
+     */
+    handleFeatureRemove_(evt) {
+      const feature = getFeatureFromEvent(evt);
+      if (feature) {
+        this.removeFeature(feature);
+        delete this.pendingFeatures_[getUid(feature)];
+      }
+    }
+    /**
+     * @param {import("../events/Event.js").default} evt Event.
+     * @private
+     */
+    handleFeatureChange_(evt) {
+      const feature = (
+        /** @type {import("../Feature.js").default} */
+        evt.target
+      );
+      if (this.handlingDownUpSequence) {
+        this.pendingFeatures_[getUid(feature)] = feature;
+      } else {
+        this.updateFeature_(feature);
+      }
+    }
+    /**
+     * Handle pointer up events.
+     * @param {import("../MapBrowserEvent.js").default} evt Event.
+     * @return {boolean} If the event was consumed.
+     * @override
+     */
+    handleUpEvent(evt) {
+      const featuresToUpdate = Object.values(this.pendingFeatures_);
+      if (featuresToUpdate.length) {
+        for (const feature of featuresToUpdate) {
+          this.updateFeature_(feature);
+        }
+        clear$1(this.pendingFeatures_);
+      }
+      return false;
+    }
+    /**
+     * Remove a feature from the collection of features that we may snap to.
+     * @param {import("../Feature.js").default} feature Feature
+     * @param {boolean} [unlisten] Whether to unlisten to the feature change
+     *     or not. Defaults to `true`.
+     * @api
+     */
+    removeFeature(feature, unlisten) {
+      const unregister = unlisten !== void 0 ? unlisten : true;
+      const feature_uid = getUid(feature);
+      const extent = this.indexedFeaturesExtents_[feature_uid];
+      if (extent) {
+        const rBush = this.rBush_;
+        rBush.getInExtent(extent).forEach((node) => {
+          if (feature === node.feature || feature === node.intersectionFeature) {
+            rBush.remove(node);
+          }
+        });
+      }
+      if (unregister) {
+        unlistenByKey(this.featureChangeListenerKeys_[feature_uid]);
+        delete this.featureChangeListenerKeys_[feature_uid];
+      }
+    }
+    /**
+     * Remove the interaction from its current map and attach it to the new map.
+     * Subclasses may set up event handlers to get notified about changes to
+     * the map here.
+     * @param {import("../Map.js").default} map Map.
+     * @override
+     */
+    setMap(map2) {
+      const currentMap = this.getMap();
+      const keys = this.featuresListenerKeys_;
+      let features = this.getFeatures_();
+      if (!Array.isArray(features)) {
+        features = features.getArray();
+      }
+      if (currentMap) {
+        keys.forEach(unlistenByKey);
+        keys.length = 0;
+        this.rBush_.clear();
+        Object.values(this.featureChangeListenerKeys_).forEach(unlistenByKey);
+        this.featureChangeListenerKeys_ = {};
+      }
+      super.setMap(map2);
+      if (map2) {
+        if (this.features_) {
+          keys.push(
+            listen(
+              this.features_,
+              CollectionEventType.ADD,
+              this.handleFeatureAdd_,
+              this
+            ),
+            listen(
+              this.features_,
+              CollectionEventType.REMOVE,
+              this.handleFeatureRemove_,
+              this
+            )
+          );
+        } else if (this.source_) {
+          keys.push(
+            listen(
+              this.source_,
+              VectorEventType.ADDFEATURE,
+              this.handleFeatureAdd_,
+              this
+            ),
+            listen(
+              this.source_,
+              VectorEventType.REMOVEFEATURE,
+              this.handleFeatureRemove_,
+              this
+            )
+          );
+        }
+        for (const feature of features) {
+          this.addFeature(feature);
+        }
+      }
+    }
+    /**
+     * @param {import("../pixel.js").Pixel} pixel Pixel
+     * @param {import("../coordinate.js").Coordinate} pixelCoordinate Coordinate
+     * @param {import("../Map.js").default} map Map.
+     * @return {SnappedInfo|null} Snap result
+     */
+    snapTo(pixel, pixelCoordinate, map2) {
+      map2.getView().getProjection();
+      const projectedCoordinate = fromUserCoordinate(pixelCoordinate);
+      const box = toUserExtent(
+        buffer(
+          boundingExtent([projectedCoordinate]),
+          map2.getView().getResolution() * this.pixelTolerance_
+        )
+      );
+      const segments = this.rBush_.getInExtent(box);
+      const segmentsLength = segments.length;
+      if (segmentsLength === 0) {
+        return null;
+      }
+      let closestVertex;
+      let minSquaredDistance = Infinity;
+      let closestFeature;
+      let closestSegment = null;
+      const squaredPixelTolerance = this.pixelTolerance_ * this.pixelTolerance_;
+      const getResult = () => {
+        if (!closestVertex) {
+          return null;
+        }
+        const vertexPixel = map2.getPixelFromCoordinate(closestVertex);
+        const squaredPixelDistance = squaredDistance(pixel, vertexPixel);
+        if (squaredPixelDistance > squaredPixelTolerance) {
+          return null;
+        }
+        return {
+          vertex: closestVertex,
+          vertexPixel: [Math.round(vertexPixel[0]), Math.round(vertexPixel[1])],
+          feature: closestFeature,
+          segment: closestSegment
+        };
+      };
+      if (this.vertex_ || this.intersection_) {
+        for (let i = 0; i < segmentsLength; ++i) {
+          const segmentData = segments[i];
+          if (segmentData.feature.getGeometry().getType() !== "Circle") {
+            for (const vertex of segmentData.segment) {
+              const tempVertexCoord = fromUserCoordinate(vertex);
+              const delta = squaredDistance(projectedCoordinate, tempVertexCoord);
+              if (delta < minSquaredDistance && (this.intersection_ && segmentData.intersectionFeature || this.vertex_ && !segmentData.intersectionFeature)) {
+                closestVertex = vertex;
+                minSquaredDistance = delta;
+                closestFeature = segmentData.feature;
+              }
+            }
+          }
+        }
+        const result = getResult();
+        if (result) {
+          return result;
+        }
+      }
+      if (this.edge_) {
+        for (let i = 0; i < segmentsLength; ++i) {
+          let vertex = null;
+          const segmentData = segments[i];
+          if (segmentData.feature.getGeometry().getType() === "Circle") {
+            let circleGeometry = segmentData.feature.getGeometry();
+            vertex = closestOnCircle(
+              projectedCoordinate,
+              /** @type {import("../geom/Circle.js").default} */
+              circleGeometry
+            );
+          } else {
+            const [segmentStart, segmentEnd] = segmentData.segment;
+            if (segmentEnd) {
+              tempSegment[0] = fromUserCoordinate(segmentStart);
+              tempSegment[1] = fromUserCoordinate(segmentEnd);
+              vertex = closestOnSegment(projectedCoordinate, tempSegment);
+            }
+          }
+          if (vertex) {
+            const delta = squaredDistance(projectedCoordinate, vertex);
+            if (delta < minSquaredDistance) {
+              closestVertex = toUserCoordinate(vertex);
+              closestSegment = segmentData.feature.getGeometry().getType() === "Circle" ? null : segmentData.segment;
+              minSquaredDistance = delta;
+              closestFeature = segmentData.feature;
+            }
+          }
+        }
+        const result = getResult();
+        if (result) {
+          return result;
+        }
+      }
+      return null;
+    }
+    /**
+     * @param {import("../Feature.js").default} feature Feature
+     * @private
+     */
+    updateFeature_(feature) {
+      this.removeFeature(feature, false);
+      this.addFeature(feature, false);
+    }
+  }
+  const EC_KIND_PROP = "ecKind";
+  function getCircleKind(feature) {
+    const k = feature.get(EC_KIND_PROP);
+    return k === "disc" ? "disc" : "circle";
+  }
+  function setCircleKind(feature, kind) {
+    feature.set(EC_KIND_PROP, kind);
+  }
+  function distToCircleCenter(circle, coord) {
+    const c = circle.getCenter();
+    return Math.hypot(coord[0] - c[0], coord[1] - c[1]);
+  }
+  function isNearCircleEdge(circle, coord, tol) {
+    return Math.abs(distToCircleCenter(circle, coord) - circle.getRadius()) <= tol;
+  }
+  function looksLikeCircleOrDisc(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    if (o.type !== "Circle" && o.type !== "Disc") return false;
+    if (!Array.isArray(o.center) || o.center.length < 2) return false;
+    if (typeof o.radius !== "number" || !(o.radius > 0)) return false;
+    return typeof o.center[0] === "number" && typeof o.center[1] === "number";
+  }
+  function looksLikeMultiCircleOrDisc(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    if (o.type !== "MultiCircle" && o.type !== "MultiDisc") return false;
+    if (!Array.isArray(o.geometries) || !o.geometries.length) return false;
+    return o.geometries.every(
+      (g) => g && typeof g === "object" && Array.isArray(g.center) && g.center.length >= 2 && typeof g.center[0] === "number" && typeof g.center[1] === "number" && typeof g.radius === "number" && g.radius > 0
+    );
+  }
+  function circleFromLonLatRadius(centerLonLat, radiusMeters, mapProjection = "EPSG:3857") {
+    const center = fromLonLat(centerLonLat, mapProjection);
+    return new Circle(center, radiusMeters);
+  }
+  function featureFromCircleJson(data, mapProjection = "EPSG:3857") {
+    const circle = circleFromLonLatRadius(data.center, data.radius, mapProjection);
+    const feature = new Feature({ geometry: circle });
+    setCircleKind(feature, data.type === "Disc" ? "disc" : "circle");
+    return feature;
+  }
+  function featuresFromMultiCircleJson(data, mapProjection = "EPSG:3857") {
+    const kind = data.type === "MultiDisc" ? "disc" : "circle";
+    const simpleType = kind === "disc" ? "Disc" : "Circle";
+    return data.geometries.map(
+      (g) => featureFromCircleJson(
+        { type: simpleType, center: g.center, radius: g.radius },
+        mapProjection
+      )
+    );
+  }
+  function circleParts(feature, precision, mapProjection) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Circle)) return null;
+    const [lon, lat] = toLonLat(geom.getCenter(), mapProjection);
+    const f = 10 ** precision;
+    const round = (n) => Math.round(n * f) / f;
+    return {
+      center: [round(lon), round(lat)],
+      radius: round(geom.getRadius())
+    };
+  }
+  function serializeCircleFeature(feature, precision, mapProjection = "EPSG:3857") {
+    const parts = circleParts(feature, precision, mapProjection);
+    if (!parts) return null;
+    const kind = getCircleKind(feature);
+    return JSON.stringify({
+      type: kind === "disc" ? "Disc" : "Circle",
+      center: parts.center,
+      radius: parts.radius
+    });
+  }
+  function serializeMultiCircleFeatures(features, kind, precision, mapProjection = "EPSG:3857") {
+    const geometries = [];
+    for (const feature of features) {
+      if (!(feature.getGeometry() instanceof Circle)) continue;
+      if (getCircleKind(feature) !== kind) continue;
+      const parts = circleParts(feature, precision, mapProjection);
+      if (parts) geometries.push(parts);
+    }
+    if (!geometries.length) return null;
+    return JSON.stringify({
+      type: kind === "disc" ? "MultiDisc" : "MultiCircle",
+      geometries
+    });
+  }
+  function circleToPolygonFeature(feature) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Circle)) return feature;
+    const poly2 = fromCircle(geom, 64);
+    const out = new Feature({ geometry: poly2 });
+    const props = feature.getProperties();
+    for (const [key2, value2] of Object.entries(props)) {
+      if (key2 === "geometry") continue;
+      out.set(key2, value2);
+    }
+    return out;
+  }
+  function polygonApproxToCircleFeature(feature, kind) {
+    const geom = feature.getGeometry();
+    if (!(geom instanceof Polygon)) return feature;
+    const extent = geom.getExtent();
+    const center = getCenter(extent);
+    const radius = Math.max(getWidth(extent), getHeight(extent)) / 2;
+    if (!(radius > 0)) return feature;
+    const out = new Feature({ geometry: new Circle(center, radius) });
+    setCircleKind(out, kind);
+    const props = feature.getProperties();
+    for (const [key2, value2] of Object.entries(props)) {
+      if (key2 === "geometry" || key2 === EC_KIND_PROP) continue;
+      out.set(key2, value2);
+    }
+    return out;
+  }
+  function restoreCircleFeaturesForKind(features, kind) {
+    return features.map((f) => {
+      const g = f.getGeometry();
+      if (g instanceof Circle) {
+        setCircleKind(f, kind);
+        return f;
+      }
+      if (g instanceof Polygon) {
+        return polygonApproxToCircleFeature(f, kind);
+      }
+      return f;
+    });
+  }
+  const blue = "#000091";
+  const fillBlue = "rgba(0, 0, 145, 0.2)";
+  const geometryFeatureStyle = new Style({
+    fill: new Fill({ color: fillBlue }),
+    stroke: new Stroke({ color: blue, width: 2 }),
+    image: new CircleStyle({
+      radius: 6,
+      fill: new Fill({ color: blue }),
+      stroke: new Stroke({ color: "#fff", width: 2 })
+    })
+  });
+  const circleOutlineStyle = new Style({
+    fill: new Fill({ color: "rgba(0,0,0,0)" }),
+    stroke: new Stroke({ color: blue, width: 2 })
+  });
+  const discFillStyle = new Style({
+    fill: new Fill({ color: fillBlue }),
+    stroke: new Stroke({ color: blue, width: 2 })
+  });
+  const geometryDrawStyle = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  new Style({
+    fill: new Fill({ color: "rgba(0,0,0,0)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  const discDrawStyle = new Style({
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
+    image: new CircleStyle({
+      radius: 5,
+      fill: new Fill({ color: blue })
+    })
+  });
+  function geometryStyleFunction(feature) {
+    var _a;
+    const geom = (_a = feature.getGeometry) == null ? void 0 : _a.call(feature);
+    if (geom instanceof Circle) {
+      return getCircleKind(feature) === "disc" ? discFillStyle : circleOutlineStyle;
+    }
+    return geometryFeatureStyle;
+  }
+  const GEOMETRY_TYPE_NAMES = [
+    "Point",
+    "LineString",
+    "Polygon",
+    "MultiPoint",
+    "MultiLineString",
+    "MultiPolygon",
+    "Rectangle",
+    /** @deprecated Préférer `Disc` — encore accepté (outil Disc). */
+    "Circle",
+    "Disc",
+    /** @deprecated Préférer `MultiDisc` — encore accepté (outil Disc). */
+    "MultiCircle",
+    "MultiDisc",
+    "Geometry"
+  ];
+  const KNOWN = new Set(GEOMETRY_TYPE_NAMES);
+  const REPLACE_ON_DRAW = /* @__PURE__ */ new Set([
+    "Point",
+    "LineString",
+    "Polygon",
+    "Rectangle",
+    "Circle",
+    "Disc"
+  ]);
+  function isGeometryTypeName(value2) {
+    return KNOWN.has(value2);
+  }
+  function parseGeometryTypes(geometryType) {
+    const raw = String(geometryType ?? "Geometry").split(",").map((s) => s.trim()).filter(Boolean);
+    const names2 = raw.filter(isGeometryTypeName);
+    if (!names2.length) return ["Geometry"];
+    return names2;
+  }
+  function shouldReplaceOnDraw(types) {
+    return types.length === 1 && REPLACE_ON_DRAW.has(types[0]);
+  }
+  function primaryGeometryType(types) {
+    if (types.length === 1) return types[0];
+    return "Geometry";
+  }
+  function drawToolKeys(types) {
+    const keys = /* @__PURE__ */ new Set();
+    const addFrom = (t) => {
+      if (t === "Geometry") {
+        keys.add("Point");
+        keys.add("LineString");
+        keys.add("Polygon");
+        keys.add("Disc");
+        return;
+      }
+      if (t === "Point" || t === "MultiPoint") keys.add("Point");
+      else if (t === "LineString" || t === "MultiLineString") keys.add("LineString");
+      else if (t === "Polygon" || t === "MultiPolygon") keys.add("Polygon");
+      else if (t === "Rectangle") keys.add("Rectangle");
+      else if (t === "Disc" || t === "MultiDisc" || t === "Circle" || t === "MultiCircle") {
+        keys.add("Disc");
+      }
+    };
+    for (const t of types) addFrom(t);
+    return [...keys];
+  }
+  const HANDLE_BLUE = "#000091";
+  const RESIZE_FILL = "#fff";
+  const HANDLE_ICON_SCALE = 1.4;
+  const LINE_SIDE_OFFSET_PX = 14;
+  const LINE_HANDLE_GAP_PX = 32;
+  const POLYGON_INNER_MARGIN_PX = 14;
+  const LINE_HOVER_KEEP_PX = 28;
+  const CIRCLE_EDGE_TOL_PX = 12;
+  const CIRCLE_HOVER_KEEP_PX = 28;
+  const TRANSLATE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M13 5.83V11h5.17l-1.59-1.59L18 8l4 4-4 4-1.41-1.41L18.17 13H13v5.17l1.59-1.59L16 18l-4 4-4-4 1.41-1.41L11 18.17V13H5.83l1.59 1.59L6 16l-4-4 4-4 1.41 1.41L5.83 11H11V5.83L9.41 7.41 8 6l4-4 4 4-1.41 1.41L13 5.83z"/>
+    </svg>`
+  );
+  const ROTATE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M12 5V1L7 6l5 5V7c2.76 0 5 2.24 5 5 0 .65-.13 1.28-.36 1.86l1.53 1.53C18.7 14.34 19 13.2 19 12c0-3.87-3.13-7-7-7zM6 12c0-.65.13-1.28.36-1.86L4.83 8.61C4.3 9.66 4 10.8 4 12c0 3.87 3.13 7 7 7v4l5-5-5-5v4c-2.76 0-5-2.24-5-5z"/>
+    </svg>`
+  );
+  const RESIZE_ICON = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+      <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
+    </svg>`
+  );
+  function styleForRole(role) {
+    if (role === "translate") {
+      return new Style({
+        image: new Icon({
+          src: TRANSLATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    if (role === "rotate") {
+      return new Style({
+        image: new Icon({
+          src: ROTATE_ICON,
+          anchor: [0.5, 0.5],
+          scale: HANDLE_ICON_SCALE
+        }),
+        zIndex: 2
+      });
+    }
+    return new Style({
+      image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
+      zIndex: 1
+    });
+  }
+  function rotateCoordinate(coord, angle, origin) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const dx = coord[0] - origin[0];
+    const dy = coord[1] - origin[1];
+    return [origin[0] + dx * cos - dy * sin, origin[1] + dx * sin + dy * cos];
+  }
+  function rotateGeometry(geom, angle, origin) {
+    if (geom instanceof Point$1) {
+      geom.setCoordinates(rotateCoordinate(geom.getCoordinates(), angle, origin));
+      return;
+    }
+    if (geom instanceof LineString) {
+      geom.setCoordinates(
+        geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin))
+      );
+      return;
+    }
+    if (geom instanceof Polygon) {
+      geom.setCoordinates(
+        geom.getCoordinates().map((ring) => ring.map((c) => rotateCoordinate(c, angle, origin)))
+      );
+    }
+  }
+  function featureCentroid(geom) {
+    return getCenter(geom.getExtent());
+  }
+  function angleBetween(origin, point) {
+    return Math.atan2(point[1] - origin[1], point[0] - origin[0]);
+  }
+  function resolutionOf(map2) {
+    return map2.getView().getResolution() ?? 1;
+  }
+  function distPointToSegment(p5, a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) {
+      const ex = p5[0] - a[0];
+      const ey = p5[1] - a[1];
+      return Math.hypot(ex, ey);
+    }
+    let t = ((p5[0] - a[0]) * dx + (p5[1] - a[1]) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p5[0] - (a[0] + t * dx), p5[1] - (a[1] + t * dy));
+  }
+  function isDeepInsidePolygon(poly2, coord, margin) {
+    if (!poly2.intersectsCoordinate(coord)) return false;
+    const ring = poly2.getLinearRing(0);
+    if (!ring) return false;
+    const coords = ring.getCoordinates();
+    for (let i = 0; i < coords.length - 1; i++) {
+      if (distPointToSegment(coord, coords[i], coords[i + 1]) < margin) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function lineSideAnchors(geom, res) {
+    const coords = geom.getCoordinates();
+    if (coords.length < 2) {
+      const c = featureCentroid(geom);
+      const x = c[0] + LINE_SIDE_OFFSET_PX * res;
+      const gap2 = LINE_HANDLE_GAP_PX * res;
+      return {
+        translate: [x, c[1] + gap2 / 2],
+        rotate: [x, c[1] - gap2 / 2]
+      };
+    }
+    let total = 0;
+    const segLens = [];
+    for (let i = 0; i < coords.length - 1; i++) {
+      const len = Math.hypot(
+        coords[i + 1][0] - coords[i][0],
+        coords[i + 1][1] - coords[i][1]
+      );
+      segLens.push(len);
+      total += len;
+    }
+    let target2 = total / 2;
+    let mid = coords[0];
+    let tx = 1;
+    let ty = 0;
+    for (let i = 0; i < segLens.length; i++) {
+      if (target2 <= segLens[i] || i === segLens.length - 1) {
+        const a = coords[i];
+        const b = coords[i + 1];
+        const t = segLens[i] > 0 ? target2 / segLens[i] : 0;
+        mid = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const len = Math.hypot(dx, dy) || 1;
+        tx = dy / len;
+        ty = -dx / len;
+        break;
+      }
+      target2 -= segLens[i];
+    }
+    const off2 = LINE_SIDE_OFFSET_PX * res;
+    const base = [mid[0] + tx * off2, mid[1] + ty * off2];
+    const gap = LINE_HANDLE_GAP_PX * res / 2;
+    const tangentX = -ty;
+    const tangentY = tx;
+    return {
+      translate: [base[0] + tangentX * gap, base[1] + tangentY * gap],
+      rotate: [base[0] - tangentX * gap, base[1] - tangentY * gap]
+    };
+  }
+  function distToLineString(line, coord) {
+    const coords = line.getCoordinates();
+    let min = Infinity;
+    for (let i = 0; i < coords.length - 1; i++) {
+      min = Math.min(min, distPointToSegment(coord, coords[i], coords[i + 1]));
+    }
+    return min;
+  }
+  function bboxPolygonFromExtent(extent) {
+    const [minX, minY, maxX, maxY] = extent;
+    return new Polygon([
+      [
+        [minX, minY],
+        [minX, maxY],
+        [maxX, maxY],
+        [maxX, minY],
+        [minX, minY]
+      ]
+    ]);
+  }
+  function applyBBoxResize(extent, role, coord) {
+    let [minX, minY, maxX, maxY] = extent;
+    const minSize = 1e-6;
+    switch (role) {
+      case "resize-nw":
+        minX = Math.min(coord[0], maxX - minSize);
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-n":
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-ne":
+        maxX = Math.max(coord[0], minX + minSize);
+        maxY = Math.max(coord[1], minY + minSize);
+        break;
+      case "resize-e":
+        maxX = Math.max(coord[0], minX + minSize);
+        break;
+      case "resize-se":
+        maxX = Math.max(coord[0], minX + minSize);
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-s":
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-sw":
+        minX = Math.min(coord[0], maxX - minSize);
+        minY = Math.min(coord[1], maxY - minSize);
+        break;
+      case "resize-w":
+        minX = Math.min(coord[0], maxX - minSize);
+        break;
+    }
+    return [minX, minY, maxX, maxY];
+  }
+  function cursorForRole(role) {
+    switch (role) {
+      case "translate":
+        return "move";
+      case "rotate":
+        return "grab";
+      case "resize-radius":
+        return "nesw-resize";
+      case "resize-n":
+      case "resize-s":
+        return "ns-resize";
+      case "resize-e":
+      case "resize-w":
+        return "ew-resize";
+      case "resize-ne":
+      case "resize-sw":
+        return "nesw-resize";
+      case "resize-nw":
+      case "resize-se":
+        return "nwse-resize";
+      default:
+        return "pointer";
+    }
+  }
+  function distToCenter(center, coord) {
+    return Math.hypot(coord[0] - center[0], coord[1] - center[1]);
+  }
+  function isDeepInsideCircle(circle, coord, margin) {
+    return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin;
+  }
+  function circleSideTranslateAnchor(circle, res) {
+    const c = circle.getCenter();
+    const r = circle.getRadius();
+    const off2 = LINE_SIDE_OFFSET_PX * res;
+    return [c[0] + r + off2, c[1]];
+  }
+  function circleModeFor(feature, mode2) {
+    if (mode2 === "circle" || mode2 === "disc") return mode2;
+    return getCircleKind(feature) === "disc" ? "disc" : "circle";
+  }
+  class TransformPointer extends PointerInteraction {
+    constructor(ctrl) {
+      super({
+        handleDownEvent: (evt) => ctrl.handleDown(evt),
+        handleDragEvent: (evt) => ctrl.handleDrag(evt),
+        handleUpEvent: (evt) => ctrl.handleUp(evt),
+        handleMoveEvent: (evt) => ctrl.handleMove(evt)
+      });
+    }
+  }
+  class ModifyTransformController {
+    constructor(opts) {
+      __publicField(this, "map");
+      __publicField(this, "dataSource");
+      __publicField(this, "dataLayer");
+      __publicField(this, "onChange");
+      __publicField(this, "mode");
+      __publicField(this, "active", false);
+      __publicField(this, "handleSource", new VectorSource({ wrapX: false }));
+      __publicField(this, "handleLayer");
+      __publicField(this, "pointer");
+      __publicField(this, "hovered", null);
+      __publicField(this, "dragging", null);
+      this.map = opts.map;
+      this.dataSource = opts.source;
+      this.dataLayer = opts.layer;
+      this.mode = opts.mode;
+      this.onChange = opts.onChange;
+      this.handleLayer = new VectorLayer({
+        source: this.handleSource,
+        // Au-dessus des couches données / tuiles
+        zIndex: 1e4,
+        className: "ec-geometry-editor__transform-handles",
+        style: (feature) => styleForRole(feature.get("role")),
+        updateWhileAnimating: true,
+        updateWhileInteracting: true
+      });
+      this.handleLayer.set("ec-transform-handles", true);
+      this.pointer = new TransformPointer(this);
+    }
+    setMode(mode2) {
+      this.mode = mode2;
+      this.clearHandles();
+      this.hovered = null;
+    }
+    setActive(active) {
+      if (this.active === active) return;
+      this.active = active;
+      if (active) {
+        this.map.addLayer(this.handleLayer);
+        this.map.addInteraction(this.pointer);
+      } else {
+        this.map.removeInteraction(this.pointer);
+        this.map.removeLayer(this.handleLayer);
+        this.clearHandles();
+        this.hovered = null;
+        this.dragging = null;
+        const el = this.map.getTargetElement();
+        if (el) el.style.cursor = "";
+      }
+    }
+    destroy() {
+      this.setActive(false);
+    }
+    usesVertexModify() {
+      return this.mode === "line-polygon" || this.mode === "point";
+    }
+    clearHandles() {
+      this.handleSource.clear(true);
+    }
+    isHandleFeature(feature) {
+      return Boolean(feature.get("role")) && this.handleSource.hasFeature(feature);
+    }
+    findHandleAtPixel(pixel) {
+      let found = null;
+      this.map.forEachFeatureAtPixel(
+        pixel,
+        (feature) => {
+          if (this.isHandleFeature(feature)) {
+            found = feature;
+            return true;
+          }
+          return void 0;
+        },
+        {
+          layerFilter: (layer) => layer === this.handleLayer,
+          hitTolerance: 18
+        }
+      );
+      return found;
+    }
+    findDataFeatureAtPixel(pixel) {
+      let found = null;
+      this.map.forEachFeatureAtPixel(
+        pixel,
+        (feature) => {
+          if (this.isHandleFeature(feature)) return void 0;
+          const f = feature;
+          if (!this.dataSource.hasFeature(f)) return void 0;
+          const geom = f.getGeometry();
+          if (this.mode === "bbox") {
+            if (geom instanceof Polygon) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          if (this.mode === "point") {
+            if (geom instanceof Point$1) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          if (this.mode === "circle" || this.mode === "disc") {
+            if (geom instanceof Circle) {
+              found = f;
+              return true;
+            }
+            return void 0;
+          }
+          if (geom instanceof Circle) {
+            found = f;
+            return true;
+          }
+          const t = geom == null ? void 0 : geom.getType();
+          if (t === "LineString" || t === "Polygon" || t === "Point") {
+            found = f;
+            return true;
+          }
+          return void 0;
+        },
+        {
+          layerFilter: (layer) => layer === this.dataLayer,
+          hitTolerance: 10
+        }
+      );
+      return found;
+    }
+    /**
+     * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
+     */
+    placeHandles(feature, opts) {
+      this.clearHandles();
+      const geom = feature.getGeometry();
+      if (!geom) return;
+      const add2 = (role, coord) => {
+        const f = new Feature({ geometry: new Point$1(coord) });
+        f.set("role", role);
+        this.handleSource.addFeature(f);
+      };
+      const res = resolutionOf(this.map);
+      if (geom instanceof Circle) {
+        const cMode = circleModeFor(feature, this.mode);
+        if (cMode === "circle") {
+          add2("translate", circleSideTranslateAnchor(geom, res));
+        }
+        return;
+      }
+      if (this.mode === "bbox" && geom instanceof Polygon) {
+        const extent = geom.getExtent();
+        const [minX, minY, maxX, maxY] = extent;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        add2("resize-nw", [minX, maxY]);
+        add2("resize-n", [midX, maxY]);
+        add2("resize-ne", [maxX, maxY]);
+        add2("resize-e", [maxX, midY]);
+        add2("resize-se", [maxX, minY]);
+        add2("resize-s", [midX, minY]);
+        add2("resize-sw", [minX, minY]);
+        add2("resize-w", [minX, midY]);
+        return;
+      }
+      if (this.mode !== "line-polygon") return;
+      if (geom instanceof LineString) {
+        const anchors = lineSideAnchors(geom, res);
+        add2("translate", anchors.translate);
+        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate);
+        return;
+      }
+      if (geom instanceof Polygon) {
+        const center = featureCentroid(geom);
+        const extent = geom.getExtent();
+        const span = Math.max(getHeight(extent), getWidth(extent), 1);
+        const defaultOffset = Math.max(span * 0.12, 36 * res);
+        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
+        add2("rotate", rotateAt);
+      }
+    }
+    isDeepInsideHoveredPolygon(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Polygon)) return false;
+      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
+      return isDeepInsidePolygon(geom, coord, margin);
+    }
+    isDeepInsideHoveredDisc(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Circle)) return false;
+      if (circleModeFor(this.hovered, this.mode) !== "disc") return false;
+      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
+      return isDeepInsideCircle(geom, coord, margin);
+    }
+    isNearHoveredCircleEdge(coord) {
+      var _a;
+      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
+      if (!(geom instanceof Circle)) return false;
+      const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
+      return isNearCircleEdge(geom, coord, tol);
+    }
+    handleMove(evt) {
+      if (!this.active || this.dragging) return;
+      const handle = this.findHandleAtPixel(evt.pixel);
+      const el = this.map.getTargetElement();
+      if (handle) {
+        if (el) el.style.cursor = cursorForRole(handle.get("role"));
+        return;
+      }
+      const feature = this.findDataFeatureAtPixel(evt.pixel);
+      if (feature) {
+        if (feature !== this.hovered) {
+          this.hovered = feature;
+        }
+        this.placeHandles(feature);
+        const coord2 = evt.coordinate;
+        const geom = feature.getGeometry();
+        if (el && (this.mode === "point" || geom instanceof Point$1)) {
+          el.style.cursor = "move";
+        } else if (el && coord2 && geom instanceof Circle) {
+          const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
+          if (isNearCircleEdge(geom, coord2, tol)) {
+            el.style.cursor = cursorForRole("resize-radius");
+          } else if (this.isDeepInsideHoveredDisc(coord2)) {
+            el.style.cursor = "move";
+          } else {
+            el.style.cursor = "pointer";
+          }
+        } else if (el && coord2 && (this.mode === "line-polygon" || this.mode === "bbox") && this.isDeepInsideHoveredPolygon(coord2)) {
+          el.style.cursor = "move";
+        } else if (el) {
+          el.style.cursor = "pointer";
+        }
+        return;
+      }
+      const coord = evt.coordinate;
+      if (this.hovered && coord) {
+        const geom = this.hovered.getGeometry();
+        const res = resolutionOf(this.map);
+        if (geom instanceof LineString) {
+          const keep = LINE_HOVER_KEEP_PX * res;
+          if (distToLineString(geom, coord) <= keep) {
+            this.placeHandles(this.hovered);
+            if (el) el.style.cursor = "pointer";
+            return;
+          }
+        }
+        if (geom instanceof Circle) {
+          const keep = CIRCLE_HOVER_KEEP_PX * res;
+          const d = Math.abs(distToCenter(geom.getCenter(), coord) - geom.getRadius());
+          const inside = distToCenter(geom.getCenter(), coord) <= geom.getRadius() + keep;
+          if (d <= keep || inside) {
+            this.placeHandles(this.hovered);
+            if (el) {
+              el.style.cursor = isNearCircleEdge(geom, coord, CIRCLE_EDGE_TOL_PX * res) ? cursorForRole("resize-radius") : this.isDeepInsideHoveredDisc(coord) ? "move" : "pointer";
+            }
+            return;
+          }
+        }
+      }
+      this.hovered = null;
+      this.clearHandles();
+      if (el) el.style.cursor = "";
+    }
+    handleDown(evt) {
+      if (!this.active || this.mode === "point") return false;
+      const coord = evt.coordinate;
+      if (!coord) return false;
+      const handle = this.findHandleAtPixel(evt.pixel);
+      if (handle && this.hovered) {
+        const role = handle.get("role");
+        const geom = this.hovered.getGeometry();
+        if (!geom) return false;
+        this.dragging = {
+          role,
+          feature: this.hovered,
+          startCoord: coord.slice(),
+          startGeom: geom.clone(),
+          origin: featureCentroid(geom),
+          startAngle: angleBetween(featureCentroid(geom), coord),
+          startExtent: geom.getExtent().slice()
+        };
+        const el = this.map.getTargetElement();
+        if (el) {
+          el.style.cursor = role === "rotate" ? "grabbing" : cursorForRole(role);
+        }
+        return true;
+      }
+      if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Circle) {
+          this.dragging = {
+            role: "resize-radius",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCenter().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = cursorForRole("resize-radius");
+          return true;
+        }
+      }
+      if (this.hovered && this.isDeepInsideHoveredDisc(coord)) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Circle) {
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: geom.getCenter().slice(),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
+        }
+      }
+      if ((this.mode === "line-polygon" || this.mode === "bbox") && this.hovered && this.isDeepInsideHoveredPolygon(coord)) {
+        const geom = this.hovered.getGeometry();
+        if (geom instanceof Polygon) {
+          this.dragging = {
+            role: "translate",
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom.clone(),
+            origin: featureCentroid(geom),
+            startAngle: 0,
+            startExtent: geom.getExtent().slice()
+          };
+          const el = this.map.getTargetElement();
+          if (el) el.style.cursor = "move";
+          return true;
+        }
+      }
+      return false;
+    }
+    handleDrag(evt) {
+      if (!this.dragging) return;
+      const coord = evt.coordinate;
+      if (!coord) return;
+      const { role, feature, startCoord, startGeom, origin, startAngle, startExtent } = this.dragging;
+      if (role === "translate") {
+        const next = startGeom.clone();
+        next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
+        feature.setGeometry(next);
+        this.placeHandles(feature);
+        return;
+      }
+      if (role === "resize-radius" && startGeom instanceof Circle) {
+        const next = startGeom.clone();
+        const radius = Math.max(distToCenter(origin, coord), 1e-3);
+        next.setRadius(radius);
+        feature.setGeometry(next);
+        this.placeHandles(feature);
+        return;
+      }
+      if (role === "rotate" && this.mode === "line-polygon") {
+        const angle = angleBetween(origin, coord) - startAngle;
+        const next = startGeom.clone();
+        rotateGeometry(next, angle, origin);
+        feature.setGeometry(next);
+        this.placeHandles(feature, { rotateAt: coord });
+        return;
+      }
+      if (this.mode === "bbox" && role.startsWith("resize-")) {
+        feature.setGeometry(
+          bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord))
+        );
+        this.placeHandles(feature);
+      }
+    }
+    handleUp(_evt) {
+      if (!this.dragging) return false;
+      const feature = this.dragging.feature;
+      this.dragging = null;
+      this.placeHandles(feature);
+      this.onChange();
+      return false;
+    }
+  }
+  function transformModeFor(geometryType) {
+    const types = parseGeometryTypes(geometryType);
+    if (types.length !== 1) return "line-polygon";
+    const primary = types[0];
+    if (primary === "Rectangle") return "bbox";
+    if (primary === "Point" || primary === "MultiPoint") return "point";
+    if (primary === "Circle" || primary === "MultiCircle") return "circle";
+    if (primary === "Disc" || primary === "MultiDisc") return "disc";
+    return "line-polygon";
+  }
+  const modifyTool = {
+    id: "modify",
+    label: "modifier une géométrie",
+    iconClass: "ec-geometry-editor__tool--modify",
+    modify: true
+  };
+  const removeTool = {
+    id: "remove",
+    label: "Supprimer une géométrie",
+    iconClass: "ec-geometry-editor__tool--remove",
+    remove: true
+  };
+  const clearAllTool = {
+    id: "clear-all",
+    label: "Tout supprimer",
+    iconClass: "ec-geometry-editor__tool--clear-all",
+    clearAll: true
+  };
+  const DRAW_TOOL_DEFS = {
+    Point: {
+      id: "point",
+      label: "Point",
+      iconClass: "ec-geometry-editor__tool--point",
+      drawType: "Point"
+    },
+    LineString: {
+      id: "line",
+      label: "Ligne",
+      iconClass: "ec-geometry-editor__tool--line",
+      drawType: "LineString"
+    },
+    Polygon: {
+      id: "polygon",
+      label: "Polygone",
+      iconClass: "ec-geometry-editor__tool--polygon",
+      drawType: "Polygon"
+    },
+    Rectangle: {
+      id: "rect",
+      label: "Rectangle",
+      iconClass: "ec-geometry-editor__tool--rectangle",
+      drawType: "Circle",
+      box: true
+    },
+    Disc: {
+      id: "disc",
+      label: "Disque",
+      // Picto contour (ex-Circle) — un seul outil cercle/disque
+      iconClass: "ec-geometry-editor__tool--circle",
+      drawType: "Circle",
+      circleKind: "disc"
+    }
+  };
+  function drawStyleFor(types) {
+    if (types.length === 1 && (types[0] === "Disc" || types[0] === "MultiDisc")) {
+      return discDrawStyle;
+    }
+    if (types.length === 1 && (types[0] === "Circle" || types[0] === "MultiCircle")) {
+      return discDrawStyle;
+    }
+    return geometryDrawStyle;
+  }
+  function toolsFor(geometryType) {
+    const types = parseGeometryTypes(geometryType);
+    const keys = drawToolKeys(types);
+    const drawTools = keys.map((k) => DRAW_TOOL_DEFS[k]);
+    if (drawTools.length === 1) {
+      return [{ ...drawTools[0], id: "draw" }, modifyTool, removeTool];
+    }
+    return [...drawTools, modifyTool, removeTool];
+  }
+  class DrawToolsBar {
+    constructor(opts) {
+      __publicField(this, "map");
+      __publicField(this, "source");
+      __publicField(this, "layer");
+      __publicField(this, "target");
+      __publicField(this, "onChange");
+      __publicField(this, "onClearAll");
+      __publicField(this, "showClearAll");
+      __publicField(this, "geometryType");
+      __publicField(this, "drawStyle");
+      __publicField(this, "customStyle");
+      __publicField(this, "activeId", null);
+      __publicField(this, "draw", null);
+      __publicField(this, "modify", null);
+      __publicField(this, "snap", null);
+      __publicField(this, "transform");
+      __publicField(this, "removeEdgeTolPx", 12);
+      __publicField(this, "onRemoveClick", (evt) => {
+        if (evt.dragging) return;
+        const res = this.map.getView().getResolution() ?? 1;
+        const edgeTol = this.removeEdgeTolPx * res;
+        const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+          layerFilter: (layer) => layer === this.layer,
+          hitTolerance: this.removeEdgeTolPx
+        });
+        for (const feature of hits) {
+          if (!this.source.hasFeature(feature)) continue;
+          const geom = feature.getGeometry();
+          if (geom instanceof Circle && getCircleKind(feature) === "circle") {
+            if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue;
+          }
+          this.source.removeFeature(feature);
+          this.onChange();
+          return;
+        }
+      });
+      __publicField(this, "onFeaturePointerMove", (evt) => {
+        if (evt.dragging) return;
+        if (this.activeId === "modify") return;
+        const target2 = this.map.getTargetElement();
+        if (!target2) return;
+        if (this.activeId === "remove") {
+          const res = this.map.getView().getResolution() ?? 1;
+          const edgeTol = this.removeEdgeTolPx * res;
+          const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+            layerFilter: (layer) => layer === this.layer,
+            hitTolerance: this.removeEdgeTolPx
+          });
+          const canRemove = hits.some((feature) => {
+            if (!this.source.hasFeature(feature)) return false;
+            const geom = feature.getGeometry();
+            if (geom instanceof Circle && getCircleKind(feature) === "circle") {
+              return isNearCircleEdge(geom, evt.coordinate, edgeTol);
+            }
+            return true;
+          });
+          target2.style.cursor = canRemove ? "pointer" : "";
+          return;
+        }
+        const hit = this.map.hasFeatureAtPixel(evt.pixel, {
+          layerFilter: (layer) => layer === this.layer,
+          hitTolerance: 12
+        });
+        target2.style.cursor = hit ? "pointer" : "";
+      });
+      this.map = opts.map;
+      this.source = opts.source;
+      this.layer = opts.layer;
+      this.geometryType = opts.geometryType;
+      this.target = opts.target;
+      this.onChange = opts.onChange;
+      this.showClearAll = Boolean(opts.clearAll);
+      this.onClearAll = opts.onClearAll ?? null;
+      this.customStyle = opts.style;
+      this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
+      this.modify = new Modify({
+        source: this.source,
+        // Cercle / disque : gérés par ModifyTransformController (rayon / translation)
+        filter: (feature) => !(feature.getGeometry() instanceof Circle)
+      });
+      this.modify.setActive(false);
+      this.snap = new Snap({ source: this.source });
+      this.map.addInteraction(this.modify);
+      this.map.addInteraction(this.snap);
+      this.modify.on("modifyend", () => this.onChange());
+      this.transform = new ModifyTransformController({
+        map: this.map,
+        source: this.source,
+        layer: this.layer,
+        mode: transformModeFor(this.geometryType),
+        onChange: () => this.onChange()
+      });
+      this.render();
+    }
+    /** Met à jour le type de géométrie (recrée les boutons). */
+    setGeometryType(geometryType) {
+      if (this.geometryType === geometryType) return;
+      this.clearTransient();
+      this.geometryType = geometryType;
+      this.transform.setMode(transformModeFor(geometryType));
+      if (!this.customStyle) {
+        this.drawStyle = drawStyleFor(parseGeometryTypes(geometryType));
+      }
+      this.render();
+    }
+    /** Met à jour le style du croquis en cours. */
+    setStyle(style) {
+      this.clearTransient();
+      this.customStyle = style;
+      this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType));
+    }
+    toolsList() {
+      const tools = toolsFor(this.geometryType);
+      return this.showClearAll ? [...tools, clearAllTool] : tools;
+    }
+    render() {
+      this.target.replaceChildren();
+      for (const tool of this.toolsList()) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
+        btn.setAttribute("aria-label", tool.label);
+        btn.setAttribute("aria-pressed", "false");
+        btn.dataset.toolId = tool.id;
+        btn.addEventListener("click", () => this.activate(tool));
+        this.target.appendChild(btn);
+      }
+    }
+    clearFeatureCursor() {
+      this.map.un("pointermove", this.onFeaturePointerMove);
+      const target2 = this.map.getTargetElement();
+      if (target2) target2.style.cursor = "";
+    }
+    clearTransient() {
+      var _a;
+      this.clearFeatureCursor();
+      this.transform.setActive(false);
+      if (this.draw) {
+        this.map.removeInteraction(this.draw);
+        this.draw = null;
+      }
+      this.map.un("singleclick", this.onRemoveClick);
+      this.activeId = null;
+      (_a = this.modify) == null ? void 0 : _a.setActive(false);
+      for (const btn of this.target.querySelectorAll("button")) {
+        btn.setAttribute("aria-pressed", "false");
+        btn.classList.remove("is-active");
+      }
+    }
+    activate(tool) {
+      var _a;
+      if (tool.clearAll) {
+        this.clearTransient();
+        if (this.onClearAll) {
+          this.onClearAll();
+        } else {
+          this.source.clear(true);
+          this.onChange();
+        }
+        return;
+      }
+      const already = this.activeId === tool.id;
+      this.clearTransient();
+      if (already) return;
+      this.activeId = tool.id;
+      const btn = this.target.querySelector(
+        `button[data-tool-id="${tool.id}"]`
+      );
+      btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
+      btn == null ? void 0 : btn.classList.add("is-active");
+      if (tool.modify) {
+        this.transform.setMode(transformModeFor(this.geometryType));
+        this.transform.setActive(true);
+        if (this.transform.usesVertexModify()) {
+          (_a = this.modify) == null ? void 0 : _a.setActive(true);
+        }
+        this.map.on("pointermove", this.onFeaturePointerMove);
+        return;
+      }
+      if (tool.remove) {
+        this.map.on("pointermove", this.onFeaturePointerMove);
+        this.map.on("singleclick", this.onRemoveClick);
+        return;
+      }
+      if (!tool.drawType) return;
+      const types = parseGeometryTypes(this.geometryType);
+      const replaceOnDraw = shouldReplaceOnDraw(types);
+      const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      this.draw = new Draw({
+        source: this.source,
+        type: tool.drawType,
+        style: this.customStyle ?? sketchStyle,
+        geometryFunction: tool.box ? createBox() : void 0
+      });
+      this.draw.on("drawstart", () => {
+        if (replaceOnDraw) this.source.clear(true);
+      });
+      this.draw.on("drawend", (evt) => {
+        if (tool.circleKind) {
+          setCircleKind(evt.feature, tool.circleKind);
+        }
+        queueMicrotask(() => this.onChange());
+      });
+      this.map.addInteraction(this.draw);
+    }
+    destroy() {
+      this.clearTransient();
+      this.transform.destroy();
+      if (this.modify) this.map.removeInteraction(this.modify);
+      if (this.snap) this.map.removeInteraction(this.snap);
+      this.target.replaceChildren();
+    }
+  }
+  const XML_SCHEMA_INSTANCE_URI = "http://www.w3.org/2001/XMLSchema-instance";
+  function createElementNS(namespaceURI, qualifiedName) {
+    return getDocument().createElementNS(namespaceURI, qualifiedName);
+  }
+  function getAllTextContent(node, normalizeWhitespace) {
+    return getAllTextContent_(node, normalizeWhitespace, []).join("");
+  }
+  function getAllTextContent_(node, normalizeWhitespace, accumulator) {
+    if (node.nodeType == Node.CDATA_SECTION_NODE || node.nodeType == Node.TEXT_NODE) {
+      {
+        accumulator.push(node.nodeValue);
+      }
+    } else {
+      let n;
+      for (n = node.firstChild; n; n = n.nextSibling) {
+        getAllTextContent_(n, normalizeWhitespace, accumulator);
+      }
+    }
+    return accumulator;
+  }
+  function isDocument(object) {
+    return "documentElement" in object;
+  }
+  function parse(xml2) {
+    return new DOMParser().parseFromString(xml2, "application/xml");
+  }
+  function makeArrayExtender(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Node} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value2 = valueReader.call(thisArg ?? this, node, objectStack);
+        if (value2 !== void 0) {
+          const array = (
+            /** @type {Array<*>} */
+            objectStack[objectStack.length - 1]
+          );
+          extend$4(array, value2);
+        }
+      })
+    );
+  }
+  function makeArrayPusher(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value2 = valueReader.call(thisArg ?? this, node, objectStack);
+        if (value2 !== void 0) {
+          const array = (
+            /** @type {Array<*>} */
+            objectStack[objectStack.length - 1]
+          );
+          array.push(value2);
+        }
+      })
+    );
+  }
+  function makeReplacer(valueReader, thisArg) {
+    return (
+      /**
+       * @param {Node} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value2 = valueReader.call(this, node, objectStack);
+        if (value2 !== void 0) {
+          objectStack[objectStack.length - 1] = value2;
+        }
+      })
+    );
+  }
+  function makeObjectPropertySetter(valueReader, property, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, objectStack) {
+        const value2 = valueReader.call(this, node, objectStack);
+        if (value2 !== void 0) {
+          const object = (
+            /** @type {!Object} */
+            objectStack[objectStack.length - 1]
+          );
+          const name2 = property !== void 0 ? property : node.localName;
+          object[name2] = value2;
+        }
+      })
+    );
+  }
+  function makeChildAppender(nodeWriter, thisArg) {
+    return (
+      /**
+       * @param {Element} node Node.
+       * @param {*} value Value to be written.
+       * @param {Array<*>} objectStack Object stack.
+       * @this {*}
+       */
+      (function(node, value2, objectStack) {
+        nodeWriter.call(this, node, value2, objectStack);
+        const parent = (
+          /** @type {NodeStackItem} */
+          objectStack[objectStack.length - 1]
+        );
+        const parentNode = parent.node;
+        parentNode.appendChild(node);
+      })
+    );
+  }
+  function makeSimpleNodeFactory(fixedNodeName, fixedNamespaceURI) {
+    return (
+      /**
+       * @param {*} value Value.
+       * @param {Array<*>} objectStack Object stack.
+       * @param {string} [newNodeName] Node name.
+       * @return {Node} Node.
+       */
+      (function(value2, objectStack, newNodeName) {
+        const context = (
+          /** @type {NodeStackItem} */
+          objectStack[objectStack.length - 1]
+        );
+        const node = context.node;
+        let nodeName = fixedNodeName;
+        if (nodeName === void 0) {
+          nodeName = newNodeName;
+        }
+        const namespaceURI = node.namespaceURI;
+        return createElementNS(
+          namespaceURI,
+          /** @type {string} */
+          nodeName
+        );
+      })
+    );
+  }
+  const OBJECT_PROPERTY_NODE_FACTORY = makeSimpleNodeFactory();
+  function makeSequence(object, orderedKeys) {
+    const length = orderedKeys.length;
+    const sequence = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      sequence[i] = object[orderedKeys[i]];
+    }
+    return sequence;
+  }
+  function makeStructureNS(namespaceURIs, structure, structureNS) {
+    structureNS = structureNS !== void 0 ? structureNS : {};
+    let i, ii;
+    for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
+      structureNS[namespaceURIs[i]] = structure;
+    }
+    return structureNS;
+  }
+  function parseNode(parsersNS, node, objectStack, thisArg) {
+    let n;
+    for (n = node.firstElementChild; n; n = n.nextElementSibling) {
+      const parsers2 = parsersNS[n.namespaceURI];
+      if (parsers2 !== void 0) {
+        const parser = parsers2[n.localName];
+        if (parser !== void 0) {
+          parser.call(thisArg, n, objectStack);
+        }
+      }
+    }
+  }
+  function pushParseAndPop(object, parsersNS, node, objectStack, thisArg) {
+    objectStack.push(object);
+    parseNode(parsersNS, node, objectStack, thisArg);
+    return (
+      /** @type {T} */
+      objectStack.pop()
+    );
+  }
+  function serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
+    const length = (keys !== void 0 ? keys : values).length;
+    let value2, node;
+    for (let i = 0; i < length; ++i) {
+      value2 = values[i];
+      if (value2 !== void 0) {
+        node = nodeFactory.call(
+          thisArg,
+          value2,
+          objectStack,
+          keys !== void 0 ? keys[i] : void 0
+        );
+        if (node !== void 0) {
+          serializersNS[node.namespaceURI][node.localName].call(
+            thisArg,
+            node,
+            value2,
+            objectStack
+          );
+        }
+      }
+    }
+  }
+  function pushSerializeAndPop(object, serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
+    objectStack.push(object);
+    serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg);
+    return (
+      /** @type {O|undefined} */
+      objectStack.pop()
+    );
+  }
+  let xmlSerializer_ = void 0;
+  function getXMLSerializer() {
+    if (xmlSerializer_ === void 0 && typeof XMLSerializer !== "undefined") {
+      xmlSerializer_ = new XMLSerializer();
+    }
+    return xmlSerializer_;
+  }
+  let document_ = void 0;
+  function getDocument() {
+    if (document_ === void 0 && typeof document !== "undefined") {
+      document_ = document.implementation.createDocument("", "", null);
+    }
+    return document_;
+  }
+  class XMLFeature extends FeatureFormat {
+    constructor() {
+      super();
+      this.xmlSerializer_ = getXMLSerializer();
+    }
+    /**
+     * @return {import("./Feature.js").Type} Format.
+     * @override
+     */
+    getType() {
+      return "xml";
+    }
+    /**
+     * Read a single feature.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../Feature.js").default} Feature.
+     * @api
+     * @override
+     */
+    readFeature(source, options) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        return this.readFeatureFromDocument(doc2, options);
+      }
+      if (isDocument(source)) {
+        return this.readFeatureFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readFeatureFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     */
+    readFeatureFromDocument(doc2, options) {
+      const features = this.readFeaturesFromDocument(doc2, options);
+      if (features.length > 0) {
+        return features[0];
+      }
+      return null;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     */
+    readFeatureFromNode(node, options) {
+      return null;
+    }
+    /**
+     * Read all features from a feature collection.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @api
+     * @override
+     */
+    readFeatures(source, options) {
+      if (!source) {
+        return [];
+      }
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        return this.readFeaturesFromDocument(doc2, options);
+      }
+      if (isDocument(source)) {
+        return this.readFeaturesFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readFeaturesFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {Array<import("../Feature.js").default>} Features.
+     */
+    readFeaturesFromDocument(doc2, options) {
+      const features = [];
+      for (let n = doc2.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$4(
+            features,
+            this.readFeaturesFromNode(
+              /** @type {Element} */
+              n,
+              options
+            )
+          );
+        }
+      }
+      return features;
+    }
+    /**
+     * @abstract
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {Array<import("../Feature.js").default>} Features.
+     */
+    readFeaturesFromNode(node, options) {
+      return abstract();
+    }
+    /**
+     * Read a single geometry from a source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @override
+     */
+    readGeometry(source, options) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        return this.readGeometryFromDocument(doc2, options);
+      }
+      if (isDocument(source)) {
+        return this.readGeometryFromDocument(
+          /** @type {Document} */
+          source,
+          options
+        );
+      }
+      return this.readGeometryFromNode(
+        /** @type {Element} */
+        source,
+        options
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromDocument(doc2, options) {
+      return null;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromNode(node, options) {
+      return null;
+    }
+    /**
+     * Read the projection from the source.
+     *
+     * @param {Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @api
+     * @override
+     */
+    readProjection(source) {
+      if (!source) {
+        return null;
+      }
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        return this.readProjectionFromDocument(doc2);
+      }
+      if (isDocument(source)) {
+        return this.readProjectionFromDocument(
+          /** @type {Document} */
+          source
+        );
+      }
+      return this.readProjectionFromNode(
+        /** @type {Element} */
+        source
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromDocument(doc2) {
+      return this.dataProjection;
+    }
+    /**
+     * @param {Element} node Node.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromNode(node) {
+      return this.dataProjection;
+    }
+    /**
+     * Encode a feature as string.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded feature.
+     * @override
+     */
+    writeFeature(feature, options) {
+      const node = this.writeFeatureNode(feature, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @protected
+     * @return {Node} Node.
+     */
+    writeFeatureNode(feature, options) {
+      return null;
+    }
+    /**
+     * Encode an array of features as string.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Result.
+     * @api
+     * @override
+     */
+    writeFeatures(features, options) {
+      const node = this.writeFeaturesNode(features, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     */
+    writeFeaturesNode(features, options) {
+      return null;
+    }
+    /**
+     * Encode a geometry as string.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded geometry.
+     * @override
+     */
+    writeGeometry(geometry, options) {
+      const node = this.writeGeometryNode(geometry, options);
+      return this.xmlSerializer_.serializeToString(node);
+    }
+    /**
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     */
+    writeGeometryNode(geometry, options) {
+      return null;
+    }
+  }
+  function readBoolean(node) {
+    const s = getAllTextContent(node, false);
+    return readBooleanString(s);
+  }
+  function readBooleanString(string) {
+    const m = /^\s*(true|1)|(false|0)\s*$/.exec(string);
+    if (m) {
+      return m[1] !== void 0 || false;
+    }
+    return void 0;
+  }
+  function readDecimal(node) {
+    const s = getAllTextContent(node, false);
+    return readDecimalString(s);
+  }
+  function readDecimalString(string) {
+    const m = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)\s*$/i.exec(string);
+    if (m) {
+      return parseFloat(m[1]);
+    }
+    return void 0;
+  }
+  function readString(node) {
+    return getAllTextContent(node, false).trim();
+  }
+  function writeBooleanTextNode(node, bool) {
+    writeStringTextNode(node, bool ? "1" : "0");
+  }
+  function writeCDATASection(node, string) {
+    node.appendChild(getDocument().createCDATASection(string));
+  }
+  function writeDecimalTextNode(node, decimal) {
+    const string = decimal.toPrecision();
+    node.appendChild(getDocument().createTextNode(string));
+  }
+  const whiteSpaceStart = /^\s/;
+  const whiteSpaceEnd = /\s$/;
+  const cdataCharacters = /(\n|\t|\r|<|&| {2})/;
+  function writeStringTextNode(node, string) {
+    if (typeof string === "string" && (whiteSpaceStart.test(string) || whiteSpaceEnd.test(string) || cdataCharacters.test(string))) {
+      string.split("]]>").forEach((part, i, a) => {
+        if (i < a.length - 1) {
+          part += "]]";
+        }
+        if (i > 0) {
+          part = ">" + part;
+        }
+        writeCDATASection(node, part);
+      });
+    } else {
+      node.appendChild(getDocument().createTextNode(string));
+    }
+  }
+  const GX_NAMESPACE_URIS = ["http://www.google.com/kml/ext/2.2"];
+  const NAMESPACE_URIS = [
+    null,
+    "http://earth.google.com/kml/2.0",
+    "http://earth.google.com/kml/2.1",
+    "http://earth.google.com/kml/2.2",
+    "http://www.opengis.net/kml/2.2"
+  ];
+  const SCHEMA_LOCATION = "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd";
+  const ICON_ANCHOR_UNITS_MAP = {
+    "fraction": "fraction",
+    "pixels": "pixels",
+    "insetPixels": "pixels"
+  };
+  const PLACEMARK_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "ExtendedData": extendedDataParser,
+      "Region": regionParser,
+      "MultiGeometry": makeObjectPropertySetter(readMultiGeometry, "geometry"),
+      "LineString": makeObjectPropertySetter(readLineString, "geometry"),
+      "LinearRing": makeObjectPropertySetter(readLinearRing, "geometry"),
+      "Point": makeObjectPropertySetter(readPoint, "geometry"),
+      "Polygon": makeObjectPropertySetter(readPolygon, "geometry"),
+      "Style": makeObjectPropertySetter(readStyle),
+      "StyleMap": placemarkStyleMapParser,
+      "address": makeObjectPropertySetter(readString),
+      "description": makeObjectPropertySetter(readString),
+      "name": makeObjectPropertySetter(readString),
+      "open": makeObjectPropertySetter(readBoolean),
+      "phoneNumber": makeObjectPropertySetter(readString),
+      "styleUrl": makeObjectPropertySetter(readStyleURL),
+      "visibility": makeObjectPropertySetter(readBoolean)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "MultiTrack": makeObjectPropertySetter(readGxMultiTrack, "geometry"),
+      "Track": makeObjectPropertySetter(readGxTrack, "geometry")
+    })
+  );
+  const NETWORK_LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "ExtendedData": extendedDataParser,
+    "Region": regionParser,
+    "Link": linkParser,
+    "address": makeObjectPropertySetter(readString),
+    "description": makeObjectPropertySetter(readString),
+    "name": makeObjectPropertySetter(readString),
+    "open": makeObjectPropertySetter(readBoolean),
+    "phoneNumber": makeObjectPropertySetter(readString),
+    "visibility": makeObjectPropertySetter(readBoolean)
+  });
+  const LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "href": makeObjectPropertySetter(readURI)
+  });
+  const CAMERA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    Altitude: makeObjectPropertySetter(readDecimal),
+    Longitude: makeObjectPropertySetter(readDecimal),
+    Latitude: makeObjectPropertySetter(readDecimal),
+    Tilt: makeObjectPropertySetter(readDecimal),
+    AltitudeMode: makeObjectPropertySetter(readString),
+    Heading: makeObjectPropertySetter(readDecimal),
+    Roll: makeObjectPropertySetter(readDecimal)
+  });
+  const REGION_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LatLonAltBox": latLonAltBoxParser,
+    "Lod": lodParser
+  });
+  const KML_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["Document", "Placemark"]);
+  const KML_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Document": makeChildAppender(writeDocument),
+    "Placemark": makeChildAppender(writePlacemark)
+  });
+  let DEFAULT_COLOR;
+  let DEFAULT_FILL_STYLE = null;
+  let DEFAULT_IMAGE_STYLE_ANCHOR;
+  let DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+  let DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+  let DEFAULT_IMAGE_STYLE_SIZE;
+  let DEFAULT_IMAGE_STYLE_SRC;
+  let DEFAULT_IMAGE_STYLE = null;
+  let DEFAULT_NO_IMAGE_STYLE;
+  let DEFAULT_STROKE_STYLE = null;
+  let DEFAULT_TEXT_STROKE_STYLE;
+  let DEFAULT_TEXT_STYLE = null;
+  let DEFAULT_STYLE = null;
+  let DEFAULT_STYLE_ARRAY = null;
+  function scaleForSize(size) {
+    return 32 / Math.min(size[0], size[1]);
+  }
+  function createStyleDefaults() {
+    DEFAULT_COLOR = [255, 255, 255, 1];
+    DEFAULT_FILL_STYLE = new Fill({
+      color: DEFAULT_COLOR
+    });
+    DEFAULT_IMAGE_STYLE_ANCHOR = [20, 2];
+    DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS = "pixels";
+    DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS = "pixels";
+    DEFAULT_IMAGE_STYLE_SIZE = [64, 64];
+    DEFAULT_IMAGE_STYLE_SRC = "https://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png";
+    DEFAULT_IMAGE_STYLE = new Icon({
+      anchor: DEFAULT_IMAGE_STYLE_ANCHOR,
+      anchorOrigin: "bottom-left",
+      anchorXUnits: DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS,
+      anchorYUnits: DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS,
+      crossOrigin: "anonymous",
+      rotation: 0,
+      scale: scaleForSize(DEFAULT_IMAGE_STYLE_SIZE),
+      size: DEFAULT_IMAGE_STYLE_SIZE,
+      src: DEFAULT_IMAGE_STYLE_SRC
+    });
+    DEFAULT_NO_IMAGE_STYLE = "NO_IMAGE";
+    DEFAULT_STROKE_STYLE = new Stroke({
+      color: DEFAULT_COLOR,
+      width: 1
+    });
+    DEFAULT_TEXT_STROKE_STYLE = new Stroke({
+      color: [51, 51, 51, 1],
+      width: 2
+    });
+    DEFAULT_TEXT_STYLE = new Text({
+      font: "bold 16px Helvetica",
+      fill: DEFAULT_FILL_STYLE,
+      stroke: DEFAULT_TEXT_STROKE_STYLE,
+      scale: 0.8
+    });
+    DEFAULT_STYLE = new Style({
+      fill: DEFAULT_FILL_STYLE,
+      image: DEFAULT_IMAGE_STYLE,
+      text: DEFAULT_TEXT_STYLE,
+      stroke: DEFAULT_STROKE_STYLE,
+      zIndex: 0
+    });
+    DEFAULT_STYLE_ARRAY = [DEFAULT_STYLE];
+  }
+  let TEXTAREA;
+  function defaultIconUrlFunction(href) {
+    return href;
+  }
+  class KML extends XMLFeature {
+    /**
+     * @param {Options} [options] Options.
+     */
+    constructor(options) {
+      super();
+      options = options ? options : {};
+      if (!DEFAULT_STYLE_ARRAY) {
+        createStyleDefaults();
+      }
+      this.dataProjection = get$2("EPSG:4326");
+      this.defaultStyle_ = options.defaultStyle ? options.defaultStyle : DEFAULT_STYLE_ARRAY;
+      this.extractStyles_ = options.extractStyles !== void 0 ? options.extractStyles : true;
+      this.writeStyles_ = options.writeStyles !== void 0 ? options.writeStyles : true;
+      this.sharedStyles_ = {};
+      this.showPointNames_ = options.showPointNames !== void 0 ? options.showPointNames : true;
+      this.crossOrigin_ = options.crossOrigin !== void 0 ? options.crossOrigin : "anonymous";
+      this.referrerPolicy_ = options.referrerPolicy;
+      this.iconUrlFunction_ = options.iconUrlFunction ? options.iconUrlFunction : defaultIconUrlFunction;
+      this.supportedMediaTypes = ["application/vnd.google-earth.kml+xml"];
+    }
+    /**
+     * @param {Node} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     * @return {Array<Feature>|undefined} Features.
+     */
+    readDocumentOrFolder_(node, objectStack) {
+      const parsersNS = makeStructureNS(NAMESPACE_URIS, {
+        "Document": makeArrayExtender(this.readDocumentOrFolder_, this),
+        "Folder": makeArrayExtender(this.readDocumentOrFolder_, this),
+        "Placemark": makeArrayPusher(this.readPlacemark_, this),
+        "Style": this.readSharedStyle_.bind(this),
+        "StyleMap": this.readSharedStyleMap_.bind(this)
+      });
+      const features = pushParseAndPop([], parsersNS, node, objectStack, this);
+      if (features) {
+        return features;
+      }
+      return void 0;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     * @return {Feature|undefined} Feature.
+     */
+    readPlacemark_(node, objectStack) {
+      const object = pushParseAndPop(
+        { "geometry": null },
+        PLACEMARK_PARSERS,
+        node,
+        objectStack,
+        this
+      );
+      if (!object) {
+        return void 0;
+      }
+      const feature = new Feature();
+      const id = node.getAttribute("id");
+      if (id !== null) {
+        feature.setId(id);
+      }
+      const options = (
+        /** @type {import("./Feature.js").ReadOptions} */
+        objectStack[0]
+      );
+      const geometry = object["geometry"];
+      if (geometry) {
+        transformGeometryWithOptions(geometry, false, options);
+      }
+      feature.setGeometry(geometry);
+      delete object["geometry"];
+      if (this.extractStyles_) {
+        const style = object["Style"];
+        const styleUrl = object["styleUrl"];
+        const styleFunction = createFeatureStyleFunction(
+          style,
+          styleUrl,
+          this.defaultStyle_,
+          this.sharedStyles_,
+          this.showPointNames_
+        );
+        feature.setStyle(styleFunction);
+      }
+      delete object["Style"];
+      feature.setProperties(object, true);
+      return feature;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     */
+    readSharedStyle_(node, objectStack) {
+      const id = node.getAttribute("id");
+      if (id !== null) {
+        const style = readStyle.call(this, node, objectStack);
+        if (style) {
+          let styleUri;
+          let baseURI = node.baseURI;
+          if (!baseURI || baseURI == "about:blank") {
+            baseURI = window.location.href;
+          }
+          if (baseURI) {
+            const url = new URL("#" + id, baseURI);
+            styleUri = url.href;
+          } else {
+            styleUri = "#" + id;
+          }
+          this.sharedStyles_[styleUri] = style;
+        }
+      }
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {Array<*>} objectStack Object stack.
+     * @private
+     */
+    readSharedStyleMap_(node, objectStack) {
+      const id = node.getAttribute("id");
+      if (id === null) {
+        return;
+      }
+      const styleMapValue = readStyleMapValue.call(this, node, objectStack);
+      if (!styleMapValue) {
+        return;
+      }
+      let styleUri;
+      let baseURI = node.baseURI;
+      if (!baseURI || baseURI == "about:blank") {
+        baseURI = window.location.href;
+      }
+      if (baseURI) {
+        const url = new URL("#" + id, baseURI);
+        styleUri = url.href;
+      } else {
+        styleUri = "#" + id;
+      }
+      this.sharedStyles_[styleUri] = styleMapValue;
+    }
+    /**
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {import("../Feature.js").default} Feature.
+     * @override
+     */
+    readFeatureFromNode(node, options) {
+      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
+        return null;
+      }
+      const feature = this.readPlacemark_(node, [
+        this.getReadOptions(node, options)
+      ]);
+      if (feature) {
+        return feature;
+      }
+      return null;
+    }
+    /**
+     * @protected
+     * @param {Element} node Node.
+     * @param {import("./Feature.js").ReadOptions} [options] Options.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @override
+     */
+    readFeaturesFromNode(node, options) {
+      if (!NAMESPACE_URIS.includes(node.namespaceURI)) {
+        return [];
+      }
+      let features;
+      const localName = node.localName;
+      if (localName == "Document" || localName == "Folder") {
+        features = this.readDocumentOrFolder_(node, [
+          this.getReadOptions(node, options)
+        ]);
+        if (features) {
+          return features;
+        }
+        return [];
+      }
+      if (localName == "Placemark") {
+        const feature = this.readPlacemark_(node, [
+          this.getReadOptions(node, options)
+        ]);
+        if (feature) {
+          return [feature];
+        }
+        return [];
+      }
+      if (localName == "kml") {
+        features = [];
+        for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+          const fs = this.readFeaturesFromNode(n, options);
+          if (fs) {
+            extend$4(features, fs);
+          }
+        }
+        return features;
+      }
+      return [];
+    }
+    /**
+     * Read the name of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {string|undefined} Name.
+     * @api
+     */
+    readName(source) {
+      if (!source) {
+        return void 0;
+      }
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        return this.readNameFromDocument(doc2);
+      }
+      if (isDocument(source)) {
+        return this.readNameFromDocument(
+          /** @type {Document} */
+          source
+        );
+      }
+      return this.readNameFromNode(
+        /** @type {Element} */
+        source
+      );
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {string|undefined} Name.
+     */
+    readNameFromDocument(doc2) {
+      for (let n = (
+        /** @type {Node} */
+        doc2.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          const name2 = this.readNameFromNode(
+            /** @type {Element} */
+            n
+          );
+          if (name2) {
+            return name2;
+          }
+        }
+      }
+      return void 0;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {string|undefined} Name.
+     */
+    readNameFromNode(node) {
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "name") {
+          return readString(n);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "Placemark" || localName == "kml")) {
+          const name2 = this.readNameFromNode(n);
+          if (name2) {
+            return name2;
+          }
+        }
+      }
+      return void 0;
+    }
+    /**
+     * Read the network links of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<Object>} Network links.
+     * @api
+     */
+    readNetworkLinks(source) {
+      const networkLinks = [];
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        extend$4(networkLinks, this.readNetworkLinksFromDocument(doc2));
+      } else if (isDocument(source)) {
+        extend$4(
+          networkLinks,
+          this.readNetworkLinksFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$4(
+          networkLinks,
+          this.readNetworkLinksFromNode(
+            /** @type {Element} */
+            source
+          )
+        );
+      }
+      return networkLinks;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<Object>} Network links.
+     */
+    readNetworkLinksFromDocument(doc2) {
+      const networkLinks = [];
+      for (let n = (
+        /** @type {Node} */
+        doc2.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$4(
+            networkLinks,
+            this.readNetworkLinksFromNode(
+              /** @type {Element} */
+              n
+            )
+          );
+        }
+      }
+      return networkLinks;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<Object>} Network links.
+     */
+    readNetworkLinksFromNode(node) {
+      const networkLinks = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "NetworkLink") {
+          const obj = pushParseAndPop({}, NETWORK_LINK_PARSERS, n, []);
+          networkLinks.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
+          extend$4(networkLinks, this.readNetworkLinksFromNode(n));
+        }
+      }
+      return networkLinks;
+    }
+    /**
+     * Read the regions of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<Object>} Regions.
+     * @api
+     */
+    readRegion(source) {
+      const regions = [];
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        extend$4(regions, this.readRegionFromDocument(doc2));
+      } else if (isDocument(source)) {
+        extend$4(
+          regions,
+          this.readRegionFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$4(regions, this.readRegionFromNode(
+          /** @type {Element} */
+          source
+        ));
+      }
+      return regions;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<Object>} Region.
+     */
+    readRegionFromDocument(doc2) {
+      const regions = [];
+      for (let n = (
+        /** @type {Node} */
+        doc2.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType == Node.ELEMENT_NODE) {
+          extend$4(regions, this.readRegionFromNode(
+            /** @type {Element} */
+            n
+          ));
+        }
+      }
+      return regions;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<Object>} Region.
+     * @api
+     */
+    readRegionFromNode(node) {
+      const regions = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName == "Region") {
+          const obj = pushParseAndPop({}, REGION_PARSERS, n, []);
+          regions.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName == "Document" || localName == "Folder" || localName == "kml")) {
+          extend$4(regions, this.readRegionFromNode(n));
+        }
+      }
+      return regions;
+    }
+    /**
+     * @typedef {Object} KMLCamera Specifies the observer's viewpoint and associated view parameters.
+     * @property {number} [Latitude] Latitude of the camera.
+     * @property {number} [Longitude] Longitude of the camera.
+     * @property {number} [Altitude] Altitude of the camera.
+     * @property {string} [AltitudeMode] Floor-related altitude mode.
+     * @property {number} [Heading] Horizontal camera rotation.
+     * @property {number} [Tilt] Lateral camera rotation.
+     * @property {number} [Roll] Vertical camera rotation.
+     */
+    /**
+     * Read the cameras of the KML.
+     *
+     * @param {Document|Element|string} source Source.
+     * @return {Array<KMLCamera>} Cameras.
+     * @api
+     */
+    readCamera(source) {
+      const cameras = [];
+      if (typeof source === "string") {
+        const doc2 = parse(source);
+        extend$4(cameras, this.readCameraFromDocument(doc2));
+      } else if (isDocument(source)) {
+        extend$4(
+          cameras,
+          this.readCameraFromDocument(
+            /** @type {Document} */
+            source
+          )
+        );
+      } else {
+        extend$4(cameras, this.readCameraFromNode(
+          /** @type {Element} */
+          source
+        ));
+      }
+      return cameras;
+    }
+    /**
+     * @param {Document} doc Document.
+     * @return {Array<KMLCamera>} Cameras.
+     */
+    readCameraFromDocument(doc2) {
+      const cameras = [];
+      for (let n = (
+        /** @type {Node} */
+        doc2.firstChild
+      ); n; n = n.nextSibling) {
+        if (n.nodeType === Node.ELEMENT_NODE) {
+          extend$4(cameras, this.readCameraFromNode(
+            /** @type {Element} */
+            n
+          ));
+        }
+      }
+      return cameras;
+    }
+    /**
+     * @param {Element} node Node.
+     * @return {Array<KMLCamera>} Cameras.
+     * @api
+     */
+    readCameraFromNode(node) {
+      const cameras = [];
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && n.localName === "Camera") {
+          const obj = pushParseAndPop({}, CAMERA_PARSERS, n, []);
+          cameras.push(obj);
+        }
+      }
+      for (let n = node.firstElementChild; n; n = n.nextElementSibling) {
+        const localName = n.localName;
+        if (NAMESPACE_URIS.includes(n.namespaceURI) && (localName === "Document" || localName === "Folder" || localName === "Placemark" || localName === "kml")) {
+          extend$4(cameras, this.readCameraFromNode(n));
+        }
+      }
+      return cameras;
+    }
+    /**
+     * Encode an array of features in the KML format as an XML node. GeometryCollections,
+     * MultiPoints, MultiLineStrings, and MultiPolygons are output as MultiGeometries.
+     *
+     * @param {Array<Feature>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Options.
+     * @return {Node} Node.
+     * @api
+     * @override
+     */
+    writeFeaturesNode(features, options) {
+      options = this.adaptOptions(options);
+      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
+      const xmlnsUri = "http://www.w3.org/2000/xmlns/";
+      kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
+      kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
+      kml.setAttributeNS(
+        XML_SCHEMA_INSTANCE_URI,
+        "xsi:schemaLocation",
+        SCHEMA_LOCATION
+      );
+      const context = {
+        node: kml
+      };
+      const properties = {};
+      if (features.length > 1) {
+        properties["Document"] = features;
+      } else if (features.length == 1) {
+        properties["Placemark"] = features[0];
+      }
+      const orderedKeys = KML_SEQUENCE[kml.namespaceURI];
+      const values = makeSequence(properties, orderedKeys);
+      pushSerializeAndPop(
+        context,
+        KML_SERIALIZERS,
+        OBJECT_PROPERTY_NODE_FACTORY,
+        values,
+        [options],
+        orderedKeys,
+        this
+      );
+      return kml;
+    }
+  }
+  function createNameStyleFunction(foundStyle, name2) {
+    const textOffset = [0, 0];
+    let textAlign = "start";
+    const imageStyle = foundStyle.getImage();
+    if (imageStyle) {
+      const imageSize = imageStyle.getSize();
+      if (imageSize && imageSize.length == 2) {
+        const imageScale = imageStyle.getScaleArray();
+        const anchor = imageStyle.getAnchor();
+        textOffset[0] = imageScale[0] * (imageSize[0] - anchor[0]);
+        textOffset[1] = imageScale[1] * (imageSize[1] / 2 - anchor[1]);
+        textAlign = "left";
+      }
+    }
+    let textStyle = foundStyle.getText();
+    if (textStyle) {
+      textStyle = textStyle.clone();
+      textStyle.setFont(textStyle.getFont() || DEFAULT_TEXT_STYLE.getFont());
+      textStyle.setScale(textStyle.getScale() || DEFAULT_TEXT_STYLE.getScale());
+      textStyle.setFill(textStyle.getFill() || DEFAULT_TEXT_STYLE.getFill());
+      textStyle.setStroke(textStyle.getStroke() || DEFAULT_TEXT_STROKE_STYLE);
+    } else {
+      textStyle = DEFAULT_TEXT_STYLE.clone();
+    }
+    textStyle.setText(name2);
+    textStyle.setOffsetX(textOffset[0]);
+    textStyle.setOffsetY(textOffset[1]);
+    textStyle.setTextAlign(textAlign);
+    const nameStyle = new Style({
+      image: imageStyle,
+      text: textStyle
+    });
+    return nameStyle;
+  }
+  function createFeatureStyleFunction(style, styleUrl, defaultStyle, sharedStyles, showPointNames) {
+    return (
+      /**
+       * @param {Feature} feature feature.
+       * @param {number} resolution Resolution.
+       * @return {Array<Style>|Style} Style.
+       */
+      (function(feature, resolution) {
+        let drawName = showPointNames;
+        let name2 = "";
+        let multiGeometryPoints = [];
+        if (drawName) {
+          const geometry = feature.getGeometry();
+          if (geometry) {
+            if (geometry instanceof GeometryCollection) {
+              multiGeometryPoints = geometry.getGeometriesArrayRecursive().filter(function(geometry2) {
+                const type = geometry2.getType();
+                return type === "Point" || type === "MultiPoint";
+              });
+              drawName = multiGeometryPoints.length > 0;
+            } else {
+              const type = geometry.getType();
+              drawName = type === "Point" || type === "MultiPoint";
+            }
+          }
+        }
+        if (drawName) {
+          name2 = /** @type {string} */
+          feature.get("name");
+          drawName = drawName && !!name2;
+          if (drawName && /&[^&]+;/.test(name2)) {
+            if (!TEXTAREA) {
+              TEXTAREA = document.createElement("textarea");
+            }
+            TEXTAREA.innerHTML = name2;
+            name2 = TEXTAREA.value;
+          }
+        }
+        let featureStyle = defaultStyle;
+        if (style) {
+          featureStyle = style;
+        } else if (styleUrl) {
+          featureStyle = findStyle(styleUrl, defaultStyle, sharedStyles);
+        }
+        if (drawName) {
+          const nameStyle = createNameStyleFunction(featureStyle[0], name2);
+          if (multiGeometryPoints.length > 0) {
+            nameStyle.setGeometry(new GeometryCollection(multiGeometryPoints));
+            const baseStyle = new Style({
+              geometry: featureStyle[0].getGeometry(),
+              image: null,
+              fill: featureStyle[0].getFill(),
+              stroke: featureStyle[0].getStroke(),
+              text: null
+            });
+            return [nameStyle, baseStyle].concat(featureStyle.slice(1));
+          }
+          return nameStyle;
+        }
+        return featureStyle;
+      })
+    );
+  }
+  function findStyle(styleValue2, defaultStyle, sharedStyles) {
+    if (Array.isArray(styleValue2)) {
+      return styleValue2;
+    }
+    if (typeof styleValue2 === "string") {
+      return findStyle(sharedStyles[styleValue2], defaultStyle, sharedStyles);
+    }
+    return defaultStyle;
+  }
+  function readColor(node) {
+    const s = getAllTextContent(node, false);
+    const m = /^\s*#?\s*([0-9A-Fa-f]{8})\s*$/.exec(s);
+    if (m) {
+      const hexColor = m[1];
+      return [
+        parseInt(hexColor.substr(6, 2), 16),
+        parseInt(hexColor.substr(4, 2), 16),
+        parseInt(hexColor.substr(2, 2), 16),
+        parseInt(hexColor.substr(0, 2), 16) / 255
+      ];
+    }
+    return void 0;
+  }
+  function readFlatCoordinates(node) {
+    let s = getAllTextContent(node, false);
+    const flatCoordinates = [];
+    s = s.replace(/\s*,\s*/g, ",");
+    const re = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?),([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|,|$)(?:([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)(?:\s+|$))?\s*/i;
+    let m;
+    while (m = re.exec(s)) {
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      const z = m[3] ? parseFloat(m[3]) : 0;
+      flatCoordinates.push(x, y, z);
+      s = s.substr(m[0].length);
+    }
+    if (s !== "") {
+      return void 0;
+    }
+    return flatCoordinates;
+  }
+  function readURI(node) {
+    const s = getAllTextContent(node, false).trim();
+    let baseURI = node.baseURI;
+    if (!baseURI || baseURI == "about:blank") {
+      baseURI = window.location.href;
+    }
+    if (baseURI) {
+      const url = new URL(s, baseURI);
+      return url.href;
+    }
+    return s;
+  }
+  function readStyleURL(node) {
+    const s = getAllTextContent(node, false).trim().replace(/^(?!.*#)/, "#");
+    let baseURI = node.baseURI;
+    if (!baseURI || baseURI == "about:blank") {
+      baseURI = window.location.href;
+    }
+    if (baseURI) {
+      const url = new URL(s, baseURI);
+      return url.href;
+    }
+    return s;
+  }
+  function readVec2(node) {
+    const xunits = node.getAttribute("xunits");
+    const yunits = node.getAttribute("yunits");
+    let origin;
+    if (xunits !== "insetPixels") {
+      if (yunits !== "insetPixels") {
+        origin = "bottom-left";
+      } else {
+        origin = "top-left";
+      }
+    } else {
+      if (yunits !== "insetPixels") {
+        origin = "bottom-right";
+      } else {
+        origin = "top-right";
+      }
+    }
+    return {
+      x: parseFloat(node.getAttribute("x")),
+      xunits: ICON_ANCHOR_UNITS_MAP[xunits],
+      y: parseFloat(node.getAttribute("y")),
+      yunits: ICON_ANCHOR_UNITS_MAP[yunits],
+      origin
+    };
+  }
+  function readScale(node) {
+    return readDecimal(node);
+  }
+  const STYLE_MAP_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Pair": pairDataParser
+  });
+  function readStyleMapValue(node, objectStack) {
+    return pushParseAndPop(void 0, STYLE_MAP_PARSERS, node, objectStack, this);
+  }
+  const ICON_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Icon": makeObjectPropertySetter(readIcon),
+    "color": makeObjectPropertySetter(readColor),
+    "heading": makeObjectPropertySetter(readDecimal),
+    "hotSpot": makeObjectPropertySetter(readVec2),
+    "scale": makeObjectPropertySetter(readScale)
+  });
+  function iconStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, ICON_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    const IconObject = "Icon" in object ? object["Icon"] : {};
+    const drawIcon = !("Icon" in object) || Object.keys(IconObject).length > 0;
+    let src;
+    const href = (
+      /** @type {string|undefined} */
+      IconObject["href"]
+    );
+    if (href) {
+      src = href;
+    } else if (drawIcon) {
+      src = DEFAULT_IMAGE_STYLE_SRC;
+    }
+    let anchor, anchorXUnits, anchorYUnits;
+    let anchorOrigin = "bottom-left";
+    const hotSpot = (
+      /** @type {Vec2|undefined} */
+      object["hotSpot"]
+    );
+    if (hotSpot) {
+      anchor = [hotSpot.x, hotSpot.y];
+      anchorXUnits = hotSpot.xunits;
+      anchorYUnits = hotSpot.yunits;
+      anchorOrigin = hotSpot.origin;
+    } else if (/^https?:\/\/maps\.(?:google|gstatic)\.com\//.test(src)) {
+      if (src.includes("pushpin")) {
+        anchor = DEFAULT_IMAGE_STYLE_ANCHOR;
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      } else if (src.includes("arrow-reverse")) {
+        anchor = [54, 42];
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      } else if (src.includes("paddle")) {
+        anchor = [32, 1];
+        anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
+        anchorYUnits = DEFAULT_IMAGE_STYLE_ANCHOR_Y_UNITS;
+      }
+    }
+    let offset2;
+    const x = (
+      /** @type {number|undefined} */
+      IconObject["x"]
+    );
+    const y = (
+      /** @type {number|undefined} */
+      IconObject["y"]
+    );
+    if (x !== void 0 && y !== void 0) {
+      offset2 = [x, y];
+    }
+    let size;
+    const w = (
+      /** @type {number|undefined} */
+      IconObject["w"]
+    );
+    const h = (
+      /** @type {number|undefined} */
+      IconObject["h"]
+    );
+    if (w !== void 0 && h !== void 0) {
+      size = [w, h];
+    }
+    let rotation;
+    const heading = (
+      /** @type {number} */
+      object["heading"]
+    );
+    if (heading !== void 0) {
+      rotation = toRadians(heading);
+    }
+    const scale2 = (
+      /** @type {number|undefined} */
+      object["scale"]
+    );
+    const color = (
+      /** @type {Array<number>|undefined} */
+      object["color"]
+    );
+    if (drawIcon) {
+      if (src == DEFAULT_IMAGE_STYLE_SRC) {
+        size = DEFAULT_IMAGE_STYLE_SIZE;
+      }
+      const imageStyle = new Icon({
+        anchor,
+        anchorOrigin,
+        anchorXUnits,
+        anchorYUnits,
+        crossOrigin: this.crossOrigin_,
+        referrerPolicy: this.referrerPolicy_,
+        offset: offset2,
+        offsetOrigin: "bottom-left",
+        rotation,
+        scale: scale2,
+        size,
+        src: this.iconUrlFunction_(src),
+        color
+      });
+      const imageScale = imageStyle.getScaleArray()[0];
+      const imageSize = imageStyle.getSize();
+      if (imageSize === null) {
+        const imageState = imageStyle.getImageState();
+        if (imageState === ImageState.IDLE || imageState === ImageState.LOADING) {
+          const listener = function() {
+            const imageState2 = imageStyle.getImageState();
+            if (!(imageState2 === ImageState.IDLE || imageState2 === ImageState.LOADING)) {
+              const imageSize2 = imageStyle.getSize();
+              if (imageSize2 && imageSize2.length == 2) {
+                const resizeScale = scaleForSize(imageSize2);
+                imageStyle.setScale(imageScale * resizeScale);
+              }
+              imageStyle.unlistenImageChange(listener);
+            }
+          };
+          imageStyle.listenImageChange(listener);
+          if (imageState === ImageState.IDLE) {
+            imageStyle.load();
+          }
+        }
+      } else if (imageSize.length == 2) {
+        const resizeScale = scaleForSize(imageSize);
+        imageStyle.setScale(imageScale * resizeScale);
+      }
+      styleObject["imageStyle"] = imageStyle;
+    } else {
+      styleObject["imageStyle"] = DEFAULT_NO_IMAGE_STYLE;
+    }
+  }
+  const LABEL_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "scale": makeObjectPropertySetter(readScale)
+  });
+  function labelStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, LABEL_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const textStyle = new Text({
+      fill: new Fill({
+        color: (
+          /** @type {import("../color.js").Color} */
+          "color" in object ? object["color"] : DEFAULT_COLOR
+        )
+      }),
+      scale: (
+        /** @type {number|undefined} */
+        object["scale"]
+      )
+    });
+    styleObject["textStyle"] = textStyle;
+  }
+  const LINE_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "width": makeObjectPropertySetter(readDecimal)
+  });
+  function lineStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, LINE_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const strokeStyle = new Stroke({
+      color: (
+        /** @type {import("../color.js").Color} */
+        "color" in object ? object["color"] : DEFAULT_COLOR
+      ),
+      width: (
+        /** @type {number} */
+        "width" in object ? object["width"] : 1
+      )
+    });
+    styleObject["strokeStyle"] = strokeStyle;
+  }
+  const POLY_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeObjectPropertySetter(readColor),
+    "fill": makeObjectPropertySetter(readBoolean),
+    "outline": makeObjectPropertySetter(readBoolean)
+  });
+  function polyStyleParser(node, objectStack) {
+    const object = pushParseAndPop({}, POLY_STYLE_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const styleObject = objectStack[objectStack.length - 1];
+    const fillStyle = new Fill({
+      color: (
+        /** @type {import("../color.js").Color} */
+        "color" in object ? object["color"] : DEFAULT_COLOR
+      )
+    });
+    styleObject["fillStyle"] = fillStyle;
+    const fill = (
+      /** @type {boolean|undefined} */
+      object["fill"]
+    );
+    if (fill !== void 0) {
+      styleObject["fill"] = fill;
+    }
+    const outline = (
+      /** @type {boolean|undefined} */
+      object["outline"]
+    );
+    if (outline !== void 0) {
+      styleObject["outline"] = outline;
+    }
+  }
+  const FLAT_LINEAR_RING_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "coordinates": makeReplacer(readFlatCoordinates)
+  });
+  function readFlatLinearRing(node, objectStack) {
+    return pushParseAndPop(null, FLAT_LINEAR_RING_PARSERS, node, objectStack);
+  }
+  function gxCoordParser(node, objectStack) {
+    const gxTrackObject = (
+      /** @type {GxTrackObject} */
+      objectStack[objectStack.length - 1]
+    );
+    const coordinates2 = gxTrackObject.coordinates;
+    const s = getAllTextContent(node, false);
+    const re = /^\s*([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s+([+\-]?\d+(?:\.\d*)?(?:e[+\-]?\d*)?)\s*$/i;
+    const m = re.exec(s);
+    if (m) {
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      const z = parseFloat(m[3]);
+      coordinates2.push([x, y, z]);
+    } else {
+      coordinates2.push([]);
+    }
+  }
+  const GX_MULTITRACK_GEOMETRY_PARSERS = makeStructureNS(GX_NAMESPACE_URIS, {
+    "Track": makeArrayPusher(readGxTrack)
+  });
+  function readGxMultiTrack(node, objectStack) {
+    const lineStrings = pushParseAndPop(
+      [],
+      GX_MULTITRACK_GEOMETRY_PARSERS,
+      node,
+      objectStack
+    );
+    if (!lineStrings) {
+      return void 0;
+    }
+    return new MultiLineString(lineStrings);
+  }
+  const GX_TRACK_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "when": whenParser
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "coord": gxCoordParser
+    })
+  );
+  function readGxTrack(node, objectStack) {
+    const gxTrackObject = pushParseAndPop(
+      /** @type {GxTrackObject} */
+      {
+        coordinates: [],
+        whens: []
+      },
+      GX_TRACK_PARSERS,
+      node,
+      objectStack
+    );
+    if (!gxTrackObject) {
+      return void 0;
+    }
+    const flatCoordinates = [];
+    const coordinates2 = gxTrackObject.coordinates;
+    const whens = gxTrackObject.whens;
+    for (let i = 0, ii = Math.min(coordinates2.length, whens.length); i < ii; ++i) {
+      if (coordinates2[i].length == 3) {
+        flatCoordinates.push(
+          coordinates2[i][0],
+          coordinates2[i][1],
+          coordinates2[i][2],
+          whens[i]
+        );
+      }
+    }
+    return new LineString(flatCoordinates, "XYZM");
+  }
+  const ICON_PARSERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "href": makeObjectPropertySetter(readURI)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "x": makeObjectPropertySetter(readDecimal),
+      "y": makeObjectPropertySetter(readDecimal),
+      "w": makeObjectPropertySetter(readDecimal),
+      "h": makeObjectPropertySetter(readDecimal)
+    })
+  );
+  function readIcon(node, objectStack) {
+    const iconObject = pushParseAndPop({}, ICON_PARSERS, node, objectStack);
+    if (iconObject) {
+      return iconObject;
+    }
+    return null;
+  }
+  const GEOMETRY_FLAT_COORDINATES_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "coordinates": makeReplacer(readFlatCoordinates)
+  });
+  function readFlatCoordinatesFromNode(node, objectStack) {
+    return pushParseAndPop(
+      null,
+      GEOMETRY_FLAT_COORDINATES_PARSERS,
+      node,
+      objectStack
+    );
+  }
+  const EXTRUDE_AND_ALTITUDE_MODE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "extrude": makeObjectPropertySetter(readBoolean),
+    "tessellate": makeObjectPropertySetter(readBoolean),
+    "altitudeMode": makeObjectPropertySetter(readString)
+  });
+  function readLineString(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const lineString = new LineString(flatCoordinates, "XYZ");
+      lineString.setProperties(properties, true);
+      return lineString;
+    }
+    return void 0;
+  }
+  function readLinearRing(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const polygon = new Polygon(flatCoordinates, "XYZ", [
+        flatCoordinates.length
+      ]);
+      polygon.setProperties(properties, true);
+      return polygon;
+    }
+    return void 0;
+  }
+  const MULTI_GEOMETRY_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LineString": makeArrayPusher(readLineString),
+    "LinearRing": makeArrayPusher(readLinearRing),
+    "MultiGeometry": makeArrayPusher(readMultiGeometry),
+    "Point": makeArrayPusher(readPoint),
+    "Polygon": makeArrayPusher(readPolygon)
+  });
+  function readMultiGeometry(node, objectStack) {
+    const geometries = pushParseAndPop(
+      [],
+      MULTI_GEOMETRY_PARSERS,
+      node,
+      objectStack
+    );
+    if (!geometries) {
+      return null;
+    }
+    if (geometries.length === 0) {
+      return new GeometryCollection(geometries);
+    }
+    let multiGeometry;
+    let homogeneous = true;
+    const type = geometries[0].getType();
+    let geometry;
+    for (let i = 1, ii = geometries.length; i < ii; ++i) {
+      geometry = geometries[i];
+      if (geometry.getType() != type) {
+        homogeneous = false;
+        break;
+      }
+    }
+    if (homogeneous) {
+      let layout;
+      let flatCoordinates;
+      if (type == "Point") {
+        const point = geometries[0];
+        layout = point.getLayout();
+        flatCoordinates = point.getFlatCoordinates();
+        for (let i = 1, ii = geometries.length; i < ii; ++i) {
+          geometry = geometries[i];
+          extend$4(flatCoordinates, geometry.getFlatCoordinates());
+        }
+        multiGeometry = new MultiPoint(flatCoordinates, layout);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "LineString") {
+        multiGeometry = new MultiLineString(geometries);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "Polygon") {
+        multiGeometry = new MultiPolygon(geometries);
+        setCommonGeometryProperties(multiGeometry, geometries);
+      } else if (type == "GeometryCollection" || type.startsWith("Multi")) {
+        multiGeometry = new GeometryCollection(geometries);
+      } else {
+        throw new Error("Unknown geometry type found");
+      }
+    } else {
+      multiGeometry = new GeometryCollection(geometries);
+    }
+    return (
+      /** @type {import("../geom/Geometry.js").default} */
+      multiGeometry
+    );
+  }
+  function readPoint(node, objectStack) {
+    const properties = pushParseAndPop(
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatCoordinates = readFlatCoordinatesFromNode(node, objectStack);
+    if (flatCoordinates) {
+      const point = new Point$1(flatCoordinates, "XYZ");
+      point.setProperties(properties, true);
+      return point;
+    }
+    return void 0;
+  }
+  const FLAT_LINEAR_RINGS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "innerBoundaryIs": innerBoundaryIsParser,
+    "outerBoundaryIs": outerBoundaryIsParser
+  });
+  function readPolygon(node, objectStack) {
+    const properties = pushParseAndPop(
+      /** @type {Object<string,*>} */
+      {},
+      EXTRUDE_AND_ALTITUDE_MODE_PARSERS,
+      node,
+      objectStack
+    );
+    const flatLinearRings = pushParseAndPop(
+      [null],
+      FLAT_LINEAR_RINGS_PARSERS,
+      node,
+      objectStack
+    );
+    if (flatLinearRings && flatLinearRings[0]) {
+      const flatCoordinates = flatLinearRings[0];
+      const ends = [flatCoordinates.length];
+      for (let i = 1, ii = flatLinearRings.length; i < ii; ++i) {
+        extend$4(flatCoordinates, flatLinearRings[i]);
+        ends.push(flatCoordinates.length);
+      }
+      const polygon = new Polygon(flatCoordinates, "XYZ", ends);
+      polygon.setProperties(properties, true);
+      return polygon;
+    }
+    return void 0;
+  }
+  const STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "IconStyle": iconStyleParser,
+    "LabelStyle": labelStyleParser,
+    "LineStyle": lineStyleParser,
+    "PolyStyle": polyStyleParser
+  });
+  function readStyle(node, objectStack) {
+    const styleObject = pushParseAndPop(
+      {},
+      STYLE_PARSERS,
+      node,
+      objectStack,
+      this
+    );
+    if (!styleObject) {
+      return null;
+    }
+    let fillStyle = (
+      /** @type {Fill} */
+      "fillStyle" in styleObject ? styleObject["fillStyle"] : DEFAULT_FILL_STYLE
+    );
+    const fill = (
+      /** @type {boolean|undefined} */
+      styleObject["fill"]
+    );
+    if (fill !== void 0 && !fill) {
+      fillStyle = null;
+    }
+    let imageStyle;
+    if ("imageStyle" in styleObject) {
+      if (styleObject["imageStyle"] != DEFAULT_NO_IMAGE_STYLE) {
+        imageStyle = /** @type {import("../style/Image.js").default} */
+        styleObject["imageStyle"];
+      }
+    } else {
+      imageStyle = DEFAULT_IMAGE_STYLE;
+    }
+    const textStyle = (
+      /** @type {Text} */
+      "textStyle" in styleObject ? styleObject["textStyle"] : DEFAULT_TEXT_STYLE
+    );
+    const strokeStyle = (
+      /** @type {Stroke} */
+      "strokeStyle" in styleObject ? styleObject["strokeStyle"] : DEFAULT_STROKE_STYLE
+    );
+    const outline = (
+      /** @type {boolean|undefined} */
+      styleObject["outline"]
+    );
+    if (outline !== void 0 && !outline) {
+      return [
+        new Style({
+          geometry: function(feature) {
+            const geometry = feature.getGeometry();
+            const type = geometry.getType();
+            if (type === "GeometryCollection") {
+              const collection = (
+                /** @type {import("../geom/GeometryCollection.js").default} */
+                geometry
+              );
+              return new GeometryCollection(
+                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                  const type2 = geometry2.getType();
+                  return type2 !== "Polygon" && type2 !== "MultiPolygon";
+                })
+              );
+            }
+            if (type !== "Polygon" && type !== "MultiPolygon") {
+              return geometry;
+            }
+          },
+          fill: fillStyle,
+          image: imageStyle,
+          stroke: strokeStyle,
+          text: textStyle,
+          zIndex: void 0
+          // FIXME
+        }),
+        new Style({
+          geometry: function(feature) {
+            const geometry = feature.getGeometry();
+            const type = geometry.getType();
+            if (type === "GeometryCollection") {
+              const collection = (
+                /** @type {import("../geom/GeometryCollection.js").default} */
+                geometry
+              );
+              return new GeometryCollection(
+                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                  const type2 = geometry2.getType();
+                  return type2 === "Polygon" || type2 === "MultiPolygon";
+                })
+              );
+            }
+            if (type === "Polygon" || type === "MultiPolygon") {
+              return geometry;
+            }
+          },
+          fill: fillStyle,
+          stroke: null,
+          zIndex: void 0
+          // FIXME
+        })
+      ];
+    }
+    return [
+      new Style({
+        fill: fillStyle,
+        image: imageStyle,
+        stroke: strokeStyle,
+        text: textStyle,
+        zIndex: void 0
+        // FIXME
+      })
+    ];
+  }
+  function setCommonGeometryProperties(multiGeometry, geometries) {
+    const ii = geometries.length;
+    const extrudes = new Array(geometries.length);
+    const tessellates = new Array(geometries.length);
+    const altitudeModes = new Array(geometries.length);
+    let hasExtrude, hasTessellate, hasAltitudeMode;
+    hasExtrude = false;
+    hasTessellate = false;
+    hasAltitudeMode = false;
+    for (let i = 0; i < ii; ++i) {
+      const geometry = geometries[i];
+      extrudes[i] = geometry.get("extrude");
+      tessellates[i] = geometry.get("tessellate");
+      altitudeModes[i] = geometry.get("altitudeMode");
+      hasExtrude = hasExtrude || extrudes[i] !== void 0;
+      hasTessellate = hasTessellate || tessellates[i] !== void 0;
+      hasAltitudeMode = hasAltitudeMode || altitudeModes[i];
+    }
+    if (hasExtrude) {
+      multiGeometry.set("extrude", extrudes);
+    }
+    if (hasTessellate) {
+      multiGeometry.set("tessellate", tessellates);
+    }
+    if (hasAltitudeMode) {
+      multiGeometry.set("altitudeMode", altitudeModes);
+    }
+  }
+  const DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "displayName": makeObjectPropertySetter(readString),
+    "value": makeObjectPropertySetter(readString)
+  });
+  function dataParser(node, objectStack) {
+    const name2 = node.getAttribute("name");
+    parseNode(DATA_PARSERS, node, objectStack);
+    const featureObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    if (name2 && featureObject.displayName) {
+      featureObject[name2] = {
+        value: featureObject.value,
+        displayName: featureObject.displayName,
+        toString: function() {
+          return featureObject.value;
+        }
+      };
+    } else if (name2 !== null) {
+      featureObject[name2] = featureObject.value;
+    } else if (featureObject.displayName !== null) {
+      featureObject[featureObject.displayName] = featureObject.value;
+    }
+    delete featureObject["value"];
+  }
+  const EXTENDED_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Data": dataParser,
+    "SchemaData": schemaDataParser
+  });
+  function extendedDataParser(node, objectStack) {
+    parseNode(EXTENDED_DATA_PARSERS, node, objectStack);
+  }
+  function regionParser(node, objectStack) {
+    parseNode(REGION_PARSERS, node, objectStack);
+  }
+  const PAIR_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "Style": makeObjectPropertySetter(readStyle),
+    "key": makeObjectPropertySetter(readString),
+    "styleUrl": makeObjectPropertySetter(readStyleURL)
+  });
+  function pairDataParser(node, objectStack) {
+    const pairObject = pushParseAndPop({}, PAIR_PARSERS, node, objectStack, this);
+    if (!pairObject) {
+      return;
+    }
+    const key2 = (
+      /** @type {string|undefined} */
+      pairObject["key"]
+    );
+    if (key2 && key2 == "normal") {
+      const styleUrl = (
+        /** @type {string|undefined} */
+        pairObject["styleUrl"]
+      );
+      if (styleUrl) {
+        objectStack[objectStack.length - 1] = styleUrl;
+      }
+      const style = (
+        /** @type {Style} */
+        pairObject["Style"]
+      );
+      if (style) {
+        objectStack[objectStack.length - 1] = style;
+      }
+    }
+  }
+  function placemarkStyleMapParser(node, objectStack) {
+    const styleMapValue = readStyleMapValue.call(this, node, objectStack);
+    if (!styleMapValue) {
+      return;
+    }
+    const placemarkObject = objectStack[objectStack.length - 1];
+    if (Array.isArray(styleMapValue)) {
+      placemarkObject["Style"] = styleMapValue;
+    } else if (typeof styleMapValue === "string") {
+      placemarkObject["styleUrl"] = styleMapValue;
+    } else {
+      throw new Error("`styleMapValue` has an unknown type");
+    }
+  }
+  const SCHEMA_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "SimpleData": simpleDataParser
+  });
+  function schemaDataParser(node, objectStack) {
+    parseNode(SCHEMA_DATA_PARSERS, node, objectStack);
+  }
+  function simpleDataParser(node, objectStack) {
+    const name2 = node.getAttribute("name");
+    if (name2 !== null) {
+      const data = readString(node);
+      const featureObject = (
+        /** @type {Object} */
+        objectStack[objectStack.length - 1]
+      );
+      featureObject[name2] = data;
+    }
+  }
+  const LAT_LON_ALT_BOX_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "altitudeMode": makeObjectPropertySetter(readString),
+    "minAltitude": makeObjectPropertySetter(readDecimal),
+    "maxAltitude": makeObjectPropertySetter(readDecimal),
+    "north": makeObjectPropertySetter(readDecimal),
+    "south": makeObjectPropertySetter(readDecimal),
+    "east": makeObjectPropertySetter(readDecimal),
+    "west": makeObjectPropertySetter(readDecimal)
+  });
+  function latLonAltBoxParser(node, objectStack) {
+    const object = pushParseAndPop(
+      {},
+      LAT_LON_ALT_BOX_PARSERS,
+      node,
+      objectStack
+    );
+    if (!object) {
+      return;
+    }
+    const regionObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    const extent = [
+      parseFloat(object["west"]),
+      parseFloat(object["south"]),
+      parseFloat(object["east"]),
+      parseFloat(object["north"])
+    ];
+    regionObject["extent"] = extent;
+    regionObject["altitudeMode"] = object["altitudeMode"];
+    regionObject["minAltitude"] = parseFloat(object["minAltitude"]);
+    regionObject["maxAltitude"] = parseFloat(object["maxAltitude"]);
+  }
+  const LOD_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "minLodPixels": makeObjectPropertySetter(readDecimal),
+    "maxLodPixels": makeObjectPropertySetter(readDecimal),
+    "minFadeExtent": makeObjectPropertySetter(readDecimal),
+    "maxFadeExtent": makeObjectPropertySetter(readDecimal)
+  });
+  function lodParser(node, objectStack) {
+    const object = pushParseAndPop({}, LOD_PARSERS, node, objectStack);
+    if (!object) {
+      return;
+    }
+    const lodObject = (
+      /** @type {Object} */
+      objectStack[objectStack.length - 1]
+    );
+    lodObject["minLodPixels"] = parseFloat(object["minLodPixels"]);
+    lodObject["maxLodPixels"] = parseFloat(object["maxLodPixels"]);
+    lodObject["minFadeExtent"] = parseFloat(object["minFadeExtent"]);
+    lodObject["maxFadeExtent"] = parseFloat(object["maxFadeExtent"]);
+  }
+  const INNER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    // KML spec only allows one LinearRing  per innerBoundaryIs, but Google Earth
+    // allows multiple, so we parse multiple here too.
+    "LinearRing": makeArrayPusher(readFlatLinearRing)
+  });
+  function innerBoundaryIsParser(node, objectStack) {
+    const innerBoundaryFlatLinearRings = pushParseAndPop(
+      /** @type {Array<Array<number>>} */
+      [],
+      INNER_BOUNDARY_IS_PARSERS,
+      node,
+      objectStack
+    );
+    if (innerBoundaryFlatLinearRings.length > 0) {
+      const flatLinearRings = (
+        /** @type {Array<Array<number>>} */
+        objectStack[objectStack.length - 1]
+      );
+      flatLinearRings.push(...innerBoundaryFlatLinearRings);
+    }
+  }
+  const OUTER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+    "LinearRing": makeReplacer(readFlatLinearRing)
+  });
+  function outerBoundaryIsParser(node, objectStack) {
+    const flatLinearRing = pushParseAndPop(
+      void 0,
+      OUTER_BOUNDARY_IS_PARSERS,
+      node,
+      objectStack
+    );
+    if (flatLinearRing) {
+      const flatLinearRings = (
+        /** @type {Array<Array<number>>} */
+        objectStack[objectStack.length - 1]
+      );
+      flatLinearRings[0] = flatLinearRing;
+    }
+  }
+  function linkParser(node, objectStack) {
+    parseNode(LINK_PARSERS, node, objectStack);
+  }
+  function whenParser(node, objectStack) {
+    const gxTrackObject = (
+      /** @type {GxTrackObject} */
+      objectStack[objectStack.length - 1]
+    );
+    const whens = gxTrackObject.whens;
+    const s = getAllTextContent(node, false);
+    const when = Date.parse(s);
+    whens.push(isNaN(when) ? 0 : when);
+  }
+  function writeColorTextNode(node, color) {
+    const rgba = asArray(color);
+    const opacity = rgba.length == 4 ? rgba[3] : 1;
+    const abgr = [opacity * 255, rgba[2], rgba[1], rgba[0]];
+    for (let i = 0; i < 4; ++i) {
+      const hex = Math.floor(
+        /** @type {number} */
+        abgr[i]
+      ).toString(16);
+      abgr[i] = hex.length == 1 ? "0" + hex : hex;
+    }
+    writeStringTextNode(node, abgr.join(""));
+  }
+  function writeCoordinatesTextNode(node, coordinates2, objectStack) {
+    const context = objectStack[objectStack.length - 1];
+    const layout = context["layout"];
+    const stride = context["stride"];
+    let dimension;
+    if (layout == "XY" || layout == "XYM") {
+      dimension = 2;
+    } else if (layout == "XYZ" || layout == "XYZM") {
+      dimension = 3;
+    } else {
+      throw new Error("Invalid geometry layout");
+    }
+    const ii = coordinates2.length;
+    let text2 = "";
+    if (ii > 0) {
+      text2 += coordinates2[0];
+      for (let d = 1; d < dimension; ++d) {
+        text2 += "," + coordinates2[d];
+      }
+      for (let i = stride; i < ii; i += stride) {
+        text2 += " " + coordinates2[i];
+        for (let d = 1; d < dimension; ++d) {
+          text2 += "," + coordinates2[i + d];
+        }
+      }
+    }
+    writeStringTextNode(node, text2);
+  }
+  const EXTENDEDDATA_NODE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Data": makeChildAppender(writeDataNode),
+    "value": makeChildAppender(writeDataNodeValue),
+    "displayName": makeChildAppender(writeDataNodeName)
+  });
+  function writeDataNode(node, pair, objectStack) {
+    node.setAttribute("name", pair.name);
+    const context = { node };
+    const value2 = pair.value;
+    if (typeof value2 == "object") {
+      if (value2 !== null && value2.displayName) {
+        pushSerializeAndPop(
+          context,
+          EXTENDEDDATA_NODE_SERIALIZERS,
+          OBJECT_PROPERTY_NODE_FACTORY,
+          [value2.displayName],
+          objectStack,
+          ["displayName"]
+        );
+      }
+      if (value2 !== null && value2.value) {
+        pushSerializeAndPop(
+          context,
+          EXTENDEDDATA_NODE_SERIALIZERS,
+          OBJECT_PROPERTY_NODE_FACTORY,
+          [value2.value],
+          objectStack,
+          ["value"]
+        );
+      }
+    } else {
+      pushSerializeAndPop(
+        context,
+        EXTENDEDDATA_NODE_SERIALIZERS,
+        OBJECT_PROPERTY_NODE_FACTORY,
+        [value2],
+        objectStack,
+        ["value"]
+      );
+    }
+  }
+  function writeDataNodeName(node, name2) {
+    writeStringTextNode(node, name2);
+  }
+  function writeDataNodeValue(node, value2) {
+    writeStringTextNode(node, value2);
+  }
+  const DOCUMENT_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Placemark": makeChildAppender(writePlacemark)
+  });
+  const DOCUMENT_NODE_FACTORY = function(value2, objectStack, nodeName) {
+    const parentNode = objectStack[objectStack.length - 1].node;
+    return createElementNS(parentNode.namespaceURI, "Placemark");
+  };
+  function writeDocument(node, features, objectStack) {
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      DOCUMENT_SERIALIZERS,
+      DOCUMENT_NODE_FACTORY,
+      features,
+      objectStack,
+      void 0,
+      this
+    );
+  }
+  const DATA_NODE_FACTORY = makeSimpleNodeFactory("Data");
+  function writeExtendedData(node, namesAndValues, objectStack) {
+    const context = { node };
+    const names2 = namesAndValues.names;
+    const values = namesAndValues.values;
+    const length = names2.length;
+    for (let i = 0; i < length; i++) {
+      pushSerializeAndPop(
+        context,
+        EXTENDEDDATA_NODE_SERIALIZERS,
+        DATA_NODE_FACTORY,
+        [{ name: names2[i], value: values[i] }],
+        objectStack
+      );
+    }
+  }
+  const ICON_SEQUENCE = makeStructureNS(
+    NAMESPACE_URIS,
+    ["href"],
+    makeStructureNS(GX_NAMESPACE_URIS, ["x", "y", "w", "h"])
+  );
+  const ICON_SERIALIZERS = makeStructureNS(
+    NAMESPACE_URIS,
+    {
+      "href": makeChildAppender(writeStringTextNode)
+    },
+    makeStructureNS(GX_NAMESPACE_URIS, {
+      "x": makeChildAppender(writeDecimalTextNode),
+      "y": makeChildAppender(writeDecimalTextNode),
+      "w": makeChildAppender(writeDecimalTextNode),
+      "h": makeChildAppender(writeDecimalTextNode)
+    })
+  );
+  const GX_NODE_FACTORY = function(value2, objectStack, nodeName) {
+    return createElementNS(GX_NAMESPACE_URIS[0], "gx:" + nodeName);
+  };
+  function writeIcon(node, icon, objectStack) {
+    const context = { node };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    let orderedKeys = ICON_SEQUENCE[parentNode.namespaceURI];
+    let values = makeSequence(icon, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+    orderedKeys = ICON_SEQUENCE[GX_NAMESPACE_URIS[0]];
+    values = makeSequence(icon, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_SERIALIZERS,
+      GX_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const ICON_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "scale",
+    "heading",
+    "Icon",
+    "color",
+    "hotSpot"
+  ]);
+  const ICON_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "Icon": makeChildAppender(writeIcon),
+    "color": makeChildAppender(writeColorTextNode),
+    "heading": makeChildAppender(writeDecimalTextNode),
+    "hotSpot": makeChildAppender(writeVec2),
+    "scale": makeChildAppender(writeScaleTextNode)
+  });
+  function writeIconStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {};
+    const src = style.getSrc();
+    const size = style.getSize();
+    const iconImageSize = style.getImageSize();
+    const iconProperties = {
+      "href": src
+    };
+    if (size) {
+      iconProperties["w"] = size[0];
+      iconProperties["h"] = size[1];
+      const anchor = style.getAnchor();
+      const origin = style.getOrigin();
+      if (origin && iconImageSize && origin[0] !== 0 && origin[1] !== size[1]) {
+        iconProperties["x"] = origin[0];
+        iconProperties["y"] = iconImageSize[1] - (origin[1] + size[1]);
+      }
+      if (anchor && (anchor[0] !== size[0] / 2 || anchor[1] !== size[1] / 2)) {
+        const hotSpot = {
+          x: anchor[0],
+          xunits: "pixels",
+          y: size[1] - anchor[1],
+          yunits: "pixels"
+        };
+        properties["hotSpot"] = hotSpot;
+      }
+    }
+    properties["Icon"] = iconProperties;
+    let scale2 = style.getScaleArray()[0];
+    let imageSize = size;
+    if (imageSize === null) {
+      imageSize = DEFAULT_IMAGE_STYLE_SIZE;
+    }
+    if (imageSize.length == 2) {
+      const resizeScale = scaleForSize(imageSize);
+      scale2 = scale2 / resizeScale;
+    }
+    if (scale2 !== 1) {
+      properties["scale"] = scale2;
+    }
+    const rotation = style.getRotation();
+    if (rotation !== 0) {
+      properties["heading"] = rotation;
+    }
+    const color = style.getColor();
+    if (color) {
+      properties["color"] = color;
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = ICON_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      ICON_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const LABEL_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "color",
+    "scale"
+  ]);
+  const LABEL_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "scale": makeChildAppender(writeScaleTextNode)
+  });
+  function writeLabelStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {};
+    const fill = style.getFill();
+    if (fill) {
+      properties["color"] = fill.getColor();
+    }
+    const scale2 = style.getScale();
+    if (scale2 && scale2 !== 1) {
+      properties["scale"] = scale2;
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = LABEL_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      LABEL_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const LINE_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["color", "width"]);
+  const LINE_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "width": makeChildAppender(writeDecimalTextNode)
+  });
+  function writeLineStyle(node, style, objectStack) {
+    const context = { node };
+    const properties = {
+      "color": style.getColor(),
+      "width": Number(style.getWidth()) || 1
+    };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = LINE_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      LINE_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const GEOMETRY_TYPE_TO_NODENAME = {
+    "Point": "Point",
+    "LineString": "LineString",
+    "LinearRing": "LinearRing",
+    "Polygon": "Polygon",
+    "MultiPoint": "MultiGeometry",
+    "MultiLineString": "MultiGeometry",
+    "MultiPolygon": "MultiGeometry",
+    "GeometryCollection": "MultiGeometry"
+  };
+  const GEOMETRY_NODE_FACTORY = function(value2, objectStack, nodeName) {
+    if (value2) {
+      const parentNode = objectStack[objectStack.length - 1].node;
+      return createElementNS(
+        parentNode.namespaceURI,
+        GEOMETRY_TYPE_TO_NODENAME[
+          /** @type {import("../geom/Geometry.js").default} */
+          value2.getType()
+        ]
+      );
+    }
+  };
+  const POINT_NODE_FACTORY = makeSimpleNodeFactory("Point");
+  const LINE_STRING_NODE_FACTORY = makeSimpleNodeFactory("LineString");
+  const LINEAR_RING_NODE_FACTORY = makeSimpleNodeFactory("LinearRing");
+  const POLYGON_NODE_FACTORY = makeSimpleNodeFactory("Polygon");
+  const MULTI_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "LineString": makeChildAppender(writePrimitiveGeometry),
+    "Point": makeChildAppender(writePrimitiveGeometry),
+    "Polygon": makeChildAppender(writePolygon),
+    "GeometryCollection": makeChildAppender(writeMultiGeometry)
+  });
+  function writeMultiGeometry(node, geometry, objectStack) {
+    const context = { node };
+    const type = geometry.getType();
+    let geometries = [];
+    let factory;
+    if (type === "GeometryCollection") {
+      geometry.getGeometriesArrayRecursive().forEach(function(geometry2) {
+        const type2 = geometry2.getType();
+        if (type2 === "MultiPoint") {
+          geometries = geometries.concat(
+            /** @type {MultiPoint} */
+            geometry2.getPoints()
+          );
+        } else if (type2 === "MultiLineString") {
+          geometries = geometries.concat(
+            /** @type {MultiLineString} */
+            geometry2.getLineStrings()
+          );
+        } else if (type2 === "MultiPolygon") {
+          geometries = geometries.concat(
+            /** @type {MultiPolygon} */
+            geometry2.getPolygons()
+          );
+        } else if (type2 === "Point" || type2 === "LineString" || type2 === "Polygon") {
+          geometries.push(geometry2);
+        } else {
+          throw new Error("Unknown geometry type");
+        }
+      });
+      factory = GEOMETRY_NODE_FACTORY;
+    } else if (type === "MultiPoint") {
+      geometries = /** @type {MultiPoint} */
+      geometry.getPoints();
+      factory = POINT_NODE_FACTORY;
+    } else if (type === "MultiLineString") {
+      geometries = /** @type {MultiLineString} */
+      geometry.getLineStrings();
+      factory = LINE_STRING_NODE_FACTORY;
+    } else if (type === "MultiPolygon") {
+      geometries = /** @type {MultiPolygon} */
+      geometry.getPolygons();
+      factory = POLYGON_NODE_FACTORY;
+    } else {
+      throw new Error("Unknown geometry type");
+    }
+    pushSerializeAndPop(
+      context,
+      MULTI_GEOMETRY_SERIALIZERS,
+      factory,
+      geometries,
+      objectStack
+    );
+  }
+  const BOUNDARY_IS_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "LinearRing": makeChildAppender(writePrimitiveGeometry)
+  });
+  function writeBoundaryIs(node, linearRing2, objectStack) {
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      BOUNDARY_IS_SERIALIZERS,
+      LINEAR_RING_NODE_FACTORY,
+      [linearRing2],
+      objectStack
+    );
+  }
+  const PLACEMARK_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "ExtendedData": makeChildAppender(writeExtendedData),
+    "MultiGeometry": makeChildAppender(writeMultiGeometry),
+    "LineString": makeChildAppender(writePrimitiveGeometry),
+    "LinearRing": makeChildAppender(writePrimitiveGeometry),
+    "Point": makeChildAppender(writePrimitiveGeometry),
+    "Polygon": makeChildAppender(writePolygon),
+    "Style": makeChildAppender(writeStyle),
+    "address": makeChildAppender(writeStringTextNode),
+    "description": makeChildAppender(writeStringTextNode),
+    "name": makeChildAppender(writeStringTextNode),
+    "open": makeChildAppender(writeBooleanTextNode),
+    "phoneNumber": makeChildAppender(writeStringTextNode),
+    "styleUrl": makeChildAppender(writeStringTextNode),
+    "visibility": makeChildAppender(writeBooleanTextNode)
+  });
+  const PLACEMARK_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "name",
+    "open",
+    "visibility",
+    "address",
+    "phoneNumber",
+    "description",
+    "styleUrl",
+    "Style"
+  ]);
+  const EXTENDEDDATA_NODE_FACTORY = makeSimpleNodeFactory("ExtendedData");
+  function writePlacemark(node, feature, objectStack) {
+    const context = { node };
+    if (feature.getId()) {
+      node.setAttribute(
+        "id",
+        /** @type {string} */
+        feature.getId()
+      );
+    }
+    const properties = feature.getProperties();
+    const filter = {
+      "address": 1,
+      "description": 1,
+      "name": 1,
+      "open": 1,
+      "phoneNumber": 1,
+      "styleUrl": 1,
+      "visibility": 1
+    };
+    filter[feature.getGeometryName()] = 1;
+    const keys = Object.keys(properties || {}).sort().filter(function(v) {
+      return !filter[v];
+    });
+    const styleFunction = feature.getStyleFunction();
+    if (styleFunction) {
+      const styles = styleFunction(feature, 0);
+      if (styles) {
+        const styleArray = Array.isArray(styles) ? styles : [styles];
+        let pointStyles = styleArray;
+        if (feature.getGeometry()) {
+          pointStyles = styleArray.filter(function(style) {
+            const geometry2 = style.getGeometryFunction()(feature);
+            if (geometry2) {
+              const type = geometry2.getType();
+              if (type === "GeometryCollection") {
+                return (
+                  /** @type {GeometryCollection} */
+                  geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                    const type2 = geometry3.getType();
+                    return type2 === "Point" || type2 === "MultiPoint";
+                  }).length
+                );
+              }
+              return type === "Point" || type === "MultiPoint";
+            }
+          });
+        }
+        if (this.writeStyles_) {
+          let lineStyles = styleArray;
+          let polyStyles = styleArray;
+          if (feature.getGeometry()) {
+            lineStyles = styleArray.filter(function(style) {
+              const geometry2 = style.getGeometryFunction()(feature);
+              if (geometry2) {
+                const type = geometry2.getType();
+                if (type === "GeometryCollection") {
+                  return (
+                    /** @type {GeometryCollection} */
+                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                      const type2 = geometry3.getType();
+                      return type2 === "LineString" || type2 === "MultiLineString";
+                    }).length
+                  );
+                }
+                return type === "LineString" || type === "MultiLineString";
+              }
+            });
+            polyStyles = styleArray.filter(function(style) {
+              const geometry2 = style.getGeometryFunction()(feature);
+              if (geometry2) {
+                const type = geometry2.getType();
+                if (type === "GeometryCollection") {
+                  return (
+                    /** @type {GeometryCollection} */
+                    geometry2.getGeometriesArrayRecursive().filter(function(geometry3) {
+                      const type2 = geometry3.getType();
+                      return type2 === "Polygon" || type2 === "MultiPolygon";
+                    }).length
+                  );
+                }
+                return type === "Polygon" || type === "MultiPolygon";
+              }
+            });
+          }
+          properties["Style"] = {
+            pointStyles,
+            lineStyles,
+            polyStyles
+          };
+        }
+        if (pointStyles.length && properties["name"] === void 0) {
+          const textStyle = pointStyles[0].getText();
+          if (textStyle) {
+            properties["name"] = textStyle.getText();
+          }
+        }
+      }
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = PLACEMARK_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      PLACEMARK_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+    if (keys.length > 0) {
+      const sequence = makeSequence(properties, keys);
+      const namesAndValues = { names: keys, values: sequence };
+      pushSerializeAndPop(
+        context,
+        PLACEMARK_SERIALIZERS,
+        EXTENDEDDATA_NODE_FACTORY,
+        [namesAndValues],
+        objectStack
+      );
+    }
+    const options = (
+      /** @type {import("./Feature.js").WriteOptions} */
+      objectStack[0]
+    );
+    let geometry = feature.getGeometry();
+    if (geometry) {
+      geometry = transformGeometryWithOptions(geometry, true, options);
+    }
+    pushSerializeAndPop(
+      context,
+      PLACEMARK_SERIALIZERS,
+      GEOMETRY_NODE_FACTORY,
+      [geometry],
+      objectStack
+    );
+  }
+  const PRIMITIVE_GEOMETRY_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "extrude",
+    "tessellate",
+    "altitudeMode",
+    "coordinates"
+  ]);
+  const PRIMITIVE_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "extrude": makeChildAppender(writeBooleanTextNode),
+    "tessellate": makeChildAppender(writeBooleanTextNode),
+    "altitudeMode": makeChildAppender(writeStringTextNode),
+    "coordinates": makeChildAppender(writeCoordinatesTextNode)
+  });
+  function writePrimitiveGeometry(node, geometry, objectStack) {
+    const flatCoordinates = geometry.getFlatCoordinates();
+    const context = { node };
+    context["layout"] = geometry.getLayout();
+    context["stride"] = geometry.getStride();
+    const properties = geometry.getProperties();
+    properties.coordinates = flatCoordinates;
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = PRIMITIVE_GEOMETRY_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      PRIMITIVE_GEOMETRY_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  const POLY_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "color",
+    "fill",
+    "outline"
+  ]);
+  const POLYGON_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "outerBoundaryIs": makeChildAppender(writeBoundaryIs),
+    "innerBoundaryIs": makeChildAppender(writeBoundaryIs)
+  });
+  const INNER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("innerBoundaryIs");
+  const OUTER_BOUNDARY_NODE_FACTORY = makeSimpleNodeFactory("outerBoundaryIs");
+  function writePolygon(node, polygon, objectStack) {
+    const linearRings2 = polygon.getLinearRings();
+    const outerRing = linearRings2.shift();
+    const context = { node };
+    pushSerializeAndPop(
+      context,
+      POLYGON_SERIALIZERS,
+      INNER_BOUNDARY_NODE_FACTORY,
+      linearRings2,
+      objectStack
+    );
+    pushSerializeAndPop(
+      context,
+      POLYGON_SERIALIZERS,
+      OUTER_BOUNDARY_NODE_FACTORY,
+      [outerRing],
+      objectStack
+    );
+  }
+  const POLY_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "color": makeChildAppender(writeColorTextNode),
+    "fill": makeChildAppender(writeBooleanTextNode),
+    "outline": makeChildAppender(writeBooleanTextNode)
+  });
+  function writePolyStyle(node, style, objectStack) {
+    const context = { node };
+    const fill = style.getFill();
+    const stroke = style.getStroke();
+    const properties = {
+      "color": fill ? fill.getColor() : void 0,
+      "fill": fill ? void 0 : false,
+      "outline": stroke ? void 0 : false
+    };
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = POLY_STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      POLY_STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  function writeScaleTextNode(node, scale2) {
+    writeDecimalTextNode(node, Math.round(scale2 * 1e6) / 1e6);
+  }
+  const STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
+    "IconStyle",
+    "LabelStyle",
+    "LineStyle",
+    "PolyStyle"
+  ]);
+  const STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+    "IconStyle": makeChildAppender(writeIconStyle),
+    "LabelStyle": makeChildAppender(writeLabelStyle),
+    "LineStyle": makeChildAppender(writeLineStyle),
+    "PolyStyle": makeChildAppender(writePolyStyle)
+  });
+  function writeStyle(node, styles, objectStack) {
+    const context = { node };
+    const properties = {};
+    if (styles.pointStyles.length) {
+      const textStyle = styles.pointStyles[0].getText();
+      if (textStyle) {
+        properties["LabelStyle"] = textStyle;
+      }
+      const imageStyle = styles.pointStyles[0].getImage();
+      if (imageStyle && typeof /** @type {?} */
+      imageStyle.getSrc === "function") {
+        properties["IconStyle"] = imageStyle;
+      }
+    }
+    if (styles.lineStyles.length) {
+      const strokeStyle = styles.lineStyles[0].getStroke();
+      if (strokeStyle) {
+        properties["LineStyle"] = strokeStyle;
+      }
+    }
+    if (styles.polyStyles.length) {
+      const strokeStyle = styles.polyStyles[0].getStroke();
+      if (strokeStyle && !properties["LineStyle"]) {
+        properties["LineStyle"] = strokeStyle;
+      }
+      properties["PolyStyle"] = styles.polyStyles[0];
+    }
+    const parentNode = objectStack[objectStack.length - 1].node;
+    const orderedKeys = STYLE_SEQUENCE[parentNode.namespaceURI];
+    const values = makeSequence(properties, orderedKeys);
+    pushSerializeAndPop(
+      context,
+      STYLE_SERIALIZERS,
+      OBJECT_PROPERTY_NODE_FACTORY,
+      values,
+      objectStack,
+      orderedKeys
+    );
+  }
+  function writeVec2(node, vec2) {
+    node.setAttribute("x", String(vec2.x));
+    node.setAttribute("y", String(vec2.y));
+    node.setAttribute("xunits", vec2.xunits);
+    node.setAttribute("yunits", vec2.yunits);
+  }
+  const geoJsonFormat$1 = new GeoJSON();
+  const kmlFormat$1 = new KML({ extractStyles: false });
+  function looksLikeKml(raw) {
+    const t = raw.trim();
+    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
+  }
+  function looksLikeBbox(raw) {
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
+    } catch {
+      return false;
+    }
+  }
+  function bboxToPolygon(bbox) {
+    const [minX, minY, maxX, maxY] = bbox;
+    return new Polygon([
+      [
+        [minX, minY],
+        [minX, maxY],
+        [maxX, maxY],
+        [maxX, minY],
+        [minX, minY]
+      ]
+    ]);
+  }
+  function explodeMultiFeatures(features) {
+    const out = [];
+    for (const feature of features) {
+      const geom = feature.getGeometry();
+      if (!geom) continue;
+      if (geom instanceof MultiPoint) {
+        for (const point of geom.getPoints()) {
+          out.push(new Feature({ geometry: point }));
+        }
+      } else if (geom instanceof MultiLineString) {
+        for (const line of geom.getLineStrings()) {
+          out.push(new Feature({ geometry: line }));
+        }
+      } else if (geom instanceof MultiPolygon) {
+        for (const poly2 of geom.getPolygons()) {
+          out.push(new Feature({ geometry: poly2 }));
+        }
+      } else {
+        out.push(feature);
+      }
+    }
+    return out;
+  }
+  function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
+    const text2 = raw.trim();
+    if (!text2) return [];
+    let features = [];
+    if (looksLikeKml(text2)) {
+      features = kmlFormat$1.readFeatures(text2, {
+        dataProjection: "EPSG:4326",
+        featureProjection: mapProjection
+      });
+    } else if (looksLikeBbox(text2)) {
+      const bbox = JSON.parse(text2);
+      const poly2 = bboxToPolygon(bbox);
+      poly2.transform("EPSG:4326", mapProjection);
+      features = [new Feature({ geometry: poly2 })];
+    } else {
+      try {
+        const data = JSON.parse(text2);
+        if (looksLikeMultiCircleOrDisc(data)) {
+          features = featuresFromMultiCircleJson(data, mapProjection);
+        } else if (looksLikeCircleOrDisc(data)) {
+          features = [featureFromCircleJson(data, mapProjection)];
+        } else if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
+          features = geoJsonFormat$1.readFeatures(data, {
+            dataProjection: "EPSG:4326",
+            featureProjection: mapProjection
+          });
+        } else {
+          features = geoJsonFormat$1.readFeatures(
+            { type: "Feature", geometry: data, properties: {} },
+            {
+              dataProjection: "EPSG:4326",
+              featureProjection: mapProjection
+            }
+          );
+        }
+      } catch {
+        console.error("[entree-carto-geometry-editor] parse failed");
+        return [];
+      }
+    }
+    return explodeMultiFeatures(features);
+  }
+  const geoJsonFormat = new GeoJSON();
+  const kmlFormat = new KML();
+  function roundCoords(value2, precision) {
+    if (typeof value2 === "number") {
+      const f = 10 ** precision;
+      return Math.round(value2 * f) / f;
+    }
+    if (Array.isArray(value2)) {
+      return value2.map((v) => roundCoords(v, precision));
+    }
+    if (value2 && typeof value2 === "object") {
+      const out = {};
+      for (const [k, v] of Object.entries(value2)) {
+        out[k] = roundCoords(v, precision);
+      }
+      return out;
+    }
+    return value2;
+  }
+  function serializeFeatures(features, options) {
+    const {
+      geometryType,
+      precision,
+      outputFormat,
+      mapProjection = "EPSG:3857"
+    } = options;
+    if (!features.length) return "";
+    const primary = primaryGeometryType(parseGeometryTypes(geometryType));
+    if (outputFormat === "kml") {
+      const forKml = features.map(
+        (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+      );
+      return kmlFormat.writeFeatures(forKml, {
+        dataProjection: "EPSG:4326",
+        featureProjection: mapProjection
+      });
+    }
+    if (primary === "Rectangle" && features.length === 1) {
+      const geom = features[0].getGeometry();
+      if (geom) {
+        const clone2 = geom.clone();
+        clone2.transform(mapProjection, "EPSG:4326");
+        const e = clone2.getExtent();
+        return JSON.stringify(roundCoords([...e], precision));
+      }
+    }
+    if (primary === "MultiCircle") {
+      const s = serializeMultiCircleFeatures(
+        features,
+        "circle",
+        precision,
+        mapProjection
+      );
+      if (s) return s;
+    }
+    if (primary === "MultiDisc") {
+      const s = serializeMultiCircleFeatures(
+        features,
+        "disc",
+        precision,
+        mapProjection
+      );
+      if (s) return s;
+    }
+    if ((primary === "Circle" || primary === "Disc") && features.length === 1) {
+      const s = serializeCircleFeature(features[0], precision, mapProjection);
+      if (s) return s;
+    }
+    if (features.length === 1 && features[0].getGeometry() instanceof Circle) {
+      const s = serializeCircleFeature(features[0], precision, mapProjection);
+      if (s) return s;
+    }
+    const prepared = features.map(
+      (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+    );
+    const multiMerged = mergeToMultiFeature(prepared, primary);
+    const toWrite = multiMerged ? [multiMerged] : prepared;
+    const json = geoJsonFormat.writeFeaturesObject(toWrite, {
+      dataProjection: "EPSG:4326",
+      featureProjection: mapProjection
+    });
+    const rounded = roundCoords(json, precision);
+    if (rounded.features.length === 1) {
+      return JSON.stringify(rounded.features[0].geometry);
+    }
+    return JSON.stringify(rounded);
+  }
+  function mergeToMultiFeature(features, geometryType) {
+    if (geometryType === "MultiPoint") {
+      const points = features.map((f) => f.getGeometry()).filter((g) => g instanceof Point$1);
+      if (!points.length) return null;
+      return new Feature({
+        geometry: new MultiPoint(points.map((p5) => p5.getCoordinates()))
+      });
+    }
+    if (geometryType === "MultiLineString") {
+      const lines = features.map((f) => f.getGeometry()).filter((g) => g instanceof LineString);
+      if (!lines.length) return null;
+      return new Feature({
+        geometry: new MultiLineString(lines.map((l) => l.getCoordinates()))
+      });
+    }
+    if (geometryType === "MultiPolygon") {
+      const polys = features.map((f) => f.getGeometry()).filter((g) => g instanceof Polygon);
+      if (!polys.length) return null;
+      return new Feature({
+        geometry: new MultiPolygon(polys.map((p5) => p5.getCoordinates()))
+      });
+    }
+    return null;
+  }
+  const GEOJSON = new GeoJSON();
+  class SketchControl extends Control {
+    constructor(options = {}) {
+      const toolsRoot = document.createElement("div");
+      toolsRoot.className = "ec-sketch-control ec-geometry-editor__tools-root";
+      toolsRoot.setAttribute("aria-label", "Croquis");
+      toolsRoot.id = `GPsketch-${Date.now()}`;
+      super({ element: toolsRoot });
+      __publicField(this, "geometryType");
+      __publicField(this, "toolsToggle");
+      __publicField(this, "position");
+      __publicField(this, "style");
+      __publicField(this, "zIndex");
+      __publicField(this, "onChangeCb");
+      __publicField(this, "localStorageKey");
+      __publicField(this, "clearAll");
+      __publicField(this, "extraTools");
+      __publicField(this, "source");
+      __publicField(this, "layer");
+      __publicField(this, "ownsLayer");
+      __publicField(this, "toolsRoot");
+      __publicField(this, "toolbarHost");
+      __publicField(this, "toolsToggleBtn", null);
+      __publicField(this, "toolsMenuOpen", false);
+      __publicField(this, "toolbarDomId", `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`);
+      __publicField(this, "drawBar", null);
+      __publicField(this, "saveTimer", null);
+      this.geometryType = options.geometryType ?? "Geometry";
+      this.toolsToggle = options.toolsToggle ?? null;
+      this.position = options.position ?? null;
+      this.style = options.style;
+      this.zIndex = options.zIndex ?? 500;
+      this.onChangeCb = options.onChange;
+      this.localStorageKey = options.localStorageKey ?? null;
+      this.clearAll = Boolean(options.clearAll);
+      this.extraTools = options.extraTools ?? [];
+      this.source = options.source ?? new VectorSource({ wrapX: false });
+      this.layer = options.layer ?? null;
+      this.ownsLayer = !options.layer;
+      this.toolsRoot = toolsRoot;
+      this.toolbarHost = document.createElement("div");
+      this.toolbarHost.className = "ec-geometry-editor__toolbar";
+      this.toolbarHost.setAttribute("role", "toolbar");
+      this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
+      this.applyToolsChrome();
+    }
+    setMap(map2) {
+      const prev = this.getMap();
+      if (prev && this.drawBar) {
+        this.teardownDrawBar();
+      }
+      if (prev && this.ownsLayer && this.layer) {
+        prev.removeLayer(this.layer);
+      }
+      super.setMap(map2);
+      if (!map2) {
+        this.layer = this.ownsLayer ? null : this.layer;
+        return;
+      }
+      this.ensureLayer(map2);
+      this.mountDrawBar(map2);
+      this.placeInGeopfContainer(map2);
+      this.restoreFromLocalStorage();
+    }
+    getSource() {
+      return this.source;
+    }
+    /** Élément DOM du contrôle (chrome outils). */
+    getElement() {
+      return this.toolsRoot;
+    }
+    getLayer() {
+      return this.layer;
+    }
+    getDrawBar() {
+      return this.drawBar;
+    }
+    getFeatures() {
+      return this.source.getFeatures();
+    }
+    setFeatures(features) {
+      this.source.clear(true);
+      if (features.length) this.source.addFeatures(features);
+      this.notifyChange();
+    }
+    clearFeatures() {
+      this.source.clear(true);
+      this.notifyChange();
+    }
+    load(raw) {
+      let features = parseRawToFeatures(raw);
+      const primary = primaryGeometryType(parseGeometryTypes(this.geometryType));
+      if (primary === "Circle" || primary === "MultiCircle") {
+        features = restoreCircleFeaturesForKind(features, "circle");
+      } else if (primary === "Disc" || primary === "MultiDisc") {
+        features = restoreCircleFeaturesForKind(features, "disc");
+      }
+      this.source.clear(true);
+      if (features.length) this.source.addFeatures(features);
+      this.notifyChange();
+    }
+    serialize(opts) {
+      return serializeFeatures(this.getFeatures(), {
+        geometryType: (opts == null ? void 0 : opts.geometryType) ?? this.geometryType,
+        outputFormat: (opts == null ? void 0 : opts.outputFormat) ?? "geojson",
+        precision: (opts == null ? void 0 : opts.precision) ?? 7
+      });
+    }
+    setGeometryType(geometryType) {
+      var _a;
+      this.geometryType = geometryType;
+      (_a = this.drawBar) == null ? void 0 : _a.setGeometryType(geometryType);
+    }
+    setStyle(style) {
+      var _a, _b;
+      this.style = style;
+      (_a = this.layer) == null ? void 0 : _a.setStyle(style ?? geometryStyleFunction);
+      (_b = this.drawBar) == null ? void 0 : _b.setStyle(style);
+    }
+    setToolsToggle(corner) {
+      this.toolsToggle = corner;
+      this.applyToolsChrome();
+      const map2 = this.getMap();
+      if (map2 && this.drawBar) {
+        this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+      }
+    }
+    ensureLayer(map2) {
+      if (this.layer) {
+        if (this.style !== void 0) {
+          this.layer.setStyle(this.style ?? geometryStyleFunction);
+        }
+        if (!map2.getLayers().getArray().includes(this.layer)) {
+          map2.addLayer(this.layer);
+        }
+        return;
+      }
+      this.layer = new VectorLayer({
+        source: this.source,
+        style: this.style ?? geometryStyleFunction,
+        zIndex: this.zIndex,
+        className: "ec-sketch-control__layer",
+        properties: {
+          "ec-sketch": true,
+          "ec-geometry-tools": true
+        }
+      });
+      this.ownsLayer = true;
+      map2.addLayer(this.layer);
+    }
+    mountDrawBar(map2) {
+      var _a;
+      if (!this.layer) return;
+      (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.drawBar = new DrawToolsBar({
+        map: map2,
+        source: this.source,
+        layer: this.layer,
+        geometryType: this.geometryType,
+        target: this.toolbarHost,
+        style: this.style,
+        clearAll: this.clearAll,
+        onChange: () => this.notifyChange(),
+        onClearAll: () => this.clearFeatures()
+      });
+      void this.extraTools;
+      this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+    }
+    teardownDrawBar() {
+      var _a;
+      (_a = this.drawBar) == null ? void 0 : _a.destroy();
+      this.drawBar = null;
+      this.toolbarHost.replaceChildren();
+    }
+    notifyChange() {
+      var _a;
+      (_a = this.onChangeCb) == null ? void 0 : _a.call(this, this.getFeatures());
+      this.scheduleSave();
+    }
+    scheduleSave() {
+      if (!this.localStorageKey) return;
+      if (this.saveTimer) clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => {
+        this.saveTimer = null;
+        this.saveToLocalStorage();
+      }, 200);
+    }
+    saveToLocalStorage() {
+      var _a;
+      if (!this.localStorageKey || typeof localStorage === "undefined") return;
+      try {
+        const features = this.getFeatures();
+        if (!features.length) {
+          localStorage.removeItem(this.localStorageKey);
+          return;
+        }
+        const json = GEOJSON.writeFeaturesObject(features, {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        localStorage.setItem(this.localStorageKey, JSON.stringify(json));
+      } catch (err) {
+        console.warn("[SketchControl] localStorage save failed", err);
+      }
+    }
+    restoreFromLocalStorage() {
+      var _a;
+      if (!this.localStorageKey || typeof localStorage === "undefined") return;
+      try {
+        const raw = localStorage.getItem(this.localStorageKey);
+        if (!raw) return;
+        const features = GEOJSON.readFeatures(JSON.parse(raw), {
+          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
+          dataProjection: "EPSG:4326"
+        });
+        this.source.clear(true);
+        if (features.length) this.source.addFeatures(features);
+      } catch (err) {
+        console.warn("[SketchControl] localStorage restore failed", err);
+      }
+    }
+    setToolsMenuOpen(open) {
+      this.toolsMenuOpen = open;
+      if (this.toolsToggleBtn) {
+        this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        this.toolsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
+        this.toolsToggleBtn.classList.toggle("is-active", open);
+      }
+      if (this.toolsToggle) {
+        this.toolbarHost.hidden = !open;
+      }
+      this.toolsRoot.classList.toggle("is-open", open);
+    }
+    applyToolsChrome() {
+      const corner = this.toolsToggle;
+      if (corner) {
+        if (!this.toolsToggleBtn) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle";
+          btn.setAttribute("aria-label", "Outils de dessin");
+          btn.setAttribute("aria-expanded", "false");
+          btn.setAttribute("aria-pressed", "false");
+          btn.setAttribute("aria-controls", this.toolbarDomId);
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.setToolsMenuOpen(!this.toolsMenuOpen);
+          });
+          this.toolsToggleBtn = btn;
+        }
+        this.toolbarHost.id = this.toolbarDomId;
+        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost);
+        this.toolsRoot.dataset.corner = corner;
+        this.setToolsMenuOpen(this.toolsMenuOpen);
+      } else {
+        this.toolsMenuOpen = false;
+        this.toolsToggleBtn = null;
+        this.toolbarHost.removeAttribute("id");
+        this.toolbarHost.hidden = false;
+        this.toolsRoot.replaceChildren(this.toolbarHost);
+        delete this.toolsRoot.dataset.corner;
+        this.toolsRoot.classList.remove("is-open");
+      }
+    }
+    /**
+     * Place le contrôle dans le conteneur geopf du coin demandé (carte principale),
+     * au-dessus de la minimap via `order: -2`.
+     * Retente si le conteneur n’existe pas encore (ordre d’ajout des contrôles).
+     */
+    placeInGeopfContainer(map2, attempt = 0) {
+      const corner = this.position ?? this.toolsToggle;
+      if (!corner) return;
+      const target2 = map2.getTargetElement();
+      if (!(target2 instanceof HTMLElement)) return;
+      const container = target2.querySelector(`.position-container-${corner}`);
+      if (!(container instanceof HTMLElement)) {
+        if (attempt < 20) {
+          requestAnimationFrame(() => this.placeInGeopfContainer(map2, attempt + 1));
+        }
+        return;
+      }
+      this.toolsRoot.classList.add("ec-sketch-control--geopf-slot");
+      if (this.toolsRoot.parentElement !== container) {
+        container.appendChild(this.toolsRoot);
+      }
+    }
+  }
+  const _hoisted_1$7 = {
+    class: "ec-ol-control-host",
+    hidden: "",
+    "aria-hidden": "true"
+  };
+  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+    __name: "SketchControl",
+    props: {
+      position: { default: CONTROL_POSITIONS.overviewMap },
+      geometryType: { default: "Geometry" },
+      toolsToggle: { default: void 0 },
+      localStorageKey: { default: "entree-carto-sketch" },
+      clearAll: { type: Boolean, default: true },
+      zIndex: { default: 500 },
+      style: { type: [Object, Array, Function, null], default: null },
+      extraTools: { default: () => [] }
+    },
+    setup(__props) {
+      const props = __props;
+      useOlControl(
+        () => new SketchControl({
+          geometryType: props.geometryType,
+          toolsToggle: props.toolsToggle === void 0 ? props.position : props.toolsToggle,
+          position: props.position,
+          localStorageKey: props.localStorageKey,
+          clearAll: props.clearAll,
+          zIndex: props.zIndex,
+          style: props.style,
+          extraTools: props.extraTools
+        })
       );
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("span", _hoisted_1$7);
@@ -68044,7 +76608,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$d, {
+          createVNode(_sfc_main$e, {
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
@@ -68056,12 +76620,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-nodes": layerNodes.value,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$9, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
-              createVNode(_sfc_main$8),
+              createVNode(_sfc_main$a, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$9),
               createVNode(_sfc_main$7),
+              createVNode(_sfc_main$8),
+              createVNode(_sfc_main$d),
               createVNode(_sfc_main$c),
-              createVNode(_sfc_main$b),
-              createVNode(_sfc_main$a)
+              createVNode(_sfc_main$b)
             ]),
             _: 1
           }, 8, ["layers"])
@@ -68069,7 +76634,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-b16e86ff"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-d9f18abc"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {

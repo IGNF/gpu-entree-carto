@@ -1,10 +1,10 @@
-import { createApp } from 'vue'
+import { createApp, type Component } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import '@gouvfr/dsfr/dist/dsfr.min.css'
 /* Pictos Remix / DSFR (`fr-icon-*`) — absents de dsfr.min.css seul */
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvminint/vue-dsfr/styles'
-import VueDsfr, * as VueDsfrExports from '@gouvminint/vue-dsfr'
+import * as VueDsfrExports from '@gouvminint/vue-dsfr'
 
 import App from './App.vue'
 import HomeView from './views/HomeView.vue'
@@ -14,7 +14,7 @@ import SketchDemoView from './views/SketchDemoView.vue'
 import './styles/main.css'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/map', name: 'map', component: DemoView },
@@ -31,13 +31,23 @@ const router = createRouter({
   ],
 })
 
-/*
- * vue-dsfr enregistre VIcon dans la boucle des composants puis une 2ᵉ fois
- * explicitement → warning « already been registered ». On passe seulement les
- * Dsfr* ; VIcon est enregistré une seule fois par le plugin.
- */
-const dsfrComponents = Object.entries(VueDsfrExports)
-  .filter(([name, value]) => name.startsWith('Dsfr') && value != null)
-  .map(([, value]) => value as { name?: string })
+const app = createApp(App)
+app.use(router)
 
-createApp(App).use(router).use(VueDsfr, { components: dsfrComponents }).mount('#app')
+/*
+ * Enregistrement manuel des composants vue-dsfr :
+ * - le plugin filtre via `component.name`, or les builds n’ont que `__name`
+ *   → rien n’était enregistré (DsfrAccordion introuvable) ;
+ * - le plugin enregistre aussi VIcon deux fois → warning.
+ */
+for (const [name, comp] of Object.entries(VueDsfrExports)) {
+  if (!name.startsWith('Dsfr') || comp == null || typeof comp !== 'object') {
+    continue
+  }
+  app.component(name, comp as Component)
+}
+if (VueDsfrExports.VIcon) {
+  app.component('VIcon', VueDsfrExports.VIcon as Component)
+}
+
+app.mount('#app')
