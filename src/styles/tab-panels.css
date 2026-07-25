@@ -33,7 +33,12 @@
   border: none;
   border-radius: 0;
   box-shadow: none;
-  pointer-events: none;
+  /*
+   * OpenLayers Control pose `pointer-events: auto` en style inline sur
+   * l’élément — sans !important, le bandeau pleine hauteur masque zoom /
+   * plein écran (bas-droite) : pas de cursor, clics morts.
+   */
+  pointer-events: none !important;
   z-index: 2;
 }
 

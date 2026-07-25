@@ -73,8 +73,8 @@ export class SettingsPanel {
     this.button.type = 'button'
     this.button.className =
       'ec-geometry-editor__tool ec-geometry-editor__tool--settings'
-    this.button.title = 'Options de la carte'
     this.button.setAttribute('aria-label', 'Options de la carte')
+    this.button.setAttribute('aria-pressed', 'false')
     this.button.setAttribute('aria-expanded', 'false')
     this.button.setAttribute('aria-haspopup', 'dialog')
     this.button.addEventListener('click', () => this.toggle())
@@ -92,6 +92,7 @@ export class SettingsPanel {
     if (this.open) return
     this.open = true
     this.button.setAttribute('aria-expanded', 'true')
+    this.button.setAttribute('aria-pressed', 'true')
     this.button.classList.add('is-active')
     this.dialog = this.buildDialog()
     this.mapHost.appendChild(this.dialog)
@@ -103,6 +104,7 @@ export class SettingsPanel {
     if (!this.open) return
     this.open = false
     this.button.setAttribute('aria-expanded', 'false')
+    this.button.setAttribute('aria-pressed', 'false')
     this.button.classList.remove('is-active')
     this.bindViewListeners(false)
     this.dialog?.remove()
@@ -345,9 +347,9 @@ export class SettingsPanel {
     input.name = 'geometryType'
     input.value = current
     input.setAttribute('list', 'ec-geom-type-list')
-    input.placeholder = 'Point,Circle ou Geometry…'
+    input.placeholder = 'Point,Disc ou Geometry…'
     input.title =
-      'Un type, ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)'
+      'Un type, ou plusieurs séparés par des virgules (ex. Point,Disc)'
 
     const list = document.createElement('datalist')
     list.id = 'ec-geom-type-list'
@@ -362,7 +364,7 @@ export class SettingsPanel {
     const hint = document.createElement('span')
     hint.className = 'ec-geometry-editor__settings-hint'
     hint.textContent =
-      'CSV autorisé : Point,Circle,Disc — comme Geometry, outils filtrés'
+      'CSV autorisé : Point,Disc — comme Geometry, outils filtrés (Circle → outil Disc)'
     wrap.appendChild(hint)
     return wrap
   }

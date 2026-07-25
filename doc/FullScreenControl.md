@@ -26,3 +26,4 @@ Offset geopf `bottom: 0.5em` annulé en colonne bas-droite (`map-controls.css`) 
 
 - Picto via `::after` (mask geopf), pas de sprite Classic ni label OpenLayers.
 - `map-controls.css` force `background-image: none` et masque le `<span>` interne pour éviter un doublon sous un hôte qui charge aussi le DSFR complet (gpu-site).
+- Le bouton a `font-size: 0` (cacher le label OL) : l’infobulle `::before` force `font-size: 0.75rem` pour rester à la même taille que zoom / territoire.

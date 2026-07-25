@@ -38,7 +38,7 @@ const optionDocs: OptionDoc[] = [
     name: 'geometryType',
     def: "'Geometry'",
     description:
-      'Un type (Point, …, MultiCircle, MultiDisc, Geometry) ou plusieurs séparés par des virgules (ex. Point,Circle,Disc)',
+      'Un type (Point, …, MultiDisc, Geometry) ou plusieurs séparés par des virgules (ex. Point,Disc)',
   },
   {
     name: 'hide',
@@ -293,46 +293,16 @@ const sections: DemoSection[] = [
     rows: 2,
   },
   {
-    type: 'Circle',
-    title: 'Circle',
-    hint:
-      'Format custom : { type: "Circle", center: [lon, lat], radius } (rayon en mètres carte). Contour seul ; pas de rotation.',
-    sampleGeoJson: JSON.stringify(
-      { type: 'Circle', center: [2.35, 48.85], radius: 4500 },
-      null,
-      2,
-    ),
-    rows: 6,
-  },
-  {
     type: 'Disc',
     title: 'Disc',
     hint:
-      'Format custom : { type: "Disc", center: [lon, lat], radius }. Rempli ; translation intérieure ; pas de rotation.',
+      'Format custom : { type: "Disc", center: [lon, lat], radius }. Rempli ; translation intérieure ; pas de rotation. (Picto bouton = cercle.)',
     sampleGeoJson: JSON.stringify(
       { type: 'Disc', center: [2.4, 48.87], radius: 3500 },
       null,
       2,
     ),
     rows: 6,
-  },
-  {
-    type: 'MultiCircle',
-    title: 'MultiCircle',
-    hint:
-      'Plusieurs cercles ; format { type: "MultiCircle", geometries: [{ center, radius }, …] }.',
-    sampleGeoJson: JSON.stringify(
-      {
-        type: 'MultiCircle',
-        geometries: [
-          { center: [2.32, 48.85], radius: 2500 },
-          { center: [2.4, 48.88], radius: 1800 },
-        ],
-      },
-      null,
-      2,
-    ),
-    rows: 10,
   },
   {
     type: 'MultiDisc',
@@ -353,11 +323,11 @@ const sections: DemoSection[] = [
     rows: 10,
   },
   {
-    type: 'Point,Circle,Disc',
-    slug: 'point-circle-disc',
-    title: 'Point,Circle,Disc (CSV)',
+    type: 'Point,Disc',
+    slug: 'point-disc',
+    title: 'Point,Disc (CSV)',
     hint:
-      'geometryType multi-valeurs : seuls les outils Point / Cercle / Disque (+ modifier / supprimer).',
+      'geometryType multi-valeurs : seuls les outils Point / Disque (+ modifier / supprimer).',
     sampleGeoJson: JSON.stringify(
       { type: 'Point', coordinates: [2.35, 48.86] },
       null,
@@ -369,7 +339,7 @@ const sections: DemoSection[] = [
     type: 'Geometry',
     title: 'Geometry (libre)',
     hint:
-      'Point, ligne, polygone, cercle ou disque ; plusieurs géométries possibles. Carte plus haute + toolsToggle top-left (bouton outils → barre).',
+      'Point, ligne, polygone ou disque ; plusieurs géométries possibles. Carte plus haute + toolsToggle top-left (bouton outils → barre).',
     sampleGeoJson: JSON.stringify(
       {
         type: 'Polygon',
@@ -661,7 +631,8 @@ onUnmounted(() => {
           </li>
           <li>
             Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON ;
-            Circle / Disc → <code>{ type, center, radius }</code>.
+            Circle / Disc → <code>{ type, center, radius }</code>
+            (dessin : outil Disc uniquement ; Circle encore lu en compat).
           </li>
           <li>
             Sync bidirectionnelle via <code>input</code> / <code>change</code> ;

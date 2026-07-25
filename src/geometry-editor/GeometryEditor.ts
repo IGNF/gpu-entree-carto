@@ -30,7 +30,7 @@ import {
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
 import { geometryStyleFunction } from './styles'
-import { DrawToolsBar } from './DrawToolsBar'
+import { SketchControl } from './SketchControl'
 import { SettingsPanel } from './SettingsPanel'
 import { restoreCircleFeaturesForKind } from './circleHelpers'
 import {
@@ -136,17 +136,10 @@ export class GeometryEditor {
   readonly source: VectorSource
   private readonly mapHost: HTMLElement
   private readonly vectorLayer: VectorLayer
-  /** Conteneur positionné (coin ou gauche) des contrôles d’édition. */
-  private toolsRoot: HTMLElement | null = null
-  /** Barre des outils de dessin (cible de DrawToolsBar). */
-  private toolbarHost: HTMLElement | null = null
-  private toolsToggleBtn: HTMLButtonElement | null = null
-  private toolsMenuOpen = false
-  private readonly toolbarDomId = `ec-geom-toolbar-${Math.random().toString(36).slice(2, 9)}`
   private zoomControl: Zoom | null = null
   private attributionControl: Attribution | null = null
   private settingsPanel: SettingsPanel | null = null
-  private drawBar: DrawToolsBar | null = null
+  private sketch: SketchControl | null = null
   private syncingFromElement = false
   private destroyed = false
   private jqueryListening = false
@@ -171,13 +164,6 @@ export class GeometryEditor {
     const mapTarget = document.createElement('div')
     mapTarget.className = 'ec-geometry-editor__map'
     this.mapHost.appendChild(mapTarget)
-
-    this.toolsRoot = null
-    this.toolbarHost = null
-    this.toolsToggleBtn = null
-    if (this.options.editable) {
-      this.ensureToolbarHost()
-    }
 
     element.insertAdjacentElement('afterend', this.mapHost)
 
@@ -316,19 +302,22 @@ export class GeometryEditor {
       this.vectorLayer.setStyle(
         this.options.customStyle ?? geometryStyleFunction,
       )
-      this.drawBar?.setStyle(this.options.customStyle)
+      this.sketch?.setStyle(this.options.customStyle)
     }
 
     if (patch.editable !== undefined) {
       this.applyEditable()
     } else if (patch.toolsToggle !== undefined) {
-      this.applyToolsChrome()
+      this.applyHostClass()
+      this.sketch?.setToolsToggle(
+        (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
+      )
     } else if (
-      this.drawBar &&
+      this.sketch &&
       patch.geometryType !== undefined &&
       patch.geometryType !== prev.geometryType
     ) {
-      this.drawBar.setGeometryType(
+      this.sketch.setGeometryType(
         this.options.geometryType as GeometryTypeOption,
       )
     }
@@ -439,8 +428,10 @@ export class GeometryEditor {
     if (this.destroyed) return
     this.destroyed = true
     this.unbindElementListeners()
-    this.drawBar?.destroy()
-    this.drawBar = null
+    if (this.sketch) {
+      this.map.removeControl(this.sketch)
+      this.sketch = null
+    }
     this.settingsPanel?.destroy()
     this.settingsPanel = null
     this.map.setTarget(undefined)
@@ -577,105 +568,36 @@ export class GeometryEditor {
     })
   }
 
-  private ensureToolbarHost(): HTMLElement {
-    this.applyToolsChrome()
-    return this.toolbarHost!
-  }
-
-  private setToolsMenuOpen(open: boolean): void {
-    this.toolsMenuOpen = open
-    if (this.toolsToggleBtn) {
-      this.toolsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false')
-      this.toolsToggleBtn.classList.toggle('is-active', open)
-    }
-    if (this.toolbarHost && this.options.toolsToggle) {
-      this.toolbarHost.hidden = !open
-    }
-    if (this.toolsRoot) {
-      this.toolsRoot.classList.toggle('is-open', open)
-    }
-  }
-
-  /**
-   * Positionne le chrome outils (toujours visibles à gauche, ou bouton + panneau
-   * selon `toolsToggle`).
-   */
-  private applyToolsChrome(): void {
-    if (!this.toolsRoot) {
-      this.toolsRoot = document.createElement('div')
-      this.toolsRoot.className = 'ec-geometry-editor__tools-root'
-      this.mapHost.appendChild(this.toolsRoot)
-    }
-    if (!this.toolbarHost) {
-      this.toolbarHost = document.createElement('div')
-      this.toolbarHost.className = 'ec-geometry-editor__toolbar'
-      this.toolbarHost.setAttribute('role', 'toolbar')
-      this.toolbarHost.setAttribute('aria-label', 'Outils de dessin')
-    }
-
-    const corner = this.options.toolsToggle as ToolsToggleCorner | null
-
-    if (corner) {
-      if (!this.toolsToggleBtn) {
-        const btn = document.createElement('button')
-        btn.type = 'button'
-        btn.className =
-          'ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle fr-icon-tools-fill'
-        btn.title = 'Outils de dessin'
-        btn.setAttribute('aria-label', 'Outils de dessin')
-        btn.setAttribute('aria-expanded', 'false')
-        btn.setAttribute('aria-controls', this.toolbarDomId)
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation()
-          this.setToolsMenuOpen(!this.toolsMenuOpen)
-        })
-        this.toolsToggleBtn = btn
-      }
-      this.toolbarHost.id = this.toolbarDomId
-      this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost)
-      this.toolsRoot.dataset.corner = corner
-      this.setToolsMenuOpen(this.toolsMenuOpen)
-    } else {
-      this.toolsMenuOpen = false
-      this.toolsToggleBtn = null
-      this.toolbarHost.removeAttribute('id')
-      this.toolbarHost.hidden = false
-      this.toolsRoot.replaceChildren(this.toolbarHost)
-      delete this.toolsRoot.dataset.corner
-      this.toolsRoot.classList.remove('is-open')
-    }
-
-    this.applyHostClass()
-  }
-
   private applyEditable(): void {
     if (this.options.editable) {
-      const host = this.ensureToolbarHost()
-      if (this.toolsRoot) this.toolsRoot.hidden = false
-      host.hidden = Boolean(this.options.toolsToggle) && !this.toolsMenuOpen
-      if (!this.drawBar) {
-        this.drawBar = new DrawToolsBar({
-          map: this.map,
+      if (!this.sketch) {
+        this.sketch = new SketchControl({
+          geometryType: this.options.geometryType as GeometryTypeOption,
+          toolsToggle:
+            (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
           source: this.source,
           layer: this.vectorLayer,
-          geometryType: this.options.geometryType as GeometryTypeOption,
-          target: host,
           style: this.options.customStyle,
+          // GeometryEditor : pas de localStorage / clearAll / extraTools
           onChange: () => this.serializeToElement(),
         })
+        this.map.addControl(this.sketch)
+        // Comme avant SketchControl : chrome sur le host, pas dans l’overlay OL
+        this.mapHost.appendChild(this.sketch.getElement())
       } else {
-        this.drawBar.setGeometryType(
+        this.sketch.setGeometryType(
           this.options.geometryType as GeometryTypeOption,
         )
-        this.drawBar.setStyle(this.options.customStyle)
+        this.sketch.setToolsToggle(
+          (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
+        )
+        this.sketch.setStyle(this.options.customStyle)
       }
-    } else {
-      this.drawBar?.destroy()
-      this.drawBar = null
-      this.setToolsMenuOpen(false)
-      if (this.toolsRoot) {
-        this.toolsRoot.hidden = true
-      }
+      this.applyHostClass()
+    } else if (this.sketch) {
+      this.map.removeControl(this.sketch)
+      this.sketch = null
+      this.applyHostClass()
     }
   }
 }

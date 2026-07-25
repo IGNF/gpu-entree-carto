@@ -6,16 +6,19 @@ import type { StyleLike } from 'ol/style/Style'
 import Circle from 'ol/geom/Circle'
 import Draw, { createBox } from 'ol/interaction/Draw'
 import Modify from 'ol/interaction/Modify'
-import Select from 'ol/interaction/Select'
 import Snap from 'ol/interaction/Snap'
-import { click } from 'ol/events/condition'
+import type { Feature as OlFeature } from 'ol'
 import type { GeometryTypeOption } from './types'
 import {
-  circleDrawStyle,
   discDrawStyle,
   geometryDrawStyle,
 } from './styles'
-import { setCircleKind, type CircleKind } from './circleHelpers'
+import {
+  getCircleKind,
+  isNearCircleEdge,
+  setCircleKind,
+  type CircleKind,
+} from './circleHelpers'
 import {
   drawToolKeys,
   parseGeometryTypes,
@@ -40,6 +43,7 @@ interface ToolDef {
   circleKind?: CircleKind
   modify?: boolean
   remove?: boolean
+  clearAll?: boolean
 }
 
 const modifyTool: ToolDef = {
@@ -54,6 +58,13 @@ const removeTool: ToolDef = {
   label: 'Supprimer une géométrie',
   iconClass: 'ec-geometry-editor__tool--remove',
   remove: true,
+}
+
+const clearAllTool: ToolDef = {
+  id: 'clear-all',
+  label: 'Tout supprimer',
+  iconClass: 'ec-geometry-editor__tool--clear-all',
+  clearAll: true,
 }
 
 const DRAW_TOOL_DEFS: Record<
@@ -85,27 +96,23 @@ const DRAW_TOOL_DEFS: Record<
     drawType: 'Circle',
     box: true,
   },
-  Circle: {
-    id: 'circle',
-    label: 'Cercle',
-    iconClass: 'ec-geometry-editor__tool--circle',
-    drawType: 'Circle',
-    circleKind: 'circle',
-  },
   Disc: {
     id: 'disc',
     label: 'Disque',
-    iconClass: 'ec-geometry-editor__tool--disc',
+    // Picto contour (ex-Circle) — un seul outil cercle/disque
+    iconClass: 'ec-geometry-editor__tool--circle',
     drawType: 'Circle',
     circleKind: 'disc',
   },
 }
 
 function drawStyleFor(types: GeometryTypeName[]): StyleLike {
-  if (types.length === 1 && types[0] === 'Circle') return circleDrawStyle
-  if (types.length === 1 && types[0] === 'Disc') return discDrawStyle
-  if (types.length === 1 && types[0] === 'MultiCircle') return circleDrawStyle
-  if (types.length === 1 && types[0] === 'MultiDisc') return discDrawStyle
+  if (types.length === 1 && (types[0] === 'Disc' || types[0] === 'MultiDisc')) {
+    return discDrawStyle
+  }
+  if (types.length === 1 && (types[0] === 'Circle' || types[0] === 'MultiCircle')) {
+    return discDrawStyle
+  }
   return geometryDrawStyle
 }
 
@@ -126,27 +133,68 @@ export class DrawToolsBar {
   private readonly layer: VectorLayer
   private readonly target: HTMLElement
   private readonly onChange: () => void
+  private readonly onClearAll: (() => void) | null
+  private readonly showClearAll: boolean
   private geometryType: GeometryTypeOption
   private drawStyle: StyleLike
   private customStyle: StyleLike | null | undefined
   private activeId: string | null = null
   private draw: Draw | null = null
   private modify: Modify | null = null
-  private select: Select | null = null
   private snap: Snap | null = null
   private readonly transform: ModifyTransformController
+  private readonly removeEdgeTolPx = 12
+  private readonly onRemoveClick = (evt: MapBrowserEvent): void => {
+    if (evt.dragging) return
+    const res = this.map.getView().getResolution() ?? 1
+    const edgeTol = this.removeEdgeTolPx * res
+    const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+      layerFilter: (layer) => layer === this.layer,
+      hitTolerance: this.removeEdgeTolPx,
+    }) as OlFeature[]
+    for (const feature of hits) {
+      if (!this.source.hasFeature(feature)) continue
+      const geom = feature.getGeometry()
+      // Circle (contour) : suppression uniquement sur l’arête (pas l’intérieur)
+      if (geom instanceof Circle && getCircleKind(feature) === 'circle') {
+        if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue
+      }
+      this.source.removeFeature(feature)
+      this.onChange()
+      return
+    }
+  }
   private readonly onFeaturePointerMove = (evt: MapBrowserEvent): void => {
     if (evt.dragging) return
     // En mode modify, le curseur est géré par ModifyTransformController
     if (this.activeId === 'modify') return
+    const target = this.map.getTargetElement()
+    if (!target) return
+
+    if (this.activeId === 'remove') {
+      const res = this.map.getView().getResolution() ?? 1
+      const edgeTol = this.removeEdgeTolPx * res
+      const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+        layerFilter: (layer) => layer === this.layer,
+        hitTolerance: this.removeEdgeTolPx,
+      }) as OlFeature[]
+      const canRemove = hits.some((feature) => {
+        if (!this.source.hasFeature(feature)) return false
+        const geom = feature.getGeometry()
+        if (geom instanceof Circle && getCircleKind(feature) === 'circle') {
+          return isNearCircleEdge(geom, evt.coordinate, edgeTol)
+        }
+        return true
+      })
+      target.style.cursor = canRemove ? 'pointer' : ''
+      return
+    }
+
     const hit = this.map.hasFeatureAtPixel(evt.pixel, {
       layerFilter: (layer) => layer === this.layer,
       hitTolerance: 12,
     })
-    const target = this.map.getTargetElement()
-    if (target) {
-      target.style.cursor = hit ? 'pointer' : ''
-    }
+    target.style.cursor = hit ? 'pointer' : ''
   }
 
   constructor(opts: {
@@ -158,6 +206,10 @@ export class DrawToolsBar {
     onChange: () => void
     /** Style du croquis ; défaut bleu France. */
     style?: StyleLike | null
+    /** Affiche le bouton « tout supprimer ». */
+    clearAll?: boolean
+    /** Appelé au clic « tout supprimer » (sinon clear source + onChange). */
+    onClearAll?: () => void
   }) {
     this.map = opts.map
     this.source = opts.source
@@ -165,6 +217,8 @@ export class DrawToolsBar {
     this.geometryType = opts.geometryType
     this.target = opts.target
     this.onChange = opts.onChange
+    this.showClearAll = Boolean(opts.clearAll)
+    this.onClearAll = opts.onClearAll ?? null
     this.customStyle = opts.style
     this.drawStyle =
       opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType))
@@ -211,13 +265,17 @@ export class DrawToolsBar {
       style ?? drawStyleFor(parseGeometryTypes(this.geometryType))
   }
 
+  private toolsList(): ToolDef[] {
+    const tools = toolsFor(this.geometryType)
+    return this.showClearAll ? [...tools, clearAllTool] : tools
+  }
+
   private render(): void {
     this.target.replaceChildren()
-    for (const tool of toolsFor(this.geometryType)) {
+    for (const tool of this.toolsList()) {
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.className = `ec-geometry-editor__tool ${tool.iconClass}`
-      btn.title = tool.label
       btn.setAttribute('aria-label', tool.label)
       btn.setAttribute('aria-pressed', 'false')
       btn.dataset.toolId = tool.id
@@ -239,10 +297,7 @@ export class DrawToolsBar {
       this.map.removeInteraction(this.draw)
       this.draw = null
     }
-    if (this.select) {
-      this.map.removeInteraction(this.select)
-      this.select = null
-    }
+    this.map.un('singleclick', this.onRemoveClick)
     this.activeId = null
     this.modify?.setActive(false)
     for (const btn of this.target.querySelectorAll('button')) {
@@ -252,6 +307,17 @@ export class DrawToolsBar {
   }
 
   private activate(tool: ToolDef): void {
+    if (tool.clearAll) {
+      this.clearTransient()
+      if (this.onClearAll) {
+        this.onClearAll()
+      } else {
+        this.source.clear(true)
+        this.onChange()
+      }
+      return
+    }
+
     const already = this.activeId === tool.id
     this.clearTransient()
     if (already) return
@@ -276,23 +342,7 @@ export class DrawToolsBar {
 
     if (tool.remove) {
       this.map.on('pointermove', this.onFeaturePointerMove)
-      this.select = new Select({
-        condition: click,
-        hitTolerance: 12,
-        layers: [this.layer],
-        style: null,
-      })
-      this.select.on('select', (e) => {
-        const selected = [...e.selected]
-        for (const f of selected) {
-          if (this.source.hasFeature(f)) {
-            this.source.removeFeature(f)
-          }
-        }
-        this.select?.getFeatures().clear()
-        this.onChange()
-      })
-      this.map.addInteraction(this.select)
+      this.map.on('singleclick', this.onRemoveClick)
       return
     }
 
@@ -302,11 +352,9 @@ export class DrawToolsBar {
     const replaceOnDraw = shouldReplaceOnDraw(types)
 
     const sketchStyle =
-      tool.circleKind === 'circle'
-        ? circleDrawStyle
-        : tool.circleKind === 'disc'
-          ? discDrawStyle
-          : this.drawStyle
+      tool.circleKind === 'disc' || tool.circleKind === 'circle'
+        ? discDrawStyle
+        : this.drawStyle
 
     this.draw = new Draw({
       source: this.source,

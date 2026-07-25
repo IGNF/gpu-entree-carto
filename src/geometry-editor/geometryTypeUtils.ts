@@ -1,6 +1,6 @@
 /**
  * Normalisation de `geometryType` : un seul type, ou plusieurs séparés par des virgules
- * (ex. `"Point,Circle,Disc"` → outils filtrés, comme Geometry).
+ * (ex. `"Point,Disc"` → outils filtrés, comme Geometry).
  */
 export const GEOMETRY_TYPE_NAMES = [
   'Point',
@@ -10,8 +10,10 @@ export const GEOMETRY_TYPE_NAMES = [
   'MultiLineString',
   'MultiPolygon',
   'Rectangle',
+  /** @deprecated Préférer `Disc` — encore accepté (outil Disc). */
   'Circle',
   'Disc',
+  /** @deprecated Préférer `MultiDisc` — encore accepté (outil Disc). */
   'MultiCircle',
   'MultiDisc',
   'Geometry',
@@ -51,7 +53,7 @@ export function isGeometryTypeName(value: string): value is GeometryTypeName {
 
 /**
  * Découpe `geometryType` en liste de types connus.
- * `"Geometry"` seul → tous les outils libres (Point, Line, Polygon, Circle, Disc).
+ * `"Geometry"` seul → tous les outils libres (Point, Line, Polygon, Disc).
  * CSV inconnu filtré ; vide → `['Geometry']`.
  */
 export function parseGeometryTypes(
@@ -77,7 +79,7 @@ export function shouldReplaceOnDraw(types: GeometryTypeName[]): boolean {
   return types.length === 1 && REPLACE_ON_DRAW.has(types[0])
 }
 
-/** Type « primaire » pour sérialisation Multi* / Rectangle / Circle dédiés. */
+/** Type « primaire » pour sérialisation Multi* / Rectangle / Disc dédiés. */
 export function primaryGeometryType(
   types: GeometryTypeName[],
 ): GeometryTypeName {
@@ -85,12 +87,15 @@ export function primaryGeometryType(
   return 'Geometry'
 }
 
-/** Types d’outils de dessin à afficher (sans modify/remove). */
+/**
+ * Types d’outils de dessin à afficher (sans modify/remove).
+ * Plus d’outil « Circle » : Circle / MultiCircle exposent l’outil Disc (compat).
+ */
 export function drawToolKeys(types: GeometryTypeName[]): Array<
-  'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Circle' | 'Disc'
+  'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'
 > {
   const keys = new Set<
-    'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Circle' | 'Disc'
+    'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'
   >()
 
   const addFrom = (t: GeometryTypeName): void => {
@@ -98,7 +103,6 @@ export function drawToolKeys(types: GeometryTypeName[]): Array<
       keys.add('Point')
       keys.add('LineString')
       keys.add('Polygon')
-      keys.add('Circle')
       keys.add('Disc')
       return
     }
@@ -106,8 +110,14 @@ export function drawToolKeys(types: GeometryTypeName[]): Array<
     else if (t === 'LineString' || t === 'MultiLineString') keys.add('LineString')
     else if (t === 'Polygon' || t === 'MultiPolygon') keys.add('Polygon')
     else if (t === 'Rectangle') keys.add('Rectangle')
-    else if (t === 'Circle' || t === 'MultiCircle') keys.add('Circle')
-    else if (t === 'Disc' || t === 'MultiDisc') keys.add('Disc')
+    else if (
+      t === 'Disc' ||
+      t === 'MultiDisc' ||
+      t === 'Circle' ||
+      t === 'MultiCircle'
+    ) {
+      keys.add('Disc')
+    }
   }
 
   for (const t of types) addFrom(t)

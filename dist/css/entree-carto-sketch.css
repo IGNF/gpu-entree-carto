@@ -1,3 +1,357 @@
+:root,
+:host {
+  --ol-background-color: white;
+  --ol-accent-background-color: #F5F5F5;
+  --ol-subtle-background-color: rgba(128, 128, 128, 0.25);
+  --ol-partial-background-color: rgba(255, 255, 255, 0.75);
+  --ol-foreground-color: #333333;
+  --ol-subtle-foreground-color: #666666;
+  --ol-brand-color: #00AAFF;
+}
+
+.ol-box {
+  box-sizing: border-box;
+  border-radius: 2px;
+  border: 1.5px solid var(--ol-background-color);
+  background-color: var(--ol-partial-background-color);
+}
+
+.ol-mouse-position {
+  top: 8px;
+  right: 8px;
+  position: absolute;
+}
+
+.ol-scale-line {
+  background: var(--ol-partial-background-color);
+  border-radius: 4px;
+  bottom: 8px;
+  left: 8px;
+  padding: 2px;
+  position: absolute;
+}
+
+.ol-scale-line-inner {
+  border: 1px solid var(--ol-subtle-foreground-color);
+  border-top: none;
+  color: var(--ol-foreground-color);
+  font-size: 10px;
+  text-align: center;
+  margin: 1px;
+  will-change: contents, width;
+  transition: all 0.25s;
+}
+
+.ol-scale-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+}
+
+.ol-scale-bar-inner {
+  display: flex;
+}
+
+.ol-scale-step-marker {
+  width: 1px;
+  height: 15px;
+  background-color: var(--ol-foreground-color);
+  float: right;
+  z-index: 10;
+}
+
+.ol-scale-step-text {
+  position: absolute;
+  bottom: -5px;
+  font-size: 10px;
+  z-index: 11;
+  color: var(--ol-foreground-color);
+  text-shadow: -1.5px 0 var(--ol-partial-background-color), 0 1.5px var(--ol-partial-background-color), 1.5px 0 var(--ol-partial-background-color), 0 -1.5px var(--ol-partial-background-color);
+}
+
+.ol-scale-text {
+  position: absolute;
+  font-size: 12px;
+  text-align: center;
+  bottom: 25px;
+  color: var(--ol-foreground-color);
+  text-shadow: -1.5px 0 var(--ol-partial-background-color), 0 1.5px var(--ol-partial-background-color), 1.5px 0 var(--ol-partial-background-color), 0 -1.5px var(--ol-partial-background-color);
+}
+
+.ol-scale-singlebar {
+  position: relative;
+  height: 10px;
+  z-index: 9;
+  box-sizing: border-box;
+  border: 1px solid var(--ol-foreground-color);
+}
+
+.ol-scale-singlebar-even {
+  background-color: var(--ol-subtle-foreground-color);
+}
+
+.ol-scale-singlebar-odd {
+  background-color: var(--ol-background-color);
+}
+
+.ol-unsupported {
+  display: none;
+}
+
+.ol-viewport,
+.ol-unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ol-viewport canvas {
+  all: unset;
+  overflow: hidden;
+}
+
+.ol-viewport {
+  touch-action: pan-x pan-y;
+}
+
+.ol-selectable {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+.ol-grabbing {
+  cursor: -webkit-grabbing;
+  cursor: -moz-grabbing;
+  cursor: grabbing;
+}
+
+.ol-grab {
+  cursor: move;
+  cursor: -webkit-grab;
+  cursor: -moz-grab;
+  cursor: grab;
+}
+
+.ol-control {
+  position: absolute;
+  background-color: var(--ol-subtle-background-color);
+  border-radius: 4px;
+}
+
+.ol-zoom {
+  top: .5em;
+  left: .5em;
+}
+
+.ol-rotate {
+  top: .5em;
+  right: .5em;
+  transition: opacity .25s linear, visibility 0s linear;
+}
+
+.ol-rotate.ol-hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s linear, visibility 0s linear .25s;
+}
+
+.ol-zoom-extent {
+  top: 4.643em;
+  left: .5em;
+}
+
+.ol-full-screen {
+  right: .5em;
+  top: .5em;
+}
+
+.ol-control button {
+  display: block;
+  margin: 1px;
+  padding: 0;
+  color: var(--ol-subtle-foreground-color);
+  font-weight: bold;
+  text-decoration: none;
+  font-size: inherit;
+  text-align: center;
+  height: 1.375em;
+  width: 1.375em;
+  line-height: .4em;
+  background-color: var(--ol-background-color);
+  border: none;
+  border-radius: 2px;
+}
+
+.ol-control button::-moz-focus-inner {
+  border: none;
+  padding: 0;
+}
+
+.ol-zoom-extent button {
+  line-height: 1.4em;
+}
+
+.ol-compass {
+  display: block;
+  font-weight: normal;
+  will-change: transform;
+}
+
+.ol-touch .ol-control button {
+  font-size: 1.5em;
+}
+
+.ol-touch .ol-zoom-extent {
+  top: 5.5em;
+}
+
+.ol-control button:hover,
+.ol-control button:focus {
+  text-decoration: none;
+  outline: 1px solid var(--ol-subtle-foreground-color);
+  color: var(--ol-foreground-color);
+}
+
+.ol-zoom .ol-zoom-in {
+  border-radius: 2px 2px 0 0;
+}
+
+.ol-zoom .ol-zoom-out {
+  border-radius: 0 0 2px 2px;
+}
+
+.ol-attribution {
+  text-align: right;
+  bottom: .5em;
+  right: .5em;
+  max-width: calc(100% - 1.3em);
+  display: flex;
+  flex-flow: row-reverse;
+  align-items: center;
+}
+
+.ol-attribution a {
+  color: var(--ol-subtle-foreground-color);
+  text-decoration: none;
+}
+
+.ol-attribution ul {
+  margin: 0;
+  padding: 1px .5em;
+  color: var(--ol-foreground-color);
+  text-shadow: 0 0 2px var(--ol-background-color);
+  font-size: 12px;
+}
+
+.ol-attribution li {
+  display: inline;
+  list-style: none;
+}
+
+.ol-attribution li:not(:last-child):after {
+  content: " ";
+}
+
+.ol-attribution img {
+  max-height: 2em;
+  max-width: inherit;
+  vertical-align: middle;
+}
+
+.ol-attribution button {
+  flex-shrink: 0;
+}
+
+.ol-attribution.ol-collapsed ul {
+  display: none;
+}
+
+.ol-attribution:not(.ol-collapsed) {
+  background: var(--ol-partial-background-color);
+}
+
+.ol-attribution.ol-uncollapsible {
+  bottom: 0;
+  right: 0;
+  border-radius: 4px 0 0;
+}
+
+.ol-attribution.ol-uncollapsible img {
+  margin-top: -.2em;
+  max-height: 1.6em;
+}
+
+.ol-attribution.ol-uncollapsible button {
+  display: none;
+}
+
+.ol-zoomslider {
+  top: 4.5em;
+  left: .5em;
+  height: 200px;
+}
+
+.ol-zoomslider button {
+  position: relative;
+  height: 10px;
+}
+
+.ol-touch .ol-zoomslider {
+  top: 5.5em;
+}
+
+.ol-overviewmap {
+  left: 0.5em;
+  bottom: 0.5em;
+}
+
+.ol-overviewmap.ol-uncollapsible {
+  bottom: 0;
+  left: 0;
+  border-radius: 0 4px 0 0;
+}
+
+.ol-overviewmap .ol-overviewmap-map,
+.ol-overviewmap button {
+  display: block;
+}
+
+.ol-overviewmap .ol-overviewmap-map {
+  border: 1px solid var(--ol-subtle-foreground-color);
+  height: 150px;
+  width: 150px;
+}
+
+.ol-overviewmap:not(.ol-collapsed) button {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+}
+
+.ol-overviewmap.ol-collapsed .ol-overviewmap-map,
+.ol-overviewmap.ol-uncollapsible button {
+  display: none;
+}
+
+.ol-overviewmap:not(.ol-collapsed) {
+  background: var(--ol-subtle-background-color);
+}
+
+.ol-overviewmap-box {
+  border: 1.5px dotted var(--ol-subtle-foreground-color);
+}
+
+.ol-overviewmap .ol-overviewmap-box:hover {
+  cursor: move;
+}
+
+.ol-overviewmap .ol-viewport:hover {
+  cursor: pointer;
+}
 /**
  * Styles standalone — mini-carte d’édition géométrique.
  * Toolbar overlay à gauche, boutons 48×48 type cartes.gouv / geopf Drawing.
@@ -104,8 +458,7 @@
   border-radius: var(--ec-geom-btn-radius);
   background: var(--background-default-grey, #fff);
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
-  /* visible : infobulles ::before (sinon clipées) */
-  overflow: visible;
+  overflow: hidden;
 }
 
 .ec-geometry-editor__toolbar[hidden] {
@@ -119,7 +472,6 @@
 
 .ec-geometry-editor__tool {
   box-sizing: border-box;
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,18 +488,6 @@
   color: var(--text-action-high-blue-france, #000091);
   cursor: pointer;
   transition: background-color 300ms;
-}
-
-.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:first-child {
-  border-radius: var(--ec-geom-btn-radius) var(--ec-geom-btn-radius) 0 0;
-}
-
-.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:last-child {
-  border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
-}
-
-.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:only-child {
-  border-radius: var(--ec-geom-btn-radius);
 }
 
 .ec-geometry-editor__tool:hover,
@@ -219,126 +559,29 @@
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.54 6.46a1 1 0 0 1 0 1.41L13.41 12l2.13 2.13a1 1 0 0 1-1.41 1.41L12 13.41l-2.13 2.13a1 1 0 0 1-1.41-1.41L10.59 12 8.46 9.87a1 1 0 0 1 1.41-1.41L12 10.59l2.13-2.13a1 1 0 0 1 1.41 0z'/%3E%3C/svg%3E");
 }
 
-/* Menu outils (toolsToggle) — picto sur ::after (comme les autres outils ;
-   ::before = infobulle geopf) */
-.ec-geometry-editor__tool--tools-toggle::after {
+/* Menu outils (toolsToggle) — picto DSFR fr-icon-tools-fill (::before) */
+.ec-geometry-editor__tool.fr-icon-tools-fill::before {
+  content: '';
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  /* SVG officiel DSFR icons/design/tools-fill.svg (absent de dsfr 1.13 — embarqué) */
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5.32943 3.27158C6.56252 2.8332 7.9923 3.10749 8.97927 4.09446C9.96652 5.08171 10.2407 6.51202 9.80178 7.74535L20.6465 18.5902L18.5252 20.7115L7.67936 9.86709C6.44627 10.3055 5.01649 10.0312 4.02952 9.04421C3.04227 8.05696 2.7681 6.62665 3.20701 5.39332L5.44373 7.63C6.02952 8.21578 6.97927 8.21578 7.56505 7.63C8.15084 7.04421 8.15084 6.09446 7.56505 5.50868L5.32943 3.27158ZM15.6968 5.15512L18.8788 3.38735L20.293 4.80157L18.5252 7.98355L16.7574 8.3371L14.6361 10.4585L13.2219 9.04421L15.3432 6.92289L15.6968 5.15512ZM8.62572 12.9333L10.747 15.0547L5.79729 20.0044C5.2115 20.5902 4.26175 20.5902 3.67597 20.0044C3.12464 19.4531 3.09221 18.5793 3.57867 17.9901L3.67597 17.8831L8.62572 12.9333Z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5.32943 3.27158C6.56252 2.8332 7.9923 3.10749 8.97927 4.09446C9.96652 5.08171 10.2407 6.51202 9.80178 7.74535L20.6465 18.5902L18.5252 20.7115L7.67936 9.86709C6.44627 10.3055 5.01649 10.0312 4.02952 9.04421C3.04227 8.05696 2.7681 6.62665 3.20701 5.39332L5.44373 7.63C6.02952 8.21578 6.97927 8.21578 7.56505 7.63C8.15084 7.04421 8.15084 6.09446 7.56505 5.50868L5.32943 3.27158ZM15.6968 5.15512L18.8788 3.38735L20.293 4.80157L18.5252 7.98355L16.7574 8.3371L14.6361 10.4585L13.2219 9.04421L15.3432 6.92289L15.6968 5.15512ZM8.62572 12.9333L10.747 15.0547L5.79729 20.0044C5.2115 20.5902 4.26175 20.5902 3.67597 20.0044C3.12464 19.4531 3.09221 18.5793 3.57867 17.9901L3.67597 17.8831L8.62572 12.9333Z'/%3E%3C/svg%3E");
 }
 
-/*
- * Infobulles — même rendu que geopf `.gpf-btn-icon[aria-label]:hover::before`
- * (zoom, territoire, minimap, plein écran). Pictos outils = ::after.
- *
- * Position : `left: 100%` / `right: 100%` (relatif au bouton), pas
- * `translate(100%)` (relatif à la largeur de la bulle → écart variable selon le libellé).
- */
-.ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__tool[aria-label]:focus-visible::before {
-  content: attr(aria-label);
-  position: absolute;
-  top: var(--ec-geom-btn-padding);
-  left: 100%;
-  right: auto;
-  z-index: 2000;
-  width: fit-content;
-  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
-  color: var(--text-default-grey, #161616);
-  font-size: 0.75rem;
-  line-height: 1.25;
-  white-space: nowrap;
-  pointer-events: none;
-  background-repeat: no-repeat;
-  background-position: 0.125rem 50%, 0 50%, 0.375rem 100%, 0.375rem 100%;
-  background-size:
-    0.375rem 0.5rem,
-    0.375rem 0.5rem,
-    1px 100%,
-    calc(100% - 0.5rem) 100%;
-  background-image:
-    conic-gradient(
-      from 56.31deg at 0 50%,
-      transparent 0deg,
-      var(--background-overlap-grey, #fff) 0deg,
-      var(--background-overlap-grey, #fff) 67.38deg,
-      transparent 67.38deg
-    ),
-    conic-gradient(
-      from 56.31deg at 0 50%,
-      transparent 0deg,
-      var(--border-default-grey, #ddd) 0deg,
-      var(--border-default-grey, #ddd) 67.38deg,
-      transparent 67.38deg
-    ),
-    linear-gradient(90deg, var(--border-default-grey, #ddd), var(--border-default-grey, #ddd)),
-    linear-gradient(
-      90deg,
-      var(--background-overlap-grey, #fff),
-      var(--background-overlap-grey, #fff)
-    );
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
-  transform: none;
-}
-
-/* Coin droit : bulle à gauche du bouton */
-.ec-geometry-editor__tools-root[data-corner='top-right']
-  .ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__tools-root[data-corner='top-right']
-  .ec-geometry-editor__tool[aria-label]:focus-visible::before,
-.ec-geometry-editor__tools-root[data-corner='bottom-right']
-  .ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__tools-root[data-corner='bottom-right']
-  .ec-geometry-editor__tool[aria-label]:focus-visible::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:focus-visible::before {
-  left: auto;
-  right: 100%;
-  padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-  background-position: calc(100% - 0.125rem) 50%, 100% 50%, calc(100% - 0.375rem) 100%, 0 100%;
-  background-size:
-    0.375rem 0.5rem,
-    0.375rem 0.5rem,
-    1px 100%,
-    calc(100% - 0.5rem) 100%;
-  background-image:
-    conic-gradient(
-      from 236.31deg at 100% 50%,
-      transparent 0deg,
-      var(--background-overlap-grey, #fff) 0deg,
-      var(--background-overlap-grey, #fff) 67.38deg,
-      transparent 67.38deg
-    ),
-    conic-gradient(
-      from 236.31deg at 100% 50%,
-      transparent 0deg,
-      var(--border-default-grey, #ddd) 0deg,
-      var(--border-default-grey, #ddd) 67.38deg,
-      transparent 67.38deg
-    ),
-    linear-gradient(90deg, var(--border-default-grey, #ddd), var(--border-default-grey, #ddd)),
-    linear-gradient(
-      90deg,
-      var(--background-overlap-grey, #fff),
-      var(--background-overlap-grey, #fff)
-    );
-  transform: none;
-}
-
-/* Pas d’infobulle si l’outil / le menu est déjà actif (comme geopf) */
-.ec-geometry-editor__tool[aria-pressed='true']:hover::before,
-.ec-geometry-editor__tool[aria-pressed='true']:focus-visible::before,
-.ec-geometry-editor__tool.is-active:hover::before,
-.ec-geometry-editor__tool.is-active:focus-visible::before {
-  content: none;
-}
-
-.ec-geometry-editor__tools-root:has(
-  > .ec-geometry-editor__tool[aria-label]:hover,
-  > .ec-geometry-editor__toolbar > .ec-geometry-editor__tool[aria-label]:hover
-) {
-  z-index: 3;
+.ec-geometry-editor__tool.fr-icon-tools-fill::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Modifier — geopf drawing-tool-edit */

@@ -12,6 +12,8 @@ export const CONTROL_POSITIONS = {
   searchEngine: 'top-left',
   overviewMap: 'bottom-left',
   territories: 'bottom-left',
+  /** Croquis : même colonne, au-dessus de la minimap (CSS order). */
+  sketch: 'bottom-left',
 } as const
 
 export type GeopfControlPosition =

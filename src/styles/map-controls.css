@@ -169,7 +169,8 @@
 }
 
 .position:has(> .gpf-widget-button > .gpf-btn-icon[aria-label]:hover),
-.position:has(> .gpf-widget > .gpf-btn-icon[aria-label]:hover) {
+.position:has(> .gpf-widget > .gpf-btn-icon[aria-label]:hover),
+.position:has(> .ec-sketch-control .ec-geometry-editor__tool[aria-label]:hover) {
   z-index: 3;
 }
 
@@ -184,6 +185,18 @@
   position: relative !important;
   left: auto;
   bottom: auto;
+}
+
+/* SketchControl : slot geopf uniquement (styles boutons = geometry-editor.css) */
+.position-container-bottom-left > .ec-sketch-control--geopf-slot {
+  order: -2;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0;
 }
 
 .position-container-bottom-left > .gpf-widget[id^='GPoverviewMap-'] .ol-overviewmap-map {
@@ -248,6 +261,16 @@
 
 .ol-custom-full-screen button.gpf-btn-icon > span {
   display: none;
+}
+
+/*
+ * Infobulle plein écran : le bouton a font-size:0 (masquer le label OL),
+ * la bulle ::before doit retrouver la taille des autres contrôles.
+ */
+.ol-custom-full-screen button.gpf-btn-icon[aria-label]:hover::before,
+.ol-custom-full-screen button.gpf-btn-icon[aria-label]:focus:focus-visible::before {
+  font-size: 0.75rem;
+  line-height: 1.25;
 }
 
 /* Territories — titres longs dans les tuiles */

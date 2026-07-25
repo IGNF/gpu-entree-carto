@@ -8,6 +8,7 @@ import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
 import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
 import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
+import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerSearch } from '@/lib/types'
@@ -82,6 +83,7 @@ function onToggleLayer(id: string, visible: boolean) {
           />
           <SearchEngineControl :initial-search="initialSearch" />
           <OverviewMapControl />
+          <SketchControl />
           <TerritoriesControl />
           <ZoomControl />
           <FullScreenControl />

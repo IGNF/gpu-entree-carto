@@ -15,6 +15,7 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 - Clic sur un onglet : active cet onglet et ouvre le panneau ; clic sur l’onglet déjà actif : ferme.
 - Un seul onglet actif à la fois.
 - À l’ouverture, `.ec-map-shell--tab-panels-open` décale zoom, plein écran et échelle de `--ec-tab-panels-inset` (= largeur panneau) + le même `--ec-widget-gap` qu’au bord de carte lorsque le panneau est fermé.
+- Conteneur pleine hauteur avec `pointer-events: none !important` (OpenLayers pose `pointer-events: auto` en inline) ; seuls les enfants (onglets / panneau) reçoivent les clics — sinon zoom / plein écran bas-droite sont masqués.
 
 ## Onglets
 

@@ -13,19 +13,21 @@ entree-carto fournit le même point d’entrée global **`window.gpu`** et un do
 
 ## Contenu de `dist/` (bibliothèque)
 
-Après `make build-lib` et `make build-geometry-editor` :
+Après `make build-lib`, `make build-geometry-editor` et `make build-sketch` :
 
 ```
 dist/
   entree-carto.js / .min.js
   entree-carto-geometry-editor.js / .min.js   # mini-carte formulaires (remplace ol-geometry-editor)
+  entree-carto-sketch.js / .min.js            # croquis standalone (mountSketch / SketchControl)
   css/
     entree-carto.css / .min.css
     entree-carto-geometry-editor.css / .min.css
+    entree-carto-sketch.css / .min.css
 ```
 
 Vue 3, OpenLayers ≥ 9 et les styles carte sont **inclus dans le bundle** (plus besoin d’OpenLayers v4 côté site pour la carte).  
-Le geometry-editor embarque aussi OpenLayers (bundle autonome pour les pages formulaire).
+Le geometry-editor et le sketch embarquent aussi OpenLayers (bundles autonomes).
 
 ---
 

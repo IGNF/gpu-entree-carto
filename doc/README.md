@@ -7,7 +7,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
-- [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor` + nav DSFR
+- [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
 
 ## Contrôles
 
@@ -27,3 +27,4 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | TreeLayerSwitcher | `src/components/layers/TreeLayerSwitcher.vue` | [TreeLayerSwitcher.md](./TreeLayerSwitcher.md) |
 | BaseLayerSwitcher | `src/components/map/BaseLayerSwitcher.vue` | [BaseLayerSwitcher.md](./BaseLayerSwitcher.md) |
 | GeometryEditor (standalone) | `src/geometry-editor/` | [GeometryEditor.md](./GeometryEditor.md) |
+| SketchControl | `src/geometry-editor/SketchControl.ts` + `SketchControl.vue` | [SketchControl.md](./SketchControl.md) |

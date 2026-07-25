@@ -3,6 +3,7 @@ import './styles/geometry-editor.css'
 import { GeometryEditor } from './GeometryEditor'
 import type { GeometryEditorOptions } from './types'
 import { attachGeometryTools } from './attachGeometryTools'
+import { SketchControl } from './SketchControl'
 import {
   featureFromWkt,
   bboxStringFromWkt,
@@ -25,6 +26,11 @@ export {
 
 export { GeometryEditor } from './GeometryEditor'
 export { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
+export { SketchControl } from './SketchControl'
+export type {
+  SketchControlOptions,
+  SketchExtraTool,
+} from './SketchControl'
 export { attachGeometryTools } from './attachGeometryTools'
 export type {
   AttachGeometryToolsHandle,
@@ -71,6 +77,7 @@ const publicApi = {
   mountGeometryEditor,
   attachGeometryTools,
   GeometryEditor,
+  SketchControl,
   featureFromWkt,
   bboxStringFromWkt,
   createSimpleStyle,

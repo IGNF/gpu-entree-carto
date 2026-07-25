@@ -9,8 +9,8 @@ export { GEOMETRY_TYPE_NAMES } from './geometryTypeUtils'
 
 /**
  * Type(s) de géométrie autorisé(s).
- * Un seul nom (`'Polygon'`, `'MultiCircle'`, …) ou plusieurs séparés par des virgules
- * (`'Point,Circle,Disc'`) pour n’afficher que ces outils (comme `Geometry`, mais filtré).
+ * Un seul nom (`'Polygon'`, `'MultiDisc'`, …) ou plusieurs séparés par des virgules
+ * (`'Point,Disc'`) pour n’afficher que ces outils (comme `Geometry`, mais filtré).
  */
 export type GeometryTypeOption = GeometryTypeName | (string & {})
 
@@ -38,7 +38,7 @@ export interface TileLayerConfig {
 export interface GeometryEditorOptions {
   /**
    * Type(s) de géométrie : un nom, ou une liste séparée par des virgules
-   * (ex. `'Point,LineString,Circle'`).
+   * (ex. `'Point,LineString,Disc'`).
    */
   geometryType?: GeometryTypeOption
   /** Masquer le champ / élément source. */

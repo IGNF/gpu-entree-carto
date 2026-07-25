@@ -10,8 +10,9 @@ Associe une mini-carte à un champ de formulaire ou un élément HTML pour produ
 
 OpenLayers est **embarqué** dans le bundle (contrairement à ol-geometry-editor historique qui s’appuyait sur `ol.js` du site).
 
-La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** (`fr-icon-tools-fill`) dans le coin choisi ouvre / ferme alors la barre.  
-Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les masques SVG de **geopf-extensions-openlayers** (`Drawing` / `DSFRdrawingStyle.css`) — pas besoin du CSS icônes DSFR pour la toolbar.
+La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** dans le coin choisi ouvre / ferme alors la barre.  
+Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les masques SVG de **geopf-extensions-openlayers** (`Drawing` / `DSFRdrawingStyle.css`) — pas besoin du CSS icônes DSFR pour la toolbar.  
+Infobulles : même style geopf que zoom / territoire (`aria-label` → `::before` au survol) ; masquées si le bouton est actif.
 
 ## Usage
 
@@ -48,7 +49,7 @@ Alignées sur ol-geometry-editor (principales) :
 
 | Option | Défaut | Description |
 |--------|--------|-------------|
-| `geometryType` | `'Geometry'` | Un type (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `MultiCircle`, `MultiDisc`, `Geometry`) **ou plusieurs séparés par des virgules** (`Point,Circle,Disc`) : mêmes outils que `Geometry`, mais filtrés. |
+| `geometryType` | `'Geometry'` | Un type (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, `Geometry`) **ou plusieurs séparés par des virgules** (`Point,Disc`) : mêmes outils que `Geometry`, mais filtrés. `Circle` / `MultiCircle` restent acceptés (compat) et exposent l’outil **Disc**. |
 | `hide` | `true` | Masque l’élément source (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, car DSFR `.fr-input` écrase sinon l’attribut `hidden`) |
 | `editable` | `true` | Affiche la barre d’outils à gauche dans la carte (sinon viewer seul) |
 | `tileLayers` | Plan IGN WMTS | Fonds XYZ `{ url, attribution?, title?, maxZoom? }` |
@@ -92,26 +93,23 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
   - **Polygone** : poignée **rotation** (bleue) au survol.
   - Pendant le drag de rotation, l’icône **suit le curseur**.
   - **Rectangle (bbox)** : carrés coins / arêtes pour redimensionner (axis-aligné, **sans rotation**).
-  - **Cercle** : contour seul ; **translation** via poignée latérale (comme une ligne) ; **rayon** en glissant le contour ; **pas de rotation**.
-  - **Disque** : rempli ; **translation** en glissant l’intérieur (comme un polygone) ; **rayon** en glissant le contour ; **pas de rotation**.
+  - **Cercle** (legacy contour) : **translation** via poignée latérale ; **rayon** en glissant le contour ; **pas de rotation**.
+  - **Disque** (outil de dessin) : rempli ; **translation** en glissant l’intérieur ; **rayon** en glissant le contour ; **pas de rotation**.
   - **Point** : déplacement du sommet.
-- **Suppression** : activer l’outil poubelle puis cliquer une géométrie.
+- **Suppression** : activer l’outil poubelle puis cliquer une géométrie. Pour un **cercle** legacy (`ecKind` contour), cliquer uniquement sur le **contour** (un clic dans l’intérieur ne supprime pas). Un **disque** se supprime aussi en cliquant dans l’aire.
 - Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
 - Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche ; boutons **48×48** avec pictos +/− (masques geopf `DSFRzoomStyle`), même look que le zoom de la carte principale.
 
 ## Démo
 
-Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Circle`, `Disc`, `MultiCircle`, `MultiDisc`, CSV, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
-Un **encart rétractable** (accordéon DSFR) en tête de page décrit l’utilisation et liste toutes les options.  
-Un exemple final active `showSettings` (roue crantée) et `showAttributions`.
+Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, CSV, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.  
 
-### Format Circle / Disc / MultiCircle / MultiDisc
+### Format Disc / MultiDisc (et Circle legacy)
 
 ```json
-{ "type": "Circle", "center": [2.35, 48.85], "radius": 4500 }
 { "type": "Disc", "center": [2.4, 48.87], "radius": 3500 }
 {
-  "type": "MultiCircle",
+  "type": "MultiDisc",
   "geometries": [
     { "center": [2.32, 48.85], "radius": 2500 },
     { "center": [2.4, 48.88], "radius": 1800 }
@@ -121,16 +119,16 @@ Un exemple final active `showSettings` (roue crantée) et `showAttributions`.
 
 - `center` : longitude / latitude (EPSG:4326)
 - `radius` : mètres dans la projection carte (EPSG:3857)
-- En **KML**, le cercle / disque est exporté comme polygone approximant (64 côtés)
+- En **KML**, le disque est exporté comme polygone approximant (64 côtés)
+- Les formats `Circle` / `MultiCircle` restent **lus** (compat) ; le dessin n’expose plus que l’outil **Disc** (picto cercle).
 
 ### `geometryType` multi-valeurs
 
 ```js
-mountGeometryEditor('#field', { geometryType: 'Point,Circle,Disc' })
+mountGeometryEditor('#field', { geometryType: 'Point,Disc' })
 ```
 
-Affiche uniquement les outils listés (+ modifier / supprimer), comme `Geometry` mais de façon explicite. `MultiPoint` / `MultiCircle` / etc. dans la liste exposent l’outil de dessin correspondant (sans remplacer la géométrie précédente).
-
+Affiche uniquement les outils listés (+ modifier / supprimer), comme `Geometry` mais de façon explicite. `MultiPoint` / `MultiDisc` / etc. dans la liste exposent l’outil de dessin correspondant (sans remplacer la géométrie précédente).
 ## Build
 
 ```sh
@@ -175,16 +173,23 @@ Pages : métadonnées (`/metadata/`), fiche document, territoire, admin grille.
 
 ## Carte principale (map-attached)
 
-Outre `mountGeometryEditor` (mini-carte + champ HTML), le même moteur de dessin s’attache à une **Map OL existante** :
+Le moteur de croquis est **`SketchControl`** (contrôle OL) — voir [SketchControl.md](./SketchControl.md).
+
+`GeometryEditor` l’instancie en interne (sans localStorage / clearAll / extraTools).  
+Sur une Map existante :
 
 ```js
-const host = document.querySelector('#sketch-toolbar');
 const tools = EntreeCartoGeometryEditor.attachGeometryTools(map, {
-  target: host,
+  toolsToggle: 'bottom-left',
+  position: 'bottom-left',
   geometryType: 'Point,LineString,Polygon',
+  clearAll: true,
+  localStorageKey: 'entree-carto-sketch',
   onChange: (features) => { /* … */ },
 });
-// tools.serialize() / tools.load(raw) / tools.destroy()
+// tools.sketch / tools.serialize() / tools.load(raw) / tools.destroy()
 ```
 
-`GeometryEditor` (formulaire) reste la façade gpu-site ; `attachGeometryTools` prépare le croquis type gpu-client sur la carte principale (sans second `ol.Map`).
+Équivalent direct : `new EntreeCartoGeometryEditor.SketchControl({…})` puis `map.addControl(…)`.
+
+`GeometryEditor` (formulaire) reste la façade gpu-site ; la carte principale utilise le wrapper Vue `SketchControl.vue`.

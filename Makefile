@@ -1,4 +1,4 @@
-.PHONY: install dev build build-lib build-demo build-geometry-editor test preview typecheck
+.PHONY: install dev build build-lib build-demo build-geometry-editor build-sketch test preview typecheck
 
 install:
 	npm install
@@ -17,6 +17,9 @@ build-demo:
 
 build-geometry-editor:
 	npm run build:geometry-editor
+
+build-sketch:
+	npm run build:sketch
 
 test:
 	npm run test

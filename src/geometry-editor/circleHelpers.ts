@@ -31,6 +31,24 @@ export function setCircleKind(feature: OlFeature, kind: CircleKind): void {
   feature.set(EC_KIND_PROP, kind)
 }
 
+/** Distance centre → point (même projection que le Circle). */
+export function distToCircleCenter(
+  circle: Circle,
+  coord: Coordinate,
+): number {
+  const c = circle.getCenter()
+  return Math.hypot(coord[0] - c[0], coord[1] - c[1])
+}
+
+/** Vrai si `coord` est à moins de `tol` (unités carte) du contour. */
+export function isNearCircleEdge(
+  circle: Circle,
+  coord: Coordinate,
+  tol: number,
+): boolean {
+  return Math.abs(distToCircleCenter(circle, coord) - circle.getRadius()) <= tol
+}
+
 export function looksLikeCircleOrDisc(data: unknown): data is {
   type: 'Circle' | 'Disc'
   center: [number, number]

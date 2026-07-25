@@ -21,7 +21,7 @@ import { Icon, Style } from 'ol/style'
 import type { Feature as OlFeature } from 'ol'
 import type VectorSourceType from 'ol/source/Vector'
 import type VectorLayerType from 'ol/layer/Vector'
-import { getCircleKind } from './circleHelpers'
+import { getCircleKind, isNearCircleEdge } from './circleHelpers'
 import { parseGeometryTypes } from './geometryTypeUtils'
 
 export type TransformMode =
@@ -354,14 +354,6 @@ function cursorForRole(role: HandleRole): string {
 
 function distToCenter(center: Coordinate, coord: Coordinate): number {
   return Math.hypot(coord[0] - center[0], coord[1] - center[1])
-}
-
-function isNearCircleEdge(
-  circle: Circle,
-  coord: Coordinate,
-  tol: number,
-): boolean {
-  return Math.abs(distToCenter(circle.getCenter(), coord) - circle.getRadius()) <= tol
 }
 
 function isDeepInsideCircle(
