@@ -197,6 +197,49 @@
   bottom: auto !important;
   left: auto !important;
   margin: 0;
+  /* Laisse dépasser les infobulles hors de la colonne 48px */
+  overflow: visible;
+  width: max-content;
+  max-width: min(100%, calc(var(--ec-widget-btn-size) + 12.5rem));
+  /*
+   * Hauteur bornée à la carte (cqb) : en slot geopf, parent .position n’a pas de
+   * hauteur fixe → max-height:100% ne contraint pas → barre dépasse / pas de scroll.
+   * On réserve la place de la minimap (~2 boutons) + gap sous le croquis.
+   */
+  max-height: calc(
+    100cqb - 2 * var(--ec-widget-gap) - (var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap) * 2)
+  );
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+/* Toolbar scrollable dans la hauteur allouée au slot */
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot
+  > .ec-geometry-editor__toolbar {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot[data-corner]
+  > .ec-geometry-editor__toolbar {
+  /* Place pour le bouton menu toolsToggle */
+  max-height: calc(100% - var(--ec-widget-btn-size) - var(--ec-widget-gap));
+}
+
+.position-container-bottom-left:has(
+  > .ec-sketch-control--geopf-slot .ec-geometry-editor__tool[aria-label]:hover
+),
+.position-container-top-left:has(
+  > .ec-sketch-control--geopf-slot .ec-geometry-editor__tool[aria-label]:hover
+) {
+  z-index: 3;
+  overflow: visible;
 }
 
 .position-container-bottom-left > .gpf-widget[id^='GPoverviewMap-'] .ol-overviewmap-map {

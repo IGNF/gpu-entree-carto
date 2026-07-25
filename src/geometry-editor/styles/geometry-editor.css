@@ -50,6 +50,8 @@
   margin: 0;
   padding: 0;
   pointer-events: none;
+  /* Limite à la hauteur carte → scroll de la barre outils si besoin */
+  max-height: calc(100% - 2 * var(--ec-geom-btn-gap));
 }
 
 .ec-geometry-editor__tools-root > * {
@@ -93,19 +95,58 @@
 }
 
 .ec-geometry-editor__toolbar {
+  --ec-geom-tooltip-space: 12.5rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  width: var(--ec-geom-btn-size);
+  /* Largeur visuelle = bouton ; padding = place pour l’infobulle (évite le clip overflow) */
+  box-sizing: border-box;
+  width: calc(var(--ec-geom-btn-size) + var(--ec-geom-tooltip-space));
   margin: 0;
   padding: 0;
+  padding-inline-end: var(--ec-geom-tooltip-space);
   border: none;
   border-radius: var(--ec-geom-btn-radius);
-  background: var(--background-default-grey, #fff);
-  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
-  /* visible : infobulles ::before (sinon clipées) */
-  overflow: visible;
+  /* Fond / ombre uniquement sur la colonne boutons */
+  background: linear-gradient(
+    to right,
+    var(--background-default-grey, #fff) 0,
+    var(--background-default-grey, #fff) var(--ec-geom-btn-size),
+    transparent var(--ec-geom-btn-size)
+  );
+  box-shadow: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
+  /* Scroll si la barre dépasse la carte (pas le bouton toolsToggle) */
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ec-geometry-editor__toolbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Coins droits : infobulle à gauche → padding de l’autre côté */
+.ec-geometry-editor__tools-root[data-corner='top-right'] .ec-geometry-editor__toolbar,
+.ec-geometry-editor__tools-root[data-corner='bottom-right'] .ec-geometry-editor__toolbar {
+  padding-inline-end: 0;
+  padding-inline-start: var(--ec-geom-tooltip-space);
+  background: linear-gradient(
+    to left,
+    var(--background-default-grey, #fff) 0,
+    var(--background-default-grey, #fff) var(--ec-geom-btn-size),
+    transparent var(--ec-geom-btn-size)
+  );
+  align-items: flex-end;
+}
+
+.ec-geometry-editor__tools-root[data-corner] .ec-geometry-editor__toolbar {
+  max-height: calc(100% - var(--ec-geom-btn-size) - var(--ec-geom-btn-gap));
 }
 
 .ec-geometry-editor__toolbar[hidden] {
@@ -115,6 +156,8 @@
 .ec-geometry-editor__tool--tools-toggle {
   border-radius: var(--ec-geom-btn-radius);
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  /* Infobulle hors de la colonne étroite */
+  overflow: visible;
 }
 
 .ec-geometry-editor__tool {
@@ -148,6 +191,39 @@
 
 .ec-geometry-editor__toolbar > .ec-geometry-editor__tool:only-child {
   border-radius: var(--ec-geom-btn-radius);
+}
+
+/* Coins arrondis même avec séparateurs intercalés */
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:first-of-type {
+  border-radius: var(--ec-geom-btn-radius) var(--ec-geom-btn-radius) 0 0;
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:last-of-type {
+  border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__toolbar
+  > .ec-geometry-editor__tool:first-of-type:last-of-type {
+  border-radius: var(--ec-geom-btn-radius);
+}
+
+/* Séparateur entre groupes d’outils */
+.ec-geometry-editor__toolbar-sep {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: var(--ec-geom-btn-size);
+  height: 9px;
+  margin: 0;
+  padding: 4px var(--ec-geom-btn-padding);
+  background-color: var(--background-default-grey, #fff);
+  pointer-events: none;
+}
+
+.ec-geometry-editor__toolbar-sep::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background-color: var(--border-default-grey, #ddd);
 }
 
 .ec-geometry-editor__tool:hover,
@@ -217,6 +293,455 @@
 .ec-geometry-editor__tool--clear-all::after {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.54 6.46a1 1 0 0 1 0 1.41L13.41 12l2.13 2.13a1 1 0 0 1-1.41 1.41L12 13.41l-2.13 2.13a1 1 0 0 1-1.41-1.41L10.59 12 8.46 9.87a1 1 0 0 1 1.41-1.41L12 10.59l2.13-2.13a1 1 0 0 1 1.41 0z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.54 6.46a1 1 0 0 1 0 1.41L13.41 12l2.13 2.13a1 1 0 0 1-1.41 1.41L12 13.41l-2.13 2.13a1 1 0 0 1-1.41-1.41L10.59 12 8.46 9.87a1 1 0 0 1 1.41-1.41L12 10.59l2.13-2.13a1 1 0 0 1 1.41 0z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--undo::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--redo::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--save::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z'/%3E%3C/svg%3E");
+}
+
+/* Badge état enregistrement (haut-gauche de l’icône) */
+.ec-geometry-editor__tool-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 1;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background-color: var(--background-default-grey, #fff);
+  pointer-events: none;
+}
+
+.ec-geometry-editor__tool-badge::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.ec-geometry-editor__tool--save-saved .ec-geometry-editor__tool-badge {
+  color: var(--success-425-625, #18753c);
+}
+
+.ec-geometry-editor__tool--save-saved .ec-geometry-editor__tool-badge::before {
+  /* fr-icon-checkbox-circle-line */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--save-dirty .ec-geometry-editor__tool-badge {
+  color: var(--warning-425-625, #b34000);
+}
+
+.ec-geometry-editor__tool--save-dirty .ec-geometry-editor__tool-badge::before {
+  /* fr-icon-error-warning-line */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 5.99 19.53 19H4.47L12 5.99M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 5.99 19.53 19H4.47L12 5.99M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--text::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5 4v3h5.5v12h3V7H19V4H5z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M5 4v3h5.5v12h3V7H19V4H5z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--import::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool--export::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E");
+}
+
+/* Remix ri-ruler-line — hors pack DSFR (`fr-icon-ruler-line` absent) */
+.ec-geometry-editor__tool--measure-distance::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M6.343 14.728 3.515 17.556l3.535 3.536L20.485 7.657l-3.535-3.536-2.122 2.122 1.415 1.414-1.415 1.414-1.414-1.414-2.121 2.121 2.121 2.122-1.414 1.414-2.122-2.121-2.121 2.121 1.414 1.415-1.414 1.414-1.414-1.414Zm11.314-12.728 4.95 4.95a1 1 0 0 1 0 1.414L7.757 23.213a1 1 0 0 1-1.414 0l-4.95-4.95a1 1 0 0 1 0-1.414L16.243 2a1 1 0 0 1 1.414 0Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M6.343 14.728 3.515 17.556l3.535 3.536L20.485 7.657l-3.535-3.536-2.122 2.122 1.415 1.414-1.415 1.414-1.414-1.414-2.121 2.121 2.121 2.122-1.414 1.414-2.122-2.121-2.121 2.121 1.414 1.415-1.414 1.414-1.414-1.414Zm11.314-12.728 4.95 4.95a1 1 0 0 1 0 1.414L7.757 23.213a1 1 0 0 1-1.414 0l-4.95-4.95a1 1 0 0 1 0-1.414L16.243 2a1 1 0 0 1 1.414 0Z'/%3E%3C/svg%3E");
+}
+
+/*
+ * Mesure d’aire — Tabler « dimensions » (rectangle + flèches largeur/hauteur).
+ * Ce n’est PAS Remix/DSFR `aspect-ratio-line` (cadre + coins L opposés).
+ * Absent du pack DSFR ; masque SVG embarqué.
+ */
+.ec-geometry-editor__tool--measure-area::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5h11'/%3E%3Cpath d='M12 7l2-2-2-2'/%3E%3Cpath d='M5 3l-2 2 2 2'/%3E%3Cpath d='M19 10v11'/%3E%3Cpath d='M17 19l2 2 2-2'/%3E%3Cpath d='M21 12l-2-2-2 2'/%3E%3Crect x='3' y='10' width='11' height='11' rx='2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5h11'/%3E%3Cpath d='M12 7l2-2-2-2'/%3E%3Cpath d='M5 3l-2 2 2 2'/%3E%3Cpath d='M19 10v11'/%3E%3Cpath d='M17 19l2 2 2-2'/%3E%3Cpath d='M21 12l-2-2-2 2'/%3E%3Crect x='3' y='10' width='11' height='11' rx='2'/%3E%3C/svg%3E");
+}
+
+.ec-geometry-editor__tool:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ec-sketch-text-popup,
+.ec-sketch-style-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 14rem;
+  max-width: min(20rem, calc(100vw - 1rem));
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  box-shadow: var(--overlap-shadow, 0 2px 8px rgba(0, 0, 18, 0.16));
+  font-size: 0.875rem;
+  box-sizing: border-box;
+}
+
+/* Positionnée en fixed (body) — peut dépasser le cadre carte */
+.ec-sketch-style-popup {
+  position: fixed;
+  overflow: visible;
+  margin-bottom: 17px;
+}
+
+.ec-sketch-style-popup__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: min(70vh, 28rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Appendice vers le bas (popup au-dessus du point) */
+.ec-sketch-style-popup::before {
+  content: "";
+  position: absolute;
+  border-top: 16px solid var(--border-default-grey, #ddd);
+  border-right: 15px solid transparent;
+  border-left: 15px solid transparent;
+  bottom: -17px;
+  left: var(--ec-tip-x, 50%);
+  margin-left: -15px;
+  pointer-events: none;
+}
+
+.ec-sketch-style-popup::after {
+  content: "";
+  position: absolute;
+  border-top: 15px solid var(--background-default-grey, #fff);
+  border-right: 14px solid transparent;
+  border-left: 14px solid transparent;
+  bottom: -15px;
+  left: var(--ec-tip-x, 50%);
+  margin-left: -14px;
+  pointer-events: none;
+}
+
+/* Appendice vers le haut (popup sous le point) */
+.ec-sketch-style-popup--below {
+  margin-bottom: 0;
+  margin-top: 17px;
+}
+
+.ec-sketch-style-popup--below::before {
+  border-top: none;
+  border-bottom: 16px solid var(--border-default-grey, #ddd);
+  bottom: auto;
+  top: -17px;
+}
+
+.ec-sketch-style-popup--below::after {
+  border-top: none;
+  border-bottom: 15px solid var(--background-default-grey, #fff);
+  bottom: auto;
+  top: -15px;
+}
+
+.ec-sketch-style-popup__advanced-toggle {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.15rem 0;
+  min-height: auto;
+}
+
+.ec-sketch-style-popup__fields--advanced {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border-default-grey, #eee);
+}
+
+/* display:flex sur __fields écrase sinon l’attribut HTML hidden */
+.ec-sketch-style-popup__fields--advanced[hidden] {
+  display: none !important;
+}
+
+/* Color picker croquis */
+.ec-sketch-color {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ec-sketch-color__label {
+  font-size: 0.75rem;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-sketch-color__swatch {
+  box-sizing: border-box;
+  width: 100%;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.ec-sketch-color__swatch:hover {
+  cursor: pointer;
+  outline: 2px solid var(--border-action-high-blue-france, #000091);
+  outline-offset: 1px;
+}
+
+.ec-sketch-color__panel {
+  box-sizing: border-box;
+  width: 15rem;
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  box-shadow: var(--raised-shadow, 0 2px 8px rgba(0, 0, 18, 0.16));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-sketch-color__panel[hidden] {
+  display: none !important;
+}
+
+.ec-sketch-color__panel-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.ec-sketch-color__hue-field,
+.ec-sketch-color__hex-field,
+.ec-sketch-color__alpha-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-sketch-color__hue {
+  box-sizing: border-box;
+  width: 100%;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  background: none;
+}
+
+.ec-sketch-color__hex {
+  width: 100%;
+}
+
+.ec-sketch-color__alpha {
+  width: 100%;
+  accent-color: var(--background-action-high-blue-france, #000091);
+  cursor: pointer;
+}
+
+.ec-sketch-text-popup[hidden],
+.ec-sketch-style-popup[hidden] {
+  display: none !important;
+}
+
+.ec-sketch-text-popup__field,
+.ec-sketch-style-popup__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ec-sketch-text-popup__field[hidden],
+.ec-sketch-style-popup__field[hidden] {
+  display: none !important;
+}
+
+.ec-sketch-style-popup__field.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ec-sketch-style-popup__field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__field--check span {
+  color: inherit;
+  font-size: 0.875rem;
+}
+
+.ec-sketch-text-popup__field span,
+.ec-sketch-style-popup__field span {
+  font-size: 0.75rem;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-sketch-text-popup__field--rotation,
+.ec-sketch-style-popup__field--rotation,
+.ec-sketch-style-popup__field--range {
+  gap: 0.35rem;
+}
+
+.ec-sketch-text-popup__rotation,
+.ec-sketch-style-popup__field--rotation input[type='range'],
+.ec-sketch-style-popup__field--range input[type='range'] {
+  width: 100%;
+  accent-color: var(--background-action-high-blue-france, #000091);
+}
+
+.ec-sketch-text-popup__rotation-value,
+.ec-sketch-style-popup__field--rotation output,
+.ec-sketch-style-popup__field--range output {
+  font: inherit;
+}
+
+.ec-sketch-text-popup__actions,
+.ec-sketch-style-popup__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.ec-sketch-style-popup__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Popup mesure — même forme que localisation geopf (GPSearchPopup) */
+.ec-sketch-measure-popup.GPSearchPopup,
+.ec-sketch-measure-popup {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 12px;
+  width: max-content;
+  min-width: 12rem;
+  max-width: 288px;
+  bottom: 17px;
+  padding: 0.75rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  box-shadow: var(--overlap-shadow, 0 2px 8px rgba(0, 0, 18, 0.16));
+  background-color: var(--background-default-grey, #fff);
+  font-size: 0.75em;
+  white-space: nowrap;
+}
+
+.ec-sketch-measure-popup::before {
+  content: "";
+  position: absolute;
+  border-top: 16px solid var(--border-default-grey, #ddd);
+  border-right: 15px solid transparent;
+  border-left: 15px solid transparent;
+  bottom: -17px;
+  margin-left: -15px;
+  left: 50%;
+}
+
+.ec-sketch-measure-popup::after {
+  content: "";
+  position: absolute;
+  border-top: 15px solid var(--background-default-grey, #fff);
+  border-right: 14px solid transparent;
+  border-left: 14px solid transparent;
+  bottom: -15px;
+  margin-left: -14px;
+  left: 50%;
+}
+
+.ec-sketch-measure-popup .GPPopupContent,
+.ec-sketch-measure-popup__content {
+  line-height: 1.25rem;
+  font-weight: 700;
+}
+
+.ec-sketch-measure-popup .GPButtonGroups {
+  display: flex;
+  flex-direction: row-reverse;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ec-sketch-export-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 20;
+  box-sizing: border-box;
+  width: min(18rem, calc(100% - 2rem));
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  transform: translate(-50%, -50%);
+}
+
+.ec-sketch-export-dialog[hidden] {
+  display: none !important;
+}
+
+.ec-sketch-export-dialog__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.ec-sketch-export-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.ec-sketch-export-dialog__field select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.ec-sketch-export-dialog__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 /* Menu outils (toolsToggle) — picto sur ::after (comme les autres outils ;
@@ -326,12 +851,12 @@
   transform: none;
 }
 
-/* Pas d’infobulle si l’outil / le menu est déjà actif (comme geopf) */
+/* Infobulles aussi sur l’outil actif (contrairement au motif geopf des widgets) */
 .ec-geometry-editor__tool[aria-pressed='true']:hover::before,
 .ec-geometry-editor__tool[aria-pressed='true']:focus-visible::before,
 .ec-geometry-editor__tool.is-active:hover::before,
 .ec-geometry-editor__tool.is-active:focus-visible::before {
-  content: none;
+  content: attr(aria-label);
 }
 
 .ec-geometry-editor__tools-root:has(

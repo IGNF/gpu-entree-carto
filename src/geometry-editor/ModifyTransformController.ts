@@ -2,6 +2,8 @@
  * Contrôles de transformation en mode modification :
  * - Ligne : poignées translation + rotation décalées sur le côté (bleu)
  * - Polygone : rotation (icône) ; translation en glissant l’intérieur (marge depuis les bords)
+ * - Texte croquis : rotation (icône au-dessus) ; translation en glissant le label (pas de sommet)
+ * - Style : icône palette pour rouvrir la popup de style (si activée)
  * - Rectangle (bbox) : translation + redimensionnement coins / arêtes
  * - Cercle : translation (poignée côté, comme ligne) ; rayon via drag du contour ; pas de rotation
  * - Disque : translation (intérieur, comme polygone) ; rayon via drag du contour ; pas de rotation
@@ -23,6 +25,17 @@ import type VectorSourceType from 'ol/source/Vector'
 import type VectorLayerType from 'ol/layer/Vector'
 import { getCircleKind, isNearCircleEdge } from './circleHelpers'
 import { parseGeometryTypes } from './geometryTypeUtils'
+import {
+  getSketchTextAttrs,
+  isNearSketchText,
+  isSketchTextFeature,
+  sketchTextHitRadiusPx,
+  sketchTextRotateAnchor,
+} from './sketch/SketchTextPopup'
+import {
+  applyFeatureStyle,
+  getFeatureStyleAttrs,
+} from './sketch/featureStyle'
 
 export type TransformMode =
   | 'line-polygon'
@@ -34,6 +47,7 @@ export type TransformMode =
 type HandleRole =
   | 'translate'
   | 'rotate'
+  | 'style-edit'
   | 'resize-radius'
   | 'resize-nw'
   | 'resize-n'
@@ -88,6 +102,18 @@ const RESIZE_ICON =
     </svg>`,
   )
 
+/** Palette — rouvrir la popup de style. */
+const STYLE_EDIT_ICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+      <path fill="${HANDLE_BLUE}" d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9 .83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.36-.61-.36-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+    </svg>`,
+  )
+
+/** Écart latéral icône style vs rotation (px). */
+const STYLE_EDIT_GAP_PX = 36
+
 function styleForRole(role: HandleRole): Style {
   if (role === 'translate') {
     return new Style({
@@ -103,6 +129,16 @@ function styleForRole(role: HandleRole): Style {
     return new Style({
       image: new Icon({
         src: ROTATE_ICON,
+        anchor: [0.5, 0.5],
+        scale: HANDLE_ICON_SCALE,
+      }),
+      zIndex: 2,
+    })
+  }
+  if (role === 'style-edit') {
+    return new Style({
+      image: new Icon({
+        src: STYLE_EDIT_ICON,
         anchor: [0.5, 0.5],
         scale: HANDLE_ICON_SCALE,
       }),
@@ -161,6 +197,21 @@ function angleBetween(origin: Coordinate, point: Coordinate): number {
 
 function resolutionOf(map: Map): number {
   return map.getView().getResolution() ?? 1
+}
+
+const HANDLE_VIEWPORT_MARGIN_PX = 28
+
+/** Garde une poignée dans le cadre visible de la carte (zoom / pan). */
+function clampHandleToViewport(map: Map, coord: Coordinate): Coordinate {
+  const size = map.getSize()
+  if (!size) return coord
+  const pixel = map.getPixelFromCoordinate(coord)
+  if (!pixel) return coord
+  const m = HANDLE_VIEWPORT_MARGIN_PX
+  const x = Math.min(Math.max(m, pixel[0]), Math.max(m, size[0] - m))
+  const y = Math.min(Math.max(m, pixel[1]), Math.max(m, size[1] - m))
+  if (x === pixel[0] && y === pixel[1]) return coord
+  return map.getCoordinateFromPixel([x, y]) as Coordinate
 }
 
 /** Distance point → segment. */
@@ -333,6 +384,8 @@ function cursorForRole(role: HandleRole): string {
       return 'move'
     case 'rotate':
       return 'grab'
+    case 'style-edit':
+      return 'pointer'
     case 'resize-radius':
       return 'nesw-resize'
     case 'resize-n':
@@ -400,6 +453,8 @@ export class ModifyTransformController {
   private readonly dataSource: VectorSourceType
   private readonly dataLayer: VectorLayerType
   private readonly onChange: () => void
+  private readonly onStyleEdit: ((feature: OlFeature<OlGeometry>) => void) | null
+  private readonly styleEditEnabled: boolean
   private mode: TransformMode
   private active = false
 
@@ -415,7 +470,14 @@ export class ModifyTransformController {
     origin: Coordinate
     startAngle: number
     startExtent: Extent
+    /** Rotation texte initiale (°) si drag rotate sur un label. */
+    startTextRotation: number
   } | null = null
+
+  private readonly onViewChange = (): void => {
+    if (!this.active || this.dragging || !this.hovered) return
+    this.placeHandles(this.hovered)
+  }
 
   constructor(opts: {
     map: Map
@@ -423,12 +485,16 @@ export class ModifyTransformController {
     layer: VectorLayerType
     mode: TransformMode
     onChange: () => void
+    /** Icône palette → rouvrir la popup de style. */
+    onStyleEdit?: (feature: OlFeature<OlGeometry>) => void
   }) {
     this.map = opts.map
     this.dataSource = opts.source
     this.dataLayer = opts.layer
     this.mode = opts.mode
     this.onChange = opts.onChange
+    this.onStyleEdit = opts.onStyleEdit ?? null
+    this.styleEditEnabled = Boolean(opts.onStyleEdit)
 
     this.handleLayer = new VectorLayer({
       source: this.handleSource,
@@ -455,9 +521,15 @@ export class ModifyTransformController {
     if (active) {
       this.map.addLayer(this.handleLayer)
       this.map.addInteraction(this.pointer)
+      this.map.getView().on('change:center', this.onViewChange)
+      this.map.getView().on('change:resolution', this.onViewChange)
+      this.map.on('change:size', this.onViewChange)
     } else {
       this.map.removeInteraction(this.pointer)
       this.map.removeLayer(this.handleLayer)
+      this.map.getView().un('change:center', this.onViewChange)
+      this.map.getView().un('change:resolution', this.onViewChange)
+      this.map.un('change:size', this.onViewChange)
       this.clearHandles()
       this.hovered = null
       this.dragging = null
@@ -545,10 +617,21 @@ export class ModifyTransformController {
       },
       {
         layerFilter: (layer) => layer === this.dataLayer,
-        hitTolerance: 10,
+        hitTolerance: 28,
       },
     )
-    return found
+    if (found) return found
+
+    // Texte : style sans pastille → hit OL limité au Point ; élargir via emprise label
+    const coord = this.map.getCoordinateFromPixel(pixel)
+    if (!coord) return null
+    const res = resolutionOf(this.map)
+    for (const f of this.dataSource.getFeatures()) {
+      const feature = f as OlFeature<OlGeometry>
+      if (!isNearSketchText(feature, coord, res)) continue
+      if (this.mode === 'point' || this.mode === 'line-polygon') return feature
+    }
+    return null
   }
 
   /**
@@ -562,8 +645,9 @@ export class ModifyTransformController {
     const geom = feature.getGeometry()
     if (!geom) return
 
-    const add = (role: HandleRole, coord: Coordinate): void => {
-      const f = new Feature({ geometry: new Point(coord) })
+    const add = (role: HandleRole, coord: Coordinate, free = false): void => {
+      const at = free ? coord : clampHandleToViewport(this.map, coord)
+      const f = new Feature({ geometry: new Point(at) })
       f.set('role', role)
       this.handleSource.addFeature(f)
     }
@@ -575,7 +659,20 @@ export class ModifyTransformController {
       // Cercle : poignée translate collée au côté (comme LineString)
       // Disque : pas d’icône — translation = drag intérieur
       if (cMode === 'circle') {
-        add('translate', circleSideTranslateAnchor(geom, res))
+        const t = circleSideTranslateAnchor(geom, res)
+        add('translate', t)
+        if (this.styleEditEnabled) {
+          add('style-edit', [
+            t[0],
+            t[1] + STYLE_EDIT_GAP_PX * res,
+          ] as Coordinate)
+        }
+      } else if (this.styleEditEnabled) {
+        const c = geom.getCenter()
+        add('style-edit', [
+          c[0],
+          c[1] + Math.max(geom.getRadius() * 0.15, 36 * res),
+        ] as Coordinate)
       }
       return
     }
@@ -594,6 +691,37 @@ export class ModifyTransformController {
       add('resize-s', [midX, minY])
       add('resize-sw', [minX, minY])
       add('resize-w', [minX, midY])
+      if (this.styleEditEnabled) {
+        add('style-edit', [
+          midX,
+          maxY + STYLE_EDIT_GAP_PX * res,
+        ] as Coordinate)
+      }
+      return
+    }
+
+    if (this.mode !== 'line-polygon' && this.mode !== 'point') return
+
+    if (geom instanceof Point && isSketchTextFeature(feature)) {
+      const attrs = getSketchTextAttrs(feature)
+      const rotateAt =
+        opts?.rotateAt ?? sketchTextRotateAnchor(geom, attrs, res)
+      add('rotate', rotateAt, Boolean(opts?.rotateAt))
+      if (this.styleEditEnabled) {
+        const rad = (attrs.rotation * Math.PI) / 180
+        const gap = STYLE_EDIT_GAP_PX * res
+        // À droite du rotate, le long de la baseline du texte
+        add('style-edit', [
+          rotateAt[0] + Math.cos(rad) * gap,
+          rotateAt[1] + Math.sin(rad) * gap,
+        ] as Coordinate)
+      }
+      return
+    }
+
+    if (geom instanceof Point && this.styleEditEnabled) {
+      const c = geom.getCoordinates()
+      add('style-edit', [c[0], c[1] + STYLE_EDIT_GAP_PX * res] as Coordinate)
       return
     }
 
@@ -602,7 +730,14 @@ export class ModifyTransformController {
     if (geom instanceof LineString) {
       const anchors = lineSideAnchors(geom, res)
       add('translate', anchors.translate)
-      add('rotate', opts?.rotateAt ?? anchors.rotate)
+      add('rotate', opts?.rotateAt ?? anchors.rotate, Boolean(opts?.rotateAt))
+      if (this.styleEditEnabled) {
+        const r = opts?.rotateAt ?? anchors.rotate
+        add('style-edit', [
+          r[0] - STYLE_EDIT_GAP_PX * res,
+          r[1],
+        ] as Coordinate)
+      }
       return
     }
 
@@ -614,7 +749,13 @@ export class ModifyTransformController {
       const defaultOffset = Math.max(span * 0.12, 36 * res)
       const rotateAt =
         opts?.rotateAt ?? ([center[0], center[1] + defaultOffset] as Coordinate)
-      add('rotate', rotateAt)
+      add('rotate', rotateAt, Boolean(opts?.rotateAt))
+      if (this.styleEditEnabled) {
+        add('style-edit', [
+          rotateAt[0] - STYLE_EDIT_GAP_PX * res,
+          rotateAt[1],
+        ] as Coordinate)
+      }
     }
   }
 
@@ -659,7 +800,19 @@ export class ModifyTransformController {
 
       const coord = evt.coordinate
       const geom = feature.getGeometry()
-      if (el && (this.mode === 'point' || geom instanceof Point)) {
+      if (
+        el &&
+        coord &&
+        geom instanceof Point &&
+        isSketchTextFeature(feature) &&
+        isNearSketchText(feature, coord, resolutionOf(this.map))
+      ) {
+        el.style.cursor = 'move'
+      } else if (
+        el &&
+        (this.mode === 'point' || geom instanceof Point) &&
+        !isSketchTextFeature(feature)
+      ) {
         el.style.cursor = 'move'
       } else if (el && coord && geom instanceof Circle) {
         const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map)
@@ -683,11 +836,25 @@ export class ModifyTransformController {
       return
     }
 
-    // LineString / cercle : garder les poignées tant qu’on est près du contour
+    // LineString / cercle / texte : garder les poignées tant qu’on est près
     const coord = evt.coordinate
     if (this.hovered && coord) {
       const geom = this.hovered.getGeometry()
       const res = resolutionOf(this.map)
+      if (geom instanceof Point && isSketchTextFeature(this.hovered)) {
+        const keep =
+          (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res
+        const c = geom.getCoordinates()
+        if (Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= keep) {
+          this.placeHandles(this.hovered)
+          if (el) {
+            el.style.cursor = isNearSketchText(this.hovered, coord, res)
+              ? 'move'
+              : 'pointer'
+          }
+          return
+        }
+      }
       if (geom instanceof LineString) {
         const keep = LINE_HOVER_KEEP_PX * res
         if (distToLineString(geom, coord) <= keep) {
@@ -720,7 +887,7 @@ export class ModifyTransformController {
   }
 
   handleDown(evt: MapBrowserEvent): boolean {
-    if (!this.active || this.mode === 'point') return false
+    if (!this.active) return false
     const coord = evt.coordinate
     if (!coord) return false
 
@@ -738,6 +905,9 @@ export class ModifyTransformController {
         origin: featureCentroid(geom),
         startAngle: angleBetween(featureCentroid(geom), coord),
         startExtent: geom.getExtent().slice() as Extent,
+        startTextRotation: isSketchTextFeature(this.hovered)
+          ? getSketchTextAttrs(this.hovered).rotation
+          : 0,
       }
 
       const el = this.map.getTargetElement()
@@ -746,6 +916,33 @@ export class ModifyTransformController {
       }
       return true
     }
+
+    // Texte croquis : translation depuis la zone du label (pas de sommet Modify)
+    if (
+      this.hovered &&
+      isSketchTextFeature(this.hovered) &&
+      isNearSketchText(this.hovered, coord, resolutionOf(this.map))
+    ) {
+      const geom = this.hovered.getGeometry()
+      if (geom instanceof Point) {
+        this.dragging = {
+          role: 'translate',
+          feature: this.hovered,
+          startCoord: coord.slice() as Coordinate,
+          startGeom: geom.clone(),
+          origin: geom.getCoordinates().slice() as Coordinate,
+          startAngle: 0,
+          startExtent: geom.getExtent().slice() as Extent,
+          startTextRotation: getSketchTextAttrs(this.hovered).rotation,
+        }
+        const el = this.map.getTargetElement()
+        if (el) el.style.cursor = 'move'
+        return true
+      }
+    }
+
+    // Points non-texte : laisser Modify OL gérer les sommets
+    if (this.mode === 'point') return false
 
     // Cercle / disque : drag du contour → rayon
     if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
@@ -759,6 +956,7 @@ export class ModifyTransformController {
           origin: geom.getCenter().slice() as Coordinate,
           startAngle: 0,
           startExtent: geom.getExtent().slice() as Extent,
+          startTextRotation: 0,
         }
         const el = this.map.getTargetElement()
         if (el) el.style.cursor = cursorForRole('resize-radius')
@@ -778,6 +976,7 @@ export class ModifyTransformController {
           origin: geom.getCenter().slice() as Coordinate,
           startAngle: 0,
           startExtent: geom.getExtent().slice() as Extent,
+          startTextRotation: 0,
         }
         const el = this.map.getTargetElement()
         if (el) el.style.cursor = 'move'
@@ -801,6 +1000,7 @@ export class ModifyTransformController {
           origin: featureCentroid(geom),
           startAngle: 0,
           startExtent: geom.getExtent().slice() as Extent,
+          startTextRotation: 0,
         }
         const el = this.map.getTargetElement()
         if (el) el.style.cursor = 'move'
@@ -816,8 +1016,16 @@ export class ModifyTransformController {
     const coord = evt.coordinate
     if (!coord) return
 
-    const { role, feature, startCoord, startGeom, origin, startAngle, startExtent } =
-      this.dragging
+    const {
+      role,
+      feature,
+      startCoord,
+      startGeom,
+      origin,
+      startAngle,
+      startExtent,
+      startTextRotation,
+    } = this.dragging
 
     if (role === 'translate') {
       const next = startGeom.clone()
@@ -827,12 +1035,35 @@ export class ModifyTransformController {
       return
     }
 
+    if (role === 'style-edit') {
+      // Clic uniquement — pas de drag géométrie
+      return
+    }
+
     if (role === 'resize-radius' && startGeom instanceof Circle) {
       const next = startGeom.clone() as Circle
       const radius = Math.max(distToCenter(origin, coord), 1e-3)
       next.setRadius(radius)
       feature.setGeometry(next)
       this.placeHandles(feature)
+      return
+    }
+
+    if (
+      role === 'rotate' &&
+      startGeom instanceof Point &&
+      isSketchTextFeature(feature)
+    ) {
+      const deltaDeg =
+        ((angleBetween(origin, coord) - startAngle) * 180) / Math.PI
+      // OL Text.rotation est horaire ; angleBetween est trigo (anti-horaire)
+      const styleAttrs = getFeatureStyleAttrs(feature)
+      applyFeatureStyle(feature, {
+        ...styleAttrs,
+        kind: 'text',
+        rotation: startTextRotation - deltaDeg,
+      })
+      this.placeHandles(feature, { rotateAt: coord })
       return
     }
 
@@ -856,8 +1087,20 @@ export class ModifyTransformController {
 
   handleUp(_evt: MapBrowserEvent): boolean {
     if (!this.dragging) return false
-    const feature = this.dragging.feature
+    const { role, feature, startCoord } = this.dragging
+    const endCoord = _evt.coordinate
     this.dragging = null
+    if (role === 'style-edit') {
+      const moved =
+        endCoord &&
+        Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1])
+      const res = resolutionOf(this.map)
+      if (!moved || moved < 8 * res) {
+        this.onStyleEdit?.(feature)
+      }
+      this.placeHandles(feature)
+      return false
+    }
     // Recaler les poignées (rotate revient à sa place relative)
     this.placeHandles(feature)
     this.onChange()

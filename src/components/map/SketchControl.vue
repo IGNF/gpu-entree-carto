@@ -22,9 +22,13 @@ const props = withDefaults(
     toolsToggle?: GeopfControlPosition | null
     localStorageKey?: string | null
     clearAll?: boolean
+    /** Défaire / Refaire. */
+    history?: boolean
     zIndex?: number
     style?: StyleLike | null
     extraTools?: SketchExtraTool[]
+    /** Popup style à la création ; défaut true sur la carte. */
+    enableFeatureStyleEditor?: boolean
   }>(),
   {
     position: CONTROL_POSITIONS.overviewMap,
@@ -32,9 +36,17 @@ const props = withDefaults(
     toolsToggle: undefined,
     localStorageKey: 'entree-carto-sketch',
     clearAll: true,
+    history: true,
     zIndex: 500,
     style: null,
-    extraTools: () => [],
+    extraTools: () => [
+      'Text',
+      'Import',
+      'Export',
+      'MeasureDistance',
+      'MeasureArea',
+    ],
+    enableFeatureStyleEditor: true,
   },
 )
 
@@ -46,9 +58,11 @@ useOlControl(
       position: props.position,
       localStorageKey: props.localStorageKey,
       clearAll: props.clearAll,
+      history: props.history,
       zIndex: props.zIndex,
       style: props.style,
       extraTools: props.extraTools,
+      enableFeatureStyleEditor: props.enableFeatureStyleEditor,
     }),
 )
 </script>

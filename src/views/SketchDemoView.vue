@@ -42,7 +42,24 @@ const optionDocs: OptionDoc[] = [
     name: 'localStorageKey',
     def: "'entree-carto-sketch'",
     description:
-      'Clé localStorage (persistance session). null pour désactiver',
+      'Clé localStorage (restore au chargement + bouton Enregistrer manuel). null pour désactiver',
+  },
+  {
+    name: 'history',
+    def: 'true',
+    description: 'Boutons Annuler / Rétablir',
+  },
+  {
+    name: 'extraTools',
+    def: 'tous',
+    description:
+      'text, import, export, measureDistance, measureArea (+ save si localStorageKey)',
+  },
+  {
+    name: 'enableFeatureStyleEditor',
+    def: 'true',
+    description:
+      'Popup de style à la création (champs selon type). false = GeometryEditor',
   },
   {
     name: 'zIndex',
@@ -51,7 +68,7 @@ const optionDocs: OptionDoc[] = [
   },
   {
     name: 'width / height',
-    def: "'100%' / 480",
+    def: "'100%' / 720",
     description: 'Taille du conteneur carte (mountSketch)',
   },
   {
@@ -76,11 +93,11 @@ const optionDocs: OptionDoc[] = [
   },
   {
     name: 'extraTools',
-    def: '[]',
-    description: 'Réservé (Text, Import, Export, Measure*) — non branchés',
+    def: "['Text','Import','Export','MeasureDistance','MeasureArea']",
+    description:
+      'Texte + popup, export (select format), mesures (popup localisation + supprimer)',
   },
 ]
-
 const usageSnippet = [
   '<!-- CSS + JS -->',
   '<link rel="stylesheet" href="…/css/entree-carto-sketch.min.css" />',
@@ -92,7 +109,7 @@ const usageSnippet = [
   "    toolsToggle: 'top-left',",
   '    clearAll: true,',
   "    localStorageKey: 'entree-carto-sketch',",
-  '    height: 480,',
+  '    height: 720,',
   '  });',
   '  // sketch.getFeatures() / sketch.serialize() / sketch.load(raw)',
   '  // destroy()',
@@ -120,11 +137,12 @@ let handle: MountSketchHandle | null = null
 onMounted(() => {
   if (!mapHost.value) return
   handle = mountSketch(mapHost.value, {
-    height: 480,
+    height: 720,
     toolsToggle: 'top-left',
     clearAll: true,
     localStorageKey: 'entree-carto-sketch-demo',
     geometryType: 'Geometry',
+    enableFeatureStyleEditor: true,
     onChange: () => {
       geoJsonOut.value = handle?.sketch.serialize({
         outputFormat: 'geojson',
@@ -260,7 +278,8 @@ onUnmounted(() => {
 }
 
 .ec-sketch-demo__map {
-  min-height: 480px;
+  min-height: 720px;
+  height: min(80vh, 720px);
 }
 
 .ec-sketch-demo__out {

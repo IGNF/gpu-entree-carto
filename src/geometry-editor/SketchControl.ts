@@ -2,18 +2,20 @@
  * Contrôle OpenLayers de croquis (dessin / édition).
  * Réutilisé par GeometryEditor (formulaire) et la carte principale.
  *
- * GeometryEditor : pas de localStorage, clearAll, Text, Import, Export, mesures
- * (comportement historique inchangé).
+ * GeometryEditor : pas de localStorage, clearAll, Text, Import, Export, mesures,
+ * ni enableFeatureStyleEditor (comportement historique inchangé).
  */
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
 import GeoJSON from 'ol/format/GeoJSON'
-import { DrawToolsBar } from './DrawToolsBar'
+import Draw from 'ol/interaction/Draw'
+import { DrawToolsBar, type DrawBarExtraTool } from './DrawToolsBar'
 import { geometryStyleFunction } from './styles'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
@@ -27,6 +29,23 @@ import type {
   GeometryTypeOption,
   ToolsToggleCorner,
 } from './types'
+import { SketchHistory } from './sketch/SketchHistory'
+import {
+  applySketchTextStyle,
+  isSketchTextFeature,
+  sketchTextStyle,
+} from './sketch/SketchTextPopup'
+import { SketchFeatureStylePopup } from './sketch/SketchFeatureStylePopup'
+import { SketchMeasureController } from './sketch/SketchMeasureController'
+import { SketchExportDialog } from './sketch/SketchExportDialog'
+import {
+  downloadBlob,
+  formatFromFilename,
+  hydrateImportedSketchFeatures,
+  pickSketchFile,
+  readSketchFile,
+  writeSketchFile,
+} from './sketch/sketchIo'
 
 export type SketchExtraTool =
   | 'Text'
@@ -55,20 +74,64 @@ export interface SketchControlOptions {
   zIndex?: number
   onChange?: (features: OlFeature<OlGeometry>[]) => void
   /**
-   * Clé localStorage : charge au montage, enregistre après chaque changement.
+   * Clé localStorage : charge au montage.
+   * Enregistrement **manuel** via bouton (pas d’auto-save).
    * `null` / omis → pas de persistance.
    */
   localStorageKey?: string | null
   /** Bouton « tout supprimer » dans la barre. */
   clearAll?: boolean
+  /** Boutons Défaire / Refaire. */
+  history?: boolean
   /**
-   * Outils roadmap (Text, Import, Export, Measure*).
-   * Non branchés pour l’instant — réservés ; GeometryEditor ne les passe pas.
+   * Outils additionnels (Text, Import, Export, Measure*).
+   * GeometryEditor ne les passe pas.
    */
   extraTools?: SketchExtraTool[]
+  /**
+   * Popup de style à la création (et reclic texte).
+   * Défaut `false` — GeometryEditor inchangé.
+   */
+  enableFeatureStyleEditor?: boolean
 }
 
 const GEOJSON = new GeoJSON()
+
+const EXTRA_DEFS: Record<
+  SketchExtraTool,
+  { id: string; label: string; iconClass: string; mode: 'action' | 'toggle' }
+> = {
+  Text: {
+    id: 'text',
+    label: 'Texte',
+    iconClass: 'ec-geometry-editor__tool--text',
+    mode: 'toggle',
+  },
+  Import: {
+    id: 'import',
+    label: 'Importer',
+    iconClass: 'ec-geometry-editor__tool--import',
+    mode: 'action',
+  },
+  Export: {
+    id: 'export',
+    label: 'Exporter',
+    iconClass: 'ec-geometry-editor__tool--export',
+    mode: 'action',
+  },
+  MeasureDistance: {
+    id: 'measure-distance',
+    label: 'Mesurer une distance',
+    iconClass: 'ec-geometry-editor__tool--measure-distance',
+    mode: 'toggle',
+  },
+  MeasureArea: {
+    id: 'measure-area',
+    label: 'Mesurer une surface',
+    iconClass: 'ec-geometry-editor__tool--measure-area',
+    mode: 'toggle',
+  },
+}
 
 export class SketchControl extends Control {
   private geometryType: GeometryTypeOption
@@ -79,7 +142,9 @@ export class SketchControl extends Control {
   private readonly onChangeCb: SketchControlOptions['onChange']
   private readonly localStorageKey: string | null
   private readonly clearAll: boolean
+  private readonly historyEnabled: boolean
   private readonly extraTools: SketchExtraTool[]
+  private readonly enableFeatureStyleEditor: boolean
 
   private source: VectorSource
   private layer: VectorLayer | null
@@ -92,19 +157,44 @@ export class SketchControl extends Control {
   private readonly toolbarDomId = `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`
 
   private drawBar: DrawToolsBar | null = null
-  private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private history: SketchHistory | null = null
+  private stylePopup: SketchFeatureStylePopup | null = null
+  private textDraw: Draw | null = null
+  private textPointerOnMap = true
+  private textMapHoverBound = false
+  private exportDialog: SketchExportDialog | null = null
+  private measure: SketchMeasureController | null = null
+  /** Snapshot GeoJSON du dernier enregistrement local (null = jamais enregistré). */
+  private savedSnapshot: string | null = null
+
+  private readonly onTextMapPointerEnter = (): void => {
+    this.textPointerOnMap = true
+    this.getMap()?.render()
+  }
+
+  private readonly onTextMapPointerLeave = (): void => {
+    this.textPointerOnMap = false
+    this.getMap()?.render()
+  }
+
+  private readonly onTextSelectClick = (evt: MapBrowserEvent): void => {
+    if (evt.dragging || !this.enableFeatureStyleEditor) return
+    const map = this.getMap()
+    if (!map || !this.layer) return
+    const hits = map.getFeaturesAtPixel(evt.pixel, {
+      layerFilter: (l) => l === this.layer,
+      hitTolerance: 14,
+    }) as OlFeature[]
+    const feature = hits.find((f) => isSketchTextFeature(f))
+    if (feature && this.stylePopup) {
+      this.stylePopup.open(feature, () => this.notifyChange())
+    }
+  }
 
   constructor(options: SketchControlOptions = {}) {
     const toolsRoot = document.createElement('div')
-    // Mêmes classes que GeometryEditor.applyToolsChrome (pas de ol-control :
-    // les styles OL cassent les boutons 48×48).
     toolsRoot.className = 'ec-sketch-control ec-geometry-editor__tools-root'
     toolsRoot.setAttribute('aria-label', 'Croquis')
-    /*
-     * Id format geopf (`Nom-123…`) obligatoire si le contrôle est dans
-     * `.position-container-*` : PanelManager (Territories, etc.) fait
-     * `p.id.match(/(\w+)-[0-9]+/)[1]` sur chaque enfant.
-     */
     toolsRoot.id = `GPsketch-${Date.now()}`
 
     super({ element: toolsRoot })
@@ -117,7 +207,9 @@ export class SketchControl extends Control {
     this.onChangeCb = options.onChange
     this.localStorageKey = options.localStorageKey ?? null
     this.clearAll = Boolean(options.clearAll)
+    this.historyEnabled = Boolean(options.history)
     this.extraTools = options.extraTools ?? []
+    this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor)
 
     this.source = options.source ?? new VectorSource({ wrapX: false })
     this.layer = options.layer ?? null
@@ -134,11 +226,10 @@ export class SketchControl extends Control {
 
   override setMap(map: Map | null): void {
     const prev = this.getMap()
-    if (prev && this.drawBar) {
-      this.teardownDrawBar()
-    }
-    if (prev && this.ownsLayer && this.layer) {
-      prev.removeLayer(this.layer)
+    if (prev) {
+      this.teardownExtras(prev)
+      if (this.drawBar) this.teardownDrawBar()
+      if (this.ownsLayer && this.layer) prev.removeLayer(this.layer)
     }
 
     super.setMap(map)
@@ -152,13 +243,18 @@ export class SketchControl extends Control {
     this.mountDrawBar(map)
     this.placeInGeopfContainer(map)
     this.restoreFromLocalStorage()
+    this.history?.resetFromSource()
+    if (this.localStorageKey && this.source.getFeatures().length) {
+      this.savedSnapshot = this.sketchSnapshot()
+    }
+    this.syncHistoryButtons()
+    this.syncSaveButtonState()
   }
 
   getSource(): VectorSource {
     return this.source
   }
 
-  /** Élément DOM du contrôle (chrome outils). */
   getElement(): HTMLElement {
     return this.toolsRoot
   }
@@ -178,12 +274,20 @@ export class SketchControl extends Control {
   setFeatures(features: OlFeature<OlGeometry>[]): void {
     this.source.clear(true)
     if (features.length) this.source.addFeatures(features)
+    this.history?.push()
     this.notifyChange()
   }
 
   clearFeatures(): void {
     this.source.clear(true)
+    this.measure?.clear()
+    this.history?.push()
     this.notifyChange()
+  }
+
+  /** Enregistrement manuel localStorage. */
+  saveLocal(): void {
+    this.saveToLocalStorage()
   }
 
   load(raw: string): void {
@@ -196,6 +300,7 @@ export class SketchControl extends Control {
     }
     this.source.clear(true)
     if (features.length) this.source.addFeatures(features)
+    this.history?.push()
     this.notifyChange()
   }
 
@@ -232,6 +337,39 @@ export class SketchControl extends Control {
     }
   }
 
+  private buildExtraTools(): DrawBarExtraTool[] {
+    const list: DrawBarExtraTool[] = []
+    if (this.historyEnabled) {
+      list.push(
+        {
+          id: 'undo',
+          label: 'Annuler',
+          iconClass: 'ec-geometry-editor__tool--undo',
+          mode: 'action',
+        },
+        {
+          id: 'redo',
+          label: 'Rétablir',
+          iconClass: 'ec-geometry-editor__tool--redo',
+          mode: 'action',
+        },
+      )
+    }
+    if (this.localStorageKey) {
+      list.push({
+        id: 'save',
+        label: 'Enregistrer localement',
+        iconClass: 'ec-geometry-editor__tool--save',
+        mode: 'action',
+      })
+    }
+    for (const key of this.extraTools) {
+      const def = EXTRA_DEFS[key]
+      if (def) list.push({ ...def })
+    }
+    return list
+  }
+
   private ensureLayer(map: Map): void {
     if (this.layer) {
       if (this.style !== undefined) {
@@ -259,6 +397,29 @@ export class SketchControl extends Control {
   private mountDrawBar(map: Map): void {
     if (!this.layer) return
     this.drawBar?.destroy()
+    this.history = this.historyEnabled
+      ? new SketchHistory(this.source, () => map.getView().getProjection())
+      : null
+    this.stylePopup?.destroy()
+    this.stylePopup = null
+    if (this.enableFeatureStyleEditor) {
+      this.stylePopup = new SketchFeatureStylePopup(map)
+    }
+    this.exportDialog?.destroy()
+    this.exportDialog = null
+    if (this.extraTools.includes('Export')) {
+      const mapEl = map.getTargetElement()
+      if (mapEl) this.exportDialog = new SketchExportDialog(mapEl)
+    }
+    this.measure?.destroy()
+    this.measure = null
+    if (
+      this.extraTools.includes('MeasureDistance') ||
+      this.extraTools.includes('MeasureArea')
+    ) {
+      this.measure = new SketchMeasureController(map, this.zIndex + 10)
+    }
+
     this.drawBar = new DrawToolsBar({
       map,
       source: this.source,
@@ -267,13 +428,173 @@ export class SketchControl extends Control {
       target: this.toolbarHost,
       style: this.style,
       clearAll: this.clearAll,
-      onChange: () => this.notifyChange(),
+      extraTools: this.buildExtraTools(),
+      onChange: () => {
+        this.history?.push()
+        this.notifyChange()
+      },
       onClearAll: () => this.clearFeatures(),
+      onExtraTool: (id, active) => this.handleExtraTool(id, active),
+      onFeatureCreated: (feature) => this.openStylePopup(feature),
+      onStyleEdit: this.enableFeatureStyleEditor
+        ? (feature) => this.openStylePopup(feature)
+        : undefined,
     })
-    // extraTools réservés (Text / Import / Export / Measure*) — pas encore branchés
-    void this.extraTools
     this.toolbarHost.hidden =
       Boolean(this.toolsToggle) && !this.toolsMenuOpen
+    this.syncHistoryButtons()
+  }
+
+  private openStylePopup(feature: OlFeature<OlGeometry>): void {
+    if (!this.enableFeatureStyleEditor || !this.stylePopup) return
+    this.stylePopup.open(feature, () => this.notifyChange())
+  }
+
+  private handleExtraTool(id: string, active: boolean): void {
+    const map = this.getMap()
+    if (!map) return
+
+    if (id === 'undo') {
+      if (this.history?.undo()) this.notifyChange()
+      this.syncHistoryButtons()
+      return
+    }
+    if (id === 'redo') {
+      if (this.history?.redo()) this.notifyChange()
+      this.syncHistoryButtons()
+      return
+    }
+    if (id === 'save') {
+      this.saveToLocalStorage()
+      return
+    }
+    if (id === 'import') {
+      this.runImport()
+      return
+    }
+    if (id === 'export') {
+      this.runExport()
+      return
+    }
+
+    if (!active) {
+      this.stopTextDraw()
+      this.measure?.deactivateDraw()
+      return
+    }
+
+    this.stopTextDraw()
+    this.measure?.deactivateDraw()
+
+    if (id === 'text') {
+      this.startTextDraw()
+      return
+    }
+    if (id === 'measure-distance') {
+      this.measure?.activate('distance')
+      return
+    }
+    if (id === 'measure-area') {
+      this.measure?.activate('area')
+    }
+  }
+
+  private startTextDraw(): void {
+    const map = this.getMap()
+    if (!map) return
+    this.stopTextDraw()
+    const textDefaults = {
+      text: 'Texte',
+      fontSize: 14,
+      fontColor: '#000091',
+      strokeColor: '#ffffff',
+      rotation: 0,
+    }
+    const baseStyle = sketchTextStyle(textDefaults)
+    this.textPointerOnMap = true
+    this.textDraw = new Draw({
+      source: this.source,
+      type: 'Point',
+      style: () => (this.textPointerOnMap ? baseStyle : []),
+    })
+    this.textDraw.on('drawend', (evt) => {
+      applySketchTextStyle(evt.feature, textDefaults)
+      queueMicrotask(() => {
+        this.openStylePopup(evt.feature)
+        this.history?.push()
+        this.notifyChange()
+      })
+    })
+    map.addInteraction(this.textDraw)
+    const el = map.getTargetElement()
+    if (el && !this.textMapHoverBound) {
+      el.addEventListener('pointerenter', this.onTextMapPointerEnter)
+      el.addEventListener('pointerleave', this.onTextMapPointerLeave)
+      this.textMapHoverBound = true
+    }
+    if (this.enableFeatureStyleEditor) {
+      map.on('singleclick', this.onTextSelectClick)
+    }
+  }
+
+  private stopTextDraw(): void {
+    const map = this.getMap()
+    if (this.textMapHoverBound) {
+      const el = map?.getTargetElement()
+      el?.removeEventListener('pointerenter', this.onTextMapPointerEnter)
+      el?.removeEventListener('pointerleave', this.onTextMapPointerLeave)
+      this.textMapHoverBound = false
+      this.textPointerOnMap = true
+    }
+    if (this.textDraw && map) {
+      map.removeInteraction(this.textDraw)
+      this.textDraw = null
+    }
+    map?.un('singleclick', this.onTextSelectClick)
+    this.stylePopup?.hide()
+  }
+
+  private runImport(): void {
+    const map = this.getMap()
+    if (!map) return
+    pickSketchFile('.geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml', (text, name) => {
+      try {
+        const format = formatFromFilename(name)
+        const features = readSketchFile(map, text, format)
+        this.source.addFeatures(features)
+        this.history?.push()
+        this.notifyChange()
+      } catch (err) {
+        console.warn('[SketchControl] import failed', err)
+      }
+    })
+  }
+
+  private async runExport(): Promise<void> {
+    const map = this.getMap()
+    if (!map) return
+    const dialog = this.exportDialog
+    if (!dialog) return
+    const format = await dialog.open('geojson')
+    if (!format) return
+    try {
+      const content = writeSketchFile(map, this.source, format)
+      downloadBlob(
+        format === 'kml' ? 'croquis.kml' : 'croquis.geojson',
+        content,
+        format === 'kml'
+          ? 'application/vnd.google-earth.kml+xml'
+          : 'application/geo+json',
+      )
+    } catch (err) {
+      console.warn('[SketchControl] export failed', err)
+    }
+  }
+
+  private syncHistoryButtons(): void {
+    if (!this.drawBar || !this.history) return
+    this.drawBar.setExtraEnabled('undo', this.history.canUndo())
+    this.drawBar.setExtraEnabled('redo', this.history.canRedo())
   }
 
   private teardownDrawBar(): void {
@@ -282,18 +603,42 @@ export class SketchControl extends Control {
     this.toolbarHost.replaceChildren()
   }
 
-  private notifyChange(): void {
-    this.onChangeCb?.(this.getFeatures())
-    this.scheduleSave()
+  private teardownExtras(map: Map): void {
+    this.stopTextDraw()
+    this.stylePopup?.destroy()
+    this.stylePopup = null
+    this.exportDialog?.destroy()
+    this.exportDialog = null
+    this.measure?.destroy()
+    this.measure = null
+    this.history = null
+    void map
   }
 
-  private scheduleSave(): void {
-    if (!this.localStorageKey) return
-    if (this.saveTimer) clearTimeout(this.saveTimer)
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null
-      this.saveToLocalStorage()
-    }, 200)
+  private notifyChange(): void {
+    this.onChangeCb?.(this.getFeatures())
+    this.syncHistoryButtons()
+    this.syncSaveButtonState()
+  }
+
+  private sketchSnapshot(): string {
+    const features = this.getFeatures()
+    return JSON.stringify(
+      GEOJSON.writeFeaturesObject(features, {
+        featureProjection: this.getMap()?.getView().getProjection(),
+        dataProjection: 'EPSG:4326',
+      }),
+    )
+  }
+
+  private syncSaveButtonState(): void {
+    if (!this.localStorageKey || !this.drawBar) return
+    if (this.savedSnapshot === null) {
+      this.drawBar.setSaveState('idle')
+      return
+    }
+    const dirty = this.sketchSnapshot() !== this.savedSnapshot
+    this.drawBar.setSaveState(dirty ? 'dirty' : 'saved')
   }
 
   private saveToLocalStorage(): void {
@@ -302,6 +647,8 @@ export class SketchControl extends Control {
       const features = this.getFeatures()
       if (!features.length) {
         localStorage.removeItem(this.localStorageKey)
+        this.savedSnapshot = this.sketchSnapshot()
+        this.syncSaveButtonState()
         return
       }
       const json = GEOJSON.writeFeaturesObject(features, {
@@ -309,6 +656,8 @@ export class SketchControl extends Control {
         dataProjection: 'EPSG:4326',
       })
       localStorage.setItem(this.localStorageKey, JSON.stringify(json))
+      this.savedSnapshot = JSON.stringify(json)
+      this.syncSaveButtonState()
     } catch (err) {
       console.warn('[SketchControl] localStorage save failed', err)
     }
@@ -322,7 +671,8 @@ export class SketchControl extends Control {
       const features = GEOJSON.readFeatures(JSON.parse(raw), {
         featureProjection: this.getMap()?.getView().getProjection(),
         dataProjection: 'EPSG:4326',
-      })
+      }) as OlFeature<OlGeometry>[]
+      hydrateImportedSketchFeatures(features)
       this.source.clear(true)
       if (features.length) this.source.addFeatures(features)
     } catch (err) {
@@ -377,11 +727,6 @@ export class SketchControl extends Control {
     }
   }
 
-  /**
-   * Place le contrôle dans le conteneur geopf du coin demandé (carte principale),
-   * au-dessus de la minimap via `order: -2`.
-   * Retente si le conteneur n’existe pas encore (ordre d’ajout des contrôles).
-   */
   private placeInGeopfContainer(map: Map, attempt = 0): void {
     const corner = this.position ?? this.toolsToggle
     if (!corner) return

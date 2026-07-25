@@ -4,6 +4,7 @@ Contrôle OpenLayers de **croquis** (dessin / édition de géométries) réutili
 
 **Sources :**
 - Classe : `src/geometry-editor/SketchControl.ts`
+- Modules : `src/geometry-editor/sketch/` (historique, texte, mesures, I/O)
 - Wrapper Vue : `src/components/map/SketchControl.vue`
 - Standalone : `src/sketch/` (`mountSketch`, API `window.EntreeCartoSketch`)
 - Moteur dessin : `DrawToolsBar` (+ `ModifyTransformController`)
@@ -18,12 +19,47 @@ Contrôle OpenLayers de **croquis** (dessin / édition de géométries) réutili
 ## Description
 
 - Couche vectorielle dédiée (`zIndex` défaut **500**, propriété `ec-sketch`)
-- Outils : Point, LineString, Polygon, Rectangle, Disc (+ modifier / supprimer)  
-  (`Circle` / `MultiCircle` en entrée → outil Disc ; picto = cercle)
+- Outils : Point, LineString, Polygon, Rectangle, Disc (+ modifier / supprimer)
 - Option `toolsToggle` : bouton menu (picto outils) dans un coin
 - Option `clearAll` : bouton « tout supprimer »
-- Option `localStorageKey` : persistance session (GeoJSON EPSG:4326)
-- Infobulles style geopf sur chaque bouton (`aria-label` → `::before`), comme zoom / territoire / minimap / plein écran ; appendice calé au bord du bouton via `left: 100%` (pas `translate(100%)`, qui varie avec la largeur du libellé) ; masquées si l’outil est actif (`aria-pressed`)
+- Option `localStorageKey` : charge au montage + bouton **Enregistrer** (pas d’auto-save)
+- Option `history` : **Annuler** / **Rétablir**
+- Option `extraTools` : Text, Import, Export, MeasureDistance, MeasureArea
+- Option `enableFeatureStyleEditor` : popup de style à la création (défaut **false** ; activé sur carte / démo)
+- Infobulles style geopf sur chaque bouton
+- Ordre barre (groupes séparés) : mesures → enregistrer / undo / redo → dessin + texte → modifier / supprimer → export / import
+
+## Outils `extraTools`
+
+| Id | Comportement |
+|----|----------------|
+| `Text` | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification |
+| `Import` | Fichier GeoJSON ou KML → features croquis |
+| `Export` | Dialogue (select GeoJSON/KML + Annuler / Exporter) |
+| `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ruler-line` (hors pack DSFR) |
+| `MeasureArea` | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Tabler `dimensions` (flèches largeur/hauteur — pas Remix `aspect-ratio-line`) |
+
+## Popup style (`enableFeatureStyleEditor`)
+
+À la création d’une feature (dessin classique ou texte), ouvre une popup adaptée au type (position `fixed` sur le document — peut dépasser le cadre carte ; fermeture au clic extérieur, sauf pan carte). En **modification**, une icône palette rouvre la popup.
+
+Color pickers : clic sur la case → dialogue (sélecteur natif, hex, barre d’**opacité**).
+
+Bouton **Enregistrer** : pastille verte (à jour) / orange (modifications non enregistrées), y compris après undo/redo.
+
+Bouton **Options avancées** (repliées par défaut) : tirets, extrémités, jonctions, forme du point, gras / italique, zIndex, etc. Les champs non pertinents sont désactivés (ex. rotation d’un point circulaire, décalage tirets si trait plein).
+
+Le style est stocké dans la propriété feature `ec-feature-style` (et `ec-sketch-text` pour le texte) — pris en compte à l’**import** / **export** GeoJSON ; en KML les objets sont sérialisés en JSON dans ExtendedData.
+
+| Type | Champs de base | Avancés (aperçu) |
+|------|----------------|------------------|
+| Texte | texte, taille, couleur, contour, rotation | police, gras, italique, épaisseur contour, zIndex |
+| Point | rayon, remplissage, contour, épaisseur | forme, rotation symbole (hors cercle), zIndex |
+| Ligne | contour, épaisseur | tirets, extrémités, jonctions, décalage, limite des pointes, zIndex |
+| Polygone / Rectangle / Disque | remplissage, contour, épaisseur | idem ligne |
+| Cercle | contour, épaisseur | idem ligne |
+
+GeometryEditor **ne** active **pas** `enableFeatureStyleEditor` (comportement historique).
 
 ## Démo
 
@@ -34,101 +70,41 @@ Nav démo : lien **Croquis**.
 
 ```bash
 npm run build:sketch
-# ou
-make build-sketch
 ```
 
-```html
-<link rel="stylesheet" href="…/css/entree-carto-sketch.min.css" />
-<script src="…/entree-carto-sketch.min.js"></script>
-
-<div id="sketch-map"></div>
-<script>
-  const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
-    toolsToggle: 'top-left',
-    clearAll: true,
-    localStorageKey: 'entree-carto-sketch',
-    height: 480,
-  })
-  // sketch.getFeatures() / sketch.serialize() / sketch.load(raw)
-  // destroy()
-</script>
+```js
+const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
+  toolsToggle: 'top-left',
+  clearAll: true,
+  history: true,
+  localStorageKey: 'entree-carto-sketch',
+  extraTools: ['Text', 'Import', 'Export', 'MeasureDistance', 'MeasureArea'],
+  enableFeatureStyleEditor: true,
+  height: 480,
+})
 ```
-
-### `mountSketch(target, options)`
-
-Crée une carte OL + `SketchControl` dans un élément (ou sélecteur).  
-Retourne `{ map, sketch, destroy }`.
-
-Options carte (en plus des options `SketchControl`) :
-
-| Option | Défaut | Description |
-|--------|--------|-------------|
-| `width` / `height` | `'100%'` / `480` | Taille du conteneur |
-| `lon` / `lat` / `zoom` | `2` / `46.5` / `5` | Vue initiale |
-| `minZoom` / `maxZoom` | `4` / `19` | Limites zoom |
-| `tileLayers` | Plan IGN WMTS | Fonds XYZ |
-| `showZoom` | `true` | Contrôle +/- OL |
-| `className` | — | Classe CSS additionnelle |
-
-Défauts sketch côté `mountSketch` : `toolsToggle: 'top-left'`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`.
 
 ## Options (classe TS)
 
 | Option | Défaut | Description |
 |--------|--------|-------------|
 | `geometryType` | `'Geometry'` | Types d’outils (CSV accepté) |
-| `toolsToggle` | `null` | `null` = barre toujours visible à gauche ; sinon coin du bouton menu |
-| `position` | — | Coin geopf (`.position-container-*`) pour la carte principale |
-| `source` / `layer` | créés | Réutiliser une source / couche existante (ex. GeometryEditor) |
+| `toolsToggle` | `null` | `null` = barre toujours visible ; sinon coin du bouton menu |
+| `position` | — | Coin geopf pour la carte principale |
+| `source` / `layer` | créés | Réutiliser une source / couche existante |
 | `style` | bleu France | Style OL des features / croquis |
 | `zIndex` | `500` | zIndex si la couche est créée ici |
 | `onChange` | — | Callback après dessin / modif / suppression |
-| `localStorageKey` | `null` | Clé `localStorage` (charge au montage, sauve après changement) |
+| `localStorageKey` | `null` | Clé `localStorage` (restore + bouton Enregistrer) |
 | `clearAll` | `false` | Bouton tout supprimer |
-| `extraTools` | `[]` | Réservé (Text, Import, Export, Measure*) — pas encore branchés |
+| `history` | `false` | Annuler / Rétablir |
+| `extraTools` | `[]` | Text, Import, Export, Measure* |
+| `enableFeatureStyleEditor` | `false` | Popup de style à la création (+ icône palette en modification) |
 
 ## Props Vue (`SketchControl.vue`)
 
-| Prop | Défaut | Description |
-|------|--------|-------------|
-| `position` | `'bottom-left'` | Slot geopf |
-| `toolsToggle` | = `position` | Coin du bouton menu |
-| `geometryType` | `'Geometry'` | Types d’outils |
-| `localStorageKey` | `'entree-carto-sketch'` | Persistance |
-| `clearAll` | `true` | Bouton tout supprimer |
-| `zIndex` | `500` | Couche croquis |
-| `style` | `null` | Style OL |
-| `extraTools` | `[]` | Réservé |
-
-## Placement (carte principale)
-
-Bas-gauche, **au-dessus** de la minimap (`order: -2` dans `map-controls.css`).  
-Le contrôle se réinsère dans `.position-container-bottom-left` dès que le conteneur geopf existe.
-
-L’élément racine porte un `id` au format geopf (`GPsketch-<timestamp>`) : le `PanelManager` geopf (ouvertures Territories, etc.) parse `id.match(/(\w+)-[0-9]+/)` sur chaque enfant du conteneur — sans id valide, le clic plante.
+Défauts carte principale : `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, tous les `extraTools`, `enableFeatureStyleEditor: true`.
 
 ## GeometryEditor
 
-`GeometryEditor` instancie `SketchControl` en interne avec :
-- `source` / `layer` de l’éditeur
-- `toolsToggle` issu des options formulaire
-- **sans** `localStorageKey`, `clearAll`, ni `extraTools` → comportement historique inchangé
-
-## API map-attachée
-
-```js
-const tools = EntreeCartoSketch.attachGeometryTools(map, {
-  toolsToggle: 'bottom-left',
-  position: 'bottom-left',
-  clearAll: true,
-  localStorageKey: 'entree-carto-sketch',
-})
-// tools.sketch, tools.drawBar, tools.load / serialize / destroy
-```
-
-(Également exposé via `EntreeCartoGeometryEditor.attachGeometryTools`.)
-
-## Hors scope actuel (roadmap)
-
-Text, Import / Export GeoJSON, MeasureDistance / MeasureArea, éditeur de style feature — voir `_local/TODO_LIST.txt`.
+Sans `localStorageKey`, `clearAll`, `history`, `extraTools`, ni `enableFeatureStyleEditor` → comportement historique inchangé.

@@ -43,7 +43,10 @@ export interface AttachGeometryToolsOptions {
   position?: ToolsToggleCorner
   localStorageKey?: string | null
   clearAll?: boolean
+  history?: boolean
   extraTools?: SketchExtraTool[]
+  /** Popup style à la création ; défaut `false` (comme GeometryEditor). */
+  enableFeatureStyleEditor?: boolean
 }
 
 export interface AttachGeometryToolsHandle {
@@ -83,7 +86,9 @@ export function attachGeometryTools(
     onChange: options.onChange,
     localStorageKey: options.localStorageKey,
     clearAll: options.clearAll,
+    history: options.history,
     extraTools: options.extraTools,
+    enableFeatureStyleEditor: options.enableFeatureStyleEditor,
   })
   map.addControl(sketch)
 

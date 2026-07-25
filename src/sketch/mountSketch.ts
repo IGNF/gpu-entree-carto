@@ -127,11 +127,20 @@ export function mountSketch(
     geometryType: options.geometryType ?? 'Geometry',
     toolsToggle,
     clearAll: options.clearAll ?? true,
+    history: options.history ?? true,
     localStorageKey:
       options.localStorageKey === undefined
         ? 'entree-carto-sketch'
         : options.localStorageKey,
-    extraTools: options.extraTools,
+    extraTools:
+      options.extraTools ?? [
+        'Text',
+        'Import',
+        'Export',
+        'MeasureDistance',
+        'MeasureArea',
+      ],
+    enableFeatureStyleEditor: options.enableFeatureStyleEditor ?? true,
     source: options.source,
     layer: options.layer,
     style: options.style,
