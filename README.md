@@ -21,13 +21,9 @@ Objectif : proposer une carte interactive d’urbanisme (documents, couches, lé
 
 ## En bref
 
-| Question | Réponse |
-|----------|---------|
-| C’est quoi ? | Nouvelle entrée cartographique GPU, compatible DSFR |
-| Remplace quoi ? | gpu-client (jQuery / stack historique) |
-| Stack | **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR |
-| Démo locale | `make dev` puis ouvrir l’URL Vite |
-| Démo en ligne | [ignf.github.io/gpu-entree-carto](https://ignf.github.io/gpu-entree-carto/) (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
+Nouvelle entrée cartographique GPU, compatible DSFR, qui remplace **gpu-client** (jQuery / stack historique). Stack : **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR.
+
+En local : `make dev` puis ouvrir l’URL Vite. En ligne : [ignf.github.io/gpu-entree-carto](https://ignf.github.io/gpu-entree-carto/) (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md).
 
 ---
 
