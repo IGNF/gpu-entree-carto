@@ -33,7 +33,7 @@
     "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.6",
-    "jsdom": "^26.0.0",
+    "jsdom": "^30.0.1",
     "typescript": "~5.7.2",
     "vite": "^6.0.7",
     "vitest": "^3.0.2",
