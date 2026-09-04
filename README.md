@@ -1,8 +1,21 @@
 # entree-carto
 
+[![CI](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml/badge.svg)](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml)
+[![Démo en ligne](https://img.shields.io/badge/démo-GitHub%20Pages-blue)](https://ignf.github.io/gpu-entree-carto/)
+
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![OpenLayers](https://img.shields.io/badge/OpenLayers-10-1F6B75)](https://openlayers.org/)
+[![DSFR](https://img.shields.io/badge/DSFR-VueDSFR-000091)](https://vue-ds.fr/)
+[![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Node](https://img.shields.io/badge/node-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 **entree-carto** est la refonte de l’entrée cartographique GPU (gpu-client), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
 
 Objectif : proposer une carte interactive d’urbanisme (documents, couches, légende, outils…) avec une interface cohérente avec les autres projets de l’écosystème, en Vue 3 + OpenLayers.
+
+**➡️ [Voir la démo en ligne](https://ignf.github.io/gpu-entree-carto/)**
 
 ---
 
@@ -14,7 +27,7 @@ Objectif : proposer une carte interactive d’urbanisme (documents, couches, lé
 | Remplace quoi ? | gpu-client (jQuery / stack historique) |
 | Stack | **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR |
 | Démo locale | `make dev` puis ouvrir l’URL Vite |
-| Démo en ligne | GitHub Pages (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
+| Démo en ligne | [ignf.github.io/gpu-entree-carto](https://ignf.github.io/gpu-entree-carto/) (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
 
 ---
 
