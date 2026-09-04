@@ -5,7 +5,7 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 **Source :** `src/components/map/TabPanelsControl.vue`  
 **Styles :** `src/styles/tab-panels.css`  
 **API :** `src/composables/tabPanels.ts`  
-**Référence :** [gpu-client `TabsPanelsControl`](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client) + captures `_local/captures/` + Figma GPU UX-UI (`node-id=310-7048`)
+**Référence :** gpu-client `TabsPanelsControl` + captures `_local/captures/` + Figma GPU UX-UI (`node-id=310-7048`)
 
 ## Comportement
 

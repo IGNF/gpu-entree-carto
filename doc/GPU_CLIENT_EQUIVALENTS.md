@@ -1,6 +1,6 @@
 # gpu-client ↔ composants IGNF
 
-Inventaire des fonctionnalités de [gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client) et recherche d’équivalents dans l’écosystème cartes.gouv.fr.
+Inventaire des fonctionnalités de gpu-client et recherche d’équivalents dans l’écosystème cartes.gouv.fr.
 
 ## Conclusion importante
 

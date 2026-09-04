@@ -1,6 +1,6 @@
 # Intégration dans un site tiers (gpu-site)
 
-Guide pour remplacer **gpu-client** par **entree-carto** dans [gpu-site](https://gitlab.gpf-tech.ign.fr/gpu/gpu-site) (branche `dsfr`).
+Guide pour remplacer **gpu-client** par **entree-carto** dans gpu-site (branche `dsfr`).
 
 ---
 
@@ -68,7 +68,7 @@ Dans `package.json` de gpu-site, remplacer gpu-client. En local (clones voisins)
 En CI / après publication de `main` avec `dist/` à jour :
 
 ```json
-"entree-carto": "git+https://gitlab.gpf-tech.ign.fr/gpu/entree-carto.git#main"
+"entree-carto": "git+https://github.com/IGNF/gpu-entree-carto.git#main"
 ```
 
 Puis `npm install` (et `make build-lib` dans entree-carto si dépendance `file:`).
@@ -223,4 +223,4 @@ Puis `npm install` et `make build-lib` dans entree-carto.
 
 - [README projet](../README.md)
 - [Contrôles carte](./README.md)
-- Référence historique : [gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client)
+- Référence historique : gpu-client

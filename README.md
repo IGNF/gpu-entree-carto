@@ -1,6 +1,6 @@
 # entree-carto
 
-**entree-carto** est la refonte de l’entrée cartographique GPU ([gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client)), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
+**entree-carto** est la refonte de l’entrée cartographique GPU (gpu-client), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
 
 Objectif : proposer une carte interactive d’urbanisme (documents, couches, légende, outils…) avec une interface cohérente avec les autres projets de l’écosystème, en Vue 3 + OpenLayers.
 
@@ -11,10 +11,10 @@ Objectif : proposer une carte interactive d’urbanisme (documents, couches, lé
 | Question | Réponse |
 |----------|---------|
 | C’est quoi ? | Nouvelle entrée cartographique GPU, compatible DSFR |
-| Remplace quoi ? | [gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client) (jQuery / stack historique) |
+| Remplace quoi ? | gpu-client (jQuery / stack historique) |
 | Stack | **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR |
 | Démo locale | `make dev` puis ouvrir l’URL Vite |
-| Démo en ligne | GitLab Pages (job CI `pages`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
+| Démo en ligne | GitHub Pages (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md) |
 
 ---
 
@@ -87,7 +87,7 @@ Maquette : [Figma — GPU UX/UI](https://www.figma.com/design/ARSe9rthrHEp6UFJOh
 | [IGNF/cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto) | Entrée cartographique de cartes.gouv.fr |
 | [IGNF/cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Composants Vue 3 (VueDSFR) |
 | [IGNF/geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers) | Extensions Géoplateforme OpenLayers |
-| [gpu-client](https://gitlab.gpf-tech.ign.fr/gpu/gpu-client) | Comportement métier à reprendre |
+| gpu-client | Comportement métier à reprendre |
 
 ---
 
