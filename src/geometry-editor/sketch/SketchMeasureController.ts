@@ -10,11 +10,7 @@ import Style from 'ol/style/Style'
 import Stroke from 'ol/style/Stroke'
 import Fill from 'ol/style/Fill'
 import CircleStyle from 'ol/style/Circle'
-import {
-  formatMapArea,
-  formatMapLength,
-  measureAnchor,
-} from './measureFormat'
+import { formatMapArea, formatMapLength, measureAnchor } from './measureFormat'
 
 const MEASURE_STYLE = new Style({
   fill: new Fill({ color: 'rgba(0, 0, 145, 0.08)' }),
@@ -161,9 +157,7 @@ export class SketchMeasureController {
       offset: [0, -8],
       stopEvent: true,
     })
-    overlay.setPosition(
-      measureAnchor(this.map, geom as LineString | Polygon),
-    )
+    overlay.setPosition(measureAnchor(this.map, geom as LineString | Polygon))
     this.map.addOverlay(overlay)
     this.overlays.set(feature, overlay)
 
@@ -177,9 +171,7 @@ export class SketchMeasureController {
       const g = feature.getGeometry()
       if (!g) return
       content.textContent = this.formatFeature(feature)
-      overlay.setPosition(
-        measureAnchor(this.map, g as LineString | Polygon),
-      )
+      overlay.setPosition(measureAnchor(this.map, g as LineString | Polygon))
     })
   }
 

@@ -37,28 +37,17 @@ onBeforeUnmount(() => {
       <div class="fr-container fr-py-8v">
         <div class="fr-grid-row fr-grid-row--center fr-grid-row--middle fr-p-4w">
           <div class="fr-col-12 fr-col-lg-6">
-            <p class="ec-home__banner-lead fr-text--lead">
-              Rechercher par lieu
-            </p>
+            <p class="ec-home__banner-lead fr-text--lead">Rechercher par lieu</p>
             <p class="ec-home__banner-hint fr-text--sm">
-              Même contrôle que sur la carte (recherche avancée incluse).
-              La validation ouvre la démonstration cartographique centrée sur le résultat.
+              Même contrôle que sur la carte (recherche avancée incluse). La validation ouvre la
+              démonstration cartographique centrée sur le résultat.
             </p>
-            <div
-              id="ec-demo-location-search"
-              ref="searchHost"
-              class="ec-home__search"
-            />
+            <div id="ec-demo-location-search" ref="searchHost" class="ec-home__search" />
           </div>
           <div class="fr-col-12 fr-col-lg-5 fr-col-offset-lg-1 fr-mt-4w fr-mt-lg-0">
             <ul class="fr-btns-group fr-btns-group--sm">
               <li>
-                <RouterLink
-                  class="fr-btn"
-                  to="/map"
-                >
-                  Ouvrir la carte
-                </RouterLink>
+                <RouterLink class="fr-btn" to="/map"> Ouvrir la carte </RouterLink>
               </li>
             </ul>
           </div>
@@ -67,12 +56,10 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="fr-container fr-py-6w">
-      <h1 class="fr-h3">
-        Démonstration entree-carto
-      </h1>
+      <h1 class="fr-h3">Démonstration entree-carto</h1>
       <p class="fr-text">
-        Cette page simule le bandeau d’accueil de gpu-site.
-        Utilisez la recherche ci-dessus ou le menu <strong>Carte</strong> pour accéder à la carte.
+        Cette page simule le bandeau d’accueil de gpu-site. Utilisez la recherche ci-dessus ou le
+        menu <strong>Carte</strong> pour accéder à la carte.
       </p>
     </div>
   </div>

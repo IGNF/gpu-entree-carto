@@ -11,15 +11,8 @@ import type VectorLayer from 'ol/layer/Vector'
 import type VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
 import { DrawToolsBar } from './DrawToolsBar'
-import {
-  SketchControl,
-  type SketchExtraTool,
-} from './SketchControl'
-import type {
-  GeometryOutputFormat,
-  GeometryTypeOption,
-  ToolsToggleCorner,
-} from './types'
+import { SketchControl, type SketchExtraTool } from './SketchControl'
+import type { GeometryOutputFormat, GeometryTypeOption, ToolsToggleCorner } from './types'
 
 export interface AttachGeometryToolsOptions {
   /**
@@ -93,9 +86,7 @@ export function attachGeometryTools(
   map.addControl(sketch)
 
   if (options.target) {
-    const toolbar = sketch
-      .getElement()
-      .querySelector('.ec-geometry-editor__toolbar')
+    const toolbar = sketch.getElement().querySelector('.ec-geometry-editor__toolbar')
     if (toolbar instanceof HTMLElement) {
       options.target.replaceChildren(toolbar)
     }

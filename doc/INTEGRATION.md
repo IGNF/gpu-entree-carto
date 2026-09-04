@@ -33,25 +33,25 @@ Le geometry-editor et le sketch embarquent aussi OpenLayers (bundles autonomes).
 
 ## API exposée (`window.gpu`)
 
-| Membre | Statut | Usage gpu-site |
-|--------|--------|----------------|
-| `gpu.config` | Compatible | Enrichi par `gpu_client_config.js.twig` |
-| `gpu.createStandardViewer(params)` | Partiel | `/map/` — carte + centrage si `params.search` |
-| `gpu.mountSearchEngine(el, opts)` | Oui | Accueil — même SearchEngine que la carte → redirect `/map/` |
-| `gpu.mountLocationSearch(el, opts)` | Fallback | Accueil — autocomplete seul |
-| `gpu.ParcelViewer` | Stub | `/map/parcel-info/` — carte seule, pas de fiche parcelle |
-| `gpu.services.Geocode` | Partiel | Accueil — autocomplétion (Gp ou fetch Géoplateforme) |
-| `gpu.control.LocateControl` | Compatible | Filtres d’autocomplétion accueil |
+| Membre                              | Statut     | Usage gpu-site                                              |
+| ----------------------------------- | ---------- | ----------------------------------------------------------- |
+| `gpu.config`                        | Compatible | Enrichi par `gpu_client_config.js.twig`                     |
+| `gpu.createStandardViewer(params)`  | Partiel    | `/map/` — carte + centrage si `params.search`               |
+| `gpu.mountSearchEngine(el, opts)`   | Oui        | Accueil — même SearchEngine que la carte → redirect `/map/` |
+| `gpu.mountLocationSearch(el, opts)` | Fallback   | Accueil — autocomplete seul                                 |
+| `gpu.ParcelViewer`                  | Stub       | `/map/parcel-info/` — carte seule, pas de fiche parcelle    |
+| `gpu.services.Geocode`              | Partiel    | Accueil — autocomplétion (Gp ou fetch Géoplateforme)        |
+| `gpu.control.LocateControl`         | Compatible | Filtres d’autocomplétion accueil                            |
 
 ### Limites actuelles (à prévoir côté gpu-site)
 
 Les pages suivantes **ne sont pas totalement fonctionnelles** tant que les fonctionnalités ne sont pas portées depuis gpu-client :
 
-| Page gpu-site | Route | Manques principaux |
-|---------------|-------|-------------------|
-| Cartographie | `/map/` | Couches métier, légende, fiche info, outils, document, recherche |
-| Fiche parcelle | `/map/parcel-info/{id}/` | Fiche info parcelle, légende parcelle, échelle dédiée |
-| Accueil (géoloc) | `/` | OK si `Gp` chargé ; pas de carte |
+| Page gpu-site    | Route                    | Manques principaux                                               |
+| ---------------- | ------------------------ | ---------------------------------------------------------------- |
+| Cartographie     | `/map/`                  | Couches métier, légende, fiche info, outils, document, recherche |
+| Fiche parcelle   | `/map/parcel-info/{id}/` | Fiche info parcelle, légende parcelle, échelle dédiée            |
+| Accueil (géoloc) | `/`                      | OK si `Gp` chargé ; pas de carte                                 |
 
 ---
 
@@ -139,7 +139,7 @@ gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
   mapUrl: el.getAttribute('data-map-url') || '/map/',
   method: 'POST',
   placeholder: el.getAttribute('data-placeholder') || '…',
-});
+})
 ```
 
 Voir [mountSearchEngine.md](./mountSearchEngine.md).  
@@ -165,7 +165,8 @@ Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-clien
 ```html
 <script src="…/geoportal-access-lib/GpServices.js"></script>
 <script src="…/entree-carto/entree-carto.js"></script>
-<script src="/map/gpu-client-config.js"></script>  {# gpu.config + LAYER_CONFIG… #}
+<script src="/map/gpu-client-config.js"></script>
+{# gpu.config + LAYER_CONFIG… #}
 <script src="…/gpu/js/map/cartographie.js"></script>
 ```
 

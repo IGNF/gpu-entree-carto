@@ -8,10 +8,10 @@ Mini-carte Géoplateforme (`GeoportalOverviewMap`).
 
 ## Props
 
-| Prop | Type | Défaut | Description |
-|------|------|--------|-------------|
-| `position` | `GeopfControlPosition` | `'bottom-left'` | Position geopf |
-| `collapsed` | `boolean` | `true` | Mini-carte repliée au chargement |
+| Prop        | Type                   | Défaut          | Description                      |
+| ----------- | ---------------------- | --------------- | -------------------------------- |
+| `position`  | `GeopfControlPosition` | `'bottom-left'` | Position geopf                   |
+| `collapsed` | `boolean`              | `true`          | Mini-carte repliée au chargement |
 
 ## Placement
 

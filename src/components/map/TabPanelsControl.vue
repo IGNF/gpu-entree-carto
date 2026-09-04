@@ -3,15 +3,7 @@
  * Contrôle OpenLayers — panneau latéral à 4 onglets (droite de la carte).
  * Masqué par défaut ; ouverture via onglet ou `showSelection` (localisation).
  */
-import {
-  inject,
-  onUnmounted,
-  provide,
-  ref,
-  shallowRef,
-  watch,
-  type ShallowRef,
-} from 'vue'
+import { inject, onUnmounted, provide, ref, shallowRef, watch, type ShallowRef } from 'vue'
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
@@ -24,9 +16,7 @@ import {
 import FicheInfoPanel from '@/components/panels/FicheInfoPanel.vue'
 import RawInfoPanel from '@/components/panels/RawInfoPanel.vue'
 import TileLayerSwitcher from '@/components/layers/TileLayerSwitcher.vue'
-import TreeLayerSwitcher, {
-  type TreeLayerNode,
-} from '@/components/layers/TreeLayerSwitcher.vue'
+import TreeLayerSwitcher, { type TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { BaseLayerId, BaseLayerPreset } from '@/ol/baseLayers'
 import '@/styles/tab-panels.css'
 
@@ -216,9 +206,7 @@ onUnmounted(() => {
           :hidden="activeTab !== TAB_PANEL_IDS.empty"
           :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.empty}`"
         >
-          <p class="ec-tab-panels__empty">
-            Contenu à venir.
-          </p>
+          <p class="ec-tab-panels__empty">Contenu à venir.</p>
         </div>
 
         <div

@@ -4,10 +4,7 @@ import type Feature from 'ol/Feature'
 import type { StandardViewerSearch } from '@/lib/types'
 
 /** Zoom selon le type de résultat (comportement gpu-client LocateControl). */
-export function zoomForLocationSearch(search: {
-  type?: string
-  poiType?: string[]
-}): number {
+export function zoomForLocationSearch(search: { type?: string; poiType?: string[] }): number {
   if (search.poiType?.includes('département')) return 9
   switch (search.type) {
     case 'StreetAddress':
@@ -108,8 +105,10 @@ export function locationFromGeopfFeature(
 
   const infoPopup = String(feature.get('infoPopup') ?? '')
   const label =
-    infoPopup.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ||
-    String(feature.get('fullText') ?? feature.get('label') ?? 'Localisation')
+    infoPopup
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || String(feature.get('fullText') ?? feature.get('label') ?? 'Localisation')
 
   return {
     fullText: label,
@@ -177,9 +176,7 @@ export function redirectToMapWithLocation(
 let pendingLocationSearch: StandardViewerSearch | null = null
 
 /** Enregistre la localisation pour la prochaine vue carte (même document SPA). */
-export function prepareLocationHandoff(
-  location: LocationPayload,
-): StandardViewerSearch {
+export function prepareLocationHandoff(location: LocationPayload): StandardViewerSearch {
   const search = locationPayloadToSearch(location)
   pendingLocationSearch = search
   return search
@@ -193,9 +190,7 @@ export function takeLocationHandoff(): StandardViewerSearch | null {
 }
 
 /** Payload localisation → prop `initialSearch` du SearchEngineControl. */
-export function locationPayloadToSearch(
-  location: LocationPayload,
-): StandardViewerSearch {
+export function locationPayloadToSearch(location: LocationPayload): StandardViewerSearch {
   return {
     fullText: location.fullText,
     type: location.type,

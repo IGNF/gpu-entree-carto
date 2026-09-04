@@ -131,10 +131,7 @@ export function getSketchTextAttrs(feature: OlFeature): SketchTextAttrs {
   }
 }
 
-export function applySketchTextStyle(
-  feature: OlFeature,
-  attrs: SketchTextAttrs,
-): void {
+export function applySketchTextStyle(feature: OlFeature, attrs: SketchTextAttrs): void {
   const normalized: SketchTextAttrs = {
     ...DEFAULTS,
     ...attrs,

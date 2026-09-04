@@ -9,16 +9,16 @@ Pour l’accueil gpu-site avec la **même UX que la carte**, préférer [`gpu.mo
 
 ## Props / options
 
-| Option | Type | Défaut | Description |
-|--------|------|--------|-------------|
-| `label` | `string` | `'Rechercher par lieu:'` | Label accessible |
-| `placeholder` | `string` | `'Rechercher une adresse…'` | Placeholder champ |
-| `mode` | `'redirect' \| 'emit'` | `'redirect'` | Redirection carte ou callback seul |
-| `mapUrl` | `string` | `'/map/'` | URL cible (route `gpu_map`) |
-| `method` | `'GET' \| 'POST'` | `'POST'` | Méthode de navigation (gpu-site = POST) |
-| `maximumResponses` | `number` | `10` | Max suggestions |
-| `initialQuery` | `string` | `''` | Texte initial |
-| `onSelect` | `(loc) => void` | — | Callback à la sélection (toujours appelé) |
+| Option             | Type                   | Défaut                      | Description                               |
+| ------------------ | ---------------------- | --------------------------- | ----------------------------------------- |
+| `label`            | `string`               | `'Rechercher par lieu:'`    | Label accessible                          |
+| `placeholder`      | `string`               | `'Rechercher une adresse…'` | Placeholder champ                         |
+| `mode`             | `'redirect' \| 'emit'` | `'redirect'`                | Redirection carte ou callback seul        |
+| `mapUrl`           | `string`               | `'/map/'`                   | URL cible (route `gpu_map`)               |
+| `method`           | `'GET' \| 'POST'`      | `'POST'`                    | Méthode de navigation (gpu-site = POST)   |
+| `maximumResponses` | `number`               | `10`                        | Max suggestions                           |
+| `initialQuery`     | `string`               | `''`                        | Texte initial                             |
+| `onSelect`         | `(loc) => void`        | —                           | Callback à la sélection (toujours appelé) |
 
 ## Comportement
 

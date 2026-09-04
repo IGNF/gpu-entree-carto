@@ -16,8 +16,4 @@ export const CONTROL_POSITIONS = {
   sketch: 'bottom-left',
 } as const
 
-export type GeopfControlPosition =
-  | 'top-left'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-right'
+export type GeopfControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'

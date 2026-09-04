@@ -8,14 +8,8 @@ import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
 import { Polygon } from 'ol/geom'
-import {
-  mountGeometryEditor,
-  type MountGeometryEditorHandle,
-} from '@/geometry-editor'
-import type {
-  GeometryOutputFormat,
-  GeometryTypeOption,
-} from '@/geometry-editor/types'
+import { mountGeometryEditor, type MountGeometryEditorHandle } from '@/geometry-editor'
+import type { GeometryOutputFormat, GeometryTypeOption } from '@/geometry-editor/types'
 import { looksLikeBbox } from '@/geometry-editor/parseGeometry'
 import {
   circleToPolygonFeature,
@@ -102,8 +96,7 @@ const optionDocs: OptionDoc[] = [
   {
     name: 'showZoom',
     def: 'true',
-    description:
-      'Affiche les boutons +/- de zoom (ignoré si blockView est true)',
+    description: 'Affiche les boutons +/- de zoom (ignoré si blockView est true)',
   },
   {
     name: 'showSettings',
@@ -167,11 +160,7 @@ const sections: DemoSection[] = [
     type: 'Point',
     title: 'Point',
     hint: 'Un seul point (remplacé à chaque dessin).',
-    sampleGeoJson: JSON.stringify(
-      { type: 'Point', coordinates: [2.35, 48.85] },
-      null,
-      2,
-    ),
+    sampleGeoJson: JSON.stringify({ type: 'Point', coordinates: [2.35, 48.85] }, null, 2),
     rows: 4,
   },
   {
@@ -298,20 +287,14 @@ const sections: DemoSection[] = [
   {
     type: 'Disc',
     title: 'Disc',
-    hint:
-      'Format custom : { type: "Disc", center: [lon, lat], radius }. Rempli ; translation intérieure ; pas de rotation. (Picto bouton = cercle.)',
-    sampleGeoJson: JSON.stringify(
-      { type: 'Disc', center: [2.4, 48.87], radius: 3500 },
-      null,
-      2,
-    ),
+    hint: 'Format custom : { type: "Disc", center: [lon, lat], radius }. Rempli ; translation intérieure ; pas de rotation. (Picto bouton = cercle.)',
+    sampleGeoJson: JSON.stringify({ type: 'Disc', center: [2.4, 48.87], radius: 3500 }, null, 2),
     rows: 6,
   },
   {
     type: 'MultiDisc',
     title: 'MultiDisc',
-    hint:
-      'Plusieurs disques ; format { type: "MultiDisc", geometries: [{ center, radius }, …] }.',
+    hint: 'Plusieurs disques ; format { type: "MultiDisc", geometries: [{ center, radius }, …] }.',
     sampleGeoJson: JSON.stringify(
       {
         type: 'MultiDisc',
@@ -329,20 +312,14 @@ const sections: DemoSection[] = [
     type: 'Point,Disc',
     slug: 'point-disc',
     title: 'Point,Disc (CSV)',
-    hint:
-      'geometryType multi-valeurs : seuls les outils Point / Disque (+ modifier / supprimer).',
-    sampleGeoJson: JSON.stringify(
-      { type: 'Point', coordinates: [2.35, 48.86] },
-      null,
-      2,
-    ),
+    hint: 'geometryType multi-valeurs : seuls les outils Point / Disque (+ modifier / supprimer).',
+    sampleGeoJson: JSON.stringify({ type: 'Point', coordinates: [2.35, 48.86] }, null, 2),
     rows: 4,
   },
   {
     type: 'Geometry',
     title: 'Geometry (libre)',
-    hint:
-      'Point, ligne, polygone ou disque ; plusieurs géométries possibles. Carte plus haute + toolsToggle top-left (bouton outils → barre).',
+    hint: 'Point, ligne, polygone ou disque ; plusieurs géométries possibles. Carte plus haute + toolsToggle top-left (bouton outils → barre).',
     sampleGeoJson: JSON.stringify(
       {
         type: 'Polygon',
@@ -441,11 +418,7 @@ const pairSyncCleanups: Array<() => void> = []
 let settingsDemoField: HTMLTextAreaElement | null = null
 let settingsDemoHandle: MountGeometryEditorHandle | null = null
 
-function setFieldRef(
-  type: GeometryTypeOption,
-  format: FormatKey,
-  el: unknown,
-): void {
+function setFieldRef(type: GeometryTypeOption, format: FormatKey, el: unknown): void {
   const key = fieldKey(type, format)
   if (el instanceof HTMLTextAreaElement) {
     fieldEls.set(key, el)
@@ -467,10 +440,7 @@ function syncPairFieldHeights(type: GeometryTypeOption): void {
   if (!geo || !kml) return
   geo.style.height = 'auto'
   kml.style.height = 'auto'
-  const h = Math.min(
-    Math.max(geo.scrollHeight, kml.scrollHeight),
-    FIELD_MAX_HEIGHT_PX,
-  )
+  const h = Math.min(Math.max(geo.scrollHeight, kml.scrollHeight), FIELD_MAX_HEIGHT_PX)
   geo.style.height = `${h}px`
   kml.style.height = `${h}px`
 }
@@ -487,17 +457,12 @@ onMounted(() => {
       const el = fieldEls.get(fieldKey(section.type, format))
       if (!el) continue
       el.value =
-        format === 'geojson'
-          ? section.sampleGeoJson
-          : geoJsonSampleToKml(section.sampleGeoJson)
+        format === 'geojson' ? section.sampleGeoJson : geoJsonSampleToKml(section.sampleGeoJson)
       handles.push(
         mountGeometryEditor(el, {
           geometryType: section.type,
           outputFormat: format,
-          height:
-            section.type === 'Geometry' || String(section.type).includes(',')
-              ? 480
-              : 280,
+          height: section.type === 'Geometry' || String(section.type).includes(',') ? 480 : 280,
           hide: false,
           editable: true,
           ...(section.type === 'Geometry' || String(section.type).includes(',')
@@ -558,99 +523,77 @@ onUnmounted(() => {
 
 <template>
   <div class="ec-demo-geometry fr-container fr-py-3w">
-    <h1 class="fr-h3">
-      Éditeur de géométries
-    </h1>
+    <h1 class="fr-h3">Éditeur de géométries</h1>
     <p class="fr-text--sm">
-      Outil standalone <code>entree-carto-geometry-editor</code> : mini-carte liée à un
-      champ HTML (GeoJSON / KML / bbox). Barre d’outils à gauche dans la carte
-      (style cartes.gouv / geopf Drawing). Remplace <code>ol-geometry-editor</code>.
-      Chaque type est illustré en <strong>GeoJSON</strong> et en <strong>KML</strong>.
+      Outil standalone <code>entree-carto-geometry-editor</code> : mini-carte liée à un champ HTML
+      (GeoJSON / KML / bbox). Barre d’outils à gauche dans la carte (style cartes.gouv / geopf
+      Drawing). Remplace <code>ol-geometry-editor</code>. Chaque type est illustré en
+      <strong>GeoJSON</strong> et en <strong>KML</strong>.
     </p>
 
-    <DsfrAccordionsGroup
-      v-model="docsAccordionOpen"
-      class="fr-mb-5w"
-    >
-      <DsfrAccordion
-        id="ec-geom-docs"
-        title="Utilisation et options"
-        title-tag="h2"
-      >
-        <h3 class="fr-h6">
-          Utilisation
-        </h3>
+    <DsfrAccordionsGroup v-model="docsAccordionOpen" class="fr-mb-5w">
+      <DsfrAccordion id="ec-geom-docs" title="Utilisation et options" title-tag="h2">
+        <h3 class="fr-h6">Utilisation</h3>
         <p class="fr-text--sm">
           Associer une mini-carte à un champ HTML via
           <code>mountGeometryEditor(élément, options)</code>
-          ou <code>new GeometryEditor(…)</code>.
-          API globale : <code>window.EntreeCartoGeometryEditor</code>.
-          Bundle : <code>dist/entree-carto-geometry-editor[.min].js</code>
+          ou <code>new GeometryEditor(…)</code>. API globale :
+          <code>window.EntreeCartoGeometryEditor</code>. Bundle :
+          <code>dist/entree-carto-geometry-editor[.min].js</code>
           + CSS associé.
         </p>
         <pre class="ec-demo-geometry__code fr-mb-3w"><code>{{ usageSnippet }}</code></pre>
 
-        <h3 class="fr-h6">
-          Mise à jour à chaud
-        </h3>
+        <h3 class="fr-h6">Mise à jour à chaud</h3>
         <p class="fr-text--sm fr-mb-3w">
           Après montage : <code>editor.setOptions(patch)</code> ou
-          <code>handle.setOptions(patch)</code> pour changer le comportement
-          sans recréer la carte (<code>blockView</code>, <code>showZoom</code>,
-          <code>editable</code>, <code>customStyle</code>, <code>geometryType</code>,
-          fonds, taille, vue, formats, etc.).
+          <code>handle.setOptions(patch)</code> pour changer le comportement sans recréer la carte
+          (<code>blockView</code>, <code>showZoom</code>, <code>editable</code>,
+          <code>customStyle</code>, <code>geometryType</code>, fonds, taille, vue, formats, etc.).
         </p>
 
-        <h3 class="fr-h6">
-          Barre d’outils
-        </h3>
+        <h3 class="fr-h6">Barre d’outils</h3>
         <ul class="fr-text--sm fr-mb-3w">
           <li>
             Overlay vertical <strong>à gauche dans la carte</strong>
             (boutons 48×48 type cartes.gouv / geopf Drawing).
           </li>
           <li>
-            <strong>Dessin</strong> : activer l’outil géométrie (point / ligne / polygone / rectangle).
-            Sur les types simples, un nouveau croquis remplace le précédent.
+            <strong>Dessin</strong> : activer l’outil géométrie (point / ligne / polygone /
+            rectangle). Sur les types simples, un nouveau croquis remplace le précédent.
           </li>
           <li>
-            <strong>Modifier</strong> (crayon) : déplacer les sommets / la géométrie
-            (inactif tant que l’outil n’est pas sélectionné).
+            <strong>Modifier</strong> (crayon) : déplacer les sommets / la géométrie (inactif tant
+            que l’outil n’est pas sélectionné).
           </li>
           <li>
-            <strong>Supprimer</strong> (poubelle) : cliquer une feature
-            (<code>cursor: pointer</code> au survol).
+            <strong>Supprimer</strong> (poubelle) : cliquer une feature (<code
+              >cursor: pointer</code
+            >
+            au survol).
           </li>
-          <li>
-            Sans outil actif : navigation seule (sauf si <code>blockView: true</code>).
-          </li>
+          <li>Sans outil actif : navigation seule (sauf si <code>blockView: true</code>).</li>
         </ul>
 
-        <h3 class="fr-h6">
-          Données
-        </h3>
+        <h3 class="fr-h6">Données</h3>
         <ul class="fr-text--sm fr-mb-3w">
           <li>
             Lecture : GeoJSON (geometry / Feature / FeatureCollection), KML, ou bbox
             <code>[minX, minY, maxX, maxY]</code>.
           </li>
           <li>
-            Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON ;
-            Circle / Disc → <code>{ type, center, radius }</code>
+            Écriture selon <code>outputFormat</code> ; Rectangle → bbox JSON ; Circle / Disc →
+            <code>{ type, center, radius }</code>
             (dessin : outil Disc uniquement ; Circle encore lu en compat).
           </li>
           <li>
-            Sync bidirectionnelle via <code>input</code> / <code>change</code> ;
-            événement carte <code>change:geometry</code>.
+            Sync bidirectionnelle via <code>input</code> / <code>change</code> ; événement carte
+            <code>change:geometry</code>.
           </li>
-          <li>
-            Les <code>Multi*</code> sont éclatés à l’édition et recombinés à l’écriture.
-          </li>
+          <li>Les <code>Multi*</code> sont éclatés à l’édition et recombinés à l’écriture.</li>
         </ul>
 
-        <h3 class="fr-h6">
-          Options
-        </h3>
+        <h3 class="fr-h6">Options</h3>
         <div class="fr-table fr-table--no-caption fr-mb-0">
           <table>
             <caption class="fr-sr-only">
@@ -658,24 +601,19 @@ onUnmounted(() => {
             </caption>
             <thead>
               <tr>
-                <th scope="col">
-                  Option
-                </th>
-                <th scope="col">
-                  Défaut
-                </th>
-                <th scope="col">
-                  Description
-                </th>
+                <th scope="col">Option</th>
+                <th scope="col">Défaut</th>
+                <th scope="col">Description</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="opt in optionDocs"
-                :key="opt.name"
-              >
-                <td><code>{{ opt.name }}</code></td>
-                <td><code>{{ opt.def }}</code></td>
+              <tr v-for="opt in optionDocs" :key="opt.name">
+                <td>
+                  <code>{{ opt.name }}</code>
+                </td>
+                <td>
+                  <code>{{ opt.def }}</code>
+                </td>
                 <td>{{ opt.description }}</td>
               </tr>
             </tbody>
@@ -684,11 +622,7 @@ onUnmounted(() => {
       </DsfrAccordion>
     </DsfrAccordionsGroup>
 
-    <section
-      v-for="section in sections"
-      :key="sectionSlug(section)"
-      class="fr-mb-5w"
-    >
+    <section v-for="section in sections" :key="sectionSlug(section)" class="fr-mb-5w">
       <h2 class="fr-h5">
         {{ section.title }}
       </h2>
@@ -697,18 +631,13 @@ onUnmounted(() => {
       </p>
 
       <div class="ec-demo-geometry__pair">
-        <div
-          v-for="fmt in formats"
-          :key="fmt.key"
-          class="ec-demo-geometry__col"
-        >
+        <div v-for="fmt in formats" :key="fmt.key" class="ec-demo-geometry__col">
           <h3 class="fr-h6">
             {{ fmt.label }}
           </h3>
-          <label
-            class="fr-label"
-            :for="`ec-geom-${sectionSlug(section)}-${fmt.key}`"
-          >Données {{ fmt.label }}</label>
+          <label class="fr-label" :for="`ec-geom-${sectionSlug(section)}-${fmt.key}`"
+            >Données {{ fmt.label }}</label
+          >
           <textarea
             :id="`ec-geom-${sectionSlug(section)}-${fmt.key}`"
             :ref="(el) => setFieldRef(section.type, fmt.key, el)"
@@ -720,18 +649,13 @@ onUnmounted(() => {
     </section>
 
     <section class="fr-mb-5w">
-      <h2 class="fr-h5">
-        Réglages à la volée (<code>showSettings</code>)
-      </h2>
+      <h2 class="fr-h5">Réglages à la volée (<code>showSettings</code>)</h2>
       <p class="fr-text--sm fr-mb-2w">
-        Une seule carte avec le bouton roue crantée (haut droite) pour ajuster
-        les options. Attributions activées (<code>showAttributions: true</code>).
-        Le zoom est décalé sous le bouton réglages.
+        Une seule carte avec le bouton roue crantée (haut droite) pour ajuster les options.
+        Attributions activées (<code>showAttributions: true</code>). Le zoom est décalé sous le
+        bouton réglages.
       </p>
-      <label
-        class="fr-label"
-        for="ec-geom-settings-demo"
-      >GeoJSON</label>
+      <label class="fr-label" for="ec-geom-settings-demo">GeoJSON</label>
       <textarea
         id="ec-geom-settings-demo"
         :ref="setSettingsDemoRef"

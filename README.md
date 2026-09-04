@@ -36,25 +36,25 @@ make dev       # serveur de développement (Vite)
 
 Autres cibles :
 
-| Commande | Effet |
-|----------|--------|
-| `make build` | Build démo + bibliothèque (`dist/`) |
+| Commande         | Effet                                       |
+| ---------------- | ------------------------------------------- |
+| `make build`     | Build démo + bibliothèque (`dist/`)         |
 | `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS) |
-| `make test` | Tests Vitest |
-| `make preview` | Prévisualiser le build |
-| `make typecheck` | Vérification TypeScript |
+| `make test`      | Tests Vitest                                |
+| `make preview`   | Prévisualiser le build                      |
+| `make typecheck` | Vérification TypeScript                     |
 
 ---
 
 ## Stack technique
 
-| Composant | Choix |
-|-----------|--------|
-| Framework UI | [Vue.js](https://vuejs.org/guide/introduction.html) 3 |
-| Design system | [DSFR](https://www.systeme-de-design.gouv.fr/version-courante/fr) + [VueDSFR](https://vue-ds.fr/) ([@gouvminint/vue-dsfr](https://github.com/dnum-mi/vue-dsfr)) |
-| Carte | [OpenLayers](https://github.com/openlayers/openlayers) ≥ 10 (geopf) |
-| Extensions carte | [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers) |
-| Build / tests | Vite, Vitest, TypeScript |
+| Composant        | Choix                                                                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework UI     | [Vue.js](https://vuejs.org/guide/introduction.html) 3                                                                                                           |
+| Design system    | [DSFR](https://www.systeme-de-design.gouv.fr/version-courante/fr) + [VueDSFR](https://vue-ds.fr/) ([@gouvminint/vue-dsfr](https://github.com/dnum-mi/vue-dsfr)) |
+| Carte            | [OpenLayers](https://github.com/openlayers/openlayers) ≥ 10 (geopf)                                                                                             |
+| Extensions carte | [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)                                                                              |
+| Build / tests    | Vite, Vitest, TypeScript                                                                                                                                        |
 
 ---
 
@@ -91,12 +91,12 @@ Maquette : [Figma — GPU UX/UI](https://www.figma.com/design/ARSe9rthrHEp6UFJOh
 
 ## Références
 
-| Dépôt | Rôle |
-|-------|------|
-| [IGNF/cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto) | Entrée cartographique de cartes.gouv.fr |
-| [IGNF/cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Composants Vue 3 (VueDSFR) |
-| [IGNF/geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers) | Extensions Géoplateforme OpenLayers |
-| gpu-client | Comportement métier à reprendre |
+| Dépôt                                                                                       | Rôle                                    |
+| ------------------------------------------------------------------------------------------- | --------------------------------------- |
+| [IGNF/cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto)     | Entrée cartographique de cartes.gouv.fr |
+| [IGNF/cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Composants Vue 3 (VueDSFR)              |
+| [IGNF/geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)     | Extensions Géoplateforme OpenLayers     |
+| gpu-client                                                                                  | Comportement métier à reprendre         |
 
 ---
 

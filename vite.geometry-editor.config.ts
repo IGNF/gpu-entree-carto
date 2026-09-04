@@ -26,9 +26,7 @@ export default defineConfig({
       name: 'EntreeCartoGeometryEditor',
       formats: ['iife'],
       fileName: () =>
-        minify
-          ? 'entree-carto-geometry-editor.min.js'
-          : 'entree-carto-geometry-editor.js',
+        minify ? 'entree-carto-geometry-editor.min.js' : 'entree-carto-geometry-editor.js',
     },
     rollupOptions: {
       output: {

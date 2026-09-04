@@ -7,10 +7,10 @@ Conteneur de la carte OpenLayers. Crée la map, expose l’instance aux contrôl
 
 ## Props
 
-| Prop | Type | Défaut | Description |
-|------|------|--------|-------------|
-| `layers` | `BaseLayer[]` | `[]` | Couches initiales passées à `ol.Map` |
-| `zoom` | `number` | `6` | Zoom initial (comme gpu-client) |
+| Prop     | Type          | Défaut | Description                          |
+| -------- | ------------- | ------ | ------------------------------------ |
+| `layers` | `BaseLayer[]` | `[]`   | Couches initiales passées à `ol.Map` |
+| `zoom`   | `number`      | `6`    | Zoom initial (comme gpu-client)      |
 
 ## Slot
 
@@ -18,8 +18,8 @@ Slot par défaut : reçoit `{ map }` ; typiquement les contrôles (`ZoomControl`
 
 ## API exposée
 
-| Méthode / ref | Description |
-|---------------|-------------|
+| Méthode / ref              | Description                                     |
+| -------------------------- | ----------------------------------------------- |
 | `map` (via `defineExpose`) | `ShallowRef<Map \| null>` — instance OpenLayers |
 
 ## Injection

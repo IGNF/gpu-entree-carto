@@ -20,11 +20,7 @@ export type GeometryOutputFormat = 'geojson' | 'kml'
  * Coin où placer le bouton qui ouvre / ferme la barre d’outils de dessin.
  * `null` → outils toujours visibles (colonne à gauche, comportement historique).
  */
-export type ToolsToggleCorner =
-  | 'top-left'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-right'
+export type ToolsToggleCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
 export type { StyleLike }
 

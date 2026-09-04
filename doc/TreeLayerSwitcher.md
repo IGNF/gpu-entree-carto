@@ -7,10 +7,10 @@ Sélecteur de **couches métier** en arbre avec **légende intégrée** (équiva
 
 ## Props / events
 
-| Prop / event | Type | Description |
-|--------------|------|-------------|
-| `nodes` | `TreeLayerNode[]` | Nœuds (`id`, `title`, `visible`, `legend?`, `children?`) |
-| `@toggle` | `(id, visible)` | Changement de visibilité |
+| Prop / event | Type              | Description                                              |
+| ------------ | ----------------- | -------------------------------------------------------- |
+| `nodes`      | `TreeLayerNode[]` | Nœuds (`id`, `title`, `visible`, `legend?`, `children?`) |
+| `@toggle`    | `(id, visible)`   | Changement de visibilité                                 |
 
 ## Comportement
 

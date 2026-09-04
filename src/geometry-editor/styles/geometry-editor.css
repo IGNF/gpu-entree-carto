@@ -202,8 +202,7 @@
   border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
 }
 
-.ec-geometry-editor__toolbar
-  > .ec-geometry-editor__tool:first-of-type:last-of-type {
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:first-of-type:last-of-type {
   border-radius: var(--ec-geom-btn-radius);
 }
 
@@ -426,7 +425,7 @@
 
 /* Appendice vers le bas (popup au-dessus du point) */
 .ec-sketch-style-popup::before {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 16px solid var(--border-default-grey, #ddd);
   border-right: 15px solid transparent;
@@ -438,7 +437,7 @@
 }
 
 .ec-sketch-style-popup::after {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 15px solid var(--background-default-grey, #fff);
   border-right: 14px solid transparent;
@@ -661,7 +660,7 @@
 }
 
 .ec-sketch-measure-popup::before {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 16px solid var(--border-default-grey, #ddd);
   border-right: 15px solid transparent;
@@ -672,7 +671,7 @@
 }
 
 .ec-sketch-measure-popup::after {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 15px solid var(--background-default-grey, #fff);
   border-right: 14px solid transparent;
@@ -774,7 +773,11 @@
   white-space: nowrap;
   pointer-events: none;
   background-repeat: no-repeat;
-  background-position: 0.125rem 50%, 0 50%, 0.375rem 100%, 0.375rem 100%;
+  background-position:
+    0.125rem 50%,
+    0 50%,
+    0.375rem 100%,
+    0.375rem 100%;
   background-size:
     0.375rem 0.5rem,
     0.375rem 0.5rem,
@@ -814,14 +817,16 @@
   .ec-geometry-editor__tool[aria-label]:hover::before,
 .ec-geometry-editor__tools-root[data-corner='bottom-right']
   .ec-geometry-editor__tool[aria-label]:focus-visible::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:focus-visible::before {
+.ec-geometry-editor__settings .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__settings .ec-geometry-editor__tool[aria-label]:focus-visible::before {
   left: auto;
   right: 100%;
   padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-  background-position: calc(100% - 0.125rem) 50%, 100% 50%, calc(100% - 0.375rem) 100%, 0 100%;
+  background-position:
+    calc(100% - 0.125rem) 50%,
+    100% 50%,
+    calc(100% - 0.375rem) 100%,
+    0 100%;
   background-size:
     0.375rem 0.5rem,
     0.375rem 0.5rem,

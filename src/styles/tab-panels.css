@@ -224,10 +224,8 @@
 /* Pas d’infobulle si l’onglet est déjà actif (comme geopf aria-pressed) */
 .ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:hover::after,
 .ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:focus-visible::after,
-.ec-tab-panels.ol-control
-  button.ec-tab-panels__tab[aria-selected='true']:hover::after,
-.ec-tab-panels.ol-control
-  button.ec-tab-panels__tab[aria-selected='true']:focus-visible::after {
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-selected='true']:hover::after,
+.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-selected='true']:focus-visible::after {
   content: none !important;
   display: none !important;
 }
@@ -288,7 +286,10 @@
   border-radius: 50%;
   background: var(--background-default-grey, #fff);
   color: var(--text-action-high-blue-france, #000091);
-  font: 700 0.75rem/1.25rem Marianne, arial, sans-serif;
+  font:
+    700 0.75rem/1.25rem Marianne,
+    arial,
+    sans-serif;
   text-align: center;
   box-shadow: 0 0 0 2px var(--background-action-high-blue-france, #000091);
 }

@@ -8,12 +8,12 @@ Sélecteur de territoire Géoplateforme (`Territories`) — France métropolitai
 
 ## Props
 
-| Prop | Type | Défaut | Description |
-|------|------|--------|-------------|
-| `position` | `GeopfControlPosition` | `'bottom-left'` | Position geopf |
-| `collapsed` | `boolean` | `true` | Panneau replié au chargement |
-| `auto` | `boolean` | `true` | Charge la liste par défaut des territoires |
-| `viewActive` | `boolean` | `true` | Affiche « Modifier les territoires » |
+| Prop         | Type                   | Défaut          | Description                                |
+| ------------ | ---------------------- | --------------- | ------------------------------------------ |
+| `position`   | `GeopfControlPosition` | `'bottom-left'` | Position geopf                             |
+| `collapsed`  | `boolean`              | `true`          | Panneau replié au chargement               |
+| `auto`       | `boolean`              | `true`          | Charge la liste par défaut des territoires |
+| `viewActive` | `boolean`              | `true`          | Affiche « Modifier les territoires »       |
 
 ## Options geopf passées
 

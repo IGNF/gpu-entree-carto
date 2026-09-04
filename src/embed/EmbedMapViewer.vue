@@ -10,10 +10,7 @@ import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import {
-  createBaseLayerPresets,
-  type BaseLayerId,
-} from '@/ol/baseLayers'
+import { createBaseLayerPresets, type BaseLayerId } from '@/ol/baseLayers'
 import type { StandardViewerParams } from '@/lib/types'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'

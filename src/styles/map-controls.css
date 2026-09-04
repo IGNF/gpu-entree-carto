@@ -54,9 +54,15 @@
 }
 
 .position-container-bottom-left > .gpf-widget > button[aria-pressed='true'] + dialog.gpf-panel,
-.position-container-bottom-left > .gpf-widget-button > button[aria-pressed='true'] + dialog.gpf-panel,
+.position-container-bottom-left
+  > .gpf-widget-button
+  > button[aria-pressed='true']
+  + dialog.gpf-panel,
 .position-container-bottom-right > .gpf-widget > button[aria-pressed='true'] + dialog.gpf-panel,
-.position-container-bottom-right > .gpf-widget-button > button[aria-pressed='true'] + dialog.gpf-panel {
+.position-container-bottom-right
+  > .gpf-widget-button
+  > button[aria-pressed='true']
+  + dialog.gpf-panel {
   display: flex;
   flex-direction: column;
 }
@@ -215,9 +221,7 @@
 }
 
 /* Toolbar scrollable dans la hauteur allouée au slot */
-.position-container-bottom-left
-  > .ec-sketch-control--geopf-slot
-  > .ec-geometry-editor__toolbar {
+.position-container-bottom-left > .ec-sketch-control--geopf-slot > .ec-geometry-editor__toolbar {
   flex: 1 1 auto;
   min-height: 0;
   max-height: 100%;

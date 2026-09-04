@@ -20,15 +20,8 @@ import { geometryStyleFunction } from './styles'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
 import { restoreCircleFeaturesForKind } from './circleHelpers'
-import {
-  parseGeometryTypes,
-  primaryGeometryType,
-} from './geometryTypeUtils'
-import type {
-  GeometryOutputFormat,
-  GeometryTypeOption,
-  ToolsToggleCorner,
-} from './types'
+import { parseGeometryTypes, primaryGeometryType } from './geometryTypeUtils'
+import type { GeometryOutputFormat, GeometryTypeOption, ToolsToggleCorner } from './types'
 import { SketchHistory } from './sketch/SketchHistory'
 import {
   applySketchTextStyle,
@@ -47,12 +40,7 @@ import {
   writeSketchFile,
 } from './sketch/sketchIo'
 
-export type SketchExtraTool =
-  | 'Text'
-  | 'Import'
-  | 'Export'
-  | 'MeasureDistance'
-  | 'MeasureArea'
+export type SketchExtraTool = 'Text' | 'Import' | 'Export' | 'MeasureDistance' | 'MeasureArea'
 
 export interface SketchControlOptions {
   /** Types d’outils (CSV accepté). Défaut `'Geometry'`. */
@@ -332,8 +320,7 @@ export class SketchControl extends Control {
     this.applyToolsChrome()
     const map = this.getMap()
     if (map && this.drawBar) {
-      this.toolbarHost.hidden =
-        Boolean(this.toolsToggle) && !this.toolsMenuOpen
+      this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen
     }
   }
 
@@ -413,10 +400,7 @@ export class SketchControl extends Control {
     }
     this.measure?.destroy()
     this.measure = null
-    if (
-      this.extraTools.includes('MeasureDistance') ||
-      this.extraTools.includes('MeasureArea')
-    ) {
+    if (this.extraTools.includes('MeasureDistance') || this.extraTools.includes('MeasureArea')) {
       this.measure = new SketchMeasureController(map, this.zIndex + 10)
     }
 
@@ -440,8 +424,7 @@ export class SketchControl extends Control {
         ? (feature) => this.openStylePopup(feature)
         : undefined,
     })
-    this.toolbarHost.hidden =
-      Boolean(this.toolsToggle) && !this.toolsMenuOpen
+    this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen
     this.syncHistoryButtons()
   }
 
@@ -557,17 +540,20 @@ export class SketchControl extends Control {
   private runImport(): void {
     const map = this.getMap()
     if (!map) return
-    pickSketchFile('.geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml', (text, name) => {
-      try {
-        const format = formatFromFilename(name)
-        const features = readSketchFile(map, text, format)
-        this.source.addFeatures(features)
-        this.history?.push()
-        this.notifyChange()
-      } catch (err) {
-        console.warn('[SketchControl] import failed', err)
-      }
-    })
+    pickSketchFile(
+      '.geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml',
+      (text, name) => {
+        try {
+          const format = formatFromFilename(name)
+          const features = readSketchFile(map, text, format)
+          this.source.addFeatures(features)
+          this.history?.push()
+          this.notifyChange()
+        } catch (err) {
+          console.warn('[SketchControl] import failed', err)
+        }
+      },
+    )
   }
 
   private async runExport(): Promise<void> {
@@ -582,9 +568,7 @@ export class SketchControl extends Control {
       downloadBlob(
         format === 'kml' ? 'croquis.kml' : 'croquis.geojson',
         content,
-        format === 'kml'
-          ? 'application/vnd.google-earth.kml+xml'
-          : 'application/geo+json',
+        format === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/geo+json',
       )
     } catch (err) {
       console.warn('[SketchControl] export failed', err)
@@ -700,8 +684,7 @@ export class SketchControl extends Control {
       if (!this.toolsToggleBtn) {
         const btn = document.createElement('button')
         btn.type = 'button'
-        btn.className =
-          'ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle'
+        btn.className = 'ec-geometry-editor__tool ec-geometry-editor__tool--tools-toggle'
         btn.setAttribute('aria-label', 'Outils de dessin')
         btn.setAttribute('aria-expanded', 'false')
         btn.setAttribute('aria-pressed', 'false')

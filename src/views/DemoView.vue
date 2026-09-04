@@ -11,13 +11,8 @@ import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerSearch } from '@/lib/types'
-import {
-  takeLocationHandoff,
-} from '@/lib/search/locationSearch'
-import {
-  createBaseLayerPresets,
-  type BaseLayerId,
-} from '@/ol/baseLayers'
+import { takeLocationHandoff } from '@/lib/search/locationSearch'
+import { createBaseLayerPresets, type BaseLayerId } from '@/ol/baseLayers'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'

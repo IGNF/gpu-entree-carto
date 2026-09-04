@@ -7,24 +7,24 @@ Sélecteur de fond de plan (radio DSFR). Bascule la visibilité des presets cré
 
 ## Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `presets` | `BaseLayerPreset[]` | Liste des fonds (`id`, `label`, `layer`) |
-| `modelValue` | `BaseLayerId` | Fond actif : `'plan' \| 'ortho' \| 'blank'` |
+| Prop         | Type                | Description                                 |
+| ------------ | ------------------- | ------------------------------------------- |
+| `presets`    | `BaseLayerPreset[]` | Liste des fonds (`id`, `label`, `layer`)    |
+| `modelValue` | `BaseLayerId`       | Fond actif : `'plan' \| 'ortho' \| 'blank'` |
 
 ## Événements
 
-| Événement | Payload | Description |
-|-----------|---------|-------------|
+| Événement           | Payload       | Description                          |
+| ------------------- | ------------- | ------------------------------------ |
 | `update:modelValue` | `BaseLayerId` | Émis au changement de fond (v-model) |
 
 ## Fonds disponibles (démo)
 
-| Id | Libellé | Source |
-|----|---------|--------|
-| `plan` | Plan IGN | WMTS Géoplateforme PLANIGNV2 |
-| `ortho` | Ortho | WMTS ORTHOIMAGERY.ORTHOPHOTOS |
-| `blank` | Blanc | Couche vectorielle fond blanc |
+| Id      | Libellé  | Source                        |
+| ------- | -------- | ----------------------------- |
+| `plan`  | Plan IGN | WMTS Géoplateforme PLANIGNV2  |
+| `ortho` | Ortho    | WMTS ORTHOIMAGERY.ORTHOPHOTOS |
+| `blank` | Blanc    | Couche vectorielle fond blanc |
 
 ## Notes
 

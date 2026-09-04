@@ -7,10 +7,10 @@ Sélecteur de **fonds de plan** en tuiles cliquables (équivalent `TileLayerSwit
 
 ## Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `presets` | `BaseLayerPreset[]` | Fonds (`createBaseLayerPresets`) |
-| `modelValue` | `BaseLayerId` | Fond actif |
+| Prop         | Type                | Description                      |
+| ------------ | ------------------- | -------------------------------- |
+| `presets`    | `BaseLayerPreset[]` | Fonds (`createBaseLayerPresets`) |
+| `modelValue` | `BaseLayerId`       | Fond actif                       |
 
 Émet `update:modelValue` et appelle `setActiveBaseLayer`.
 

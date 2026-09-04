@@ -4,11 +4,7 @@ import { GeometryEditor } from './GeometryEditor'
 import type { GeometryEditorOptions } from './types'
 import { attachGeometryTools } from './attachGeometryTools'
 import { SketchControl } from './SketchControl'
-import {
-  featureFromWkt,
-  bboxStringFromWkt,
-  createSimpleStyle,
-} from './olHelpers'
+import { featureFromWkt, bboxStringFromWkt, createSimpleStyle } from './olHelpers'
 
 export type {
   GeometryEditorOptions,
@@ -19,28 +15,15 @@ export type {
   StyleLike,
 } from './types'
 export { GEOMETRY_TYPE_NAMES } from './types'
-export {
-  FUTURE_GEOMETRY_TOOL_NAMES,
-  type FutureGeometryToolName,
-} from './geometryTypeUtils'
+export { FUTURE_GEOMETRY_TOOL_NAMES, type FutureGeometryToolName } from './geometryTypeUtils'
 
 export { GeometryEditor } from './GeometryEditor'
 export { DEFAULT_GEOMETRY_EDITOR_OPTIONS } from './types'
 export { SketchControl } from './SketchControl'
-export type {
-  SketchControlOptions,
-  SketchExtraTool,
-} from './SketchControl'
+export type { SketchControlOptions, SketchExtraTool } from './SketchControl'
 export { attachGeometryTools } from './attachGeometryTools'
-export type {
-  AttachGeometryToolsHandle,
-  AttachGeometryToolsOptions,
-} from './attachGeometryTools'
-export {
-  featureFromWkt,
-  bboxStringFromWkt,
-  createSimpleStyle,
-} from './olHelpers'
+export type { AttachGeometryToolsHandle, AttachGeometryToolsOptions } from './attachGeometryTools'
+export { featureFromWkt, bboxStringFromWkt, createSimpleStyle } from './olHelpers'
 export type { SimpleStyleOptions } from './olHelpers'
 
 export interface MountGeometryEditorHandle {
@@ -57,10 +40,7 @@ export function mountGeometryEditor(
   element: HTMLElement | string,
   options?: GeometryEditorOptions,
 ): MountGeometryEditorHandle {
-  const el =
-    typeof element === 'string'
-      ? document.querySelector<HTMLElement>(element)
-      : element
+  const el = typeof element === 'string' ? document.querySelector<HTMLElement>(element) : element
   if (!el) {
     throw new Error('[entree-carto-geometry-editor] élément introuvable')
   }
@@ -86,9 +66,8 @@ const publicApi = {
 export default publicApi
 
 if (typeof window !== 'undefined') {
-  ;(
-    window as Window & { EntreeCartoGeometryEditor?: typeof publicApi }
-  ).EntreeCartoGeometryEditor = publicApi
+  ;(window as Window & { EntreeCartoGeometryEditor?: typeof publicApi }).EntreeCartoGeometryEditor =
+    publicApi
 }
 
 declare global {

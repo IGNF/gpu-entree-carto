@@ -60,9 +60,7 @@ export const discDrawStyle = new Style({
 export function geometryStyleFunction(feature: FeatureLike): Style {
   const geom = feature.getGeometry?.()
   if (geom instanceof CircleGeom) {
-    return getCircleKind(feature as never) === 'disc'
-      ? discFillStyle
-      : circleOutlineStyle
+    return getCircleKind(feature as never) === 'disc' ? discFillStyle : circleOutlineStyle
   }
   return geometryFeatureStyle
 }

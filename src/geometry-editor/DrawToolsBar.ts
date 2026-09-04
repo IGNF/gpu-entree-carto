@@ -10,26 +10,15 @@ import Snap from 'ol/interaction/Snap'
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import type { GeometryTypeOption } from './types'
-import {
-  discDrawStyle,
-  geometryDrawStyle,
-} from './styles'
-import {
-  getCircleKind,
-  isNearCircleEdge,
-  setCircleKind,
-  type CircleKind,
-} from './circleHelpers'
+import { discDrawStyle, geometryDrawStyle } from './styles'
+import { getCircleKind, isNearCircleEdge, setCircleKind, type CircleKind } from './circleHelpers'
 import {
   drawToolKeys,
   parseGeometryTypes,
   shouldReplaceOnDraw,
   type GeometryTypeName,
 } from './geometryTypeUtils'
-import {
-  ModifyTransformController,
-  transformModeFor,
-} from './ModifyTransformController'
+import { ModifyTransformController, transformModeFor } from './ModifyTransformController'
 import { isSketchTextFeature } from './sketch/SketchTextPopup'
 
 type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle'
@@ -62,7 +51,6 @@ export interface DrawBarExtraTool {
   mode: 'action' | 'toggle'
 }
 
-
 const modifyTool: ToolDef = {
   id: 'modify',
   label: 'Modifier',
@@ -84,10 +72,7 @@ const clearAllTool: ToolDef = {
   clearAll: true,
 }
 
-const DRAW_TOOL_DEFS: Record<
-  ReturnType<typeof drawToolKeys>[number],
-  ToolDef
-> = {
+const DRAW_TOOL_DEFS: Record<ReturnType<typeof drawToolKeys>[number], ToolDef> = {
   Point: {
     id: 'point',
     label: 'Point',
@@ -154,9 +139,7 @@ export class DrawToolsBar {
   private readonly showClearAll: boolean
   private readonly extraTools: DrawBarExtraTool[]
   private readonly onExtraTool: ((id: string, active: boolean) => void) | null
-  private readonly onFeatureCreated:
-    | ((feature: OlFeature<OlGeometry>) => void)
-    | null
+  private readonly onFeatureCreated: ((feature: OlFeature<OlGeometry>) => void) | null
   private geometryType: GeometryTypeOption
   private drawStyle: StyleLike
   private customStyle: StyleLike | null | undefined
@@ -294,15 +277,13 @@ export class DrawToolsBar {
     this.onExtraTool = opts.onExtraTool ?? null
     this.onFeatureCreated = opts.onFeatureCreated ?? null
     this.customStyle = opts.style
-    this.drawStyle =
-      opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType))
+    this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType))
 
     this.modify = new Modify({
       source: this.source,
       // Cercle / disque / texte : gérés par ModifyTransformController
       filter: (feature) =>
-        !(feature.getGeometry() instanceof Circle) &&
-        !isSketchTextFeature(feature),
+        !(feature.getGeometry() instanceof Circle) && !isSketchTextFeature(feature),
     })
     this.modify.setActive(false)
     this.snap = new Snap({ source: this.source })
@@ -338,8 +319,7 @@ export class DrawToolsBar {
   setStyle(style: StyleLike | null | undefined): void {
     this.clearTransient()
     this.customStyle = style
-    this.drawStyle =
-      style ?? drawStyleFor(parseGeometryTypes(this.geometryType))
+    this.drawStyle = style ?? drawStyleFor(parseGeometryTypes(this.geometryType))
   }
 
   private toolsList(): ToolDef[] {
@@ -350,9 +330,7 @@ export class DrawToolsBar {
       action: t.mode === 'action',
       extraToggle: t.mode === 'toggle',
     })
-    const extrasById = new globalThis.Map(
-      this.extraTools.map((t) => [t.id, toDef(t)] as const),
-    )
+    const extrasById = new globalThis.Map(this.extraTools.map((t) => [t.id, toDef(t)] as const))
     const pickExtras = (...ids: string[]): ToolDef[] =>
       ids.flatMap((id) => {
         const t = extrasById.get(id)
@@ -387,9 +365,7 @@ export class DrawToolsBar {
     if (io.length) groups.push(io)
 
     const placed = new Set(groups.flat().map((t) => t.id))
-    const leftovers = this.extraTools
-      .filter((t) => !placed.has(t.id))
-      .map(toDef)
+    const leftovers = this.extraTools.filter((t) => !placed.has(t.id)).map(toDef)
     if (leftovers.length) groups.push(leftovers)
 
     const sep = (): ToolDef => ({
@@ -409,9 +385,7 @@ export class DrawToolsBar {
 
   /** Active / désactive visuellement un bouton extra (enabled). */
   setExtraEnabled(id: string, enabled: boolean): void {
-    const btn = this.target.querySelector<HTMLButtonElement>(
-      `button[data-tool-id="${id}"]`,
-    )
+    const btn = this.target.querySelector<HTMLButtonElement>(`button[data-tool-id="${id}"]`)
     if (!btn) return
     btn.disabled = !enabled
     btn.setAttribute('aria-disabled', enabled ? 'false' : 'true')
@@ -419,9 +393,7 @@ export class DrawToolsBar {
 
   /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
   setSaveState(state: 'idle' | 'saved' | 'dirty'): void {
-    const btn = this.target.querySelector<HTMLButtonElement>(
-      'button[data-tool-id="save"]',
-    )
+    const btn = this.target.querySelector<HTMLButtonElement>('button[data-tool-id="save"]')
     if (!btn) return
     btn.classList.toggle('ec-geometry-editor__tool--save-saved', state === 'saved')
     btn.classList.toggle('ec-geometry-editor__tool--save-dirty', state === 'dirty')
@@ -521,9 +493,7 @@ export class DrawToolsBar {
     if (already) return
 
     this.activeId = tool.id
-    const btn = this.target.querySelector<HTMLButtonElement>(
-      `button[data-tool-id="${tool.id}"]`,
-    )
+    const btn = this.target.querySelector<HTMLButtonElement>(`button[data-tool-id="${tool.id}"]`)
     btn?.setAttribute('aria-pressed', 'true')
     btn?.classList.add('is-active')
 
@@ -555,9 +525,7 @@ export class DrawToolsBar {
     const replaceOnDraw = shouldReplaceOnDraw(types)
 
     const sketchStyle =
-      tool.circleKind === 'disc' || tool.circleKind === 'circle'
-        ? discDrawStyle
-        : this.drawStyle
+      tool.circleKind === 'disc' || tool.circleKind === 'circle' ? discDrawStyle : this.drawStyle
 
     const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle)
 

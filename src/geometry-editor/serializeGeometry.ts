@@ -18,10 +18,7 @@ import {
   serializeCircleFeature,
   serializeMultiCircleFeatures,
 } from './circleHelpers'
-import {
-  parseGeometryTypes,
-  primaryGeometryType,
-} from './geometryTypeUtils'
+import { parseGeometryTypes, primaryGeometryType } from './geometryTypeUtils'
 
 const geoJsonFormat = new GeoJSON()
 const kmlFormat = new KML()
@@ -60,12 +57,7 @@ export function serializeFeatures(
     mapProjection?: string
   },
 ): string {
-  const {
-    geometryType,
-    precision,
-    outputFormat,
-    mapProjection = 'EPSG:3857',
-  } = options
+  const { geometryType, precision, outputFormat, mapProjection = 'EPSG:3857' } = options
 
   if (!features.length) return ''
 
@@ -93,29 +85,16 @@ export function serializeFeatures(
   }
 
   if (primary === 'MultiCircle') {
-    const s = serializeMultiCircleFeatures(
-      features,
-      'circle',
-      precision,
-      mapProjection,
-    )
+    const s = serializeMultiCircleFeatures(features, 'circle', precision, mapProjection)
     if (s) return s
   }
 
   if (primary === 'MultiDisc') {
-    const s = serializeMultiCircleFeatures(
-      features,
-      'disc',
-      precision,
-      mapProjection,
-    )
+    const s = serializeMultiCircleFeatures(features, 'disc', precision, mapProjection)
     if (s) return s
   }
 
-  if (
-    (primary === 'Circle' || primary === 'Disc') &&
-    features.length === 1
-  ) {
+  if ((primary === 'Circle' || primary === 'Disc') && features.length === 1) {
     const s = serializeCircleFeature(features[0], precision, mapProjection)
     if (s) return s
   }

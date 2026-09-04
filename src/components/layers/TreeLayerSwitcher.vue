@@ -43,38 +43,19 @@ function onChange(node: TreeLayerNode, checked: boolean) {
     </div>
 
     <ul class="ec-tree-layers__list">
-      <li
-        v-for="node in nodes"
-        :key="node.id"
-        class="ec-tree-layers__item"
-      >
+      <li v-for="node in nodes" :key="node.id" class="ec-tree-layers__item">
         <div class="fr-checkbox-group">
           <input
             :id="`tls-${node.id}`"
             type="checkbox"
             :checked="node.visible"
             @change="onChange(node, ($event.target as HTMLInputElement).checked)"
-          >
-          <label
-            class="fr-label"
-            :for="`tls-${node.id}`"
-          >{{ node.title }}</label>
+          />
+          <label class="fr-label" :for="`tls-${node.id}`">{{ node.title }}</label>
         </div>
-        <ul
-          v-if="node.visible && node.legend?.length"
-          class="ec-tree-layers__legend"
-        >
-          <li
-            v-for="leg in node.legend"
-            :key="leg.id"
-            class="ec-tree-layers__legend-item"
-          >
-            <img
-              v-if="leg.imageUrl"
-              class="ec-tree-layers__swatch"
-              :src="leg.imageUrl"
-              alt=""
-            >
+        <ul v-if="node.visible && node.legend?.length" class="ec-tree-layers__legend">
+          <li v-for="leg in node.legend" :key="leg.id" class="ec-tree-layers__legend-item">
+            <img v-if="leg.imageUrl" class="ec-tree-layers__swatch" :src="leg.imageUrl" alt="" />
             <span
               v-else
               class="ec-tree-layers__swatch ec-tree-layers__swatch--color"
@@ -86,17 +67,11 @@ function onChange(node: TreeLayerNode, checked: boolean) {
       </li>
     </ul>
 
-    <p
-      v-if="!nodes.length"
-      class="ec-tree-layers__hint"
-    >
+    <p v-if="!nodes.length" class="ec-tree-layers__hint">
       Aucune couche configurée pour le moment.
     </p>
 
-    <p
-      v-else-if="!flatLegend.length"
-      class="ec-tree-layers__hint"
-    >
+    <p v-else-if="!flatLegend.length" class="ec-tree-layers__hint">
       Activez une couche pour afficher sa légende.
     </p>
   </section>

@@ -4,12 +4,12 @@ Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours
 
 ## Routes
 
-| Route | Vue | Rôle |
-|-------|-----|------|
-| `/` | `HomeView.vue` | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA) |
-| `/map` | `DemoView.vue` | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire |
-| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone |
-| `/sketch` | `SketchDemoView.vue` | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte) |
+| Route              | Vue                      | Rôle                                                                                                                               |
+| ------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                 |
+| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                              |
+| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                   |
 
 ## Navigation
 
@@ -30,7 +30,7 @@ La démo est publiée par le workflow `pages.yml` (branche par défaut) :
 1. `npm run build:demo` avec `base` dérivé de `GITHUB_REPOSITORY`
 2. Artefact `public/` (+ `404.html` = `index.html` pour le routage SPA)
 
-Après le workflow vert : **Settings → Pages** (source *GitHub Actions*), URL typiquement du type
+Après le workflow vert : **Settings → Pages** (source _GitHub Actions_), URL typiquement du type
 `https://ignf.github.io/entree-carto/`.
 
 En local, simuler le sous-chemin :

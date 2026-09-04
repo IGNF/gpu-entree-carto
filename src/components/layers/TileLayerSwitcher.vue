@@ -28,10 +28,7 @@ function thumbClass(id: BaseLayerId): string {
   <section class="ec-tile-switcher" aria-label="Fonds de plan">
     <h3 class="ec-tile-switcher__title">Fonds de plan</h3>
     <ul class="ec-tile-switcher__list">
-      <li
-        v-for="preset in presets"
-        :key="preset.id"
-      >
+      <li v-for="preset in presets" :key="preset.id">
         <button
           type="button"
           class="ec-tile-switcher__tile"
@@ -39,10 +36,7 @@ function thumbClass(id: BaseLayerId): string {
           :aria-pressed="modelValue === preset.id"
           @click="select(preset.id)"
         >
-          <span
-            :class="thumbClass(preset.id)"
-            aria-hidden="true"
-          />
+          <span :class="thumbClass(preset.id)" aria-hidden="true" />
           <span class="ec-tile-switcher__label">{{ preset.label }}</span>
         </button>
       </li>
@@ -103,7 +97,15 @@ function thumbClass(id: BaseLayerId): string {
 
 .ec-tile-switcher__thumb--plan {
   background-color: #d8e4f0;
-  background-image: linear-gradient(135deg, #c5d4e8 25%, #e8eef5 25%, #e8eef5 50%, #c5d4e8 50%, #c5d4e8 75%, #e8eef5 75%);
+  background-image: linear-gradient(
+    135deg,
+    #c5d4e8 25%,
+    #e8eef5 25%,
+    #e8eef5 50%,
+    #c5d4e8 50%,
+    #c5d4e8 75%,
+    #e8eef5 75%
+  );
   background-size: 12px 12px;
 }
 

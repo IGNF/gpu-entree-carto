@@ -40,12 +40,10 @@ export class SketchExportDialog {
     this.root
       .querySelector('.ec-sketch-export-dialog__cancel')!
       .addEventListener('click', () => this.close(null))
-    this.root
-      .querySelector('.ec-sketch-export-dialog__ok')!
-      .addEventListener('click', () => {
-        const v = this.select.value === 'kml' ? 'kml' : 'geojson'
-        this.close(v)
-      })
+    this.root.querySelector('.ec-sketch-export-dialog__ok')!.addEventListener('click', () => {
+      const v = this.select.value === 'kml' ? 'kml' : 'geojson'
+      this.close(v)
+    })
     this.host.appendChild(this.root)
   }
 

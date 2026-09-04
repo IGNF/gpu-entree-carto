@@ -12,7 +12,10 @@ export function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n))
 }
 
-export function parseColor(value: string, fallback: RgbaColor = { r: 0, g: 0, b: 145, a: 1 }): RgbaColor {
+export function parseColor(
+  value: string,
+  fallback: RgbaColor = { r: 0, g: 0, b: 145, a: 1 },
+): RgbaColor {
   const v = (value || '').trim()
   if (!v || v === 'transparent') return { r: 0, g: 0, b: 0, a: 0 }
   const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(v)
@@ -27,8 +30,7 @@ export function parseColor(value: string, fallback: RgbaColor = { r: 0, g: 0, b:
     const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
     return { r, g, b, a: clamp01(a) }
   }
-  const rgba =
-    /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v)
+  const rgba = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v)
   if (rgba) {
     return {
       r: Math.round(Number(rgba[1])),
@@ -49,7 +51,9 @@ export function toRgbaString(c: RgbaColor): string {
 
 export function toHexRgb(c: RgbaColor): string {
   const h = (n: number) =>
-    Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0')
   return `#${h(c.r)}${h(c.g)}${h(c.b)}`
 }
 

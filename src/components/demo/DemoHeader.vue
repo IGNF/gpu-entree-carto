@@ -20,33 +20,21 @@ const isActive = computed(() => (name: string) => {
 </script>
 
 <template>
-  <header
-    role="banner"
-    class="fr-header ec-demo-header"
-  >
+  <header role="banner" class="fr-header ec-demo-header">
     <div class="fr-header__body">
       <div class="fr-container">
         <div class="fr-header__body-row">
           <div class="fr-header__brand fr-enlarge-link">
             <div class="fr-header__brand-top">
               <div class="fr-header__logo">
-                <p class="fr-logo">
-                  République<br>Française
-                </p>
+                <p class="fr-logo">République<br />Française</p>
               </div>
             </div>
             <div class="fr-header__service">
-              <RouterLink
-                to="/"
-                title="Accueil - entree-carto"
-              >
-                <p class="fr-header__service-title">
-                  entree-carto
-                </p>
+              <RouterLink to="/" title="Accueil - entree-carto">
+                <p class="fr-header__service-title">entree-carto</p>
               </RouterLink>
-              <p class="fr-header__service-tagline">
-                Démonstration — refonte GPU / DSFR
-              </p>
+              <p class="fr-header__service-tagline">Démonstration — refonte GPU / DSFR</p>
             </div>
           </div>
         </div>
@@ -54,18 +42,9 @@ const isActive = computed(() => (name: string) => {
     </div>
     <div class="fr-header__menu">
       <div class="fr-container">
-        <nav
-          class="fr-nav"
-          id="ec-demo-navigation"
-          role="navigation"
-          aria-label="Menu principal"
-        >
+        <nav id="ec-demo-navigation" class="fr-nav" role="navigation" aria-label="Menu principal">
           <ul class="fr-nav__list">
-            <li
-              v-for="link in links"
-              :key="link.name"
-              class="fr-nav__item"
-            >
+            <li v-for="link in links" :key="link.name" class="fr-nav__item">
               <RouterLink
                 class="fr-nav__link"
                 :to="link.to"

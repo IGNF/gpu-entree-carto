@@ -38,12 +38,7 @@ const props = withDefaults(
 )
 
 type SearchEngineAdvancedLike = Control & {
-  createMarker: (
-    coords: number[],
-    content: string,
-    origin?: string,
-    center?: boolean,
-  ) => void
+  createMarker: (coords: number[], content: string, origin?: string, center?: boolean) => void
   getMap: () => Map | null
   on: (type: string, listener: () => void) => void
   un?: (type: string, listener: () => void) => void
@@ -90,9 +85,7 @@ function openFicheFromSearch(search: StandardViewerSearch): void {
     parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`)
   }
   if (search.position) {
-    parts.push(
-      `<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`,
-    )
+    parts.push(`<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`)
   }
   tabPanels.showSelection({
     title: label,
@@ -187,10 +180,7 @@ function refitPopupForOpenPanels(control: SearchEngineAdvancedLike): void {
  * - Fiche TabPanels ouverte **avant** le marker, puis recentrage avec padding panneau.
  * - Objet location toujours avec poiType: [] si absent.
  */
-function applyInitialSearch(
-  control: SearchEngineAdvancedLike,
-  search: StandardViewerSearch,
-): void {
+function applyInitialSearch(control: SearchEngineAdvancedLike, search: StandardViewerSearch): void {
   const key = searchKey(search)
   if (!key || key === appliedKey) return
   appliedKey = key
@@ -209,15 +199,8 @@ function applyInitialSearch(
   if (hasCoords) {
     // Même format que geopf (géoloc native / lieux) : pas de <p> (marges DSFR
     // → trait parasite entre bulle et appendice).
-    const popupHtml = isGeolocate
-      ? `<strong>${escapeHtml(label)}</strong><br/>${x}, ${y}`
-      : label
-    control.createMarker(
-      [x, y],
-      popupHtml,
-      isGeolocate ? 'geolocate' : 'searchAtInit',
-      true,
-    )
+    const popupHtml = isGeolocate ? `<strong>${escapeHtml(label)}</strong><br/>${x}, ${y}` : label
+    control.createMarker([x, y], popupHtml, isGeolocate ? 'geolocate' : 'searchAtInit', true)
     requestAnimationFrame(() => refitPopupForOpenPanels(control))
   }
 

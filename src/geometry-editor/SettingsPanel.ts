@@ -27,8 +27,7 @@ const ZOOM_DECIMALS = 1
 const LON_LAT_STEP = 10 ** -LON_LAT_DECIMALS
 const ZOOM_STEP = 10 ** -ZOOM_DECIMALS
 
-type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS &
-  GeometryEditorOptions
+type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS & GeometryEditorOptions
 
 /** API minimale — évite l’import circulaire avec GeometryEditor. */
 export interface SettingsEditorHost {
@@ -71,8 +70,7 @@ export class SettingsPanel {
 
     this.button = document.createElement('button')
     this.button.type = 'button'
-    this.button.className =
-      'ec-geometry-editor__tool ec-geometry-editor__tool--settings'
+    this.button.className = 'ec-geometry-editor__tool ec-geometry-editor__tool--settings'
     this.button.setAttribute('aria-label', 'Options de la carte')
     this.button.setAttribute('aria-pressed', 'false')
     this.button.setAttribute('aria-expanded', 'false')
@@ -150,33 +148,19 @@ export class SettingsPanel {
     title.textContent = 'Options'
     form.appendChild(title)
 
-    form.appendChild(
-      this.geometryTypeField(String(opts.geometryType)),
-    )
+    form.appendChild(this.geometryTypeField(String(opts.geometryType)))
     form.appendChild(
       this.selectField('outputFormat', 'Format de sortie', OUTPUT_FORMATS, opts.outputFormat),
     )
 
-    form.appendChild(
-      this.numberField('height', 'Hauteur (px)', Number(opts.height) || 400),
-    )
-    form.appendChild(
-      this.textField('width', 'Largeur', String(opts.width)),
-    )
-    form.appendChild(
-      this.numberField('lon', 'Longitude courante', viewState.lon, LON_LAT_STEP),
-    )
-    form.appendChild(
-      this.numberField('lat', 'Latitude courante', viewState.lat, LON_LAT_STEP),
-    )
-    form.appendChild(
-      this.numberField('zoom', 'Zoom courant', viewState.zoom, ZOOM_STEP),
-    )
+    form.appendChild(this.numberField('height', 'Hauteur (px)', Number(opts.height) || 400))
+    form.appendChild(this.textField('width', 'Largeur', String(opts.width)))
+    form.appendChild(this.numberField('lon', 'Longitude courante', viewState.lon, LON_LAT_STEP))
+    form.appendChild(this.numberField('lat', 'Latitude courante', viewState.lat, LON_LAT_STEP))
+    form.appendChild(this.numberField('zoom', 'Zoom courant', viewState.zoom, ZOOM_STEP))
     form.appendChild(this.numberField('minZoom', 'Zoom min', opts.minZoom, 1))
     form.appendChild(this.numberField('maxZoom', 'Zoom max', opts.maxZoom, 1))
-    form.appendChild(
-      this.numberField('precision', 'Précision', opts.precision, 1),
-    )
+    form.appendChild(this.numberField('precision', 'Précision', opts.precision, 1))
 
     form.appendChild(this.checkField('editable', 'Éditable', opts.editable))
     form.appendChild(
@@ -184,12 +168,8 @@ export class SettingsPanel {
     )
     form.appendChild(this.checkField('blockView', 'Bloquer la vue', opts.blockView))
     form.appendChild(this.checkField('showZoom', 'Contrôle zoom', opts.showZoom))
-    form.appendChild(
-      this.checkField('showAttributions', 'Attributions', opts.showAttributions),
-    )
-    form.appendChild(
-      this.checkField('showSettings', 'Bouton réglages', opts.showSettings),
-    )
+    form.appendChild(this.checkField('showAttributions', 'Attributions', opts.showAttributions))
+    form.appendChild(this.checkField('showSettings', 'Bouton réglages', opts.showSettings))
     form.appendChild(
       this.selectField(
         'toolsToggle',
@@ -284,11 +264,7 @@ export class SettingsPanel {
     this.setNumberIfIdle(this.form, 'zoom', viewState.zoom)
   }
 
-  private setNumberIfIdle(
-    form: HTMLFormElement,
-    name: string,
-    value: number,
-  ): void {
+  private setNumberIfIdle(form: HTMLFormElement, name: string, value: number): void {
     const input = form.elements.namedItem(name)
     if (!(input instanceof HTMLInputElement)) return
     if (document.activeElement === input) return
@@ -348,8 +324,7 @@ export class SettingsPanel {
     input.value = current
     input.setAttribute('list', 'ec-geom-type-list')
     input.placeholder = 'Point,Disc ou Geometry…'
-    input.title =
-      'Un type, ou plusieurs séparés par des virgules (ex. Point,Disc)'
+    input.title = 'Un type, ou plusieurs séparés par des virgules (ex. Point,Disc)'
 
     const list = document.createElement('datalist')
     list.id = 'ec-geom-type-list'
@@ -377,12 +352,7 @@ export class SettingsPanel {
     return this.fieldWrap(label, input)
   }
 
-  private numberField(
-    name: string,
-    label: string,
-    value: number,
-    step = 1,
-  ): HTMLElement {
+  private numberField(name: string, label: string, value: number, step = 1): HTMLElement {
     const input = document.createElement('input')
     input.type = 'number'
     input.name = name
@@ -397,8 +367,7 @@ export class SettingsPanel {
     input.name = name
     input.checked = checked
     const wrap = document.createElement('label')
-    wrap.className =
-      'ec-geometry-editor__settings-field ec-geometry-editor__settings-field--check'
+    wrap.className = 'ec-geometry-editor__settings-field ec-geometry-editor__settings-field--check'
     wrap.append(input, document.createTextNode(` ${label}`))
     return wrap
   }

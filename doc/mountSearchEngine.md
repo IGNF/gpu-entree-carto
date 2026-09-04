@@ -8,14 +8,14 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 
 ## Options
 
-| Option | Type | Défaut | Description |
-|--------|------|--------|-------------|
-| `mode` | `'redirect' \| 'emit'` | `'redirect'` | Formulaire HTML vers la carte, ou callback seul (SPA) |
-| `mapUrl` | `string` | `'/map/'` | URL cible (`redirect`) |
-| `method` | `'GET' \| 'POST'` | `'POST'` | Méthode formulaire (`redirect`, gpu-site = POST) |
-| `placeholder` | `string` | adresse / ville / lieu… | Placeholder barre |
-| `serviceBaseUrl` | `string` | `https://data.geopf.fr` | Base services |
-| `onSelect` | `(loc) => void` | — | Callback à la validation |
+| Option           | Type                   | Défaut                  | Description                                           |
+| ---------------- | ---------------------- | ----------------------- | ----------------------------------------------------- |
+| `mode`           | `'redirect' \| 'emit'` | `'redirect'`            | Formulaire HTML vers la carte, ou callback seul (SPA) |
+| `mapUrl`         | `string`               | `'/map/'`               | URL cible (`redirect`)                                |
+| `method`         | `'GET' \| 'POST'`      | `'POST'`                | Méthode formulaire (`redirect`, gpu-site = POST)      |
+| `placeholder`    | `string`               | adresse / ville / lieu… | Placeholder barre                                     |
+| `serviceBaseUrl` | `string`               | `https://data.geopf.fr` | Base services                                         |
+| `onSelect`       | `(loc) => void`        | —                       | Callback à la validation                              |
 
 ## Comportement
 
@@ -50,7 +50,7 @@ gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
   mapUrl: '/map/',
   method: 'POST',
   placeholder: 'Rechercher une adresse, une ville, un lieu...',
-});
+})
 ```
 
 ## Fallback

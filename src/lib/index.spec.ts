@@ -35,9 +35,7 @@ describe('lib exports unitaires', () => {
   it('calcule le zoom selon le type de lieu', () => {
     expect(zoomForLocationSearch({ type: 'StreetAddress' })).toBe(18)
     expect(zoomForLocationSearch({ type: 'PositionOfInterest' })).toBe(13)
-    expect(
-      zoomForLocationSearch({ type: 'PositionOfInterest', poiType: ['département'] }),
-    ).toBe(9)
+    expect(zoomForLocationSearch({ type: 'PositionOfInterest', poiType: ['département'] })).toBe(9)
   })
 
   it('sérialise les params formulaire gpu-site', () => {

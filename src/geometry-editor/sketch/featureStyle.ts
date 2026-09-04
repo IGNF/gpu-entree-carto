@@ -5,14 +5,7 @@
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import Circle from 'ol/geom/Circle'
-import {
-  Point,
-  LineString,
-  MultiLineString,
-  Polygon,
-  MultiPolygon,
-  MultiPoint,
-} from 'ol/geom'
+import { Point, LineString, MultiLineString, Polygon, MultiPolygon, MultiPoint } from 'ol/geom'
 import type { Coordinate } from 'ol/coordinate'
 import Style from 'ol/style/Style'
 import Fill from 'ol/style/Fill'
@@ -30,13 +23,7 @@ import {
 
 export const FEATURE_STYLE_PROP = 'ec-feature-style'
 
-export type FeatureStyleKind =
-  | 'text'
-  | 'point'
-  | 'line'
-  | 'polygon'
-  | 'circle'
-  | 'disc'
+export type FeatureStyleKind = 'text' | 'point' | 'line' | 'polygon' | 'circle' | 'disc'
 
 export type StrokeLineCap = 'butt' | 'round' | 'square'
 export type StrokeLineJoin = 'bevel' | 'round' | 'miter'
@@ -95,9 +82,7 @@ const DEFAULTS: FeatureStyleAttrs = {
   zIndex: 0,
 }
 
-export function defaultFeatureStyleAttrs(
-  kind: FeatureStyleKind,
-): FeatureStyleAttrs {
+export function defaultFeatureStyleAttrs(kind: FeatureStyleKind): FeatureStyleAttrs {
   const base = { ...DEFAULTS, kind }
   if (kind === 'circle') {
     return { ...base, fillColor: 'rgba(0, 0, 0, 0)' }
@@ -119,9 +104,7 @@ export function defaultFeatureStyleAttrs(
   return base
 }
 
-export function featureStyleKindOf(
-  feature: OlFeature<OlGeometry>,
-): FeatureStyleKind {
+export function featureStyleKindOf(feature: OlFeature<OlGeometry>): FeatureStyleKind {
   if (isSketchTextFeature(feature)) return 'text'
   const geom = feature.getGeometry()
   if (!geom) return 'polygon'
@@ -136,11 +119,13 @@ export function featureStyleKindOf(
 
 function coerceAttrs(
   kind: FeatureStyleKind,
-  partial: Partial<FeatureStyleAttrs> & {
-    /** Ancien format import */
-    fontWeight?: string
-    fontStyle?: string
-  } | undefined,
+  partial:
+    | (Partial<FeatureStyleAttrs> & {
+        /** Ancien format import */
+        fontWeight?: string
+        fontStyle?: string
+      })
+    | undefined,
 ): FeatureStyleAttrs {
   const defaults = defaultFeatureStyleAttrs(kind)
   if (!partial || typeof partial !== 'object') return defaults
@@ -148,10 +133,7 @@ function coerceAttrs(
   const merged: FeatureStyleAttrs = { ...defaults, ...rest, kind }
   if (typeof rest.fontBold !== 'boolean' && fontWeight != null) {
     merged.fontBold =
-      fontWeight === 'bold' ||
-      fontWeight === '700' ||
-      fontWeight === '600' ||
-      fontWeight === '500'
+      fontWeight === 'bold' || fontWeight === '700' || fontWeight === '600' || fontWeight === '500'
   }
   if (typeof rest.fontItalic !== 'boolean' && fontStyle != null) {
     merged.fontItalic = fontStyle === 'italic' || fontStyle === 'oblique'
@@ -165,39 +147,24 @@ function cssFont(attrs: FeatureStyleAttrs): string {
   return `${style} ${weight} ${attrs.fontSize}pt ${attrs.fontFamily}`
 }
 
-export function getFeatureStyleAttrs(
-  feature: OlFeature<OlGeometry>,
-): FeatureStyleAttrs {
+export function getFeatureStyleAttrs(feature: OlFeature<OlGeometry>): FeatureStyleAttrs {
   const kind = featureStyleKindOf(feature)
-  const stored = feature.get(FEATURE_STYLE_PROP) as
-    | Partial<FeatureStyleAttrs>
-    | undefined
-  const textStored = feature.get(SKETCH_TEXT_PROP) as
-    | Partial<SketchTextAttrs>
-    | undefined
+  const stored = feature.get(FEATURE_STYLE_PROP) as Partial<FeatureStyleAttrs> | undefined
+  const textStored = feature.get(SKETCH_TEXT_PROP) as Partial<SketchTextAttrs> | undefined
   const base = coerceAttrs(kind, stored)
   return {
     ...base,
     kind,
-    text:
-      stored?.text ??
-      textStored?.text ??
-      String(feature.get('text') ?? base.text),
+    text: stored?.text ?? textStored?.text ?? String(feature.get('text') ?? base.text),
     fontSize: stored?.fontSize ?? textStored?.fontSize ?? base.fontSize,
     fontColor: stored?.fontColor ?? textStored?.fontColor ?? base.fontColor,
-    textStrokeColor:
-      stored?.textStrokeColor ??
-      textStored?.strokeColor ??
-      base.textStrokeColor,
-    rotation: clampRotationDeg(
-      stored?.rotation ?? textStored?.rotation ?? base.rotation,
-    ),
+    textStrokeColor: stored?.textStrokeColor ?? textStored?.strokeColor ?? base.textStrokeColor,
+    rotation: clampRotationDeg(stored?.rotation ?? textStored?.rotation ?? base.rotation),
   }
 }
 
 function strokeFromAttrs(attrs: FeatureStyleAttrs): Stroke {
-  const dash =
-    attrs.lineDash > 0 ? [attrs.lineDash, attrs.lineDash] : undefined
+  const dash = attrs.lineDash > 0 ? [attrs.lineDash, attrs.lineDash] : undefined
   return new Stroke({
     color: attrs.strokeColor,
     width: attrs.strokeWidth,
@@ -298,10 +265,7 @@ export function buildFeatureStyle(attrs: FeatureStyleAttrs): Style {
 }
 
 /** Persiste le style dans les properties + applique le Style OL. */
-export function applyFeatureStyle(
-  feature: OlFeature<OlGeometry>,
-  attrs: FeatureStyleAttrs,
-): void {
+export function applyFeatureStyle(feature: OlFeature<OlGeometry>, attrs: FeatureStyleAttrs): void {
   const kind = attrs.kind || featureStyleKindOf(feature)
   const normalized = coerceAttrs(kind, {
     ...attrs,
@@ -325,9 +289,7 @@ export function applyFeatureStyle(
 }
 
 /** Réapplique le style stocké dans les properties (après import). */
-export function restoreFeatureStyleFromProperties(
-  feature: OlFeature<OlGeometry>,
-): boolean {
+export function restoreFeatureStyleFromProperties(feature: OlFeature<OlGeometry>): boolean {
   const stored = feature.get(FEATURE_STYLE_PROP)
   const text = feature.get(SKETCH_TEXT_PROP) || feature.get('text')
   if (!stored && !text) return false
@@ -335,16 +297,12 @@ export function restoreFeatureStyleFromProperties(
   return true
 }
 
-export function restoreFeaturesStyles(
-  features: OlFeature<OlGeometry>[],
-): void {
+export function restoreFeaturesStyles(features: OlFeature<OlGeometry>[]): void {
   for (const f of features) restoreFeatureStyleFromProperties(f)
 }
 
 /** Points d’ancrage sur la géométrie (sommets / centre) pour l’appendice popup. */
-export function featureStylePopupAnchorCandidates(
-  feature: OlFeature<OlGeometry>,
-): Coordinate[] {
+export function featureStylePopupAnchorCandidates(feature: OlFeature<OlGeometry>): Coordinate[] {
   const geom = feature.getGeometry()
   if (!geom) return []
   if (geom instanceof Point) return [geom.getCoordinates()]
@@ -399,11 +357,7 @@ export function featureStylePopupAnchor(
   const scored = candidates.map((c, index) => {
     const p = getPixel(c)
     const onScreen = Boolean(
-      p &&
-        p[0] >= 0 &&
-        p[1] >= 0 &&
-        p[0] <= mapSize[0] &&
-        p[1] <= mapSize[1],
+      p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1],
     )
     return {
       c,

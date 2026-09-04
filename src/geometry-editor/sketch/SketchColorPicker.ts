@@ -1,12 +1,7 @@
 /**
  * Sélecteur de couleur croquis : clic sur la case → dialogue (teinte native + hex + opacité).
  */
-import {
-  parseColor,
-  toHexRgb,
-  toRgbaString,
-  type RgbaColor,
-} from './colorUtils'
+import { parseColor, toHexRgb, toRgbaString, type RgbaColor } from './colorUtils'
 
 export type ColorChangeHandler = (rgba: string) => void
 

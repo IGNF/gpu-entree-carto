@@ -33,13 +33,9 @@ import { geometryStyleFunction } from './styles'
 import { SketchControl } from './SketchControl'
 import { SettingsPanel } from './SettingsPanel'
 import { restoreCircleFeaturesForKind } from './circleHelpers'
-import {
-  parseGeometryTypes,
-  primaryGeometryType,
-} from './geometryTypeUtils'
+import { parseGeometryTypes, primaryGeometryType } from './geometryTypeUtils'
 
-type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS &
-  GeometryEditorOptions
+type ResolvedOptions = typeof DEFAULT_GEOMETRY_EDITOR_OPTIONS & GeometryEditorOptions
 
 function cssSize(value: string | number): string {
   return typeof value === 'number' ? `${value}px` : value
@@ -50,10 +46,7 @@ function isFormField(el: HTMLElement): boolean {
   return tag === 'input' || tag === 'textarea' || tag === 'select'
 }
 
-function mergeOptions(
-  current: ResolvedOptions,
-  patch: GeometryEditorOptions,
-): ResolvedOptions {
+function mergeOptions(current: ResolvedOptions, patch: GeometryEditorOptions): ResolvedOptions {
   return {
     ...current,
     ...patch,
@@ -63,10 +56,7 @@ function mergeOptions(
           ? patch.tileLayers
           : DEFAULT_GEOMETRY_EDITOR_OPTIONS.tileLayers
         : current.tileLayers,
-    customStyle:
-      patch.customStyle === undefined
-        ? current.customStyle
-        : patch.customStyle,
+    customStyle: patch.customStyle === undefined ? current.customStyle : patch.customStyle,
   }
 }
 
@@ -149,10 +139,7 @@ export class GeometryEditor {
 
   constructor(element: HTMLElement, options: GeometryEditorOptions = {}) {
     this.element = element
-    this.options = mergeOptions(
-      { ...DEFAULT_GEOMETRY_EDITOR_OPTIONS },
-      options,
-    )
+    this.options = mergeOptions({ ...DEFAULT_GEOMETRY_EDITOR_OPTIONS }, options)
     this.initialOptions = cloneResolvedOptions(this.options)
 
     this.applyElementVisibility()
@@ -222,10 +209,7 @@ export class GeometryEditor {
     this.element.addEventListener('change', this.onElementInput)
     const jq = getJQuery()
     if (jq) {
-      jq(this.element).on(
-        'input.ecGeometryEditor change.ecGeometryEditor',
-        this.onElementInput,
-      )
+      jq(this.element).on('input.ecGeometryEditor change.ecGeometryEditor', this.onElementInput)
       this.jqueryListening = true
     }
   }
@@ -299,9 +283,7 @@ export class GeometryEditor {
     }
 
     if (patch.customStyle !== undefined) {
-      this.vectorLayer.setStyle(
-        this.options.customStyle ?? geometryStyleFunction,
-      )
+      this.vectorLayer.setStyle(this.options.customStyle ?? geometryStyleFunction)
       this.sketch?.setStyle(this.options.customStyle)
     }
 
@@ -309,17 +291,13 @@ export class GeometryEditor {
       this.applyEditable()
     } else if (patch.toolsToggle !== undefined) {
       this.applyHostClass()
-      this.sketch?.setToolsToggle(
-        (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
-      )
+      this.sketch?.setToolsToggle((this.options.toolsToggle as ToolsToggleCorner | null) ?? null)
     } else if (
       this.sketch &&
       patch.geometryType !== undefined &&
       patch.geometryType !== prev.geometryType
     ) {
-      this.sketch.setGeometryType(
-        this.options.geometryType as GeometryTypeOption,
-      )
+      this.sketch.setGeometryType(this.options.geometryType as GeometryTypeOption)
     }
 
     if (
@@ -384,9 +362,7 @@ export class GeometryEditor {
     if (raw === this.lastLoadedRaw) return
     this.lastLoadedRaw = raw
     let features = parseRawToFeatures(raw)
-    const primary = primaryGeometryType(
-      parseGeometryTypes(this.options.geometryType),
-    )
+    const primary = primaryGeometryType(parseGeometryTypes(this.options.geometryType))
     if (primary === 'Circle' || primary === 'MultiCircle') {
       features = restoreCircleFeaturesForKind(features, 'circle')
     } else if (primary === 'Disc' || primary === 'MultiDisc') {
@@ -474,19 +450,13 @@ export class GeometryEditor {
   private hideSourceElement(): void {
     this.element.hidden = true
     this.element.setAttribute('aria-hidden', 'true')
-    this.element.classList.add(
-      'ec-geometry-editor-source--hidden',
-      'fr-hidden',
-    )
+    this.element.classList.add('ec-geometry-editor-source--hidden', 'fr-hidden')
   }
 
   private showSourceElement(): void {
     this.element.hidden = false
     this.element.removeAttribute('aria-hidden')
-    this.element.classList.remove(
-      'ec-geometry-editor-source--hidden',
-      'fr-hidden',
-    )
+    this.element.classList.remove('ec-geometry-editor-source--hidden', 'fr-hidden')
   }
 
   private applyView(patch: GeometryEditorOptions): void {
@@ -494,11 +464,7 @@ export class GeometryEditor {
     if (patch.lon !== undefined || patch.lat !== undefined) {
       const next = fromLonLat([this.options.lon, this.options.lat])
       const cur = view.getCenter()
-      if (
-        !cur ||
-        Math.abs(cur[0] - next[0]) > 1e-3 ||
-        Math.abs(cur[1] - next[1]) > 1e-3
-      ) {
+      if (!cur || Math.abs(cur[0] - next[0]) > 1e-3 || Math.abs(cur[1] - next[1]) > 1e-3) {
         view.setCenter(next)
       }
     }
@@ -573,8 +539,7 @@ export class GeometryEditor {
       if (!this.sketch) {
         this.sketch = new SketchControl({
           geometryType: this.options.geometryType as GeometryTypeOption,
-          toolsToggle:
-            (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
+          toolsToggle: (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
           source: this.source,
           layer: this.vectorLayer,
           style: this.options.customStyle,
@@ -585,12 +550,8 @@ export class GeometryEditor {
         // Comme avant SketchControl : chrome sur le host, pas dans l’overlay OL
         this.mapHost.appendChild(this.sketch.getElement())
       } else {
-        this.sketch.setGeometryType(
-          this.options.geometryType as GeometryTypeOption,
-        )
-        this.sketch.setToolsToggle(
-          (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
-        )
+        this.sketch.setGeometryType(this.options.geometryType as GeometryTypeOption)
+        this.sketch.setToolsToggle((this.options.toolsToggle as ToolsToggleCorner | null) ?? null)
         this.sketch.setStyle(this.options.customStyle)
       }
       this.applyHostClass()

@@ -46,8 +46,7 @@ function patchTerritoriesPanel(control: Control): void {
   if (!btn) return
 
   btn.id = 'GPterritoriesPanelClose'
-  btn.className =
-    'gpf-btn gpf-btn-icon-close fr-btn--close fr-btn fr-btn--tertiary-no-outline'
+  btn.className = 'gpf-btn gpf-btn-icon-close fr-btn--close fr-btn fr-btn--tertiary-no-outline'
   btn.title = 'Fermer le panneau'
   btn.removeAttribute('style')
   btn.replaceChildren()

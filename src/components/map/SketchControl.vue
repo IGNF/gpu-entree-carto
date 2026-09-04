@@ -6,10 +6,7 @@
  */
 import { useOlControl } from '@/composables/useOlControl'
 import { CONTROL_POSITIONS, type GeopfControlPosition } from '@/map/controlPositions'
-import {
-  SketchControl,
-  type SketchExtraTool,
-} from '@/geometry-editor/SketchControl'
+import { SketchControl, type SketchExtraTool } from '@/geometry-editor/SketchControl'
 import type { GeometryTypeOption } from '@/geometry-editor/types'
 import type { StyleLike } from 'ol/style/Style'
 import '@/geometry-editor/styles/geometry-editor.css'
@@ -39,13 +36,7 @@ const props = withDefaults(
     history: true,
     zIndex: 500,
     style: null,
-    extraTools: () => [
-      'Text',
-      'Import',
-      'Export',
-      'MeasureDistance',
-      'MeasureArea',
-    ],
+    extraTools: () => ['Text', 'Import', 'Export', 'MeasureDistance', 'MeasureArea'],
     enableFeatureStyleEditor: true,
   },
 )

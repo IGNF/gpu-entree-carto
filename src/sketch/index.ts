@@ -8,10 +8,7 @@ import { SketchControl } from '@/geometry-editor/SketchControl'
 import { attachGeometryTools } from '@/geometry-editor/attachGeometryTools'
 import { mountSketch } from './mountSketch'
 
-export type {
-  SketchControlOptions,
-  SketchExtraTool,
-} from '@/geometry-editor/SketchControl'
+export type { SketchControlOptions, SketchExtraTool } from '@/geometry-editor/SketchControl'
 export type {
   AttachGeometryToolsHandle,
   AttachGeometryToolsOptions,
@@ -32,9 +29,7 @@ const publicApi = {
 export default publicApi
 
 if (typeof window !== 'undefined') {
-  ;(
-    window as Window & { EntreeCartoSketch?: typeof publicApi }
-  ).EntreeCartoSketch = publicApi
+  ;(window as Window & { EntreeCartoSketch?: typeof publicApi }).EntreeCartoSketch = publicApi
 }
 
 declare global {

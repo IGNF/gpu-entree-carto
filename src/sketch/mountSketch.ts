@@ -9,10 +9,7 @@ import Zoom from 'ol/control/Zoom'
 import TileLayer from 'ol/layer/Tile'
 import XYZ from 'ol/source/XYZ'
 import { fromLonLat } from 'ol/proj'
-import {
-  SketchControl,
-  type SketchControlOptions,
-} from '@/geometry-editor/SketchControl'
+import { SketchControl, type SketchControlOptions } from '@/geometry-editor/SketchControl'
 import type { TileLayerConfig } from '@/geometry-editor/types'
 
 export interface MountSketchOptions extends SketchControlOptions {
@@ -63,10 +60,7 @@ export function mountSketch(
   target: HTMLElement | string,
   options: MountSketchOptions = {},
 ): MountSketchHandle {
-  const el =
-    typeof target === 'string'
-      ? document.querySelector<HTMLElement>(target)
-      : target
+  const el = typeof target === 'string' ? document.querySelector<HTMLElement>(target) : target
   if (!el) {
     throw new Error('[entree-carto-sketch] élément introuvable')
   }
@@ -78,9 +72,7 @@ export function mountSketch(
   const zoom = options.zoom ?? 5
   const minZoom = options.minZoom ?? 4
   const maxZoom = options.maxZoom ?? 19
-  const tileLayers = options.tileLayers?.length
-    ? options.tileLayers
-    : [DEFAULT_TILE]
+  const tileLayers = options.tileLayers?.length ? options.tileLayers : [DEFAULT_TILE]
   const showZoom = options.showZoom !== false
   const toolsToggle = options.toolsToggle ?? 'top-left'
 
@@ -129,17 +121,14 @@ export function mountSketch(
     clearAll: options.clearAll ?? true,
     history: options.history ?? true,
     localStorageKey:
-      options.localStorageKey === undefined
-        ? 'entree-carto-sketch'
-        : options.localStorageKey,
-    extraTools:
-      options.extraTools ?? [
-        'Text',
-        'Import',
-        'Export',
-        'MeasureDistance',
-        'MeasureArea',
-      ],
+      options.localStorageKey === undefined ? 'entree-carto-sketch' : options.localStorageKey,
+    extraTools: options.extraTools ?? [
+      'Text',
+      'Import',
+      'Export',
+      'MeasureDistance',
+      'MeasureArea',
+    ],
     enableFeatureStyleEditor: options.enableFeatureStyleEditor ?? true,
     source: options.source,
     layer: options.layer,

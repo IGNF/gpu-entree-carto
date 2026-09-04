@@ -4,10 +4,7 @@ import type { Geometry as OlGeometry } from 'ol/geom'
 import type VectorSource from 'ol/source/Vector'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
-import {
-  FEATURE_STYLE_PROP,
-  restoreFeaturesStyles,
-} from './featureStyle'
+import { FEATURE_STYLE_PROP, restoreFeaturesStyles } from './featureStyle'
 import { SKETCH_TEXT_PROP } from './SketchTextPopup'
 
 const GEOJSON = new GeoJSON()
@@ -22,9 +19,7 @@ function projectionOf(map: Map) {
 }
 
 /** KML ExtendedData ne garde bien que des chaînes → JSON.stringify des props style. */
-function cloneForKmlExport(
-  features: OlFeature<OlGeometry>[],
-): OlFeature<OlGeometry>[] {
+function cloneForKmlExport(features: OlFeature<OlGeometry>[]): OlFeature<OlGeometry>[] {
   return features.map((f) => {
     const c = f.clone()
     for (const key of STYLE_PROP_KEYS) {
@@ -38,9 +33,7 @@ function cloneForKmlExport(
 }
 
 /** Après lecture : parse JSON des props style + réapplique Style OL. */
-export function hydrateImportedSketchFeatures(
-  features: OlFeature<OlGeometry>[],
-): void {
+export function hydrateImportedSketchFeatures(features: OlFeature<OlGeometry>[]): void {
   for (const f of features) {
     for (const key of STYLE_PROP_KEYS) {
       const v = f.get(key)
@@ -75,11 +68,7 @@ export function readSketchFile(
 }
 
 /** Sérialise les features croquis en GeoJSON ou KML (inclut `ec-feature-style`). */
-export function writeSketchFile(
-  map: Map,
-  source: VectorSource,
-  format: SketchIoFormat,
-): string {
+export function writeSketchFile(map: Map, source: VectorSource, format: SketchIoFormat): string {
   const features = source.getFeatures()
   const opts = {
     featureProjection: projectionOf(map),
@@ -101,10 +90,7 @@ export function downloadBlob(filename: string, content: string, mime: string): v
   URL.revokeObjectURL(url)
 }
 
-export function pickSketchFile(
-  accept: string,
-  onFile: (text: string, name: string) => void,
-): void {
+export function pickSketchFile(accept: string, onFile: (text: string, name: string) => void): void {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = accept

@@ -20,22 +20,22 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 
 ## Onglets
 
-| # | Icône DSFR | Contenu |
-|---|------------|---------|
-| 0 | `fr-icon-map-pin-2-line` (localisation) | Fiche info — texte « Aucune sélection… » ou données de localisation |
-| 1 | `fr-icon-road-map-line` | Vide (réservé) |
-| 2 | `fr-icon-layout-grid-line` | `TileLayerSwitcher` + `TreeLayerSwitcher` (+ légende) |
-| 3 | `fr-icon-list-unordered` | Attributs bruts de la sélection |
+| #   | Icône DSFR                              | Contenu                                                             |
+| --- | --------------------------------------- | ------------------------------------------------------------------- |
+| 0   | `fr-icon-map-pin-2-line` (localisation) | Fiche info — texte « Aucune sélection… » ou données de localisation |
+| 1   | `fr-icon-road-map-line`                 | Vide (réservé)                                                      |
+| 2   | `fr-icon-layout-grid-line`              | `TileLayerSwitcher` + `TreeLayerSwitcher` (+ légende)               |
+| 3   | `fr-icon-list-unordered`                | Attributs bruts de la sélection                                     |
 
-Mapping gpu-client (3 onglets) → entree-carto (4) : fiche → 0, *(nouveau vide)* → 1, couches → 2, raw → 3.
+Mapping gpu-client (3 onglets) → entree-carto (4) : fiche → 0, _(nouveau vide)_ → 1, couches → 2, raw → 3.
 
 ## Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `basePresets` | `BaseLayerPreset[]` | Fonds pour le TileLayerSwitcher |
-| `baseModelValue` | `BaseLayerId` | Fond actif (`v-model:base-model-value`) |
-| `layerNodes` | `TreeLayerNode[]` | Arbre / stubs pour TreeLayerSwitcher |
+| Prop             | Type                | Description                             |
+| ---------------- | ------------------- | --------------------------------------- |
+| `basePresets`    | `BaseLayerPreset[]` | Fonds pour le TileLayerSwitcher         |
+| `baseModelValue` | `BaseLayerId`       | Fond actif (`v-model:base-model-value`) |
+| `layerNodes`     | `TreeLayerNode[]`   | Arbre / stubs pour TreeLayerSwitcher    |
 
 ## API (`TabPanelsApi`)
 

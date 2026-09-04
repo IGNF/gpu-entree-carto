@@ -23,10 +23,7 @@ export function formatMapArea(map: Map, polygon: Polygon): string {
 }
 
 /** Point d’ancrage d’une popup de mesure. */
-export function measureAnchor(
-  _map: Map,
-  geom: LineString | Polygon,
-): number[] {
+export function measureAnchor(_map: Map, geom: LineString | Polygon): number[] {
   if (geom.getType() === 'Polygon') {
     return (geom as Polygon).getInteriorPoint().getCoordinates()
   }

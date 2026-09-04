@@ -32,17 +32,9 @@ import {
   sketchTextHitRadiusPx,
   sketchTextRotateAnchor,
 } from './sketch/SketchTextPopup'
-import {
-  applyFeatureStyle,
-  getFeatureStyleAttrs,
-} from './sketch/featureStyle'
+import { applyFeatureStyle, getFeatureStyleAttrs } from './sketch/featureStyle'
 
-export type TransformMode =
-  | 'line-polygon'
-  | 'bbox'
-  | 'point'
-  | 'circle'
-  | 'disc'
+export type TransformMode = 'line-polygon' | 'bbox' | 'point' | 'circle' | 'disc'
 
 type HandleRole =
   | 'translate'
@@ -151,11 +143,7 @@ function styleForRole(role: HandleRole): Style {
   })
 }
 
-function rotateCoordinate(
-  coord: Coordinate,
-  angle: number,
-  origin: Coordinate,
-): Coordinate {
+function rotateCoordinate(coord: Coordinate, angle: number, origin: Coordinate): Coordinate {
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
   const dx = coord[0] - origin[0]
@@ -163,26 +151,18 @@ function rotateCoordinate(
   return [origin[0] + dx * cos - dy * sin, origin[1] + dx * sin + dy * cos]
 }
 
-function rotateGeometry(
-  geom: OlGeometry,
-  angle: number,
-  origin: Coordinate,
-): void {
+function rotateGeometry(geom: OlGeometry, angle: number, origin: Coordinate): void {
   if (geom instanceof Point) {
     geom.setCoordinates(rotateCoordinate(geom.getCoordinates(), angle, origin))
     return
   }
   if (geom instanceof LineString) {
-    geom.setCoordinates(
-      geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin)),
-    )
+    geom.setCoordinates(geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin)))
     return
   }
   if (geom instanceof Polygon) {
     geom.setCoordinates(
-      geom
-        .getCoordinates()
-        .map((ring) => ring.map((c) => rotateCoordinate(c, angle, origin))),
+      geom.getCoordinates().map((ring) => ring.map((c) => rotateCoordinate(c, angle, origin))),
     )
   }
 }
@@ -215,11 +195,7 @@ function clampHandleToViewport(map: Map, coord: Coordinate): Coordinate {
 }
 
 /** Distance point → segment. */
-function distPointToSegment(
-  p: Coordinate,
-  a: Coordinate,
-  b: Coordinate,
-): number {
+function distPointToSegment(p: Coordinate, a: Coordinate, b: Coordinate): number {
   const dx = b[0] - a[0]
   const dy = b[1] - a[1]
   const len2 = dx * dx + dy * dy
@@ -237,11 +213,7 @@ function distPointToSegment(
  * True si le point est dans le polygone et à plus de `margin` (unités carte)
  * de tout bord extérieur.
  */
-function isDeepInsidePolygon(
-  poly: Polygon,
-  coord: Coordinate,
-  margin: number,
-): boolean {
+function isDeepInsidePolygon(poly: Polygon, coord: Coordinate, margin: number): boolean {
   if (!poly.intersectsCoordinate(coord)) return false
   const ring = poly.getLinearRing(0)
   if (!ring) return false
@@ -274,10 +246,7 @@ function lineSideAnchors(
   let total = 0
   const segLens: number[] = []
   for (let i = 0; i < coords.length - 1; i++) {
-    const len = Math.hypot(
-      coords[i + 1][0] - coords[i][0],
-      coords[i + 1][1] - coords[i][1],
-    )
+    const len = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1])
     segLens.push(len)
     total += len
   }
@@ -336,11 +305,7 @@ function bboxPolygonFromExtent(extent: Extent): Polygon {
   ])
 }
 
-function applyBBoxResize(
-  extent: Extent,
-  role: HandleRole,
-  coord: Coordinate,
-): Extent {
+function applyBBoxResize(extent: Extent, role: HandleRole, coord: Coordinate): Extent {
   let [minX, minY, maxX, maxY] = extent
   const minSize = 1e-6
   switch (role) {
@@ -409,19 +374,12 @@ function distToCenter(center: Coordinate, coord: Coordinate): number {
   return Math.hypot(coord[0] - center[0], coord[1] - center[1])
 }
 
-function isDeepInsideCircle(
-  circle: Circle,
-  coord: Coordinate,
-  margin: number,
-): boolean {
+function isDeepInsideCircle(circle: Circle, coord: Coordinate, margin: number): boolean {
   return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin
 }
 
 /** Poignée translate à droite du cercle (même principe que côté de ligne). */
-function circleSideTranslateAnchor(
-  circle: Circle,
-  res: number,
-): Coordinate {
+function circleSideTranslateAnchor(circle: Circle, res: number): Coordinate {
   const c = circle.getCenter()
   const r = circle.getRadius()
   const off = LINE_SIDE_OFFSET_PX * res
@@ -429,10 +387,7 @@ function circleSideTranslateAnchor(
 }
 
 /** Mode effectif pour une feature Circle (y compris en mode Geometry). */
-function circleModeFor(
-  feature: OlFeature,
-  mode: TransformMode,
-): 'circle' | 'disc' {
+function circleModeFor(feature: OlFeature, mode: TransformMode): 'circle' | 'disc' {
   if (mode === 'circle' || mode === 'disc') return mode
   return getCircleKind(feature) === 'disc' ? 'disc' : 'circle'
 }
@@ -637,10 +592,7 @@ export class ModifyTransformController {
   /**
    * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
    */
-  private placeHandles(
-    feature: OlFeature<OlGeometry>,
-    opts?: { rotateAt?: Coordinate },
-  ): void {
+  private placeHandles(feature: OlFeature<OlGeometry>, opts?: { rotateAt?: Coordinate }): void {
     this.clearHandles()
     const geom = feature.getGeometry()
     if (!geom) return
@@ -662,17 +614,11 @@ export class ModifyTransformController {
         const t = circleSideTranslateAnchor(geom, res)
         add('translate', t)
         if (this.styleEditEnabled) {
-          add('style-edit', [
-            t[0],
-            t[1] + STYLE_EDIT_GAP_PX * res,
-          ] as Coordinate)
+          add('style-edit', [t[0], t[1] + STYLE_EDIT_GAP_PX * res] as Coordinate)
         }
       } else if (this.styleEditEnabled) {
         const c = geom.getCenter()
-        add('style-edit', [
-          c[0],
-          c[1] + Math.max(geom.getRadius() * 0.15, 36 * res),
-        ] as Coordinate)
+        add('style-edit', [c[0], c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)] as Coordinate)
       }
       return
     }
@@ -692,10 +638,7 @@ export class ModifyTransformController {
       add('resize-sw', [minX, minY])
       add('resize-w', [minX, midY])
       if (this.styleEditEnabled) {
-        add('style-edit', [
-          midX,
-          maxY + STYLE_EDIT_GAP_PX * res,
-        ] as Coordinate)
+        add('style-edit', [midX, maxY + STYLE_EDIT_GAP_PX * res] as Coordinate)
       }
       return
     }
@@ -704,8 +647,7 @@ export class ModifyTransformController {
 
     if (geom instanceof Point && isSketchTextFeature(feature)) {
       const attrs = getSketchTextAttrs(feature)
-      const rotateAt =
-        opts?.rotateAt ?? sketchTextRotateAnchor(geom, attrs, res)
+      const rotateAt = opts?.rotateAt ?? sketchTextRotateAnchor(geom, attrs, res)
       add('rotate', rotateAt, Boolean(opts?.rotateAt))
       if (this.styleEditEnabled) {
         const rad = (attrs.rotation * Math.PI) / 180
@@ -733,10 +675,7 @@ export class ModifyTransformController {
       add('rotate', opts?.rotateAt ?? anchors.rotate, Boolean(opts?.rotateAt))
       if (this.styleEditEnabled) {
         const r = opts?.rotateAt ?? anchors.rotate
-        add('style-edit', [
-          r[0] - STYLE_EDIT_GAP_PX * res,
-          r[1],
-        ] as Coordinate)
+        add('style-edit', [r[0] - STYLE_EDIT_GAP_PX * res, r[1]] as Coordinate)
       }
       return
     }
@@ -747,14 +686,10 @@ export class ModifyTransformController {
       const extent = geom.getExtent()
       const span = Math.max(getHeight(extent), getWidth(extent), 1)
       const defaultOffset = Math.max(span * 0.12, 36 * res)
-      const rotateAt =
-        opts?.rotateAt ?? ([center[0], center[1] + defaultOffset] as Coordinate)
+      const rotateAt = opts?.rotateAt ?? ([center[0], center[1] + defaultOffset] as Coordinate)
       add('rotate', rotateAt, Boolean(opts?.rotateAt))
       if (this.styleEditEnabled) {
-        add('style-edit', [
-          rotateAt[0] - STYLE_EDIT_GAP_PX * res,
-          rotateAt[1],
-        ] as Coordinate)
+        add('style-edit', [rotateAt[0] - STYLE_EDIT_GAP_PX * res, rotateAt[1]] as Coordinate)
       }
     }
   }
@@ -842,15 +777,12 @@ export class ModifyTransformController {
       const geom = this.hovered.getGeometry()
       const res = resolutionOf(this.map)
       if (geom instanceof Point && isSketchTextFeature(this.hovered)) {
-        const keep =
-          (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res
+        const keep = (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res
         const c = geom.getCoordinates()
         if (Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= keep) {
           this.placeHandles(this.hovered)
           if (el) {
-            el.style.cursor = isNearSketchText(this.hovered, coord, res)
-              ? 'move'
-              : 'pointer'
+            el.style.cursor = isNearSketchText(this.hovered, coord, res) ? 'move' : 'pointer'
           }
           return
         }
@@ -1049,13 +981,8 @@ export class ModifyTransformController {
       return
     }
 
-    if (
-      role === 'rotate' &&
-      startGeom instanceof Point &&
-      isSketchTextFeature(feature)
-    ) {
-      const deltaDeg =
-        ((angleBetween(origin, coord) - startAngle) * 180) / Math.PI
+    if (role === 'rotate' && startGeom instanceof Point && isSketchTextFeature(feature)) {
+      const deltaDeg = ((angleBetween(origin, coord) - startAngle) * 180) / Math.PI
       // OL Text.rotation est horaire ; angleBetween est trigo (anti-horaire)
       const styleAttrs = getFeatureStyleAttrs(feature)
       applyFeatureStyle(feature, {
@@ -1078,9 +1005,7 @@ export class ModifyTransformController {
     }
 
     if (this.mode === 'bbox' && role.startsWith('resize-')) {
-      feature.setGeometry(
-        bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)),
-      )
+      feature.setGeometry(bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)))
       this.placeHandles(feature)
     }
   }
@@ -1091,9 +1016,7 @@ export class ModifyTransformController {
     const endCoord = _evt.coordinate
     this.dragging = null
     if (role === 'style-edit') {
-      const moved =
-        endCoord &&
-        Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1])
+      const moved = endCoord && Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1])
       const res = resolutionOf(this.map)
       if (!moved || moved < 8 * res) {
         this.onStyleEdit?.(feature)

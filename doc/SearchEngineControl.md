@@ -8,13 +8,13 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 
 ## Props
 
-| Prop | Type | Défaut | Description |
-|------|------|--------|-------------|
-| `placeholder` | `string` | `'Rechercher un lieu...'` | Placeholder du champ principal |
-| `collapsed` | `boolean` | `false` | Barre repliée au chargement |
-| `collapsible` | `boolean` | `false` | Autorise le repli |
-| `serviceBaseUrl` | `string` | `'https://data.geopf.fr'` | Base URL géocodage / WFS Géoplateforme |
-| `initialSearch` | `StandardViewerSearch \| null` | `null` | Rejoue une recherche (accueil → carte) : même géocode que le clic suggestion |
+| Prop             | Type                           | Défaut                    | Description                                                                  |
+| ---------------- | ------------------------------ | ------------------------- | ---------------------------------------------------------------------------- |
+| `placeholder`    | `string`                       | `'Rechercher un lieu...'` | Placeholder du champ principal                                               |
+| `collapsed`      | `boolean`                      | `false`                   | Barre repliée au chargement                                                  |
+| `collapsible`    | `boolean`                      | `false`                   | Autorise le repli                                                            |
+| `serviceBaseUrl` | `string`                       | `'https://data.geopf.fr'` | Base URL géocodage / WFS Géoplateforme                                       |
+| `initialSearch`  | `StandardViewerSearch \| null` | `null`                    | Rejoue une recherche (accueil → carte) : même géocode que le clic suggestion |
 
 ## Comportement
 

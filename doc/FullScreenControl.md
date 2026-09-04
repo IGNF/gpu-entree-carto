@@ -8,8 +8,8 @@ Contrôle plein écran Géoplateforme (`GeoportalFullScreen`).
 
 ## Props
 
-| Prop | Type | Défaut | Description |
-|------|------|--------|-------------|
+| Prop       | Type                   | Défaut           | Description    |
+| ---------- | ---------------------- | ---------------- | -------------- |
 | `position` | `GeopfControlPosition` | `'bottom-right'` | Position geopf |
 
 ## Placement

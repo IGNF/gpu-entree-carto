@@ -94,9 +94,11 @@ export class Geocode {
     maximumResponses: number,
     type: string,
   ): Promise<AutoCompleteResponse> {
-    const url = new URL(this.settings.completionUrl.endsWith('/')
-      ? this.settings.completionUrl
-      : `${this.settings.completionUrl}/`)
+    const url = new URL(
+      this.settings.completionUrl.endsWith('/')
+        ? this.settings.completionUrl
+        : `${this.settings.completionUrl}/`,
+    )
     url.searchParams.set('text', text)
     url.searchParams.set('type', type)
     url.searchParams.set('maximumResponses', String(maximumResponses))

@@ -21,11 +21,7 @@ function select(id: BaseLayerId) {
   <fieldset class="fr-fieldset ec-base-layers">
     <legend class="fr-fieldset__legend fr-text--sm">Fond de plan</legend>
     <div class="fr-fieldset__content">
-      <div
-        v-for="preset in presets"
-        :key="preset.id"
-        class="fr-radio-group"
-      >
+      <div v-for="preset in presets" :key="preset.id" class="fr-radio-group">
         <input
           :id="`base-layer-${preset.id}`"
           type="radio"
@@ -33,7 +29,7 @@ function select(id: BaseLayerId) {
           :value="preset.id"
           :checked="modelValue === preset.id"
           @change="select(preset.id)"
-        >
+        />
         <label class="fr-label" :for="`base-layer-${preset.id}`">
           {{ preset.label }}
         </label>

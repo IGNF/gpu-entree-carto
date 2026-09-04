@@ -32,20 +32,13 @@ export function setCircleKind(feature: OlFeature, kind: CircleKind): void {
 }
 
 /** Distance centre → point (même projection que le Circle). */
-export function distToCircleCenter(
-  circle: Circle,
-  coord: Coordinate,
-): number {
+export function distToCircleCenter(circle: Circle, coord: Coordinate): number {
   const c = circle.getCenter()
   return Math.hypot(coord[0] - c[0], coord[1] - c[1])
 }
 
 /** Vrai si `coord` est à moins de `tol` (unités carte) du contour. */
-export function isNearCircleEdge(
-  circle: Circle,
-  coord: Coordinate,
-  tol: number,
-): boolean {
+export function isNearCircleEdge(circle: Circle, coord: Coordinate, tol: number): boolean {
   return Math.abs(distToCircleCenter(circle, coord) - circle.getRadius()) <= tol
 }
 
@@ -112,10 +105,7 @@ export function featuresFromMultiCircleJson(
   const kind: CircleKind = data.type === 'MultiDisc' ? 'disc' : 'circle'
   const simpleType = kind === 'disc' ? 'Disc' : 'Circle'
   return data.geometries.map((g) =>
-    featureFromCircleJson(
-      { type: simpleType, center: g.center, radius: g.radius },
-      mapProjection,
-    ),
+    featureFromCircleJson({ type: simpleType, center: g.center, radius: g.radius }, mapProjection),
   )
 }
 
@@ -171,9 +161,7 @@ export function serializeMultiCircleFeatures(
 }
 
 /** Pour KML : polygone approximant le cercle. */
-export function circleToPolygonFeature(
-  feature: OlFeature<OlGeometry>,
-): OlFeature<OlGeometry> {
+export function circleToPolygonFeature(feature: OlFeature<OlGeometry>): OlFeature<OlGeometry> {
   const geom = feature.getGeometry()
   if (!(geom instanceof Circle)) return feature
   const poly = fromCircle(geom, 64)

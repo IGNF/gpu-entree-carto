@@ -6,10 +6,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import Geocode from '@/lib/services/Geocode'
 import LocateControl from '@/lib/control/LocateControl'
-import {
-  redirectToMapWithLocation,
-  type LocationRedirectParams,
-} from '@/lib/search/locationSearch'
+import { redirectToMapWithLocation, type LocationRedirectParams } from '@/lib/search/locationSearch'
 import type { AutocompleteLocation } from '@/lib/types'
 
 const props = withDefaults(
@@ -174,20 +171,9 @@ defineExpose({
 </script>
 
 <template>
-  <form
-    class="ec-location-search"
-    role="search"
-    @submit="onSubmit"
-  >
-    <label
-      v-if="label"
-      class="fr-label"
-      :for="inputId"
-    >{{ label }}</label>
-    <div
-      class="fr-search-bar"
-      role="search"
-    >
+  <form class="ec-location-search" role="search" @submit="onSubmit">
+    <label v-if="label" class="fr-label" :for="inputId">{{ label }}</label>
+    <div class="fr-search-bar" role="search">
       <input
         :id="inputId"
         class="fr-input"
@@ -208,13 +194,8 @@ defineExpose({
         @keydown="onKeydown"
         @blur="onBlur"
         @focus="suggestions.length && (open = true)"
-      >
-      <button
-        class="fr-btn"
-        type="submit"
-        title="Rechercher"
-        :disabled="loading"
-      >
+      />
+      <button class="fr-btn" type="submit" title="Rechercher" :disabled="loading">
         <span class="fr-sr-only">Rechercher</span>
       </button>
     </div>

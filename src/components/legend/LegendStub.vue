@@ -8,9 +8,7 @@ defineProps<{
 
 <template>
   <section class="ec-legend" aria-labelledby="ec-legend-title">
-    <h2 id="ec-legend-title" class="fr-h6">
-      Légende
-    </h2>
+    <h2 id="ec-legend-title" class="fr-h6">Légende</h2>
     <ul class="ec-legend__list fr-raw-list">
       <li v-for="item in items" :key="item.id" class="ec-legend__item">
         <img
@@ -18,12 +16,8 @@ defineProps<{
           class="ec-legend__img"
           :src="item.imageUrl"
           :alt="`Légende — ${item.title}`"
-        >
-        <span
-          v-else
-          class="ec-legend__swatch"
-          aria-hidden="true"
         />
+        <span v-else class="ec-legend__swatch" aria-hidden="true" />
         <span class="ec-legend__title">{{ item.title }}</span>
       </li>
       <li v-if="items.length === 0" class="fr-text--sm fr-hint-text">

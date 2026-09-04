@@ -56,9 +56,7 @@ export function isGeometryTypeName(value: string): value is GeometryTypeName {
  * `"Geometry"` seul → tous les outils libres (Point, Line, Polygon, Disc).
  * CSV inconnu filtré ; vide → `['Geometry']`.
  */
-export function parseGeometryTypes(
-  geometryType: string | undefined | null,
-): GeometryTypeName[] {
+export function parseGeometryTypes(geometryType: string | undefined | null): GeometryTypeName[] {
   const raw = String(geometryType ?? 'Geometry')
     .split(',')
     .map((s) => s.trim())
@@ -80,9 +78,7 @@ export function shouldReplaceOnDraw(types: GeometryTypeName[]): boolean {
 }
 
 /** Type « primaire » pour sérialisation Multi* / Rectangle / Disc dédiés. */
-export function primaryGeometryType(
-  types: GeometryTypeName[],
-): GeometryTypeName {
+export function primaryGeometryType(types: GeometryTypeName[]): GeometryTypeName {
   if (types.length === 1) return types[0]
   return 'Geometry'
 }
@@ -91,12 +87,10 @@ export function primaryGeometryType(
  * Types d’outils de dessin à afficher (sans modify/remove).
  * Plus d’outil « Circle » : Circle / MultiCircle exposent l’outil Disc (compat).
  */
-export function drawToolKeys(types: GeometryTypeName[]): Array<
-  'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'
-> {
-  const keys = new Set<
-    'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'
-  >()
+export function drawToolKeys(
+  types: GeometryTypeName[],
+): Array<'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'> {
+  const keys = new Set<'Point' | 'LineString' | 'Polygon' | 'Rectangle' | 'Disc'>()
 
   const addFrom = (t: GeometryTypeName): void => {
     if (t === 'Geometry') {
@@ -110,12 +104,7 @@ export function drawToolKeys(types: GeometryTypeName[]): Array<
     else if (t === 'LineString' || t === 'MultiLineString') keys.add('LineString')
     else if (t === 'Polygon' || t === 'MultiPolygon') keys.add('Polygon')
     else if (t === 'Rectangle') keys.add('Rectangle')
-    else if (
-      t === 'Disc' ||
-      t === 'MultiDisc' ||
-      t === 'Circle' ||
-      t === 'MultiCircle'
-    ) {
+    else if (t === 'Disc' || t === 'MultiDisc' || t === 'Circle' || t === 'MultiCircle') {
       keys.add('Disc')
     }
   }

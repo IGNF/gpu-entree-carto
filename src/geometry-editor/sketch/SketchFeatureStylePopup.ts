@@ -123,9 +123,7 @@ export class SketchFeatureStylePopup {
   private readonly onPopupWheel = (evt: WheelEvent): void => {
     // Empêche zoom carte / scroll page ; laisse scroller le panneau interne
     evt.stopPropagation()
-    const scroll = this.root.querySelector(
-      '.ec-sketch-style-popup__scroll',
-    ) as HTMLElement | null
+    const scroll = this.root.querySelector('.ec-sketch-style-popup__scroll') as HTMLElement | null
     if (!scroll) {
       evt.preventDefault()
       return
@@ -137,9 +135,7 @@ export class SketchFeatureStylePopup {
     }
     const delta = evt.deltaY
     const atTop = scroll.scrollTop <= 0 && delta < 0
-    const atBottom =
-      scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 &&
-      delta > 0
+    const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0
     if (atTop || atBottom) evt.preventDefault()
   }
 
@@ -200,9 +196,7 @@ export class SketchFeatureStylePopup {
     `
     this.basicFields = this.root.querySelector('[data-section="basic"]')!
     this.advancedFields = this.root.querySelector('[data-section="advanced"]')!
-    this.advancedToggle = this.root.querySelector(
-      '.ec-sketch-style-popup__advanced-toggle',
-    )!
+    this.advancedToggle = this.root.querySelector('.ec-sketch-style-popup__advanced-toggle')!
 
     this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
@@ -322,23 +316,17 @@ export class SketchFeatureStylePopup {
       lineCap: this.root.querySelector('[data-input="lineCap"]')!,
       lineJoin: this.root.querySelector('[data-input="lineJoin"]')!,
       lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]')!,
-      lineDashOffsetValue: this.root.querySelector(
-        '[data-output="lineDashOffset"]',
-      )!,
+      lineDashOffsetValue: this.root.querySelector('[data-output="lineDashOffset"]')!,
       miterLimit: this.root.querySelector('[data-input="miterLimit"]')!,
       miterLimitValue: this.root.querySelector('[data-output="miterLimit"]')!,
       fontFamily: this.root.querySelector('[data-input="fontFamily"]')!,
       fontBold: this.root.querySelector('[data-input="fontBold"]')!,
       fontItalic: this.root.querySelector('[data-input="fontItalic"]')!,
       textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]')!,
-      textStrokeWidthValue: this.root.querySelector(
-        '[data-output="textStrokeWidth"]',
-      )!,
+      textStrokeWidthValue: this.root.querySelector('[data-output="textStrokeWidth"]')!,
       pointShape: this.root.querySelector('[data-input="pointShape"]')!,
       pointRotation: this.root.querySelector('[data-input="pointRotation"]')!,
-      pointRotationValue: this.root.querySelector(
-        '[data-output="pointRotation"]',
-      )!,
+      pointRotationValue: this.root.querySelector('[data-output="pointRotation"]')!,
       zIndex: this.root.querySelector('[data-input="zIndex"]')!,
     }
 
@@ -427,9 +415,7 @@ export class SketchFeatureStylePopup {
     this.advancedOpen = open
     this.advancedFields.hidden = !open
     this.advancedToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
-    this.advancedToggle.textContent = open
-      ? 'Masquer les options avancées'
-      : 'Options avancées'
+    this.advancedToggle.textContent = open ? 'Masquer les options avancées' : 'Options avancées'
   }
 
   private containsUi(node: Node | null): boolean {
@@ -498,10 +484,8 @@ export class SketchFeatureStylePopup {
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
     const mapSize = this.map.getSize()
-    const anchor = featureStylePopupAnchor(
-      this.feature,
-      mapSize,
-      (c) => this.map.getPixelFromCoordinate(c),
+    const anchor = featureStylePopupAnchor(this.feature, mapSize, (c) =>
+      this.map.getPixelFromCoordinate(c),
     )
     if (!anchor) return
     const pixel = this.map.getPixelFromCoordinate(anchor)
@@ -651,9 +635,7 @@ export class SketchFeatureStylePopup {
       lineCap: (this.els.lineCap.value as StrokeLineCap) || base.lineCap,
       lineJoin: join,
       lineDashOffset:
-        dash <= 0
-          ? 0
-          : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
+        dash <= 0 ? 0 : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
       miterLimit:
         join !== 'miter'
           ? base.miterLimit
@@ -661,12 +643,7 @@ export class SketchFeatureStylePopup {
       fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
       fontBold: this.els.fontBold.checked,
       fontItalic: this.els.fontItalic.checked,
-      textStrokeWidth: clamp(
-        Number(this.els.textStrokeWidth.value),
-        0,
-        20,
-        base.textStrokeWidth,
-      ),
+      textStrokeWidth: clamp(Number(this.els.textStrokeWidth.value), 0, 20, base.textStrokeWidth),
       pointShape: shape,
       pointRotation:
         shape === 'circle'

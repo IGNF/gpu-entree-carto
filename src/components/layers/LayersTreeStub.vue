@@ -17,9 +17,7 @@ function onChange(id: string, event: Event) {
 
 <template>
   <section class="ec-layers-tree" aria-labelledby="ec-layers-title">
-    <h2 id="ec-layers-title" class="fr-h6">
-      Couches
-    </h2>
+    <h2 id="ec-layers-title" class="fr-h6">Couches</h2>
     <ul class="fr-raw-list">
       <li v-for="node in nodes" :key="node.id" class="fr-checkbox-group">
         <input
@@ -27,7 +25,7 @@ function onChange(id: string, event: Event) {
           type="checkbox"
           :checked="node.visible"
           @change="onChange(node.id, $event)"
-        >
+        />
         <label class="fr-label" :for="`layer-${node.id}`">
           {{ node.title }}
         </label>

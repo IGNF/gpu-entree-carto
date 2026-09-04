@@ -5,10 +5,7 @@
  */
 
 function isPanelVisible(panel: HTMLElement): boolean {
-  if (
-    panel.classList.contains('gpf-hidden') ||
-    panel.classList.contains('GPelementHidden')
-  ) {
+  if (panel.classList.contains('gpf-hidden') || panel.classList.contains('GPelementHidden')) {
     return false
   }
   if (panel.classList.contains('GPAdvancedContainer')) {

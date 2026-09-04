@@ -5,10 +5,7 @@ import type { AutocompleteLocation } from '@/lib/types'
  */
 export class LocateControl {
   isAllowedResult(autocompleteResult: AutocompleteLocation): boolean {
-    if (
-      autocompleteResult.type === 'StreetAddress' &&
-      autocompleteResult.kind === 'municipality'
-    ) {
+    if (autocompleteResult.type === 'StreetAddress' && autocompleteResult.kind === 'municipality') {
       return false
     }
     return true

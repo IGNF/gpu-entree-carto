@@ -27,11 +27,7 @@ export function looksLikeKml(raw: string): boolean {
 export function looksLikeBbox(raw: string): boolean {
   try {
     const v = JSON.parse(raw) as unknown
-    return (
-      Array.isArray(v) &&
-      v.length === 4 &&
-      v.every((n) => typeof n === 'number')
-    )
+    return Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === 'number')
   } catch {
     return false
   }
@@ -54,9 +50,7 @@ export function bboxToPolygon(bbox: number[]): Polygon {
 /**
  * Éclate Multi* en géométries simples (édition / suppression unitaire).
  */
-export function explodeMultiFeatures(
-  features: OlFeature<OlGeometry>[],
-): OlFeature<OlGeometry>[] {
+export function explodeMultiFeatures(features: OlFeature<OlGeometry>[]): OlFeature<OlGeometry>[] {
   const out: OlFeature<OlGeometry>[] = []
   for (const feature of features) {
     const geom = feature.getGeometry()
@@ -92,7 +86,7 @@ export function parseRawToFeatures(
   const text = raw.trim()
   if (!text) return []
 
-  let features: OlFeature<OlGeometry>[] = []
+  let features: OlFeature<OlGeometry>[]
 
   if (looksLikeKml(text)) {
     features = kmlFormat.readFeatures(text, {

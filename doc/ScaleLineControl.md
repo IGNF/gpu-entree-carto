@@ -12,8 +12,8 @@ Aucune pour l’instant.
 
 ## Options OpenLayers
 
-| Option | Valeur | Description |
-|--------|--------|-------------|
+| Option  | Valeur     | Description               |
+| ------- | ---------- | ------------------------- |
 | `units` | `'metric'` | Unités métriques (m / km) |
 
 ## Placement / style
