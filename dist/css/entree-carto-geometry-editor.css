@@ -408,8 +408,37 @@
   max-height: calc(100% - 2 * var(--ec-geom-btn-gap));
 }
 
-.ec-geometry-editor__tools-root > * {
+.ec-geometry-editor__tools-root > .ec-geometry-editor__tool--tools-toggle {
   pointer-events: auto;
+}
+
+/* Seuls les boutons capturent les clics (pas la zone infobulle transparente) */
+.ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
+  pointer-events: none;
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
+  pointer-events: auto;
+}
+
+/*
+ * GeometryEditor standalone : colonne layout 48px (comme slot geopf).
+ * Infobulles en overflow via marge négative — la boîte de hit ne couvre pas la carte.
+ */
+.ec-geometry-editor > .ec-geometry-editor__tools-root {
+  overflow: visible;
+  width: var(--ec-geom-btn-size);
+  max-width: var(--ec-geom-btn-size);
+}
+
+.ec-geometry-editor > .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
+  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
+}
+
+.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='top-right'] > .ec-geometry-editor__toolbar,
+.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='bottom-right'] > .ec-geometry-editor__toolbar {
+  margin-inline-end: 0;
+  margin-inline-start: calc(-1 * var(--ec-geom-tooltip-space));
 }
 
 .ec-geometry-editor__tools-root[data-corner] {
@@ -460,6 +489,8 @@
   margin: 0;
   padding: 0;
   padding-inline-end: var(--ec-geom-tooltip-space);
+  /* Zone padding transparente : clics / scroll carte passent au travers */
+  pointer-events: none;
   border: none;
   border-radius: var(--ec-geom-btn-radius);
   /* Fond / ombre uniquement sur la colonne boutons */
@@ -556,8 +587,7 @@
   border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
 }
 
-.ec-geometry-editor__toolbar
-  > .ec-geometry-editor__tool:first-of-type:last-of-type {
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool:first-of-type:last-of-type {
   border-radius: var(--ec-geom-btn-radius);
 }
 
@@ -762,9 +792,9 @@
   box-sizing: border-box;
 }
 
-/* Positionnée en fixed (body) — peut dépasser le cadre carte */
+/* Overlay OL (bottom-center) — appendice centré */
 .ec-sketch-style-popup {
-  position: fixed;
+  position: relative;
   overflow: visible;
   margin-bottom: 17px;
 }
@@ -780,47 +810,27 @@
 
 /* Appendice vers le bas (popup au-dessus du point) */
 .ec-sketch-style-popup::before {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 16px solid var(--border-default-grey, #ddd);
   border-right: 15px solid transparent;
   border-left: 15px solid transparent;
   bottom: -17px;
-  left: var(--ec-tip-x, 50%);
+  left: 50%;
   margin-left: -15px;
   pointer-events: none;
 }
 
 .ec-sketch-style-popup::after {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 15px solid var(--background-default-grey, #fff);
   border-right: 14px solid transparent;
   border-left: 14px solid transparent;
   bottom: -15px;
-  left: var(--ec-tip-x, 50%);
+  left: 50%;
   margin-left: -14px;
   pointer-events: none;
-}
-
-/* Appendice vers le haut (popup sous le point) */
-.ec-sketch-style-popup--below {
-  margin-bottom: 0;
-  margin-top: 17px;
-}
-
-.ec-sketch-style-popup--below::before {
-  border-top: none;
-  border-bottom: 16px solid var(--border-default-grey, #ddd);
-  bottom: auto;
-  top: -17px;
-}
-
-.ec-sketch-style-popup--below::after {
-  border-top: none;
-  border-bottom: 15px solid var(--background-default-grey, #fff);
-  bottom: auto;
-  top: -15px;
 }
 
 .ec-sketch-style-popup__advanced-toggle {
@@ -1015,7 +1025,7 @@
 }
 
 .ec-sketch-measure-popup::before {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 16px solid var(--border-default-grey, #ddd);
   border-right: 15px solid transparent;
@@ -1026,7 +1036,7 @@
 }
 
 .ec-sketch-measure-popup::after {
-  content: "";
+  content: '';
   position: absolute;
   border-top: 15px solid var(--background-default-grey, #fff);
   border-right: 14px solid transparent;
@@ -1128,7 +1138,11 @@
   white-space: nowrap;
   pointer-events: none;
   background-repeat: no-repeat;
-  background-position: 0.125rem 50%, 0 50%, 0.375rem 100%, 0.375rem 100%;
+  background-position:
+    0.125rem 50%,
+    0 50%,
+    0.375rem 100%,
+    0.375rem 100%;
   background-size:
     0.375rem 0.5rem,
     0.375rem 0.5rem,
@@ -1168,14 +1182,16 @@
   .ec-geometry-editor__tool[aria-label]:hover::before,
 .ec-geometry-editor__tools-root[data-corner='bottom-right']
   .ec-geometry-editor__tool[aria-label]:focus-visible::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:hover::before,
-.ec-geometry-editor__settings
-  .ec-geometry-editor__tool[aria-label]:focus-visible::before {
+.ec-geometry-editor__settings .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-geometry-editor__settings .ec-geometry-editor__tool[aria-label]:focus-visible::before {
   left: auto;
   right: 100%;
   padding: 0.5rem 1.25rem 0.5rem 0.5rem;
-  background-position: calc(100% - 0.125rem) 50%, 100% 50%, calc(100% - 0.375rem) 100%, 0 100%;
+  background-position:
+    calc(100% - 0.125rem) 50%,
+    100% 50%,
+    calc(100% - 0.375rem) 100%,
+    0 100%;
   background-size:
     0.375rem 0.5rem,
     0.375rem 0.5rem,

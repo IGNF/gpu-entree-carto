@@ -54,17 +54,37 @@
   max-height: calc(100% - 2 * var(--ec-geom-btn-gap));
 }
 
-.ec-geometry-editor__tools-root > * {
+.ec-geometry-editor__tools-root > .ec-geometry-editor__tool--tools-toggle {
   pointer-events: auto;
 }
 
-/* Annule tools-root > * sur la toolbar : seuls les boutons capturent les clics */
+/* Seuls les boutons capturent les clics (pas la zone infobulle transparente) */
 .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
   pointer-events: none;
 }
 
 .ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
   pointer-events: auto;
+}
+
+/*
+ * GeometryEditor standalone : colonne layout 48px (comme slot geopf).
+ * Infobulles en overflow via marge négative — la boîte de hit ne couvre pas la carte.
+ */
+.ec-geometry-editor > .ec-geometry-editor__tools-root {
+  overflow: visible;
+  width: var(--ec-geom-btn-size);
+  max-width: var(--ec-geom-btn-size);
+}
+
+.ec-geometry-editor > .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
+  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
+}
+
+.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='top-right'] > .ec-geometry-editor__toolbar,
+.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='bottom-right'] > .ec-geometry-editor__toolbar {
+  margin-inline-end: 0;
+  margin-inline-start: calc(-1 * var(--ec-geom-tooltip-space));
 }
 
 .ec-geometry-editor__tools-root[data-corner] {

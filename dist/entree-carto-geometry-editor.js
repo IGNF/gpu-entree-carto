@@ -2112,6 +2112,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return intersection;
   }
+  function getDifference(extent1, extent2) {
+    if (!intersects$1(extent1, extent2)) {
+      return [extent1.slice()];
+    }
+    if (containsExtent(extent2, extent1)) {
+      return [];
+    }
+    const [x1, y1, x2, y2] = extent1;
+    const ix1 = Math.max(x1, extent2[0]);
+    const iy1 = Math.max(y1, extent2[1]);
+    const ix2 = Math.min(x2, extent2[2]);
+    const iy2 = Math.min(y2, extent2[3]);
+    const result = [];
+    if (ix1 > x1) {
+      result.push([x1, y1, ix1, y2]);
+    }
+    if (ix2 < x2) {
+      result.push([ix2, y1, x2, y2]);
+    }
+    if (iy1 > y1) {
+      result.push([ix1, y1, ix2, iy1]);
+    }
+    if (iy2 < y2) {
+      result.push([ix1, iy2, ix2, y2]);
+    }
+    return result;
+  }
   function getTopLeft(extent) {
     return [extent[0], extent[3]];
   }
@@ -2212,6 +2239,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     return [extent];
+  }
+  function subtractExtents(base, subtract) {
+    let remainder = [base];
+    for (let i = 0, ii = subtract.length; i < ii && remainder.length > 0; ++i) {
+      const next = [];
+      for (let j = 0, jj = remainder.length; j < jj; ++j) {
+        next.push(...getDifference(remainder[j], subtract[i]));
+      }
+      remainder = next;
+    }
+    return remainder;
   }
   function add$2(coordinate, delta) {
     coordinate[0] += +delta[0];
@@ -3202,9 +3240,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   }
   addCommon();
+  const IDENTITY_TRANSFORM = [1, 0, 0, 1, 0, 0];
   new Array(6);
   function create() {
-    return [1, 0, 0, 1, 0, 0];
+    return IDENTITY_TRANSFORM.slice(0);
   }
   function setFromArray(transform1, transform2) {
     transform1[0] = transform2[0];
@@ -4176,6 +4215,213 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     coordinatesss.length = i;
     return coordinatesss;
   }
+  function linearRingContainsExtent(flatCoordinates, offset, end, stride, extent) {
+    const outside = forEachCorner(
+      extent,
+      /**
+       * @param {import("../../coordinate.js").Coordinate} coordinate Coordinate.
+       * @return {boolean} Contains (x, y).
+       */
+      function(coordinate) {
+        return !linearRingContainsXY(
+          flatCoordinates,
+          offset,
+          end,
+          stride,
+          coordinate[0],
+          coordinate[1]
+        );
+      }
+    );
+    return !outside;
+  }
+  function linearRingContainsXY(flatCoordinates, offset, end, stride, x, y) {
+    let wn = 0;
+    let x1 = flatCoordinates[end - stride];
+    let y1 = flatCoordinates[end - stride + 1];
+    for (; offset < end; offset += stride) {
+      const x2 = flatCoordinates[offset];
+      const y2 = flatCoordinates[offset + 1];
+      if (y1 <= y) {
+        if (y2 > y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) > 0) {
+          wn++;
+        }
+      } else if (y2 <= y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) < 0) {
+        wn--;
+      }
+      x1 = x2;
+      y1 = y2;
+    }
+    return wn !== 0;
+  }
+  function linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y) {
+    if (ends.length === 0) {
+      return false;
+    }
+    if (!linearRingContainsXY(flatCoordinates, offset, ends[0], stride, x, y)) {
+      return false;
+    }
+    for (let i = 1, ii = ends.length; i < ii; ++i) {
+      if (linearRingContainsXY(flatCoordinates, ends[i - 1], ends[i], stride, x, y)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function linearRingssContainsXY(flatCoordinates, offset, endss, stride, x, y) {
+    if (endss.length === 0) {
+      return false;
+    }
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      if (linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y)) {
+        return true;
+      }
+      offset = ends[ends.length - 1];
+    }
+    return false;
+  }
+  function forEach(flatCoordinates, offset, end, stride, callback) {
+    let ret;
+    offset += stride;
+    for (; offset < end; offset += stride) {
+      ret = callback(
+        flatCoordinates.slice(offset - stride, offset),
+        flatCoordinates.slice(offset, offset + stride)
+      );
+      if (ret) {
+        return ret;
+      }
+    }
+    return false;
+  }
+  function getIntersectionPoint(segment1, segment2) {
+    const [a, b] = segment1;
+    const [c, d] = segment2;
+    const t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    const u = ((a[0] - c[0]) * (a[1] - b[1]) - (a[1] - c[1]) * (a[0] - b[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+      return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    }
+    return void 0;
+  }
+  function intersectsLineString(flatCoordinates, offset, end, stride, extent, coordinatesExtent) {
+    coordinatesExtent = coordinatesExtent ?? extendFlatCoordinates(createEmpty(), flatCoordinates, offset, end, stride);
+    if (!intersects$1(extent, coordinatesExtent)) {
+      return false;
+    }
+    if (coordinatesExtent[0] >= extent[0] && coordinatesExtent[2] <= extent[2] || coordinatesExtent[1] >= extent[1] && coordinatesExtent[3] <= extent[3]) {
+      return true;
+    }
+    return forEach(
+      flatCoordinates,
+      offset,
+      end,
+      stride,
+      /**
+       * @param {import("../../coordinate.js").Coordinate} point1 Start point.
+       * @param {import("../../coordinate.js").Coordinate} point2 End point.
+       * @return {boolean} `true` if the segment and the extent intersect,
+       *     `false` otherwise.
+       */
+      function(point1, point2) {
+        return intersectsSegment(extent, point1, point2);
+      }
+    );
+  }
+  function intersectsLineStringArray(flatCoordinates, offset, ends, stride, extent) {
+    for (let i = 0, ii = ends.length; i < ii; ++i) {
+      if (intersectsLineString(flatCoordinates, offset, ends[i], stride, extent)) {
+        return true;
+      }
+      offset = ends[i];
+    }
+    return false;
+  }
+  function intersectsLinearRing(flatCoordinates, offset, end, stride, extent) {
+    if (intersectsLineString(flatCoordinates, offset, end, stride, extent)) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset,
+      end,
+      stride,
+      extent[0],
+      extent[1]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset,
+      end,
+      stride,
+      extent[0],
+      extent[3]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset,
+      end,
+      stride,
+      extent[2],
+      extent[1]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset,
+      end,
+      stride,
+      extent[2],
+      extent[3]
+    )) {
+      return true;
+    }
+    return false;
+  }
+  function intersectsLinearRingArray(flatCoordinates, offset, ends, stride, extent) {
+    if (!intersectsLinearRing(flatCoordinates, offset, ends[0], stride, extent)) {
+      return false;
+    }
+    if (ends.length === 1) {
+      return true;
+    }
+    for (let i = 1, ii = ends.length; i < ii; ++i) {
+      if (linearRingContainsExtent(
+        flatCoordinates,
+        ends[i - 1],
+        ends[i],
+        stride,
+        extent
+      )) {
+        if (!intersectsLineString(
+          flatCoordinates,
+          ends[i - 1],
+          ends[i],
+          stride,
+          extent
+        )) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  function intersectsLinearRingMultiArray(flatCoordinates, offset, endss, stride, extent) {
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      if (intersectsLinearRingArray(flatCoordinates, offset, ends, stride, extent)) {
+        return true;
+      }
+      offset = ends[ends.length - 1];
+    }
+    return false;
+  }
   function douglasPeucker(flatCoordinates, offset, end, stride, squaredTolerance, simplifiedFlatCoordinates, simplifiedOffset) {
     const n = (end - offset) / stride;
     if (n < 3) {
@@ -4454,14 +4700,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return "LinearRing";
     }
     /**
-     * Test if the geometry and the passed extent intersect.
+     * Test if the geometry and the passed extent intersect. A linear ring is
+     * treated as a line string for this test.
      * @param {import("../extent.js").Extent} extent Extent.
      * @return {boolean} `true` if the geometry and the extent intersect.
      * @api
      * @override
      */
     intersectsExtent(extent) {
-      return false;
+      return intersectsLineString(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        extent
+      );
     }
     /**
      * Set the coordinates of the linear ring.
@@ -4587,72 +4840,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.changed();
     }
   }
-  function linearRingContainsExtent(flatCoordinates, offset, end, stride, extent) {
-    const outside = forEachCorner(
-      extent,
-      /**
-       * @param {import("../../coordinate.js").Coordinate} coordinate Coordinate.
-       * @return {boolean} Contains (x, y).
-       */
-      function(coordinate) {
-        return !linearRingContainsXY(
-          flatCoordinates,
-          offset,
-          end,
-          stride,
-          coordinate[0],
-          coordinate[1]
-        );
-      }
-    );
-    return !outside;
-  }
-  function linearRingContainsXY(flatCoordinates, offset, end, stride, x, y) {
-    let wn = 0;
-    let x1 = flatCoordinates[end - stride];
-    let y1 = flatCoordinates[end - stride + 1];
-    for (; offset < end; offset += stride) {
-      const x2 = flatCoordinates[offset];
-      const y2 = flatCoordinates[offset + 1];
-      if (y1 <= y) {
-        if (y2 > y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) > 0) {
-          wn++;
-        }
-      } else if (y2 <= y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) < 0) {
-        wn--;
-      }
-      x1 = x2;
-      y1 = y2;
-    }
-    return wn !== 0;
-  }
-  function linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y) {
-    if (ends.length === 0) {
-      return false;
-    }
-    if (!linearRingContainsXY(flatCoordinates, offset, ends[0], stride, x, y)) {
-      return false;
-    }
-    for (let i = 1, ii = ends.length; i < ii; ++i) {
-      if (linearRingContainsXY(flatCoordinates, ends[i - 1], ends[i], stride, x, y)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function linearRingssContainsXY(flatCoordinates, offset, endss, stride, x, y) {
-    if (endss.length === 0) {
-      return false;
-    }
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      if (linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y)) {
-        return true;
-      }
-      offset = ends[ends.length - 1];
-    }
-    return false;
-  }
   function getInteriorPointOfArray(flatCoordinates, offset, ends, stride, flatCenters, flatCentersOffset, dest) {
     let i, ii, x, x1, x2, y1, y2;
     const y = flatCenters[flatCentersOffset + 1];
@@ -4713,147 +4900,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       offset = ends[ends.length - 1];
     }
     return interiorPoints;
-  }
-  function forEach(flatCoordinates, offset, end, stride, callback) {
-    let ret;
-    offset += stride;
-    for (; offset < end; offset += stride) {
-      ret = callback(
-        flatCoordinates.slice(offset - stride, offset),
-        flatCoordinates.slice(offset, offset + stride)
-      );
-      if (ret) {
-        return ret;
-      }
-    }
-    return false;
-  }
-  function getIntersectionPoint(segment1, segment2) {
-    const [a, b] = segment1;
-    const [c, d] = segment2;
-    const t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
-    const u = ((a[0] - c[0]) * (a[1] - b[1]) - (a[1] - c[1]) * (a[0] - b[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
-    if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
-      return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
-    }
-    return void 0;
-  }
-  function intersectsLineString(flatCoordinates, offset, end, stride, extent, coordinatesExtent) {
-    coordinatesExtent = coordinatesExtent ?? extendFlatCoordinates(createEmpty(), flatCoordinates, offset, end, stride);
-    if (!intersects$1(extent, coordinatesExtent)) {
-      return false;
-    }
-    if (coordinatesExtent[0] >= extent[0] && coordinatesExtent[2] <= extent[2] || coordinatesExtent[1] >= extent[1] && coordinatesExtent[3] <= extent[3]) {
-      return true;
-    }
-    return forEach(
-      flatCoordinates,
-      offset,
-      end,
-      stride,
-      /**
-       * @param {import("../../coordinate.js").Coordinate} point1 Start point.
-       * @param {import("../../coordinate.js").Coordinate} point2 End point.
-       * @return {boolean} `true` if the segment and the extent intersect,
-       *     `false` otherwise.
-       */
-      function(point1, point2) {
-        return intersectsSegment(extent, point1, point2);
-      }
-    );
-  }
-  function intersectsLineStringArray(flatCoordinates, offset, ends, stride, extent) {
-    for (let i = 0, ii = ends.length; i < ii; ++i) {
-      if (intersectsLineString(flatCoordinates, offset, ends[i], stride, extent)) {
-        return true;
-      }
-      offset = ends[i];
-    }
-    return false;
-  }
-  function intersectsLinearRing(flatCoordinates, offset, end, stride, extent) {
-    if (intersectsLineString(flatCoordinates, offset, end, stride, extent)) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset,
-      end,
-      stride,
-      extent[0],
-      extent[1]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset,
-      end,
-      stride,
-      extent[0],
-      extent[3]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset,
-      end,
-      stride,
-      extent[2],
-      extent[1]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset,
-      end,
-      stride,
-      extent[2],
-      extent[3]
-    )) {
-      return true;
-    }
-    return false;
-  }
-  function intersectsLinearRingArray(flatCoordinates, offset, ends, stride, extent) {
-    if (!intersectsLinearRing(flatCoordinates, offset, ends[0], stride, extent)) {
-      return false;
-    }
-    if (ends.length === 1) {
-      return true;
-    }
-    for (let i = 1, ii = ends.length; i < ii; ++i) {
-      if (linearRingContainsExtent(
-        flatCoordinates,
-        ends[i - 1],
-        ends[i],
-        stride,
-        extent
-      )) {
-        if (!intersectsLineString(
-          flatCoordinates,
-          ends[i - 1],
-          ends[i],
-          stride,
-          extent
-        )) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  function intersectsLinearRingMultiArray(flatCoordinates, offset, endss, stride, extent) {
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      if (intersectsLinearRingArray(flatCoordinates, offset, ends, stride, extent)) {
-        return true;
-      }
-      offset = ends[ends.length - 1];
-    }
-    return false;
   }
   function coordinates(flatCoordinates, offset, end, stride) {
     while (offset < end - stride) {
@@ -10814,6 +10860,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return dest;
   }
   let numTypes = 0;
+  const NoneType = 0;
   const BooleanType = 1 << numTypes++;
   const NumberType = 1 << numTypes++;
   const StringType = 1 << numTypes++;
@@ -10851,12 +10898,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function includesType(broad, specific) {
     return (broad & specific) === specific;
   }
+  function overlapsType(oneType, otherType) {
+    return !!(oneType & otherType);
+  }
   function isType(type, expected) {
     return type === expected;
   }
   class LiteralExpression {
     /**
-     * @param {number} type The value type.
+     * @param {ValueType} type The value type.
      * @param {LiteralValue} value The literal value.
      */
     constructor(type, value) {
@@ -10871,7 +10921,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   class CallExpression {
     /**
-     * @param {number} type The return type.
+     * @param {ValueType} type The return type.
      * @param {string} operator The operator.
      * @param {...Expression} args The arguments.
      */
@@ -10881,14 +10931,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.args = args;
     }
   }
-  function newParsingContext() {
+  function newParsingContext(inputVariables) {
     return {
-      variables: /* @__PURE__ */ new Set(),
-      properties: /* @__PURE__ */ new Set(),
+      variables: /* @__PURE__ */ new Map(),
+      properties: /* @__PURE__ */ new Map(),
       featureId: false,
       geometryType: false,
       mCoordinate: false,
-      mapState: false
+      mapState: false,
+      inputVariables
     };
   }
   function parse$1(encoded, expectedType, context) {
@@ -11023,7 +11074,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   };
   const parsers = {
     [Ops.Get]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
-    [Ops.Var]: createCallExpressionParser(hasArgsCount(1, 1), withVarArgs),
+    [Ops.Var]: createVarExpressionParser(),
     [Ops.Has]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
     [Ops.Id]: createCallExpressionParser(usesFeatureId, withNoArgs),
     [Ops.Concat]: createCallExpressionParser(
@@ -11049,11 +11100,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     ),
     [Ops.Equal]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.NotEqual]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.GreaterThan]: createCallExpressionParser(
       hasArgsCount(2, 2),
@@ -11205,18 +11256,56 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (i === 0) {
-        context.properties.add(String(key));
+        context.properties.set(String(key), returnType);
       }
     }
     return args;
   }
-  function withVarArgs(encoded, returnType, context) {
-    const name = encoded[1];
-    if (typeof name !== "string") {
-      throw new Error("expected a string argument for var operation");
-    }
-    context.variables.add(name);
-    return [new LiteralExpression(StringType, name)];
+  function createVarExpressionParser() {
+    return function(encoded, returnType, context) {
+      var _a;
+      const name = encoded[1];
+      if (typeof name !== "string") {
+        throw new Error("expected a string argument for var operation");
+      }
+      let type = returnType;
+      const variableValue = (_a = context.inputVariables) == null ? void 0 : _a[name];
+      if (variableValue !== void 0) {
+        const parsedInput = parse$1(variableValue, AnyType, context);
+        if (!(parsedInput instanceof LiteralExpression)) {
+          throw new Error(
+            `style variables should only be literal values (no expressions!), variable name: ${name}`
+          );
+        }
+        let parsedType = parsedInput.type;
+        if (typeof variableValue === "string" && overlapsType(type, ColorType) && !overlapsType(type, StringType)) {
+          parsedType = ColorType;
+        } else if (Array.isArray(variableValue) && variableValue.length === 2 && overlapsType(type, SizeType) && !overlapsType(type, NumberArrayType)) {
+          parsedType = SizeType;
+        }
+        type &= parsedType;
+        if (type === NoneType) {
+          throw new Error(
+            `the type expected from the var operator (${typeName(returnType)}) did not have any overlap with the type of the corresponding style variables (${typeName(parsedType)}), variable name: ${name}`
+          );
+        }
+      }
+      if (context.variables.has(name)) {
+        const existingType = context.variables.get(name);
+        type &= existingType;
+        if (type === NoneType) {
+          throw new Error(
+            `a new type expected from the var operator (${typeName(returnType)}) did not have any overlap with the previous type expected for it (${typeName(existingType)}), variable name: ${name}`
+          );
+        }
+      }
+      context.variables.set(name, type);
+      return new CallExpression(
+        type,
+        "var",
+        new LiteralExpression(StringType, name)
+      );
+    };
   }
   function usesFeatureId(encoded, returnType, context) {
     context.featureId = true;
@@ -11276,6 +11365,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return args;
     };
   }
+  function withArgsOfIdenticalType() {
+    return function(encoded, returnType, context) {
+      const operation = encoded[0];
+      const argCount = encoded.length - 1;
+      const args = new Array(argCount);
+      let commonType = AnyType;
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$1(encoded[i + 1], commonType, context);
+        commonType &= expression.type;
+      }
+      if (commonType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of ${operation}`
+        );
+      }
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$1(encoded[i + 1], commonType, context);
+        args[i] = expression;
+      }
+      return args;
+    };
+  }
   function hasOddArgs(encoded, returnType, context) {
     const operation = encoded[0];
     const argCount = encoded.length - 1;
@@ -11296,13 +11407,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function withMatchArgs(encoded, returnType, context) {
     const argsCount = encoded.length - 1;
-    const inputType = StringType | NumberType | BooleanType;
-    const input = parse$1(encoded[1], inputType, context);
     const fallback = parse$1(encoded[encoded.length - 1], returnType, context);
+    let inputType = StringType | NumberType | BooleanType;
     const args = new Array(argsCount - 2);
     for (let i = 0; i < argsCount - 2; i += 2) {
       try {
-        const match = parse$1(encoded[i + 2], input.type, context);
+        const match = parse$1(encoded[i + 2], inputType, context);
+        inputType &= match.type;
+      } catch (err) {
+        throw new Error(
+          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+        );
+      }
+      if (inputType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of match expression`
+        );
+      }
+    }
+    for (let i = 0; i < argsCount - 2; i += 2) {
+      try {
+        const match = parse$1(encoded[i + 2], inputType, context);
         args[i] = match;
       } catch (err) {
         throw new Error(
@@ -11318,6 +11443,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         );
       }
     }
+    const input = parse$1(encoded[1], inputType, context);
     return [input, ...args, fallback];
   }
   function withInterpolateArgs(encoded, returnType, context) {
@@ -12510,24 +12636,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let timeout, fontFaceSet;
     async function isAvailable(fontSpec) {
       await fontFaceSet.ready;
-      const fontFaces = await fontFaceSet.load(fontSpec);
-      if (fontFaces.length === 0) {
-        return false;
-      }
       const font = getFontParameters(fontSpec);
       const checkFamily = font.families[0].toLowerCase();
       const checkWeight = font.weight;
-      return fontFaces.some(
+      const matching = [];
+      fontFaceSet.forEach(
         /**
-         * @param {import('../css.js').FontParameters} f Font.
-         * @return {boolean} Font matches.
+         * @param {FontFace} f Font face.
          */
         (f) => {
           const family = f.family.replace(/^['"]|['"]$/g, "").toLowerCase();
           const weight = fontWeights[f.weight] || f.weight;
-          return family === checkFamily && f.style === font.style && weight == checkWeight;
+          if (family === checkFamily && f.style === font.style && weight == checkWeight) {
+            matching.push(f);
+          }
         }
       );
+      if (matching.length === 0) {
+        return false;
+      }
+      const loaded = await Promise.all(
+        matching.map(
+          (f) => f.load().then(
+            () => true,
+            // available
+            () => false
+            // not available
+          )
+        )
+      );
+      return loaded.some((available) => available);
     }
     async function check() {
       await fontFaceSet.ready;
@@ -14874,8 +15012,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function always(context) {
     return true;
   }
-  function rulesToStyleFunction(rules) {
-    const parsingContext = newParsingContext();
+  function rulesToStyleFunction(rules, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const evaluator = buildRuleSet(rules, parsingContext);
     const evaluationContext = newEvaluationContext();
     return function(feature, resolution) {
@@ -14897,8 +15035,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return evaluator(evaluationContext);
     };
   }
-  function flatStylesToStyleFunction(flatStyles) {
-    const parsingContext = newParsingContext();
+  function flatStylesToStyleFunction(flatStyles, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const length = flatStyles.length;
     const evaluators = new Array(length);
     for (let i = 0; i < length; ++i) {
@@ -14917,6 +15055,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           evaluationContext.featureId = null;
         }
       }
+      if (parsingContext.geometryType) {
+        evaluationContext.geometryType = computeGeometryType(
+          feature.getGeometry()
+        );
+      }
       let nonNullCount = 0;
       for (let i = 0; i < length; ++i) {
         const style = evaluators[i](evaluationContext);
@@ -14928,6 +15071,30 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       styles.length = nonNullCount;
       return styles;
     };
+  }
+  function flatStyleLikeToStyleFunction(flatStyleLike, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
+    if (!Array.isArray(flatStyleLike)) {
+      return flatStylesToStyleFunction([flatStyleLike], parsingContext);
+    }
+    const length = flatStyleLike.length;
+    const first = flatStyleLike[0];
+    if ("style" in first) {
+      const rules = new Array(length);
+      for (let i = 0; i < length; ++i) {
+        const candidate = flatStyleLike[i];
+        if (!("style" in candidate)) {
+          throw new Error("Expected a list of rules with a style property");
+        }
+        rules[i] = candidate;
+      }
+      return rulesToStyleFunction(rules, parsingContext);
+    }
+    const flatStyles = (
+      /** @type {Array<import("../../style/flat.js").FlatStyle>} */
+      flatStyleLike
+    );
+    return flatStylesToStyleFunction(flatStyles, parsingContext);
   }
   function buildRuleSet(rules, context) {
     const length = rules.length;
@@ -15975,15 +16142,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (style instanceof Style) {
       return style;
     }
-    if (!Array.isArray(style)) {
-      return flatStylesToStyleFunction([style]);
-    }
-    if (style.length === 0) {
+    if (Array.isArray(style) && style.length === 0) {
       return [];
     }
-    const length = style.length;
-    const first = style[0];
-    if (first instanceof Style) {
+    if (Array.isArray(style) && style[0] instanceof Style) {
+      const length = style.length;
       const styles = new Array(length);
       for (let i = 0; i < length; ++i) {
         const candidate = style[i];
@@ -15994,22 +16157,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return styles;
     }
-    if ("style" in first) {
-      const rules = new Array(length);
-      for (let i = 0; i < length; ++i) {
-        const candidate = style[i];
-        if (!("style" in candidate)) {
-          throw new Error("Expected a list of rules with a style property");
-        }
-        rules[i] = candidate;
-      }
-      return rulesToStyleFunction(rules);
-    }
-    const flatStyles = (
-      /** @type {Array<import("../style/flat.js").FlatStyle>} */
+    const flatStyleLike = (
+      /** @type {import("../style/flat.js").FlatStyleLike} */
       style
     );
-    return flatStylesToStyleFunction(flatStyles);
+    return flatStyleLikeToStyleFunction(flatStyleLike);
   }
   class RenderEvent extends BaseEvent {
     /**
@@ -16263,8 +16415,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const viewState = frameState.viewState;
       this.children_.length = 0;
+      const map = this.getMap();
+      const mapCanvas = map.getTargetElement();
+      let mapContext;
+      if (isCanvas(mapCanvas)) {
+        mapContext = /** @type {CanvasRenderingContext2D} */
+        mapCanvas.getContext("2d");
+        mapContext.setTransform(1, 0, 0, 1, 0, 0);
+        mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+      }
       const renderedLayerStates = [];
-      let previousElement = null;
+      let previousElement = mapContext ? mapCanvas : null;
       for (let i = 0, ii = layerStatesArray.length; i < ii; ++i) {
         const layerState = layerStatesArray[i];
         frameState.layerIndex = i;
@@ -16286,36 +16447,37 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.declutter(frameState, renderedLayerStates);
       replaceChildren(this.element_, this.children_);
-      const map = this.getMap();
-      const mapCanvas = map.getTargetElement();
-      if (isCanvas(mapCanvas)) {
-        const mapContext = mapCanvas.getContext("2d");
-        for (const container of this.children_) {
-          const canvas = container.firstElementChild || container;
-          const backgroundColor = container.style.backgroundColor;
-          if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
-            mapContext.fillStyle = backgroundColor;
-            mapContext.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-          }
-          if (isCanvas(canvas) && canvas.width > 0) {
-            mapContext.save();
-            const opacity = container.style.opacity || canvas.style.opacity;
-            mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
-            const transform2 = canvas.style.transform;
-            if (transform2) {
-              mapContext.transform(
-                .../** @type {[number, number, number, number, number, number]} */
-                fromString$1(transform2)
-              );
-            } else {
-              const w = parseFloat(canvas.style.width) / canvas.width;
-              const h = parseFloat(canvas.style.height) / canvas.height;
-              mapContext.transform(w, 0, 0, h, 0, 0);
-            }
-            mapContext.drawImage(canvas, 0, 0);
-            mapContext.restore();
-          }
+      for (const container of mapContext ? this.children_ : []) {
+        const canvas = container.firstElementChild || container;
+        const backgroundColor = container.style.backgroundColor;
+        if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
+          mapContext.fillStyle = backgroundColor;
+          mapContext.fillRect(
+            0,
+            0,
+            mapContext.canvas.width,
+            mapContext.canvas.height
+          );
         }
+        if (!isCanvas(canvas) || canvas.width === 0) {
+          continue;
+        }
+        mapContext.save();
+        const opacity = container.style.opacity || canvas.style.opacity;
+        mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
+        const transform2 = canvas.style.transform;
+        if (transform2) {
+          mapContext.transform(
+            .../** @type {[number, number, number, number, number, number]} */
+            fromString$1(transform2)
+          );
+        } else {
+          const w = parseFloat(canvas.style.width) / canvas.width;
+          const h = parseFloat(canvas.style.height) / canvas.height;
+          mapContext.transform(w, 0, 0, h, 0, 0);
+        }
+        mapContext.drawImage(canvas, 0, 0);
+        mapContext.restore();
       }
       this.dispatchRenderEvent(RenderEventType.POSTCOMPOSE, frameState);
       if (!this.renderedVisible_) {
@@ -16365,7 +16527,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
   }
-  class Map extends BaseObject {
+  let Map$1 = class Map extends BaseObject {
     /**
      * @param {MapOptions} [options] Map options.
      */
@@ -17244,7 +17406,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               this
             )
           ];
-          if (targetElement instanceof HTMLElement) {
+          if (!isCanvas(targetElement)) {
             const rootNode = targetElement.getRootNode();
             if (rootNode instanceof ShadowRoot) {
               this.resizeObserver_.observe(rootNode.host);
@@ -17599,7 +17761,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         view.setViewportSize(size);
       }
     }
-  }
+  };
   function createOptionsInternal(options) {
     let keyboardEventTarget = null;
     if (options.keyboardEventTarget !== void 0) {
@@ -21085,6 +21247,109 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return false;
     }
   }
+  let clipSegmentStart = 0;
+  let clipSegmentEnd = 1;
+  function clipSegment(minX, minY, maxX, maxY, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let t0 = 0;
+    let t1 = 1;
+    if (dx === 0) {
+      if (x0 < minX || x0 > maxX) {
+        return false;
+      }
+    } else {
+      let ta = (minX - x0) / dx;
+      let tb = (maxX - x0) / dx;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    if (dy === 0) {
+      if (y0 < minY || y0 > maxY) {
+        return false;
+      }
+    } else {
+      let ta = (minY - y0) / dy;
+      let tb = (maxY - y0) / dy;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    clipSegmentStart = t0;
+    clipSegmentEnd = t1;
+    return true;
+  }
+  function clipFlatLineStrings(flatCoordinates, ends, stride, extent) {
+    const minX = extent[0];
+    const minY = extent[1];
+    const maxX = extent[2];
+    const maxY = extent[3];
+    const dest = [];
+    const destEnds = [];
+    let open = false;
+    let lastX, lastY;
+    let offset = 0;
+    for (let e = 0, ee = ends.length; e < ee; ++e) {
+      const end = ends[e];
+      let prevX = flatCoordinates[offset];
+      let prevY = flatCoordinates[offset + 1];
+      let lineHasLast = false;
+      for (let i = offset + stride; i < end; i += stride) {
+        const curX = flatCoordinates[i];
+        const curY = flatCoordinates[i + 1];
+        if (clipSegment(minX, minY, maxX, maxY, prevX, prevY, curX, curY)) {
+          const dx = curX - prevX;
+          const dy = curY - prevY;
+          const ax = prevX + clipSegmentStart * dx;
+          const ay = prevY + clipSegmentStart * dy;
+          const bx = prevX + clipSegmentEnd * dx;
+          const by = prevY + clipSegmentEnd * dy;
+          if (open && lineHasLast && ax === lastX && ay === lastY) {
+            dest.push(bx, by);
+          } else {
+            if (open) {
+              destEnds.push(dest.length);
+            }
+            dest.push(ax, ay, bx, by);
+            open = true;
+          }
+          lastX = bx;
+          lastY = by;
+          lineHasLast = true;
+        }
+        prevX = curX;
+        prevY = curY;
+      }
+      offset = end;
+    }
+    if (open) {
+      destEnds.push(dest.length);
+    }
+    return { flatCoordinates: dest, ends: destEnds };
+  }
   function lineChunk(chunkLength, flatCoordinates, offset, end, stride) {
     const chunks = [];
     let cursor = offset;
@@ -21239,7 +21504,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let flatCoordinates = null;
       let stride = geometry.getStride();
       if (textState.placement === "line" && (geometryType == "LineString" || geometryType == "MultiLineString" || geometryType == "Polygon" || geometryType == "MultiPolygon")) {
-        if (!intersects$1(this.maxExtent, geometry.getExtent())) {
+        const geometryExtent = geometry.getExtent();
+        if (!intersects$1(this.maxExtent, geometryExtent)) {
           return;
         }
         let ends;
@@ -21260,6 +21526,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ends = [];
           for (let i = 0, ii = endss.length; i < ii; ++i) {
             ends.push(endss[i][0]);
+          }
+        }
+        if ((geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
+          const clipped = clipFlatLineStrings(
+            flatCoordinates,
+            ends,
+            stride,
+            this.getBufferedMaxExtent()
+          );
+          flatCoordinates = clipped.flatCoordinates;
+          ends = clipped.ends;
+          stride = 2;
+          if (ends.length === 0) {
+            return;
           }
         }
         this.beginGeometry(geometry, feature, index);
@@ -21506,6 +21786,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.saveTextStates_();
       const pixelRatio = this.pixelRatio;
       const baseline = TEXT_ALIGN[textState.textBaseline];
+      const offsetX = this.textOffsetX_ * pixelRatio;
       const offsetY = this.textOffsetY_ * pixelRatio;
       const text = this.text_;
       const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textState.scale[0]) / 2 : 0;
@@ -21525,7 +21806,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textKey,
         1,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
       this.hitDetectionInstructions.push([
         Instruction.DRAW_CHARS,
@@ -21543,7 +21825,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textKey,
         1 / pixelRatio,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
     }
     /**
@@ -21777,9 +22060,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const dy = by * (1 / sin);
     return [x + dx * offset, y + dy * offset];
   }
-  function removeOffsetCycles(coords, stride) {
+  function removeOffsetCycles(coords, stride, closedLine = false) {
     for (let i = 0, ii = coords.length - 2; i < ii; i += stride) {
-      for (let j = coords.length - 2 * stride; j > i + stride; j -= stride) {
+      const jMax = closedLine && i === 0 ? coords.length - 3 * stride : coords.length - 2 * stride;
+      for (let j = jMax; j > i + stride; j -= stride) {
         const p1x = coords[i];
         const p1y = coords[i + 1];
         const p2x = coords[i + stride];
@@ -21805,6 +22089,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     return coords;
+  }
+  let segmenter;
+  function getSegmenter() {
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+    }
+    return segmenter;
   }
   function drawTextOnPath(flatCoordinates, offset, end, stride, text, startM, maxAngle, scale2, measureAndCacheTextWidth2, font, cache2, rotation, keepUpright = true) {
     let x2 = flatCoordinates[offset];
@@ -21868,7 +22159,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return result;
     }
     text = text.replace(/\n/g, " ");
-    for (let i = 0, ii = text.length; i < ii; ) {
+    const segments = Array.from(getSegmenter().segment(text), (s) => s.segment);
+    for (let i = 0, ii = segments.length; i < ii; ) {
       advance();
       let angle = Math.atan2(y2 - y1, x2 - x1);
       if (reverse) {
@@ -21886,7 +22178,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let charLength = 0;
       for (; i < ii; ++i) {
         const index = reverse ? ii - i - 1 : i;
-        const len = scale2 * measureAndCacheTextWidth2(font, text[index], cache2);
+        const len = scale2 * measureAndCacheTextWidth2(font, segments[index], cache2);
         if (offset + stride < end && segmentM + segmentLength < startM + charLength + len / 2) {
           break;
         }
@@ -21895,7 +22187,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (i === iStart) {
         continue;
       }
-      const chars = reverse ? text.substring(ii - iStart, ii - i) : text.substring(iStart, i);
+      const chars = (reverse ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
       interpolate = segmentLength === 0 ? 0 : (startM + charLength / 2 - segmentM) / segmentLength;
       const x = lerp(x1, x2, interpolate);
       const y = lerp(y1, y2, interpolate);
@@ -21907,25 +22199,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   class ZIndexContext {
     constructor() {
       /**
-       * @private
+       * Pushes the method name captured at access time together with the arguments
+       * passed at call time. Reused across all proxied method calls.
        * @param {...*} args Args.
-       * @return {ZIndexContext} This.
+       * @private
        */
       __publicField(this, "pushMethodArgs_", (...args) => {
-        this.push_(args);
-        return this;
+        this.push_(this.pendingMethod_, args);
       });
       this.instructions_ = [];
       this.zIndex = 0;
       this.offset_ = 0;
+      this.pendingMethod_;
       this.context_ = /** @type {ZIndexContextProxy} */
       new Proxy(getSharedCanvasContext2D(), {
         get: (target, property) => {
           if (typeof /** @type {*} */
-          getSharedCanvasContext2D()[property] !== "function") {
+          target[property] !== "function") {
             return void 0;
           }
-          this.push_(property);
+          this.pendingMethod_ = property;
           return this.pushMethodArgs_;
         },
         set: (target, property, value) => {
@@ -21978,11 +22271,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           if (typeof /** @type {*} */
           context[property] === "function") {
             context[property](...instructionAtIndex);
+          } else if (typeof instructionAtIndex === "function") {
+            context[property] = instructionAtIndex(context);
           } else {
-            if (typeof instructionAtIndex === "function") {
-              context[property] = instructionAtIndex(context);
-              continue;
-            }
             context[property] = instructionAtIndex;
           }
         }
@@ -22801,6 +23092,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               /** @type {boolean} */
               instruction[15]
             );
+            const offsetX = (
+              /** @type {number} */
+              instruction[16]
+            );
             const textState = this.textStates[textKey];
             const font = textState.font;
             const textScale = [
@@ -22844,7 +23139,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     part[4];
                     label = this.createLabel(chars, textKey, "", strokeKey);
                     anchorX = /** @type {number} */
-                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth);
+                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth) - offsetX;
                     anchorY = baseline * label.height + (0.5 - baseline) * 2 * strokeWidth * textScale[1] / textScale[0] - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -22885,7 +23180,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     part[4];
                     label = this.createLabel(chars, textKey, fillKey, "");
                     anchorX = /** @type {number} */
-                    part[2];
+                    part[2] - offsetX;
                     anchorY = baseline * label.height - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -22965,16 +23260,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 /** @type {boolean|undefined} */
                 instruction[4] ?? false
               );
+              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd - 1]) < 1e-6;
               offsetLineString(
                 pixelCoordinates,
                 d,
                 dd,
                 2,
                 lineOffsetPx,
-                isClosedRing,
+                isClosedLine,
                 offsetCoords
               );
-              removeOffsetCycles(offsetCoords, 2);
+              removeOffsetCycles(offsetCoords, 2, isClosedLine);
               lineCoords = offsetCoords;
               lineStart = 0;
               lineEnd = lineCoords.length;
@@ -23677,16 +23973,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.pixelCoordinates_
       );
       if (Math.abs(strokeOffset) > 0) {
+        const n = pixelCoordinates.length;
+        const isClosedLine = close || Math.abs(pixelCoordinates[0] - pixelCoordinates[n - 2]) < 1e-6 && Math.abs(pixelCoordinates[1] - pixelCoordinates[n - 1]) < 1e-6;
         pixelCoordinates = offsetLineString(
           pixelCoordinates,
           0,
-          pixelCoordinates.length,
+          n,
           2,
           strokeOffset,
-          close,
+          isClosedLine,
           pixelCoordinates
         );
-        removeOffsetCycles(pixelCoordinates, 2);
+        removeOffsetCycles(pixelCoordinates, 2, isClosedLine);
       }
       context.moveTo(pixelCoordinates[0], pixelCoordinates[1]);
       let length = pixelCoordinates.length;
@@ -24768,6 +25066,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.layer_ = layer;
       this.staleKeys_ = new Array();
       this.maxStaleKeys = maxStaleKeys;
+      this.renderedSourceKey_;
     }
     /**
      * @return {Array<string>} Get the list of stale keys.
@@ -24782,6 +25081,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.staleKeys_.unshift(key);
       if (this.staleKeys_.length > this.maxStaleKeys) {
         this.staleKeys_.length = this.maxStaleKeys;
+      }
+    }
+    /**
+     * Remember the previous source key as stale when the key changes.
+     * @param {string} sourceKey The current source key.
+     * @protected
+     */
+    updateStaleKeys(sourceKey) {
+      if (!this.renderedSourceKey_) {
+        this.renderedSourceKey_ = sourceKey;
+      } else if (this.renderedSourceKey_ !== sourceKey) {
+        this.prependStaleKey(this.renderedSourceKey_);
+        this.renderedSourceKey_ = sourceKey;
       }
     }
     /**
@@ -24960,8 +25272,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {HTMLElement} target Potential render target.
      * @param {string} transform CSS transform matrix.
      * @param {string} [backgroundColor] Background color.
+     * @param {number} [width] Physical pixel width of the rendering canvas.
+     * @param {number} [height] Physical pixel height of the rendering canvas.
      */
-    useContainer(target, transform2, backgroundColor) {
+    useContainer(target, transform2, backgroundColor, width, height) {
+      if (isCanvas(target) && this.pixelTransform[1] === 0 && this.pixelTransform[2] === 0 && this.pixelTransform[4] === 0 && this.pixelTransform[5] === 0 && target.width === width && target.height === height) {
+        const targetCanvas = (
+          /** @type {HTMLCanvasElement} */
+          target
+        );
+        const context2 = targetCanvas.getContext("2d");
+        if (context2) {
+          this.container = target;
+          this.context = context2;
+          this.containerReused = true;
+          if (backgroundColor) {
+            context2.fillStyle = backgroundColor;
+            context2.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+          }
+          return;
+        }
+      }
       const layerClassName = this.getLayer().getClassName();
       let container, context;
       if (target && target.className === layerClassName && (!backgroundColor || target && target.style.backgroundColor && equals$2(
@@ -25060,7 +25391,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       makeInverse(this.inversePixelTransform, this.pixelTransform);
       const canvasTransform = toString$1(this.pixelTransform);
-      this.useContainer(target, canvasTransform, this.getBackground(frameState));
+      const backgroundColor = this.getBackground(frameState);
+      this.useContainer(target, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
         const canvas = this.context.canvas;
         if (canvas.width != width || canvas.height != height) {
@@ -26411,6 +26743,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.viewPromise_;
     }
     /**
+     * Resolve once the source is ready to be used (its state is `ready`), or
+     * reject if it fails to load (its state is `error`). Sources that configure
+     * asynchronously can use this to expose data (e.g. dimensions) through a
+     * promise instead of the `change` event.
+     * @return {Promise<void>} Resolves when the source is ready.
+     * @protected
+     */
+    ready() {
+      const state = this.getState();
+      if (state === "ready") {
+        return Promise.resolve();
+      }
+      if (state === "error") {
+        return Promise.reject(new Error("Source failed to load"));
+      }
+      return new Promise((resolve, reject) => {
+        const onChange = () => {
+          const changedState = this.getState();
+          if (changedState === "ready") {
+            this.un("change", onChange);
+            resolve();
+          } else if (changedState === "error") {
+            this.un("change", onChange);
+            reject(new Error("Source failed to load"));
+          }
+        };
+        this.on("change", onChange);
+      });
+    }
+    /**
      * Get the state of the source, see {@link import("./Source.js").State} for possible states.
      * @return {import("./Source.js").State} State.
      * @api
@@ -27165,7 +27527,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     hasFeature(feature) {
       const id = feature.getId();
       if (id !== void 0) {
-        return id in this.idIndex_;
+        const indexed = this.idIndex_[String(id)];
+        if (Array.isArray(indexed)) {
+          return indexed.includes(feature);
+        }
+        return indexed === feature;
       }
       return getUid(feature) in this.uidIndex_;
     }
@@ -27254,20 +27620,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super.refresh();
     }
     /**
-     * Remove an extent from the list of loaded extents.
-     * @param {import("../extent.js").Extent} extent Extent.
+     * Marks an extent as not loaded, preserving any loaded areas outside it.
+     *
+     * Any previously loaded extent overlapping the given extent is split into its
+     * remaining non-overlapping parts using {@link module:ol/extent~getDifference getDifference()},
+     * which are then re-inserted into the tree.
+     *
+     * @param {import("../extent.js").Extent} extent Extent to mark as not loaded.
      * @api
      */
     removeLoadedExtent(extent) {
       const loadedExtentsRtree = this.loadedExtentsRtree_;
-      const obj = loadedExtentsRtree.forEachInExtent(extent, function(object) {
-        if (equals$1(object.extent, extent)) {
-          return object;
+      const intersectingExtents = [];
+      loadedExtentsRtree.forEachInExtent(extent, function(object) {
+        intersectingExtents.push(object);
+      });
+      intersectingExtents.forEach((intersectingExtent) => {
+        loadedExtentsRtree.remove(intersectingExtent);
+        const remainders = getDifference(intersectingExtent.extent, extent);
+        for (const remainder of remainders) {
+          loadedExtentsRtree.insert(remainder, { extent: remainder });
         }
       });
-      if (obj) {
-        loadedExtentsRtree.remove(obj);
-      }
     }
     /**
      * Batch remove features from the source.  If you want to remove all features
@@ -29656,8 +30030,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.traceState_ = { active: false };
     }
     /**
+     * Determine whether a trace from `fromIndex` to `toIndex` passes at least one
+     * vertex of the target (i.e. whether it would add any traced coordinates).
+     * The index math mirrors {@link addTracedCoordinates_}.
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @return {boolean} At least one target vertex lies between the indices.
+     * @private
+     */
+    tracePassesVertex_(fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return false;
+      }
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end2 = Math.floor(toIndex);
+        if (end2 === toIndex) {
+          end2 -= 1;
+        }
+        return start2 <= end2;
+      }
+      const start = Math.floor(fromIndex);
+      let end = Math.ceil(toIndex);
+      if (end === toIndex) {
+        end += 1;
+      }
+      return start >= end;
+    }
+    /**
      * Update the trace.
      * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @return {import('../coordinate.js').Coordinate|undefined} The coordinate the
+     * dragged vertex was snapped onto a target edge, if any.
      * @private
      */
     updateTrace_(event) {
@@ -29680,41 +30084,45 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / event.map.getView().getResolution() > this.pixelTolerance_) {
         return;
       }
-      if (traceState.targetIndex !== updatedTraceTarget.index) {
-        if (traceState.targetIndex !== -1) {
-          const oldTarget = traceState.targets[traceState.targetIndex];
-          this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
-        } else {
-          for (const traceSegment of this.traceSegments_) {
-            const segmentData = traceSegment[0];
-            const geometry = segmentData.geometry;
-            const index = traceSegment[1];
-            const coordinates2 = geometry.getCoordinates();
-            const coordinatesArray = getCoordinatesArray(
-              coordinates2,
-              geometry.getType(),
-              segmentData.depth
-            );
-            coordinatesArray.splice(segmentData.index + index, 1);
-            geometry.setCoordinates(coordinates2);
-            if (index === 0) {
-              segmentData.index -= 1;
-            }
-          }
-        }
-        const newTarget = traceState.targets[updatedTraceTarget.index];
-        this.addTracedCoordinates_(
-          newTarget,
-          newTarget.startIndex,
+      let commit = true;
+      if (traceState.targetIndex === -1) {
+        const candidateTarget = traceState.targets[updatedTraceTarget.index];
+        commit = this.tracePassesVertex_(
+          candidateTarget.startIndex,
           updatedTraceTarget.endIndex
         );
-      } else {
-        const target2 = traceState.targets[traceState.targetIndex];
-        this.addOrRemoveTracedCoordinates_(target2, updatedTraceTarget.endIndex);
       }
-      traceState.targetIndex = updatedTraceTarget.index;
-      const target = traceState.targets[traceState.targetIndex];
-      target.endIndex = updatedTraceTarget.endIndex;
+      if (commit) {
+        if (traceState.targetIndex !== updatedTraceTarget.index) {
+          if (traceState.targetIndex !== -1) {
+            const oldTarget = traceState.targets[traceState.targetIndex];
+            this.removeTracedCoordinates_(
+              oldTarget.startIndex,
+              oldTarget.endIndex
+            );
+          }
+          const newTarget = traceState.targets[updatedTraceTarget.index];
+          this.addTracedCoordinates_(
+            newTarget,
+            newTarget.startIndex,
+            updatedTraceTarget.endIndex
+          );
+        } else {
+          const target = traceState.targets[traceState.targetIndex];
+          this.addOrRemoveTracedCoordinates_(target, updatedTraceTarget.endIndex);
+        }
+        traceState.targetIndex = updatedTraceTarget.index;
+        traceState.targets[traceState.targetIndex].endIndex = updatedTraceTarget.endIndex;
+      }
+      const snapTarget = traceState.targets[updatedTraceTarget.index];
+      const snappedVertex = interpolateCoordinate(
+        snapTarget.coordinates,
+        updatedTraceTarget.endIndex
+      );
+      for (const dragSegment of this.dragSegments_) {
+        this.updateGeometry_(snappedVertex.slice(), dragSegment);
+      }
+      return snappedVertex;
     }
     getTraceCandidates_(event) {
       const map = this.getMap();
@@ -29779,6 +30187,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
+     * Tracing splices coordinates into a ring next to the dragged vertex, but only
+     * adjusts the index of the trace segment itself.  The dragged vertex' other
+     * segments in `dragSegments_` reference the same ring, so their stored index
+     * must be shifted too - otherwise the next {@link updateGeometry_} writes the
+     * dragged vertex to the wrong coordinate and scrambles the ring.
+     * @param {SegmentData} traceSegmentData The trace segment (adjusted by the
+     * caller and skipped here).
+     * @param {number} atIndex Segments at or after this coordinate index shift.
+     * @param {number} delta Coordinates added (positive) or removed (negative).
+     * @private
+     */
+    shiftTracedSegmentIndices_(traceSegmentData, atIndex, delta) {
+      for (const dragSegment of this.dragSegments_) {
+        const segmentData = dragSegment[0];
+        if (segmentData !== traceSegmentData && segmentData.geometry === traceSegmentData.geometry && (segmentData.depth === void 0 || traceSegmentData.depth === void 0 || equals$2(segmentData.depth, traceSegmentData.depth)) && segmentData.index >= atIndex) {
+          segmentData.index += delta;
+        }
+      }
+    }
+    /**
      * @param {number} fromIndex The start index.
      * @param {number} toIndex The end index.
      * @private
@@ -29819,7 +30247,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             segmentData.depth
           );
           coordinatesArray.splice(removeIndex, remove);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            removeIndex + remove,
+            -remove
+          );
           if (index === 1) {
             segmentData.index -= remove;
           }
@@ -29872,7 +30305,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             segmentData.depth
           );
           coordinatesArray.splice(insertIndex, 0, ...newCoordinates);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            insertIndex,
+            newCoordinates.length
+          );
           if (index === 1) {
             segmentData.index += newCoordinates.length;
           }
@@ -30008,6 +30446,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             this.traceSegments_.push(dragSegment);
           }
         }
+        if (this.traceSegments_.length > 1) {
+          this.deactivateTrace_();
+          this.traceSegments_ = null;
+        }
       }
       for (let i = 0, ii = this.dragSegments_.length; i < ii; ++i) {
         const dragSegment = this.dragSegments_[i];
@@ -30022,8 +30464,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         this.updateGeometry_(vertex, dragSegment);
       }
-      this.updateTrace_(evt);
-      this.createOrUpdateVertexFeature_(vertex, features, geometries, true);
+      const snappedVertex = this.updateTrace_(evt);
+      this.createOrUpdateVertexFeature_(
+        snappedVertex || vertex,
+        features,
+        geometries,
+        true
+      );
     }
     /**
      * Handle pointer down events.
@@ -30056,8 +30503,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     handleUpEvent(evt) {
+      const tracedFeatures = this.traceState_.active ? /* @__PURE__ */ new Set() : null;
       for (let i = this.dragSegments_.length - 1; i >= 0; --i) {
         const segmentData = this.dragSegments_[i][0];
+        if (tracedFeatures) {
+          tracedFeatures.add(segmentData.feature);
+        }
         const geometry = segmentData.geometry;
         if (geometry.getType() === "Circle") {
           const circle = (
@@ -30079,6 +30530,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
         } else {
           this.rBush_.update(boundingExtent(segmentData.segment), segmentData);
+        }
+      }
+      if (tracedFeatures) {
+        for (const feature of tracedFeatures) {
+          this.removeFeature_(feature);
+          if (this.filter_(feature)) {
+            this.addFeature_(feature);
+          }
         }
       }
       if (this.featuresBeingModified_) {
@@ -30698,9 +31157,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const segments = [];
       const geometries = geometry.getGeometriesArray();
       for (let i = 0; i < geometries.length; ++i) {
-        const segmenter = this[geometries[i].getType()];
-        if (segmenter) {
-          segments.push(segmenter(geometries[i], projection));
+        const segmenter2 = this[geometries[i].getType()];
+        if (segmenter2) {
+          segments.push(segmenter2(geometries[i], projection));
         }
       }
       return segments.flat();
@@ -30878,10 +31337,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const feature_uid = getUid(feature);
       const geometry = feature.getGeometry();
       if (geometry) {
-        const segmenter = this.segmenters_[geometry.getType()];
-        if (segmenter) {
+        const segmenter2 = this.segmenters_[geometry.getType()];
+        if (segmenter2) {
           this.indexedFeaturesExtents_[feature_uid] = geometry.getExtent(createEmpty());
-          const segments = segmenter.call(
+          const segments = segmenter2.call(
             this.segmenters_,
             geometry,
             this.getMap().getView().getProjection()
@@ -32888,7 +33347,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.renderedPixelRatio;
       this.renderedProjection = null;
       this.renderedTiles = [];
-      this.renderedSourceKey_;
       this.renderedSourceRevision_;
       this.tempExtent = createEmpty();
       this.tempTileRange_ = new TileRange(0, 0, 0, 0);
@@ -33235,13 +33693,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const tileGrid = tileSource.getTileGridForProjection(projection);
       const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
       const tileResolution = tileGrid.getResolution(z);
-      const sourceKey = tileSource.getKey();
-      if (!this.renderedSourceKey_) {
-        this.renderedSourceKey_ = sourceKey;
-      } else if (this.renderedSourceKey_ !== sourceKey) {
-        this.prependStaleKey(this.renderedSourceKey_);
-        this.renderedSourceKey_ = sourceKey;
-      }
+      this.updateStaleKeys(tileSource.getKey());
       let frameExtent = frameState.extent;
       const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
       this.prepareContainer(frameState, target);
@@ -33353,9 +33805,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.preRender(context, frameState);
       const zs = Object.keys(tilesByZ).map(Number);
       zs.sort(ascending);
-      let currentClip;
       const clips = [];
       const clipZs = [];
+      const fadingTiles = [];
       for (let i = zs.length - 1; i >= 0; --i) {
         const currentZ = zs[i];
         const currentTilePixelSize = tileSource.getTilePixelSize(
@@ -33390,42 +33842,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const y = Math.round(origin[1] - yIndex * dy2);
           const w = nextX - x;
           const h = nextY - y;
-          const transition = zs.length === 1;
-          let contextSaved = false;
-          currentClip = [x, y, x + w, y, x + w, y + h, x, y + h];
-          for (let i2 = 0, ii = clips.length; i2 < ii; ++i2) {
-            if (!transition && currentZ < clipZs[i2]) {
-              const clip = clips[i2];
-              if (intersects$1(
-                [x, y, x + w, y + h],
-                [clip[0], clip[3], clip[4], clip[7]]
-              )) {
-                if (!contextSaved) {
-                  context.save();
-                  contextSaved = true;
-                }
-                context.beginPath();
-                context.moveTo(currentClip[0], currentClip[1]);
-                context.lineTo(currentClip[2], currentClip[3]);
-                context.lineTo(currentClip[4], currentClip[5]);
-                context.lineTo(currentClip[6], currentClip[7]);
-                context.moveTo(clip[6], clip[7]);
-                context.lineTo(clip[4], clip[5]);
-                context.lineTo(clip[2], clip[3]);
-                context.lineTo(clip[0], clip[1]);
-                context.clip();
-              }
+          const transition = currentZ === z;
+          if (transition && tile.inTransition(uid)) {
+            fadingTiles.push({ tile, x, y, w, h, gutter: tileGutter });
+            this.renderedTiles.unshift(tile);
+            this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
+            continue;
+          }
+          const currentRect = [x, y, x + w, y + h];
+          const covered = [];
+          for (let j = 0, jj = clips.length; j < jj; ++j) {
+            if (currentZ < clipZs[j] && intersects$1(currentRect, clips[j])) {
+              covered.push(clips[j]);
             }
           }
-          clips.push(currentClip);
-          clipZs.push(currentZ);
-          this.drawTile(tile, frameState, x, y, w, h, tileGutter, transition);
-          if (contextSaved) {
-            context.restore();
+          let clipRects;
+          if (covered.length > 0) {
+            clipRects = subtractExtents(currentRect, covered);
           }
+          clips.push(currentRect);
+          clipZs.push(currentZ);
+          this.drawTile(
+            tile,
+            frameState,
+            x,
+            y,
+            w,
+            h,
+            tileGutter,
+            transition,
+            clipRects
+          );
           this.renderedTiles.unshift(tile);
           this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
         }
+      }
+      for (let i = 0, ii = fadingTiles.length; i < ii; ++i) {
+        const { tile, x, y, w, h, gutter } = fadingTiles[i];
+        this.drawTile(tile, frameState, x, y, w, h, gutter, true, void 0);
       }
       this.renderedResolution = tileResolution;
       this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
@@ -33469,9 +33923,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {number} h Height of the tile.
      * @param {number} gutter Tile gutter.
      * @param {boolean} transition Apply an alpha transition.
+     * @param {Array<import("../../extent.js").Extent>} [clipRects] Sub-rectangles
+     *     of the tile to draw. When not provided, the whole tile is drawn; when an
+     *     empty array is provided, nothing is drawn (the tile is fully covered by
+     *     higher-z tiles).
      * @protected
      */
-    drawTile(tile, frameState, x, y, w, h, gutter, transition) {
+    drawTile(tile, frameState, x, y, w, h, gutter, transition, clipRects) {
       let image;
       if (tile instanceof DataTile) {
         image = asImageLike(tile.getData());
@@ -33496,17 +33954,42 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         context.save();
         context.globalAlpha = alpha;
       }
-      context.drawImage(
-        image,
-        gutter,
-        gutter,
-        image.width - 2 * gutter,
-        image.height - 2 * gutter,
-        x,
-        y,
-        w,
-        h
-      );
+      const imageWidth = image.width - 2 * gutter;
+      const imageHeight = image.height - 2 * gutter;
+      if (clipRects) {
+        const scaleX = imageWidth / w;
+        const scaleY = imageHeight / h;
+        for (let i = 0, ii = clipRects.length; i < ii; ++i) {
+          const rect = clipRects[i];
+          const rx = rect[0];
+          const ry = rect[1];
+          const rw = rect[2] - rect[0];
+          const rh = rect[3] - rect[1];
+          context.drawImage(
+            image,
+            gutter + (rx - x) * scaleX,
+            gutter + (ry - y) * scaleY,
+            rw * scaleX,
+            rh * scaleY,
+            rx,
+            ry,
+            rw,
+            rh
+          );
+        }
+      } else {
+        context.drawImage(
+          image,
+          gutter,
+          gutter,
+          imageWidth,
+          imageHeight,
+          x,
+          y,
+          w,
+          h
+        );
+      }
       if (alphaChanged) {
         context.restore();
       }
@@ -33664,8 +34147,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Options} options Tile grid options.
      */
     constructor(options) {
-      this.minZoom = options.minZoom !== void 0 ? options.minZoom : 0;
-      this.resolutions_ = options.resolutions;
+      let minZoom = options.minZoom;
+      const resolutions = options.resolutions;
+      if (minZoom === void 0 && resolutions) {
+        minZoom = resolutions.findIndex((resolution) => resolution !== void 0);
+      }
+      this.minZoom = minZoom !== void 0 ? minZoom : 0;
+      this.resolutions_ = resolutions;
       assert(
         isSorted(
           this.resolutions_,
@@ -33727,7 +34215,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.fullTileRanges_ = null;
       this.tmpSize_ = [0, 0];
       this.tmpExtent_ = [0, 0, 0, 0];
-      if (options.sizes !== void 0) {
+      if (options.tileRanges !== void 0) {
+        this.fullTileRanges_ = options.tileRanges;
+      } else if (options.sizes !== void 0) {
         this.fullTileRanges_ = options.sizes.map((size, z) => {
           const tileRange = new TileRange(
             Math.min(0, size[0]),
@@ -35526,7 +36016,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           )
         );
       }
-      const feature = new Feature();
+      const FeatureClass = (
+        /** @type {typeof import("../Feature.js").default} */
+        this.featureClass
+      );
+      const feature = new FeatureClass();
       if (this.geometryName_) {
         feature.setGeometryName(this.geometryName_);
       } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
@@ -38954,10 +39448,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const kind = data.type === "MultiDisc" ? "disc" : "circle";
     const simpleType = kind === "disc" ? "Disc" : "Circle";
     return data.geometries.map(
-      (g) => featureFromCircleJson(
-        { type: simpleType, center: g.center, radius: g.radius },
-        mapProjection
-      )
+      (g) => featureFromCircleJson({ type: simpleType, center: g.center, radius: g.radius }, mapProjection)
     );
   }
   function circleParts(feature, precision, mapProjection) {
@@ -39088,7 +39579,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
     const text = raw.trim();
     if (!text) return [];
-    let features = [];
+    let features;
     if (looksLikeKml(text)) {
       features = kmlFormat$1.readFeatures(text, {
         dataProjection: "EPSG:4326",
@@ -39147,12 +39638,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return value;
   }
   function serializeFeatures(features, options) {
-    const {
-      geometryType,
-      precision,
-      outputFormat,
-      mapProjection = "EPSG:3857"
-    } = options;
+    const { geometryType, precision, outputFormat, mapProjection = "EPSG:3857" } = options;
     if (!features.length) return "";
     const primary = primaryGeometryType(parseGeometryTypes(geometryType));
     if (outputFormat === "kml") {
@@ -39174,21 +39660,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     if (primary === "MultiCircle") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "circle",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "circle", precision, mapProjection);
       if (s) return s;
     }
     if (primary === "MultiDisc") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "disc",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "disc", precision, mapProjection);
       if (s) return s;
     }
     if ((primary === "Circle" || primary === "Disc") && features.length === 1) {
@@ -39487,9 +39963,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       fontSize: (stored == null ? void 0 : stored.fontSize) ?? (textStored == null ? void 0 : textStored.fontSize) ?? base.fontSize,
       fontColor: (stored == null ? void 0 : stored.fontColor) ?? (textStored == null ? void 0 : textStored.fontColor) ?? base.fontColor,
       textStrokeColor: (stored == null ? void 0 : stored.textStrokeColor) ?? (textStored == null ? void 0 : textStored.strokeColor) ?? base.textStrokeColor,
-      rotation: clampRotationDeg(
-        (stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation
-      )
+      rotation: clampRotationDeg((stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation)
     };
   }
   function strokeFromAttrs(attrs) {
@@ -39654,29 +40128,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    if (!mapSize || !getPixel) {
+    {
       return candidates[0];
     }
-    const scored = candidates.map((c, index) => {
-      const p = getPixel(c);
-      const onScreen = Boolean(
-        p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1]
-      );
-      return {
-        c,
-        p,
-        onScreen,
-        index,
-        // Plus haut à l’écran = meilleur pour une popup au-dessus
-        topRank: p ? p[1] : Number.POSITIVE_INFINITY
-      };
-    });
-    const pool = scored.filter((s) => s.onScreen);
-    const use = pool.length ? pool : scored;
-    const interior = use.find((s) => s.index === 0);
-    if (interior && interior.onScreen) return interior.c;
-    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
-    return use[0].c;
   }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
@@ -39757,9 +40211,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return;
     }
     if (geom instanceof LineString) {
-      geom.setCoordinates(
-        geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin))
-      );
+      geom.setCoordinates(geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin)));
       return;
     }
     if (geom instanceof Polygon) {
@@ -39828,10 +40280,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let total = 0;
     const segLens = [];
     for (let i = 0; i < coords.length - 1; i++) {
-      const len = Math.hypot(
-        coords[i + 1][0] - coords[i][0],
-        coords[i + 1][1] - coords[i][1]
-      );
+      const len = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1]);
       segLens.push(len);
       total += len;
     }
@@ -40143,17 +40592,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const t = circleSideTranslateAnchor(geom, res);
           add2("translate", t);
           if (this.styleEditEnabled) {
-            add2("style-edit", [
-              t[0],
-              t[1] + STYLE_EDIT_GAP_PX * res
-            ]);
+            add2("style-edit", [t[0], t[1] + STYLE_EDIT_GAP_PX * res]);
           }
         } else if (this.styleEditEnabled) {
           const c = geom.getCenter();
-          add2("style-edit", [
-            c[0],
-            c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)
-          ]);
+          add2("style-edit", [c[0], c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)]);
         }
         return;
       }
@@ -40171,10 +40614,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("resize-sw", [minX, minY]);
         add2("resize-w", [minX, midY]);
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            midX,
-            maxY + STYLE_EDIT_GAP_PX * res
-          ]);
+          add2("style-edit", [midX, maxY + STYLE_EDIT_GAP_PX * res]);
         }
         return;
       }
@@ -40205,10 +40645,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
           const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
-          add2("style-edit", [
-            r[0] - STYLE_EDIT_GAP_PX * res,
-            r[1]
-          ]);
+          add2("style-edit", [r[0] - STYLE_EDIT_GAP_PX * res, r[1]]);
         }
         return;
       }
@@ -40220,10 +40657,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
         add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            rotateAt[0] - STYLE_EDIT_GAP_PX * res,
-            rotateAt[1]
-          ]);
+          add2("style-edit", [rotateAt[0] - STYLE_EDIT_GAP_PX * res, rotateAt[1]]);
         }
       }
     }
@@ -40477,9 +40911,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (this.mode === "bbox" && role.startsWith("resize-")) {
-        feature.setGeometry(
-          bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord))
-        );
+        feature.setGeometry(bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)));
         this.placeHandles(feature);
       }
     }
@@ -40747,9 +41179,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         action: t.mode === "action",
         extraToggle: t.mode === "toggle"
       });
-      const extrasById = new globalThis.Map(
-        this.extraTools.map((t) => [t.id, toDef(t)])
-      );
+      const extrasById = new globalThis.Map(this.extraTools.map((t) => [t.id, toDef(t)]));
       const pickExtras = (...ids) => ids.flatMap((id) => {
         const t = extrasById.get(id);
         return t ? [t] : [];
@@ -40790,18 +41220,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /** Active / désactive visuellement un bouton extra (enabled). */
     setExtraEnabled(id, enabled) {
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${id}"]`);
       if (!btn) return;
       btn.disabled = !enabled;
       btn.setAttribute("aria-disabled", enabled ? "false" : "true");
     }
     /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
     setSaveState(state) {
-      const btn = this.target.querySelector(
-        'button[data-tool-id="save"]'
-      );
+      const btn = this.target.querySelector('button[data-tool-id="save"]');
       if (!btn) return;
       btn.classList.toggle("ec-geometry-editor__tool--save-saved", state === "saved");
       btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
@@ -40894,9 +41320,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clearTransient();
       if (already) return;
       this.activeId = tool.id;
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${tool.id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${tool.id}"]`);
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
       if (tool.extraToggle) {
@@ -40952,11 +41376,118 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.target.replaceChildren();
     }
   }
-  const GEOJSON$2 = new GeoJSON();
+  function parseGpuStyle(raw) {
+    if (!raw) return null;
+    if (typeof raw === "string") {
+      try {
+        return parseGpuStyle(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof raw !== "object") return null;
+    return raw;
+  }
+  function parseGpuFont(textFont) {
+    const fallback = {
+      fontSize: 14,
+      fontFamily: "Marianne, Calibri, sans-serif",
+      fontBold: false,
+      fontItalic: false
+    };
+    if (!textFont) return fallback;
+    const fontBold = /\bbold\b/i.test(textFont);
+    const fontItalic = /\bitalic\b/i.test(textFont);
+    const sizeMatch = /(\d+(?:\.\d+)?)\s*pt/i.exec(textFont);
+    const fontSize = sizeMatch ? Math.round(Number(sizeMatch[1])) : fallback.fontSize;
+    const afterPt = textFont.replace(/^.*?\d+(?:\.\d+)?\s*pt\s+/i, "").trim();
+    const fontFamily = afterPt || fallback.fontFamily;
+    return { fontSize, fontFamily, fontBold, fontItalic };
+  }
+  function numOr(value, fallback) {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  }
+  function strOr(value, fallback) {
+    return typeof value === "string" && value.length > 0 ? value : fallback;
+  }
+  function kindFromGpuType(gpuGeometryType, feature) {
+    const t = typeof gpuGeometryType === "string" ? gpuGeometryType : "";
+    if (t === "Text") return "text";
+    if (t === "Point") return "point";
+    if (t === "LineString") return "line";
+    if (t === "Polygon") return "polygon";
+    if (t === "Disc") return "disc";
+    if (t === "Circle") return "circle";
+    return featureStyleKindOf(feature);
+  }
+  function gpuClientStyleToFeatureStyleAttrs(kind, style) {
+    const base = defaultFeatureStyleAttrs(kind);
+    const font = parseGpuFont(style.textFont);
+    if (kind === "text") {
+      return {
+        ...base,
+        kind,
+        text: strOr(style.textText, base.text),
+        fontSize: font.fontSize,
+        fontFamily: font.fontFamily,
+        fontBold: font.fontBold,
+        fontItalic: font.fontItalic,
+        fontColor: strOr(style.textFillColor, base.fontColor),
+        textStrokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        textStrokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        strokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        strokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    if (kind === "point") {
+      return {
+        ...base,
+        kind,
+        radius: numOr(style.imageRadius, base.radius),
+        fillColor: strOr(style.imageFillColor ?? style.fillColor, base.fillColor),
+        strokeColor: strOr(style.imageStrokeColor ?? style.strokeColor, base.strokeColor),
+        strokeWidth: numOr(style.imageStrokeWidth ?? style.strokeWidth, base.strokeWidth)
+      };
+    }
+    if (kind === "line") {
+      return {
+        ...base,
+        kind,
+        strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+        strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    return {
+      ...base,
+      kind,
+      fillColor: strOr(style.fillColor ?? style.imageFillColor, base.fillColor),
+      strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+      strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth)
+    };
+  }
+  function adaptGpuClientSketchFeatures(features) {
+    for (const feature of features) {
+      if (feature.get(FEATURE_STYLE_PROP)) continue;
+      const gpuStyle = parseGpuStyle(feature.get("style"));
+      if (!gpuStyle) continue;
+      const kind = kindFromGpuType(feature.get("gpuGeometryType"), feature);
+      const attrs = gpuClientStyleToFeatureStyleAttrs(kind, gpuStyle);
+      applyFeatureStyle(feature, attrs);
+      feature.unset("style");
+    }
+  }
+  const GEOJSON = new GeoJSON();
   const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
+  const SKETCH_PRECISION = 7;
   const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
   function projectionOf(map) {
     return map.getView().getProjection();
+  }
+  function mapProjectionCode(map) {
+    const p = projectionOf(map);
+    return typeof p === "string" ? p : p.getCode();
   }
   function cloneForKmlExport(features) {
     return features.map((f) => {
@@ -40984,14 +41515,109 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     restoreFeaturesStyles(features);
   }
-  function readSketchFile(map, text, format) {
+  function restoreImportedCircleFeatures(features) {
+    return features.map((f) => {
+      const g = f.getGeometry();
+      if (g instanceof Circle) return f;
+      const kind = f.get(EC_KIND_PROP);
+      if (kind === "disc" || kind === "circle") {
+        return polygonApproxToCircleFeature(f, kind);
+      }
+      return f;
+    });
+  }
+  function copyFeatureProperties(feature, props) {
+    if (!props) return;
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "geometry") continue;
+      feature.set(key, value);
+    }
+  }
+  function readSketchGeoJsonFeature(raw, mapProjection) {
+    const geom = raw.geometry;
+    if (looksLikeCircleOrDisc(geom)) {
+      const feature = featureFromCircleJson(geom, mapProjection);
+      copyFeatureProperties(feature, raw.properties);
+      return [feature];
+    }
+    if (looksLikeMultiCircleOrDisc(geom)) {
+      const features = featuresFromMultiCircleJson(geom, mapProjection);
+      const props = raw.properties;
+      if (props) {
+        for (const f of features) copyFeatureProperties(f, props);
+      }
+      return features;
+    }
+    return GEOJSON.readFeatures(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: mapProjection
+    });
+  }
+  function readSketchGeoJsonObject(map, data) {
+    const mapProjection = mapProjectionCode(map);
+    if (!data || typeof data !== "object") return [];
+    const root = data;
+    let features;
+    if (looksLikeMultiCircleOrDisc(data)) {
+      features = featuresFromMultiCircleJson(data, mapProjection);
+    } else if (looksLikeCircleOrDisc(data)) {
+      features = [featureFromCircleJson(data, mapProjection)];
+    } else if (root.type === "FeatureCollection" && Array.isArray(root.features)) {
+      features = root.features.flatMap((f) => readSketchGeoJsonFeature(f, mapProjection));
+    } else if (root.type === "Feature") {
+      features = readSketchGeoJsonFeature(root, mapProjection);
+    } else {
+      features = GEOJSON.readFeatures(
+        { type: "Feature", geometry: data, properties: {} },
+        { dataProjection: "EPSG:4326", featureProjection: mapProjection }
+      );
+    }
+    features = restoreImportedCircleFeatures(features);
+    adaptGpuClientSketchFeatures(features);
+    hydrateImportedSketchFeatures(features);
+    return features;
+  }
+  function writeSketchGeoJsonObject(map, features) {
+    const mapProjection = mapProjectionCode(map);
     const opts = {
       featureProjection: projectionOf(map),
       dataProjection: "EPSG:4326"
     };
-    const features = format === "kml" ? KML_FMT.readFeatures(text, opts) : GEOJSON$2.readFeatures(JSON.parse(text), opts);
-    hydrateImportedSketchFeatures(features);
-    return features;
+    const out = features.map((f) => {
+      if (f.getGeometry() instanceof Circle) {
+        const geomJson = JSON.parse(
+          serializeCircleFeature(f, SKETCH_PRECISION, mapProjection)
+        );
+        const props = { ...f.getProperties() };
+        delete props.geometry;
+        return { type: "Feature", geometry: geomJson, properties: props };
+      }
+      return GEOJSON.writeFeatureObject(f, opts);
+    });
+    return { type: "FeatureCollection", features: out };
+  }
+  function sketchFeaturesSnapshot(map, features) {
+    return JSON.stringify(writeSketchGeoJsonObject(map, features));
+  }
+  function sketchFeaturesFromSnapshot(map, raw) {
+    try {
+      return readSketchGeoJsonObject(map, JSON.parse(raw));
+    } catch {
+      return [];
+    }
+  }
+  function readSketchFile(map, text, format) {
+    if (format === "kml") {
+      const features = KML_FMT.readFeatures(text, {
+        featureProjection: projectionOf(map),
+        dataProjection: "EPSG:4326"
+      });
+      const restored = restoreImportedCircleFeatures(features);
+      adaptGpuClientSketchFeatures(restored);
+      hydrateImportedSketchFeatures(restored);
+      return restored;
+    }
+    return readSketchGeoJsonObject(map, JSON.parse(text));
   }
   function writeSketchFile(map, source, format) {
     const features = source.getFeatures();
@@ -41000,9 +41626,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       dataProjection: "EPSG:4326"
     };
     if (format === "kml") {
-      return KML_FMT.writeFeatures(cloneForKmlExport(features), opts);
+      const forKml = features.map(
+        (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+      );
+      return KML_FMT.writeFeatures(cloneForKmlExport(forKml), opts);
     }
-    return JSON.stringify(GEOJSON$2.writeFeaturesObject(features, opts), null, 2);
+    return JSON.stringify(writeSketchGeoJsonObject(map, features), null, 2);
   }
   function downloadBlob(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
@@ -41035,15 +41664,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function formatFromFilename(name) {
     return /\.kml$/i.test(name) ? "kml" : "geojson";
   }
-  const GEOJSON$1 = new GeoJSON();
   const MAX = 50;
+  function sketchHistoryStorageKey(baseKey) {
+    return `${baseKey}:history`;
+  }
   class SketchHistory {
-    constructor(source, getProjection) {
+    constructor(source, getMap) {
       __publicField(this, "undoStack", []);
       __publicField(this, "redoStack", []);
       __publicField(this, "suppress", false);
       this.source = source;
-      this.getProjection = getProjection;
+      this.getMap = getMap;
     }
     /** Enregistre l’état courant (avant mutation ou après stabilisation). */
     push() {
@@ -41076,29 +41707,67 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.restore(next);
       return true;
     }
-    /** Après restoreFromLocalStorage / setFeatures externe. */
+    /** Initialise l’historique depuis l’état courant (sans persistance). */
     resetFromSource() {
       this.undoStack = [this.snapshot()];
       this.redoStack = [];
     }
+    /** Restaure piles + features depuis le dernier Enregistrer. */
+    restoreFromLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return false;
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if ((data == null ? void 0 : data.version) !== 1 || !Array.isArray(data.undo) || !data.undo.length) {
+          return false;
+        }
+        this.undoStack = data.undo.slice(-MAX);
+        this.redoStack = Array.isArray(data.redo) ? data.redo.slice(-MAX) : [];
+        const current = this.undoStack[this.undoStack.length - 1];
+        this.restore(current);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    /** Sérialise les piles undo/redo (appelé au Enregistrer). */
+    persistToLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        if (!this.undoStack.length) {
+          localStorage.removeItem(storageKey);
+          return;
+        }
+        const payload = {
+          version: 1,
+          undo: this.undoStack,
+          redo: this.redoStack
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (err) {
+        console.warn("[SketchHistory] localStorage persist failed", err);
+      }
+    }
+    clearLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+      }
+    }
     snapshot() {
+      const map = this.getMap();
+      if (!map) return '{"type":"FeatureCollection","features":[]}';
       const features = this.source.getFeatures();
-      const projection = this.getProjection();
-      return JSON.stringify(
-        GEOJSON$1.writeFeaturesObject(features, {
-          featureProjection: projection,
-          dataProjection: "EPSG:4326"
-        })
-      );
+      return sketchFeaturesSnapshot(map, features);
     }
     restore(raw) {
+      const map = this.getMap();
+      if (!map) return;
       this.suppress = true;
       try {
-        const features = GEOJSON$1.readFeatures(JSON.parse(raw), {
-          featureProjection: this.getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const features = sketchFeaturesFromSnapshot(map, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } finally {
@@ -41330,6 +41999,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   class SketchFeatureStylePopup {
     constructor(map) {
       __publicField(this, "root");
+      __publicField(this, "overlay");
       __publicField(this, "basicFields");
       __publicField(this, "advancedFields");
       __publicField(this, "advancedToggle");
@@ -41342,31 +42012,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "advancedOpen", false);
       __publicField(this, "outsideDown", false);
       __publicField(this, "mapDragged", false);
-      __publicField(this, "repositionBound", false);
-      __publicField(this, "scrollGuardBound", false);
-      __publicField(this, "mapResizeObserver", null);
-      __publicField(this, "repositionRaf", 0);
+      __publicField(this, "geomChangeKey", null);
       __publicField(this, "onMapPointerDrag", () => {
         this.mapDragged = true;
-      });
-      __publicField(this, "onPopupWheel", (evt) => {
-        evt.stopPropagation();
-        const scroll = this.root.querySelector(
-          ".ec-sketch-style-popup__scroll"
-        );
-        if (!scroll) {
-          evt.preventDefault();
-          return;
-        }
-        const canScroll = scroll.scrollHeight > scroll.clientHeight + 1;
-        if (!canScroll) {
-          evt.preventDefault();
-          return;
-        }
-        const delta = evt.deltaY;
-        const atTop = scroll.scrollTop <= 0 && delta < 0;
-        const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0;
-        if (atTop || atBottom) evt.preventDefault();
       });
       __publicField(this, "onDocPointerDown", (evt) => {
         if (!this.openFlag) return;
@@ -41386,11 +42034,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       __publicField(this, "onViewChange", () => {
         if (!this.openFlag) return;
-        this.scheduleReposition(false);
-      });
-      __publicField(this, "onWindowResize", () => {
-        if (!this.openFlag) return;
-        this.scheduleReposition(true);
+        this.reposition();
       });
       this.map = map;
       this.root = document.createElement("div");
@@ -41411,9 +42055,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     `;
       this.basicFields = this.root.querySelector('[data-section="basic"]');
       this.advancedFields = this.root.querySelector('[data-section="advanced"]');
-      this.advancedToggle = this.root.querySelector(
-        ".ec-sketch-style-popup__advanced-toggle"
-      );
+      this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
       this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
         <span>Texte</span>
@@ -41529,23 +42171,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         lineCap: this.root.querySelector('[data-input="lineCap"]'),
         lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
         lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
-        lineDashOffsetValue: this.root.querySelector(
-          '[data-output="lineDashOffset"]'
-        ),
+        lineDashOffsetValue: this.root.querySelector('[data-output="lineDashOffset"]'),
         miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
         miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
         fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
         fontBold: this.root.querySelector('[data-input="fontBold"]'),
         fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
         textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
-        textStrokeWidthValue: this.root.querySelector(
-          '[data-output="textStrokeWidth"]'
-        ),
+        textStrokeWidthValue: this.root.querySelector('[data-output="textStrokeWidth"]'),
         pointShape: this.root.querySelector('[data-input="pointShape"]'),
         pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
-        pointRotationValue: this.root.querySelector(
-          '[data-output="pointRotation"]'
-        ),
+        pointRotationValue: this.root.querySelector('[data-output="pointRotation"]'),
         zIndex: this.root.querySelector('[data-input="zIndex"]')
       };
       const syncOutputs = () => {
@@ -41571,7 +42207,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.advancedToggle.addEventListener("click", () => {
         this.setAdvancedOpen(!this.advancedOpen);
-        this.reposition();
       });
       this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
         var _a;
@@ -41580,15 +42215,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.hide();
       });
       this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
-      document.body.appendChild(this.root);
-    }
-    scheduleReposition(updateMapSize) {
-      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
-      this.repositionRaf = requestAnimationFrame(() => {
-        this.repositionRaf = 0;
-        if (updateMapSize) this.map.updateSize();
-        this.reposition();
+      this.overlay = new Overlay({
+        element: this.root,
+        positioning: "bottom-center",
+        offset: [0, -8],
+        stopEvent: true
       });
+      this.map.addOverlay(this.overlay);
     }
     open(feature, onCommit) {
       this.unbindOutside();
@@ -41605,7 +42238,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.openFlag = true;
       this.reposition();
       this.bindOutside();
-      this.bindScrollGuard();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
         this.els.text.focus();
         this.els.text.select();
@@ -41613,9 +42245,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     hide() {
       this.unbindOutside();
-      this.unbindScrollGuard();
       this.setAdvancedOpen(false);
       this.root.hidden = true;
+      this.overlay.setPosition(void 0);
       this.openFlag = false;
       this.feature = null;
       this.onCommit = null;
@@ -41626,6 +42258,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     destroy() {
       this.hide();
       for (const p of Object.values(this.colorPickers)) p.destroy();
+      this.map.removeOverlay(this.overlay);
       this.root.remove();
     }
     setAdvancedOpen(open) {
@@ -41640,114 +42273,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return Object.values(this.colorPickers).some((p) => p.containsNode(node));
     }
     bindOutside() {
-      var _a, _b;
+      var _a;
       this.map.on("pointerdrag", this.onMapPointerDrag);
       this.map.getView().on("change:center", this.onViewChange);
       this.map.getView().on("change:resolution", this.onViewChange);
-      this.map.on("change:size", this.onViewChange);
-      window.addEventListener("resize", this.onWindowResize);
-      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", this.onWindowResize);
-      window.addEventListener("scroll", this.onViewChange, true);
       document.addEventListener("pointerdown", this.onDocPointerDown, true);
       document.addEventListener("pointerup", this.onDocPointerUp, true);
-      const mapEl = this.map.getTargetElement();
-      if (mapEl && typeof ResizeObserver !== "undefined") {
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize());
-        this.mapResizeObserver.observe(mapEl);
+      const geom = (_a = this.feature) == null ? void 0 : _a.getGeometry();
+      if (geom) {
+        this.geomChangeKey = geom.on("change", this.onViewChange);
       }
-      this.repositionBound = true;
     }
     unbindOutside() {
-      var _a, _b;
       this.map.un("pointerdrag", this.onMapPointerDrag);
-      if (this.repositionBound) {
-        this.map.getView().un("change:center", this.onViewChange);
-        this.map.getView().un("change:resolution", this.onViewChange);
-        this.map.un("change:size", this.onViewChange);
-        window.removeEventListener("resize", this.onWindowResize);
-        (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", this.onWindowResize);
-        window.removeEventListener("scroll", this.onViewChange, true);
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = null;
-      }
+      this.map.getView().un("change:center", this.onViewChange);
+      this.map.getView().un("change:resolution", this.onViewChange);
       document.removeEventListener("pointerdown", this.onDocPointerDown, true);
       document.removeEventListener("pointerup", this.onDocPointerUp, true);
-      if (this.repositionRaf) {
-        cancelAnimationFrame(this.repositionRaf);
-        this.repositionRaf = 0;
+      if (this.geomChangeKey) {
+        unByKey(this.geomChangeKey);
+        this.geomChangeKey = null;
       }
-      this.repositionBound = false;
     }
-    bindScrollGuard() {
-      if (this.scrollGuardBound) return;
-      this.root.addEventListener("wheel", this.onPopupWheel, {
-        passive: false,
-        capture: true
-      });
-      this.scrollGuardBound = true;
-    }
-    unbindScrollGuard() {
-      if (!this.scrollGuardBound) return;
-      this.root.removeEventListener("wheel", this.onPopupWheel, true);
-      this.scrollGuardBound = false;
-    }
-    /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+    /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const mapSize = this.map.getSize();
-      const anchor = featureStylePopupAnchor(
-        this.feature,
-        mapSize,
-        (c) => this.map.getPixelFromCoordinate(c)
-      );
-      if (!anchor) return;
-      const pixel = this.map.getPixelFromCoordinate(anchor);
-      if (!pixel) return;
-      const mapEl = this.map.getTargetElement();
-      if (!mapEl) return;
-      const mapRect = mapEl.getBoundingClientRect();
-      const tipX = mapRect.left + pixel[0];
-      const tipY = mapRect.top + pixel[1];
-      this.root.style.position = "fixed";
-      this.root.style.zIndex = "10040";
-      this.root.style.left = "0";
-      this.root.style.top = "0";
-      this.root.style.visibility = "hidden";
-      this.root.hidden = false;
-      requestAnimationFrame(() => {
-        const pr = this.root.getBoundingClientRect();
-        const gap = 20;
-        const tipPad = 18;
-        let below = false;
-        let top = tipY - pr.height - gap;
-        if (top < 8) {
-          top = tipY + gap;
-          below = true;
-        }
-        let tipLocalX = pr.width / 2;
-        let left = tipX - tipLocalX;
-        const minLeft = 8;
-        const maxLeft = window.innerWidth - pr.width - 8;
-        if (left < minLeft) {
-          left = minLeft;
-          tipLocalX = tipX - left;
-        } else if (left > maxLeft) {
-          left = maxLeft;
-          tipLocalX = tipX - left;
-        }
-        tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad);
-        left = tipX - tipLocalX;
-        left = Math.min(Math.max(minLeft, left), maxLeft);
-        tipLocalX = tipX - left;
-        top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8);
-        if (!below && top + 4 > tipY) below = true;
-        this.root.style.left = `${left}px`;
-        this.root.style.top = `${top}px`;
-        this.root.style.setProperty("--ec-tip-x", `${tipLocalX}px`);
-        this.root.style.visibility = "visible";
-        this.root.classList.toggle("ec-sketch-style-popup--below", below);
-      });
+      const anchor = featureStylePopupAnchor(this.feature);
+      if (anchor) this.overlay.setPosition(anchor);
     }
     syncFieldsVisibility() {
       const basic = new Set(BASIC_BY_KIND[this.kind]);
@@ -41841,12 +42393,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
         fontBold: this.els.fontBold.checked,
         fontItalic: this.els.fontItalic.checked,
-        textStrokeWidth: clamp(
-          Number(this.els.textStrokeWidth.value),
-          0,
-          20,
-          base.textStrokeWidth
-        ),
+        textStrokeWidth: clamp(Number(this.els.textStrokeWidth.value), 0, 20, base.textStrokeWidth),
         pointShape: shape,
         pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
         zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
@@ -42001,9 +42548,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         offset: [0, -8],
         stopEvent: true
       });
-      overlay.setPosition(
-        measureAnchor(this.map, geom)
-      );
+      overlay.setPosition(measureAnchor(this.map, geom));
       this.map.addOverlay(overlay);
       this.overlays.set(feature, overlay);
       remove.addEventListener("click", (e) => {
@@ -42015,9 +42560,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const g = feature.getGeometry();
         if (!g) return;
         content.textContent = this.formatFeature(feature);
-        overlay.setPosition(
-          measureAnchor(this.map, g)
-        );
+        overlay.setPosition(measureAnchor(this.map, g));
       });
     }
     formatFeature(feature) {
@@ -42122,7 +42665,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       r == null ? void 0 : r(format);
     }
   }
-  const GEOJSON = new GeoJSON();
   const EXTRA_DEFS = {
     Text: {
       id: "text",
@@ -42236,7 +42778,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.applyToolsChrome();
     }
     setMap(map) {
-      var _a;
       const prev = this.getMap();
       if (prev) {
         this.teardownExtras(prev);
@@ -42251,11 +42792,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.ensureLayer(map);
       this.mountDrawBar(map);
       this.placeInGeopfContainer(map);
-      this.restoreFromLocalStorage();
-      (_a = this.history) == null ? void 0 : _a.resetFromSource();
-      if (this.localStorageKey && this.source.getFeatures().length) {
-        this.savedSnapshot = this.sketchSnapshot();
-      }
+      this.restoreSketchFromLocalStorage();
       this.syncHistoryButtons();
       this.syncSaveButtonState();
     }
@@ -42391,7 +42928,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       var _a, _b, _c, _d;
       if (!this.layer) return;
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
-      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map.getView().getProjection()) : null;
+      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map) : null;
       (_b = this.stylePopup) == null ? void 0 : _b.destroy();
       this.stylePopup = null;
       if (this.enableFeatureStyleEditor) {
@@ -42537,18 +43074,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     runImport() {
       const map = this.getMap();
       if (!map) return;
-      pickSketchFile(".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml", (text, name) => {
-        var _a;
-        try {
-          const format = formatFromFilename(name);
-          const features = readSketchFile(map, text, format);
-          this.source.addFeatures(features);
-          (_a = this.history) == null ? void 0 : _a.push();
-          this.notifyChange();
-        } catch (err) {
-          console.warn("[SketchControl] import failed", err);
+      pickSketchFile(
+        ".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml",
+        (text, name) => {
+          var _a;
+          try {
+            const format = formatFromFilename(name);
+            const features = readSketchFile(map, text, format);
+            this.source.addFeatures(features);
+            (_a = this.history) == null ? void 0 : _a.push();
+            this.notifyChange();
+          } catch (err) {
+            console.warn("[SketchControl] import failed", err);
+          }
         }
-      });
+      );
     }
     async runExport() {
       const map = this.getMap();
@@ -42597,14 +43137,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.syncSaveButtonState();
     }
     sketchSnapshot() {
-      var _a;
-      const features = this.getFeatures();
-      return JSON.stringify(
-        GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        })
-      );
+      const map = this.getMap();
+      if (!map) return '{"type":"FeatureCollection","features":[]}';
+      return sketchFeaturesSnapshot(map, this.getFeatures());
     }
     syncSaveButtonState() {
       if (!this.localStorageKey || !this.drawBar) return;
@@ -42616,38 +43151,59 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.drawBar.setSaveState(dirty ? "dirty" : "saved");
     }
     saveToLocalStorage() {
-      var _a;
+      var _a, _b, _c;
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const features = this.getFeatures();
+        const historyKey = sketchHistoryStorageKey(this.localStorageKey);
         if (!features.length) {
           localStorage.removeItem(this.localStorageKey);
+          (_a = this.history) == null ? void 0 : _a.clearLocalStorage(historyKey);
+          (_b = this.history) == null ? void 0 : _b.resetFromSource();
           this.savedSnapshot = this.sketchSnapshot();
           this.syncSaveButtonState();
+          this.syncHistoryButtons();
           return;
         }
-        const json = GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        localStorage.setItem(this.localStorageKey, JSON.stringify(json));
-        this.savedSnapshot = JSON.stringify(json);
+        const map = this.getMap();
+        if (!map) return;
+        const json = sketchFeaturesSnapshot(map, features);
+        localStorage.setItem(this.localStorageKey, json);
+        (_c = this.history) == null ? void 0 : _c.persistToLocalStorage(historyKey);
+        this.savedSnapshot = json;
         this.syncSaveButtonState();
+        this.syncHistoryButtons();
       } catch (err) {
         console.warn("[SketchControl] localStorage save failed", err);
       }
     }
-    restoreFromLocalStorage() {
-      var _a;
+    /**
+     * Au montage : dernier Enregistrer (croquis + historique `:history`).
+     * Modifications non enregistrées avant rechargement sont perdues.
+     */
+    restoreSketchFromLocalStorage() {
+      var _a, _b, _c;
+      if (!this.localStorageKey || typeof localStorage === "undefined") {
+        (_a = this.history) == null ? void 0 : _a.resetFromSource();
+        return;
+      }
+      const saved = localStorage.getItem(this.localStorageKey);
+      this.savedSnapshot = saved;
+      const historyKey = sketchHistoryStorageKey(this.localStorageKey);
+      const restoredHistory = this.historyEnabled && saved && ((_b = this.history) == null ? void 0 : _b.restoreFromLocalStorage(historyKey));
+      if (!restoredHistory) {
+        this.restoreSavedSnapshotFromLocalStorage();
+        (_c = this.history) == null ? void 0 : _c.resetFromSource();
+      }
+    }
+    restoreSavedSnapshotFromLocalStorage() {
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const raw = localStorage.getItem(this.localStorageKey);
         if (!raw) return;
-        const features = GEOJSON.readFeatures(JSON.parse(raw), {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const map = this.getMap();
+        if (!map) return;
+        const features = sketchFeaturesFromSnapshot(map, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } catch (err) {
@@ -42824,44 +43380,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       title.className = "ec-geometry-editor__settings-title";
       title.textContent = "Options";
       form.appendChild(title);
-      form.appendChild(
-        this.geometryTypeField(String(opts.geometryType))
-      );
+      form.appendChild(this.geometryTypeField(String(opts.geometryType)));
       form.appendChild(
         this.selectField("outputFormat", "Format de sortie", OUTPUT_FORMATS, opts.outputFormat)
       );
-      form.appendChild(
-        this.numberField("height", "Hauteur (px)", Number(opts.height) || 400)
-      );
-      form.appendChild(
-        this.textField("width", "Largeur", String(opts.width))
-      );
-      form.appendChild(
-        this.numberField("lon", "Longitude courante", viewState.lon, LON_LAT_STEP)
-      );
-      form.appendChild(
-        this.numberField("lat", "Latitude courante", viewState.lat, LON_LAT_STEP)
-      );
-      form.appendChild(
-        this.numberField("zoom", "Zoom courant", viewState.zoom, ZOOM_STEP)
-      );
+      form.appendChild(this.numberField("height", "Hauteur (px)", Number(opts.height) || 400));
+      form.appendChild(this.textField("width", "Largeur", String(opts.width)));
+      form.appendChild(this.numberField("lon", "Longitude courante", viewState.lon, LON_LAT_STEP));
+      form.appendChild(this.numberField("lat", "Latitude courante", viewState.lat, LON_LAT_STEP));
+      form.appendChild(this.numberField("zoom", "Zoom courant", viewState.zoom, ZOOM_STEP));
       form.appendChild(this.numberField("minZoom", "Zoom min", opts.minZoom, 1));
       form.appendChild(this.numberField("maxZoom", "Zoom max", opts.maxZoom, 1));
-      form.appendChild(
-        this.numberField("precision", "Précision", opts.precision, 1)
-      );
+      form.appendChild(this.numberField("precision", "Précision", opts.precision, 1));
       form.appendChild(this.checkField("editable", "Éditable", opts.editable));
       form.appendChild(
         this.checkField("centerOnResults", "Recadrer sur les résultats", opts.centerOnResults)
       );
       form.appendChild(this.checkField("blockView", "Bloquer la vue", opts.blockView));
       form.appendChild(this.checkField("showZoom", "Contrôle zoom", opts.showZoom));
-      form.appendChild(
-        this.checkField("showAttributions", "Attributions", opts.showAttributions)
-      );
-      form.appendChild(
-        this.checkField("showSettings", "Bouton réglages", opts.showSettings)
-      );
+      form.appendChild(this.checkField("showAttributions", "Attributions", opts.showAttributions));
+      form.appendChild(this.checkField("showSettings", "Bouton réglages", opts.showSettings));
       form.appendChild(
         this.selectField(
           "toolsToggle",
@@ -43113,10 +43651,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "lastLoadedRaw", null);
       __publicField(this, "onElementInput");
       this.element = element;
-      this.options = mergeOptions(
-        { ...DEFAULT_GEOMETRY_EDITOR_OPTIONS },
-        options
-      );
+      this.options = mergeOptions({ ...DEFAULT_GEOMETRY_EDITOR_OPTIONS }, options);
       this.initialOptions = cloneResolvedOptions(this.options);
       this.applyElementVisibility();
       this.mapHost = document.createElement("div");
@@ -43134,7 +43669,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const baseLayers = this.options.tileLayers.map(createTileLayer);
       const controls = defaults$1({ attribution: false, zoom: false });
       const blockView = this.options.blockView;
-      this.map = new Map({
+      this.map = new Map$1({
         target: mapTarget,
         layers: [...baseLayers, this.vectorLayer],
         view: new View({
@@ -43175,10 +43710,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.element.addEventListener("change", this.onElementInput);
       const jq = getJQuery();
       if (jq) {
-        jq(this.element).on(
-          "input.ecGeometryEditor change.ecGeometryEditor",
-          this.onElementInput
-        );
+        jq(this.element).on("input.ecGeometryEditor change.ecGeometryEditor", this.onElementInput);
         this.jqueryListening = true;
       }
     }
@@ -43231,22 +43763,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.applyTileLayers(this.options.tileLayers);
       }
       if (patch.customStyle !== void 0) {
-        this.vectorLayer.setStyle(
-          this.options.customStyle ?? geometryStyleFunction
-        );
+        this.vectorLayer.setStyle(this.options.customStyle ?? geometryStyleFunction);
         (_a = this.sketch) == null ? void 0 : _a.setStyle(this.options.customStyle);
       }
       if (patch.editable !== void 0) {
         this.applyEditable();
       } else if (patch.toolsToggle !== void 0) {
         this.applyHostClass();
-        (_b = this.sketch) == null ? void 0 : _b.setToolsToggle(
-          this.options.toolsToggle ?? null
-        );
+        (_b = this.sketch) == null ? void 0 : _b.setToolsToggle(this.options.toolsToggle ?? null);
       } else if (this.sketch && patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
-        this.sketch.setGeometryType(
-          this.options.geometryType
-        );
+        this.sketch.setGeometryType(this.options.geometryType);
       }
       if (patch.geometryType !== void 0 || patch.outputFormat !== void 0 || patch.precision !== void 0) {
         this.serializeToElement();
@@ -43298,9 +43824,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (raw === this.lastLoadedRaw) return;
       this.lastLoadedRaw = raw;
       let features = parseRawToFeatures(raw);
-      const primary = primaryGeometryType(
-        parseGeometryTypes(this.options.geometryType)
-      );
+      const primary = primaryGeometryType(parseGeometryTypes(this.options.geometryType));
       if (primary === "Circle" || primary === "MultiCircle") {
         features = restoreCircleFeaturesForKind(features, "circle");
       } else if (primary === "Disc" || primary === "MultiDisc") {
@@ -43379,18 +43903,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     hideSourceElement() {
       this.element.hidden = true;
       this.element.setAttribute("aria-hidden", "true");
-      this.element.classList.add(
-        "ec-geometry-editor-source--hidden",
-        "fr-hidden"
-      );
+      this.element.classList.add("ec-geometry-editor-source--hidden", "fr-hidden");
     }
     showSourceElement() {
       this.element.hidden = false;
       this.element.removeAttribute("aria-hidden");
-      this.element.classList.remove(
-        "ec-geometry-editor-source--hidden",
-        "fr-hidden"
-      );
+      this.element.classList.remove("ec-geometry-editor-source--hidden", "fr-hidden");
     }
     applyView(patch) {
       const view = this.map.getView();
@@ -43476,12 +43994,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.map.addControl(this.sketch);
           this.mapHost.appendChild(this.sketch.getElement());
         } else {
-          this.sketch.setGeometryType(
-            this.options.geometryType
-          );
-          this.sketch.setToolsToggle(
-            this.options.toolsToggle ?? null
-          );
+          this.sketch.setGeometryType(this.options.geometryType);
+          this.sketch.setToolsToggle(this.options.toolsToggle ?? null);
           this.sketch.setStyle(this.options.customStyle);
         }
         this.applyHostClass();
