@@ -13,7 +13,6 @@ import type { Geometry as OlGeometry } from 'ol/geom'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
-import GeoJSON from 'ol/format/GeoJSON'
 import Draw from 'ol/interaction/Draw'
 import { DrawToolsBar, type DrawBarExtraTool } from './DrawToolsBar'
 import { geometryStyleFunction } from './styles'
@@ -34,9 +33,10 @@ import { SketchExportDialog } from './sketch/SketchExportDialog'
 import {
   downloadBlob,
   formatFromFilename,
-  hydrateImportedSketchFeatures,
   pickSketchFile,
   readSketchFile,
+  sketchFeaturesFromSnapshot,
+  sketchFeaturesSnapshot,
   writeSketchFile,
 } from './sketch/sketchIo'
 
@@ -82,8 +82,6 @@ export interface SketchControlOptions {
    */
   enableFeatureStyleEditor?: boolean
 }
-
-const GEOJSON = new GeoJSON()
 
 const EXTRA_DEFS: Record<
   SketchExtraTool,
@@ -385,7 +383,7 @@ export class SketchControl extends Control {
     if (!this.layer) return
     this.drawBar?.destroy()
     this.history = this.historyEnabled
-      ? new SketchHistory(this.source, () => map.getView().getProjection())
+      ? new SketchHistory(this.source, () => map)
       : null
     this.stylePopup?.destroy()
     this.stylePopup = null
@@ -606,13 +604,9 @@ export class SketchControl extends Control {
   }
 
   private sketchSnapshot(): string {
-    const features = this.getFeatures()
-    return JSON.stringify(
-      GEOJSON.writeFeaturesObject(features, {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      }),
-    )
+    const map = this.getMap()
+    if (!map) return '{"type":"FeatureCollection","features":[]}'
+    return sketchFeaturesSnapshot(map, this.getFeatures())
   }
 
   private syncSaveButtonState(): void {
@@ -635,12 +629,11 @@ export class SketchControl extends Control {
         this.syncSaveButtonState()
         return
       }
-      const json = GEOJSON.writeFeaturesObject(features, {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      })
-      localStorage.setItem(this.localStorageKey, JSON.stringify(json))
-      this.savedSnapshot = JSON.stringify(json)
+      const map = this.getMap()
+      if (!map) return
+      const json = sketchFeaturesSnapshot(map, features)
+      localStorage.setItem(this.localStorageKey, json)
+      this.savedSnapshot = json
       this.syncSaveButtonState()
     } catch (err) {
       console.warn('[SketchControl] localStorage save failed', err)
@@ -652,11 +645,9 @@ export class SketchControl extends Control {
     try {
       const raw = localStorage.getItem(this.localStorageKey)
       if (!raw) return
-      const features = GEOJSON.readFeatures(JSON.parse(raw), {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      }) as OlFeature<OlGeometry>[]
-      hydrateImportedSketchFeatures(features)
+      const map = this.getMap()
+      if (!map) return
+      const features = sketchFeaturesFromSnapshot(map, raw)
       this.source.clear(true)
       if (features.length) this.source.addFeatures(features)
     } catch (err) {

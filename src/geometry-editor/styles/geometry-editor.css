@@ -407,9 +407,9 @@
   box-sizing: border-box;
 }
 
-/* Positionnée en fixed (body) — peut dépasser le cadre carte */
+/* Overlay OL (bottom-center) — appendice centré */
 .ec-sketch-style-popup {
-  position: fixed;
+  position: relative;
   overflow: visible;
   margin-bottom: 17px;
 }
@@ -431,7 +431,7 @@
   border-right: 15px solid transparent;
   border-left: 15px solid transparent;
   bottom: -17px;
-  left: var(--ec-tip-x, 50%);
+  left: 50%;
   margin-left: -15px;
   pointer-events: none;
 }
@@ -443,29 +443,9 @@
   border-right: 14px solid transparent;
   border-left: 14px solid transparent;
   bottom: -15px;
-  left: var(--ec-tip-x, 50%);
+  left: 50%;
   margin-left: -14px;
   pointer-events: none;
-}
-
-/* Appendice vers le haut (popup sous le point) */
-.ec-sketch-style-popup--below {
-  margin-bottom: 0;
-  margin-top: 17px;
-}
-
-.ec-sketch-style-popup--below::before {
-  border-top: none;
-  border-bottom: 16px solid var(--border-default-grey, #ddd);
-  bottom: auto;
-  top: -17px;
-}
-
-.ec-sketch-style-popup--below::after {
-  border-top: none;
-  border-bottom: 15px solid var(--background-default-grey, #fff);
-  bottom: auto;
-  top: -15px;
 }
 
 .ec-sketch-style-popup__advanced-toggle {

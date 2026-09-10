@@ -1,15 +1,13 @@
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import type VectorSource from 'ol/source/Vector'
-import GeoJSON from 'ol/format/GeoJSON'
-import type { ProjectionLike } from 'ol/proj'
-import { hydrateImportedSketchFeatures } from './sketchIo'
+import type Map from 'ol/Map'
+import { sketchFeaturesFromSnapshot, sketchFeaturesSnapshot } from './sketchIo'
 
-const GEOJSON = new GeoJSON()
 const MAX = 50
 
 /**
- * Historique undo/redo des features croquis (snapshots GeoJSON).
+ * Historique undo/redo des features croquis (snapshots GeoJSON croquis).
  */
 export class SketchHistory {
   private undoStack: string[] = []
@@ -18,7 +16,7 @@ export class SketchHistory {
 
   constructor(
     private readonly source: VectorSource,
-    private readonly getProjection: () => ProjectionLike | undefined,
+    private readonly getMap: () => Map | null,
   ) {}
 
   /** Enregistre l’état courant (avant mutation ou après stabilisation). */
@@ -64,24 +62,18 @@ export class SketchHistory {
   }
 
   private snapshot(): string {
+    const map = this.getMap()
+    if (!map) return '[]'
     const features = this.source.getFeatures() as OlFeature<OlGeometry>[]
-    const projection = this.getProjection()
-    return JSON.stringify(
-      GEOJSON.writeFeaturesObject(features, {
-        featureProjection: projection,
-        dataProjection: 'EPSG:4326',
-      }),
-    )
+    return sketchFeaturesSnapshot(map, features)
   }
 
   private restore(raw: string): void {
+    const map = this.getMap()
+    if (!map) return
     this.suppress = true
     try {
-      const features = GEOJSON.readFeatures(JSON.parse(raw), {
-        featureProjection: this.getProjection(),
-        dataProjection: 'EPSG:4326',
-      }) as OlFeature<OlGeometry>[]
-      hydrateImportedSketchFeatures(features)
+      const features = sketchFeaturesFromSnapshot(map, raw)
       this.source.clear(true)
       if (features.length) this.source.addFeatures(features)
     } finally {

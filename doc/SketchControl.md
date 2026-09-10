@@ -43,7 +43,7 @@ Contrôle OpenLayers de **croquis** (dessin / édition de géométries) réutili
 
 ## Popup style (`enableFeatureStyleEditor`)
 
-À la création d’une feature (dessin classique ou texte), ouvre une popup adaptée au type (position `fixed` sur le document — peut dépasser le cadre carte ; fermeture au clic extérieur, sauf pan carte). En **modification**, une icône palette rouvre la popup.
+À la création d’une feature (dessin classique ou texte), ouvre une popup adaptée au type (Overlay OL `bottom-center`, comme les mesures ; fermeture au clic extérieur, sauf pan carte). En **modification**, une icône palette rouvre la popup.
 
 Color pickers : clic sur la case → dialogue (sélecteur natif, hex, barre d’**opacité**).
 
@@ -52,6 +52,8 @@ Bouton **Enregistrer** : pastille verte (à jour) / orange (modifications non en
 Bouton **Options avancées** (repliées par défaut) : tirets, extrémités, jonctions, forme du point, gras / italique, zIndex, etc. Les champs non pertinents sont désactivés (ex. rotation d’un point circulaire, décalage tirets si trait plein).
 
 Le style est stocké dans la propriété feature `ec-feature-style` (et `ec-sketch-text` pour le texte) — pris en compte à l’**import** / **export** GeoJSON ; en KML les objets sont sérialisés en JSON dans ExtendedData.
+
+Les **disques / cercles** (`ol/geom/Circle`) sont sérialisés en GeoJSON avec une géométrie custom `{ "type": "Disc"|"Circle", "center": [lon, lat], "radius": m }` (propriété `ecKind`). En KML : polygone approximant + `ecKind` dans les propriétés.
 
 | Type                          | Champs de base                            | Avancés (aperçu)                                                    |
 | ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
