@@ -6,6 +6,7 @@ import Circle from 'ol/geom/Circle'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
 import { FEATURE_STYLE_PROP, restoreFeaturesStyles } from './featureStyle'
+import { adaptGpuClientSketchFeatures } from './gpuClientSketchAdapter'
 import { SKETCH_TEXT_PROP } from './SketchTextPopup'
 import {
   EC_KIND_PROP,
@@ -148,6 +149,7 @@ export function readSketchGeoJsonObject(
   }
 
   features = restoreImportedCircleFeatures(features)
+  adaptGpuClientSketchFeatures(features)
   hydrateImportedSketchFeatures(features)
   return features
 }
@@ -202,6 +204,7 @@ export function readSketchFile(
       dataProjection: 'EPSG:4326',
     }) as OlFeature<OlGeometry>[]
     const restored = restoreImportedCircleFeatures(features)
+    adaptGpuClientSketchFeatures(restored)
     hydrateImportedSketchFeatures(restored)
     return restored
   }

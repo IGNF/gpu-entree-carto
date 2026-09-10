@@ -55,6 +55,10 @@ Le style est stocké dans la propriété feature `ec-feature-style` (et `ec-sket
 
 Les **disques / cercles** (`ol/geom/Circle`) sont sérialisés en GeoJSON avec une géométrie custom `{ "type": "Disc"|"Circle", "center": [lon, lat], "radius": m }` (propriété `ecKind`). En KML : polygone approximant + `ecKind` dans les propriétés.
 
+### Compatibilité import gpu-client
+
+Les exports GeoJSON de **gpu-client** (`properties.style` + `gpuGeometryType`) sont reconnus automatiquement et convertis en `ec-feature-style` / `ec-sketch-text` (textes inclus). Module : `sketch/gpuClientSketchAdapter.ts`.
+
 | Type                          | Champs de base                            | Avancés (aperçu)                                                    |
 | ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
 | Texte                         | texte, taille, couleur, contour, rotation | police, gras, italique, épaisseur contour, zIndex                   |

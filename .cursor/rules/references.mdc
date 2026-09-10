@@ -1,0 +1,7 @@
+---
+description: Liste des projets de reférence local
+globs: _local/references-projet.txt
+alwaysApply: true
+---
+
+
