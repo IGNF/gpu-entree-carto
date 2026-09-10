@@ -58,6 +58,15 @@
   pointer-events: auto;
 }
 
+/* Annule tools-root > * sur la toolbar : seuls les boutons capturent les clics */
+.ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
+  pointer-events: none;
+}
+
+.ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
+  pointer-events: auto;
+}
+
 .ec-geometry-editor__tools-root[data-corner] {
   gap: var(--ec-geom-btn-gap);
 }
@@ -106,6 +115,8 @@
   margin: 0;
   padding: 0;
   padding-inline-end: var(--ec-geom-tooltip-space);
+  /* Zone padding transparente : clics / scroll carte passent au travers */
+  pointer-events: none;
   border: none;
   border-radius: var(--ec-geom-btn-radius);
   /* Fond / ombre uniquement sur la colonne boutons */

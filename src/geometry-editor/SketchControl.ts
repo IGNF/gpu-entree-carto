@@ -21,7 +21,7 @@ import { serializeFeatures } from './serializeGeometry'
 import { restoreCircleFeaturesForKind } from './circleHelpers'
 import { parseGeometryTypes, primaryGeometryType } from './geometryTypeUtils'
 import type { GeometryOutputFormat, GeometryTypeOption, ToolsToggleCorner } from './types'
-import { SketchHistory } from './sketch/SketchHistory'
+import { SketchHistory, sketchHistoryStorageKey } from './sketch/SketchHistory'
 import {
   applySketchTextStyle,
   isSketchTextFeature,
@@ -228,11 +228,7 @@ export class SketchControl extends Control {
     this.ensureLayer(map)
     this.mountDrawBar(map)
     this.placeInGeopfContainer(map)
-    this.restoreFromLocalStorage()
-    this.history?.resetFromSource()
-    if (this.localStorageKey && this.source.getFeatures().length) {
-      this.savedSnapshot = this.sketchSnapshot()
-    }
+    this.restoreSketchFromLocalStorage()
     this.syncHistoryButtons()
     this.syncSaveButtonState()
   }
@@ -623,24 +619,50 @@ export class SketchControl extends Control {
     if (!this.localStorageKey || typeof localStorage === 'undefined') return
     try {
       const features = this.getFeatures()
+      const historyKey = sketchHistoryStorageKey(this.localStorageKey)
       if (!features.length) {
         localStorage.removeItem(this.localStorageKey)
+        this.history?.clearLocalStorage(historyKey)
+        this.history?.resetFromSource()
         this.savedSnapshot = this.sketchSnapshot()
         this.syncSaveButtonState()
+        this.syncHistoryButtons()
         return
       }
       const map = this.getMap()
       if (!map) return
       const json = sketchFeaturesSnapshot(map, features)
       localStorage.setItem(this.localStorageKey, json)
+      this.history?.persistToLocalStorage(historyKey)
       this.savedSnapshot = json
       this.syncSaveButtonState()
+      this.syncHistoryButtons()
     } catch (err) {
       console.warn('[SketchControl] localStorage save failed', err)
     }
   }
 
-  private restoreFromLocalStorage(): void {
+  /**
+   * Au montage : dernier Enregistrer (croquis + historique `:history`).
+   * Modifications non enregistrées avant rechargement sont perdues.
+   */
+  private restoreSketchFromLocalStorage(): void {
+    if (!this.localStorageKey || typeof localStorage === 'undefined') {
+      this.history?.resetFromSource()
+      return
+    }
+    const saved = localStorage.getItem(this.localStorageKey)
+    this.savedSnapshot = saved
+    const historyKey = sketchHistoryStorageKey(this.localStorageKey)
+    const restoredHistory =
+      this.historyEnabled && saved && this.history?.restoreFromLocalStorage(historyKey)
+    if (!restoredHistory) {
+      this.restoreSavedSnapshotFromLocalStorage()
+      this.history?.resetFromSource()
+    }
+  }
+
+  private restoreSavedSnapshotFromLocalStorage(): void {
     if (!this.localStorageKey || typeof localStorage === 'undefined') return
     try {
       const raw = localStorage.getItem(this.localStorageKey)

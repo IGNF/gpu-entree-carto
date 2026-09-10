@@ -9,6 +9,10 @@
   --ec-widget-btn-size: 48px;
   --ec-widget-btn-padding: 4px;
   --ec-widget-btn-radius: 4px;
+  /** Colonne outils croquis (largeur layout, infobulles en overflow) */
+  --ec-sketch-column-width: var(--ec-widget-btn-size);
+  /** Décalage horizontal recherche lieu (évite chevauchement colonne croquis) */
+  --ec-search-left-inset: 0px;
   --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
   /* Largeur panneau TabPanels (1,5 × ~408px Figma) ; inset = panneau seul
      (les onglets sont en haut : pas de reserve en bas à côté du panneau) */
@@ -91,6 +95,11 @@
   gap: var(--ec-widget-gap);
   bottom: var(--ec-widget-gap);
   left: var(--ec-widget-gap);
+}
+
+/* Infobulles croquis : ne pas clipper la colonne (padding toolbar en overflow) */
+.position-container-bottom-left:has(> .ec-sketch-control--geopf-slot) {
+  overflow: visible;
 }
 
 .position-container-bottom-right {
@@ -203,30 +212,46 @@
   bottom: auto !important;
   left: auto !important;
   margin: 0;
-  /* Laisse dépasser les infobulles hors de la colonne 48px */
+  align-self: flex-start;
+  flex: 0 1 auto;
+  /* Colonne 48px ; infobulles croquis en overflow visible */
   overflow: visible;
-  width: max-content;
-  max-width: min(100%, calc(var(--ec-widget-btn-size) + 12.5rem));
+  width: var(--ec-sketch-column-width);
+  max-width: var(--ec-sketch-column-width);
   /*
-   * Hauteur bornée à la carte (cqb) : en slot geopf, parent .position n’a pas de
-   * hauteur fixe → max-height:100% ne contraint pas → barre dépasse / pas de scroll.
-   * On réserve la place de la minimap (~2 boutons) + gap sous le croquis.
+   * Hauteur bornée à la carte (cqb) : réserve minimap (~2 boutons) + gaps.
    */
   max-height: calc(
     100cqb - 2 * var(--ec-widget-gap) - (var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap) * 2)
   );
   min-height: 0;
   display: flex;
+  flex-direction: column;
   align-items: stretch;
+  gap: var(--ec-widget-gap);
 }
 
-/* Toolbar scrollable dans la hauteur allouée au slot */
+/*
+ * Toolbar : colonne layout 48px, zone infobulle à droite (comme geometry-editor.css).
+ * margin-inline-end négatif → n’élargit pas la colonne geopf ; overflow-x:hidden
+ * garde les bulles dans la zone padding (sinon clip avec overflow-y:auto).
+ */
 .position-container-bottom-left > .ec-sketch-control--geopf-slot > .ec-geometry-editor__toolbar {
+  --ec-geom-tooltip-space: 12.5rem;
   flex: 1 1 auto;
+  box-sizing: border-box;
+  width: calc(var(--ec-sketch-column-width) + var(--ec-geom-tooltip-space));
+  max-width: none;
   min-height: 0;
   max-height: 100%;
+  padding-inline-end: var(--ec-geom-tooltip-space);
+  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.position-container-bottom-left > .ec-sketch-control--geopf-slot .ec-geometry-editor__tool {
+  overflow: visible;
 }
 
 .position-container-bottom-left
@@ -257,13 +282,18 @@
   background-color: var(--background-default-grey, #fff);
 }
 
+/* Croquis présent → réserve la colonne gauche pour la barre outils */
+.ec-map-shell:has(.ec-sketch-control--geopf-slot) {
+  --ec-search-left-inset: calc(var(--ec-sketch-column-width) + var(--ec-widget-gap));
+}
+
 /* SearchEngine — haut-gauche (cartes.gouv SearchEngine.vue) */
 .gpf-widget[id^='GPsearchEngine-Advanced'] {
   top: var(--ec-widget-gap);
-  left: calc(var(--ec-widget-gap) - 5px);
+  left: calc(var(--ec-widget-gap) - 5px + var(--ec-search-left-inset));
   z-index: 1;
   box-shadow: none;
-  max-width: min(420px, calc(100% - 12px));
+  max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
 }
 
 /*

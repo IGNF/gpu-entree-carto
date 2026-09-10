@@ -16,7 +16,8 @@ Contrôle OpenLayers de **croquis** (dessin / édition de géométries) réutili
 - Standalone : `dist/entree-carto-sketch[.min].js` + `dist/css/entree-carto-sketch[.min].css`  
   → `window.EntreeCartoSketch` (`mountSketch`, `attachGeometryTools`, `SketchControl`)
 
-**CSS :** styles `ec-geometry-editor__*` (toolbar 48×48) + slot geopf `ec-sketch-control--geopf-slot`
+**CSS :** styles `ec-geometry-editor__*` (toolbar 48×48) + slot geopf `ec-sketch-control--geopf-slot`  
+Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), scroll vertical si besoin ; infobulles à droite des boutons (zone `--ec-geom-tooltip-space`, sans élargir la colonne geopf) ; **clics traversants** sur la zone transparente de la toolbar (`pointer-events: none` sur `#ec-sketch-toolbar-*`, `auto` sur les boutons). La recherche lieu est décalée via `--ec-search-left-inset` (`map-controls.css`).
 
 ## Description
 
@@ -24,8 +25,8 @@ Contrôle OpenLayers de **croquis** (dessin / édition de géométries) réutili
 - Outils : Point, LineString, Polygon, Rectangle, Disc (+ modifier / supprimer)
 - Option `toolsToggle` : bouton menu (picto outils) dans un coin
 - Option `clearAll` : bouton « tout supprimer »
-- Option `localStorageKey` : charge au montage + bouton **Enregistrer** (pas d’auto-save)
-- Option `history` : **Annuler** / **Rétablir**
+- Option `localStorageKey` : bouton **Enregistrer** → persiste croquis + historique undo/redo (`{clé}` et `{clé}:history`) ; au rechargement, restauration du **dernier enregistrement** uniquement (modifications non enregistrées perdues)
+- Option `history` : **Annuler** / **Rétablir** en session ; piles restaurées après rechargement si un Enregistrer avait été fait
 - Option `extraTools` : Text, Import, Export, MeasureDistance, MeasureArea
 - Option `enableFeatureStyleEditor` : popup de style à la création (défaut **false** ; activé sur carte / démo)
 - Infobulles style geopf sur chaque bouton
@@ -105,7 +106,7 @@ const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
 | `onChange`                 | —            | Callback après dessin / modif / suppression                    |
 | `localStorageKey`          | `null`       | Clé `localStorage` (restore + bouton Enregistrer)              |
 | `clearAll`                 | `false`      | Bouton tout supprimer                                          |
-| `history`                  | `false`      | Annuler / Rétablir                                             |
+| `history`                  | `false`      | Annuler / Rétablir (persisté au Enregistrer, `{clé}:history`)   |
 | `extraTools`               | `[]`         | Text, Import, Export, Measure*                                 |
 | `enableFeatureStyleEditor` | `false`      | Popup de style à la création (+ icône palette en modification) |
 
