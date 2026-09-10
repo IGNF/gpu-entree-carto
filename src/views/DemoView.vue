@@ -12,6 +12,7 @@ import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
+import { pushRandomLifeNotification } from '@/lib/notifications/cartoNotifications'
 import { createBaseLayerPresets, type BaseLayerId } from '@/ol/baseLayers'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
@@ -47,6 +48,15 @@ function onToggleLayer(id: string, visible: boolean) {
 
 <template>
   <div class="ec-demo-map">
+    <!-- Bouton temporaire — test notifications Notivue (style cartes.gouv.fr) -->
+    <button
+      type="button"
+      class="ec-demo-map__notif-test fr-btn fr-btn--sm fr-btn--secondary"
+      title="Déclencher une notification aléatoire"
+      @click="pushRandomLifeNotification"
+    >
+      Notif test
+    </button>
     <main class="ec-layout ec-layout--map-only">
       <div class="ec-layout__map">
         <MapShell :layers="baseLayers">
@@ -82,5 +92,14 @@ function onToggleLayer(id: string, visible: boolean) {
   flex: 1;
   min-height: 0;
   height: auto;
+}
+
+/* Fixe en haut à gauche de la page (démo /map uniquement) */
+.ec-demo-map__notif-test {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 10000;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
 }
 </style>
