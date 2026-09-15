@@ -160,6 +160,25 @@ export class GpuWmsLayerRegistry {
   hasWmsLayer(catalogId: string): boolean {
     return this.entries.has(catalogId)
   }
+
+  /**
+   * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+   * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
+   */
+  applyStackOrder(catalogIdsBottomToTop: string[]): void {
+    const baseZ = 200
+    catalogIdsBottomToTop.forEach((id, index) => {
+      const layer = this.olLayers.get(id)
+      if (layer) layer.setZIndex(baseZ + index)
+    })
+    if (!this.map) return
+    for (const id of catalogIdsBottomToTop) {
+      const layer = this.olLayers.get(id)
+      if (!layer) continue
+      this.map.removeLayer(layer)
+      this.map.addLayer(layer)
+    }
+  }
 }
 
 export const gpuWmsLayerRegistry = new GpuWmsLayerRegistry()

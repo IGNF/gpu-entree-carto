@@ -6,7 +6,11 @@ import { flattenTreeLayerNodes } from '@/lib/layerConfig/layerConfigToTree'
 export interface LayerMapHooks {
   onVisible?: (id: string, visible: boolean) => void
   onOpacity?: (id: string, opacity: number) => void
+  /** Ids des couches empilées, du bas vers le haut (z-index carte). */
+  onStackOrder?: (orderedIdsBottomToTop: string[]) => void
 }
+
+export const DEFAULT_LAYER_OPACITY = 100
 
 export interface ManagedLayer {
   id: string
@@ -16,6 +20,8 @@ export interface ManagedLayer {
   /** Affichée sur la carte. */
   visible: boolean
   opacity: number
+  /** Opacité « contraste par défaut » (bouton contraste). */
+  defaultOpacity: number
   legend?: LegendItem[]
 }
 
@@ -53,7 +59,8 @@ export function useManagedLayers(
           title: node.title,
           inStack: Boolean(node.visible),
           visible: Boolean(node.visible),
-          opacity: 100,
+          opacity: DEFAULT_LAYER_OPACITY,
+          defaultOpacity: DEFAULT_LAYER_OPACITY,
           legend: nodeLegend(node),
         }
       })
@@ -81,6 +88,14 @@ export function useManagedLayers(
     if (node) node.visible = visible
   }
 
+  function stackedIdsBottomToTop(): string[] {
+    return layers.value.filter((l) => l.inStack).map((l) => l.id)
+  }
+
+  function notifyStackOrder() {
+    mapHooks?.onStackOrder?.(stackedIdsBottomToTop())
+  }
+
   function setInStack(id: string, inStack: boolean) {
     const layer = layers.value.find((l) => l.id === id)
     if (!layer) return
@@ -88,9 +103,11 @@ export function useManagedLayers(
     if (inStack) {
       layer.visible = true
       syncMapVisible(id, true)
+      notifyStackOrder()
     } else {
       layer.visible = false
       syncMapVisible(id, false)
+      notifyStackOrder()
     }
   }
 
@@ -108,21 +125,34 @@ export function useManagedLayers(
     mapHooks?.onOpacity?.(id, layer.opacity)
   }
 
+  function resetOpacity(id: string) {
+    const layer = layers.value.find((l) => l.id === id)
+    if (!layer) return
+    setOpacity(id, layer.defaultOpacity)
+  }
+
   function removeFromStack(id: string) {
     setInStack(id, false)
   }
 
-  function moveInStack(id: string, direction: -1 | 1) {
-    const stacked = layers.value.filter((l) => l.inStack)
-    const index = stacked.findIndex((l) => l.id === id)
-    if (index < 0) return
-    const target = index + direction
-    if (target < 0 || target >= stacked.length) return
-    const reordered = [...stacked]
-    const [item] = reordered.splice(index, 1)
-    reordered.splice(target, 0, item!)
+  /** Réordonne la pile selon l’ordre d’affichage UI (haut de liste = dessus sur la carte). */
+  function reorderStackByDisplayIndex(fromDisplayIndex: number, toDisplayIndex: number) {
+    const display = [...stackLayers.value]
+    if (
+      fromDisplayIndex < 0 ||
+      fromDisplayIndex >= display.length ||
+      toDisplayIndex < 0 ||
+      toDisplayIndex >= display.length ||
+      fromDisplayIndex === toDisplayIndex
+    ) {
+      return
+    }
+    const [item] = display.splice(fromDisplayIndex, 1)
+    display.splice(toDisplayIndex, 0, item!)
+    const stacked = [...display].reverse()
     const rest = layers.value.filter((l) => !l.inStack)
-    layers.value = [...reordered, ...rest]
+    layers.value = [...stacked, ...rest]
+    notifyStackOrder()
   }
 
   return {
@@ -132,8 +162,10 @@ export function useManagedLayers(
     setInStack,
     setVisible,
     setOpacity,
+    resetOpacity,
     removeFromStack,
-    moveInStack,
+    reorderStackByDisplayIndex,
+    notifyStackOrder,
   }
 }
 

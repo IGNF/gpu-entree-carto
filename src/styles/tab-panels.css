@@ -303,6 +303,13 @@
   display: none !important;
 }
 
+.ec-tab-panels__pane:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 100%;
+}
+
 /* Fiche info — bandeau bleu + pictogramme i (capture / Figma) */
 .ec-fiche-info {
   position: relative;

@@ -60,7 +60,7 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 | Composant | Fichier |
 | --------- | ------- |
 | `LayerCataloguePanel` | `src/components/panels/LayerCataloguePanel.vue` |
-| `DataLayersManagerPanel` | `src/components/panels/DataLayersManagerPanel.vue` |
+| `DataLayersManagerPanel` | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md) |
 | `LayerLegendsPanel` | `src/components/panels/LayerLegendsPanel.vue` |
 
 ## Intégration localisation

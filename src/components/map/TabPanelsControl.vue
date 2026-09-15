@@ -58,13 +58,21 @@ const {
   setInStack,
   setVisible,
   setOpacity,
+  resetOpacity,
   removeFromStack,
-  moveInStack,
+  reorderStackByDisplayIndex,
+  notifyStackOrder,
   layers: managedLayers,
 } = useManagedLayers(
   layerNodesRef,
   (id, visible) => emit('toggle-layer', id, visible),
   props.layerMapHooks,
+)
+
+watch(
+  () => managedLayers.value.filter((l) => l.inStack).map((l) => l.id).join(','),
+  () => notifyStackOrder(),
+  { immediate: true },
 )
 
 const inStackById = computed(() => {
@@ -269,8 +277,9 @@ onUnmounted(() => {
             :layers="stackLayers"
             @visible="setVisible"
             @opacity="setOpacity"
+            @reset-opacity="resetOpacity"
             @remove="removeFromStack"
-            @move="moveInStack"
+            @reorder="reorderStackByDisplayIndex"
           />
         </div>
 

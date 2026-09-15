@@ -62,6 +62,7 @@ if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
 const layerMapHooks = {
   onVisible: (id: string, visible: boolean) => gpuWmsLayerRegistry.setVisible(id, visible),
   onOpacity: (id: string, opacity: number) => gpuWmsLayerRegistry.setOpacity(id, opacity),
+  onStackOrder: (ids: string[]) => gpuWmsLayerRegistry.applyStackOrder(ids),
 }
 
 onMounted(async () => {
