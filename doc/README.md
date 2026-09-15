@@ -8,6 +8,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
 - [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
+- [Configuration démo](./DemoConfig.md) — `public/js/demo-config.js` (équivalent gpu-client `exemple-config.js`)
 - [Notifications](./Notifications.md) — toasts Notivue style cartes.gouv.fr
 
 ## Contrôles
@@ -24,6 +25,11 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | OverviewMapControl          | `src/components/map/OverviewMapControl.vue`                  | [OverviewMapControl.md](./OverviewMapControl.md)     |
 | TerritoriesControl          | `src/components/map/TerritoriesControl.vue`                  | [TerritoriesControl.md](./TerritoriesControl.md)     |
 | TabPanelsControl            | `src/components/map/TabPanelsControl.vue`                    | [TabPanelsControl.md](./TabPanelsControl.md)         |
+| LayerCataloguePanel         | `src/components/panels/LayerCataloguePanel.vue`              | [TabPanelsControl.md](./TabPanelsControl.md#composants-panneau) |
+| DataLayersManagerPanel      | `src/components/panels/DataLayersManagerPanel.vue`           | [TabPanelsControl.md](./TabPanelsControl.md#composants-panneau) |
+| LayerLegendsPanel           | `src/components/panels/LayerLegendsPanel.vue`                | [TabPanelsControl.md](./TabPanelsControl.md#composants-panneau) |
+| CatalogLayerTree            | `src/components/layers/CatalogLayerTree.vue`                 | [CatalogLayerTree.md](./CatalogLayerTree.md)         |
+| BaseLayerRadioList          | `src/components/layers/BaseLayerRadioList.vue`               | [BaseLayerRadioList.md](./BaseLayerRadioList.md)   |
 | TileLayerSwitcher           | `src/components/layers/TileLayerSwitcher.vue`                | [TileLayerSwitcher.md](./TileLayerSwitcher.md)       |
 | TreeLayerSwitcher           | `src/components/layers/TreeLayerSwitcher.vue`                | [TreeLayerSwitcher.md](./TreeLayerSwitcher.md)       |
 | BaseLayerSwitcher           | `src/components/map/BaseLayerSwitcher.vue`                   | [BaseLayerSwitcher.md](./BaseLayerSwitcher.md)       |

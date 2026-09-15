@@ -6,8 +6,8 @@
  */
 
 :root {
-  /* 1,5 × 25.5rem (~408px → ~612px) */
-  --ec-tab-panels-width: min(38.25rem, 92vw);
+  /* ~80 % de 38.25rem (~612px → ~490px) */
+  --ec-tab-panels-width: min(30.6rem, 92vw);
   /*
    * Décalage des contrôles bas-droite = largeur du panneau seul.
    * Les onglets sont en haut : en bas, l’écart contrôles ↔ panneau
@@ -143,6 +143,18 @@
   margin: 0;
 }
 
+.ec-tab-panels.ol-control button.ec-tab-panels__tab--remix {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.ec-tab-panels.ol-control button.ec-tab-panels__tab--remix i {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: inherit;
+}
+
 /* Masque le doublon DSFR ::after (sauf infobulle au survol) */
 .ec-tab-panels.ol-control
   button.ec-tab-panels__tab[class*='fr-icon-']:not(:hover):not(:focus-visible)::after {
@@ -251,6 +263,40 @@
   min-height: 0;
   overflow: auto;
   padding: 1rem 1.25rem 1.5rem;
+}
+
+/*
+ * Panneau latéral : pas de bordure / contour au survol ou au focus (OL, DSFR, navigateur).
+ * Le soulignement de l’onglet catalogue actif est rétabli plus bas.
+ */
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:focus-visible {
+  outline: none !important;
+}
+
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.ec-layer-catalogue__tab):hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.ec-layer-catalogue__tab):focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.ec-layer-catalogue__tab):focus-visible {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body .fr-btn:hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body .fr-btn:focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body .fr-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .ec-tab-panels__pane[hidden] {

@@ -3,7 +3,7 @@
  * Contrôle OpenLayers — panneau latéral à 4 onglets (droite de la carte).
  * Masqué par défaut ; ouverture via onglet ou `showSelection` (localisation).
  */
-import { inject, onUnmounted, provide, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import { computed, inject, onUnmounted, provide, ref, shallowRef, toRef, watch, type ShallowRef } from 'vue'
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
@@ -13,30 +13,32 @@ import {
   type FicheInfoSelection,
   type TabPanelsApi,
 } from '@/composables/tabPanels'
+import { useManagedLayers, type LayerMapHooks } from '@/composables/managedLayers'
 import FicheInfoPanel from '@/components/panels/FicheInfoPanel.vue'
-import RawInfoPanel from '@/components/panels/RawInfoPanel.vue'
-import TileLayerSwitcher from '@/components/layers/TileLayerSwitcher.vue'
-import TreeLayerSwitcher, { type TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import type { BaseLayerId, BaseLayerPreset } from '@/ol/baseLayers'
+import LayerCataloguePanel from '@/components/panels/LayerCataloguePanel.vue'
+import DataLayersManagerPanel from '@/components/panels/DataLayersManagerPanel.vue'
+import LayerLegendsPanel from '@/components/panels/LayerLegendsPanel.vue'
+import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
 import '@/styles/tab-panels.css'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
-    /** Fonds de plan pour l’onglet couches. */
-    basePresets?: BaseLayerPreset[]
-    baseModelValue?: BaseLayerId
-    /** Nœuds arbre de couches (stub / layerConfig plus tard). */
+    basePresets?: GpuBaseLayerPreset[]
+    baseModelValue?: GpuBaseLayerId
     layerNodes?: TreeLayerNode[]
+    layerMapHooks?: LayerMapHooks
   }>(),
   {
     basePresets: () => [],
-    baseModelValue: 'plan',
+    baseModelValue: 'carte',
     layerNodes: () => [],
+    layerMapHooks: undefined,
   },
 )
 
 const emit = defineEmits<{
-  'update:baseModelValue': [id: BaseLayerId]
+  'update:baseModelValue': [id: GpuBaseLayerId]
   'toggle-layer': [id: string, visible: boolean]
 }>()
 
@@ -48,28 +50,64 @@ const isOpen = ref(false)
 const activeTab = ref<number | null>(null)
 const selection = ref<FicheInfoSelection | null>(null)
 
-const tabs = [
+const layerNodesRef = toRef(props, 'layerNodes')
+
+const {
+  stackLayers,
+  legendLayers,
+  setInStack,
+  setVisible,
+  setOpacity,
+  removeFromStack,
+  moveInStack,
+  layers: managedLayers,
+} = useManagedLayers(
+  layerNodesRef,
+  (id, visible) => emit('toggle-layer', id, visible),
+  props.layerMapHooks,
+)
+
+const inStackById = computed(() => {
+  const map: Record<string, boolean> = {}
+  for (const layer of managedLayers.value) {
+    map[layer.id] = layer.inStack
+  }
+  return map
+})
+
+type TabDef = {
+  id: number
+  label: string
+  iconKind: 'dsfr' | 'remix'
+  iconClass: string
+}
+
+const tabs: TabDef[] = [
   {
     id: TAB_PANEL_IDS.fiche,
     label: 'Informations / localisation',
-    icon: 'fr-icon-map-pin-2-line',
+    iconKind: 'dsfr',
+    iconClass: 'fr-icon-map-pin-2-line',
   },
   {
-    id: TAB_PANEL_IDS.empty,
-    label: 'Onglet réservé',
-    icon: 'fr-icon-road-map-line',
+    id: TAB_PANEL_IDS.catalogue,
+    label: 'Catalogue',
+    iconKind: 'remix',
+    iconClass: 'ri-map-2-line',
   },
   {
-    id: TAB_PANEL_IDS.layers,
-    label: 'Couches et légende',
-    icon: 'fr-icon-layout-grid-line',
+    id: TAB_PANEL_IDS.dataLayers,
+    label: 'Couches de données',
+    iconKind: 'remix',
+    iconClass: 'ri-stack-line',
   },
   {
-    id: TAB_PANEL_IDS.raw,
-    label: 'Données brutes',
-    icon: 'fr-icon-list-unordered',
+    id: TAB_PANEL_IDS.legends,
+    label: 'Légendes',
+    iconKind: 'remix',
+    iconClass: 'ri-list-indefinite',
   },
-] as const
+]
 
 function openTab(index: number) {
   if (index < 0 || index >= tabs.length) return
@@ -132,7 +170,6 @@ watch(
     }
     if (!map || !el) return
 
-    // OpenLayers déplace `element` dans le viewport carte
     olControl = new Control({ element: el })
     map.addControl(olControl)
     syncShellOpenClass(isOpen.value)
@@ -179,12 +216,17 @@ onUnmounted(() => {
         type="button"
         role="tab"
         class="ec-tab-panels__tab"
-        :class="[tab.icon, { 'is-active': isOpen && activeTab === tab.id }]"
+        :class="[
+          tab.iconKind === 'dsfr' ? tab.iconClass : 'ec-tab-panels__tab--remix',
+          { 'is-active': isOpen && activeTab === tab.id },
+        ]"
         :aria-selected="isOpen && activeTab === tab.id"
         :aria-controls="`ec-tab-panel-${tab.id}`"
         :aria-label="tab.label"
         @click="onTabClick(tab.id)"
-      />
+      >
+        <i v-if="tab.iconKind === 'remix'" :class="tab.iconClass" aria-hidden="true" />
+      </button>
     </div>
 
     <div class="ec-tab-panels__panel">
@@ -200,42 +242,46 @@ onUnmounted(() => {
         </div>
 
         <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.empty}`"
+          :id="`ec-tab-panel-${TAB_PANEL_IDS.catalogue}`"
           class="ec-tab-panels__pane"
           role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.empty"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.empty}`"
+          :hidden="activeTab !== TAB_PANEL_IDS.catalogue"
+          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.catalogue}`"
         >
-          <p class="ec-tab-panels__empty">Contenu à venir.</p>
-        </div>
-
-        <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.layers}`"
-          class="ec-tab-panels__pane"
-          role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.layers"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.layers}`"
-        >
-          <TileLayerSwitcher
-            v-if="basePresets.length"
-            :presets="basePresets"
-            :model-value="baseModelValue"
-            @update:model-value="emit('update:baseModelValue', $event)"
-          />
-          <TreeLayerSwitcher
-            :nodes="layerNodes"
-            @toggle="(id, visible) => emit('toggle-layer', id, visible)"
+          <LayerCataloguePanel
+            :layer-nodes="layerNodes"
+            :in-stack-by-id="inStackById"
+            :base-presets="basePresets"
+            :base-model-value="baseModelValue"
+            @update:base-model-value="emit('update:baseModelValue', $event)"
+            @catalog-toggle="setInStack"
           />
         </div>
 
         <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.raw}`"
+          :id="`ec-tab-panel-${TAB_PANEL_IDS.dataLayers}`"
           class="ec-tab-panels__pane"
           role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.raw"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.raw}`"
+          :hidden="activeTab !== TAB_PANEL_IDS.dataLayers"
+          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.dataLayers}`"
         >
-          <RawInfoPanel :selection="selection" />
+          <DataLayersManagerPanel
+            :layers="stackLayers"
+            @visible="setVisible"
+            @opacity="setOpacity"
+            @remove="removeFromStack"
+            @move="moveInStack"
+          />
+        </div>
+
+        <div
+          :id="`ec-tab-panel-${TAB_PANEL_IDS.legends}`"
+          class="ec-tab-panels__pane"
+          role="tabpanel"
+          :hidden="activeTab !== TAB_PANEL_IDS.legends"
+          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.legends}`"
+        >
+          <LayerLegendsPanel :layers="legendLayers" />
         </div>
       </div>
     </div>

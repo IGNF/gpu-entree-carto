@@ -1,0 +1,99 @@
+/**
+ * Catalogue panneau latéral — sous-onglets type barre de navigation DSFR.
+ */
+
+.ec-layer-catalogue {
+  --ec-layer-catalogue-panel-x: 1.25rem;
+}
+
+.ec-layer-catalogue__nav.fr-nav {
+  width: calc(100% + var(--ec-layer-catalogue-panel-x) * 2);
+  margin: 0 calc(-1 * var(--ec-layer-catalogue-panel-x)) 0;
+  box-shadow: inset 0 -1px 0 0 var(--border-default-grey, #ddd);
+}
+
+.ec-layer-catalogue__nav .fr-nav__list {
+  display: flex;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ec-layer-catalogue__nav .fr-nav__item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Neutralise `.ol-control button` sans casser `.fr-nav__link` */
+.ec-tab-panels.ol-control .ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link {
+  display: inline-flex !important;
+  width: 100%;
+  height: auto !important;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+  text-align: center;
+  color: var(--text-title-grey, #161616);
+}
+
+.ec-tab-panels.ol-control .ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link::before {
+  display: none;
+}
+
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):hover,
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):focus,
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):focus-visible {
+  background-color: var(--background-contrast-grey, #eee);
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page'] {
+  color: var(--text-action-high-blue-france, #000091);
+  box-shadow: inset 0 -2px 0 0 var(--border-active-blue-france, #000091);
+}
+
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:hover,
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:focus,
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: inset 0 -2px 0 0 var(--border-active-blue-france, #000091);
+}
+
+.ec-layer-catalogue__panel {
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 1rem;
+}
+
+.ec-layer-catalogue__panel[hidden] {
+  display: none !important;
+}

@@ -4,7 +4,7 @@ import { shallowRef, type InjectionKey, type Ref } from 'vue'
 export interface FicheInfoSelection {
   title: string
   bodyHtml?: string
-  /** Attributs bruts pour l’onglet 4. */
+  /** Attributs bruts (affichés dans l’onglet fiche si présents). */
   raw?: Record<string, unknown> | null
 }
 
@@ -36,9 +36,9 @@ export function registerTabPanelsApi(api: TabPanelsApi | null): void {
 
 export const TAB_PANEL_IDS = {
   fiche: 0,
-  empty: 1,
-  layers: 2,
-  raw: 3,
+  catalogue: 1,
+  dataLayers: 2,
+  legends: 3,
 } as const
 
 export const DEFAULT_FICHE_EMPTY = {

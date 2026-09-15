@@ -16,8 +16,14 @@
   --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
   /* Largeur panneau TabPanels (1,5 × ~408px Figma) ; inset = panneau seul
      (les onglets sont en haut : pas de reserve en bas à côté du panneau) */
-  --ec-tab-panels-width: min(38.25rem, 92vw);
+  --ec-tab-panels-width: min(30.6rem, 92vw);
   --ec-tab-panels-inset: var(--ec-tab-panels-width);
+  --ec-attribution-logo-width: 52px;
+  --ec-attribution-logo-height: 56px;
+  /** Hauteur utile du bandeau attributions (logos + padding images). */
+  --ec-attribution-block-height: calc(var(--ec-attribution-logo-height) + 8px);
+  /** Marge entre bandeau attributions et barre d’échelle (empilés). */
+  --ec-scale-attribution-stack-gap: 6px;
 }
 
 .position {
@@ -108,13 +114,8 @@
   align-items: stretch;
   gap: var(--ec-widget-gap);
   bottom: var(--ec-widget-gap);
-  right: var(--ec-widget-gap);
+  right: var(--ec-bottom-right-inset);
   z-index: 0;
-}
-
-/* Panneau TabPanels ouvert : même écart (gap) qu’avec le bord de carte quand fermé */
-.ec-map-shell--tab-panels-open .position-container-bottom-right {
-  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
 }
 
 /* Annule les offsets geopf (top/bottom: 0.5em) qui décalent les boutons dans la colonne */
@@ -457,23 +458,102 @@ dialog[id^='GPterritoriesPanel-'] {
   max-height: initial;
 }
 
-/* ScaleLine — bas-droite, à gauche de zoom/fullscreen */
+/*
+ * Bas-droite : colonne widgets (.position-container-bottom-right),
+ * attributions en bas (ancrage horizontal de l’ancienne échelle),
+ * barre d’échelle juste au-dessus avec une petite marge.
+ */
+.ec-map-shell {
+  --ec-bottom-right-inset: var(--ec-widget-gap);
+  --ec-scale-line-right: calc(
+    var(--ec-bottom-right-inset) + var(--ec-widget-btn-size) + var(--ec-widget-gap)
+  );
+}
+
+.ec-map-shell--tab-panels-open {
+  --ec-bottom-right-inset: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
+}
+
+#gpu-map .ol-control.ol-attribution {
+  left: auto;
+  right: var(--ec-scale-line-right);
+  bottom: var(--ec-widget-gap);
+  background-color: transparent;
+  max-width: none;
+}
+
+#gpu-map .ol-attribution.ol-uncollapsible {
+  bottom: var(--ec-widget-gap);
+}
+
 .ol-scale-line {
   z-index: auto;
   left: auto;
-  right: var(--ec-widget-panel-x);
-  bottom: var(--ec-widget-gap);
+  right: var(--ec-scale-line-right);
+  bottom: calc(
+    var(--ec-widget-gap) + var(--ec-attribution-block-height) +
+      var(--ec-scale-attribution-stack-gap)
+  );
   background: var(--background-default-grey, #fff);
 }
 
-.position-container-bottom-right:empty ~ .ol-scale-line {
-  right: var(--ec-widget-gap);
+#gpu-map .ol-attribution ul {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.ec-map-shell--tab-panels-open .ol-scale-line {
-  right: calc(var(--ec-widget-panel-x) + var(--ec-tab-panels-inset));
+#gpu-map .ol-attribution li {
+  display: inline-flex;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0;
 }
 
-.ec-map-shell--tab-panels-open .position-container-bottom-right:empty ~ .ol-scale-line {
-  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
+#gpu-map .ol-attribution li:not(:last-child)::after {
+  content: none;
+}
+
+#gpu-map .ol-attribution img.map-logo-ign-svg,
+#gpu-map .ol-attribution img.map-logo-ministere-svg {
+  display: block;
+  width: var(--ec-attribution-logo-width);
+  height: var(--ec-attribution-logo-height);
+  object-fit: contain;
+  box-sizing: border-box;
+  margin: 0;
+  max-height: none;
+  background-color: white !important;
+  padding: 4px;
+}
+
+/* Pas d’icône « lien externe » DSFR sur les logos */
+#gpu-map .ol-attribution a:has(img)[target='_blank']::after {
+  content: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  background: none !important;
+}
+
+#gpu-map .ol-attribution a.legal-attribution {
+  display: inline-flex;
+  align-items: flex-end;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.15;
+  margin-right: 6px;
+  padding-bottom: 2px;
+  color: black;
+  font-weight: bold;
+}
+
+#gpu-map .ol-attribution a.legal-attribution:hover,
+#gpu-map .ol-attribution a.legal-attribution:focus {
+  text-decoration: none;
 }

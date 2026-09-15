@@ -7,6 +7,7 @@ import '@gouvfr/dsfr/dist/dsfr.min.css'
 /* Pictos Remix / DSFR (`fr-icon-*`) — absents de dsfr.min.css seul */
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvminint/vue-dsfr/styles'
+import 'remixicon/fonts/remixicon.css'
 import * as VueDsfrExports from '@gouvminint/vue-dsfr'
 
 import App from './App.vue'

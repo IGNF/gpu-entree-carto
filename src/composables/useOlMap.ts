@@ -39,9 +39,10 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
       target: el,
       layers: (options.layers ?? []) as Layer[],
       controls: defaultControls({
-        attribution: false,
+        attribution: true,
         zoom: false,
         rotate: false,
+        attributionOptions: { collapsible: false },
       }),
       view: new View({
         center: FRANCE_CENTER,
