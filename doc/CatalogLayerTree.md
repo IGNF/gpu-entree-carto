@@ -29,7 +29,8 @@ Arbre **checkbox** du catalogue *Données* (équivalent gpu-client `TreeLayerSwi
 - Feuilles WMS : `gpuMapLayer` (y compris **`onlyLegend`** avec `name` — tuile WMS comme gpu-client, sans ligne dans le sélecteur).
 - **`onlyLegend`** : masqué dans le sélecteur (`catalogSwitcherDisplayNodes`) et **Couches de données** ; entrée dans l’index (checkbox synchronisée au parent, WMS si `name`) ; légendes dans l’onglet **Légendes** lorsque la tuile est active sur la carte.
 - **`visible`** : comme gpu-client `Layer`, absent sur un enfant → hérite du parent ; explicite (`true` / `false`) prime. État initial des checkboxes sans écraser les `visible: false` explicites.
-- Paramètres LAYER_CONFIG pris en compte à l’arbre : `opacity`, **`forceOpacity`** (100 % sur la carte, **absent** de l’onglet Couches de données), `virtual`, `onlyLegend`, filtres CQL, min/max zoom (WMS), légendes (`LEGEND_*`).
+- Paramètres LAYER_CONFIG pris en compte à l’arbre : `opacity`, **`forceOpacity`** (100 % sur la carte, **absent** de l’onglet Couches de données), `virtual`, `onlyLegend`, filtres CQL, **`minZoomLevel` / `maxZoomLevel`** (hérités comme gpu-client), légendes (`LEGEND_*`).
+- **Hors plage de zoom** : ligne grisée (`ec-not-in-zoom-range`, équivalent gpu-client `notInZoomRange`) — mise à jour au zoom carte ; dossier non tuile grisé si aucun descendant n’est dans la plage.
 - **Couches de données** : une ligne par entrée cochée **dont la tuile WMS est active** sur la carte (agrégat actif → pas les feuilles cochées) — voir [DataLayersManagerPanel](./DataLayersManagerPanel.md).
 - Synchronisation carte via `layerMapHooks` → `GpuWmsLayerRegistry` (démo `/map`).
 

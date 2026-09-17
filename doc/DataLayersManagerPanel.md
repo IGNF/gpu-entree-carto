@@ -21,11 +21,13 @@ Pas de **lignes** parent ↔ enfant synchronisées dans le panneau. Chaque ligne
 
 La **carte** applique les agrégats gpu-client (`computeMapVisibilityById`) ; le panneau suit cette visibilité effective.
 
+Les lignes **hors plage** `minZoomLevel` / `maxZoomLevel` (LAYER_CONFIG) sont **grisées** comme dans le TreeLayerSwitcher gpu-client (`catalogLayerZoomRange.ts`, classe `ec-not-in-zoom-range`).
+
 ## Props / events
 
 | Prop / event | Type | Description |
 | ------------ | ---- | ----------- |
-| `layers` | `ManagedLayer[]` | Ordre **utilisateur** (`stackDisplayOrderIds`) ; nouvelles couches ajoutées en bas |
+| `layers` | `ManagedLayer[]` | Ordre par **clés de tri** (`stackSortKeyById`, drag) ; entrées décochées **conservent** leur clé ; le drag ne réordonne que les couches actives ; recocher → position catalogue préservée |
 | `@visible` | `(id, visible)` | Œil afficher / masquer (WMS contrôlés par la ligne) |
 | `@opacity` | `(id, opacity)` | Opacité 0–100 % |
 | `@toggle-grayscale` | `(id)` | Niveaux de gris |

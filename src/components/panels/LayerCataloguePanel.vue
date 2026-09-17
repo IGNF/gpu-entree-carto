@@ -13,6 +13,7 @@ import '@/styles/layer-catalogue.css'
 defineProps<{
   layerNodes: TreeLayerNode[]
   inStackById: Record<string, boolean>
+  mapZoom: number
   basePresets: GpuBaseLayerPreset[]
   baseModelValue: GpuBaseLayerId
 }>()
@@ -85,6 +86,7 @@ function onCatalogToggle(id: string, checked: boolean) {
       <CatalogLayerTree
         v-if="layerNodes.length"
         :nodes="layerNodes"
+        :map-zoom="mapZoom"
         :catalog-roots="layerNodes"
         :checked-by-id="inStackById"
         @toggle="onCatalogToggle"

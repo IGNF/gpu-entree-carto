@@ -20,6 +20,7 @@ Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dan
 - Contenu déplié : liste d’entrées `LegendItem` (`title`, une ou plusieurs images **pct / lin / surf** sur la même ligne, ordre gpu-client).
 - **`onlyLegend: true`** : absent du catalogue et de Couches de données ; accordéon dédié ici si la tuile WMS est **active** sur la carte.
 - **Dédoublonnage** : une entrée déjà affichée (même libellé + mêmes symboles) n’est pas répétée ; un second accordéon au même **titre** et à la **même légende** est masqué (`dedupeLegendLayersForPanel`).
+- **Hors plage de zoom** LAYER_CONFIG : accordéon grisé (`ec-not-in-zoom-range`, même règle que le catalogue).
 - Pas de réglage d’opacité ici (réservé à [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
 - URLs d’images : **`legendImageDetailDirectory`** (injecté dans `gpu.config` par `gpu-client-config.js`, aussi fusionné dans `@/lib/config`) + chemin relatif de l’image + `.png`, comme gpu-client `LegendImages#getUrl`.
 - Symboles dérivés de `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligné gpu-client `CreateTreeLayerSwitcherItems`) : chemins filtrés `info_surf/05`, sous-filtres `hasfilter2`, blocs « other », etc.

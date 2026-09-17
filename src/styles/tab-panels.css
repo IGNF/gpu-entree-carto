@@ -1,3 +1,5 @@
+@import './catalog-zoom-range.css';
+
 /**
  * Panneau latéral à onglets (droite de la carte).
  * Boutons = même boîte que zoom / plein écran (48×48).

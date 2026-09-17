@@ -12,6 +12,11 @@ import {
   type GpuLegendBuildOptions,
 } from '@/lib/layerConfig/gpuLegendItems'
 import { GPU_FORCE_OPACITY_PERCENT } from '@/lib/layerConfig/catalogLayerTargets'
+import {
+  DEFAULT_GPU_MAX_ZOOM,
+  DEFAULT_GPU_MIN_ZOOM,
+  effectiveZoomLevelsFromConfig,
+} from '@/lib/layerConfig/catalogLayerZoomRange'
 
 function defaultOpacityPercent(layer: GpuLayerConfig): number {
   if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT
@@ -34,6 +39,8 @@ function buildTreeLevel(
   parentVisible = false,
   /** gpu-client `isLayerConfigHasLegend` : pas de légende sur les enfants d’un parent hideLayers. */
   underHideLayersParent = false,
+  inheritedMinZoom = DEFAULT_GPU_MIN_ZOOM,
+  inheritedMaxZoom = DEFAULT_GPU_MAX_ZOOM,
 ): TreeLayerNode[] {
   const nodes: TreeLayerNode[] = []
 
@@ -48,12 +55,15 @@ function buildTreeLevel(
             legendOpts,
             parentVisible,
             underHideLayersParent,
+            inheritedMinZoom,
+            inheritedMaxZoom,
           ),
         )
       }
       continue
     }
 
+    const zoomLevels = effectiveZoomLevelsFromConfig(layer, inheritedMinZoom, inheritedMaxZoom)
     const visible = resolveGpuLayerVisible(layer, parentVisible)
     const path = buildLayerPath(layer, parentPath || '')
     const id = pathToCatalogId(path)
@@ -77,6 +87,8 @@ function buildTreeLevel(
       gpuOnlyLegend: Boolean(layer.onlyLegend),
       gpuForceOpacity: Boolean(layer.forceOpacity),
       gpuDefaultOpacity: defaultOpacityPercent(layer),
+      gpuMinZoomLevel: zoomLevels.min,
+      gpuMaxZoomLevel: zoomLevels.max,
       legend: legend.length ? legend : undefined,
     }
 
@@ -88,6 +100,8 @@ function buildTreeLevel(
         legendOpts,
         visible,
         underHideLayersParent || Boolean(layer.hideLayers),
+        zoomLevels.min,
+        zoomLevels.max,
       )
       if (layer.hideLayers) {
         node.hiddenCatalogChildren = childNodes

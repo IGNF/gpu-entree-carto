@@ -14,6 +14,7 @@ import {
   type FicheInfoSelection,
   type TabPanelsApi,
 } from '@/composables/tabPanels'
+import { useMapZoom } from '@/composables/useMapZoom'
 import { useManagedLayers, type LayerMapHooks } from '@/composables/managedLayers'
 import FicheInfoPanel from '@/components/panels/FicheInfoPanel.vue'
 import LayerCataloguePanel from '@/components/panels/LayerCataloguePanel.vue'
@@ -52,11 +53,13 @@ const activeTab = ref<number | null>(null)
 const selection = ref<FicheInfoSelection | null>(null)
 
 const layerNodesRef = toRef(props, 'layerNodes')
+const { mapZoom } = useMapZoom()
 
 const {
   layers,
   legendLayers,
   catalogCheckedById,
+  catalogEntryInZoomRange,
   setCatalogChecked,
   setVisible,
   setOpacity,
@@ -258,6 +261,7 @@ onUnmounted(() => {
           <LayerCataloguePanel
             :layer-nodes="layerNodes"
             :in-stack-by-id="catalogCheckedById"
+            :map-zoom="mapZoom"
             :base-presets="basePresets"
             :base-model-value="baseModelValue"
             @update:base-model-value="emit('update:baseModelValue', $event)"
@@ -274,6 +278,8 @@ onUnmounted(() => {
         >
           <DataLayersManagerPanel
             :layers="layers"
+            :map-zoom="mapZoom"
+            :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
             @visible="setVisible"
             @opacity="setOpacity"
             @toggle-grayscale="toggleGrayscale"
@@ -289,7 +295,11 @@ onUnmounted(() => {
           :hidden="activeTab !== TAB_PANEL_IDS.legends"
           :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.legends}`"
         >
-          <LayerLegendsPanel :layers="legendLayers" />
+          <LayerLegendsPanel
+            :layers="legendLayers"
+            :map-zoom="mapZoom"
+            :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
+          />
         </div>
       </div>
     </div>

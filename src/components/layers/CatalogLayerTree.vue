@@ -9,10 +9,12 @@ import {
   catalogAncestorIdsToExpand,
   flattenCatalogNodes,
 } from '@/lib/layerConfig/catalogTreeIndex'
+import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 
 const props = defineProps<{
   nodes: TreeLayerNode[]
   checkedById: Record<string, boolean>
+  mapZoom: number
   depth?: number
   /** Racines LAYER_CONFIG (index complet) — renseigné seulement à la racine du composant. */
   catalogRoots?: TreeLayerNode[]
@@ -58,12 +60,20 @@ function toggleCollapsed(node: TreeLayerNode) {
 function onCheck(node: TreeLayerNode, checked: boolean) {
   emit('toggle', node.id, checked)
 }
+
+function rowInZoomRange(node: TreeLayerNode): boolean {
+  return isCatalogNodeInZoomRange(node, props.mapZoom)
+}
 </script>
 
 <template>
   <ul class="ec-catalog-tree" :class="{ 'ec-catalog-tree--nested': (depth ?? 0) > 0 }">
     <li v-for="node in displayNodes" :key="node.id" class="ec-catalog-tree__item">
-      <div class="ec-catalog-tree__row" :style="{ paddingLeft: `${(depth ?? 0) * 1.25}rem` }">
+      <div
+        class="ec-catalog-tree__row"
+        :class="{ 'ec-not-in-zoom-range': !rowInZoomRange(node) }"
+        :style="{ paddingLeft: `${(depth ?? 0) * 1.25}rem` }"
+      >
         <button
           v-if="node.children?.length"
           type="button"
@@ -94,6 +104,7 @@ function onCheck(node: TreeLayerNode, checked: boolean) {
         v-if="node.children?.length && !isCollapsed(node)"
         :nodes="node.children"
         :checked-by-id="checkedById"
+        :map-zoom="mapZoom"
         :catalog-roots="catalogRoots ?? nodes"
         :expand-ancestor-ids="expandAncestorIds"
         :depth="(depth ?? 0) + 1"

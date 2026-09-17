@@ -2,8 +2,7 @@
 /**
  * Onglet Légendes — une section DSFR `fr-accordion` par couche (repliée par défaut).
  */
-import { computed, inject, nextTick, onUnmounted, ref, shallowRef, watch, type ShallowRef } from 'vue'
-import type Map from 'ol/Map'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { ManagedLayer } from '@/composables/managedLayers'
 import { legendPanelFocusRef } from '@/composables/tabPanels'
 import { rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
@@ -18,30 +17,15 @@ import '@/styles/layer-legends.css'
 
 const props = defineProps<{
   layers: ManagedLayer[]
+  mapZoom: number
+  catalogEntryInZoomRange: (id: string, zoom: number) => boolean
 }>()
-
-const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
-const mapZoom = ref(6)
 
 const expandedByLayerId = ref<Record<string, boolean>>({})
 
-let unbindZoom: (() => void) | undefined
-
-function bindMapZoom(map: Map | null) {
-  unbindZoom?.()
-  unbindZoom = undefined
-  if (!map) return
-  const view = map.getView()
-  const update = () => {
-    mapZoom.value = view.getZoom() ?? mapZoom.value
-  }
-  update()
-  view.on('change:resolution', update)
-  unbindZoom = () => view.un('change:resolution', update)
+function layerInZoomRange(layer: ManagedLayer): boolean {
+  return props.catalogEntryInZoomRange(layer.id, props.mapZoom)
 }
-
-watch(() => mapRef.value ?? null, bindMapZoom, { immediate: true })
-onUnmounted(() => unbindZoom?.())
 
 function collapseDomId(layerId: string): string {
   const safe = layerId.replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -65,7 +49,7 @@ function toggleExpanded(layerId: string) {
 }
 
 function legendImageSrcs(leg: LegendItem): string[] {
-  return resolveLegendItemImageUrls(leg, mapZoom.value).map((url) => rewriteLocalGpuSiteUrl(url))
+  return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url))
 }
 
 const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
@@ -131,6 +115,7 @@ watch(
         :id="sectionDomId(layer.id)"
         :key="layer.id"
         class="fr-accordion"
+        :class="{ 'ec-not-in-zoom-range': !layerInZoomRange(layer) }"
       >
         <h3 class="fr-accordion__title">
           <button

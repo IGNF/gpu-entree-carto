@@ -9,7 +9,13 @@ import '@/styles/data-layers.css'
 
 const props = defineProps<{
   layers: ManagedLayer[]
+  mapZoom: number
+  catalogEntryInZoomRange: (id: string, zoom: number) => boolean
 }>()
+
+function layerInZoomRange(layer: ManagedLayer): boolean {
+  return props.catalogEntryInZoomRange(layer.id, props.mapZoom)
+}
 
 const emit = defineEmits<{
   visible: [id: string, visible: boolean]
@@ -134,6 +140,7 @@ function showDropMarkerBefore(index: number): boolean {
           class="ec-data-layers__item"
           :class="{
             'ec-data-layers__item--dragging': dragFromIndex() === index,
+            'ec-not-in-zoom-range': !layerInZoomRange(layer),
           }"
           @dragover="onItemDragOver($event, index)"
           @drop.prevent="onDrop"

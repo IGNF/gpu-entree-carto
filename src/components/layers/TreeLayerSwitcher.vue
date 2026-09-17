@@ -24,6 +24,9 @@ export interface TreeLayerNode extends LayerTreeNode {
   hiddenCatalogChildren?: TreeLayerNode[]
   /** Sous-arbre masqué dans le sélecteur (`hideLayers`) — une seule ligne parent dans Couches de données. */
   gpuHideLayers?: boolean
+  /** Plage zoom effective (héritage gpu-client LAYER_CONFIG). */
+  gpuMinZoomLevel?: number
+  gpuMaxZoomLevel?: number
 }
 
 const props = withDefaults(

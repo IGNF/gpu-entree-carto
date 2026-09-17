@@ -26,6 +26,13 @@ import {
   flattenCatalogNodes,
   type CatalogTreeIndex,
 } from '@/lib/layerConfig/catalogTreeIndex'
+import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
+import {
+  ensureStackSortKeys,
+  reorderActiveStackSortKeys,
+  sortIdsByStackSortKey,
+  type StackSortKeyById,
+} from '@/lib/layerConfig/catalogStackDisplayOrder'
 
 export interface LayerMapHooks {
   onVisible?: (id: string, visible: boolean) => void
@@ -178,26 +185,22 @@ export function useManagedLayers(
     )
   }
 
-  /** Ordre panneau : index 0 = haut = z-index max sur la carte. */
-  const stackDisplayOrderIds = ref<string[]>([])
+  /** Clés de tri persistantes (entrées décochées incluses) — index 0 = clé min = haut panneau. */
+  const stackSortKeyById = ref<StackSortKeyById>({})
 
-  function mergeStackDisplayOrderWithCatalog(catalogIds: string[]) {
-    const catalogSet = new Set(catalogIds)
-    const kept = stackDisplayOrderIds.value.filter((id) => catalogSet.has(id))
-    const keptSet = new Set(kept)
-    const added = catalogIds.filter((id) => !keptSet.has(id))
-    stackDisplayOrderIds.value = [...kept, ...added]
+  function syncStackSortKeysWithCatalog() {
+    const catalogOrder = stackNodesBottomToTop().map((n) => n.id)
+    stackSortKeyById.value = ensureStackSortKeys(stackSortKeyById.value, catalogOrder)
   }
 
   function stackNodesForDisplayOrder(): TreeLayerNode[] {
-    const byId = new Map(stackNodesBottomToTop().map((n) => [n.id, n]))
-    const ids = stackDisplayOrderIds.value.filter((id) => byId.has(id))
-    for (const node of byId.values()) {
-      if (!ids.includes(node.id)) ids.push(node.id)
-    }
-    return ids
-      .map((id) => byId.get(id))
-      .filter((n): n is TreeLayerNode => Boolean(n))
+    const nodes = stackNodesBottomToTop()
+    const byId = new Map(nodes.map((n) => [n.id, n]))
+    const ids = sortIdsByStackSortKey(
+      stackSortKeyById.value,
+      nodes.map((n) => n.id),
+    )
+    return ids.map((id) => byId.get(id)!).filter(Boolean)
   }
 
   function applyMapStackOrderFromDisplay() {
@@ -283,11 +286,12 @@ export function useManagedLayers(
   })
 
   const layers = computed((): ManagedLayer[] => {
-    const byId = new Map(stackLayers.value.map((l) => [l.id, l]))
-    const ids = stackDisplayOrderIds.value.filter((id) => byId.has(id))
-    for (const layer of stackLayers.value) {
-      if (!ids.includes(layer.id)) ids.push(layer.id)
-    }
+    const list = stackLayers.value
+    const ids = sortIdsByStackSortKey(
+      stackSortKeyById.value,
+      list.map((l) => l.id),
+    )
+    const byId = new Map(list.map((l) => [l.id, l]))
     return ids.map((id) => byId.get(id)!)
   })
 
@@ -333,6 +337,12 @@ export function useManagedLayers(
 
   function setInStack(id: string, inStack: boolean) {
     setCatalogChecked(id, inStack)
+  }
+
+  function catalogEntryInZoomRange(nodeId: string, zoom: number): boolean {
+    const node = treeIndex.nodesById.get(nodeId)
+    if (!node) return true
+    return isCatalogNodeInZoomRange(node, zoom)
   }
 
   function setVisible(id: string, visible: boolean) {
@@ -384,24 +394,20 @@ export function useManagedLayers(
   watch(
     () => stackLayers.value.map((l) => l.id).join('|'),
     () => {
-      mergeStackDisplayOrderWithCatalog(stackLayers.value.map((l) => l.id))
+      syncStackSortKeysWithCatalog()
     },
     { immediate: true },
   )
 
   /** @param toInsertBefore index d’insertion (0 = tout en haut). */
   function reorderStackByDisplayIndex(fromDisplayIndex: number, toInsertBefore: number) {
-    const order = layers.value.map((l) => l.id)
-    if (fromDisplayIndex < 0 || fromDisplayIndex >= order.length) return
-    if (toInsertBefore < 0 || toInsertBefore > order.length) return
-    if (fromDisplayIndex === toInsertBefore || fromDisplayIndex + 1 === toInsertBefore) {
-      return
-    }
-    const [item] = order.splice(fromDisplayIndex, 1)
-    let insertAt = toInsertBefore
-    if (fromDisplayIndex < toInsertBefore) insertAt -= 1
-    order.splice(insertAt, 0, item!)
-    stackDisplayOrderIds.value = order
+    const activeTopToBottom = layers.value.map((l) => l.id)
+    stackSortKeyById.value = reorderActiveStackSortKeys(
+      stackSortKeyById.value,
+      activeTopToBottom,
+      fromDisplayIndex,
+      toInsertBefore,
+    )
     applyMapStackOrderFromDisplay()
   }
 
@@ -420,6 +426,7 @@ export function useManagedLayers(
     reorderStackByDisplayIndex,
     notifyStackOrder,
     reapplyCatalogMapState,
+    catalogEntryInZoomRange,
   }
 }
 
