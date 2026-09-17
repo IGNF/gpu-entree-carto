@@ -1,0 +1,61 @@
+/**
+ * Onglet Légendes — layout local + neutralisation `.ol-control button` (OpenLayers).
+ * L’apparence accordéon vient de `@gouvfr/dsfr/.../accordion.min.css` (import dans le composant).
+ */
+
+.ec-layer-legends__collapse-inner {
+  padding: 0;
+}
+
+/*
+ * Spécificité > `.ol-control button` (ol.css) — rétablit les valeurs attendues par DSFR
+ * sans redéfinir chevron, bordures (::before sur .fr-accordion), etc.
+ */
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn {
+  box-sizing: border-box;
+  display: inline-flex !important;
+  flex-direction: row;
+  align-items: center;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 3rem;
+  max-width: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0.75rem 1rem !important;
+  line-height: 1.5rem !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  text-decoration: none !important;
+  color: var(--text-action-high-blue-france) !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: initial !important;
+}
+
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true'] {
+  background-color: var(--background-open-blue-france) !important;
+}
+
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn:hover,
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn:focus,
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn:focus-visible {
+  text-decoration: none !important;
+  color: var(--text-action-high-blue-france) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:hover,
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus,
+.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus-visible {
+  background-color: var(--background-open-blue-france-hover, var(--background-open-blue-france)) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}

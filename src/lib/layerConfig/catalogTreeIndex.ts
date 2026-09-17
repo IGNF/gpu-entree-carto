@@ -33,3 +33,59 @@ export function flattenCatalogNodes(roots: TreeLayerNode[]): TreeLayerNode[] {
   roots.forEach(walk)
   return flat
 }
+
+/** Sous-arbre entièrement coché (nœud + tous les descendants catalogue). */
+export function catalogSubtreeFullyChecked(
+  node: TreeLayerNode,
+  checkedById: Record<string, boolean>,
+): boolean {
+  if (!Boolean(checkedById[node.id])) return false
+  for (const child of catalogChildNodes(node)) {
+    if (!catalogSubtreeFullyChecked(child, checkedById)) return false
+  }
+  return true
+}
+
+/** Au moins une entrée cochée et une décochée dans le sous-arbre (nœud inclus). */
+export function catalogSubtreePartiallyChecked(
+  node: TreeLayerNode,
+  checkedById: Record<string, boolean>,
+): boolean {
+  let anyChecked = false
+  let anyUnchecked = false
+
+  function walk(n: TreeLayerNode) {
+    if (Boolean(checkedById[n.id])) anyChecked = true
+    else anyUnchecked = true
+    for (const child of catalogChildNodes(n)) walk(child)
+  }
+
+  walk(node)
+  return anyChecked && anyUnchecked
+}
+
+/**
+ * Nœuds à déplier : sélection **mixte** dans le sous-arbre seulement
+ * (tout coché ou tout décoché → replié ; ex. SUP sans `visible` → replié).
+ */
+export function catalogAncestorIdsToExpand(
+  roots: TreeLayerNode[],
+  checkedById: Record<string, boolean>,
+): ReadonlySet<string> {
+  const expand = new Set<string>()
+
+  function visit(node: TreeLayerNode) {
+    const children = catalogChildNodes(node)
+    if (!children.length) return
+
+    if (catalogSubtreePartiallyChecked(node, checkedById)) {
+      expand.add(node.id)
+    }
+    for (const child of children) {
+      visit(child)
+    }
+  }
+
+  for (const root of roots) visit(root)
+  return expand
+}

@@ -3,6 +3,7 @@ import {
   layerConfigToCatalogEntries,
   pathToCatalogId,
   buildLayerPath,
+  resolveGpuLayerVisible,
   type GpuLayerConfig,
 } from '@/lib/layerConfig/gpuLayerConfig'
 import {
@@ -30,17 +31,30 @@ function buildTreeLevel(
   parentPath: string,
   ancestorLayers: GpuLayerConfig[],
   legendOpts: GpuLegendBuildOptions,
+  parentVisible = false,
+  /** gpu-client `isLayerConfigHasLegend` : pas de légende sur les enfants d’un parent hideLayers. */
+  underHideLayersParent = false,
 ): TreeLayerNode[] {
   const nodes: TreeLayerNode[] = []
 
   for (const layer of layers) {
     if (layer.hideHimself) {
       if (layer.layers?.length) {
-        nodes.push(...buildTreeLevel(layer.layers, parentPath, ancestorLayers, legendOpts))
+        nodes.push(
+          ...buildTreeLevel(
+            layer.layers,
+            parentPath,
+            ancestorLayers,
+            legendOpts,
+            parentVisible,
+            underHideLayersParent,
+          ),
+        )
       }
       continue
     }
 
+    const visible = resolveGpuLayerVisible(layer, parentVisible)
     const path = buildLayerPath(layer, parentPath || '')
     const id = pathToCatalogId(path)
 
@@ -48,13 +62,16 @@ function buildTreeLevel(
       ...legendOpts,
       ancestorLayers: [...ancestorLayers],
     }
-    const legend = buildLegendItemsForGpuLayer(layer, legendContext)
+    const legend = underHideLayersParent
+      ? []
+      : buildLegendItemsForGpuLayer(layer, legendContext)
 
     const node: TreeLayerNode = {
       id,
       title: layer.title?.trim() || layer.name || id,
-      visible: Boolean(layer.visible),
+      visible,
       defaultCollapsed: Boolean(layer.hideLayers),
+      gpuHideLayers: Boolean(layer.hideLayers),
       gpuVirtual: Boolean(layer.virtual),
       gpuMapLayer: isGpuMapLayerConfig(layer),
       gpuOnlyLegend: Boolean(layer.onlyLegend),
@@ -64,7 +81,14 @@ function buildTreeLevel(
     }
 
     if (layer.layers?.length) {
-      const childNodes = buildTreeLevel(layer.layers, path, [...ancestorLayers, layer], legendOpts)
+      const childNodes = buildTreeLevel(
+        layer.layers,
+        path,
+        [...ancestorLayers, layer],
+        legendOpts,
+        visible,
+        underHideLayersParent || Boolean(layer.hideLayers),
+      )
       if (layer.hideLayers) {
         node.hiddenCatalogChildren = childNodes
       } else {

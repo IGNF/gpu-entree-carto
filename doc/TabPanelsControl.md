@@ -51,6 +51,7 @@ Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
 Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex. SearchEngine) :
 
 - `openTab(index)` / `closePanels()`
+- `openLegendForLayer(layerId)` — onglet Légendes, déplie la couche et scroll (voir [LayerLegendsPanel](./LayerLegendsPanel.md))
 - `showSelection({ title, bodyHtml?, raw? })` — remplit la fiche info, ouvre l’onglet 0
 - `clearSelection()`
 - refs : `isOpen`, `activeTab`, `selection`

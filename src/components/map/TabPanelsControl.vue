@@ -7,6 +7,7 @@ import { inject, onUnmounted, provide, ref, shallowRef, toRef, watch, type Shall
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
+  legendPanelFocusRef,
   registerTabPanelsApi,
   TAB_PANELS_KEY,
   TAB_PANEL_IDS,
@@ -53,7 +54,7 @@ const selection = ref<FicheInfoSelection | null>(null)
 const layerNodesRef = toRef(props, 'layerNodes')
 
 const {
-  stackLayers,
+  layers,
   legendLayers,
   catalogCheckedById,
   setCatalogChecked,
@@ -63,7 +64,6 @@ const {
   removeFromStack,
   reorderStackByDisplayIndex,
   notifyStackOrder,
-  layers: managedLayers,
 } = useManagedLayers(
   layerNodesRef,
   (id, visible) => emit('toggle-layer', id, visible),
@@ -71,7 +71,7 @@ const {
 )
 
 watch(
-  () => managedLayers.value.filter((l) => l.inStack).map((l) => l.id).join(','),
+  () => layers.value.filter((l) => l.inStack).map((l) => l.id).join(','),
   () => notifyStackOrder(),
   { immediate: true },
 )
@@ -134,6 +134,11 @@ function showSelection(next: FicheInfoSelection) {
   openTab(TAB_PANEL_IDS.fiche)
 }
 
+function openLegendForLayer(layerId: string) {
+  legendPanelFocusRef.value = { layerId, at: Date.now() }
+  openTab(TAB_PANEL_IDS.legends)
+}
+
 function clearSelection() {
   selection.value = null
 }
@@ -148,6 +153,7 @@ function syncShellOpenClass(open: boolean) {
 
 const api: TabPanelsApi = {
   openTab,
+  openLegendForLayer,
   closePanels,
   showSelection,
   clearSelection,
@@ -267,7 +273,7 @@ onUnmounted(() => {
           :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.dataLayers}`"
         >
           <DataLayersManagerPanel
-            :layers="stackLayers"
+            :layers="layers"
             @visible="setVisible"
             @opacity="setOpacity"
             @toggle-grayscale="toggleGrayscale"

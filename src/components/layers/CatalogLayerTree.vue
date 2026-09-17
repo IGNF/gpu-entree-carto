@@ -2,14 +2,22 @@
 /**
  * Arbre catalogue gpu-client (LAYER_CONFIG) — checkbox + titre, repliable.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import { catalogSwitcherDisplayNodes } from '@/lib/layerConfig/catalogLayerTargets'
+import {
+  catalogAncestorIdsToExpand,
+  flattenCatalogNodes,
+} from '@/lib/layerConfig/catalogTreeIndex'
 
 const props = defineProps<{
   nodes: TreeLayerNode[]
   checkedById: Record<string, boolean>
   depth?: number
+  /** Racines LAYER_CONFIG (index complet) — renseigné seulement à la racine du composant. */
+  catalogRoots?: TreeLayerNode[]
+  /** Ancestres à garder dépliés (propagé aux instances imbriquées). */
+  expandAncestorIds?: ReadonlySet<string>
 }>()
 
 const emit = defineEmits<{
@@ -18,13 +26,29 @@ const emit = defineEmits<{
 
 const displayNodes = computed(() => catalogSwitcherDisplayNodes(props.nodes))
 
+const expandAncestorIds = computed(() => {
+  if (props.expandAncestorIds) return props.expandAncestorIds
+  const roots = props.catalogRoots ?? props.nodes
+  return catalogAncestorIdsToExpand(roots, props.checkedById)
+})
+
 const collapsedById = ref<Record<string, boolean>>({})
+
+watch(
+  () => flattenCatalogNodes(props.catalogRoots ?? props.nodes)
+    .map((n) => n.id)
+    .join('|'),
+  () => {
+    collapsedById.value = {}
+  },
+)
 
 function isCollapsed(node: TreeLayerNode): boolean {
   if (collapsedById.value[node.id] !== undefined) {
     return collapsedById.value[node.id]
   }
-  return Boolean(node.defaultCollapsed)
+  if (!node.children?.length) return false
+  return !expandAncestorIds.value.has(node.id)
 }
 
 function toggleCollapsed(node: TreeLayerNode) {
@@ -70,6 +94,8 @@ function onCheck(node: TreeLayerNode, checked: boolean) {
         v-if="node.children?.length && !isCollapsed(node)"
         :nodes="node.children"
         :checked-by-id="checkedById"
+        :catalog-roots="catalogRoots ?? nodes"
+        :expand-ancestor-ids="expandAncestorIds"
         :depth="(depth ?? 0) + 1"
         @toggle="(id, checked) => emit('toggle', id, checked)"
       />

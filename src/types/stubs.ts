@@ -5,6 +5,8 @@ export interface LegendItem {
   imageUrl?: string
   /** Chemin image sans suffixe d’échelle (gpu-client LegendImages). */
   legendImageName?: string
+  /** Plusieurs symboles (pct / lin / surf) sur une même ligne de légende. */
+  legendImageNames?: string[]
   legendImagePath?: string
   legendScaleDependant?: boolean
   legendScaleThreshold?: number

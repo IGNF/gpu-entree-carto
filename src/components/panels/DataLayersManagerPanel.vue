@@ -4,10 +4,10 @@
  */
 import { ref } from 'vue'
 import type { ManagedLayer } from '@/composables/managedLayers'
-import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
+import { tabPanelsApiRef } from '@/composables/tabPanels'
 import '@/styles/data-layers.css'
 
-defineProps<{
+const props = defineProps<{
   layers: ManagedLayer[]
 }>()
 
@@ -16,45 +16,94 @@ const emit = defineEmits<{
   opacity: [id: string, opacity: number]
   'toggle-grayscale': [id: string]
   remove: [id: string]
-  reorder: [fromDisplayIndex: number, toDisplayIndex: number]
+  reorder: [fromDisplayIndex: number, toInsertBefore: number]
 }>()
 
-const dragFromIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
+const dragLayerId = ref<string | null>(null)
+const dragInsertIndex = ref<number | null>(null)
+let dropCommitted = false
 
 function toggleVisible(layer: ManagedLayer) {
   emit('visible', layer.id, !layer.visible)
 }
 
-function openLegendsTab() {
-  tabPanelsApiRef.value?.openTab(TAB_PANEL_IDS.legends)
+function openLegendsForLayer(layer: ManagedLayer) {
+  tabPanelsApiRef.value?.openLegendForLayer(layer.id)
 }
 
 function onDragStart(event: DragEvent, index: number) {
-  dragFromIndex.value = index
-  dragOverIndex.value = index
+  const layer = props.layers[index]
+  if (!layer) return
+  dropCommitted = false
+  dragLayerId.value = layer.id
+  dragInsertIndex.value = index
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', String(index))
+    event.dataTransfer.setData('text/plain', layer.id)
+    if (event.target instanceof HTMLElement) {
+      event.dataTransfer.setDragImage(event.target, 12, 12)
+    }
   }
+}
+
+function clearDragState() {
+  dragLayerId.value = null
+  dragInsertIndex.value = null
 }
 
 function onDragEnd() {
-  dragFromIndex.value = null
-  dragOverIndex.value = null
+  window.setTimeout(() => {
+    if (!dropCommitted) clearDragState()
+    dropCommitted = false
+  }, 0)
 }
 
-function onDragOver(index: number) {
-  if (dragFromIndex.value === null) return
-  dragOverIndex.value = index
+function insertIndexFromPointer(event: DragEvent, index: number, layerCount: number): number {
+  const el = event.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const mid = rect.top + rect.height / 2
+  const before = event.clientY < mid ? index : index + 1
+  return Math.min(Math.max(0, before), layerCount)
 }
 
-function onDrop(toIndex: number) {
-  const from = dragFromIndex.value
-  if (from !== null && from !== toIndex) {
-    emit('reorder', from, toIndex)
+function onItemDragOver(event: DragEvent, index: number) {
+  if (!dragLayerId.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  dragInsertIndex.value = insertIndexFromPointer(event, index, props.layers.length)
+}
+
+function onListDragOver(event: DragEvent) {
+  if (!dragLayerId.value) return
+  event.preventDefault()
+}
+
+function onTailDragOver(event: DragEvent) {
+  if (!dragLayerId.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  dragInsertIndex.value = props.layers.length
+}
+
+function onDrop() {
+  const fromIndex = props.layers.findIndex((l) => l.id === dragLayerId.value)
+  const toInsertBefore = dragInsertIndex.value
+  if (fromIndex >= 0 && toInsertBefore !== null) {
+    emit('reorder', fromIndex, toInsertBefore)
+    dropCommitted = true
   }
-  onDragEnd()
+  clearDragState()
+}
+
+function dragFromIndex(): number | null {
+  if (!dragLayerId.value) return null
+  const i = props.layers.findIndex((l) => l.id === dragLayerId.value)
+  return i >= 0 ? i : null
+}
+
+function showDropMarkerBefore(index: number): boolean {
+  const from = dragFromIndex()
+  return from !== null && dragInsertIndex.value === index
 }
 </script>
 
@@ -69,115 +118,135 @@ function onDrop(toIndex: number) {
       Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données.
     </p>
 
-    <ul v-else class="ec-data-layers__list">
-      <li
-        v-for="(layer, index) in layers"
-        :key="layer.id"
-        class="ec-data-layers__item"
-        :class="{
-          'ec-data-layers__item--drag-over':
-            dragOverIndex === index && dragFromIndex !== null && dragFromIndex !== index,
-          'ec-data-layers__item--dragging': dragFromIndex === index,
-        }"
-        @dragover.prevent="onDragOver(index)"
-        @drop.prevent="onDrop(index)"
-      >
-        <div class="ec-data-layers__head">
-          <p class="ec-data-layers__name">{{ layer.title }}</p>
-          <div class="ec-data-layers__head-end">
-            <button
-              v-if="layer.legend?.length"
-              type="button"
-              class="ec-data-layers__legend-btn fr-btn fr-btn--sm fr-btn--secondary"
-              @click="openLegendsTab"
-            >
-              <span class="ri-list-indefinite" aria-hidden="true" />
-              Légendes
-            </button>
-            <button
-              type="button"
-              class="ec-data-layers__drag-handle"
-              draggable="true"
-              title="Glisser pour modifier l’ordre d’affichage"
-              @dragstart="onDragStart($event, index)"
-              @dragend="onDragEnd"
-            >
-              <i class="ri-drag-move-2-fill" aria-hidden="true" />
-              <span class="fr-sr-only">Réordonner {{ layer.title }}</span>
-            </button>
+    <ul
+      v-else
+      class="ec-data-layers__list"
+      @dragover="onListDragOver"
+      @drop.prevent="onDrop"
+    >
+      <template v-for="(layer, index) in layers" :key="layer.id">
+        <li
+          v-if="showDropMarkerBefore(index)"
+          class="ec-data-layers__drop-marker"
+          aria-hidden="true"
+        />
+        <li
+          class="ec-data-layers__item"
+          :class="{
+            'ec-data-layers__item--dragging': dragFromIndex() === index,
+          }"
+          @dragover="onItemDragOver($event, index)"
+          @drop.prevent="onDrop"
+        >
+          <div class="ec-data-layers__head">
+            <p class="ec-data-layers__name">{{ layer.title }}</p>
+            <div class="ec-data-layers__head-end">
+              <button
+                v-if="layer.legend?.length"
+                type="button"
+                class="ec-data-layers__legend-btn fr-btn fr-btn--sm fr-btn--secondary"
+                @click="openLegendsForLayer(layer)"
+              >
+                <i class="ri-list-indefinite ec-data-layers__legend-icon" aria-hidden="true" />
+                Légendes
+              </button>
+              <button
+                type="button"
+                class="ec-data-layers__drag-handle"
+                draggable="true"
+                title="Glisser pour modifier l’ordre d’affichage"
+                @dragstart="onDragStart($event, index)"
+                @dragend="onDragEnd"
+              >
+                <i class="ri-drag-move-2-fill" aria-hidden="true" />
+                <span class="fr-sr-only">Réordonner {{ layer.title }}</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div class="ec-data-layers__toolbar">
-          <button
-            type="button"
-            class="ec-data-layers__icon-btn"
-            :title="layer.visible ? 'Masquer la couche' : 'Afficher la couche'"
-            :aria-pressed="layer.visible"
-            @click="toggleVisible(layer)"
-          >
-            <i
-              :class="layer.visible ? 'ri-eye-line' : 'ri-eye-off-line'"
-              aria-hidden="true"
-            />
-            <span class="fr-sr-only">
-              {{ layer.visible ? 'Masquer' : 'Afficher' }} {{ layer.title }}
-            </span>
-          </button>
+          <div class="ec-data-layers__toolbar">
+            <button
+              type="button"
+              class="ec-data-layers__icon-btn"
+              :title="layer.visible ? 'Masquer la couche' : 'Afficher la couche'"
+              :aria-pressed="layer.visible"
+              @click="toggleVisible(layer)"
+            >
+              <i
+                :class="layer.visible ? 'ri-eye-line' : 'ri-eye-off-line'"
+                aria-hidden="true"
+              />
+              <span class="fr-sr-only">
+                {{ layer.visible ? 'Masquer' : 'Afficher' }} {{ layer.title }}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            class="ec-data-layers__icon-btn"
-            title="Retirer de la pile"
-            @click="emit('remove', layer.id)"
-          >
-            <i class="ri-delete-bin-line" aria-hidden="true" />
-            <span class="fr-sr-only">Retirer {{ layer.title }}</span>
-          </button>
+            <button
+              type="button"
+              class="ec-data-layers__icon-btn"
+              title="Retirer de la pile"
+              @click="emit('remove', layer.id)"
+            >
+              <i class="ri-delete-bin-line" aria-hidden="true" />
+              <span class="fr-sr-only">Retirer {{ layer.title }}</span>
+            </button>
 
-          <button
-            type="button"
-            class="ec-data-layers__icon-btn"
-            :class="{ 'ec-data-layers__icon-btn--active': layer.grayscale }"
-            :title="
-              layer.grayscale
-                ? 'Afficher en couleurs'
-                : 'Afficher en niveaux de gris'
-            "
-            :aria-pressed="layer.grayscale"
-            @click="emit('toggle-grayscale', layer.id)"
-          >
-            <i class="ri-contrast-fill" aria-hidden="true" />
-            <span class="fr-sr-only">
-              {{
-                layer.grayscale ? 'Couleurs' : 'Niveaux de gris'
-              }}
-              — {{ layer.title }}
-            </span>
-          </button>
-
-          <div class="ec-data-layers__range fr-range-group">
-            <label class="fr-sr-only" :for="`ec-dlm-op-${layer.id}`">Opacité</label>
-            <input
-              :id="`ec-dlm-op-${layer.id}`"
-              class="fr-range"
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              :value="layer.opacity"
-              :disabled="layer.forceOpacity"
-              :title="layer.forceOpacity ? 'Opacité fixée par la configuration' : undefined"
-              @input="
-                emit('opacity', layer.id, Number(($event.target as HTMLInputElement).value))
+            <button
+              type="button"
+              class="ec-data-layers__icon-btn"
+              :class="{ 'ec-data-layers__icon-btn--active': layer.grayscale }"
+              :title="
+                layer.grayscale
+                  ? 'Afficher en couleurs'
+                  : 'Afficher en niveaux de gris'
               "
-            />
-            <output class="ec-data-layers__range-value" :for="`ec-dlm-op-${layer.id}`">
-              {{ layer.opacity }}&nbsp;%
-            </output>
+              :aria-pressed="layer.grayscale"
+              @click="emit('toggle-grayscale', layer.id)"
+            >
+              <i class="ri-contrast-fill" aria-hidden="true" />
+              <span class="fr-sr-only">
+                {{
+                  layer.grayscale ? 'Couleurs' : 'Niveaux de gris'
+                }}
+                — {{ layer.title }}
+              </span>
+            </button>
+
+            <div class="ec-data-layers__range fr-range-group">
+              <label class="fr-sr-only" :for="`ec-dlm-op-${layer.id}`">Opacité</label>
+              <input
+                :id="`ec-dlm-op-${layer.id}`"
+                class="fr-range"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                :value="layer.opacity"
+                :disabled="layer.forceOpacity"
+                :title="layer.forceOpacity ? 'Opacité fixée par la configuration' : undefined"
+                @input="
+                  emit('opacity', layer.id, Number(($event.target as HTMLInputElement).value))
+                "
+              />
+              <output class="ec-data-layers__range-value" :for="`ec-dlm-op-${layer.id}`">
+                {{ layer.opacity }}&nbsp;%
+              </output>
+            </div>
           </div>
-        </div>
-      </li>
+        </li>
+      </template>
+      <li
+        v-if="dragLayerId && dragInsertIndex === layers.length"
+        class="ec-data-layers__drop-marker"
+        aria-hidden="true"
+      />
+      <li
+        v-if="dragLayerId"
+        class="ec-data-layers__drop-tail"
+        aria-hidden="true"
+        @dragover="onTailDragOver"
+        @drop.prevent="onDrop"
+      />
     </ul>
   </section>
 </template>

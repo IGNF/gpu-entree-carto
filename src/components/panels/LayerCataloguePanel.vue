@@ -85,6 +85,7 @@ function onCatalogToggle(id: string, checked: boolean) {
       <CatalogLayerTree
         v-if="layerNodes.length"
         :nodes="layerNodes"
+        :catalog-roots="layerNodes"
         :checked-by-id="inStackById"
         @toggle="onCatalogToggle"
       />

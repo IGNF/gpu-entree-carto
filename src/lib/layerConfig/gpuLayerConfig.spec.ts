@@ -3,7 +3,44 @@ import {
   buildLayerPath,
   layerConfigToCatalogEntries,
   pathToCatalogId,
+  resolveGpuLayerVisible,
 } from '@/lib/layerConfig/gpuLayerConfig'
+import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
+import { flattenCatalogNodes } from '@/lib/layerConfig/catalogTreeIndex'
+
+describe('resolveGpuLayerVisible', () => {
+  it('hérite du parent si visible absent', () => {
+    expect(resolveGpuLayerVisible({ title: 'x' }, true)).toBe(true)
+    expect(resolveGpuLayerVisible({ title: 'x' }, false)).toBe(false)
+  })
+
+  it('respecte visible explicite', () => {
+    expect(resolveGpuLayerVisible({ visible: false }, true)).toBe(false)
+    expect(resolveGpuLayerVisible({ visible: true }, false)).toBe(true)
+  })
+})
+
+describe('layerConfigToTreeNodes visible', () => {
+  it('propage visible parent aux enfants sans clé visible', () => {
+    const roots = layerConfigToTreeNodes([
+      {
+        title: 'Parent',
+        virtual: true,
+        visible: true,
+        layers: [
+          { title: 'Enfant A', name: 'wms-a' },
+          { title: 'Enfant B', name: 'wms-b', visible: false },
+        ],
+      },
+    ])
+    const byTitle = Object.fromEntries(
+      flattenCatalogNodes(roots).map((n) => [n.title, n.visible]),
+    )
+    expect(byTitle['Parent']).toBe(true)
+    expect(byTitle['Enfant A']).toBe(true)
+    expect(byTitle['Enfant B']).toBe(false)
+  })
+})
 
 describe('gpuLayerConfig paths', () => {
   it('distingue dev-prescription et dev-prescription_psmv malgré le même titre', () => {

@@ -31,6 +31,14 @@ export interface GpuLayerCatalogEntry {
   config: GpuLayerConfig
 }
 
+/** Comme {@link gpu.model.Layer} : `visible` absent → hérite du parent ; racine → false. */
+export function resolveGpuLayerVisible(layer: GpuLayerConfig, parentVisible: boolean): boolean {
+  if (Object.prototype.hasOwnProperty.call(layer, 'visible')) {
+    return Boolean(layer.visible)
+  }
+  return parentVisible
+}
+
 export function pathToCatalogId(path: string): string {
   const normalized = path.replace(/^\/+/, '').replace(/\/+/g, '/')
   if (!normalized) return 'root'

@@ -88,6 +88,43 @@ describe('catalogCheckboxLogic', () => {
     expect(mapVis['mec-wms']).toBe(true)
   })
 
+  it('garde l’agrégat si l’opacité est alignée sur un enfant virtual intermédiaire', () => {
+    const roots: TreeLayerNode[] = [
+      node({
+        id: 'presc',
+        title: 'Prescriptions',
+        visible: true,
+        gpuMapLayer: true,
+        children: [
+          node({
+            id: 'virt',
+            title: 'Groupe',
+            visible: true,
+            gpuVirtual: true,
+            children: [
+              node({
+                id: 'leaf',
+                title: 'Leaf',
+                visible: true,
+                gpuMapLayer: true,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]
+    const nestedIndex = buildCatalogTreeIndex(roots)
+    const checked: Record<string, boolean> = {
+      presc: true,
+      virt: true,
+      leaf: true,
+    }
+    const opacity = { presc: 45, virt: 45, leaf: 45 }
+    const mapVis = computeMapVisibilityById(checked, nestedIndex, opacity)
+    expect(mapVis.presc).toBe(true)
+    expect(mapVis.leaf).toBe(false)
+  })
+
   it('active l’agrégat parent quand tout le sous-arbre est coché', () => {
     const checked: Record<string, boolean> = {
       du: true,

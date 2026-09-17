@@ -74,17 +74,89 @@ export function legendImageUrl(
   return `${imagePath}${name}.png`
 }
 
-export function resolveLegendItemImageUrl(item: LegendItem, zoom: number): string | undefined {
-  if (item.legendImageName && item.legendImagePath) {
-    return legendImageUrl(
-      item.legendImagePath,
-      item.legendImageName,
-      item.legendScaleDependant === true,
-      item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD,
-      zoom,
-    )
+function legendImageNamesForItem(item: LegendItem): string[] {
+  if (item.legendImageNames?.length) return item.legendImageNames
+  if (item.legendImageName) return [item.legendImageName]
+  return []
+}
+
+/** Ordre gpu-client : pct, lin, surf lorsque présents. */
+export function sortLegendImageNamesByGeometry(names: string[]): string[] {
+  function rank(name: string): number {
+    const match = name.match(/_(pct|lin|surf)(?:\/|$|-)/)
+    if (!match) return GEOMETRY_TYPES.length
+    const idx = GEOMETRY_TYPES.indexOf(match[1] as (typeof GEOMETRY_TYPES)[number])
+    return idx >= 0 ? idx : GEOMETRY_TYPES.length
   }
-  return item.imageUrl
+  return [...names].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+}
+
+export function resolveLegendItemImageUrls(item: LegendItem, zoom: number): string[] {
+  const path = item.legendImagePath
+  const names = legendImageNamesForItem(item)
+  if (path && names.length) {
+    const scaleDependant = item.legendScaleDependant === true
+    const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD
+    return names.map((name) => legendImageUrl(path, name, scaleDependant, threshold, zoom))
+  }
+  if (item.imageUrl) return [item.imageUrl]
+  return []
+}
+
+export function resolveLegendItemImageUrl(item: LegendItem, zoom: number): string | undefined {
+  const urls = resolveLegendItemImageUrls(item, zoom)
+  return urls[0]
+}
+
+/** Clé visuelle titre + symboles (sans suffixe d’échelle). */
+export function legendItemVisualKey(item: LegendItem): string {
+  const imagePart = item.legendImageNames?.length
+    ? [...item.legendImageNames].sort().join('\x1f')
+    : (item.legendImageName ?? item.imageUrl ?? '')
+  return `${item.title}\x1e${imagePart}\x1e${item.legendImagePath ?? ''}`
+}
+
+export function dedupeLegendItems(items: LegendItem[]): LegendItem[] {
+  const seen = new Set<string>()
+  const out: LegendItem[] = []
+  for (const item of items) {
+    const key = legendItemVisualKey(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(item)
+  }
+  return out
+}
+
+function layerLegendAccordionKey(title: string, legend: LegendItem[]): string {
+  return `${title}\x1e${legend.map(legendItemVisualKey).sort().join('\x1f')}`
+}
+
+/** Onglet Légendes : pas de doublon ligne à ligne ni d’accordéon identique (titre + légende). */
+export function dedupeLegendLayersForPanel<
+  T extends { id: string; title: string; legend?: LegendItem[] },
+>(layers: T[]): T[] {
+  const seenLegendKeys = new Set<string>()
+  const seenAccordionKeys = new Set<string>()
+  const out: T[] = []
+
+  for (const layer of layers) {
+    const legend = dedupeLegendItems(layer.legend ?? []).filter((item) => {
+      const key = legendItemVisualKey(item)
+      if (seenLegendKeys.has(key)) return false
+      seenLegendKeys.add(key)
+      return true
+    })
+    if (!legend.length) continue
+
+    const accordionKey = layerLegendAccordionKey(layer.title, legend)
+    if (seenAccordionKeys.has(accordionKey)) continue
+    seenAccordionKeys.add(accordionKey)
+
+    out.push({ ...layer, legend })
+  }
+
+  return out
 }
 
 export function resolveLegendImageDetailDirectory(): string {
@@ -247,21 +319,30 @@ function pushLegendItemsFromNames(
   threshold: number,
   idPrefix: string,
 ): void {
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i]!
-    const item: LegendItem = {
-      id: `${idPrefix}-${i}-${name}`,
-      title: names.length > 1 ? `${title} (${i + 1})` : title,
-      legendImageName: name,
-      legendImagePath: opts.imagePath,
-      legendScaleDependant: scaleDependant,
-      legendScaleThreshold: threshold,
-    }
-    if (opts.imagePath) {
-      item.imageUrl = legendImageUrl(opts.imagePath, name, scaleDependant, threshold, opts.zoomAtInit)
-    }
-    items.push(item)
+  if (!names.length) return
+  const sorted = sortLegendImageNamesByGeometry(names)
+  const item: LegendItem = {
+    id: `${idPrefix}-${sorted.join('|')}`,
+    title,
+    legendImagePath: opts.imagePath,
+    legendScaleDependant: scaleDependant,
+    legendScaleThreshold: threshold,
   }
+  if (sorted.length === 1) {
+    item.legendImageName = sorted[0]
+    if (opts.imagePath) {
+      item.imageUrl = legendImageUrl(
+        opts.imagePath,
+        sorted[0]!,
+        scaleDependant,
+        threshold,
+        opts.zoomAtInit,
+      )
+    }
+  } else {
+    item.legendImageNames = sorted
+  }
+  items.push(item)
 }
 
 function buildNoFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions): LegendItem[] {
@@ -353,12 +434,12 @@ function buildFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions):
   return items
 }
 
-export function buildLegendItemsForGpuLayer(
+/** Feuille WMS (ou parent hideLayers avec filtre) — pas d’agrégation enfants. */
+function buildLegendItemsForLeafGpuLayer(
   layer: GpuLayerConfig,
   opts: GpuLegendBuildOptions,
 ): LegendItem[] {
   if (!layer.name) return []
-  if (layer.layers?.length) return []
 
   const layerName = normalizeLayerNameForLegend(layer.name.split(',')[0]!)
   if (isPsmvLayerName(layerName)) return []
@@ -366,6 +447,35 @@ export function buildLegendItemsForGpuLayer(
 
   if (hasFilterIn(layer)) return buildFilterLegends(layer, opts)
   return buildNoFilterLegends(layer, opts)
+}
+
+/** gpu-client `createLegendImages` : hideLayers sans filtre → légendes des enfants directs. */
+function buildHideLayersAggregatedLegendItems(
+  layer: GpuLayerConfig,
+  opts: GpuLegendBuildOptions,
+): LegendItem[] {
+  const items: LegendItem[] = []
+  for (const child of layer.layers ?? []) {
+    const childName = normalizeLayerNameForLegend((child.name ?? '').split(',')[0] ?? '')
+    if (childName === 'prescription_psmv') continue
+    items.push(...buildLegendItemsForLeafGpuLayer(child, opts))
+  }
+  return items
+}
+
+export function buildLegendItemsForGpuLayer(
+  layer: GpuLayerConfig,
+  opts: GpuLegendBuildOptions,
+): LegendItem[] {
+  if (!layer.name) return []
+
+  if (layer.layers?.length) {
+    if (!layer.hideLayers) return []
+    if (hasFilterIn(layer)) return buildLegendItemsForLeafGpuLayer(layer, opts)
+    return buildHideLayersAggregatedLegendItems(layer, opts)
+  }
+
+  return buildLegendItemsForLeafGpuLayer(layer, opts)
 }
 
 export function readGpuLegendBuildOptions(zoomAtInit = 6): GpuLegendBuildOptions {

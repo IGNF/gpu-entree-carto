@@ -1,13 +1,20 @@
 <script setup lang="ts">
 /**
- * Onglet Légendes — entrées des couches visibles dans la pile.
+ * Onglet Légendes — une section DSFR `fr-accordion` par couche (repliée par défaut).
  */
-import { computed, inject, onUnmounted, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import { computed, inject, nextTick, onUnmounted, ref, shallowRef, watch, type ShallowRef } from 'vue'
 import type Map from 'ol/Map'
 import type { ManagedLayer } from '@/composables/managedLayers'
+import { legendPanelFocusRef } from '@/composables/tabPanels'
 import { rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
-import { resolveLegendItemImageUrl } from '@/lib/layerConfig/gpuLegendItems'
+import {
+  dedupeLegendLayersForPanel,
+  resolveLegendItemImageUrls,
+} from '@/lib/layerConfig/gpuLegendItems'
 import type { LegendItem } from '@/types/stubs'
+/* Accordéon : absent de dsfr.min.css (comme navigation pour le catalogue). */
+import '@gouvfr/dsfr/dist/component/accordion/accordion.min.css'
+import '@/styles/layer-legends.css'
 
 const props = defineProps<{
   layers: ManagedLayer[]
@@ -15,6 +22,8 @@ const props = defineProps<{
 
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
 const mapZoom = ref(6)
+
+const expandedByLayerId = ref<Record<string, boolean>>({})
 
 let unbindZoom: (() => void) | undefined
 
@@ -34,19 +43,75 @@ function bindMapZoom(map: Map | null) {
 watch(() => mapRef.value ?? null, bindMapZoom, { immediate: true })
 onUnmounted(() => unbindZoom?.())
 
-function legendImageSrc(leg: LegendItem): string | undefined {
-  const url = resolveLegendItemImageUrl(leg, mapZoom.value)
-  if (!url) return undefined
-  return rewriteLocalGpuSiteUrl(url)
+function collapseDomId(layerId: string): string {
+  const safe = layerId.replace(/[^a-zA-Z0-9_-]/g, '_')
+  return `ec-legend-collapse-${safe}`
 }
+
+function sectionDomId(layerId: string): string {
+  const safe = layerId.replace(/[^a-zA-Z0-9_-]/g, '_')
+  return `ec-legend-section-${safe}`
+}
+
+function isExpanded(layerId: string): boolean {
+  return Boolean(expandedByLayerId.value[layerId])
+}
+
+function toggleExpanded(layerId: string) {
+  expandedByLayerId.value = {
+    ...expandedByLayerId.value,
+    [layerId]: !expandedByLayerId.value[layerId],
+  }
+}
+
+function legendImageSrcs(leg: LegendItem): string[] {
+  return resolveLegendItemImageUrls(leg, mapZoom.value).map((url) => rewriteLocalGpuSiteUrl(url))
+}
+
+const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
 
 const legendItems = computed((): LegendItem[] => {
   const items: LegendItem[] = []
-  for (const layer of props.layers) {
+  for (const layer of displayLayers.value) {
     if (layer.legend?.length) items.push(...layer.legend)
   }
   return items
 })
+
+async function focusLegendLayer(layerId: string) {
+  expandedByLayerId.value = {
+    ...expandedByLayerId.value,
+    [layerId]: true,
+  }
+  await nextTick()
+  requestAnimationFrame(() => {
+    const el = document.getElementById(sectionDomId(layerId))
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  })
+}
+
+watch(
+  legendPanelFocusRef,
+  (focus) => {
+    if (!focus?.layerId) return
+    if (!props.layers.some((l) => l.id === focus.layerId)) return
+    void focusLegendLayer(focus.layerId)
+  },
+  { flush: 'post' },
+)
+
+watch(
+  () => props.layers.map((l) => l.id).join('|'),
+  (sig, prev) => {
+    if (sig === prev) return
+    const ids = new Set(props.layers.map((l) => l.id))
+    const next: Record<string, boolean> = {}
+    for (const [id, open] of Object.entries(expandedByLayerId.value)) {
+      if (ids.has(id) && open) next[id] = true
+    }
+    expandedByLayerId.value = next
+  },
+)
 </script>
 
 <template>
@@ -56,42 +121,62 @@ const legendItems = computed((): LegendItem[] => {
       Légendes
     </h2>
 
-    <p v-if="!layers.length" class="ec-layer-legends__hint">
+    <p v-if="!displayLayers.length" class="ec-layer-legends__hint">
       Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici.
     </p>
 
-    <template v-else>
-      <article
-        v-for="layer in layers"
+    <div v-else class="fr-accordions-group">
+      <section
+        v-for="layer in displayLayers"
+        :id="sectionDomId(layer.id)"
         :key="layer.id"
-        class="ec-layer-legends__block"
+        class="fr-accordion"
       >
-        <h3 class="ec-layer-legends__layer-name">{{ layer.title }}</h3>
-        <ul v-if="layer.legend?.length" class="ec-layer-legends__list">
-          <li v-for="leg in layer.legend" :key="leg.id" class="ec-layer-legends__item">
-            <img
-              v-if="legendImageSrc(leg)"
-              class="ec-layer-legends__img"
-              :src="legendImageSrc(leg)"
-              alt=""
-              loading="lazy"
-              decoding="async"
-            />
-            <span
-              v-else
-              class="ec-layer-legends__swatch"
-              aria-hidden="true"
-            />
-            <span>{{ leg.title }}</span>
-          </li>
-        </ul>
-        <p v-else class="ec-layer-legends__hint">Pas de légende pour cette couche.</p>
-      </article>
+        <h3 class="fr-accordion__title">
+          <button
+            type="button"
+            class="fr-accordion__btn"
+            :aria-expanded="isExpanded(layer.id)"
+            :aria-controls="collapseDomId(layer.id)"
+            @click="toggleExpanded(layer.id)"
+          >
+            {{ layer.title }}
+          </button>
+        </h3>
+        <div
+          :id="collapseDomId(layer.id)"
+          class="fr-collapse"
+          :class="{ 'fr-collapse--expanded': isExpanded(layer.id) }"
+        >
+          <div class="ec-layer-legends__collapse-inner">
+            <ul v-if="layer.legend?.length" class="ec-layer-legends__list">
+              <li v-for="leg in layer.legend" :key="leg.id" class="ec-layer-legends__item">
+                <span class="ec-layer-legends__symbols" aria-hidden="true">
+                  <template v-if="legendImageSrcs(leg).length">
+                    <img
+                      v-for="(src, imgIdx) in legendImageSrcs(leg)"
+                      :key="imgIdx"
+                      class="ec-layer-legends__img"
+                      :src="src"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </template>
+                  <span v-else class="ec-layer-legends__swatch" />
+                </span>
+                <span>{{ leg.title }}</span>
+              </li>
+            </ul>
+            <p v-else class="ec-layer-legends__hint">Pas de légende pour cette couche.</p>
+          </div>
+        </div>
+      </section>
 
       <p v-if="!legendItems.length" class="ec-layer-legends__hint">
         Aucune entrée de légende disponible pour les couches affichées.
       </p>
-    </template>
+    </div>
   </section>
 </template>
 
@@ -112,20 +197,6 @@ const legendItems = computed((): LegendItem[] => {
   color: var(--text-action-high-blue-france, #000091);
 }
 
-.ec-layer-legends__layer-name {
-  margin: 0 0 0.5rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
-}
-
-.ec-layer-legends__block {
-  margin-bottom: 1.25rem;
-}
-
-.ec-layer-legends__block:last-child {
-  margin-bottom: 0;
-}
-
 .ec-layer-legends__list {
   margin: 0;
   padding: 0;
@@ -138,6 +209,13 @@ const legendItems = computed((): LegendItem[] => {
   gap: 0.5rem;
   margin-bottom: 0.35rem;
   font-size: 0.8125rem;
+}
+
+.ec-layer-legends__symbols {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.2rem;
 }
 
 .ec-layer-legends__swatch {

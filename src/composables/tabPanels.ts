@@ -8,9 +8,17 @@ export interface FicheInfoSelection {
   raw?: Record<string, unknown> | null
 }
 
+/** Demande d’ouverture / dépliage d’une légende couche (onglet Légendes). */
+export type LegendPanelFocus = {
+  layerId: string
+  at: number
+}
+
 export interface TabPanelsApi {
   /** Ouvre le panneau sur l’onglet `index` (0–3). */
   openTab: (index: number) => void
+  /** Ouvre l’onglet Légendes, déplie et scroll vers la couche `layerId`. */
+  openLegendForLayer: (layerId: string) => void
   /** Ferme le panneau et désactive l’onglet. */
   closePanels: () => void
   /** Met à jour la fiche info (+ raw optionnel) et ouvre l’onglet 0. */
@@ -21,6 +29,9 @@ export interface TabPanelsApi {
   activeTab: Ref<number | null>
   selection: Ref<FicheInfoSelection | null>
 }
+
+/** Consommé par `LayerLegendsPanel` (focus depuis Couches de données). */
+export const legendPanelFocusRef = shallowRef<LegendPanelFocus | null>(null)
 
 export const TAB_PANELS_KEY: InjectionKey<TabPanelsApi> = Symbol('ecTabPanels')
 

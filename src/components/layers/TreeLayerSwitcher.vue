@@ -22,6 +22,8 @@ export interface TreeLayerNode extends LayerTreeNode {
   gpuDefaultOpacity?: number
   /** Enfants masqués dans le sélecteur (`hideLayers`) mais toujours pilotés par le parent virtual. */
   hiddenCatalogChildren?: TreeLayerNode[]
+  /** Sous-arbre masqué dans le sélecteur (`hideLayers`) — une seule ligne parent dans Couches de données. */
+  gpuHideLayers?: boolean
 }
 
 const props = withDefaults(
