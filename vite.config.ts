@@ -28,5 +28,13 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    proxy: {
+      /** gpu-site local (légendes, script config, APIs) — évite ORB en dev. */
+      '/__gpu_dev_proxy__': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/__gpu_dev_proxy__/, ''),
+      },
+    },
   },
 })

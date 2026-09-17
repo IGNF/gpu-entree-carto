@@ -3,7 +3,7 @@
  * Contrôle OpenLayers — panneau latéral à 4 onglets (droite de la carte).
  * Masqué par défaut ; ouverture via onglet ou `showSelection` (localisation).
  */
-import { computed, inject, onUnmounted, provide, ref, shallowRef, toRef, watch, type ShallowRef } from 'vue'
+import { inject, onUnmounted, provide, ref, shallowRef, toRef, watch, type ShallowRef } from 'vue'
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
@@ -55,10 +55,11 @@ const layerNodesRef = toRef(props, 'layerNodes')
 const {
   stackLayers,
   legendLayers,
-  setInStack,
+  catalogCheckedById,
+  setCatalogChecked,
   setVisible,
   setOpacity,
-  resetOpacity,
+  toggleGrayscale,
   removeFromStack,
   reorderStackByDisplayIndex,
   notifyStackOrder,
@@ -74,14 +75,6 @@ watch(
   () => notifyStackOrder(),
   { immediate: true },
 )
-
-const inStackById = computed(() => {
-  const map: Record<string, boolean> = {}
-  for (const layer of managedLayers.value) {
-    map[layer.id] = layer.inStack
-  }
-  return map
-})
 
 type TabDef = {
   id: number
@@ -258,11 +251,11 @@ onUnmounted(() => {
         >
           <LayerCataloguePanel
             :layer-nodes="layerNodes"
-            :in-stack-by-id="inStackById"
+            :in-stack-by-id="catalogCheckedById"
             :base-presets="basePresets"
             :base-model-value="baseModelValue"
             @update:base-model-value="emit('update:baseModelValue', $event)"
-            @catalog-toggle="setInStack"
+            @catalog-toggle="setCatalogChecked"
           />
         </div>
 
@@ -277,7 +270,7 @@ onUnmounted(() => {
             :layers="stackLayers"
             @visible="setVisible"
             @opacity="setOpacity"
-            @reset-opacity="resetOpacity"
+            @toggle-grayscale="toggleGrayscale"
             @remove="removeFromStack"
             @reorder="reorderStackByDisplayIndex"
           />

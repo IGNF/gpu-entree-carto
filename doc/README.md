@@ -27,7 +27,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | TabPanelsControl            | `src/components/map/TabPanelsControl.vue`                    | [TabPanelsControl.md](./TabPanelsControl.md)         |
 | LayerCataloguePanel         | `src/components/panels/LayerCataloguePanel.vue`              | [TabPanelsControl.md](./TabPanelsControl.md#composants-panneau) |
 | DataLayersManagerPanel      | `src/components/panels/DataLayersManagerPanel.vue`           | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md) |
-| LayerLegendsPanel           | `src/components/panels/LayerLegendsPanel.vue`                | [TabPanelsControl.md](./TabPanelsControl.md#composants-panneau) |
+| LayerLegendsPanel           | `src/components/panels/LayerLegendsPanel.vue`                | [LayerLegendsPanel.md](./LayerLegendsPanel.md)       |
 | CatalogLayerTree            | `src/components/layers/CatalogLayerTree.vue`                 | [CatalogLayerTree.md](./CatalogLayerTree.md)         |
 | BaseLayerRadioList          | `src/components/layers/BaseLayerRadioList.vue`               | [BaseLayerRadioList.md](./BaseLayerRadioList.md)   |
 | TileLayerSwitcher           | `src/components/layers/TileLayerSwitcher.vue`                | [TileLayerSwitcher.md](./TileLayerSwitcher.md)       |

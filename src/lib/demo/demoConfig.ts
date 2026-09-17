@@ -3,6 +3,7 @@ import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { readLayerConfigFromWindow } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
+import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import type Map from 'ol/Map'
 import { transformExtent } from 'ol/proj'
@@ -123,20 +124,75 @@ export function applyGpuConfigOverrides(overrides: Record<string, unknown> | und
   }
 }
 
+/** gpu-site n’injecte `legendImageDetailDirectory` que si `window.gpu` existe déjà. */
+export function ensureGpuClientStub(): void {
+  const w = window as unknown as Record<string, unknown>
+  if (typeof w.gpu !== 'object' || w.gpu === null) {
+    w.gpu = { config: {} }
+    return
+  }
+  const gpu = w.gpu as Record<string, unknown>
+  if (typeof gpu.config !== 'object' || gpu.config === null) {
+    gpu.config = {}
+  }
+}
+
+export function syncEntreeConfigFromGpuScript(): void {
+  ensureGpuClientStub()
+  const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
+  if (w.gpu?.config) {
+    Object.assign(config, w.gpu.config)
+  }
+}
+
+function applyGpuConfigSyncAndDevRewrite(): void {
+  syncEntreeConfigFromGpuScript()
+  rewriteGpuConfigUrlsForViteDev(config as Record<string, unknown>)
+  const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
+  if (w.gpu?.config) {
+    rewriteGpuConfigUrlsForViteDev(w.gpu.config)
+  }
+}
+
+async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
+  if (typeof config.legendImageDetailDirectory === 'string' && config.legendImageDetailDirectory.length) {
+    return
+  }
+  try {
+    const res = await fetch(rewriteLocalGpuSiteUrl(url), { credentials: 'include' })
+    const text = await res.text()
+    const match = text.match(/legendImageDetailDirectory:\s*"((?:\\.|[^"\\])*)"/)
+    if (!match?.[1]) return
+    const cleaned = match[1].replace(/\\\//g, '/').replace(/\?.*$/i, '')
+    const base = cleaned.endsWith('/') ? cleaned : `${cleaned}/`
+    config.legendImageDetailDirectory = base
+    ensureGpuClientStub()
+    const stub = window as Window & { gpu?: { config?: Record<string, unknown> } }
+    if (stub.gpu?.config) stub.gpu.config.legendImageDetailDirectory = base
+    applyGpuConfigSyncAndDevRewrite()
+  } catch {
+    /* ignore */
+  }
+}
+
 export function loadGpuClientConfigScript(url: string): Promise<void> {
+  const scriptUrl = rewriteLocalGpuSiteUrl(url)
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[data-ec-demo-config="${url}"]`)
     if (existing) {
-      resolve()
+      applyGpuConfigSyncAndDevRewrite()
+      void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
       return
     }
+    ensureGpuClientStub()
     const script = document.createElement('script')
     script.dataset.ecDemoConfig = url
     script.id = 'gpu-client-config'
-    script.src = url
+    script.src = scriptUrl
     script.onload = () => {
-      console.info(`${LOG_PREFIX} gpu-client-config chargé`, url)
-      resolve()
+      console.info(`${LOG_PREFIX} gpu-client-config chargé`, scriptUrl)
+      applyGpuConfigSyncAndDevRewrite()
+      void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
     }
     script.onerror = () => {
       console.error(`${LOG_PREFIX} échec chargement`, url)
@@ -152,10 +208,7 @@ export async function prepareDemoEnvironment(cfg: DemoConfig = getDemoConfig()):
   if (url) {
     try {
       await loadGpuClientConfigScript(url)
-      const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
-      if (w.gpu?.config) {
-        Object.assign(config, w.gpu.config)
-      }
+      applyGpuConfigSyncAndDevRewrite()
     } catch {
       /* démo utilisable avec layerNodes locaux */
     }
@@ -166,7 +219,8 @@ export async function prepareDemoEnvironment(cfg: DemoConfig = getDemoConfig()):
 export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
   const fromGpu = readLayerConfigFromWindow()
   if (fromGpu?.length) {
-    return layerConfigToTreeNodes(fromGpu)
+    const zoom = cfg.map?.zoom ?? 6
+    return layerConfigToTreeNodes(fromGpu, zoom)
   }
   const nodes = cfg.map?.layerNodes
   if (Array.isArray(nodes) && nodes.length) {

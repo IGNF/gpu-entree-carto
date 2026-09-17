@@ -2,29 +2,53 @@ import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import {
   layerConfigToCatalogEntries,
   pathToCatalogId,
-  pathSegment,
+  buildLayerPath,
   type GpuLayerConfig,
 } from '@/lib/layerConfig/gpuLayerConfig'
+import {
+  buildLegendItemsForGpuLayer,
+  readGpuLegendBuildOptions,
+  type GpuLegendBuildOptions,
+} from '@/lib/layerConfig/gpuLegendItems'
+import { GPU_FORCE_OPACITY_PERCENT } from '@/lib/layerConfig/catalogLayerTargets'
+
+function defaultOpacityPercent(layer: GpuLayerConfig): number {
+  if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT
+  if (typeof layer.opacity === 'number' && Number.isFinite(layer.opacity)) {
+    return Math.round(layer.opacity * 100)
+  }
+  return 70
+}
+
+/** Tuile WMS si `name` et non virtual (onlyLegend inclus — gpu-client CreateTreeLayerSwitcherItems). */
+function isGpuMapLayerConfig(layer: GpuLayerConfig): boolean {
+  return !layer.virtual && Boolean(layer.name?.trim())
+}
 
 function buildTreeLevel(
   layers: GpuLayerConfig[],
   parentPath: string,
+  ancestorLayers: GpuLayerConfig[],
+  legendOpts: GpuLegendBuildOptions,
 ): TreeLayerNode[] {
   const nodes: TreeLayerNode[] = []
 
   for (const layer of layers) {
     if (layer.hideHimself) {
       if (layer.layers?.length) {
-        nodes.push(...buildTreeLevel(layer.layers, parentPath))
+        nodes.push(...buildTreeLevel(layer.layers, parentPath, ancestorLayers, legendOpts))
       }
       continue
     }
 
-    const segment = pathSegment(layer)
-    const path = layer.path?.startsWith('/')
-      ? layer.path
-      : `${parentPath}/${segment}`.replace(/\/+/g, '/')
+    const path = buildLayerPath(layer, parentPath || '')
     const id = pathToCatalogId(path)
+
+    const legendContext: GpuLegendBuildOptions = {
+      ...legendOpts,
+      ancestorLayers: [...ancestorLayers],
+    }
+    const legend = buildLegendItemsForGpuLayer(layer, legendContext)
 
     const node: TreeLayerNode = {
       id,
@@ -32,10 +56,20 @@ function buildTreeLevel(
       visible: Boolean(layer.visible),
       defaultCollapsed: Boolean(layer.hideLayers),
       gpuVirtual: Boolean(layer.virtual),
+      gpuMapLayer: isGpuMapLayerConfig(layer),
+      gpuOnlyLegend: Boolean(layer.onlyLegend),
+      gpuForceOpacity: Boolean(layer.forceOpacity),
+      gpuDefaultOpacity: defaultOpacityPercent(layer),
+      legend: legend.length ? legend : undefined,
     }
 
     if (layer.layers?.length) {
-      node.children = buildTreeLevel(layer.layers, path)
+      const childNodes = buildTreeLevel(layer.layers, path, [...ancestorLayers, layer], legendOpts)
+      if (layer.hideLayers) {
+        node.hiddenCatalogChildren = childNodes
+      } else {
+        node.children = childNodes
+      }
     }
 
     nodes.push(node)
@@ -44,8 +78,12 @@ function buildTreeLevel(
   return nodes
 }
 
-export function layerConfigToTreeNodes(layers: GpuLayerConfig[]): TreeLayerNode[] {
-  return buildTreeLevel(layers, '')
+export function layerConfigToTreeNodes(
+  layers: GpuLayerConfig[],
+  zoomAtInit = 6,
+): TreeLayerNode[] {
+  const legendOpts = readGpuLegendBuildOptions(zoomAtInit)
+  return buildTreeLevel(layers, '', [], legendOpts)
 }
 
 export function flattenTreeLayerNodes(nodes: TreeLayerNode[]): TreeLayerNode[] {
@@ -54,6 +92,7 @@ export function flattenTreeLayerNodes(nodes: TreeLayerNode[]): TreeLayerNode[] {
     for (const node of list) {
       flat.push(node)
       if (node.children?.length) walk(node.children)
+      if (node.hiddenCatalogChildren?.length) walk(node.hiddenCatalogChildren)
     }
   }
   walk(nodes)

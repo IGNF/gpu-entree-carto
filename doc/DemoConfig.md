@@ -37,5 +37,7 @@ Voir les blocs commentés en bas de `public/js/demo-config.js` (environnements g
 
 ## Limites
 
-- WMS simplifié (`GpuWmsLayerRegistry`) : pas de hub zoom gpu-client, prévisualisation document partielle.
+- WMS simplifié (`GpuWmsLayerRegistry`) : noms GetMap **identiques** à `LAYER_CONFIG.name` (ex. `dev-document`, préfixe `config.prefix` conservé) ; filtres CQL `filterAttribute` / `filterValue` / `filterValueLike` ; pas de hub zoom gpu-client.
+- Avant chargement de `gpu-client-config.js`, un stub `window.gpu.config` est créé pour recevoir `legendImageDetailDirectory` et les URLs WMS.
+- **Dev Vite** : les URLs `http://127.0.0.1:8000/…` (ou `localhost:8000`) sont réécrites vers le proxy same-origin `/__gpu_dev_proxy__/…` (`vite.config.ts`) pour éviter *OpaqueResponseBlocking* sur les légendes et les `fetch` config.
 - `LEGEND_CONFIG` : pas encore mappé automatiquement sur l’onglet Légendes.

@@ -2,20 +2,48 @@
 /**
  * Onglet Légendes — entrées des couches visibles dans la pile.
  */
-import { computed } from 'vue'
+import { computed, inject, onUnmounted, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import type Map from 'ol/Map'
 import type { ManagedLayer } from '@/composables/managedLayers'
+import { rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import { resolveLegendItemImageUrl } from '@/lib/layerConfig/gpuLegendItems'
 import type { LegendItem } from '@/types/stubs'
 
 const props = defineProps<{
   layers: ManagedLayer[]
 }>()
 
+const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
+const mapZoom = ref(6)
+
+let unbindZoom: (() => void) | undefined
+
+function bindMapZoom(map: Map | null) {
+  unbindZoom?.()
+  unbindZoom = undefined
+  if (!map) return
+  const view = map.getView()
+  const update = () => {
+    mapZoom.value = view.getZoom() ?? mapZoom.value
+  }
+  update()
+  view.on('change:resolution', update)
+  unbindZoom = () => view.un('change:resolution', update)
+}
+
+watch(() => mapRef.value ?? null, bindMapZoom, { immediate: true })
+onUnmounted(() => unbindZoom?.())
+
+function legendImageSrc(leg: LegendItem): string | undefined {
+  const url = resolveLegendItemImageUrl(leg, mapZoom.value)
+  if (!url) return undefined
+  return rewriteLocalGpuSiteUrl(url)
+}
+
 const legendItems = computed((): LegendItem[] => {
   const items: LegendItem[] = []
   for (const layer of props.layers) {
-    if (layer.legend?.length) {
-      items.push(...layer.legend)
-    }
+    if (layer.legend?.length) items.push(...layer.legend)
   }
   return items
 })
@@ -23,7 +51,10 @@ const legendItems = computed((): LegendItem[] => {
 
 <template>
   <section class="ec-layer-legends" aria-labelledby="ec-layer-legends-title">
-    <h2 id="ec-layer-legends-title" class="ec-layer-legends__title">Légendes</h2>
+    <h2 id="ec-layer-legends-title" class="ec-layer-legends__title">
+      <span class="ri-list-indefinite ec-layer-legends__title-icon" aria-hidden="true" />
+      Légendes
+    </h2>
 
     <p v-if="!layers.length" class="ec-layer-legends__hint">
       Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici.
@@ -38,7 +69,14 @@ const legendItems = computed((): LegendItem[] => {
         <h3 class="ec-layer-legends__layer-name">{{ layer.title }}</h3>
         <ul v-if="layer.legend?.length" class="ec-layer-legends__list">
           <li v-for="leg in layer.legend" :key="leg.id" class="ec-layer-legends__item">
-            <img v-if="leg.imageUrl" class="ec-layer-legends__img" :src="leg.imageUrl" alt="" />
+            <img
+              v-if="legendImageSrc(leg)"
+              class="ec-layer-legends__img"
+              :src="legendImageSrc(leg)"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
             <span
               v-else
               class="ec-layer-legends__swatch"
@@ -59,9 +97,19 @@ const legendItems = computed((): LegendItem[] => {
 
 <style scoped>
 .ec-layer-legends__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0 0 1rem;
   font-size: 1.125rem;
   font-weight: 700;
+}
+
+.ec-layer-legends__title-icon {
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--text-action-high-blue-france, #000091);
 }
 
 .ec-layer-legends__layer-name {

@@ -1,8 +1,13 @@
 export interface LegendItem {
   id: string
   title: string
-  /** URL d'image de légende (optionnel en stub). */
+  /** URL figée (fallback démo) ou dernière résolution. */
   imageUrl?: string
+  /** Chemin image sans suffixe d’échelle (gpu-client LegendImages). */
+  legendImageName?: string
+  legendImagePath?: string
+  legendScaleDependant?: boolean
+  legendScaleThreshold?: number
 }
 
 export interface LayerTreeNode {

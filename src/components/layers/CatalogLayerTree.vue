@@ -2,8 +2,9 @@
 /**
  * Arbre catalogue gpu-client (LAYER_CONFIG) — checkbox + titre, repliable.
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import { catalogSwitcherDisplayNodes } from '@/lib/layerConfig/catalogLayerTargets'
 
 const props = defineProps<{
   nodes: TreeLayerNode[]
@@ -14,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   toggle: [id: string, checked: boolean]
 }>()
+
+const displayNodes = computed(() => catalogSwitcherDisplayNodes(props.nodes))
 
 const collapsedById = ref<Record<string, boolean>>({})
 
@@ -35,7 +38,7 @@ function onCheck(node: TreeLayerNode, checked: boolean) {
 
 <template>
   <ul class="ec-catalog-tree" :class="{ 'ec-catalog-tree--nested': (depth ?? 0) > 0 }">
-    <li v-for="node in nodes" :key="node.id" class="ec-catalog-tree__item">
+    <li v-for="node in displayNodes" :key="node.id" class="ec-catalog-tree__item">
       <div class="ec-catalog-tree__row" :style="{ paddingLeft: `${(depth ?? 0) * 1.25}rem` }">
         <button
           v-if="node.children?.length"

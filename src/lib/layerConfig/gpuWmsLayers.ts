@@ -15,14 +15,19 @@ function wmsUrl(): string {
   return typeof url === 'string' && url.length ? url : 'https://data.geopf.fr/wms-v/ows'
 }
 
+/** Filtre CQL comme gpu-client `CreateTreeLayerSwitcherItems#createCqlFilterFromGpuLayer`. */
 function buildCqlFilter(layer: GpuLayerConfig, document: StandardViewerDocument | null): string {
   const parts: string[] = []
-  if (document?.status === 'document.preview' && document.name && !layer.name?.endsWith('municipality')) {
+  const configuredName = layer.name ?? ''
+  if (
+    document?.status === 'document.preview' &&
+    document.name &&
+    !configuredName.endsWith('municipality')
+  ) {
     parts.push(`(partition like '${document.name}')`)
   }
   if (layer.filterAttribute && layer.filterValue?.length) {
-    const values = layer.filterValue.map((v) => `'${v}'`).join(',')
-    parts.push(`${layer.filterAttribute} IN (${values})`)
+    parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`)
   } else if (layer.filterAttribute && layer.filterValueLike) {
     parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`)
   }
@@ -63,7 +68,7 @@ function createWmsTileLayer(
     TILED: true,
   }
   if (cql) {
-    params.CQL_FILTER = layerName.split(',').map(() => cql).join(';')
+    params.cql_filter = layerName.split(',').map(() => cql).join(';')
   }
 
   const minZoom = layer.minZoomLevel ?? 0
@@ -78,7 +83,11 @@ function createWmsTileLayer(
       tileGrid: createXYZ({ tileSize: 512 }),
     }),
     visible: false,
-    opacity: typeof layer.opacity === 'number' ? layer.opacity : 0.7,
+    opacity: layer.forceOpacity
+      ? 1
+      : typeof layer.opacity === 'number'
+        ? layer.opacity
+        : 0.7,
     minResolution: zoomToResolution(maxZoom + 0.5),
     maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
     zIndex: layer.zIndex ? Number(layer.zIndex) : undefined,
@@ -89,9 +98,19 @@ function createWmsTileLayer(
   })
 }
 
+const WMS_LAYER_GRAYSCALE_CLASS = 'ec-gpu-layer-grayscale'
+
+function applyWmsLayerGrayscale(layer: TileLayer, grayscale: boolean): void {
+  const internal = layer as unknown as { className_: string }
+  internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : 'ol-layer'
+  layer.set('grayscale', grayscale)
+  layer.changed()
+}
+
 export class GpuWmsLayerRegistry {
   private readonly entries = new Map<string, GpuLayerCatalogEntry>()
   private readonly olLayers = new Map<string, TileLayer>()
+  private readonly grayscaleById = new Map<string, boolean>()
   private map: OlMap | null = null
   private document: StandardViewerDocument | null = null
 
@@ -102,6 +121,7 @@ export class GpuWmsLayerRegistry {
     }
     this.entries.clear()
     this.olLayers.clear()
+    this.grayscaleById.clear()
 
     for (const entry of layerConfigToCatalogEntries(layers)) {
       this.entries.set(entry.id, entry)
@@ -136,6 +156,7 @@ export class GpuWmsLayerRegistry {
     if (!created) return undefined
 
     this.olLayers.set(catalogId, created)
+    applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true)
     if (this.map && !this.map.getLayers().getArray().includes(created)) {
       this.map.addLayer(created)
     }
@@ -155,6 +176,12 @@ export class GpuWmsLayerRegistry {
   setOpacity(catalogId: string, opacityPercent: number): void {
     const layer = this.olLayers.get(catalogId)
     if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100)
+  }
+
+  setGrayscale(catalogId: string, grayscale: boolean): void {
+    this.grayscaleById.set(catalogId, grayscale)
+    const layer = this.olLayers.get(catalogId)
+    if (layer) applyWmsLayerGrayscale(layer, grayscale)
   }
 
   hasWmsLayer(catalogId: string): boolean {

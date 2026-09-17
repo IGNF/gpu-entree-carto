@@ -14,7 +14,7 @@ defineProps<{
 const emit = defineEmits<{
   visible: [id: string, visible: boolean]
   opacity: [id: string, opacity: number]
-  'reset-opacity': [id: string]
+  'toggle-grayscale': [id: string]
   remove: [id: string]
   reorder: [fromDisplayIndex: number, toDisplayIndex: number]
 }>()
@@ -138,11 +138,22 @@ function onDrop(toIndex: number) {
           <button
             type="button"
             class="ec-data-layers__icon-btn"
-            title="Rétablir le contraste par défaut"
-            @click="emit('reset-opacity', layer.id)"
+            :class="{ 'ec-data-layers__icon-btn--active': layer.grayscale }"
+            :title="
+              layer.grayscale
+                ? 'Afficher en couleurs'
+                : 'Afficher en niveaux de gris'
+            "
+            :aria-pressed="layer.grayscale"
+            @click="emit('toggle-grayscale', layer.id)"
           >
             <i class="ri-contrast-fill" aria-hidden="true" />
-            <span class="fr-sr-only">Contraste par défaut pour {{ layer.title }}</span>
+            <span class="fr-sr-only">
+              {{
+                layer.grayscale ? 'Couleurs' : 'Niveaux de gris'
+              }}
+              — {{ layer.title }}
+            </span>
           </button>
 
           <div class="ec-data-layers__range fr-range-group">
@@ -155,6 +166,8 @@ function onDrop(toIndex: number) {
               max="100"
               step="5"
               :value="layer.opacity"
+              :disabled="layer.forceOpacity"
+              :title="layer.forceOpacity ? 'Opacité fixée par la configuration' : undefined"
               @input="
                 emit('opacity', layer.id, Number(($event.target as HTMLInputElement).value))
               "

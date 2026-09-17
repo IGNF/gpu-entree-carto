@@ -25,7 +25,6 @@ import {
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 import { readLayerConfigFromWindow } from '@/lib/layerConfig/gpuLayerConfig'
-import { flattenTreeLayerNodes } from '@/lib/layerConfig/layerConfigToTree'
 import {
   createGpuBaseLayerEnvironment,
   setActiveGpuBaseLayer,
@@ -62,6 +61,7 @@ if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
 const layerMapHooks = {
   onVisible: (id: string, visible: boolean) => gpuWmsLayerRegistry.setVisible(id, visible),
   onOpacity: (id: string, opacity: number) => gpuWmsLayerRegistry.setOpacity(id, opacity),
+  onGrayscale: (id: string, grayscale: boolean) => gpuWmsLayerRegistry.setGrayscale(id, grayscale),
   onStackOrder: (ids: string[]) => gpuWmsLayerRegistry.applyStackOrder(ids),
 }
 
@@ -74,9 +74,6 @@ onMounted(async () => {
     gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, gpuDocument.value)
     const map = mapShellRef.value?.map ?? null
     if (map) gpuWmsLayerRegistry.attachMap(map)
-    for (const node of flattenTreeLayerNodes(layerNodes.value)) {
-      if (node.visible) gpuWmsLayerRegistry.setVisible(node.id, true)
-    }
   }
 })
 
@@ -87,7 +84,9 @@ onUnmounted(() => {
 watch(
   () => mapShellRef.value?.map ?? null,
   (map) => {
-    if (map) gpuWmsLayerRegistry.attachMap(map)
+    if (map && readLayerConfigFromWindow()?.length) {
+      gpuWmsLayerRegistry.attachMap(map)
+    }
   },
 )
 

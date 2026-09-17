@@ -14,6 +14,9 @@ export interface GpuLayerConfig {
   hideLayers?: boolean
   hideHimself?: boolean
   onlyLegend?: boolean
+  scaleDependant?: boolean
+  scaleDependantTreshold?: number
+  forceOpacity?: boolean
   layers?: GpuLayerConfig[]
   filterAttribute?: string
   filterValue?: string[]
@@ -44,9 +47,36 @@ export function pathToCatalogId(path: string): string {
     .join('--')
 }
 
+/**
+ * Segment de chemin TLS gpu-client ({@link gpu.model.Layer#getOrCreatePath}) :
+ * `name` + concaténation des `filterValue` (+ `filterValueLike`), pas le titre.
+ */
 export function pathSegment(layer: GpuLayerConfig): string {
-  const base = layer.title?.trim() || layer.name?.trim() || 'couche'
-  return base.slice(0, 80)
+  if (layer.path?.startsWith('/')) {
+    const parts = layer.path.replace(/\/+/g, '/').split('/').filter(Boolean)
+    return parts[parts.length - 1] ?? 'couche'
+  }
+
+  let uniqueName = (layer.name ?? layer.title ?? 'couche').trim()
+  if (layer.filterAttribute && layer.filterValue?.length) {
+    for (const value of layer.filterValue) {
+      uniqueName += value
+    }
+  }
+  if (layer.filterAttribute && layer.filterValueLike) {
+    uniqueName += `_${layer.filterValueLike}`
+  }
+  return uniqueName.toLowerCase()
+}
+
+export function buildLayerPath(layer: GpuLayerConfig, parentPath: string): string {
+  if (layer.path?.startsWith('/')) {
+    return layer.path.replace(/\/+/g, '/')
+  }
+  const segment = pathSegment(layer)
+  if (!parentPath) return `/${segment}`
+  const base = parentPath.endsWith('/') ? parentPath.slice(0, -1) : parentPath
+  return `${base}/${segment}`.replace(/\/+/g, '/')
 }
 
 export function layerConfigToCatalogEntries(
@@ -62,10 +92,7 @@ export function layerConfigToCatalogEntries(
       continue
     }
 
-    const segment = pathSegment(layer)
-    const path = layer.path?.startsWith('/')
-      ? layer.path
-      : `${parentPath}/${segment}`.replace(/\/+/g, '/')
+    const path = buildLayerPath(layer, parentPath || '')
     const id = pathToCatalogId(path)
 
     registry.push({ id, path, config: layer })

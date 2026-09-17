@@ -61,7 +61,7 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 | --------- | ------- |
 | `LayerCataloguePanel` | `src/components/panels/LayerCataloguePanel.vue` |
 | `DataLayersManagerPanel` | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md) |
-| `LayerLegendsPanel` | `src/components/panels/LayerLegendsPanel.vue` |
+| `LayerLegendsPanel` | [LayerLegendsPanel.md](./LayerLegendsPanel.md) |
 
 ## Intégration localisation
 
@@ -71,7 +71,8 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 
 - Fiche structurée selon sélection : contenu riche à brancher plus tard.
 - Opacité / ordre : pile onglet 3 branchée sur hooks ; pas encore grisage zoom gpu-client.
-- Légendes depuis `LEGEND_CONFIG` : partiel (champ `legend` sur nœuds démo).
+- Légendes `scaleDependant` : URL figée au zoom initial (pas d’écoute zoom OL pour l’instant).
+- Pas de permalink couches (hors scope).
 
 ## Dépendances
 

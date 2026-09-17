@@ -155,6 +155,10 @@
   background-color: var(--background-contrast-grey, #eee);
 }
 
+.ec-tab-panels.ol-control .ec-data-layers__icon-btn--active {
+  background-color: var(--background-open-blue-france, #e3e3fd);
+}
+
 .ec-data-layers__range {
   flex: 1 1 auto;
   display: flex;
