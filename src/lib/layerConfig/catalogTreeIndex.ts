@@ -24,6 +24,20 @@ export function buildCatalogTreeIndex(roots: TreeLayerNode[]): CatalogTreeIndex 
   return { nodesById, parentById, roots }
 }
 
+/** Chaîne parent → racine (ids des ancêtres à déplier pour afficher `nodeId`). */
+export function catalogAncestorIds(
+  nodeId: string,
+  parentById: Map<string, TreeLayerNode | null>,
+): string[] {
+  const ids: string[] = []
+  let parent = parentById.get(nodeId) ?? null
+  while (parent) {
+    ids.unshift(parent.id)
+    parent = parentById.get(parent.id) ?? null
+  }
+  return ids
+}
+
 export function flattenCatalogNodes(roots: TreeLayerNode[]): TreeLayerNode[] {
   const flat: TreeLayerNode[] = []
   function walk(node: TreeLayerNode) {

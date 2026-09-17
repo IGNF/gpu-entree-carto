@@ -94,6 +94,14 @@
   padding-top: 1rem;
 }
 
+/* Champ de recherche DSFR dans le panneau OL */
+.ec-tab-panels.ol-control .ec-layer-catalogue .fr-input-group .fr-input {
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  margin: 0;
+  width: 100%;
+}
+
 .ec-layer-catalogue__panel[hidden] {
   display: none !important;
 }

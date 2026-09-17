@@ -2,15 +2,17 @@
 /**
  * Onglet Catalogue — sous-onglets Données / Fonds de cartes (style barre de navigation).
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import CatalogLayerTree from '@/components/layers/CatalogLayerTree.vue'
+import CatalogLayerSearch from '@/components/layers/CatalogLayerSearch.vue'
+import { buildCatalogTreeIndex, catalogAncestorIds } from '@/lib/layerConfig/catalogTreeIndex'
 import BaseLayerRadioList from '@/components/layers/BaseLayerRadioList.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
 import '@gouvfr/dsfr/dist/component/navigation/navigation.min.css'
 import '@/styles/layer-catalogue.css'
 
-defineProps<{
+const props = defineProps<{
   layerNodes: TreeLayerNode[]
   inStackById: Record<string, boolean>
   mapZoom: number
@@ -25,8 +27,32 @@ const emit = defineEmits<{
 
 const catalogueTab = ref<'donnees' | 'fonds'>('donnees')
 
+const catalogTreeIndex = computed(() => buildCatalogTreeIndex(props.layerNodes))
+const pinnedExpandIds = ref<Set<string>>(new Set())
+const highlightedNodeIds = ref<Set<string>>(new Set())
+const focusCatalogNodeId = ref<string | null>(null)
+let highlightClearTimer: ReturnType<typeof setTimeout> | undefined
+
 function onCatalogToggle(id: string, checked: boolean) {
   emit('catalog-toggle', id, checked)
+}
+
+function onSearchFocusNode(nodeId: string) {
+  const ancestors = catalogAncestorIds(nodeId, catalogTreeIndex.value.parentById)
+  pinnedExpandIds.value = new Set(ancestors)
+  highlightedNodeIds.value = new Set([nodeId])
+  focusCatalogNodeId.value = nodeId
+  clearTimeout(highlightClearTimer)
+  highlightClearTimer = setTimeout(() => {
+    highlightedNodeIds.value = new Set()
+  }, 2600)
+}
+
+function onUnpinExpand(nodeId: string) {
+  if (!pinnedExpandIds.value.has(nodeId)) return
+  const next = new Set(pinnedExpandIds.value)
+  next.delete(nodeId)
+  pinnedExpandIds.value = next
 }
 </script>
 
@@ -83,14 +109,30 @@ function onCatalogToggle(id: string, checked: boolean) {
       aria-labelledby="ec-catalog-tab-donnees"
       :hidden="catalogueTab !== 'donnees'"
     >
-      <CatalogLayerTree
+      <CatalogLayerSearch
         v-if="layerNodes.length"
-        :nodes="layerNodes"
-        :map-zoom="mapZoom"
-        :catalog-roots="layerNodes"
+        :roots="layerNodes"
         :checked-by-id="inStackById"
+        :map-zoom="mapZoom"
         @toggle="onCatalogToggle"
+        @focus-node="onSearchFocusNode"
       />
+      <div v-if="layerNodes.length" class="ec-layer-catalogue__selection">
+        <h3 id="ec-catalog-selection-title" class="ec-layer-catalogue__section-title">
+          Sélection des données
+        </h3>
+        <CatalogLayerTree
+          :nodes="layerNodes"
+          :map-zoom="mapZoom"
+          :catalog-roots="layerNodes"
+          :checked-by-id="inStackById"
+          :pinned-expand-ids="pinnedExpandIds"
+          :highlighted-node-ids="highlightedNodeIds"
+          :focus-catalog-node-id="focusCatalogNodeId"
+          @toggle="onCatalogToggle"
+          @unpin-expand="onUnpinExpand"
+        />
+      </div>
       <p v-else class="ec-layer-catalogue__hint">Aucune couche dans LAYER_CONFIG.</p>
     </div>
 
@@ -127,6 +169,18 @@ function onCatalogToggle(id: string, checked: boolean) {
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
+}
+
+.ec-layer-catalogue__selection {
+  margin-top: 1.5rem;
+}
+
+.ec-layer-catalogue__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .ec-layer-catalogue__hint {

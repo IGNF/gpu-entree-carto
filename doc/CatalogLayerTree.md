@@ -5,7 +5,7 @@ Arbre **checkbox** du catalogue *Données* (équivalent gpu-client `TreeLayerSwi
 **Source :** `src/components/layers/CatalogLayerTree.vue`  
 **Construction de l’arbre :** `src/lib/layerConfig/layerConfigToTree.ts` ← `window.LAYER_CONFIG`  
 **Identifiants catalogue :** chemin TLS gpu-client (`name` + valeurs de filtre, pas le seul `title`) — voir `gpu.model.Layer#getOrCreatePath`.  
-**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → *Données*
+**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → *Données*, sous le titre **Sélection des données** (après [CatalogLayerSearch](./CatalogLayerSearch.md)).
 
 ## Props / events
 
@@ -14,7 +14,11 @@ Arbre **checkbox** du catalogue *Données* (équivalent gpu-client `TreeLayerSwi
 | `nodes` | `TreeLayerNode[]` | Racine de l’arbre (`children`, `defaultCollapsed`, `gpuVirtual`, …) |
 | `checkedById` | `Record<string, boolean>` | État coché sur **chaque** entrée (propagation gpu-client) |
 | `catalogRoots` | `TreeLayerNode[]` | Racines complètes (optionnel, défaut `nodes`) — calcul des replis |
+| `pinnedExpandIds` | `ReadonlySet<string>` | Branches dépliées (recherche [CatalogLayerSearch](./CatalogLayerSearch.md)) |
+| `highlightedNodeIds` | `ReadonlySet<string>` | Surbrillance temporaire des lignes |
+| `focusCatalogNodeId` | `string \| null` | Scroll vers la ligne (racine du composant) |
 | `@toggle` | `(id, checked)` | → `setCatalogChecked` (checkboxes + visibilité WMS) |
+| `@unpin-expand` | `(id)` | Retrait du dépliage forcé (repli manuel) |
 
 ## Comportement
 
