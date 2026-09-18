@@ -2,6 +2,9 @@
   "name": "entree-carto",
   "version": "0.2.0",
   "private": true,
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "type": "module",
   "description": "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)",
   "main": "./dist/entree-carto.js",
@@ -19,10 +22,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "vue-tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify": "npm run lint && npm run format:check && npm run typecheck",
+    "fix": "npm run lint:fix && npm run format",
+    "prepare": "husky"
   },
   "dependencies": {
     "@gouvfr/dsfr": "^1.15.2",
@@ -50,6 +56,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.10.0",
     "globals": "^17.12.0",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "typescript": "~5.7.2",

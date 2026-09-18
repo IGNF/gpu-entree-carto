@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  assertSafeKmlXmlText,
-  looksLikeKmlDocument,
-  parseUserKmlDocument,
-} from './safeKmlParse'
+import { assertSafeKmlXmlText, looksLikeKmlDocument, parseUserKmlDocument } from './safeKmlParse'
 import { parseRawToFeatures } from './parseGeometry'
 
 const MINIMAL_KML = `<?xml version="1.0" encoding="UTF-8"?>
