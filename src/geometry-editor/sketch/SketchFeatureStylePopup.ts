@@ -1,7 +1,9 @@
 /**
  * Popup d’édition de style à la création (et reclic / icône modify).
- * Positionnée en `fixed` (peut dépasser le cadre carte) ; color pickers avec opacité.
+ * Positionnée via Overlay OL (`bottom-center`), comme les popups mesure.
  */
+import Overlay from 'ol/Overlay'
+import { unByKey } from 'ol/Observable'
 import type Map from 'ol/Map'
 import type { Feature as OlFeature } from 'ol'
 import type { Geometry as OlGeometry } from 'ol/geom'
@@ -67,6 +69,7 @@ const ADVANCED_BY_KIND: Record<FeatureStyleKind, AdvancedField[]> = {
  */
 export class SketchFeatureStylePopup {
   private readonly root: HTMLElement
+  private readonly overlay: Overlay
   private readonly basicFields: HTMLElement
   private readonly advancedFields: HTMLElement
   private readonly advancedToggle: HTMLButtonElement
@@ -111,32 +114,10 @@ export class SketchFeatureStylePopup {
   private advancedOpen = false
   private outsideDown = false
   private mapDragged = false
-  private repositionBound = false
-  private scrollGuardBound = false
-  private mapResizeObserver: ResizeObserver | null = null
-  private repositionRaf = 0
+  private geomChangeKey: import('ol/events').EventsKey | null = null
 
   private readonly onMapPointerDrag = (): void => {
     this.mapDragged = true
-  }
-
-  private readonly onPopupWheel = (evt: WheelEvent): void => {
-    // Empêche zoom carte / scroll page ; laisse scroller le panneau interne
-    evt.stopPropagation()
-    const scroll = this.root.querySelector('.ec-sketch-style-popup__scroll') as HTMLElement | null
-    if (!scroll) {
-      evt.preventDefault()
-      return
-    }
-    const canScroll = scroll.scrollHeight > scroll.clientHeight + 1
-    if (!canScroll) {
-      evt.preventDefault()
-      return
-    }
-    const delta = evt.deltaY
-    const atTop = scroll.scrollTop <= 0 && delta < 0
-    const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0
-    if (atTop || atBottom) evt.preventDefault()
   }
 
   private readonly onDocPointerDown = (evt: PointerEvent): void => {
@@ -159,22 +140,7 @@ export class SketchFeatureStylePopup {
 
   private readonly onViewChange = (): void => {
     if (!this.openFlag) return
-    this.scheduleReposition(false)
-  }
-
-  private readonly onWindowResize = (): void => {
-    if (!this.openFlag) return
-    // La taille OL peut être obsolète juste après un resize navigateur
-    this.scheduleReposition(true)
-  }
-
-  private scheduleReposition(updateMapSize: boolean): void {
-    if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf)
-    this.repositionRaf = requestAnimationFrame(() => {
-      this.repositionRaf = 0
-      if (updateMapSize) this.map.updateSize()
-      this.reposition()
-    })
+    this.reposition()
   }
 
   constructor(private readonly map: Map) {
@@ -355,7 +321,6 @@ export class SketchFeatureStylePopup {
 
     this.advancedToggle.addEventListener('click', () => {
       this.setAdvancedOpen(!this.advancedOpen)
-      this.reposition()
     })
 
     this.root.querySelector('.ec-sketch-style-popup__ok')!.addEventListener('click', () => {
@@ -367,7 +332,13 @@ export class SketchFeatureStylePopup {
       .querySelector('.ec-sketch-style-popup__cancel')!
       .addEventListener('click', () => this.hide())
 
-    document.body.appendChild(this.root)
+    this.overlay = new Overlay({
+      element: this.root,
+      positioning: 'bottom-center',
+      offset: [0, -8],
+      stopEvent: true,
+    })
+    this.map.addOverlay(this.overlay)
   }
 
   open(feature: OlFeature<OlGeometry>, onCommit?: () => void): void {
@@ -385,7 +356,6 @@ export class SketchFeatureStylePopup {
     this.openFlag = true
     this.reposition()
     this.bindOutside()
-    this.bindScrollGuard()
     if (this.kind === 'text' && !this.els.text.closest('[hidden]')) {
       this.els.text.focus()
       this.els.text.select()
@@ -394,9 +364,9 @@ export class SketchFeatureStylePopup {
 
   hide(): void {
     this.unbindOutside()
-    this.unbindScrollGuard()
     this.setAdvancedOpen(false)
     this.root.hidden = true
+    this.overlay.setPosition(undefined)
     this.openFlag = false
     this.feature = null
     this.onCommit = null
@@ -408,6 +378,7 @@ export class SketchFeatureStylePopup {
   destroy(): void {
     this.hide()
     for (const p of Object.values(this.colorPickers)) p.destroy()
+    this.map.removeOverlay(this.overlay)
     this.root.remove()
   }
 
@@ -428,118 +399,31 @@ export class SketchFeatureStylePopup {
     this.map.on('pointerdrag', this.onMapPointerDrag)
     this.map.getView().on('change:center', this.onViewChange)
     this.map.getView().on('change:resolution', this.onViewChange)
-    this.map.on('change:size', this.onViewChange)
-    window.addEventListener('resize', this.onWindowResize)
-    window.visualViewport?.addEventListener('resize', this.onWindowResize)
-    // capture : le scroll ne bubble pas — suit la carte dans la page
-    window.addEventListener('scroll', this.onViewChange, true)
     document.addEventListener('pointerdown', this.onDocPointerDown, true)
     document.addEventListener('pointerup', this.onDocPointerUp, true)
-    const mapEl = this.map.getTargetElement()
-    if (mapEl && typeof ResizeObserver !== 'undefined') {
-      this.mapResizeObserver?.disconnect()
-      this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize())
-      this.mapResizeObserver.observe(mapEl)
+    const geom = this.feature?.getGeometry()
+    if (geom) {
+      this.geomChangeKey = geom.on('change', this.onViewChange)
     }
-    this.repositionBound = true
   }
 
   private unbindOutside(): void {
     this.map.un('pointerdrag', this.onMapPointerDrag)
-    if (this.repositionBound) {
-      this.map.getView().un('change:center', this.onViewChange)
-      this.map.getView().un('change:resolution', this.onViewChange)
-      this.map.un('change:size', this.onViewChange)
-      window.removeEventListener('resize', this.onWindowResize)
-      window.visualViewport?.removeEventListener('resize', this.onWindowResize)
-      window.removeEventListener('scroll', this.onViewChange, true)
-      this.mapResizeObserver?.disconnect()
-      this.mapResizeObserver = null
-    }
+    this.map.getView().un('change:center', this.onViewChange)
+    this.map.getView().un('change:resolution', this.onViewChange)
     document.removeEventListener('pointerdown', this.onDocPointerDown, true)
     document.removeEventListener('pointerup', this.onDocPointerUp, true)
-    if (this.repositionRaf) {
-      cancelAnimationFrame(this.repositionRaf)
-      this.repositionRaf = 0
+    if (this.geomChangeKey) {
+      unByKey(this.geomChangeKey)
+      this.geomChangeKey = null
     }
-    this.repositionBound = false
   }
 
-  private bindScrollGuard(): void {
-    if (this.scrollGuardBound) return
-    this.root.addEventListener('wheel', this.onPopupWheel, {
-      passive: false,
-      capture: true,
-    })
-    this.scrollGuardBound = true
-  }
-
-  private unbindScrollGuard(): void {
-    if (!this.scrollGuardBound) return
-    this.root.removeEventListener('wheel', this.onPopupWheel, true)
-    this.scrollGuardBound = false
-  }
-
-  /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+  /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
-    const mapSize = this.map.getSize()
-    const anchor = featureStylePopupAnchor(this.feature, mapSize, (c) =>
-      this.map.getPixelFromCoordinate(c),
-    )
-    if (!anchor) return
-    const pixel = this.map.getPixelFromCoordinate(anchor)
-    if (!pixel) return
-    const mapEl = this.map.getTargetElement()
-    if (!mapEl) return
-    const mapRect = mapEl.getBoundingClientRect()
-    const tipX = mapRect.left + pixel[0]
-    const tipY = mapRect.top + pixel[1]
-
-    this.root.style.position = 'fixed'
-    this.root.style.zIndex = '10040'
-    this.root.style.left = '0'
-    this.root.style.top = '0'
-    this.root.style.visibility = 'hidden'
-    this.root.hidden = false
-
-    requestAnimationFrame(() => {
-      const pr = this.root.getBoundingClientRect()
-      const gap = 20
-      const tipPad = 18
-      let below = false
-      let top = tipY - pr.height - gap
-      if (top < 8) {
-        top = tipY + gap
-        below = true
-      }
-      // Garder l’appendice sur tipX : left = tipX - tipLocalX
-      let tipLocalX = pr.width / 2
-      let left = tipX - tipLocalX
-      const minLeft = 8
-      const maxLeft = window.innerWidth - pr.width - 8
-      if (left < minLeft) {
-        left = minLeft
-        tipLocalX = tipX - left
-      } else if (left > maxLeft) {
-        left = maxLeft
-        tipLocalX = tipX - left
-      }
-      tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad)
-      // Recaler left pour que le tip reste sur tipX après clamp du tipLocalX
-      left = tipX - tipLocalX
-      left = Math.min(Math.max(minLeft, left), maxLeft)
-      tipLocalX = tipX - left
-
-      top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8)
-      if (!below && top + 4 > tipY) below = true
-
-      this.root.style.left = `${left}px`
-      this.root.style.top = `${top}px`
-      this.root.style.setProperty('--ec-tip-x', `${tipLocalX}px`)
-      this.root.style.visibility = 'visible'
-      this.root.classList.toggle('ec-sketch-style-popup--below', below)
-    })
+    const anchor = featureStylePopupAnchor(this.feature)
+    if (anchor) this.overlay.setPosition(anchor)
   }
 
   private syncFieldsVisibility(): void {

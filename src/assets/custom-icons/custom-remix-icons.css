@@ -1,0 +1,20 @@
+/**
+ * Icônes Remix absentes du pack — classe `ri-*` pour cohérence avec remixicon.css.
+ */
+i.ri-draw-line {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: currentColor;
+}
+
+i.ri-draw-line::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask: url('./draw-line.svg') center / contain no-repeat;
+  mask: url('./draw-line.svg') center / contain no-repeat;
+}

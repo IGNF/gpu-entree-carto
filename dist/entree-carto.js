@@ -2,8 +2,8 @@ var __defProp = Object.defineProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
 };
-var __defNormalProp = (obj, key2, value2) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key2] = value2;
-var __publicField = (obj, key2, value2) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value2);
+var __defNormalProp = (obj, key, value2) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key] = value2;
+var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value2);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateAdd = (obj, member, value2) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value2);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
@@ -30,7 +30,7 @@ this.gpu = (function() {
     config.scriptDir = path.split("/").slice(0, -1).join("/");
   }
   /**
-  * @vue/shared v3.5.40
+  * @vue/shared v3.5.42
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -199,6 +199,23 @@ this.gpu = (function() {
     }
     return equal;
   }
+  function looseCompareCollections(a, b) {
+    if (a.size !== b.size) return false;
+    const candidates = Array.from(b);
+    const matched = new Uint8Array(candidates.length);
+    for (const item of a) {
+      let index2 = -1;
+      for (let i = 0; i < candidates.length; i++) {
+        if (!matched[i] && looseEqual(item, candidates[i])) {
+          index2 = i;
+          break;
+        }
+      }
+      if (index2 < 0) return false;
+      matched[index2] = 1;
+    }
+    return true;
+  }
   function looseEqual(a, b) {
     if (a === b) return true;
     let aValidType = isDate(a);
@@ -221,6 +238,16 @@ this.gpu = (function() {
     if (aValidType || bValidType) {
       if (!aValidType || !bValidType) {
         return false;
+      }
+      aValidType = isMap(a);
+      bValidType = isMap(b);
+      if (aValidType || bValidType) {
+        return aValidType && bValidType ? looseCompareCollections(a, b) : false;
+      }
+      aValidType = isSet(a);
+      bValidType = isSet(b);
+      if (aValidType || bValidType) {
+        return aValidType && bValidType ? looseCompareCollections(a, b) : false;
       }
       const aKeysCount = Object.keys(a).length;
       const bKeysCount = Object.keys(b).length;
@@ -276,7 +303,7 @@ this.gpu = (function() {
     );
   };
   /**
-  * @vue/reactivity v3.5.40
+  * @vue/reactivity v3.5.42
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -928,6 +955,10 @@ this.gpu = (function() {
       }
     }
     endBatch();
+  }
+  function getDepFromReactive(object, key2) {
+    const depMap = targetMap.get(object);
+    return depMap && depMap.get(key2);
   }
   function reactiveReadArray(array) {
     const raw = /* @__PURE__ */ toRaw(array);
@@ -1723,6 +1754,70 @@ this.gpu = (function() {
   function proxyRefs(objectWithRefs) {
     return /* @__PURE__ */ isReactive(objectWithRefs) ? objectWithRefs : new Proxy(objectWithRefs, shallowUnwrapHandlers);
   }
+  class ObjectRefImpl {
+    constructor(_object, key2, _defaultValue) {
+      this._object = _object;
+      this._defaultValue = _defaultValue;
+      this["__v_isRef"] = true;
+      this._value = void 0;
+      this._key = isSymbol(key2) ? key2 : String(key2);
+      this._raw = /* @__PURE__ */ toRaw(_object);
+      let shallow = true;
+      let obj = _object;
+      if (!isArray(_object) || isSymbol(this._key) || !isIntegerKey(this._key)) {
+        do {
+          shallow = !/* @__PURE__ */ isProxy(obj) || /* @__PURE__ */ isShallow(obj);
+        } while (shallow && (obj = obj["__v_raw"]));
+      }
+      this._shallow = shallow;
+    }
+    get value() {
+      let val = this._object[this._key];
+      if (this._shallow) {
+        val = unref(val);
+      }
+      return this._value = val === void 0 ? this._defaultValue : val;
+    }
+    set value(newVal) {
+      if (this._shallow && /* @__PURE__ */ isRef(this._raw[this._key])) {
+        const nestedRef = this._object[this._key];
+        if (/* @__PURE__ */ isRef(nestedRef)) {
+          nestedRef.value = newVal;
+          return;
+        }
+      }
+      this._object[this._key] = newVal;
+    }
+    get dep() {
+      return getDepFromReactive(this._raw, this._key);
+    }
+  }
+  class GetterRefImpl {
+    constructor(_getter) {
+      this._getter = _getter;
+      this["__v_isRef"] = true;
+      this["__v_isReadonly"] = true;
+      this._value = void 0;
+    }
+    get value() {
+      return this._value = this._getter();
+    }
+  }
+  // @__NO_SIDE_EFFECTS__
+  function toRef(source, key2, defaultValue) {
+    if (/* @__PURE__ */ isRef(source)) {
+      return source;
+    } else if (isFunction(source)) {
+      return new GetterRefImpl(source);
+    } else if (isObject(source) && arguments.length > 1) {
+      return propertyToRef(source, key2, defaultValue);
+    } else {
+      return /* @__PURE__ */ ref(source);
+    }
+  }
+  function propertyToRef(source, key2, defaultValue) {
+    return new ObjectRefImpl(source, key2, defaultValue);
+  }
   class ComputedRefImpl {
     constructor(fn, setter, isSSR) {
       this.fn = fn;
@@ -1987,7 +2082,7 @@ this.gpu = (function() {
     return value2;
   }
   /**
-  * @vue/runtime-core v3.5.40
+  * @vue/runtime-core v3.5.42
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -2268,7 +2363,9 @@ this.gpu = (function() {
         cb.flags |= 1;
       }
     } else {
-      pendingPostFlushCbs.push(...cb);
+      for (let i = 0; i < cb.length; i++) {
+        pendingPostFlushCbs.push(cb[i]);
+      }
     }
     queueFlush();
   }
@@ -2304,7 +2401,9 @@ this.gpu = (function() {
       );
       pendingPostFlushCbs.length = 0;
       if (activePostFlushCbs) {
-        activePostFlushCbs.push(...deduped);
+        for (let i = 0; i < deduped.length; i++) {
+          activePostFlushCbs.push(deduped[i]);
+        }
         return;
       }
       activePostFlushCbs = deduped;
@@ -2868,10 +2967,53 @@ this.gpu = (function() {
   const TeleportEndKey = /* @__PURE__ */ Symbol("_vte");
   const isTeleport = (type) => type.__isTeleport;
   const leaveCbKey = /* @__PURE__ */ Symbol("_leaveCb");
+  function findNonCommentChild(children) {
+    let child = children[0];
+    if (children.length > 1) {
+      let hasFound = false;
+      for (const c of children) {
+        if (c.type !== Comment) {
+          if (hasFound) {
+            warn$1(
+              "<transition> can only be used on a single element or component. Use <transition-group> for lists."
+            );
+            break;
+          }
+          child = c;
+          hasFound = true;
+        }
+      }
+    }
+    return child;
+  }
+  function getInnerChild$1(vnode) {
+    if (!isKeepAlive(vnode)) {
+      if (isTeleport(vnode.type) && vnode.children) {
+        return findNonCommentChild(vnode.children);
+      }
+      return vnode;
+    }
+    if (vnode.component) {
+      return vnode.component.subTree;
+    }
+    const { shapeFlag, children } = vnode;
+    if (children) {
+      if (shapeFlag & 16) {
+        return children[0];
+      }
+      if (shapeFlag & 32 && isFunction(children.default)) {
+        return children.default();
+      }
+    }
+  }
   function setTransitionHooks(vnode, hooks) {
     if (vnode.shapeFlag & 6 && vnode.component) {
       vnode.transition = hooks;
-      setTransitionHooks(vnode.component.subTree, hooks);
+      const subTree = vnode.component.subTree;
+      setTransitionHooks(
+        isTeleport(subTree.type) ? getInnerChild$1(subTree) || subTree : subTree,
+        hooks
+      );
     } else if (vnode.shapeFlag & 128) {
       vnode.ssContent.transition = hooks.clone(vnode.ssContent);
       vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
@@ -3126,7 +3268,48 @@ this.gpu = (function() {
   function onErrorCaptured(hook, target2 = currentInstance) {
     injectHook("ec", hook, target2);
   }
+  const COMPONENTS = "components";
+  function resolveComponent(name2, maybeSelfReference) {
+    return resolveAsset(COMPONENTS, name2, true, maybeSelfReference) || name2;
+  }
   const NULL_DYNAMIC_COMPONENT = /* @__PURE__ */ Symbol.for("v-ndc");
+  function resolveAsset(type, name2, warnMissing = true, maybeSelfReference = false) {
+    const instance = currentRenderingInstance || currentInstance;
+    if (instance) {
+      const Component = instance.type;
+      {
+        const selfName = getComponentName(
+          Component,
+          false
+        );
+        if (selfName && (selfName === name2 || selfName === camelize(name2) || selfName === capitalize(camelize(name2)))) {
+          return Component;
+        }
+      }
+      const res = (
+        // local registration
+        // check instance[type] first which is resolved for options API
+        resolve(instance[type] || Component[type], name2) || // global registration
+        resolve(instance.appContext[type], name2)
+      );
+      if (!res && maybeSelfReference) {
+        return Component;
+      }
+      if (warnMissing && !res) {
+        const extra = `
+If this is a native custom element, make sure to exclude it from component resolution via compilerOptions.isCustomElement.`;
+        warn$1(`Failed to resolve ${type.slice(0, -1)}: ${name2}${extra}`);
+      }
+      return res;
+    } else {
+      warn$1(
+        `resolve${capitalize(type.slice(0, -1))} can only be used in render() or setup().`
+      );
+    }
+  }
+  function resolve(registry, name2) {
+    return registry && (registry[name2] || registry[camelize(name2)] || registry[capitalize(camelize(name2))]);
+  }
   function renderList(source, renderItem, cache2, index2) {
     let ret;
     const cached = cache2;
@@ -3180,7 +3363,8 @@ this.gpu = (function() {
     }
     return ret;
   }
-  function renderSlot(slots, name2, props = {}, fallback, noSlotted, branchKey) {
+  function renderSlot(slots, name2, props, fallback, noSlotted, branchKey) {
+    if (props == null) props = {};
     if (currentRenderingInstance.ce || currentRenderingInstance.parent && isAsyncWrapper(currentRenderingInstance.parent) && currentRenderingInstance.parent.ce) {
       const slotProps = props;
       const hasProps = Object.keys(slotProps).length > 0;
@@ -3245,12 +3429,41 @@ this.gpu = (function() {
     if (isStatefulComponent(i)) return getComponentPublicInstance(i);
     return getPublicInstance(i.parent);
   };
+  const resolveDevRootEl = (vnode) => {
+    let found = false;
+    while (true) {
+      if (vnode.patchFlag > 0 && vnode.patchFlag & 2048) {
+        const root = filterSingleRoot(vnode.children);
+        if (!root) {
+          return;
+        }
+        vnode = root;
+        found = true;
+        continue;
+      }
+      const component = vnode.component;
+      if (component && component.subTree) {
+        vnode = component.subTree;
+        continue;
+      }
+      const suspense = vnode.suspense;
+      if (suspense && suspense.activeBranch) {
+        vnode = suspense.activeBranch;
+        continue;
+      }
+      return found ? vnode.el : void 0;
+    }
+  };
+  const getDevRootFragmentEl = (i) => {
+    const el = i.subTree && resolveDevRootEl(i.subTree);
+    return el === void 0 ? i.vnode.el : el;
+  };
   const publicPropertiesMap = (
     // Move PURE marker to new line to workaround compiler discarding it
     // due to type annotation
     /* @__PURE__ */ extend$5(/* @__PURE__ */ Object.create(null), {
       $: (i) => i,
-      $el: (i) => i.vnode.el,
+      $el: (i) => getDevRootFragmentEl(i),
       $data: (i) => i.data,
       $props: (i) => /* @__PURE__ */ shallowReadonly(i.props),
       $attrs: (i) => /* @__PURE__ */ shallowReadonly(i.attrs),
@@ -4122,7 +4335,7 @@ If you want to remount the same app, move your app creation logic into a factory
         args = rawArgs.map((a) => isString(a) ? a.trim() : a);
       }
       if (modifiers.number) {
-        args = rawArgs.map(looseToNumber);
+        args = args.map(looseToNumber);
       }
     }
     {
@@ -4358,12 +4571,13 @@ If you want to remount the same app, move your app creation logic into a factory
       root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs;
     }
     if (vnode.transition) {
-      if (!isElementRoot(root)) {
+      const child = isTeleport(root.type) ? getInnerChild$1(root) || root : root;
+      if (!isElementRoot(child)) {
         warn$1(
           `Component inside <Transition> renders non-element root node that cannot be animated.`
         );
       }
-      setTransitionHooks(root, vnode.transition);
+      setTransitionHooks(child, vnode.transition);
     }
     if (setRoot) {
       setRoot(root);
@@ -6755,6 +6969,14 @@ For more details, see https://link.vuejs.org/feature-flags.`
     if (vnode.key !== vnode.key) {
       warn$1(`VNode created with invalid key (NaN). VNode type:`, vnode.type);
     }
+    if (props && vnode.shapeFlag & 1) {
+      const overwritingProp = props.innerHTML != null ? "innerHTML" : props.textContent != null ? "textContent" : null;
+      if (overwritingProp && hasContentChildren(vnode.children)) {
+        warn$1(
+          `The \`${overwritingProp}\` prop on <${vnode.type}> will override its children. Remove either the \`${overwritingProp}\` prop or the children.`
+        );
+      }
+    }
     if (isBlockTreeEnabled > 0 && // avoid a block node from tracking itself
     !isBlockNode && // has current parent block
     currentBlock && // presence of a patch flag indicates this node needs patching on updates.
@@ -6767,6 +6989,11 @@ For more details, see https://link.vuejs.org/feature-flags.`
       currentBlock.push(vnode);
     }
     return vnode;
+  }
+  function hasContentChildren(children) {
+    if (isString(children)) return children !== "";
+    if (isArray(children)) return children.length > 0;
+    return false;
   }
   const createVNode = createVNodeWithArgsTransform;
   function _createVNode(type, props = null, children = null, patchFlag = 0, dynamicProps = null, isBlockNode = false) {
@@ -7210,7 +7437,12 @@ Component that was made reactive: `,
         setupResult.then(unsetCurrentInstance, unsetCurrentInstance);
         if (isSSR) {
           return setupResult.then((resolvedResult) => {
-            handleSetupResult(instance, resolvedResult, isSSR);
+            setInSSRSetupState(true);
+            try {
+              handleSetupResult(instance, resolvedResult, isSSR);
+            } finally {
+              setInSSRSetupState(false);
+            }
           }).catch((e) => {
             handleError(e, instance, 0);
           });
@@ -7584,10 +7816,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version$4 = "3.5.40";
+  const version$4 = "3.5.42";
   const warn$2 = warn$1;
   /**
-  * @vue/runtime-dom v3.5.40
+  * @vue/runtime-dom v3.5.42
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -7804,7 +8036,11 @@ Component that was made reactive: `,
         }
       }
       if (name2.startsWith("--")) {
-        style.setProperty(name2, val);
+        if (importantRE.test(val)) {
+          style.setProperty(name2, val.replace(importantRE, ""), "important");
+        } else {
+          style.setProperty(name2, val);
+        }
       } else {
         const prefixed = autoPrefix(style, name2);
         if (importantRE.test(val)) {
@@ -8086,6 +8322,84 @@ Expected function or array of functions, received type ${typeof value2}.`
     const camelKey = camelize(key2);
     return Array.isArray(props) ? props.some((prop) => camelize(prop) === camelKey) : Object.keys(props).some((prop) => camelize(prop) === camelKey);
   }
+  const getModelAssigner = (vnode) => {
+    const fn = vnode.props["onUpdate:modelValue"] || false;
+    return isArray(fn) ? (value2) => invokeArrayFns(fn, value2) : fn;
+  };
+  function onCompositionStart(e) {
+    e.target.composing = true;
+  }
+  function onCompositionEnd(e) {
+    const target2 = e.target;
+    if (target2.composing) {
+      target2.composing = false;
+      target2.dispatchEvent(new Event("input"));
+    }
+  }
+  const assignKey = /* @__PURE__ */ Symbol("_assign");
+  const initialValueKey = /* @__PURE__ */ Symbol("_initialValue");
+  function castValue(value2, trim, number) {
+    if (trim) value2 = value2.trim();
+    if (number) value2 = looseToNumber(value2);
+    return value2;
+  }
+  const vModelText = {
+    created(el, { modifiers: { lazy, trim, number } }, vnode) {
+      if (el.parentNode) {
+        if (el.type === "text") {
+          el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, "");
+        } else if (el.type === "textarea") {
+          el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, "\n");
+        }
+      }
+      el[assignKey] = getModelAssigner(vnode);
+      const castToNumber = number || vnode.props && vnode.props.type === "number";
+      addEventListener(el, lazy ? "change" : "input", (e) => {
+        if (e.target.composing) return;
+        el[assignKey](castValue(el.value, trim, castToNumber));
+      });
+      if (trim || castToNumber) {
+        addEventListener(el, "change", () => {
+          el.value = castValue(el.value, trim, castToNumber);
+        });
+      }
+      if (!lazy) {
+        addEventListener(el, "compositionstart", onCompositionStart);
+        addEventListener(el, "compositionend", onCompositionEnd);
+        addEventListener(el, "change", onCompositionEnd);
+      }
+    },
+    // set value on mounted so it's after min/max for type="range"
+    mounted(el, { value: value2, modifiers: { trim, number } }) {
+      const newValue = value2 == null ? "" : value2;
+      const initialValue = el[initialValueKey];
+      delete el[initialValueKey];
+      if (initialValue !== void 0 && (el.type === "text" || el.type === "textarea") && el.value !== initialValue) {
+        el[assignKey](castValue(el.value, trim, number));
+      } else {
+        el.value = newValue;
+      }
+    },
+    beforeUpdate(el, { value: value2, oldValue, modifiers: { lazy, trim, number } }, vnode) {
+      el[assignKey] = getModelAssigner(vnode);
+      if (el.composing) return;
+      const elValue = (number || el.type === "number") && !/^0\d/.test(el.value) ? looseToNumber(el.value) : el.value;
+      const newValue = value2 == null ? "" : value2;
+      if (elValue === newValue) {
+        return;
+      }
+      const rootNode = el.getRootNode();
+      if ((rootNode instanceof Document || rootNode instanceof ShadowRoot) && rootNode.activeElement === el && el.type !== "range") {
+        if (lazy && value2 === oldValue) {
+          return;
+        }
+        if (trim && el.value.trim() === newValue) {
+          return;
+        }
+      }
+      el.value = newValue;
+    }
+  };
   const systemModifiers = ["ctrl", "shift", "alt", "meta"];
   const modifierGuards = {
     stop: (e) => e.stopPropagation(),
@@ -8204,7 +8518,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return container;
   }
   /**
-  * vue v3.5.40
+  * vue v3.5.42
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -10332,6 +10646,33 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return intersection;
   }
+  function getDifference(extent1, extent2) {
+    if (!intersects$1(extent1, extent2)) {
+      return [extent1.slice()];
+    }
+    if (containsExtent(extent2, extent1)) {
+      return [];
+    }
+    const [x1, y1, x2, y2] = extent1;
+    const ix1 = Math.max(x1, extent2[0]);
+    const iy1 = Math.max(y1, extent2[1]);
+    const ix2 = Math.min(x2, extent2[2]);
+    const iy2 = Math.min(y2, extent2[3]);
+    const result = [];
+    if (ix1 > x1) {
+      result.push([x1, y1, ix1, y2]);
+    }
+    if (ix2 < x2) {
+      result.push([ix2, y1, x2, y2]);
+    }
+    if (iy1 > y1) {
+      result.push([ix1, y1, ix2, iy1]);
+    }
+    if (iy2 < y2) {
+      result.push([ix1, iy2, ix2, y2]);
+    }
+    return result;
+  }
   function getTopLeft(extent) {
     return [extent[0], extent[3]];
   }
@@ -10466,6 +10807,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     return [extent];
+  }
+  function subtractExtents(base, subtract) {
+    let remainder = [base];
+    for (let i = 0, ii = subtract.length; i < ii && remainder.length > 0; ++i) {
+      const next = [];
+      for (let j = 0, jj = remainder.length; j < jj; ++j) {
+        next.push(...getDifference(remainder[j], subtract[i]));
+      }
+      remainder = next;
+    }
+    return remainder;
   }
   function add$3(coordinate, delta) {
     coordinate[0] += +delta[0];
@@ -11503,9 +11855,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
   }
   addCommon();
+  const IDENTITY_TRANSFORM = [1, 0, 0, 1, 0, 0];
   new Array(6);
   function create$1() {
-    return [1, 0, 0, 1, 0, 0];
+    return IDENTITY_TRANSFORM.slice(0);
   }
   function setFromArray(transform1, transform2) {
     transform1[0] = transform2[0];
@@ -12477,6 +12830,213 @@ Expected function or array of functions, received type ${typeof value2}.`
     coordinatesss.length = i;
     return coordinatesss;
   }
+  function linearRingContainsExtent(flatCoordinates, offset2, end, stride, extent) {
+    const outside = forEachCorner(
+      extent,
+      /**
+       * @param {import("../../coordinate.js").Coordinate} coordinate Coordinate.
+       * @return {boolean} Contains (x, y).
+       */
+      function(coordinate) {
+        return !linearRingContainsXY(
+          flatCoordinates,
+          offset2,
+          end,
+          stride,
+          coordinate[0],
+          coordinate[1]
+        );
+      }
+    );
+    return !outside;
+  }
+  function linearRingContainsXY(flatCoordinates, offset2, end, stride, x, y) {
+    let wn = 0;
+    let x1 = flatCoordinates[end - stride];
+    let y1 = flatCoordinates[end - stride + 1];
+    for (; offset2 < end; offset2 += stride) {
+      const x2 = flatCoordinates[offset2];
+      const y2 = flatCoordinates[offset2 + 1];
+      if (y1 <= y) {
+        if (y2 > y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) > 0) {
+          wn++;
+        }
+      } else if (y2 <= y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) < 0) {
+        wn--;
+      }
+      x1 = x2;
+      y1 = y2;
+    }
+    return wn !== 0;
+  }
+  function linearRingsContainsXY(flatCoordinates, offset2, ends, stride, x, y) {
+    if (ends.length === 0) {
+      return false;
+    }
+    if (!linearRingContainsXY(flatCoordinates, offset2, ends[0], stride, x, y)) {
+      return false;
+    }
+    for (let i = 1, ii = ends.length; i < ii; ++i) {
+      if (linearRingContainsXY(flatCoordinates, ends[i - 1], ends[i], stride, x, y)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function linearRingssContainsXY(flatCoordinates, offset2, endss, stride, x, y) {
+    if (endss.length === 0) {
+      return false;
+    }
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      if (linearRingsContainsXY(flatCoordinates, offset2, ends, stride, x, y)) {
+        return true;
+      }
+      offset2 = ends[ends.length - 1];
+    }
+    return false;
+  }
+  function forEach(flatCoordinates, offset2, end, stride, callback) {
+    let ret;
+    offset2 += stride;
+    for (; offset2 < end; offset2 += stride) {
+      ret = callback(
+        flatCoordinates.slice(offset2 - stride, offset2),
+        flatCoordinates.slice(offset2, offset2 + stride)
+      );
+      if (ret) {
+        return ret;
+      }
+    }
+    return false;
+  }
+  function getIntersectionPoint(segment1, segment2) {
+    const [a, b] = segment1;
+    const [c, d] = segment2;
+    const t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    const u = ((a[0] - c[0]) * (a[1] - b[1]) - (a[1] - c[1]) * (a[0] - b[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
+    if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+      return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    }
+    return void 0;
+  }
+  function intersectsLineString(flatCoordinates, offset2, end, stride, extent, coordinatesExtent) {
+    coordinatesExtent = coordinatesExtent ?? extendFlatCoordinates(createEmpty(), flatCoordinates, offset2, end, stride);
+    if (!intersects$1(extent, coordinatesExtent)) {
+      return false;
+    }
+    if (coordinatesExtent[0] >= extent[0] && coordinatesExtent[2] <= extent[2] || coordinatesExtent[1] >= extent[1] && coordinatesExtent[3] <= extent[3]) {
+      return true;
+    }
+    return forEach(
+      flatCoordinates,
+      offset2,
+      end,
+      stride,
+      /**
+       * @param {import("../../coordinate.js").Coordinate} point1 Start point.
+       * @param {import("../../coordinate.js").Coordinate} point2 End point.
+       * @return {boolean} `true` if the segment and the extent intersect,
+       *     `false` otherwise.
+       */
+      function(point1, point2) {
+        return intersectsSegment(extent, point1, point2);
+      }
+    );
+  }
+  function intersectsLineStringArray(flatCoordinates, offset2, ends, stride, extent) {
+    for (let i = 0, ii = ends.length; i < ii; ++i) {
+      if (intersectsLineString(flatCoordinates, offset2, ends[i], stride, extent)) {
+        return true;
+      }
+      offset2 = ends[i];
+    }
+    return false;
+  }
+  function intersectsLinearRing(flatCoordinates, offset2, end, stride, extent) {
+    if (intersectsLineString(flatCoordinates, offset2, end, stride, extent)) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset2,
+      end,
+      stride,
+      extent[0],
+      extent[1]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset2,
+      end,
+      stride,
+      extent[0],
+      extent[3]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset2,
+      end,
+      stride,
+      extent[2],
+      extent[1]
+    )) {
+      return true;
+    }
+    if (linearRingContainsXY(
+      flatCoordinates,
+      offset2,
+      end,
+      stride,
+      extent[2],
+      extent[3]
+    )) {
+      return true;
+    }
+    return false;
+  }
+  function intersectsLinearRingArray(flatCoordinates, offset2, ends, stride, extent) {
+    if (!intersectsLinearRing(flatCoordinates, offset2, ends[0], stride, extent)) {
+      return false;
+    }
+    if (ends.length === 1) {
+      return true;
+    }
+    for (let i = 1, ii = ends.length; i < ii; ++i) {
+      if (linearRingContainsExtent(
+        flatCoordinates,
+        ends[i - 1],
+        ends[i],
+        stride,
+        extent
+      )) {
+        if (!intersectsLineString(
+          flatCoordinates,
+          ends[i - 1],
+          ends[i],
+          stride,
+          extent
+        )) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  function intersectsLinearRingMultiArray(flatCoordinates, offset2, endss, stride, extent) {
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      if (intersectsLinearRingArray(flatCoordinates, offset2, ends, stride, extent)) {
+        return true;
+      }
+      offset2 = ends[ends.length - 1];
+    }
+    return false;
+  }
   function douglasPeucker(flatCoordinates, offset2, end, stride, squaredTolerance, simplifiedFlatCoordinates, simplifiedOffset) {
     const n = (end - offset2) / stride;
     if (n < 3) {
@@ -12755,14 +13315,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       return "LinearRing";
     }
     /**
-     * Test if the geometry and the passed extent intersect.
+     * Test if the geometry and the passed extent intersect. A linear ring is
+     * treated as a line string for this test.
      * @param {import("../extent.js").Extent} extent Extent.
      * @return {boolean} `true` if the geometry and the extent intersect.
      * @api
      * @override
      */
     intersectsExtent(extent) {
-      return false;
+      return intersectsLineString(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        extent
+      );
     }
     /**
      * Set the coordinates of the linear ring.
@@ -12888,72 +13455,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.changed();
     }
   };
-  function linearRingContainsExtent(flatCoordinates, offset2, end, stride, extent) {
-    const outside = forEachCorner(
-      extent,
-      /**
-       * @param {import("../../coordinate.js").Coordinate} coordinate Coordinate.
-       * @return {boolean} Contains (x, y).
-       */
-      function(coordinate) {
-        return !linearRingContainsXY(
-          flatCoordinates,
-          offset2,
-          end,
-          stride,
-          coordinate[0],
-          coordinate[1]
-        );
-      }
-    );
-    return !outside;
-  }
-  function linearRingContainsXY(flatCoordinates, offset2, end, stride, x, y) {
-    let wn = 0;
-    let x1 = flatCoordinates[end - stride];
-    let y1 = flatCoordinates[end - stride + 1];
-    for (; offset2 < end; offset2 += stride) {
-      const x2 = flatCoordinates[offset2];
-      const y2 = flatCoordinates[offset2 + 1];
-      if (y1 <= y) {
-        if (y2 > y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) > 0) {
-          wn++;
-        }
-      } else if (y2 <= y && (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1) < 0) {
-        wn--;
-      }
-      x1 = x2;
-      y1 = y2;
-    }
-    return wn !== 0;
-  }
-  function linearRingsContainsXY(flatCoordinates, offset2, ends, stride, x, y) {
-    if (ends.length === 0) {
-      return false;
-    }
-    if (!linearRingContainsXY(flatCoordinates, offset2, ends[0], stride, x, y)) {
-      return false;
-    }
-    for (let i = 1, ii = ends.length; i < ii; ++i) {
-      if (linearRingContainsXY(flatCoordinates, ends[i - 1], ends[i], stride, x, y)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function linearRingssContainsXY(flatCoordinates, offset2, endss, stride, x, y) {
-    if (endss.length === 0) {
-      return false;
-    }
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      if (linearRingsContainsXY(flatCoordinates, offset2, ends, stride, x, y)) {
-        return true;
-      }
-      offset2 = ends[ends.length - 1];
-    }
-    return false;
-  }
   function getInteriorPointOfArray(flatCoordinates, offset2, ends, stride, flatCenters, flatCentersOffset, dest) {
     let i, ii, x, x1, x2, y1, y2;
     const y = flatCenters[flatCentersOffset + 1];
@@ -13014,147 +13515,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       offset2 = ends[ends.length - 1];
     }
     return interiorPoints;
-  }
-  function forEach(flatCoordinates, offset2, end, stride, callback) {
-    let ret;
-    offset2 += stride;
-    for (; offset2 < end; offset2 += stride) {
-      ret = callback(
-        flatCoordinates.slice(offset2 - stride, offset2),
-        flatCoordinates.slice(offset2, offset2 + stride)
-      );
-      if (ret) {
-        return ret;
-      }
-    }
-    return false;
-  }
-  function getIntersectionPoint(segment1, segment2) {
-    const [a, b] = segment1;
-    const [c, d] = segment2;
-    const t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
-    const u = ((a[0] - c[0]) * (a[1] - b[1]) - (a[1] - c[1]) * (a[0] - b[0])) / ((a[0] - b[0]) * (c[1] - d[1]) - (a[1] - b[1]) * (c[0] - d[0]));
-    if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
-      return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
-    }
-    return void 0;
-  }
-  function intersectsLineString(flatCoordinates, offset2, end, stride, extent, coordinatesExtent) {
-    coordinatesExtent = coordinatesExtent ?? extendFlatCoordinates(createEmpty(), flatCoordinates, offset2, end, stride);
-    if (!intersects$1(extent, coordinatesExtent)) {
-      return false;
-    }
-    if (coordinatesExtent[0] >= extent[0] && coordinatesExtent[2] <= extent[2] || coordinatesExtent[1] >= extent[1] && coordinatesExtent[3] <= extent[3]) {
-      return true;
-    }
-    return forEach(
-      flatCoordinates,
-      offset2,
-      end,
-      stride,
-      /**
-       * @param {import("../../coordinate.js").Coordinate} point1 Start point.
-       * @param {import("../../coordinate.js").Coordinate} point2 End point.
-       * @return {boolean} `true` if the segment and the extent intersect,
-       *     `false` otherwise.
-       */
-      function(point1, point2) {
-        return intersectsSegment(extent, point1, point2);
-      }
-    );
-  }
-  function intersectsLineStringArray(flatCoordinates, offset2, ends, stride, extent) {
-    for (let i = 0, ii = ends.length; i < ii; ++i) {
-      if (intersectsLineString(flatCoordinates, offset2, ends[i], stride, extent)) {
-        return true;
-      }
-      offset2 = ends[i];
-    }
-    return false;
-  }
-  function intersectsLinearRing(flatCoordinates, offset2, end, stride, extent) {
-    if (intersectsLineString(flatCoordinates, offset2, end, stride, extent)) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset2,
-      end,
-      stride,
-      extent[0],
-      extent[1]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset2,
-      end,
-      stride,
-      extent[0],
-      extent[3]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset2,
-      end,
-      stride,
-      extent[2],
-      extent[1]
-    )) {
-      return true;
-    }
-    if (linearRingContainsXY(
-      flatCoordinates,
-      offset2,
-      end,
-      stride,
-      extent[2],
-      extent[3]
-    )) {
-      return true;
-    }
-    return false;
-  }
-  function intersectsLinearRingArray(flatCoordinates, offset2, ends, stride, extent) {
-    if (!intersectsLinearRing(flatCoordinates, offset2, ends[0], stride, extent)) {
-      return false;
-    }
-    if (ends.length === 1) {
-      return true;
-    }
-    for (let i = 1, ii = ends.length; i < ii; ++i) {
-      if (linearRingContainsExtent(
-        flatCoordinates,
-        ends[i - 1],
-        ends[i],
-        stride,
-        extent
-      )) {
-        if (!intersectsLineString(
-          flatCoordinates,
-          ends[i - 1],
-          ends[i],
-          stride,
-          extent
-        )) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  function intersectsLinearRingMultiArray(flatCoordinates, offset2, endss, stride, extent) {
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      if (intersectsLinearRingArray(flatCoordinates, offset2, ends, stride, extent)) {
-        return true;
-      }
-      offset2 = ends[ends.length - 1];
-    }
-    return false;
   }
   function coordinates(flatCoordinates, offset2, end, stride) {
     while (offset2 < end - stride) {
@@ -19128,6 +19488,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return dest;
   }
   let numTypes = 0;
+  const NoneType = 0;
   const BooleanType = 1 << numTypes++;
   const NumberType = 1 << numTypes++;
   const StringType = 1 << numTypes++;
@@ -19165,12 +19526,15 @@ Expected function or array of functions, received type ${typeof value2}.`
   function includesType(broad, specific) {
     return (broad & specific) === specific;
   }
+  function overlapsType(oneType, otherType) {
+    return !!(oneType & otherType);
+  }
   function isType(type, expected) {
     return type === expected;
   }
   class LiteralExpression {
     /**
-     * @param {number} type The value type.
+     * @param {ValueType} type The value type.
      * @param {LiteralValue} value The literal value.
      */
     constructor(type, value2) {
@@ -19185,7 +19549,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   class CallExpression {
     /**
-     * @param {number} type The return type.
+     * @param {ValueType} type The return type.
      * @param {string} operator The operator.
      * @param {...Expression} args The arguments.
      */
@@ -19195,14 +19559,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.args = args;
     }
   }
-  function newParsingContext() {
+  function newParsingContext(inputVariables) {
     return {
-      variables: /* @__PURE__ */ new Set(),
-      properties: /* @__PURE__ */ new Set(),
+      variables: /* @__PURE__ */ new Map(),
+      properties: /* @__PURE__ */ new Map(),
       featureId: false,
       geometryType: false,
       mCoordinate: false,
-      mapState: false
+      mapState: false,
+      inputVariables
     };
   }
   function parse$2(encoded, expectedType, context) {
@@ -19337,7 +19702,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const parsers = {
     [Ops.Get]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
-    [Ops.Var]: createCallExpressionParser(hasArgsCount(1, 1), withVarArgs),
+    [Ops.Var]: createVarExpressionParser(),
     [Ops.Has]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
     [Ops.Id]: createCallExpressionParser(usesFeatureId, withNoArgs),
     [Ops.Concat]: createCallExpressionParser(
@@ -19363,11 +19728,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     ),
     [Ops.Equal]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.NotEqual]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.GreaterThan]: createCallExpressionParser(
       hasArgsCount(2, 2),
@@ -19519,18 +19884,56 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       if (i === 0) {
-        context.properties.add(String(key2));
+        context.properties.set(String(key2), returnType);
       }
     }
     return args;
   }
-  function withVarArgs(encoded, returnType, context) {
-    const name2 = encoded[1];
-    if (typeof name2 !== "string") {
-      throw new Error("expected a string argument for var operation");
-    }
-    context.variables.add(name2);
-    return [new LiteralExpression(StringType, name2)];
+  function createVarExpressionParser() {
+    return function(encoded, returnType, context) {
+      var _a;
+      const name2 = encoded[1];
+      if (typeof name2 !== "string") {
+        throw new Error("expected a string argument for var operation");
+      }
+      let type = returnType;
+      const variableValue = (_a = context.inputVariables) == null ? void 0 : _a[name2];
+      if (variableValue !== void 0) {
+        const parsedInput = parse$2(variableValue, AnyType, context);
+        if (!(parsedInput instanceof LiteralExpression)) {
+          throw new Error(
+            `style variables should only be literal values (no expressions!), variable name: ${name2}`
+          );
+        }
+        let parsedType = parsedInput.type;
+        if (typeof variableValue === "string" && overlapsType(type, ColorType) && !overlapsType(type, StringType)) {
+          parsedType = ColorType;
+        } else if (Array.isArray(variableValue) && variableValue.length === 2 && overlapsType(type, SizeType) && !overlapsType(type, NumberArrayType)) {
+          parsedType = SizeType;
+        }
+        type &= parsedType;
+        if (type === NoneType) {
+          throw new Error(
+            `the type expected from the var operator (${typeName(returnType)}) did not have any overlap with the type of the corresponding style variables (${typeName(parsedType)}), variable name: ${name2}`
+          );
+        }
+      }
+      if (context.variables.has(name2)) {
+        const existingType = context.variables.get(name2);
+        type &= existingType;
+        if (type === NoneType) {
+          throw new Error(
+            `a new type expected from the var operator (${typeName(returnType)}) did not have any overlap with the previous type expected for it (${typeName(existingType)}), variable name: ${name2}`
+          );
+        }
+      }
+      context.variables.set(name2, type);
+      return new CallExpression(
+        type,
+        "var",
+        new LiteralExpression(StringType, name2)
+      );
+    };
   }
   function usesFeatureId(encoded, returnType, context) {
     context.featureId = true;
@@ -19590,6 +19993,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       return args;
     };
   }
+  function withArgsOfIdenticalType() {
+    return function(encoded, returnType, context) {
+      const operation = encoded[0];
+      const argCount = encoded.length - 1;
+      const args = new Array(argCount);
+      let commonType = AnyType;
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$2(encoded[i + 1], commonType, context);
+        commonType &= expression.type;
+      }
+      if (commonType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of ${operation}`
+        );
+      }
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$2(encoded[i + 1], commonType, context);
+        args[i] = expression;
+      }
+      return args;
+    };
+  }
   function hasOddArgs(encoded, returnType, context) {
     const operation = encoded[0];
     const argCount = encoded.length - 1;
@@ -19610,13 +20035,27 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function withMatchArgs(encoded, returnType, context) {
     const argsCount = encoded.length - 1;
-    const inputType = StringType | NumberType | BooleanType;
-    const input = parse$2(encoded[1], inputType, context);
     const fallback = parse$2(encoded[encoded.length - 1], returnType, context);
+    let inputType = StringType | NumberType | BooleanType;
     const args = new Array(argsCount - 2);
     for (let i = 0; i < argsCount - 2; i += 2) {
       try {
-        const match2 = parse$2(encoded[i + 2], input.type, context);
+        const match2 = parse$2(encoded[i + 2], inputType, context);
+        inputType &= match2.type;
+      } catch (err) {
+        throw new Error(
+          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+        );
+      }
+      if (inputType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of match expression`
+        );
+      }
+    }
+    for (let i = 0; i < argsCount - 2; i += 2) {
+      try {
+        const match2 = parse$2(encoded[i + 2], inputType, context);
         args[i] = match2;
       } catch (err) {
         throw new Error(
@@ -19632,6 +20071,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
       }
     }
+    const input = parse$2(encoded[1], inputType, context);
     return [input, ...args, fallback];
   }
   function withInterpolateArgs(encoded, returnType, context) {
@@ -20373,10 +20813,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   function load(image, src) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       function handleLoad() {
         unlisten();
-        resolve(image);
+        resolve2(image);
       }
       function handleError2() {
         unlisten();
@@ -20395,8 +20835,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       image.src = src;
     }
     return image.src && IMAGE_DECODE ? new Promise(
-      (resolve, reject) => image.decode().then(() => resolve(image)).catch(
-        (e) => image.complete && image.width ? resolve(image) : reject(e)
+      (resolve2, reject) => image.decode().then(() => resolve2(image)).catch(
+        (e) => image.complete && image.width ? resolve2(image) : reject(e)
       )
     ) : load(image);
   }
@@ -20700,14 +21140,14 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     ready() {
       if (!this.ready_) {
-        this.ready_ = new Promise((resolve) => {
+        this.ready_ = new Promise((resolve2) => {
           if (this.imageState_ === ImageState.LOADED || this.imageState_ === ImageState.ERROR) {
-            resolve();
+            resolve2();
           } else {
             const onChange = () => {
               if (this.imageState_ === ImageState.LOADED || this.imageState_ === ImageState.ERROR) {
                 this.removeEventListener(EventType.CHANGE, onChange);
-                resolve();
+                resolve2();
               }
             };
             this.addEventListener(EventType.CHANGE, onChange);
@@ -20824,24 +21264,36 @@ Expected function or array of functions, received type ${typeof value2}.`
     let timeout, fontFaceSet;
     async function isAvailable(fontSpec) {
       await fontFaceSet.ready;
-      const fontFaces = await fontFaceSet.load(fontSpec);
-      if (fontFaces.length === 0) {
-        return false;
-      }
       const font = getFontParameters(fontSpec);
       const checkFamily = font.families[0].toLowerCase();
       const checkWeight = font.weight;
-      return fontFaces.some(
+      const matching = [];
+      fontFaceSet.forEach(
         /**
-         * @param {import('../css.js').FontParameters} f Font.
-         * @return {boolean} Font matches.
+         * @param {FontFace} f Font face.
          */
         (f) => {
           const family = f.family.replace(/^['"]|['"]$/g, "").toLowerCase();
           const weight = fontWeights[f.weight] || f.weight;
-          return family === checkFamily && f.style === font.style && weight == checkWeight;
+          if (family === checkFamily && f.style === font.style && weight == checkWeight) {
+            matching.push(f);
+          }
         }
       );
+      if (matching.length === 0) {
+        return false;
+      }
+      const loaded = await Promise.all(
+        matching.map(
+          (f) => f.load().then(
+            () => true,
+            // available
+            () => false
+            // not available
+          )
+        )
+      );
+      return loaded.some((available) => available);
     }
     async function check() {
       await fontFaceSet.ready;
@@ -23188,8 +23640,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function always(context) {
     return true;
   }
-  function rulesToStyleFunction(rules) {
-    const parsingContext = newParsingContext();
+  function rulesToStyleFunction(rules, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const evaluator = buildRuleSet(rules, parsingContext);
     const evaluationContext = newEvaluationContext();
     return function(feature, resolution) {
@@ -23211,8 +23663,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       return evaluator(evaluationContext);
     };
   }
-  function flatStylesToStyleFunction(flatStyles) {
-    const parsingContext = newParsingContext();
+  function flatStylesToStyleFunction(flatStyles, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const length = flatStyles.length;
     const evaluators = new Array(length);
     for (let i = 0; i < length; ++i) {
@@ -23231,6 +23683,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           evaluationContext.featureId = null;
         }
       }
+      if (parsingContext.geometryType) {
+        evaluationContext.geometryType = computeGeometryType(
+          feature.getGeometry()
+        );
+      }
       let nonNullCount = 0;
       for (let i = 0; i < length; ++i) {
         const style = evaluators[i](evaluationContext);
@@ -23242,6 +23699,30 @@ Expected function or array of functions, received type ${typeof value2}.`
       styles.length = nonNullCount;
       return styles;
     };
+  }
+  function flatStyleLikeToStyleFunction(flatStyleLike, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
+    if (!Array.isArray(flatStyleLike)) {
+      return flatStylesToStyleFunction([flatStyleLike], parsingContext);
+    }
+    const length = flatStyleLike.length;
+    const first = flatStyleLike[0];
+    if ("style" in first) {
+      const rules = new Array(length);
+      for (let i = 0; i < length; ++i) {
+        const candidate = flatStyleLike[i];
+        if (!("style" in candidate)) {
+          throw new Error("Expected a list of rules with a style property");
+        }
+        rules[i] = candidate;
+      }
+      return rulesToStyleFunction(rules, parsingContext);
+    }
+    const flatStyles = (
+      /** @type {Array<import("../../style/flat.js").FlatStyle>} */
+      flatStyleLike
+    );
+    return flatStylesToStyleFunction(flatStyles, parsingContext);
   }
   function buildRuleSet(rules, context) {
     const length = rules.length;
@@ -24289,15 +24770,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (style instanceof Style) {
       return style;
     }
-    if (!Array.isArray(style)) {
-      return flatStylesToStyleFunction([style]);
-    }
-    if (style.length === 0) {
+    if (Array.isArray(style) && style.length === 0) {
       return [];
     }
-    const length = style.length;
-    const first = style[0];
-    if (first instanceof Style) {
+    if (Array.isArray(style) && style[0] instanceof Style) {
+      const length = style.length;
       const styles = new Array(length);
       for (let i = 0; i < length; ++i) {
         const candidate = style[i];
@@ -24308,22 +24785,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return styles;
     }
-    if ("style" in first) {
-      const rules = new Array(length);
-      for (let i = 0; i < length; ++i) {
-        const candidate = style[i];
-        if (!("style" in candidate)) {
-          throw new Error("Expected a list of rules with a style property");
-        }
-        rules[i] = candidate;
-      }
-      return rulesToStyleFunction(rules);
-    }
-    const flatStyles = (
-      /** @type {Array<import("../style/flat.js").FlatStyle>} */
+    const flatStyleLike = (
+      /** @type {import("../style/flat.js").FlatStyleLike} */
       style
     );
-    return flatStylesToStyleFunction(flatStyles);
+    return flatStyleLikeToStyleFunction(flatStyleLike);
   }
   class RenderEvent extends BaseEvent {
     /**
@@ -24577,8 +25043,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const viewState = frameState.viewState;
       this.children_.length = 0;
+      const map2 = this.getMap();
+      const mapCanvas = map2.getTargetElement();
+      let mapContext;
+      if (isCanvas(mapCanvas)) {
+        mapContext = /** @type {CanvasRenderingContext2D} */
+        mapCanvas.getContext("2d");
+        mapContext.setTransform(1, 0, 0, 1, 0, 0);
+        mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+      }
       const renderedLayerStates = [];
-      let previousElement = null;
+      let previousElement = mapContext ? mapCanvas : null;
       for (let i = 0, ii = layerStatesArray.length; i < ii; ++i) {
         const layerState = layerStatesArray[i];
         frameState.layerIndex = i;
@@ -24600,36 +25075,37 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       this.declutter(frameState, renderedLayerStates);
       replaceChildren(this.element_, this.children_);
-      const map2 = this.getMap();
-      const mapCanvas = map2.getTargetElement();
-      if (isCanvas(mapCanvas)) {
-        const mapContext = mapCanvas.getContext("2d");
-        for (const container of this.children_) {
-          const canvas = container.firstElementChild || container;
-          const backgroundColor = container.style.backgroundColor;
-          if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
-            mapContext.fillStyle = backgroundColor;
-            mapContext.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-          }
-          if (isCanvas(canvas) && canvas.width > 0) {
-            mapContext.save();
-            const opacity = container.style.opacity || canvas.style.opacity;
-            mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
-            const transform2 = canvas.style.transform;
-            if (transform2) {
-              mapContext.transform(
-                .../** @type {[number, number, number, number, number, number]} */
-                fromString$1(transform2)
-              );
-            } else {
-              const w = parseFloat(canvas.style.width) / canvas.width;
-              const h = parseFloat(canvas.style.height) / canvas.height;
-              mapContext.transform(w, 0, 0, h, 0, 0);
-            }
-            mapContext.drawImage(canvas, 0, 0);
-            mapContext.restore();
-          }
+      for (const container of mapContext ? this.children_ : []) {
+        const canvas = container.firstElementChild || container;
+        const backgroundColor = container.style.backgroundColor;
+        if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
+          mapContext.fillStyle = backgroundColor;
+          mapContext.fillRect(
+            0,
+            0,
+            mapContext.canvas.width,
+            mapContext.canvas.height
+          );
         }
+        if (!isCanvas(canvas) || canvas.width === 0) {
+          continue;
+        }
+        mapContext.save();
+        const opacity = container.style.opacity || canvas.style.opacity;
+        mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
+        const transform2 = canvas.style.transform;
+        if (transform2) {
+          mapContext.transform(
+            .../** @type {[number, number, number, number, number, number]} */
+            fromString$1(transform2)
+          );
+        } else {
+          const w = parseFloat(canvas.style.width) / canvas.width;
+          const h = parseFloat(canvas.style.height) / canvas.height;
+          mapContext.transform(w, 0, 0, h, 0, 0);
+        }
+        mapContext.drawImage(canvas, 0, 0);
+        mapContext.restore();
       }
       this.dispatchRenderEvent(RenderEventType.POSTCOMPOSE, frameState);
       if (!this.renderedVisible_) {
@@ -25558,7 +26034,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               this
             )
           ];
-          if (targetElement instanceof HTMLElement) {
+          if (!isCanvas(targetElement)) {
             const rootNode = targetElement.getRootNode();
             if (rootNode instanceof ShadowRoot) {
               this.resizeObserver_.observe(rootNode.host);
@@ -27302,9 +27778,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         target: el,
         layers: options.layers ?? [],
         controls: defaults$2({
-          attribution: false,
+          attribution: true,
           zoom: false,
-          rotate: false
+          rotate: false,
+          attributionOptions: { collapsible: false }
         }),
         view: new View({
           center: FRANCE_CENTER,
@@ -27322,11 +27799,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$e = {
+  const _hoisted_1$j = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$e = /* @__PURE__ */ defineComponent({
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27351,7 +27828,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$e, [
+        return openBlock(), createElementBlock("div", _hoisted_1$j, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -27901,12 +28378,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$d = {
+  const _hoisted_1$i = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -27921,7 +28398,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$d);
+        return openBlock(), createElementBlock("span", _hoisted_1$i);
       };
     }
   });
@@ -28041,12 +28518,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$c = {
+  const _hoisted_1$h = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$c = /* @__PURE__ */ defineComponent({
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -28060,25 +28537,26 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$c);
+        return openBlock(), createElementBlock("span", _hoisted_1$h);
       };
     }
   });
-  const _hoisted_1$b = {
+  const _hoisted_1$g = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+  const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
         () => new ScaleLine({
-          units: "metric"
+          units: "metric",
+          minWidth: 100
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$b);
+        return openBlock(), createElementBlock("span", _hoisted_1$g);
       };
     }
   });
@@ -32070,7 +32548,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           )
         );
       }
-      const feature = new Feature();
+      const FeatureClass = (
+        /** @type {typeof import("../Feature.js").default} */
+        this.featureClass
+      );
+      const feature = new FeatureClass();
       if (this.geometryName_) {
         feature.setGeometryName(this.geometryName_);
       } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
@@ -32828,7 +33310,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             return object;
           }
           var promise = new Constructor(noop);
-          resolve(promise, object);
+          resolve2(promise, object);
           return promise;
         }
         var PROMISE_ID = Math.random().toString(36).substring(2);
@@ -32859,7 +33341,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               }
               sealed = true;
               if (thenable !== value2) {
-                resolve(promise2, value2);
+                resolve2(promise2, value2);
               } else {
                 fulfill(promise2, value2);
               }
@@ -32883,7 +33365,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             reject(promise, thenable._result);
           } else {
             subscribe(thenable, void 0, function(value2) {
-              return resolve(promise, value2);
+              return resolve2(promise, value2);
             }, function(reason) {
               return reject(promise, reason);
             });
@@ -32902,7 +33384,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
           }
         }
-        function resolve(promise, value2) {
+        function resolve2(promise, value2) {
           if (promise === value2) {
             reject(promise, selfFulfillment());
           } else if (objectOrFunction(value2)) {
@@ -32989,7 +33471,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
           if (promise._state !== PENDING) ;
           else if (hasCallback && succeeded) {
-            resolve(promise, value2);
+            resolve2(promise, value2);
           } else if (succeeded === false) {
             reject(promise, error);
           } else if (settled === FULFILLED) {
@@ -33001,7 +33483,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         function initializePromise(promise, resolver) {
           try {
             resolver(function resolvePromise(value2) {
-              resolve(promise, value2);
+              resolve2(promise, value2);
             }, function rejectPromise(reason) {
               reject(promise, reason);
             });
@@ -33120,10 +33602,10 @@ Expected function or array of functions, received type ${typeof value2}.`
               return reject2(new TypeError("You must pass an array to race."));
             });
           } else {
-            return new Constructor(function(resolve2, reject2) {
+            return new Constructor(function(resolve3, reject2) {
               var length = entries2.length;
               for (var i = 0; i < length; i++) {
-                Constructor.resolve(entries2[i]).then(resolve2, reject2);
+                Constructor.resolve(entries2[i]).then(resolve3, reject2);
               }
             });
           }
@@ -33313,7 +33795,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       var logger2 = LoggerByDefault.getLogger("XHR");
       logger2.trace("[XHR::__call()]");
       var promise = new Promise(
-        function(resolve, reject) {
+        function(resolve2, reject) {
           var corps = options.method === "POST" || options.method === "PUT" ? 1 : 0;
           if (options.data && (typeof options.data === "object" && Object.keys(options.data).length || typeof options.data === "string" && options.data.length) && !corps) {
             options.url = Helper.normalyzeUrl(options.url, options.data);
@@ -33339,7 +33821,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
             return nodefetch(options.url, opts).then(function(response) {
               if (response.ok) {
-                resolve(response.text());
+                resolve2(response.text());
               } else {
                 var message = "Errors Occured on Http Request (status : '" + response.statusText + "' | url : '" + response.url + "')";
                 var status = response.status;
@@ -33390,7 +33872,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 if (hXHR.readyState === 4) {
                   if (hXHR.status === 200) {
                     window.clearTimeout(onTimeOutTrigger);
-                    resolve(hXHR.response);
+                    resolve2(hXHR.response);
                   } else {
                     var message = "Errors Occured on Http Request (status : '" + e.target.statusText + "' | url : '" + e.target.responseURL + "' | response : '" + e.target.response + "')";
                     var status = e.target.status;
@@ -33423,7 +33905,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               };
               hXHR.onload = function(e) {
                 if (hXHR.status === 200) {
-                  resolve(hXHR.responseText);
+                  resolve2(hXHR.responseText);
                 } else {
                   var message = "Errors Occured on Http Request (status : '" + e.target.statusText + "' | url : '" + e.target.responseURL + "')";
                   var status = e.target.status;
@@ -34484,7 +34966,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           throw new Error("Exception HTTP : " + response.status + " (status code) !");
         }
       }).catch((error2) => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           reject(error2);
         });
       });
@@ -38570,8 +39052,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   const setSize = (value2) => {
     m_size = parseInt(value2);
   };
-  const setUrl = (value) => {
-    m_url = eval("`" + value + "`");
+  const setUrl = (value2) => {
+    m_url = String(value2 ?? "");
   };
   const setMaximumResponses = (value2) => {
     m_maximumResponses = parseInt(value2);
@@ -39160,7 +39642,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.12 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.12/LICENSE */
+  /*! @license DOMPurify 3.4.15 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.15/LICENSE */
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
     for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -39393,7 +39875,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const mathMlDisallowed = freeze(["maction", "maligngroup", "malignmark", "mlongdiv", "mscarries", "mscarry", "msgroup", "mstack", "msline", "msrow", "semantics", "annotation", "annotation-xml", "mprescripts", "none"]);
   const text = freeze(["#text"]);
   const html = freeze(["accept", "action", "align", "alt", "autocapitalize", "autocomplete", "autopictureinpicture", "autoplay", "background", "bgcolor", "border", "capture", "cellpadding", "cellspacing", "checked", "cite", "class", "clear", "color", "cols", "colspan", "command", "commandfor", "controls", "controlslist", "coords", "crossorigin", "datetime", "decoding", "default", "dir", "disabled", "disablepictureinpicture", "disableremoteplayback", "download", "draggable", "enctype", "enterkeyhint", "exportparts", "face", "for", "headers", "height", "hidden", "high", "href", "hreflang", "id", "inert", "inputmode", "integrity", "ismap", "kind", "label", "lang", "list", "loading", "loop", "low", "max", "maxlength", "media", "method", "min", "minlength", "multiple", "muted", "name", "nonce", "noshade", "novalidate", "nowrap", "open", "optimum", "part", "pattern", "placeholder", "playsinline", "popover", "popovertarget", "popovertargetaction", "poster", "preload", "pubdate", "radiogroup", "readonly", "rel", "required", "rev", "reversed", "role", "rows", "rowspan", "spellcheck", "scope", "selected", "shape", "size", "sizes", "slot", "span", "srclang", "start", "src", "srcset", "step", "style", "summary", "tabindex", "title", "translate", "type", "usemap", "valign", "value", "width", "wrap", "xmlns"]);
-  const svg = freeze(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]);
+  const svg = freeze(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "pointer-events", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "vector-effect", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]);
   const mathMl = freeze(["accent", "accentunder", "align", "bevelled", "close", "columnalign", "columnlines", "columnspacing", "columnspan", "denomalign", "depth", "dir", "display", "displaystyle", "encoding", "fence", "frame", "height", "href", "id", "largeop", "length", "linethickness", "lquote", "lspace", "mathbackground", "mathcolor", "mathsize", "mathvariant", "maxsize", "minsize", "movablelimits", "notation", "numalign", "open", "rowalign", "rowlines", "rowspacing", "rowspan", "rspace", "rquote", "scriptlevel", "scriptminsize", "scriptsizemultiplier", "selection", "separator", "separators", "stretchy", "subscriptshift", "supscriptshift", "symmetric", "voffset", "width", "xmlns"]);
   const xml = freeze(["xlink:href", "xml:id", "xlink:title", "xml:space", "xmlns:xlink"]);
   const MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
@@ -39433,6 +39915,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     notation: 12
     // Deprecated
   };
+  const LITERAL_TEXT_ELEMENT_NAMES = ["style", "script", "xmp", "iframe", "noembed", "noframes", "plaintext", "noscript"];
+  const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, LITERAL_TEXT_ELEMENT_NAMES));
+  const LITERAL_TEXT_CLOSE = (function() {
+    const map2 = {};
+    arrayForEach(LITERAL_TEXT_ELEMENT_NAMES, (name2) => {
+      map2[name2] = seal(new RegExp("</" + name2 + "(?=[\\t\\n\\f\\r />])", "i"));
+    });
+    return freeze(map2);
+  })();
   const getGlobal = function getGlobal2() {
     return typeof window === "undefined" ? null : window;
   };
@@ -39476,10 +39967,14 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _resolveSetOption = function _resolveSetOption2(cfg, key2, fallback, options) {
     return objectHasOwnProperty(cfg, key2) && arrayIsArray(cfg[key2]) ? addToSet(options.base ? clone$1(options.base) : {}, cfg[key2], options.transform) : fallback;
   };
+  const _resolveObjectOption = function _resolveObjectOption2(cfg, key2, makeFallback) {
+    const value2 = objectHasOwnProperty(cfg, key2) ? cfg[key2] : void 0;
+    return value2 && typeof value2 === "object" ? clone$1(value2) : makeFallback();
+  };
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.12";
+    DOMPurify.version = "3.4.15";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -39496,6 +39991,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const ElementPrototype = Element2.prototype;
     const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
     const remove2 = lookupGetter(ElementPrototype, "remove");
+    const removeAttributeNode = lookupGetter(ElementPrototype, "removeAttributeNode");
     const getNextSibling = lookupGetter(ElementPrototype, "nextSibling");
     const getChildNodes = lookupGetter(ElementPrototype, "childNodes");
     const getParentNode = lookupGetter(ElementPrototype, "parentNode");
@@ -39503,6 +39999,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     const getAttributes = lookupGetter(ElementPrototype, "attributes");
     const getNodeType = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeType") : null;
     const getNodeName = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "nodeName") : null;
+    const getOwnerDocument = Node2 && Node2.prototype ? lookupGetter(Node2.prototype, "ownerDocument") : null;
+    const _readNodeType = function _readNodeType2(node) {
+      return getNodeType ? getNodeType(node) : node.nodeType;
+    };
+    const _readNodeName = function _readNodeName2(node) {
+      return getNodeName ? getNodeName(node) : node.nodeName;
+    };
     if (typeof HTMLTemplateElement === "function") {
       const template = document2.createElement("template");
       if (template.content && template.content.ownerDocument) {
@@ -39729,9 +40232,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       IN_PLACE = cfg.IN_PLACE || false;
       IS_ALLOWED_URI$1 = isRegex(cfg.ALLOWED_URI_REGEXP) ? cfg.ALLOWED_URI_REGEXP : IS_ALLOWED_URI;
       NAMESPACE = typeof cfg.NAMESPACE === "string" ? cfg.NAMESPACE : HTML_NAMESPACE;
-      MATHML_TEXT_INTEGRATION_POINTS = objectHasOwnProperty(cfg, "MATHML_TEXT_INTEGRATION_POINTS") && cfg.MATHML_TEXT_INTEGRATION_POINTS && typeof cfg.MATHML_TEXT_INTEGRATION_POINTS === "object" ? clone$1(cfg.MATHML_TEXT_INTEGRATION_POINTS) : addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
-      HTML_INTEGRATION_POINTS = objectHasOwnProperty(cfg, "HTML_INTEGRATION_POINTS") && cfg.HTML_INTEGRATION_POINTS && typeof cfg.HTML_INTEGRATION_POINTS === "object" ? clone$1(cfg.HTML_INTEGRATION_POINTS) : addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS);
-      const customElementHandling = objectHasOwnProperty(cfg, "CUSTOM_ELEMENT_HANDLING") && cfg.CUSTOM_ELEMENT_HANDLING && typeof cfg.CUSTOM_ELEMENT_HANDLING === "object" ? clone$1(cfg.CUSTOM_ELEMENT_HANDLING) : create(null);
+      MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(
+        cfg,
+        "MATHML_TEXT_INTEGRATION_POINTS",
+        () => addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS)
+        // Default built-in map
+      );
+      HTML_INTEGRATION_POINTS = _resolveObjectOption(
+        cfg,
+        "HTML_INTEGRATION_POINTS",
+        () => addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS)
+        // Default built-in map
+      );
+      const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", () => create(null));
       CUSTOM_ELEMENT_HANDLING = create(null);
       if (objectHasOwnProperty(customElementHandling, "tagNameCheck") && isRegexOrFunction(customElementHandling.tagNameCheck)) {
         CUSTOM_ELEMENT_HANDLING.tagNameCheck = customElementHandling.tagNameCheck;
@@ -39793,15 +40306,6 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
           addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
         }
-      }
-      if (objectHasOwnProperty(cfg, "ADD_URI_SAFE_ATTR") && arrayIsArray(cfg.ADD_URI_SAFE_ATTR)) {
-        addToSet(URI_SAFE_ATTRIBUTES, cfg.ADD_URI_SAFE_ATTR, transformCaseFunc);
-      }
-      if (objectHasOwnProperty(cfg, "FORBID_CONTENTS") && arrayIsArray(cfg.FORBID_CONTENTS)) {
-        if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) {
-          FORBID_CONTENTS = clone$1(FORBID_CONTENTS);
-        }
-        addToSet(FORBID_CONTENTS, cfg.FORBID_CONTENTS, transformCaseFunc);
       }
       if (objectHasOwnProperty(cfg, "ADD_FORBID_CONTENTS") && arrayIsArray(cfg.ADD_FORBID_CONTENTS)) {
         if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) {
@@ -39919,6 +40423,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
     };
+    const _stripAttributeNode = function _stripAttributeNode2(element, attribute, name2) {
+      try {
+        removeAttributeNode(element, attribute);
+      } catch (_) {
+        try {
+          element.removeAttribute(name2);
+        } catch (_2) {
+        }
+      }
+    };
     const _neutralizeRoot = function _neutralizeRoot2(root) {
       _neutralizeSubtree(root);
       const childNodes = getChildNodes(root);
@@ -39940,27 +40454,35 @@ Expected function or array of functions, received type ${typeof value2}.`
           const attribute = attributes[i];
           const name2 = attribute && attribute.name;
           if (typeof name2 === "string") {
-            try {
-              root.removeAttribute(name2);
-            } catch (_) {
-            }
+            _stripAttributeNode(root, attribute, name2);
           }
         }
       }
     };
-    const _removeAttribute = function _removeAttribute2(name2, element) {
-      try {
-        arrayPush(DOMPurify.removed, {
-          attribute: element.getAttributeNode(name2),
-          from: element
-        });
-      } catch (_) {
-        arrayPush(DOMPurify.removed, {
-          attribute: null,
-          from: element
-        });
+    const _removeAttribute = function _removeAttribute2(name2, element, attr) {
+      if (!attr) {
+        try {
+          attr = element.getAttributeNode(name2);
+        } catch (_) {
+          attr = null;
+        }
       }
-      element.removeAttribute(name2);
+      arrayPush(DOMPurify.removed, {
+        attribute: attr || null,
+        from: element
+      });
+      try {
+        if (attr) {
+          removeAttributeNode(element, attr);
+        } else {
+          element.removeAttribute(name2);
+        }
+      } catch (_) {
+        try {
+          element.removeAttribute(name2);
+        } catch (_2) {
+        }
+      }
       if (name2 === "is") {
         if (RETURN_DOM || RETURN_DOM_FRAGMENT) {
           try {
@@ -39986,17 +40508,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (typeof name2 !== "string" || ALLOWED_ATTR[transformCaseFunc(name2)]) {
           continue;
         }
-        try {
-          element.removeAttribute(name2);
-        } catch (_) {
-        }
+        _stripAttributeNode(element, attribute, name2);
       }
     };
     const _neutralizeSubtree = function _neutralizeSubtree2(root) {
       const stack2 = [root];
       while (stack2.length > 0) {
         const node = stack2.pop();
-        const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+        const nodeType = _readNodeType(node);
         if (nodeType === NODE_TYPE.element) {
           _stripDisallowedAttributes(node);
         }
@@ -40008,6 +40527,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
     };
+    const _isPatchLinkageAttribute = function _isPatchLinkageAttribute2(lcName, lcTag) {
+      if (!SAFE_FOR_XML) {
+        return false;
+      }
+      if (lcName === "patchsrc") {
+        return true;
+      }
+      return lcName === "for" && lcTag !== "label" && lcTag !== "output";
+    };
     const _neutralizePatchLinkage = function _neutralizePatchLinkage2(root) {
       if (!SAFE_FOR_XML) {
         return;
@@ -40015,7 +40543,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const stack2 = [root];
       while (stack2.length > 0) {
         const node = stack2.pop();
-        const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+        const nodeType = _readNodeType(node);
         if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node.data)) {
           try {
             remove2(node);
@@ -40025,12 +40553,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         if (nodeType === NODE_TYPE.element) {
           const element = node;
-          const lcTag = transformCaseFunc(getNodeName ? getNodeName(node) : node.nodeName);
+          const lcTag = transformCaseFunc(_readNodeName(node));
           try {
             if (element.hasAttribute && element.hasAttribute("patchsrc")) {
               element.removeAttribute("patchsrc");
             }
-            if (element.hasAttribute && element.hasAttribute("for") && lcTag !== "label" && lcTag !== "output") {
+            if (element.hasAttribute && element.hasAttribute("for") && _isPatchLinkageAttribute("for", lcTag)) {
               element.removeAttribute("for");
             }
           } catch (_) {
@@ -40080,8 +40608,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       return WHOLE_DOCUMENT ? doc2.documentElement : body;
     };
     const _createNodeIterator = function _createNodeIterator2(root) {
+      const doc2 = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
       return createNodeIterator.call(
-        root.ownerDocument || root,
+        doc2 || root,
         root,
         // eslint-disable-next-line no-bitwise
         NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION,
@@ -40097,8 +40626,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const _scrubTemplateExpressions2 = function _scrubTemplateExpressions(node) {
       var _node$querySelectorAl;
       node.normalize();
+      const doc2 = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
       const walker = createNodeIterator.call(
-        node.ownerDocument || node,
+        doc2 || node,
         node,
         // eslint-disable-next-line no-bitwise
         NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION,
@@ -40131,7 +40661,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       // makes the direct read diverge from the cached read; a clean form
       // (same-realm OR foreign-realm) has both reads pointing at the same
       // canonical NamedNodeMap.
-      element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || // NodeType clobbering probe. Cached Node.prototype.nodeType getter
+      element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || // A form descendant named "removeAttributeNode" or "getAttributeNode"
+      // shadows these Attr-node methods via [LegacyOverrideBuiltIns].
+      // _removeAttribute() / _stripAttributeNode() reach for
+      // element.removeAttributeNode(attr) first; when it is shadowed the call
+      // throws and the name-based fallback element.removeAttribute(name)
+      // ASCII-lowercases its lookup key in an HTML document, silently missing
+      // a case-preserved event-handler attribute (e.g. an ONANIMATIONSTART
+      // that reached the sanitizer through an XML/XHTML parse). Flag the form
+      // so it is removed wholesale, exactly as for the other shadowed methods.
+      typeof element.removeAttributeNode !== "function" || typeof element.getAttributeNode !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || // NodeType clobbering probe. Cached Node.prototype.nodeType getter
       // returns the integer 1 for any Element regardless of realm; direct
       // read on a clobbered form (e.g. <input name="nodeType">) returns
       // the named child element. Cheap addition — nodeType is read from
@@ -40183,7 +40722,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) {
         return true;
       }
-      if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && tagName === "style" && _isNode(currentNode.firstElementChild)) {
+      if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && LITERAL_TEXT_ELEMENTS[tagName] && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(LITERAL_TEXT_CLOSE[tagName], currentNode.textContent))) {
         return true;
       }
       if (currentNode.nodeType === NODE_TYPE.processingInstruction) {
@@ -40194,14 +40733,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return false;
     };
-    const _sanitizeDisallowedNode = function _sanitizeDisallowedNode2(currentNode, tagName) {
-      if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName)) {
-        if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) {
-          return false;
+    const _matchesNameCheck = function _matchesNameCheck2(check, name2) {
+      if (check instanceof RegExp) {
+        return regExpTest(check, name2);
+      }
+      if (check instanceof Function) {
+        for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+          args[_key - 2] = arguments[_key];
         }
-        if (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(tagName)) {
-          return false;
-        }
+        return Boolean(check(name2, ...args));
+      }
+      return false;
+    };
+    const _sanitizeDisallowedNode = function _sanitizeDisallowedNode2(currentNode, tagName, root) {
+      if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) {
+        return false;
       }
       if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
         const parentNode = getParentNode(currentNode);
@@ -40209,7 +40755,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (childNodes && parentNode) {
           const childCount = childNodes.length;
           for (let i = childCount - 1; i >= 0; --i) {
-            const hoisted = IN_PLACE ? childNodes[i] : cloneNode(childNodes[i], true);
+            const hoisted = currentNode === root ? cloneNode(childNodes[i], true) : childNodes[i];
             parentNode.insertBefore(hoisted, getNextSibling(currentNode));
           }
         }
@@ -40217,21 +40763,37 @@ Expected function or array of functions, received type ${typeof value2}.`
       _forceRemove(currentNode);
       return true;
     };
+    const _forkSharedAllowlist = function _forkSharedAllowlist2(hookList, set, defaultSet, setConfigSet) {
+      if (hookList.length === 0) {
+        return set;
+      }
+      return set === defaultSet || set === setConfigSet ? clone$1(set) : set;
+    };
+    const _handleHookDetachedNode = function _handleHookDetachedNode2(currentNode, root) {
+      if (currentNode === root || getParentNode(currentNode) !== null) {
+        return false;
+      }
+      if (IN_PLACE) {
+        _neutralizeSubtree(currentNode);
+      }
+      return true;
+    };
     const _sanitizeElements = function _sanitizeElements2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
-      if (currentNode !== root && getParentNode(currentNode) === null) {
+      if (_handleHookDetachedNode(currentNode, root)) {
         return true;
       }
       if (_isClobbered(currentNode)) {
         _forceRemove(currentNode);
         return true;
       }
-      const tagName = transformCaseFunc(getNodeName ? getNodeName(currentNode) : currentNode.nodeName);
+      const tagName = transformCaseFunc(_readNodeName(currentNode));
+      ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
       _executeHooks(hooks.uponSanitizeElement, currentNode, {
         tagName,
         allowedTags: ALLOWED_TAGS
       });
-      if (currentNode !== root && getParentNode(currentNode) === null) {
+      if (_handleHookDetachedNode(currentNode, root)) {
         return true;
       }
       if (_isUnsafeNode(currentNode, tagName)) {
@@ -40239,13 +40801,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         return true;
       }
       if (FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) {
-        const removed = _sanitizeDisallowedNode(currentNode, tagName);
+        const removed = _sanitizeDisallowedNode(currentNode, tagName, root);
         if (removed === false) {
           _executeHooks(hooks.afterSanitizeElements, currentNode, null);
         }
         return removed;
       }
-      const nt = getNodeType ? getNodeType(currentNode) : currentNode.nodeType;
+      const nt = _readNodeType(currentNode);
       if (nt === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
         _forceRemove(currentNode);
         return true;
@@ -40270,38 +40832,43 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (FORBID_ATTR[lcName]) {
         return false;
       }
-      if (SAFE_FOR_XML && lcName === "patchsrc") {
-        return false;
-      }
-      if (SAFE_FOR_XML && lcName === "for" && lcTag !== "label" && lcTag !== "output") {
+      if (_isPatchLinkageAttribute(lcName, lcTag)) {
         return false;
       }
       if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value2 in document2 || value2 in formElement)) {
         return false;
       }
       const nameIsPermitted = ALLOWED_ATTR[lcName] || EXTRA_ELEMENT_HANDLING.attributeCheck instanceof Function && EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag);
-      if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName)) ;
-      else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) ;
-      else if (!nameIsPermitted) {
-        if (
-          // First condition does a very basic check if a) it's basically a valid custom element tagname AND
-          // b) if the tagName passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-          // and c) if the attribute name passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.attributeNameCheck
-          _isBasicCustomElement(lcTag) && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(lcTag)) && (CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName) || CUSTOM_ELEMENT_HANDLING.attributeNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.attributeNameCheck(lcName, lcTag)) || // Alternative, second condition checks if it's an `is`-attribute, AND
-          // the value passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-          lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && (CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof RegExp && regExpTest(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value2) || CUSTOM_ELEMENT_HANDLING.tagNameCheck instanceof Function && CUSTOM_ELEMENT_HANDLING.tagNameCheck(value2))
-        ) ;
-        else {
-          return false;
-        }
-      } else if (URI_SAFE_ATTRIBUTES[lcName]) ;
-      else if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) ;
-      else if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value2, "data:") === 0 && DATA_URI_TAGS[lcTag]) ;
-      else if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) ;
-      else if (value2) {
-        return false;
-      } else ;
-      return true;
+      if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName)) {
+        return true;
+      }
+      if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) {
+        return true;
+      }
+      if (!nameIsPermitted) {
+        return (
+          // Condition a) covers a basically valid custom element tag name whose
+          // tag passes the configured tagNameCheck and whose attribute name
+          // passes the configured attributeNameCheck ...
+          _isBasicCustomElement(lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName, lcTag) || // Condition b) covers an `is` attribute whose value passes the
+          // configured tagNameCheck while customized built-in elements are
+          // allowed.
+          lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value2)
+        );
+      }
+      if (URI_SAFE_ATTRIBUTES[lcName]) {
+        return true;
+      }
+      if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) {
+        return true;
+      }
+      if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value2, "data:") === 0 && DATA_URI_TAGS[lcTag]) {
+        return true;
+      }
+      if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) {
+        return true;
+      }
+      return !value2;
     };
     const RESERVED_CUSTOM_ELEMENT_NAMES = addToSet({}, ["annotation-xml", "color-profile", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "missing-glyph"]);
     const _isBasicCustomElement = function _isBasicCustomElement2(tagName) {
@@ -40329,11 +40896,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         if (_isClobbered(currentNode)) {
           _forceRemove(currentNode);
-        } else {
-          arrayPop(DOMPurify.removed);
+          return false;
         }
+        return true;
       } catch (_) {
         _removeAttribute(name2, currentNode);
+        return false;
       }
     };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode) {
@@ -40342,6 +40910,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!attributes || _isClobbered(currentNode)) {
         return;
       }
+      ALLOWED_ATTR = _forkSharedAllowlist(hooks.uponSanitizeAttribute, ALLOWED_ATTR, DEFAULT_ALLOWED_ATTR, SET_CONFIG_ALLOWED_ATTR);
       const hookEvent = {
         attrName: "",
         attrValue: "",
@@ -40357,6 +40926,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const lcName = transformCaseFunc(name2);
         const initValue = attrValue;
         let value2 = name2 === "value" ? initValue : stringTrim(initValue);
+        let recreatedNamedProp = false;
         hookEvent.attrName = lcName;
         hookEvent.attrValue = value2;
         hookEvent.keepAttr = true;
@@ -40364,38 +40934,42 @@ Expected function or array of functions, received type ${typeof value2}.`
         _executeHooks(hooks.uponSanitizeAttribute, currentNode, hookEvent);
         value2 = hookEvent.attrValue;
         if (SANITIZE_NAMED_PROPS && (lcName === "id" || lcName === "name") && stringIndexOf(value2, SANITIZE_NAMED_PROPS_PREFIX) !== 0) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           value2 = SANITIZE_NAMED_PROPS_PREFIX + value2;
+          recreatedNamedProp = true;
         }
         if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           continue;
         }
         if (lcName === "attributename" && stringMatch(value2, "href")) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           continue;
         }
         if (hookEvent.forceKeepAttr) {
           continue;
         }
         if (!hookEvent.keepAttr) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           continue;
         }
         if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(SELF_CLOSING_TAG, value2)) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           continue;
         }
         if (SAFE_FOR_TEMPLATES) {
           value2 = _stripTemplateExpressions(value2);
         }
         if (!_isValidAttribute(lcTag, lcName, value2)) {
-          _removeAttribute(name2, currentNode);
+          _removeAttribute(name2, currentNode, attr);
           continue;
         }
         value2 = _applyTrustedTypesToAttribute(lcTag, lcName, namespaceURI, value2);
         if (value2 !== initValue) {
-          _setAttributeValue(currentNode, name2, namespaceURI, value2);
+          const cleanWrite = _setAttributeValue(currentNode, name2, namespaceURI, value2);
+          if (cleanWrite && recreatedNamedProp) {
+            arrayPop(DOMPurify.removed);
+          }
         }
       }
       _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
@@ -40411,8 +40985,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (_isDocumentFragment(shadowNode.content)) {
           _sanitizeShadowDOM2(shadowNode.content);
         }
-        const shadowNodeType = getNodeType ? getNodeType(shadowNode) : shadowNode.nodeType;
-        if (shadowNodeType === NODE_TYPE.element) {
+        if (_readNodeType(shadowNode) === NODE_TYPE.element) {
           const innerSr = getShadowRoot(shadowNode);
           if (_isDocumentFragment(innerSr)) {
             _sanitizeAttachedShadowRoots(innerSr);
@@ -40434,7 +41007,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           continue;
         }
         const node = item.node;
-        const nodeType = getNodeType ? getNodeType(node) : node.nodeType;
+        const nodeType = _readNodeType(node);
         const isElement = nodeType === NODE_TYPE.element;
         const childNodes = getChildNodes(node);
         if (childNodes) {
@@ -40506,7 +41079,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
       if (inPlace) {
         _neutralizePatchLinkage(dirty);
-        const nn = getNodeName ? getNodeName(dirty) : dirty.nodeName;
+        const nn = _readNodeName(dirty);
         if (typeof nn === "string") {
           const tagName = transformCaseFunc(nn);
           if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
@@ -40534,7 +41107,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         } else {
           body.appendChild(importedNode);
         }
-        _sanitizeAttachedShadowRoots(importedNode);
+        _sanitizeAttachedShadowRoots(body);
       } else {
         if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && // eslint-disable-next-line unicorn/prefer-includes
         dirty.indexOf("<") === -1) {
@@ -40549,8 +41122,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         _forceRemove(body.firstChild);
       }
       const walkRoot = inPlace ? dirty : body;
-      const nodeIterator = _createNodeIterator(walkRoot);
       try {
+        const nodeIterator = _createNodeIterator(walkRoot);
         while (currentNode = nodeIterator.nextNode()) {
           _sanitizeElements(currentNode, walkRoot);
           _sanitizeAttributes(currentNode);
@@ -42018,6 +42591,109 @@ Expected function or array of functions, received type ${typeof value2}.`
       return false;
     }
   }
+  let clipSegmentStart = 0;
+  let clipSegmentEnd = 1;
+  function clipSegment(minX, minY, maxX, maxY, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let t0 = 0;
+    let t1 = 1;
+    if (dx === 0) {
+      if (x0 < minX || x0 > maxX) {
+        return false;
+      }
+    } else {
+      let ta = (minX - x0) / dx;
+      let tb = (maxX - x0) / dx;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    if (dy === 0) {
+      if (y0 < minY || y0 > maxY) {
+        return false;
+      }
+    } else {
+      let ta = (minY - y0) / dy;
+      let tb = (maxY - y0) / dy;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    clipSegmentStart = t0;
+    clipSegmentEnd = t1;
+    return true;
+  }
+  function clipFlatLineStrings(flatCoordinates, ends, stride, extent) {
+    const minX = extent[0];
+    const minY = extent[1];
+    const maxX = extent[2];
+    const maxY = extent[3];
+    const dest = [];
+    const destEnds = [];
+    let open = false;
+    let lastX, lastY;
+    let offset2 = 0;
+    for (let e = 0, ee = ends.length; e < ee; ++e) {
+      const end = ends[e];
+      let prevX = flatCoordinates[offset2];
+      let prevY = flatCoordinates[offset2 + 1];
+      let lineHasLast = false;
+      for (let i = offset2 + stride; i < end; i += stride) {
+        const curX = flatCoordinates[i];
+        const curY = flatCoordinates[i + 1];
+        if (clipSegment(minX, minY, maxX, maxY, prevX, prevY, curX, curY)) {
+          const dx = curX - prevX;
+          const dy = curY - prevY;
+          const ax = prevX + clipSegmentStart * dx;
+          const ay = prevY + clipSegmentStart * dy;
+          const bx = prevX + clipSegmentEnd * dx;
+          const by = prevY + clipSegmentEnd * dy;
+          if (open && lineHasLast && ax === lastX && ay === lastY) {
+            dest.push(bx, by);
+          } else {
+            if (open) {
+              destEnds.push(dest.length);
+            }
+            dest.push(ax, ay, bx, by);
+            open = true;
+          }
+          lastX = bx;
+          lastY = by;
+          lineHasLast = true;
+        }
+        prevX = curX;
+        prevY = curY;
+      }
+      offset2 = end;
+    }
+    if (open) {
+      destEnds.push(dest.length);
+    }
+    return { flatCoordinates: dest, ends: destEnds };
+  }
   function lineChunk(chunkLength, flatCoordinates, offset2, end, stride) {
     const chunks = [];
     let cursor = offset2;
@@ -42172,7 +42848,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       let flatCoordinates = null;
       let stride = geometry.getStride();
       if (textState.placement === "line" && (geometryType == "LineString" || geometryType == "MultiLineString" || geometryType == "Polygon" || geometryType == "MultiPolygon")) {
-        if (!intersects$1(this.maxExtent, geometry.getExtent())) {
+        const geometryExtent = geometry.getExtent();
+        if (!intersects$1(this.maxExtent, geometryExtent)) {
           return;
         }
         let ends;
@@ -42193,6 +42870,20 @@ Expected function or array of functions, received type ${typeof value2}.`
           ends = [];
           for (let i = 0, ii = endss.length; i < ii; ++i) {
             ends.push(endss[i][0]);
+          }
+        }
+        if ((geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
+          const clipped = clipFlatLineStrings(
+            flatCoordinates,
+            ends,
+            stride,
+            this.getBufferedMaxExtent()
+          );
+          flatCoordinates = clipped.flatCoordinates;
+          ends = clipped.ends;
+          stride = 2;
+          if (ends.length === 0) {
+            return;
           }
         }
         this.beginGeometry(geometry, feature, index2);
@@ -42439,6 +43130,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.saveTextStates_();
       const pixelRatio = this.pixelRatio;
       const baseline = TEXT_ALIGN[textState.textBaseline];
+      const offsetX = this.textOffsetX_ * pixelRatio;
       const offsetY = this.textOffsetY_ * pixelRatio;
       const text2 = this.text_;
       const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textState.scale[0]) / 2 : 0;
@@ -42458,7 +43150,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         textKey,
         1,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
       this.hitDetectionInstructions.push([
         Instruction.DRAW_CHARS,
@@ -42476,7 +43169,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         textKey,
         1 / pixelRatio,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
     }
     /**
@@ -42710,9 +43404,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     const dy = by * (1 / sin);
     return [x + dx * offset2, y + dy * offset2];
   }
-  function removeOffsetCycles(coords, stride) {
+  function removeOffsetCycles(coords, stride, closedLine = false) {
     for (let i = 0, ii = coords.length - 2; i < ii; i += stride) {
-      for (let j = coords.length - 2 * stride; j > i + stride; j -= stride) {
+      const jMax = closedLine && i === 0 ? coords.length - 3 * stride : coords.length - 2 * stride;
+      for (let j = jMax; j > i + stride; j -= stride) {
         const p1x = coords[i];
         const p1y = coords[i + 1];
         const p2x = coords[i + stride];
@@ -42738,6 +43433,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     return coords;
+  }
+  let segmenter;
+  function getSegmenter() {
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+    }
+    return segmenter;
   }
   function drawTextOnPath(flatCoordinates, offset2, end, stride, text2, startM, maxAngle, scale2, measureAndCacheTextWidth2, font, cache2, rotation, keepUpright = true) {
     let x2 = flatCoordinates[offset2];
@@ -42801,7 +43503,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       return result;
     }
     text2 = text2.replace(/\n/g, " ");
-    for (let i = 0, ii = text2.length; i < ii; ) {
+    const segments = Array.from(getSegmenter().segment(text2), (s) => s.segment);
+    for (let i = 0, ii = segments.length; i < ii; ) {
       advance();
       let angle = Math.atan2(y2 - y1, x2 - x1);
       if (reverse) {
@@ -42819,7 +43522,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let charLength = 0;
       for (; i < ii; ++i) {
         const index2 = reverse ? ii - i - 1 : i;
-        const len = scale2 * measureAndCacheTextWidth2(font, text2[index2], cache2);
+        const len = scale2 * measureAndCacheTextWidth2(font, segments[index2], cache2);
         if (offset2 + stride < end && segmentM + segmentLength < startM + charLength + len / 2) {
           break;
         }
@@ -42828,7 +43531,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (i === iStart) {
         continue;
       }
-      const chars = reverse ? text2.substring(ii - iStart, ii - i) : text2.substring(iStart, i);
+      const chars = (reverse ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
       interpolate = segmentLength === 0 ? 0 : (startM + charLength / 2 - segmentM) / segmentLength;
       const x = lerp(x1, x2, interpolate);
       const y = lerp(y1, y2, interpolate);
@@ -42840,25 +43543,26 @@ Expected function or array of functions, received type ${typeof value2}.`
   class ZIndexContext {
     constructor() {
       /**
-       * @private
+       * Pushes the method name captured at access time together with the arguments
+       * passed at call time. Reused across all proxied method calls.
        * @param {...*} args Args.
-       * @return {ZIndexContext} This.
+       * @private
        */
       __publicField(this, "pushMethodArgs_", (...args) => {
-        this.push_(args);
-        return this;
+        this.push_(this.pendingMethod_, args);
       });
       this.instructions_ = [];
       this.zIndex = 0;
       this.offset_ = 0;
+      this.pendingMethod_;
       this.context_ = /** @type {ZIndexContextProxy} */
       new Proxy(getSharedCanvasContext2D(), {
         get: (target2, property) => {
           if (typeof /** @type {*} */
-          getSharedCanvasContext2D()[property] !== "function") {
+          target2[property] !== "function") {
             return void 0;
           }
-          this.push_(property);
+          this.pendingMethod_ = property;
           return this.pushMethodArgs_;
         },
         set: (target2, property, value2) => {
@@ -42911,11 +43615,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           if (typeof /** @type {*} */
           context[property] === "function") {
             context[property](...instructionAtIndex);
+          } else if (typeof instructionAtIndex === "function") {
+            context[property] = instructionAtIndex(context);
           } else {
-            if (typeof instructionAtIndex === "function") {
-              context[property] = instructionAtIndex(context);
-              continue;
-            }
             context[property] = instructionAtIndex;
           }
         }
@@ -43734,6 +44436,10 @@ Expected function or array of functions, received type ${typeof value2}.`
               /** @type {boolean} */
               instruction[15]
             );
+            const offsetX = (
+              /** @type {number} */
+              instruction[16]
+            );
             const textState = this.textStates[textKey];
             const font = textState.font;
             const textScale = [
@@ -43777,7 +44483,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     part[4];
                     label = this.createLabel(chars, textKey, "", strokeKey);
                     anchorX = /** @type {number} */
-                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth);
+                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth) - offsetX;
                     anchorY = baseline * label.height + (0.5 - baseline) * 2 * strokeWidth * textScale[1] / textScale[0] - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -43818,7 +44524,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     part[4];
                     label = this.createLabel(chars, textKey, fillKey, "");
                     anchorX = /** @type {number} */
-                    part[2];
+                    part[2] - offsetX;
                     anchorY = baseline * label.height - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -43898,16 +44604,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                 /** @type {boolean|undefined} */
                 instruction[4] ?? false
               );
+              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd - 1]) < 1e-6;
               offsetLineString(
                 pixelCoordinates,
                 d,
                 dd,
                 2,
                 lineOffsetPx,
-                isClosedRing,
+                isClosedLine,
                 offsetCoords
               );
-              removeOffsetCycles(offsetCoords, 2);
+              removeOffsetCycles(offsetCoords, 2, isClosedLine);
               lineCoords = offsetCoords;
               lineStart = 0;
               lineEnd = lineCoords.length;
@@ -44610,16 +45317,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.pixelCoordinates_
       );
       if (Math.abs(strokeOffset) > 0) {
+        const n = pixelCoordinates.length;
+        const isClosedLine = close || Math.abs(pixelCoordinates[0] - pixelCoordinates[n - 2]) < 1e-6 && Math.abs(pixelCoordinates[1] - pixelCoordinates[n - 1]) < 1e-6;
         pixelCoordinates = offsetLineString(
           pixelCoordinates,
           0,
-          pixelCoordinates.length,
+          n,
           2,
           strokeOffset,
-          close,
+          isClosedLine,
           pixelCoordinates
         );
-        removeOffsetCycles(pixelCoordinates, 2);
+        removeOffsetCycles(pixelCoordinates, 2, isClosedLine);
       }
       context.moveTo(pixelCoordinates[0], pixelCoordinates[1]);
       let length = pixelCoordinates.length;
@@ -45701,6 +46410,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.layer_ = layer;
       this.staleKeys_ = new Array();
       this.maxStaleKeys = maxStaleKeys;
+      this.renderedSourceKey_;
     }
     /**
      * @return {Array<string>} Get the list of stale keys.
@@ -45715,6 +46425,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.staleKeys_.unshift(key2);
       if (this.staleKeys_.length > this.maxStaleKeys) {
         this.staleKeys_.length = this.maxStaleKeys;
+      }
+    }
+    /**
+     * Remember the previous source key as stale when the key changes.
+     * @param {string} sourceKey The current source key.
+     * @protected
+     */
+    updateStaleKeys(sourceKey) {
+      if (!this.renderedSourceKey_) {
+        this.renderedSourceKey_ = sourceKey;
+      } else if (this.renderedSourceKey_ !== sourceKey) {
+        this.prependStaleKey(this.renderedSourceKey_);
+        this.renderedSourceKey_ = sourceKey;
       }
     }
     /**
@@ -45893,8 +46616,27 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @param {HTMLElement} target Potential render target.
      * @param {string} transform CSS transform matrix.
      * @param {string} [backgroundColor] Background color.
+     * @param {number} [width] Physical pixel width of the rendering canvas.
+     * @param {number} [height] Physical pixel height of the rendering canvas.
      */
-    useContainer(target2, transform2, backgroundColor) {
+    useContainer(target2, transform2, backgroundColor, width, height) {
+      if (isCanvas(target2) && this.pixelTransform[1] === 0 && this.pixelTransform[2] === 0 && this.pixelTransform[4] === 0 && this.pixelTransform[5] === 0 && target2.width === width && target2.height === height) {
+        const targetCanvas = (
+          /** @type {HTMLCanvasElement} */
+          target2
+        );
+        const context2 = targetCanvas.getContext("2d");
+        if (context2) {
+          this.container = target2;
+          this.context = context2;
+          this.containerReused = true;
+          if (backgroundColor) {
+            context2.fillStyle = backgroundColor;
+            context2.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+          }
+          return;
+        }
+      }
       const layerClassName = this.getLayer().getClassName();
       let container, context;
       if (target2 && target2.className === layerClassName && (!backgroundColor || target2 && target2.style.backgroundColor && equals$2(
@@ -45993,7 +46735,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       makeInverse(this.inversePixelTransform, this.pixelTransform);
       const canvasTransform = toString$1(this.pixelTransform);
-      this.useContainer(target2, canvasTransform, this.getBackground(frameState));
+      const backgroundColor = this.getBackground(frameState);
+      this.useContainer(target2, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
         const canvas = this.context.canvas;
         if (canvas.width != width || canvas.height != height) {
@@ -46329,7 +47072,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @override
      */
     getFeatures(pixel) {
-      return new Promise((resolve) => {
+      return new Promise((resolve2) => {
         if (this.frameState && !this.hitDetectionImageData_ && !this.animatingOrInteracting_) {
           const size = this.frameState.size.slice();
           const center = this.renderedCenter_;
@@ -46405,7 +47148,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             getSquaredTolerance(resolution, this.renderedPixelRatio_)
           );
         }
-        resolve(
+        resolve2(
           hitDetect(pixel, this.renderedFeatures_, this.hitDetectionImageData_)
         );
       });
@@ -47358,8 +48101,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.viewResolver = null;
       this.viewRejector = null;
       const self2 = this;
-      this.viewPromise_ = new Promise(function(resolve, reject) {
-        self2.viewResolver = resolve;
+      this.viewPromise_ = new Promise(function(resolve2, reject) {
+        self2.viewResolver = resolve2;
         self2.viewRejector = reject;
       });
     }
@@ -47398,6 +48141,36 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     getView() {
       return this.viewPromise_;
+    }
+    /**
+     * Resolve once the source is ready to be used (its state is `ready`), or
+     * reject if it fails to load (its state is `error`). Sources that configure
+     * asynchronously can use this to expose data (e.g. dimensions) through a
+     * promise instead of the `change` event.
+     * @return {Promise<void>} Resolves when the source is ready.
+     * @protected
+     */
+    ready() {
+      const state = this.getState();
+      if (state === "ready") {
+        return Promise.resolve();
+      }
+      if (state === "error") {
+        return Promise.reject(new Error("Source failed to load"));
+      }
+      return new Promise((resolve2, reject) => {
+        const onChange = () => {
+          const changedState = this.getState();
+          if (changedState === "ready") {
+            this.un("change", onChange);
+            resolve2();
+          } else if (changedState === "error") {
+            this.un("change", onChange);
+            reject(new Error("Source failed to load"));
+          }
+        };
+        this.on("change", onChange);
+      });
     }
     /**
      * Get the state of the source, see {@link import("./Source.js").State} for possible states.
@@ -48154,7 +48927,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     hasFeature(feature) {
       const id = feature.getId();
       if (id !== void 0) {
-        return id in this.idIndex_;
+        const indexed = this.idIndex_[String(id)];
+        if (Array.isArray(indexed)) {
+          return indexed.includes(feature);
+        }
+        return indexed === feature;
       }
       return getUid(feature) in this.uidIndex_;
     }
@@ -48243,20 +49020,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       super.refresh();
     }
     /**
-     * Remove an extent from the list of loaded extents.
-     * @param {import("../extent.js").Extent} extent Extent.
+     * Marks an extent as not loaded, preserving any loaded areas outside it.
+     *
+     * Any previously loaded extent overlapping the given extent is split into its
+     * remaining non-overlapping parts using {@link module:ol/extent~getDifference getDifference()},
+     * which are then re-inserted into the tree.
+     *
+     * @param {import("../extent.js").Extent} extent Extent to mark as not loaded.
      * @api
      */
     removeLoadedExtent(extent) {
       const loadedExtentsRtree = this.loadedExtentsRtree_;
-      const obj = loadedExtentsRtree.forEachInExtent(extent, function(object) {
-        if (equals$1(object.extent, extent)) {
-          return object;
+      const intersectingExtents = [];
+      loadedExtentsRtree.forEachInExtent(extent, function(object) {
+        intersectingExtents.push(object);
+      });
+      intersectingExtents.forEach((intersectingExtent) => {
+        loadedExtentsRtree.remove(intersectingExtent);
+        const remainders = getDifference(intersectingExtent.extent, extent);
+        for (const remainder of remainders) {
+          loadedExtentsRtree.insert(remainder, { extent: remainder });
         }
       });
-      if (obj) {
-        loadedExtentsRtree.remove(obj);
-      }
     }
     /**
      * Batch remove features from the source.  If you want to remove all features
@@ -50008,7 +50793,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.renderedPixelRatio;
       this.renderedProjection = null;
       this.renderedTiles = [];
-      this.renderedSourceKey_;
       this.renderedSourceRevision_;
       this.tempExtent = createEmpty();
       this.tempTileRange_ = new TileRange(0, 0, 0, 0);
@@ -50355,13 +51139,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const tileGrid = tileSource.getTileGridForProjection(projection);
       const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
       const tileResolution = tileGrid.getResolution(z);
-      const sourceKey = tileSource.getKey();
-      if (!this.renderedSourceKey_) {
-        this.renderedSourceKey_ = sourceKey;
-      } else if (this.renderedSourceKey_ !== sourceKey) {
-        this.prependStaleKey(this.renderedSourceKey_);
-        this.renderedSourceKey_ = sourceKey;
-      }
+      this.updateStaleKeys(tileSource.getKey());
       let frameExtent = frameState.extent;
       const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
       this.prepareContainer(frameState, target2);
@@ -50473,9 +51251,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.preRender(context, frameState);
       const zs = Object.keys(tilesByZ).map(Number);
       zs.sort(ascending);
-      let currentClip;
       const clips = [];
       const clipZs = [];
+      const fadingTiles = [];
       for (let i = zs.length - 1; i >= 0; --i) {
         const currentZ = zs[i];
         const currentTilePixelSize = tileSource.getTilePixelSize(
@@ -50510,42 +51288,44 @@ Expected function or array of functions, received type ${typeof value2}.`
           const y = Math.round(origin[1] - yIndex * dy2);
           const w = nextX - x;
           const h = nextY - y;
-          const transition = zs.length === 1;
-          let contextSaved = false;
-          currentClip = [x, y, x + w, y, x + w, y + h, x, y + h];
-          for (let i2 = 0, ii = clips.length; i2 < ii; ++i2) {
-            if (!transition && currentZ < clipZs[i2]) {
-              const clip = clips[i2];
-              if (intersects$1(
-                [x, y, x + w, y + h],
-                [clip[0], clip[3], clip[4], clip[7]]
-              )) {
-                if (!contextSaved) {
-                  context.save();
-                  contextSaved = true;
-                }
-                context.beginPath();
-                context.moveTo(currentClip[0], currentClip[1]);
-                context.lineTo(currentClip[2], currentClip[3]);
-                context.lineTo(currentClip[4], currentClip[5]);
-                context.lineTo(currentClip[6], currentClip[7]);
-                context.moveTo(clip[6], clip[7]);
-                context.lineTo(clip[4], clip[5]);
-                context.lineTo(clip[2], clip[3]);
-                context.lineTo(clip[0], clip[1]);
-                context.clip();
-              }
+          const transition = currentZ === z;
+          if (transition && tile.inTransition(uid2)) {
+            fadingTiles.push({ tile, x, y, w, h, gutter: tileGutter });
+            this.renderedTiles.unshift(tile);
+            this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
+            continue;
+          }
+          const currentRect = [x, y, x + w, y + h];
+          const covered = [];
+          for (let j = 0, jj = clips.length; j < jj; ++j) {
+            if (currentZ < clipZs[j] && intersects$1(currentRect, clips[j])) {
+              covered.push(clips[j]);
             }
           }
-          clips.push(currentClip);
-          clipZs.push(currentZ);
-          this.drawTile(tile, frameState, x, y, w, h, tileGutter, transition);
-          if (contextSaved) {
-            context.restore();
+          let clipRects;
+          if (covered.length > 0) {
+            clipRects = subtractExtents(currentRect, covered);
           }
+          clips.push(currentRect);
+          clipZs.push(currentZ);
+          this.drawTile(
+            tile,
+            frameState,
+            x,
+            y,
+            w,
+            h,
+            tileGutter,
+            transition,
+            clipRects
+          );
           this.renderedTiles.unshift(tile);
           this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
         }
+      }
+      for (let i = 0, ii = fadingTiles.length; i < ii; ++i) {
+        const { tile, x, y, w, h, gutter } = fadingTiles[i];
+        this.drawTile(tile, frameState, x, y, w, h, gutter, true, void 0);
       }
       this.renderedResolution = tileResolution;
       this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
@@ -50589,9 +51369,13 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @param {number} h Height of the tile.
      * @param {number} gutter Tile gutter.
      * @param {boolean} transition Apply an alpha transition.
+     * @param {Array<import("../../extent.js").Extent>} [clipRects] Sub-rectangles
+     *     of the tile to draw. When not provided, the whole tile is drawn; when an
+     *     empty array is provided, nothing is drawn (the tile is fully covered by
+     *     higher-z tiles).
      * @protected
      */
-    drawTile(tile, frameState, x, y, w, h, gutter, transition) {
+    drawTile(tile, frameState, x, y, w, h, gutter, transition, clipRects) {
       let image;
       if (tile instanceof DataTile) {
         image = asImageLike(tile.getData());
@@ -50616,17 +51400,42 @@ Expected function or array of functions, received type ${typeof value2}.`
         context.save();
         context.globalAlpha = alpha;
       }
-      context.drawImage(
-        image,
-        gutter,
-        gutter,
-        image.width - 2 * gutter,
-        image.height - 2 * gutter,
-        x,
-        y,
-        w,
-        h
-      );
+      const imageWidth = image.width - 2 * gutter;
+      const imageHeight = image.height - 2 * gutter;
+      if (clipRects) {
+        const scaleX = imageWidth / w;
+        const scaleY = imageHeight / h;
+        for (let i = 0, ii = clipRects.length; i < ii; ++i) {
+          const rect = clipRects[i];
+          const rx = rect[0];
+          const ry = rect[1];
+          const rw = rect[2] - rect[0];
+          const rh = rect[3] - rect[1];
+          context.drawImage(
+            image,
+            gutter + (rx - x) * scaleX,
+            gutter + (ry - y) * scaleY,
+            rw * scaleX,
+            rh * scaleY,
+            rx,
+            ry,
+            rw,
+            rh
+          );
+        }
+      } else {
+        context.drawImage(
+          image,
+          gutter,
+          gutter,
+          imageWidth,
+          imageHeight,
+          x,
+          y,
+          w,
+          h
+        );
+      }
       if (alphaChanged) {
         context.restore();
       }
@@ -50966,6 +51775,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.CLASSNAME = "SearchEngineAdvanced";
       this._searchForms;
       this.listenToClick = false;
+      this.selectGeometry = options.selectGeometry === "extent" ? "extent" : "point";
       if (options.advancedSearch && options.advancedSearch instanceof Array) {
         this._searchForms = options.advancedSearch;
       } else {
@@ -51207,15 +52017,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       this._closePopup(e);
       this.layer.getSource().clear();
       let extent;
-      if (!!e.result) {
+      let selectedFeature;
+      if (!!e.result && (this.selectGeometry !== "extent" || !e.extent)) {
         this.layer.getSource().addFeature(e.result);
         extent = e.result.getGeometry().getExtent();
-        this.selectInteraction.getFeatures().push(e.result);
-        this._setPopupInfo(e.result);
+        selectedFeature = e.result;
       }
       if (!!e.extent) {
         this.layer.getSource().addFeature(e.extent);
         extent = e.extent.getGeometry().getExtent();
+        if (this.selectGeometry === "extent") {
+          selectedFeature = e.extent;
+        }
+      }
+      if (selectedFeature) {
+        this.selectInteraction.getFeatures().push(selectedFeature);
+        this._setPopupInfo(selectedFeature);
       }
       if (this.getMap() && e.center !== false) {
         let view = this.getMap().getView();
@@ -51237,9 +52054,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (feature) {
         this.popup.setPosition(void 0);
         let offset2 = null;
-        if (((_a = feature.getGeometry()) == null ? void 0 : _a.getType()) === "Point") {
-          position = (_b = feature.getGeometry()) == null ? void 0 : _b.getCoordinates();
+        const geometry = feature.getGeometry();
+        if ((geometry == null ? void 0 : geometry.getType()) === "Point") {
+          position = geometry.getCoordinates();
           offset2 = [0, -20];
+        } else if (!position && geometry) {
+          position = ((_b = (_a = geometry.getInteriorPoint) == null ? void 0 : _a.call(geometry)) == null ? void 0 : _b.getCoordinates()) || getCenter(geometry.getExtent());
         }
         this.popup.setPosition(position);
         offset2 && this.popup.setOffset(offset2);
@@ -52401,7 +53221,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           if (csNode) {
             result.coordinate_system = {
-              type: csNode[1],
+              subtype: csNode[1],
               axis: this.extractAxes(node)
             };
           }
@@ -52435,8 +53255,9 @@ Expected function or array of functions, received type ${typeof value2}.`
               };
             }
           }
+          const geogCsNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           result.coordinate_system = {
-            type: "ellipsoidal",
+            subtype: geogCsNode ? geogCsNode[1] : "ellipsoidal",
             axis: this.extractAxes(node)
           };
           result.id = this.getId(node);
@@ -52570,63 +53391,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       return result;
     }
   }
-  class PROJJSONBuilder2015 extends PROJJSONBuilderBase {
-    static convert(node, result = {}) {
-      super.convert(node, result);
-      if (result.coordinate_system && result.coordinate_system.subtype === "Cartesian") {
-        delete result.coordinate_system;
-      }
-      if (result.usage) {
-        delete result.usage;
-      }
-      return result;
-    }
-  }
-  class PROJJSONBuilder2019 extends PROJJSONBuilderBase {
-    static convert(node, result = {}) {
-      super.convert(node, result);
-      const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
-      if (csNode) {
-        result.coordinate_system = {
-          subtype: csNode[1],
-          axis: this.extractAxes(node)
-        };
-      }
-      const usageNode = node.find((child) => Array.isArray(child) && child[0] === "USAGE");
-      if (usageNode) {
-        const scope = usageNode.find((child) => Array.isArray(child) && child[0] === "SCOPE");
-        const area = usageNode.find((child) => Array.isArray(child) && child[0] === "AREA");
-        const bbox = usageNode.find((child) => Array.isArray(child) && child[0] === "BBOX");
-        result.usage = {};
-        if (scope) {
-          result.usage.scope = scope[1];
-        }
-        if (area) {
-          result.usage.area = area[1];
-        }
-        if (bbox) {
-          result.usage.bbox = bbox.slice(1);
-        }
-      }
-      return result;
-    }
-  }
-  function detectWKT2Version(root) {
-    if (root.find((child) => Array.isArray(child) && child[0] === "USAGE")) {
-      return "2019";
-    }
-    if (root.find((child) => Array.isArray(child) && child[0] === "CS")) {
-      return "2015";
-    }
-    if (root[0] === "BOUNDCRS" || root[0] === "PROJCRS" || root[0] === "GEOGCRS") {
-      return "2015";
-    }
-    return "2015";
-  }
   function buildPROJJSON(root) {
-    const version2 = detectWKT2Version(root);
-    const builder = version2 === "2019" ? PROJJSONBuilder2019 : PROJJSONBuilder2015;
-    return builder.convert(root);
+    return PROJJSONBuilderBase.convert(root);
   }
   function detectWKTVersion(wkt2) {
     const normalizedWKT = wkt2.toUpperCase();
@@ -61140,6 +61906,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       ]
     });
   }
+  const legendPanelFocusRef = /* @__PURE__ */ shallowRef(null);
   const TAB_PANELS_KEY = Symbol("ecTabPanels");
   const tabPanelsApiRef = /* @__PURE__ */ shallowRef(null);
   function registerTabPanelsApi(api) {
@@ -61147,20 +61914,20 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const TAB_PANEL_IDS = {
     fiche: 0,
-    empty: 1,
-    layers: 2,
-    raw: 3
+    catalogue: 1,
+    dataLayers: 2,
+    legends: 3
   };
   const DEFAULT_FICHE_EMPTY = {
     title: "Aucune sélection en cours",
     bodyHtml: "<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>"
   };
-  const _hoisted_1$a = {
+  const _hoisted_1$f = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$a = /* @__PURE__ */ defineComponent({
+  const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -61189,9 +61956,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
         }
         if (search.position) {
-          parts.push(
-            `<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`
-          );
+          parts.push(`<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`);
         }
         tabPanels.showSelection({
           title: label,
@@ -61267,12 +62032,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         openFicheFromSearch(search);
         if (hasCoords) {
           const popupHtml = isGeolocate ? `<strong>${escapeHtml(label)}</strong><br/>${x}, ${y}` : label;
-          control.createMarker(
-            [x, y],
-            popupHtml,
-            isGeolocate ? "geolocate" : "searchAtInit",
-            true
-          );
+          control.createMarker([x, y], popupHtml, isGeolocate ? "geolocate" : "searchAtInit", true);
           requestAnimationFrame(() => refitPopupForOpenPanels(control));
         }
         if (!label || isGeolocate) return;
@@ -61322,7 +62082,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$a);
+        return openBlock(), createElementBlock("span", _hoisted_1$f);
       };
     }
   });
@@ -61358,8 +62118,13 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @param {Options} options Tile grid options.
      */
     constructor(options) {
-      this.minZoom = options.minZoom !== void 0 ? options.minZoom : 0;
-      this.resolutions_ = options.resolutions;
+      let minZoom = options.minZoom;
+      const resolutions = options.resolutions;
+      if (minZoom === void 0 && resolutions) {
+        minZoom = resolutions.findIndex((resolution) => resolution !== void 0);
+      }
+      this.minZoom = minZoom !== void 0 ? minZoom : 0;
+      this.resolutions_ = resolutions;
       assert(
         isSorted(
           this.resolutions_,
@@ -61421,7 +62186,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.fullTileRanges_ = null;
       this.tmpSize_ = [0, 0];
       this.tmpExtent_ = [0, 0, 0, 0];
-      if (options.sizes !== void 0) {
+      if (options.tileRanges !== void 0) {
+        this.fullTileRanges_ = options.tileRanges;
+      } else if (options.sizes !== void 0) {
         this.fullTileRanges_ = options.sizes.map((size, z) => {
           const tileRange = new TileRange(
             Math.min(0, size[0]),
@@ -61860,7 +62627,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         resolutions: options.resolutions,
         tileSize: options.tileSize,
         tileSizes: options.tileSizes,
-        sizes: options.sizes
+        sizes: options.sizes,
+        tileRanges: options.tileRanges,
+        minZoom: options.minZoom
       });
       this.matrixIds_ = options.matrixIds;
     }
@@ -63093,7 +63862,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return intersectsX && intersectsY;
     }
   };
-  const version$2 = "1.0.0-beta.13";
+  const version$2 = "1.0.0-beta.14";
   const Pkg = {
     version: version$2
   };
@@ -63925,12 +64694,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$9 = {
+  const _hoisted_1$e = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -63946,11 +64715,20 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$9);
+        return openBlock(), createElementBlock("span", _hoisted_1$e);
       };
     }
   });
   const exceptions = ["GPoverviewMap", "GPfullScreen"];
+  const gfiIncompatiblePanels = ["GPdrawing", "GPisochron", "GPmeasureArea", "GPmeasureAzimuth", "GPmeasureLength", "GProute", "GPelevationPath"];
+  var gfiActiveBeforePanel = false;
+  function getGetFeatureInfoControl(widget) {
+    var map2 = widget && typeof widget.getMap === "function" ? widget.getMap() : null;
+    if (!map2) {
+      return null;
+    }
+    return map2.getControls().getArray().filter((control) => control.CLASSNAME === "GetFeatureInfo")[0] || null;
+  }
   function getSameSideOpenedPanel(position, openedPanelID) {
     var exceptionPanel = [...exceptions, openedPanelID];
     var controlPanels = [];
@@ -63973,11 +64751,29 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     });
   }
-  var PanelManager = function(position, openedPanelID) {
+  var PanelManager = function(position, openedPanelID, widget) {
     var openedPanel = getSameSideOpenedPanel(position, openedPanelID);
     openedPanel.forEach((panel) => {
-      panel.getElementsByTagName("button")[0].click();
+      var closeButton = panel.querySelector(".GPcloseGetFeatureInfo") || panel.getElementsByTagName("button")[0];
+      closeButton.click();
     });
+    if (gfiIncompatiblePanels.includes(openedPanelID)) {
+      var gfi = getGetFeatureInfoControl(widget);
+      if (gfi) {
+        gfiActiveBeforePanel = gfi.getActive();
+        gfi.setActive(false);
+      }
+    }
+  };
+  var PanelManagerClose = function(closedPanelID, widget) {
+    if (!gfiIncompatiblePanels.includes(closedPanelID)) {
+      return;
+    }
+    var gfi = getGetFeatureInfoControl(widget);
+    if (gfi && gfiActiveBeforePanel) {
+      gfi.setActive(true);
+    }
+    gfiActiveBeforePanel = false;
   };
   var Widget = {
     /**
@@ -63985,7 +64781,14 @@ Expected function or array of functions, received type ${typeof value2}.`
      * It calls the panelManager to automatically close other panels
      */
     onPanelOpen: function() {
-      PanelManager(this.options.position, this.element.id.match(/(\w+)-[0-9]+/)[1]);
+      PanelManager(this.options.position, this.element.id.match(/(\w+)-[0-9]+/)[1], this);
+    },
+    /**
+     * This method is called when a widget closes its panel
+     * It lets the panelManager restore the state of the other widgets
+     */
+    onPanelClose: function() {
+      PanelManagerClose(this.element.id.match(/(\w+)-[0-9]+/)[1], this);
     }
   };
   LoggerByDefault$1.getLogger("draggable");
@@ -67736,13 +68539,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$8 = {
+  const _hoisted_1$d = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -67792,7 +68595,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$8);
+        return openBlock(), createElementBlock("span", _hoisted_1$d);
       };
     }
   });
@@ -70004,8 +70807,38 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.traceState_ = { active: false };
     }
     /**
+     * Determine whether a trace from `fromIndex` to `toIndex` passes at least one
+     * vertex of the target (i.e. whether it would add any traced coordinates).
+     * The index math mirrors {@link addTracedCoordinates_}.
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @return {boolean} At least one target vertex lies between the indices.
+     * @private
+     */
+    tracePassesVertex_(fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return false;
+      }
+      if (fromIndex < toIndex) {
+        const start3 = Math.ceil(fromIndex);
+        let end2 = Math.floor(toIndex);
+        if (end2 === toIndex) {
+          end2 -= 1;
+        }
+        return start3 <= end2;
+      }
+      const start2 = Math.floor(fromIndex);
+      let end = Math.ceil(toIndex);
+      if (end === toIndex) {
+        end += 1;
+      }
+      return start2 >= end;
+    }
+    /**
      * Update the trace.
      * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @return {import('../coordinate.js').Coordinate|undefined} The coordinate the
+     * dragged vertex was snapped onto a target edge, if any.
      * @private
      */
     updateTrace_(event) {
@@ -70028,41 +70861,45 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / event.map.getView().getResolution() > this.pixelTolerance_) {
         return;
       }
-      if (traceState.targetIndex !== updatedTraceTarget.index) {
-        if (traceState.targetIndex !== -1) {
-          const oldTarget = traceState.targets[traceState.targetIndex];
-          this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
-        } else {
-          for (const traceSegment of this.traceSegments_) {
-            const segmentData = traceSegment[0];
-            const geometry = segmentData.geometry;
-            const index2 = traceSegment[1];
-            const coordinates2 = geometry.getCoordinates();
-            const coordinatesArray = getCoordinatesArray(
-              coordinates2,
-              geometry.getType(),
-              segmentData.depth
-            );
-            coordinatesArray.splice(segmentData.index + index2, 1);
-            geometry.setCoordinates(coordinates2);
-            if (index2 === 0) {
-              segmentData.index -= 1;
-            }
-          }
-        }
-        const newTarget = traceState.targets[updatedTraceTarget.index];
-        this.addTracedCoordinates_(
-          newTarget,
-          newTarget.startIndex,
+      let commit = true;
+      if (traceState.targetIndex === -1) {
+        const candidateTarget = traceState.targets[updatedTraceTarget.index];
+        commit = this.tracePassesVertex_(
+          candidateTarget.startIndex,
           updatedTraceTarget.endIndex
         );
-      } else {
-        const target3 = traceState.targets[traceState.targetIndex];
-        this.addOrRemoveTracedCoordinates_(target3, updatedTraceTarget.endIndex);
       }
-      traceState.targetIndex = updatedTraceTarget.index;
-      const target2 = traceState.targets[traceState.targetIndex];
-      target2.endIndex = updatedTraceTarget.endIndex;
+      if (commit) {
+        if (traceState.targetIndex !== updatedTraceTarget.index) {
+          if (traceState.targetIndex !== -1) {
+            const oldTarget = traceState.targets[traceState.targetIndex];
+            this.removeTracedCoordinates_(
+              oldTarget.startIndex,
+              oldTarget.endIndex
+            );
+          }
+          const newTarget = traceState.targets[updatedTraceTarget.index];
+          this.addTracedCoordinates_(
+            newTarget,
+            newTarget.startIndex,
+            updatedTraceTarget.endIndex
+          );
+        } else {
+          const target2 = traceState.targets[traceState.targetIndex];
+          this.addOrRemoveTracedCoordinates_(target2, updatedTraceTarget.endIndex);
+        }
+        traceState.targetIndex = updatedTraceTarget.index;
+        traceState.targets[traceState.targetIndex].endIndex = updatedTraceTarget.endIndex;
+      }
+      const snapTarget = traceState.targets[updatedTraceTarget.index];
+      const snappedVertex = interpolateCoordinate(
+        snapTarget.coordinates,
+        updatedTraceTarget.endIndex
+      );
+      for (const dragSegment of this.dragSegments_) {
+        this.updateGeometry_(snappedVertex.slice(), dragSegment);
+      }
+      return snappedVertex;
     }
     getTraceCandidates_(event) {
       const map2 = this.getMap();
@@ -70127,6 +70964,26 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     /**
+     * Tracing splices coordinates into a ring next to the dragged vertex, but only
+     * adjusts the index of the trace segment itself.  The dragged vertex' other
+     * segments in `dragSegments_` reference the same ring, so their stored index
+     * must be shifted too - otherwise the next {@link updateGeometry_} writes the
+     * dragged vertex to the wrong coordinate and scrambles the ring.
+     * @param {SegmentData} traceSegmentData The trace segment (adjusted by the
+     * caller and skipped here).
+     * @param {number} atIndex Segments at or after this coordinate index shift.
+     * @param {number} delta Coordinates added (positive) or removed (negative).
+     * @private
+     */
+    shiftTracedSegmentIndices_(traceSegmentData, atIndex, delta) {
+      for (const dragSegment of this.dragSegments_) {
+        const segmentData = dragSegment[0];
+        if (segmentData !== traceSegmentData && segmentData.geometry === traceSegmentData.geometry && (segmentData.depth === void 0 || traceSegmentData.depth === void 0 || equals$2(segmentData.depth, traceSegmentData.depth)) && segmentData.index >= atIndex) {
+          segmentData.index += delta;
+        }
+      }
+    }
+    /**
      * @param {number} fromIndex The start index.
      * @param {number} toIndex The end index.
      * @private
@@ -70167,7 +71024,12 @@ Expected function or array of functions, received type ${typeof value2}.`
             segmentData.depth
           );
           coordinatesArray.splice(removeIndex, remove2);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            removeIndex + remove2,
+            -remove2
+          );
           if (index2 === 1) {
             segmentData.index -= remove2;
           }
@@ -70220,7 +71082,12 @@ Expected function or array of functions, received type ${typeof value2}.`
             segmentData.depth
           );
           coordinatesArray.splice(insertIndex, 0, ...newCoordinates);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            insertIndex,
+            newCoordinates.length
+          );
           if (index2 === 1) {
             segmentData.index += newCoordinates.length;
           }
@@ -70356,6 +71223,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             this.traceSegments_.push(dragSegment);
           }
         }
+        if (this.traceSegments_.length > 1) {
+          this.deactivateTrace_();
+          this.traceSegments_ = null;
+        }
       }
       for (let i = 0, ii = this.dragSegments_.length; i < ii; ++i) {
         const dragSegment = this.dragSegments_[i];
@@ -70370,8 +71241,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         this.updateGeometry_(vertex, dragSegment);
       }
-      this.updateTrace_(evt);
-      this.createOrUpdateVertexFeature_(vertex, features, geometries, true);
+      const snappedVertex = this.updateTrace_(evt);
+      this.createOrUpdateVertexFeature_(
+        snappedVertex || vertex,
+        features,
+        geometries,
+        true
+      );
     }
     /**
      * Handle pointer down events.
@@ -70404,8 +71280,12 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @override
      */
     handleUpEvent(evt) {
+      const tracedFeatures = this.traceState_.active ? /* @__PURE__ */ new Set() : null;
       for (let i = this.dragSegments_.length - 1; i >= 0; --i) {
         const segmentData = this.dragSegments_[i][0];
+        if (tracedFeatures) {
+          tracedFeatures.add(segmentData.feature);
+        }
         const geometry = segmentData.geometry;
         if (geometry.getType() === "Circle") {
           const circle = (
@@ -70427,6 +71307,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           );
         } else {
           this.rBush_.update(boundingExtent(segmentData.segment), segmentData);
+        }
+      }
+      if (tracedFeatures) {
+        for (const feature of tracedFeatures) {
+          this.removeFeature_(feature);
+          if (this.filter_(feature)) {
+            this.addFeature_(feature);
+          }
         }
       }
       if (this.featuresBeingModified_) {
@@ -71046,9 +71934,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const segments = [];
       const geometries = geometry.getGeometriesArray();
       for (let i = 0; i < geometries.length; ++i) {
-        const segmenter = this[geometries[i].getType()];
-        if (segmenter) {
-          segments.push(segmenter(geometries[i], projection));
+        const segmenter2 = this[geometries[i].getType()];
+        if (segmenter2) {
+          segments.push(segmenter2(geometries[i], projection));
         }
       }
       return segments.flat();
@@ -71226,10 +72114,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       const feature_uid = getUid(feature);
       const geometry = feature.getGeometry();
       if (geometry) {
-        const segmenter = this.segmenters_[geometry.getType()];
-        if (segmenter) {
+        const segmenter2 = this.segmenters_[geometry.getType()];
+        if (segmenter2) {
           this.indexedFeaturesExtents_[feature_uid] = geometry.getExtent(createEmpty());
-          const segments = segmenter.call(
+          const segments = segmenter2.call(
             this.segmenters_,
             geometry,
             this.getMap().getView().getProjection()
@@ -71647,10 +72535,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const kind = data.type === "MultiDisc" ? "disc" : "circle";
     const simpleType = kind === "disc" ? "Disc" : "Circle";
     return data.geometries.map(
-      (g) => featureFromCircleJson(
-        { type: simpleType, center: g.center, radius: g.radius },
-        mapProjection
-      )
+      (g) => featureFromCircleJson({ type: simpleType, center: g.center, radius: g.radius }, mapProjection)
     );
   }
   function circleParts(feature, precision, mapProjection) {
@@ -72040,9 +72925,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       fontSize: (stored == null ? void 0 : stored.fontSize) ?? (textStored == null ? void 0 : textStored.fontSize) ?? base.fontSize,
       fontColor: (stored == null ? void 0 : stored.fontColor) ?? (textStored == null ? void 0 : textStored.fontColor) ?? base.fontColor,
       textStrokeColor: (stored == null ? void 0 : stored.textStrokeColor) ?? (textStored == null ? void 0 : textStored.strokeColor) ?? base.textStrokeColor,
-      rotation: clampRotationDeg(
-        (stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation
-      )
+      rotation: clampRotationDeg((stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation)
     };
   }
   function strokeFromAttrs(attrs) {
@@ -72207,29 +73090,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    if (!mapSize || !getPixel) {
+    {
       return candidates[0];
     }
-    const scored = candidates.map((c, index2) => {
-      const p5 = getPixel(c);
-      const onScreen = Boolean(
-        p5 && p5[0] >= 0 && p5[1] >= 0 && p5[0] <= mapSize[0] && p5[1] <= mapSize[1]
-      );
-      return {
-        c,
-        p: p5,
-        onScreen,
-        index: index2,
-        // Plus haut à l’écran = meilleur pour une popup au-dessus
-        topRank: p5 ? p5[1] : Number.POSITIVE_INFINITY
-      };
-    });
-    const pool = scored.filter((s) => s.onScreen);
-    const use = pool.length ? pool : scored;
-    const interior = use.find((s) => s.index === 0);
-    if (interior && interior.onScreen) return interior.c;
-    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
-    return use[0].c;
   }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
@@ -72310,9 +73173,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return;
     }
     if (geom instanceof LineString) {
-      geom.setCoordinates(
-        geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin))
-      );
+      geom.setCoordinates(geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin)));
       return;
     }
     if (geom instanceof Polygon) {
@@ -72381,10 +73242,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let total = 0;
     const segLens = [];
     for (let i = 0; i < coords.length - 1; i++) {
-      const len = Math.hypot(
-        coords[i + 1][0] - coords[i][0],
-        coords[i + 1][1] - coords[i][1]
-      );
+      const len = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1]);
       segLens.push(len);
       total += len;
     }
@@ -72696,17 +73554,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           const t = circleSideTranslateAnchor(geom, res);
           add2("translate", t);
           if (this.styleEditEnabled) {
-            add2("style-edit", [
-              t[0],
-              t[1] + STYLE_EDIT_GAP_PX * res
-            ]);
+            add2("style-edit", [t[0], t[1] + STYLE_EDIT_GAP_PX * res]);
           }
         } else if (this.styleEditEnabled) {
           const c = geom.getCenter();
-          add2("style-edit", [
-            c[0],
-            c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)
-          ]);
+          add2("style-edit", [c[0], c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)]);
         }
         return;
       }
@@ -72724,10 +73576,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         add2("resize-sw", [minX, minY]);
         add2("resize-w", [minX, midY]);
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            midX,
-            maxY + STYLE_EDIT_GAP_PX * res
-          ]);
+          add2("style-edit", [midX, maxY + STYLE_EDIT_GAP_PX * res]);
         }
         return;
       }
@@ -72758,10 +73607,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
           const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
-          add2("style-edit", [
-            r[0] - STYLE_EDIT_GAP_PX * res,
-            r[1]
-          ]);
+          add2("style-edit", [r[0] - STYLE_EDIT_GAP_PX * res, r[1]]);
         }
         return;
       }
@@ -72773,10 +73619,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
         add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            rotateAt[0] - STYLE_EDIT_GAP_PX * res,
-            rotateAt[1]
-          ]);
+          add2("style-edit", [rotateAt[0] - STYLE_EDIT_GAP_PX * res, rotateAt[1]]);
         }
       }
     }
@@ -73030,9 +73873,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return;
       }
       if (this.mode === "bbox" && role.startsWith("resize-")) {
-        feature.setGeometry(
-          bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord))
-        );
+        feature.setGeometry(bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)));
         this.placeHandles(feature);
       }
     }
@@ -73065,6 +73906,54 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (primary === "Circle" || primary === "MultiCircle") return "circle";
     if (primary === "Disc" || primary === "MultiDisc") return "disc";
     return "line-polygon";
+  }
+  const REMIX_BY_TOOL_CLASS = {
+    "ec-geometry-editor__tool--tools-toggle": "ri-tools-fill",
+    "ec-geometry-editor__tool--measure-distance": "ri-ruler-line",
+    "ec-geometry-editor__tool--measure-area": "ri-custom-size",
+    "ec-geometry-editor__tool--save": "ri-save-line",
+    "ec-geometry-editor__tool--undo": "ri-corner-up-left-line",
+    "ec-geometry-editor__tool--redo": "ri-corner-up-right-line",
+    "ec-geometry-editor__tool--point": "ri-map-pin-5-line",
+    "ec-geometry-editor__tool--line": "ri-draw-line",
+    "ec-geometry-editor__tool--polygon": "ri-pentagon-line",
+    "ec-geometry-editor__tool--rectangle": "ri-rectangle-line",
+    "ec-geometry-editor__tool--circle": "ri-circle-line",
+    "ec-geometry-editor__tool--disc": "ri-circle-line",
+    "ec-geometry-editor__tool--text": "ri-text",
+    "ec-geometry-editor__tool--modify": "ri-edit-line",
+    "ec-geometry-editor__tool--remove": "ri-close-circle-line",
+    "ec-geometry-editor__tool--clear-all": "ri-delete-bin-6-fill",
+    "ec-geometry-editor__tool--export": "ri-upload-line",
+    "ec-geometry-editor__tool--import": "ri-download-line",
+    "ec-geometry-editor__tool--settings": "ri-settings-3-line"
+  };
+  function remixIconClassForToolModifier(iconClass) {
+    return REMIX_BY_TOOL_CLASS[iconClass] ?? null;
+  }
+  function appendGeometryToolIcon(button, iconClass) {
+    const remix = remixIconClassForToolModifier(iconClass);
+    if (!remix) return;
+    const icon = document.createElement("i");
+    icon.className = `${remix} ec-geometry-editor__tool-icon`;
+    icon.setAttribute("aria-hidden", "true");
+    button.appendChild(icon);
+  }
+  function updateSaveToolBadge(badge, state) {
+    badge.hidden = state === "idle";
+    badge.dataset.state = state;
+    badge.replaceChildren();
+    if (state === "dirty") {
+      const icon = document.createElement("i");
+      icon.className = "ri-alert-line";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    } else if (state === "saved") {
+      const icon = document.createElement("i");
+      icon.className = "ri-checkbox-circle-fill";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    }
   }
   const modifyTool = {
     id: "modify",
@@ -73300,9 +74189,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         action: t.mode === "action",
         extraToggle: t.mode === "toggle"
       });
-      const extrasById = new globalThis.Map(
-        this.extraTools.map((t) => [t.id, toDef(t)])
-      );
+      const extrasById = new globalThis.Map(this.extraTools.map((t) => [t.id, toDef(t)]));
       const pickExtras = (...ids) => ids.flatMap((id) => {
         const t = extrasById.get(id);
         return t ? [t] : [];
@@ -73343,25 +74230,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     /** Active / désactive visuellement un bouton extra (enabled). */
     setExtraEnabled(id, enabled) {
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${id}"]`);
       if (!btn) return;
       btn.disabled = !enabled;
       btn.setAttribute("aria-disabled", enabled ? "false" : "true");
     }
     /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
     setSaveState(state) {
-      const btn = this.target.querySelector(
-        'button[data-tool-id="save"]'
-      );
+      const btn = this.target.querySelector('button[data-tool-id="save"]');
       if (!btn) return;
       btn.classList.toggle("ec-geometry-editor__tool--save-saved", state === "saved");
       btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
       const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
       if (badge instanceof HTMLElement) {
-        badge.hidden = state === "idle";
-        badge.dataset.state = state;
+        updateSaveToolBadge(badge, state);
       }
     }
     /** Désactive tout outil transient (dessin, measure externe, etc.). */
@@ -73390,11 +74272,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        appendGeometryToolIcon(btn, tool.iconClass);
         if (tool.id === "save") {
           const badge = document.createElement("span");
           badge.className = "ec-geometry-editor__tool-badge";
           badge.setAttribute("aria-hidden", "true");
-          badge.hidden = true;
+          updateSaveToolBadge(badge, "idle");
           btn.appendChild(badge);
         }
         btn.addEventListener("click", () => this.activate(tool));
@@ -73447,9 +74330,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.clearTransient();
       if (already) return;
       this.activeId = tool.id;
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${tool.id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${tool.id}"]`);
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
       if (tool.extraToggle) {
@@ -76455,12 +77336,62 @@ Expected function or array of functions, received type ${typeof value2}.`
     node.setAttribute("xunits", vec2.xunits);
     node.setAttribute("yunits", vec2.yunits);
   }
+  const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i;
+  const EVENT_HANDLER = /\son[a-z]+\s*=/i;
+  const JAVASCRIPT_URI = /javascript\s*:/i;
+  const DISALLOWED_LOCAL = /* @__PURE__ */ new Set([
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "foreignobject",
+    "link",
+    "meta"
+  ]);
+  function assertSafeKmlXmlText(text2) {
+    if (UNSAFE_TAG.test(text2) || EVENT_HANDLER.test(text2) || JAVASCRIPT_URI.test(text2)) {
+      throw new Error("[entree-carto-geometry-editor] unsafe KML markup rejected");
+    }
+  }
+  function looksLikeKmlDocument(raw) {
+    const t = raw.trim();
+    if (!t.startsWith("<")) return false;
+    if (UNSAFE_TAG.test(t) || EVENT_HANDLER.test(t) || JAVASCRIPT_URI.test(t)) return false;
+    return /^<\?xml[\s\S]*?>\s*<kml[\s>/]/i.test(t) || /^<kml[\s>/]/i.test(t);
+  }
+  function stripUnsafeNodes(root) {
+    for (let i = root.children.length - 1; i >= 0; i--) {
+      const child = root.children[i];
+      const local = child.localName.toLowerCase();
+      if (DISALLOWED_LOCAL.has(local)) {
+        child.remove();
+        continue;
+      }
+      for (const attr of [...child.attributes]) {
+        const name2 = attr.name.toLowerCase();
+        const value2 = attr.value;
+        if (name2.startsWith("on") || /javascript\s*:/i.test(value2) || name2 === "href" && /^\s*javascript:/i.test(value2)) {
+          child.removeAttribute(attr.name);
+        }
+      }
+      stripUnsafeNodes(child);
+    }
+  }
+  function parseUserKmlDocument(text2) {
+    assertSafeKmlXmlText(text2);
+    const doc2 = new DOMParser().parseFromString(text2, "application/xml");
+    if (doc2.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("[entree-carto-geometry-editor] invalid KML XML");
+    }
+    const root = doc2.documentElement;
+    if (!root || root.localName.toLowerCase() !== "kml") {
+      throw new Error("[entree-carto-geometry-editor] KML root element required");
+    }
+    stripUnsafeNodes(root);
+    return doc2;
+  }
   const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat$1 = new KML({ extractStyles: false });
-  function looksLikeKml(raw) {
-    const t = raw.trim();
-    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
-  }
   function looksLikeBbox(raw) {
     try {
       const v = JSON.parse(raw);
@@ -76507,12 +77438,18 @@ Expected function or array of functions, received type ${typeof value2}.`
   function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
     const text2 = raw.trim();
     if (!text2) return [];
-    let features = [];
-    if (looksLikeKml(text2)) {
-      features = kmlFormat$1.readFeatures(text2, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
+    let features;
+    if (looksLikeKmlDocument(text2)) {
+      try {
+        const doc2 = parseUserKmlDocument(text2);
+        features = kmlFormat$1.readFeatures(doc2, {
+          dataProjection: "EPSG:4326",
+          featureProjection: mapProjection
+        });
+      } catch {
+        console.error("[entree-carto-geometry-editor] KML rejected or invalid");
+        return [];
+      }
     } else if (looksLikeBbox(text2)) {
       const bbox = JSON.parse(text2);
       const poly2 = bboxToPolygon(bbox);
@@ -76566,12 +77503,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return value2;
   }
   function serializeFeatures(features, options) {
-    const {
-      geometryType,
-      precision,
-      outputFormat,
-      mapProjection = "EPSG:3857"
-    } = options;
+    const { geometryType, precision, outputFormat, mapProjection = "EPSG:3857" } = options;
     if (!features.length) return "";
     const primary = primaryGeometryType(parseGeometryTypes(geometryType));
     if (outputFormat === "kml") {
@@ -76593,21 +77525,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     if (primary === "MultiCircle") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "circle",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "circle", precision, mapProjection);
       if (s) return s;
     }
     if (primary === "MultiDisc") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "disc",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "disc", precision, mapProjection);
       if (s) return s;
     }
     if ((primary === "Circle" || primary === "Disc") && features.length === 1) {
@@ -76657,11 +77579,118 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return null;
   }
-  const GEOJSON$2 = new GeoJSON();
+  function parseGpuStyle(raw) {
+    if (!raw) return null;
+    if (typeof raw === "string") {
+      try {
+        return parseGpuStyle(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof raw !== "object") return null;
+    return raw;
+  }
+  function parseGpuFont(textFont) {
+    const fallback = {
+      fontSize: 14,
+      fontFamily: "Marianne, Calibri, sans-serif",
+      fontBold: false,
+      fontItalic: false
+    };
+    if (!textFont) return fallback;
+    const fontBold = /\bbold\b/i.test(textFont);
+    const fontItalic = /\bitalic\b/i.test(textFont);
+    const sizeMatch = /(\d+(?:\.\d+)?)\s*pt/i.exec(textFont);
+    const fontSize = sizeMatch ? Math.round(Number(sizeMatch[1])) : fallback.fontSize;
+    const afterPt = textFont.replace(/^.*?\d+(?:\.\d+)?\s*pt\s+/i, "").trim();
+    const fontFamily = afterPt || fallback.fontFamily;
+    return { fontSize, fontFamily, fontBold, fontItalic };
+  }
+  function numOr(value2, fallback) {
+    return typeof value2 === "number" && Number.isFinite(value2) ? value2 : fallback;
+  }
+  function strOr(value2, fallback) {
+    return typeof value2 === "string" && value2.length > 0 ? value2 : fallback;
+  }
+  function kindFromGpuType(gpuGeometryType, feature) {
+    const t = typeof gpuGeometryType === "string" ? gpuGeometryType : "";
+    if (t === "Text") return "text";
+    if (t === "Point") return "point";
+    if (t === "LineString") return "line";
+    if (t === "Polygon") return "polygon";
+    if (t === "Disc") return "disc";
+    if (t === "Circle") return "circle";
+    return featureStyleKindOf(feature);
+  }
+  function gpuClientStyleToFeatureStyleAttrs(kind, style) {
+    const base = defaultFeatureStyleAttrs(kind);
+    const font = parseGpuFont(style.textFont);
+    if (kind === "text") {
+      return {
+        ...base,
+        kind,
+        text: strOr(style.textText, base.text),
+        fontSize: font.fontSize,
+        fontFamily: font.fontFamily,
+        fontBold: font.fontBold,
+        fontItalic: font.fontItalic,
+        fontColor: strOr(style.textFillColor, base.fontColor),
+        textStrokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        textStrokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        strokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        strokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    if (kind === "point") {
+      return {
+        ...base,
+        kind,
+        radius: numOr(style.imageRadius, base.radius),
+        fillColor: strOr(style.imageFillColor ?? style.fillColor, base.fillColor),
+        strokeColor: strOr(style.imageStrokeColor ?? style.strokeColor, base.strokeColor),
+        strokeWidth: numOr(style.imageStrokeWidth ?? style.strokeWidth, base.strokeWidth)
+      };
+    }
+    if (kind === "line") {
+      return {
+        ...base,
+        kind,
+        strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+        strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    return {
+      ...base,
+      kind,
+      fillColor: strOr(style.fillColor ?? style.imageFillColor, base.fillColor),
+      strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+      strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth)
+    };
+  }
+  function adaptGpuClientSketchFeatures(features) {
+    for (const feature of features) {
+      if (feature.get(FEATURE_STYLE_PROP)) continue;
+      const gpuStyle = parseGpuStyle(feature.get("style"));
+      if (!gpuStyle) continue;
+      const kind = kindFromGpuType(feature.get("gpuGeometryType"), feature);
+      const attrs = gpuClientStyleToFeatureStyleAttrs(kind, gpuStyle);
+      applyFeatureStyle(feature, attrs);
+      feature.unset("style");
+    }
+  }
+  const GEOJSON = new GeoJSON();
   const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
+  const SKETCH_PRECISION = 7;
   const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
   function projectionOf(map2) {
     return map2.getView().getProjection();
+  }
+  function mapProjectionCode(map2) {
+    const p5 = projectionOf(map2);
+    return typeof p5 === "string" ? p5 : p5.getCode();
   }
   function cloneForKmlExport(features) {
     return features.map((f) => {
@@ -76689,14 +77718,115 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     restoreFeaturesStyles(features);
   }
-  function readSketchFile(map2, text2, format) {
+  function restoreImportedCircleFeatures(features) {
+    return features.map((f) => {
+      const g = f.getGeometry();
+      if (g instanceof Circle) return f;
+      const kind = f.get(EC_KIND_PROP);
+      if (kind === "disc" || kind === "circle") {
+        return polygonApproxToCircleFeature(f, kind);
+      }
+      return f;
+    });
+  }
+  function copyFeatureProperties(feature, props) {
+    if (!props) return;
+    for (const [key2, value2] of Object.entries(props)) {
+      if (key2 === "geometry") continue;
+      feature.set(key2, value2);
+    }
+  }
+  function readSketchGeoJsonFeature(raw, mapProjection) {
+    const geom = raw.geometry;
+    if (looksLikeCircleOrDisc(geom)) {
+      const feature = featureFromCircleJson(geom, mapProjection);
+      copyFeatureProperties(feature, raw.properties);
+      return [feature];
+    }
+    if (looksLikeMultiCircleOrDisc(geom)) {
+      const features = featuresFromMultiCircleJson(geom, mapProjection);
+      const props = raw.properties;
+      if (props) {
+        for (const f of features) copyFeatureProperties(f, props);
+      }
+      return features;
+    }
+    return GEOJSON.readFeatures(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: mapProjection
+    });
+  }
+  function readSketchGeoJsonObject(map2, data) {
+    const mapProjection = mapProjectionCode(map2);
+    if (!data || typeof data !== "object") return [];
+    const root = data;
+    let features;
+    if (looksLikeMultiCircleOrDisc(data)) {
+      features = featuresFromMultiCircleJson(data, mapProjection);
+    } else if (looksLikeCircleOrDisc(data)) {
+      features = [featureFromCircleJson(data, mapProjection)];
+    } else if (root.type === "FeatureCollection" && Array.isArray(root.features)) {
+      features = root.features.flatMap((f) => readSketchGeoJsonFeature(f, mapProjection));
+    } else if (root.type === "Feature") {
+      features = readSketchGeoJsonFeature(root, mapProjection);
+    } else {
+      features = GEOJSON.readFeatures(
+        { type: "Feature", geometry: data, properties: {} },
+        { dataProjection: "EPSG:4326", featureProjection: mapProjection }
+      );
+    }
+    features = restoreImportedCircleFeatures(features);
+    adaptGpuClientSketchFeatures(features);
+    hydrateImportedSketchFeatures(features);
+    return features;
+  }
+  function writeSketchGeoJsonObject(map2, features) {
+    const mapProjection = mapProjectionCode(map2);
     const opts = {
       featureProjection: projectionOf(map2),
       dataProjection: "EPSG:4326"
     };
-    const features = format === "kml" ? KML_FMT.readFeatures(text2, opts) : GEOJSON$2.readFeatures(JSON.parse(text2), opts);
-    hydrateImportedSketchFeatures(features);
-    return features;
+    const out = features.map((f) => {
+      if (f.getGeometry() instanceof Circle) {
+        const geomJson = JSON.parse(
+          serializeCircleFeature(f, SKETCH_PRECISION, mapProjection)
+        );
+        const props = { ...f.getProperties() };
+        delete props.geometry;
+        return { type: "Feature", geometry: geomJson, properties: props };
+      }
+      return GEOJSON.writeFeatureObject(f, opts);
+    });
+    return { type: "FeatureCollection", features: out };
+  }
+  function sketchFeaturesSnapshot(map2, features) {
+    return JSON.stringify(writeSketchGeoJsonObject(map2, features));
+  }
+  function sketchFeaturesFromSnapshot(map2, raw) {
+    try {
+      return readSketchGeoJsonObject(map2, JSON.parse(raw));
+    } catch {
+      return [];
+    }
+  }
+  function readSketchFile(map2, text2, format) {
+    if (format === "kml") {
+      let features;
+      try {
+        const doc2 = parseUserKmlDocument(text2);
+        features = KML_FMT.readFeatures(doc2, {
+          featureProjection: projectionOf(map2),
+          dataProjection: "EPSG:4326"
+        });
+      } catch {
+        return [];
+      }
+      const restored = restoreImportedCircleFeatures(features);
+      adaptGpuClientSketchFeatures(restored);
+      hydrateImportedSketchFeatures(restored);
+      return restored;
+    }
+    return readSketchGeoJsonObject(map2, JSON.parse(text2));
   }
   function writeSketchFile(map2, source, format) {
     const features = source.getFeatures();
@@ -76705,9 +77835,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       dataProjection: "EPSG:4326"
     };
     if (format === "kml") {
-      return KML_FMT.writeFeatures(cloneForKmlExport(features), opts);
+      const forKml = features.map(
+        (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+      );
+      return KML_FMT.writeFeatures(cloneForKmlExport(forKml), opts);
     }
-    return JSON.stringify(GEOJSON$2.writeFeaturesObject(features, opts), null, 2);
+    return JSON.stringify(writeSketchGeoJsonObject(map2, features), null, 2);
   }
   function downloadBlob(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
@@ -76740,15 +77873,17 @@ Expected function or array of functions, received type ${typeof value2}.`
   function formatFromFilename(name2) {
     return /\.kml$/i.test(name2) ? "kml" : "geojson";
   }
-  const GEOJSON$1 = new GeoJSON();
   const MAX = 50;
+  function sketchHistoryStorageKey(baseKey) {
+    return `${baseKey}:history`;
+  }
   class SketchHistory {
-    constructor(source, getProjection) {
+    constructor(source, getMap) {
       __publicField(this, "undoStack", []);
       __publicField(this, "redoStack", []);
       __publicField(this, "suppress", false);
       this.source = source;
-      this.getProjection = getProjection;
+      this.getMap = getMap;
     }
     /** Enregistre l’état courant (avant mutation ou après stabilisation). */
     push() {
@@ -76781,29 +77916,67 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.restore(next);
       return true;
     }
-    /** Après restoreFromLocalStorage / setFeatures externe. */
+    /** Initialise l’historique depuis l’état courant (sans persistance). */
     resetFromSource() {
       this.undoStack = [this.snapshot()];
       this.redoStack = [];
     }
+    /** Restaure piles + features depuis le dernier Enregistrer. */
+    restoreFromLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return false;
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if ((data == null ? void 0 : data.version) !== 1 || !Array.isArray(data.undo) || !data.undo.length) {
+          return false;
+        }
+        this.undoStack = data.undo.slice(-MAX);
+        this.redoStack = Array.isArray(data.redo) ? data.redo.slice(-MAX) : [];
+        const current = this.undoStack[this.undoStack.length - 1];
+        this.restore(current);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    /** Sérialise les piles undo/redo (appelé au Enregistrer). */
+    persistToLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        if (!this.undoStack.length) {
+          localStorage.removeItem(storageKey);
+          return;
+        }
+        const payload = {
+          version: 1,
+          undo: this.undoStack,
+          redo: this.redoStack
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (err) {
+        console.warn("[SketchHistory] localStorage persist failed", err);
+      }
+    }
+    clearLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+      }
+    }
     snapshot() {
+      const map2 = this.getMap();
+      if (!map2) return '{"type":"FeatureCollection","features":[]}';
       const features = this.source.getFeatures();
-      const projection = this.getProjection();
-      return JSON.stringify(
-        GEOJSON$1.writeFeaturesObject(features, {
-          featureProjection: projection,
-          dataProjection: "EPSG:4326"
-        })
-      );
+      return sketchFeaturesSnapshot(map2, features);
     }
     restore(raw) {
+      const map2 = this.getMap();
+      if (!map2) return;
       this.suppress = true;
       try {
-        const features = GEOJSON$1.readFeatures(JSON.parse(raw), {
-          featureProjection: this.getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const features = sketchFeaturesFromSnapshot(map2, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } finally {
@@ -77035,6 +78208,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   class SketchFeatureStylePopup {
     constructor(map2) {
       __publicField(this, "root");
+      __publicField(this, "overlay");
       __publicField(this, "basicFields");
       __publicField(this, "advancedFields");
       __publicField(this, "advancedToggle");
@@ -77047,31 +78221,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "advancedOpen", false);
       __publicField(this, "outsideDown", false);
       __publicField(this, "mapDragged", false);
-      __publicField(this, "repositionBound", false);
-      __publicField(this, "scrollGuardBound", false);
-      __publicField(this, "mapResizeObserver", null);
-      __publicField(this, "repositionRaf", 0);
+      __publicField(this, "geomChangeKey", null);
       __publicField(this, "onMapPointerDrag", () => {
         this.mapDragged = true;
-      });
-      __publicField(this, "onPopupWheel", (evt) => {
-        evt.stopPropagation();
-        const scroll = this.root.querySelector(
-          ".ec-sketch-style-popup__scroll"
-        );
-        if (!scroll) {
-          evt.preventDefault();
-          return;
-        }
-        const canScroll = scroll.scrollHeight > scroll.clientHeight + 1;
-        if (!canScroll) {
-          evt.preventDefault();
-          return;
-        }
-        const delta = evt.deltaY;
-        const atTop = scroll.scrollTop <= 0 && delta < 0;
-        const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0;
-        if (atTop || atBottom) evt.preventDefault();
       });
       __publicField(this, "onDocPointerDown", (evt) => {
         if (!this.openFlag) return;
@@ -77091,11 +78243,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       __publicField(this, "onViewChange", () => {
         if (!this.openFlag) return;
-        this.scheduleReposition(false);
-      });
-      __publicField(this, "onWindowResize", () => {
-        if (!this.openFlag) return;
-        this.scheduleReposition(true);
+        this.reposition();
       });
       this.map = map2;
       this.root = document.createElement("div");
@@ -77116,9 +78264,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     `;
       this.basicFields = this.root.querySelector('[data-section="basic"]');
       this.advancedFields = this.root.querySelector('[data-section="advanced"]');
-      this.advancedToggle = this.root.querySelector(
-        ".ec-sketch-style-popup__advanced-toggle"
-      );
+      this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
       this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
         <span>Texte</span>
@@ -77234,23 +78380,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         lineCap: this.root.querySelector('[data-input="lineCap"]'),
         lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
         lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
-        lineDashOffsetValue: this.root.querySelector(
-          '[data-output="lineDashOffset"]'
-        ),
+        lineDashOffsetValue: this.root.querySelector('[data-output="lineDashOffset"]'),
         miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
         miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
         fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
         fontBold: this.root.querySelector('[data-input="fontBold"]'),
         fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
         textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
-        textStrokeWidthValue: this.root.querySelector(
-          '[data-output="textStrokeWidth"]'
-        ),
+        textStrokeWidthValue: this.root.querySelector('[data-output="textStrokeWidth"]'),
         pointShape: this.root.querySelector('[data-input="pointShape"]'),
         pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
-        pointRotationValue: this.root.querySelector(
-          '[data-output="pointRotation"]'
-        ),
+        pointRotationValue: this.root.querySelector('[data-output="pointRotation"]'),
         zIndex: this.root.querySelector('[data-input="zIndex"]')
       };
       const syncOutputs = () => {
@@ -77276,7 +78416,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       this.advancedToggle.addEventListener("click", () => {
         this.setAdvancedOpen(!this.advancedOpen);
-        this.reposition();
       });
       this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
         var _a;
@@ -77285,15 +78424,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.hide();
       });
       this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
-      document.body.appendChild(this.root);
-    }
-    scheduleReposition(updateMapSize) {
-      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
-      this.repositionRaf = requestAnimationFrame(() => {
-        this.repositionRaf = 0;
-        if (updateMapSize) this.map.updateSize();
-        this.reposition();
+      this.overlay = new Overlay({
+        element: this.root,
+        positioning: "bottom-center",
+        offset: [0, -8],
+        stopEvent: true
       });
+      this.map.addOverlay(this.overlay);
     }
     open(feature, onCommit) {
       this.unbindOutside();
@@ -77310,7 +78447,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.openFlag = true;
       this.reposition();
       this.bindOutside();
-      this.bindScrollGuard();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
         this.els.text.focus();
         this.els.text.select();
@@ -77318,9 +78454,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     hide() {
       this.unbindOutside();
-      this.unbindScrollGuard();
       this.setAdvancedOpen(false);
       this.root.hidden = true;
+      this.overlay.setPosition(void 0);
       this.openFlag = false;
       this.feature = null;
       this.onCommit = null;
@@ -77331,6 +78467,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     destroy() {
       this.hide();
       for (const p5 of Object.values(this.colorPickers)) p5.destroy();
+      this.map.removeOverlay(this.overlay);
       this.root.remove();
     }
     setAdvancedOpen(open) {
@@ -77345,114 +78482,33 @@ Expected function or array of functions, received type ${typeof value2}.`
       return Object.values(this.colorPickers).some((p5) => p5.containsNode(node));
     }
     bindOutside() {
-      var _a, _b;
+      var _a;
       this.map.on("pointerdrag", this.onMapPointerDrag);
       this.map.getView().on("change:center", this.onViewChange);
       this.map.getView().on("change:resolution", this.onViewChange);
-      this.map.on("change:size", this.onViewChange);
-      window.addEventListener("resize", this.onWindowResize);
-      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", this.onWindowResize);
-      window.addEventListener("scroll", this.onViewChange, true);
       document.addEventListener("pointerdown", this.onDocPointerDown, true);
       document.addEventListener("pointerup", this.onDocPointerUp, true);
-      const mapEl = this.map.getTargetElement();
-      if (mapEl && typeof ResizeObserver !== "undefined") {
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize());
-        this.mapResizeObserver.observe(mapEl);
+      const geom = (_a = this.feature) == null ? void 0 : _a.getGeometry();
+      if (geom) {
+        this.geomChangeKey = geom.on("change", this.onViewChange);
       }
-      this.repositionBound = true;
     }
     unbindOutside() {
-      var _a, _b;
       this.map.un("pointerdrag", this.onMapPointerDrag);
-      if (this.repositionBound) {
-        this.map.getView().un("change:center", this.onViewChange);
-        this.map.getView().un("change:resolution", this.onViewChange);
-        this.map.un("change:size", this.onViewChange);
-        window.removeEventListener("resize", this.onWindowResize);
-        (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", this.onWindowResize);
-        window.removeEventListener("scroll", this.onViewChange, true);
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = null;
-      }
+      this.map.getView().un("change:center", this.onViewChange);
+      this.map.getView().un("change:resolution", this.onViewChange);
       document.removeEventListener("pointerdown", this.onDocPointerDown, true);
       document.removeEventListener("pointerup", this.onDocPointerUp, true);
-      if (this.repositionRaf) {
-        cancelAnimationFrame(this.repositionRaf);
-        this.repositionRaf = 0;
+      if (this.geomChangeKey) {
+        unByKey(this.geomChangeKey);
+        this.geomChangeKey = null;
       }
-      this.repositionBound = false;
     }
-    bindScrollGuard() {
-      if (this.scrollGuardBound) return;
-      this.root.addEventListener("wheel", this.onPopupWheel, {
-        passive: false,
-        capture: true
-      });
-      this.scrollGuardBound = true;
-    }
-    unbindScrollGuard() {
-      if (!this.scrollGuardBound) return;
-      this.root.removeEventListener("wheel", this.onPopupWheel, true);
-      this.scrollGuardBound = false;
-    }
-    /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+    /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const mapSize = this.map.getSize();
-      const anchor = featureStylePopupAnchor(
-        this.feature,
-        mapSize,
-        (c) => this.map.getPixelFromCoordinate(c)
-      );
-      if (!anchor) return;
-      const pixel = this.map.getPixelFromCoordinate(anchor);
-      if (!pixel) return;
-      const mapEl = this.map.getTargetElement();
-      if (!mapEl) return;
-      const mapRect = mapEl.getBoundingClientRect();
-      const tipX = mapRect.left + pixel[0];
-      const tipY = mapRect.top + pixel[1];
-      this.root.style.position = "fixed";
-      this.root.style.zIndex = "10040";
-      this.root.style.left = "0";
-      this.root.style.top = "0";
-      this.root.style.visibility = "hidden";
-      this.root.hidden = false;
-      requestAnimationFrame(() => {
-        const pr = this.root.getBoundingClientRect();
-        const gap = 20;
-        const tipPad = 18;
-        let below = false;
-        let top = tipY - pr.height - gap;
-        if (top < 8) {
-          top = tipY + gap;
-          below = true;
-        }
-        let tipLocalX = pr.width / 2;
-        let left = tipX - tipLocalX;
-        const minLeft = 8;
-        const maxLeft = window.innerWidth - pr.width - 8;
-        if (left < minLeft) {
-          left = minLeft;
-          tipLocalX = tipX - left;
-        } else if (left > maxLeft) {
-          left = maxLeft;
-          tipLocalX = tipX - left;
-        }
-        tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad);
-        left = tipX - tipLocalX;
-        left = Math.min(Math.max(minLeft, left), maxLeft);
-        tipLocalX = tipX - left;
-        top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8);
-        if (!below && top + 4 > tipY) below = true;
-        this.root.style.left = `${left}px`;
-        this.root.style.top = `${top}px`;
-        this.root.style.setProperty("--ec-tip-x", `${tipLocalX}px`);
-        this.root.style.visibility = "visible";
-        this.root.classList.toggle("ec-sketch-style-popup--below", below);
-      });
+      const anchor = featureStylePopupAnchor(this.feature);
+      if (anchor) this.overlay.setPosition(anchor);
     }
     syncFieldsVisibility() {
       const basic = new Set(BASIC_BY_KIND[this.kind]);
@@ -77546,12 +78602,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
         fontBold: this.els.fontBold.checked,
         fontItalic: this.els.fontItalic.checked,
-        textStrokeWidth: clamp(
-          Number(this.els.textStrokeWidth.value),
-          0,
-          20,
-          base.textStrokeWidth
-        ),
+        textStrokeWidth: clamp(Number(this.els.textStrokeWidth.value), 0, 20, base.textStrokeWidth),
         pointShape: shape,
         pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
         zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
@@ -77706,9 +78757,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         offset: [0, -8],
         stopEvent: true
       });
-      overlay.setPosition(
-        measureAnchor(this.map, geom)
-      );
+      overlay.setPosition(measureAnchor(this.map, geom));
       this.map.addOverlay(overlay);
       this.overlays.set(feature, overlay);
       remove2.addEventListener("click", (e) => {
@@ -77720,9 +78769,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const g = feature.getGeometry();
         if (!g) return;
         content.textContent = this.formatFeature(feature);
-        overlay.setPosition(
-          measureAnchor(this.map, g)
-        );
+        overlay.setPosition(measureAnchor(this.map, g));
       });
     }
     formatFeature(feature) {
@@ -77802,8 +78849,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     /** Ouvre la boîte ; résout avec le format choisi ou `null` si annulé. */
     open(defaultFormat = "geojson") {
       if (this.resolve) this.finish(null);
-      return new Promise((resolve) => {
-        this.resolve = resolve;
+      return new Promise((resolve2) => {
+        this.resolve = resolve2;
         this.select.value = defaultFormat;
         this.root.hidden = false;
         document.addEventListener("pointerdown", this.onDocPointerDown, true);
@@ -77827,7 +78874,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       r == null ? void 0 : r(format);
     }
   }
-  const GEOJSON = new GeoJSON();
   const EXTRA_DEFS = {
     Text: {
       id: "text",
@@ -77941,7 +78987,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.applyToolsChrome();
     }
     setMap(map2) {
-      var _a;
       const prev = this.getMap();
       if (prev) {
         this.teardownExtras(prev);
@@ -77956,11 +79001,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.ensureLayer(map2);
       this.mountDrawBar(map2);
       this.placeInGeopfContainer(map2);
-      this.restoreFromLocalStorage();
-      (_a = this.history) == null ? void 0 : _a.resetFromSource();
-      if (this.localStorageKey && this.source.getFeatures().length) {
-        this.savedSnapshot = this.sketchSnapshot();
-      }
+      this.restoreSketchFromLocalStorage();
       this.syncHistoryButtons();
       this.syncSaveButtonState();
     }
@@ -78096,7 +79137,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       var _a, _b, _c, _d;
       if (!this.layer) return;
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
-      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map2.getView().getProjection()) : null;
+      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map2) : null;
       (_b = this.stylePopup) == null ? void 0 : _b.destroy();
       this.stylePopup = null;
       if (this.enableFeatureStyleEditor) {
@@ -78242,18 +79283,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     runImport() {
       const map2 = this.getMap();
       if (!map2) return;
-      pickSketchFile(".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml", (text2, name2) => {
-        var _a;
-        try {
-          const format = formatFromFilename(name2);
-          const features = readSketchFile(map2, text2, format);
-          this.source.addFeatures(features);
-          (_a = this.history) == null ? void 0 : _a.push();
-          this.notifyChange();
-        } catch (err) {
-          console.warn("[SketchControl] import failed", err);
+      pickSketchFile(
+        ".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml",
+        (text2, name2) => {
+          var _a;
+          try {
+            const format = formatFromFilename(name2);
+            const features = readSketchFile(map2, text2, format);
+            this.source.addFeatures(features);
+            (_a = this.history) == null ? void 0 : _a.push();
+            this.notifyChange();
+          } catch (err) {
+            console.warn("[SketchControl] import failed", err);
+          }
         }
-      });
+      );
     }
     async runExport() {
       const map2 = this.getMap();
@@ -78302,14 +79346,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.syncSaveButtonState();
     }
     sketchSnapshot() {
-      var _a;
-      const features = this.getFeatures();
-      return JSON.stringify(
-        GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        })
-      );
+      const map2 = this.getMap();
+      if (!map2) return '{"type":"FeatureCollection","features":[]}';
+      return sketchFeaturesSnapshot(map2, this.getFeatures());
     }
     syncSaveButtonState() {
       if (!this.localStorageKey || !this.drawBar) return;
@@ -78321,38 +79360,59 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.drawBar.setSaveState(dirty ? "dirty" : "saved");
     }
     saveToLocalStorage() {
-      var _a;
+      var _a, _b, _c;
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const features = this.getFeatures();
+        const historyKey = sketchHistoryStorageKey(this.localStorageKey);
         if (!features.length) {
           localStorage.removeItem(this.localStorageKey);
+          (_a = this.history) == null ? void 0 : _a.clearLocalStorage(historyKey);
+          (_b = this.history) == null ? void 0 : _b.resetFromSource();
           this.savedSnapshot = this.sketchSnapshot();
           this.syncSaveButtonState();
+          this.syncHistoryButtons();
           return;
         }
-        const json = GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        localStorage.setItem(this.localStorageKey, JSON.stringify(json));
-        this.savedSnapshot = JSON.stringify(json);
+        const map2 = this.getMap();
+        if (!map2) return;
+        const json = sketchFeaturesSnapshot(map2, features);
+        localStorage.setItem(this.localStorageKey, json);
+        (_c = this.history) == null ? void 0 : _c.persistToLocalStorage(historyKey);
+        this.savedSnapshot = json;
         this.syncSaveButtonState();
+        this.syncHistoryButtons();
       } catch (err) {
         console.warn("[SketchControl] localStorage save failed", err);
       }
     }
-    restoreFromLocalStorage() {
-      var _a;
+    /**
+     * Au montage : dernier Enregistrer (croquis + historique `:history`).
+     * Modifications non enregistrées avant rechargement sont perdues.
+     */
+    restoreSketchFromLocalStorage() {
+      var _a, _b, _c;
+      if (!this.localStorageKey || typeof localStorage === "undefined") {
+        (_a = this.history) == null ? void 0 : _a.resetFromSource();
+        return;
+      }
+      const saved = localStorage.getItem(this.localStorageKey);
+      this.savedSnapshot = saved;
+      const historyKey = sketchHistoryStorageKey(this.localStorageKey);
+      const restoredHistory = this.historyEnabled && saved && ((_b = this.history) == null ? void 0 : _b.restoreFromLocalStorage(historyKey));
+      if (!restoredHistory) {
+        this.restoreSavedSnapshotFromLocalStorage();
+        (_c = this.history) == null ? void 0 : _c.resetFromSource();
+      }
+    }
+    restoreSavedSnapshotFromLocalStorage() {
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const raw = localStorage.getItem(this.localStorageKey);
         if (!raw) return;
-        const features = GEOJSON.readFeatures(JSON.parse(raw), {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const map2 = this.getMap();
+        if (!map2) return;
+        const features = sketchFeaturesFromSnapshot(map2, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } catch (err) {
@@ -78386,6 +79446,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             e.stopPropagation();
             this.setToolsMenuOpen(!this.toolsMenuOpen);
           });
+          appendGeometryToolIcon(btn, "ec-geometry-editor__tool--tools-toggle");
           this.toolsToggleBtn = btn;
         }
         this.toolbarHost.id = this.toolbarDomId;
@@ -78420,12 +79481,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
-  const _hoisted_1$7 = {
+  const _hoisted_1$c = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -78436,13 +79497,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       history: { type: Boolean, default: true },
       zIndex: { default: 500 },
       style: { type: [Object, Array, Function, null], default: null },
-      extraTools: { default: () => [
-        "Text",
-        "Import",
-        "Export",
-        "MeasureDistance",
-        "MeasureArea"
-      ] },
+      extraTools: { default: () => ["Text", "Import", "Export", "MeasureDistance", "MeasureArea"] },
       enableFeatureStyleEditor: { type: Boolean, default: true }
     },
     setup(__props) {
@@ -78462,63 +79517,1003 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$7);
+        return openBlock(), createElementBlock("span", _hoisted_1$c);
       };
     }
   });
-  const _hoisted_1$6 = { class: "ec-fiche-info" };
-  const _hoisted_2$5 = { class: "ec-fiche-info__inner" };
-  const _hoisted_3$5 = { class: "ec-fiche-info__title" };
-  const _hoisted_4$5 = ["innerHTML"];
-  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
-    __name: "FicheInfoPanel",
+  function useMapZoom() {
+    const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+    const mapZoom = /* @__PURE__ */ ref(6);
+    let unbind;
+    function bindMap(map2) {
+      unbind == null ? void 0 : unbind();
+      unbind = void 0;
+      if (!map2) return;
+      const view = map2.getView();
+      const update = () => {
+        mapZoom.value = view.getZoom() ?? mapZoom.value;
+      };
+      update();
+      view.on("change:resolution", update);
+      unbind = () => view.un("change:resolution", update);
+    }
+    watch(() => mapRef.value ?? null, bindMap, { immediate: true });
+    onUnmounted(() => unbind == null ? void 0 : unbind());
+    return { mapZoom };
+  }
+  const GPU_FORCE_OPACITY_PERCENT = 100;
+  function catalogNodeOpacityPercent(node) {
+    if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
+    if (typeof node.gpuDefaultOpacity === "number") return node.gpuDefaultOpacity;
+    return 70;
+  }
+  function catalogChildNodes(node) {
+    return [...node.children ?? [], ...node.hiddenCatalogChildren ?? []];
+  }
+  function catalogSwitcherDisplayNodes(nodes) {
+    var _a;
+    const out = [];
+    for (const node of nodes) {
+      if (node.gpuOnlyLegend) {
+        out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)));
+        continue;
+      }
+      const children = ((_a = node.children) == null ? void 0 : _a.length) ? catalogSwitcherDisplayNodes(node.children) : void 0;
+      out.push({
+        ...node,
+        children: (children == null ? void 0 : children.length) ? children : void 0
+      });
+    }
+    return out;
+  }
+  const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
+  function isHighScaleZoom(zoom, threshold) {
+    return zoom >= threshold;
+  }
+  function legendImageUrl(imagePath, imageName, scaleDependant, threshold, zoom) {
+    let name2 = imageName;
+    if (scaleDependant) {
+      name2 += isHighScaleZoom(zoom, threshold) ? "-highscale" : "-lowscale";
+    }
+    return `${imagePath}${name2}.png`;
+  }
+  function legendImageNamesForItem(item) {
+    var _a;
+    if ((_a = item.legendImageNames) == null ? void 0 : _a.length) return item.legendImageNames;
+    if (item.legendImageName) return [item.legendImageName];
+    return [];
+  }
+  function resolveLegendItemImageUrls(item, zoom) {
+    const path = item.legendImagePath;
+    const names2 = legendImageNamesForItem(item);
+    if (path && names2.length) {
+      const scaleDependant = item.legendScaleDependant === true;
+      const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD;
+      return names2.map((name2) => legendImageUrl(path, name2, scaleDependant, threshold, zoom));
+    }
+    if (item.imageUrl) return [item.imageUrl];
+    return [];
+  }
+  function legendItemVisualKey(item) {
+    var _a;
+    const imagePart = ((_a = item.legendImageNames) == null ? void 0 : _a.length) ? [...item.legendImageNames].sort().join("") : item.legendImageName ?? item.imageUrl ?? "";
+    return `${item.title}${imagePart}${item.legendImagePath ?? ""}`;
+  }
+  function dedupeLegendItems(items) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const item of items) {
+      const key2 = legendItemVisualKey(item);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(item);
+    }
+    return out;
+  }
+  function layerLegendAccordionKey(title, legend) {
+    return `${title}${legend.map(legendItemVisualKey).sort().join("")}`;
+  }
+  function dedupeLegendLayersForPanel(layers) {
+    const seenLegendKeys = /* @__PURE__ */ new Set();
+    const seenAccordionKeys = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const layer of layers) {
+      const legend = dedupeLegendItems(layer.legend ?? []).filter((item) => {
+        const key2 = legendItemVisualKey(item);
+        if (seenLegendKeys.has(key2)) return false;
+        seenLegendKeys.add(key2);
+        return true;
+      });
+      if (!legend.length) continue;
+      const accordionKey = layerLegendAccordionKey(layer.title, legend);
+      if (seenAccordionKeys.has(accordionKey)) continue;
+      seenAccordionKeys.add(accordionKey);
+      out.push({ ...layer, legend });
+    }
+    return out;
+  }
+  function isCatalogAggregate(node) {
+    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
+  }
+  function directCatalogChildren(node) {
+    return catalogChildNodes(node);
+  }
+  function isCheckboxSameAsDirectChildren(checked, node) {
+    const self2 = Boolean(checked[node.id]);
+    for (const child of directCatalogChildren(node)) {
+      if (Boolean(checked[child.id]) !== self2) return false;
+    }
+    return true;
+  }
+  function isSameAsChildrenState(checked, node, opacityById) {
+    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
+    return isOpacitySameAsDirectChildren(node, opacityById);
+  }
+  function isSameAsDescendants(checked, node, index2, opacityById) {
+    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
+    for (const child of directCatalogChildren(node)) {
+      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
+    }
+    return true;
+  }
+  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    const parent = index2.parentById.get(node.id);
+    if (!parent) return false;
+    if (split == null ? void 0 : split.has(parent.id)) {
+      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+    }
+    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
+      return true;
+    }
+    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+  }
+  function isOpacitySameAsDirectChildren(node, opacityById) {
+    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
+    for (const child of directCatalogChildren(node)) {
+      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
+      if (childOpacity !== selfOpacity) return false;
+    }
+    return true;
+  }
+  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
+    if (!node.gpuMapLayer || node.gpuVirtual) return false;
+    if (!checked[node.id]) return false;
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    if ((split == null ? void 0 : split.has(node.id)) && isCatalogAggregate(node) && isSameAsDescendants(checked, node, index2, opacityById)) {
+      return false;
+    }
+    const parent = index2.parentById.get(node.id);
+    if (!parent) {
+      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
+      return catalogChildNodes(node).length === 0;
+    }
+    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
+      return true;
+    }
+    return false;
+  }
+  function propagateCheckedToDescendants(checked, node, value2) {
+    for (const child of directCatalogChildren(node)) {
+      checked[child.id] = value2;
+      propagateCheckedToDescendants(checked, child, value2);
+    }
+  }
+  function propagateCheckedToAncestors(checked, nodeId, index2) {
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return;
+    let parentChecked = false;
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend) continue;
+      if (checked[child.id]) {
+        parentChecked = true;
+        break;
+      }
+    }
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend && Boolean(checked[child.id]) !== parentChecked) {
+        checked[child.id] = parentChecked;
+      }
+    }
+    if (Boolean(checked[parent.id]) !== parentChecked) {
+      checked[parent.id] = parentChecked;
+    }
+    propagateCheckedToAncestors(checked, parent.id, index2);
+  }
+  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
+    const node = index2.nodesById.get(nodeId);
+    if (!node) return;
+    checked[nodeId] = value2;
+    propagateCheckedToAncestors(checked, nodeId, index2);
+    propagateCheckedToDescendants(checked, node, value2);
+  }
+  function computeMapVisibilityById(checked, index2, opacityById, options) {
+    const out = {};
+    for (const node of index2.nodesById.values()) {
+      if (!node.gpuMapLayer) continue;
+      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
+    }
+    return out;
+  }
+  function defaultPanelStateForNode(node) {
+    return {
+      visible: true,
+      opacity: catalogNodeOpacityPercent(node),
+      grayscale: false
+    };
+  }
+  function isUnderHideLayersCatalogBranch(node, parentById) {
+    let parent = parentById.get(node.id) ?? null;
+    while (parent) {
+      if (parent.gpuHideLayers) return true;
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return false;
+  }
+  function isDataLayersPanelEntry(node, checkedById, parentById) {
+    if (!checkedById[node.id] || node.gpuForceOpacity) return false;
+    if (parentById && isUnderHideLayersCatalogBranch(node, parentById)) return false;
+    return true;
+  }
+  function hasActiveMapAggregateAncestor(node, parentById, mapVisibilityById) {
+    let parent = parentById.get(node.id) ?? null;
+    while (parent) {
+      if (isCatalogAggregate(parent) && parent.gpuMapLayer && Boolean(mapVisibilityById[parent.id])) {
+        return true;
+      }
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return false;
+  }
+  function shouldShowInDataLayersStack(node, checkedById, parentById, mapVisibilityById) {
+    if (!isDataLayersPanelEntry(node, checkedById, parentById)) return false;
+    if (node.gpuMapLayer) {
+      if (!mapVisibilityById[node.id]) return false;
+      return !hasActiveMapAggregateAncestor(node, parentById, mapVisibilityById);
+    }
+    if (node.gpuHideLayers) {
+      return collectWmsMapLayerIdsUnder(node).some((id) => Boolean(mapVisibilityById[id]));
+    }
+    return false;
+  }
+  function collectActiveOnlyLegendNodesForLegendsPanel(roots, checkedById, mapVisibilityById) {
+    const out = [];
+    function walk(nodes) {
+      var _a;
+      for (const node of nodes) {
+        if (node.gpuOnlyLegend && ((_a = node.legend) == null ? void 0 : _a.length) && Boolean(checkedById[node.id]) && Boolean(mapVisibilityById[node.id])) {
+          out.push(node);
+        }
+        walk(catalogChildNodes(node));
+      }
+    }
+    walk(roots);
+    return out;
+  }
+  function collectDataLayersStackNodes(roots, checkedById, parentById, mapVisibilityById) {
+    const out = [];
+    function walk(nodes) {
+      for (const node of nodes) {
+        if (shouldShowInDataLayersStack(node, checkedById, parentById, mapVisibilityById)) {
+          out.push(node);
+        }
+        walk(catalogChildNodes(node));
+      }
+    }
+    walk(roots);
+    return out;
+  }
+  function wmsIdsControlledByDataLayersPanelEntry(node, mapVisibilityById) {
+    if (node.gpuMapLayer && mapVisibilityById[node.id]) {
+      return [node.id];
+    }
+    return collectWmsMapLayerIdsUnder(node).filter((id) => Boolean(mapVisibilityById[id]));
+  }
+  function catalogIdsForPanelOpacityWhenEntryAdjusted(node, mapVisibilityById) {
+    if (isCatalogAggregate(node) && node.gpuMapLayer && mapVisibilityById[node.id]) {
+      let walk = function(n) {
+        if (n.gpuForceOpacity) {
+          catalogChildNodes(n).forEach(walk);
+          return;
+        }
+        ids.push(n.id);
+        catalogChildNodes(n).forEach(walk);
+      };
+      const ids = [];
+      walk(node);
+      return ids;
+    }
+    if (node.gpuForceOpacity) return [];
+    return wmsIdsControlledByDataLayersPanelEntry(node, mapVisibilityById);
+  }
+  function collectWmsMapLayerIdsUnder(node, opts) {
+    const ids = [];
+    function walk(n) {
+      if (n.gpuMapLayer) {
+        ids.push(n.id);
+      }
+      for (const child of catalogChildNodes(n)) walk(child);
+    }
+    walk(node);
+    return ids;
+  }
+  function legendFromNode(node) {
+    var _a;
+    return ((_a = node.legend) == null ? void 0 : _a.length) ? node.legend : void 0;
+  }
+  function aggregateStackNodeLegend(node) {
+    const own = legendFromNode(node);
+    if (own) return dedupeLegendItems(own);
+    const items = [];
+    function walk(n) {
+      var _a;
+      if ((_a = n.legend) == null ? void 0 : _a.length) items.push(...n.legend);
+      catalogChildNodes(n).forEach(walk);
+    }
+    for (const child of catalogChildNodes(node)) {
+      walk(child);
+    }
+    const deduped = dedupeLegendItems(items);
+    return deduped.length ? deduped : void 0;
+  }
+  function dataLayersStackToWmsIdsBottomToTop(stackNodesBottomToTop, mapVisibilityById) {
+    const ids = [];
+    for (const node of stackNodesBottomToTop) {
+      ids.push(...wmsIdsControlledByDataLayersPanelEntry(node, mapVisibilityById));
+    }
+    return ids;
+  }
+  function collectForceOpacityWmsIdsBottomToTop(roots, mapVisibilityById) {
+    const ids = [];
+    function walk(nodes) {
+      for (const node of nodes) {
+        if (node.gpuMapLayer && node.gpuForceOpacity && mapVisibilityById[node.id]) {
+          ids.push(node.id);
+        }
+        walk(catalogChildNodes(node));
+      }
+    }
+    walk(roots);
+    return ids;
+  }
+  function mergeWmsStackOrderWithForceOpacityOnTop(panelWmsIdsBottomToTop, roots, mapVisibilityById) {
+    const forceTop = collectForceOpacityWmsIdsBottomToTop(roots, mapVisibilityById);
+    const forceSet = new Set(forceTop);
+    const normal = panelWmsIdsBottomToTop.filter((id) => !forceSet.has(id));
+    return [...normal, ...forceTop];
+  }
+  function pruneSplitAggregateIds(splitIds, checked, index2) {
+    const next = /* @__PURE__ */ new Set();
+    for (const id of splitIds) {
+      const node = index2.nodesById.get(id);
+      if (!node || !isCatalogAggregate(node)) continue;
+      if (!checked[id]) continue;
+      next.add(id);
+    }
+    return next;
+  }
+  function mapVisibilityOptionsFromSplitIds(splitIds) {
+    return splitIds.size ? { splitAggregateIds: splitIds } : void 0;
+  }
+  function aggregateDetailToggleForStackNode(node, splitIds) {
+    if (isCatalogAggregate(node) && !splitIds.has(node.id)) {
+      return { aggregateId: node.id };
+    }
+    return null;
+  }
+  function aggregateRegroupForStackNode(node, splitIds, index2) {
+    const parent = index2.parentById.get(node.id);
+    if (!parent || !splitIds.has(parent.id)) return null;
+    const isDirectChild = catalogChildNodes(parent).some((c) => c.id === node.id);
+    if (!isDirectChild) return null;
+    return { aggregateId: parent.id };
+  }
+  function syncDirectChildrenPanelStateFromAggregate(aggregate, state, patch) {
+    for (const child of catalogChildNodes(aggregate)) {
+      if (child.gpuForceOpacity) continue;
+      patch(child.id, state);
+    }
+  }
+  function aggregatePanelStateAfterRegroup(_aggregate, savedAggregateState, childStates) {
+    const visible = childStates.length > 0 && childStates.some((s) => s.visible);
+    const grayscale = childStates.length > 0 && childStates.every((s) => s.grayscale);
+    return {
+      opacity: savedAggregateState.opacity,
+      visible,
+      grayscale
+    };
+  }
+  function buildCatalogTreeIndex(roots) {
+    const nodesById = /* @__PURE__ */ new Map();
+    const parentById = /* @__PURE__ */ new Map();
+    function walk(node, parent) {
+      nodesById.set(node.id, node);
+      parentById.set(node.id, parent);
+      for (const child of catalogChildNodes(node)) {
+        walk(child, node);
+      }
+    }
+    for (const root of roots) walk(root, null);
+    return { nodesById, parentById, roots };
+  }
+  function catalogAncestorIds(nodeId, parentById) {
+    const ids = [];
+    let parent = parentById.get(nodeId) ?? null;
+    while (parent) {
+      ids.unshift(parent.id);
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return ids;
+  }
+  function flattenCatalogNodes(roots) {
+    const flat = [];
+    function walk(node) {
+      flat.push(node);
+      catalogChildNodes(node).forEach(walk);
+    }
+    roots.forEach(walk);
+    return flat;
+  }
+  function catalogSubtreePartiallyChecked(node, checkedById) {
+    let anyChecked = false;
+    let anyUnchecked = false;
+    function walk(n) {
+      if (checkedById[n.id]) anyChecked = true;
+      else anyUnchecked = true;
+      for (const child of catalogChildNodes(n)) walk(child);
+    }
+    walk(node);
+    return anyChecked && anyUnchecked;
+  }
+  function catalogAncestorIdsToExpand(roots, checkedById) {
+    const expand = /* @__PURE__ */ new Set();
+    function visit(node) {
+      const children = catalogChildNodes(node);
+      if (!children.length) return;
+      if (catalogSubtreePartiallyChecked(node, checkedById)) {
+        expand.add(node.id);
+      }
+      for (const child of children) {
+        visit(child);
+      }
+    }
+    for (const root of roots) visit(root);
+    return expand;
+  }
+  const DEFAULT_GPU_MIN_ZOOM = 0;
+  const DEFAULT_GPU_MAX_ZOOM = 22;
+  function isZoomInLayerRange(zoom, minZoom, maxZoom) {
+    return zoom >= minZoom && zoom <= maxZoom;
+  }
+  function isCatalogNodeInZoomRange(node, zoom) {
+    const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
+    const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM;
+    const children = catalogChildNodes(node);
+    if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
+      return isZoomInLayerRange(zoom, min, max);
+    }
+    if (!children.length) return true;
+    return children.some((child) => isCatalogNodeInZoomRange(child, zoom));
+  }
+  const STACK_SORT_KEY_STEP = 1e3;
+  function ensureStackSortKeys(sortKeyById, catalogStackOrderBottomToTop) {
+    const next = { ...sortKeyById };
+    catalogStackOrderBottomToTop.forEach((id, index2) => {
+      if (next[id] === void 0) {
+        next[id] = (index2 + 1) * STACK_SORT_KEY_STEP;
+      }
+    });
+    return next;
+  }
+  function sortIdsByStackSortKey(sortKeyById, ids) {
+    return [...ids].sort((a, b) => {
+      const ka = sortKeyById[a] ?? Number.MAX_SAFE_INTEGER;
+      const kb = sortKeyById[b] ?? Number.MAX_SAFE_INTEGER;
+      if (ka !== kb) return ka - kb;
+      return a.localeCompare(b);
+    });
+  }
+  function buildFullOrderAfterActiveReorder(sortKeyById, activeTopToBottom) {
+    const activeSet = new Set(activeTopToBottom);
+    const sorted = Object.keys(sortKeyById).sort((a, b) => sortKeyById[a] - sortKeyById[b]);
+    const out = [];
+    let injectedActive = false;
+    for (const id of sorted) {
+      if (activeSet.has(id)) {
+        if (!injectedActive) {
+          out.push(...activeTopToBottom);
+          injectedActive = true;
+        }
+        continue;
+      }
+      out.push(id);
+    }
+    if (!injectedActive) out.push(...activeTopToBottom);
+    return out;
+  }
+  function assignStackSortKeysFromFullOrder(sortKeyById, fullOrder) {
+    const next = { ...sortKeyById };
+    fullOrder.forEach((id, index2) => {
+      next[id] = (index2 + 1) * STACK_SORT_KEY_STEP;
+    });
+    return next;
+  }
+  function activeTopToBottomReplacingAggregateWithChildren(activeTopToBottom, aggregateId, childIdsTopToBottom) {
+    const childSet = new Set(childIdsTopToBottom);
+    const idx = activeTopToBottom.indexOf(aggregateId);
+    if (idx < 0) return activeTopToBottom;
+    const before = activeTopToBottom.slice(0, idx);
+    const after = activeTopToBottom.slice(idx + 1).filter((id) => !childSet.has(id));
+    return [...before, ...childIdsTopToBottom, ...after];
+  }
+  function reassignSortKeysAfterAggregateSplit(sortKeyById, activeTopToBottomBeforeSplit, aggregateId, childIdsTopToBottom) {
+    const newActive = activeTopToBottomReplacingAggregateWithChildren(
+      activeTopToBottomBeforeSplit,
+      aggregateId,
+      childIdsTopToBottom
+    );
+    const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive);
+    return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder);
+  }
+  function reassignSortKeysAfterAggregateRegroup(sortKeyById, activeTopToBottomWithChildren, aggregateId, childIdsTopToBottom) {
+    const childSet = new Set(childIdsTopToBottom);
+    const indices = childIdsTopToBottom.map((id) => activeTopToBottomWithChildren.indexOf(id)).filter((i) => i >= 0);
+    if (!indices.length) return sortKeyById;
+    const insertAt = Math.min(...indices);
+    const newActive = activeTopToBottomWithChildren.filter((id) => !childSet.has(id));
+    newActive.splice(insertAt, 0, aggregateId);
+    const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive);
+    return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder);
+  }
+  function reorderActiveStackSortKeys(sortKeyById, activeTopToBottom, fromDisplayIndex, toInsertBefore) {
+    const order = [...activeTopToBottom];
+    if (fromDisplayIndex < 0 || fromDisplayIndex >= order.length) return sortKeyById;
+    if (toInsertBefore < 0 || toInsertBefore > order.length) return sortKeyById;
+    if (fromDisplayIndex === toInsertBefore || fromDisplayIndex + 1 === toInsertBefore) {
+      return sortKeyById;
+    }
+    const [item] = order.splice(fromDisplayIndex, 1);
+    let insertAt = toInsertBefore;
+    if (fromDisplayIndex < toInsertBefore) insertAt -= 1;
+    order.splice(insertAt, 0, item);
+    const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, order);
+    return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder);
+  }
+  function useManagedLayers(nodes, onMapVisibleChange, mapHooks) {
+    const catalogChecked = /* @__PURE__ */ ref({});
+    const panelStateById = /* @__PURE__ */ ref({});
+    const splitAggregateIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
+    const aggregatePanelSnapshot = /* @__PURE__ */ ref({});
+    let treeIndex = buildCatalogTreeIndex([]);
+    function getPanelState(node) {
+      const existing = panelStateById.value[node.id];
+      if (existing) return existing;
+      const next = defaultPanelStateForNode(node);
+      panelStateById.value = { ...panelStateById.value, [node.id]: next };
+      return next;
+    }
+    function patchPanelState(id, patch) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node) return;
+      const prev = getPanelState(node);
+      panelStateById.value = {
+        ...panelStateById.value,
+        [id]: { ...prev, ...patch }
+      };
+    }
+    function initCatalogCheckedFromConfig(roots) {
+      const next = {};
+      for (const node of flattenCatalogNodes(roots)) {
+        next[node.id] = Boolean(node.visible);
+      }
+      for (const node of flattenCatalogNodes(roots)) {
+        if (next[node.id]) {
+          propagateCheckedToAncestors(next, node.id, treeIndex);
+        }
+      }
+      catalogChecked.value = next;
+    }
+    function opacityById() {
+      const map2 = {};
+      for (const node of treeIndex.nodesById.values()) {
+        const panel = panelStateById.value[node.id];
+        if (panel && !node.gpuForceOpacity) {
+          map2[node.id] = panel.opacity;
+          continue;
+        }
+        if (!node.gpuMapLayer) continue;
+        map2[node.id] = node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : catalogNodeOpacityPercent(node);
+      }
+      return map2;
+    }
+    function syncSplitAggregateIds() {
+      splitAggregateIds.value = pruneSplitAggregateIds(
+        splitAggregateIds.value,
+        catalogChecked.value,
+        treeIndex
+      );
+      const valid = splitAggregateIds.value;
+      const snap2 = { ...aggregatePanelSnapshot.value };
+      for (const id of Object.keys(snap2)) {
+        if (!valid.has(id)) delete snap2[id];
+      }
+      aggregatePanelSnapshot.value = snap2;
+    }
+    function catalogMapVisibility() {
+      return computeMapVisibilityById(
+        catalogChecked.value,
+        treeIndex,
+        opacityById(),
+        mapVisibilityOptionsFromSplitIds(splitAggregateIds.value)
+      );
+    }
+    function toManagedLayer(node) {
+      const state = getPanelState(node);
+      const detailToggle = aggregateDetailToggleForStackNode(node, splitAggregateIds.value);
+      const regroup = aggregateRegroupForStackNode(node, splitAggregateIds.value, treeIndex);
+      return {
+        id: node.id,
+        title: node.title,
+        inStack: true,
+        visible: state.visible,
+        opacity: node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : state.opacity,
+        grayscale: state.grayscale,
+        forceOpacity: Boolean(node.gpuForceOpacity),
+        legend: aggregateStackNodeLegend(node),
+        aggregateDetailToggle: detailToggle ?? void 0,
+        aggregateRegroup: regroup ?? void 0
+      };
+    }
+    function syncMapVisible(wmsCatalogId, visible) {
+      var _a;
+      onMapVisibleChange(wmsCatalogId, visible);
+      (_a = mapHooks == null ? void 0 : mapHooks.onVisible) == null ? void 0 : _a.call(mapHooks, wmsCatalogId, visible);
+    }
+    function applyOpacityToMap(wmsCatalogId, opacity) {
+      var _a;
+      (_a = mapHooks == null ? void 0 : mapHooks.onOpacity) == null ? void 0 : _a.call(mapHooks, wmsCatalogId, opacity);
+    }
+    function applyGrayscaleToMap(wmsCatalogId, grayscale) {
+      var _a;
+      (_a = mapHooks == null ? void 0 : mapHooks.onGrayscale) == null ? void 0 : _a.call(mapHooks, wmsCatalogId, grayscale);
+    }
+    function applyPanelStateToControlledWms(node, state, mapVis) {
+      for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
+        const wmsNode = treeIndex.nodesById.get(wmsId);
+        if (!(wmsNode == null ? void 0 : wmsNode.gpuMapLayer)) continue;
+        syncMapVisible(wmsId, state.visible);
+        if (!wmsNode.gpuForceOpacity) {
+          applyOpacityToMap(wmsId, state.opacity);
+        } else {
+          applyOpacityToMap(wmsId, GPU_FORCE_OPACITY_PERCENT);
+        }
+        applyGrayscaleToMap(wmsId, state.grayscale);
+      }
+    }
+    function syncPanelStateFromControlledWms(node, mapVis) {
+      const wmsIds = wmsIdsControlledByDataLayersPanelEntry(node, mapVis);
+      if (!wmsIds.length) return;
+      const visible = wmsIds.some((id) => Boolean(mapVis[id]));
+      const opacityWmsIds = wmsIds.filter((id) => {
+        const n = treeIndex.nodesById.get(id);
+        return n && !n.gpuForceOpacity;
+      });
+      let opacity = getPanelState(node).opacity;
+      if (opacityWmsIds.length) {
+        const opacities = opacityWmsIds.map(
+          (id) => {
+            var _a;
+            return ((_a = panelStateById.value[id]) == null ? void 0 : _a.opacity) ?? catalogNodeOpacityPercent(treeIndex.nodesById.get(id));
+          }
+        );
+        opacity = opacities[0];
+      }
+      patchPanelState(node.id, { visible, opacity });
+    }
+    function stackNodesBottomToTop() {
+      const mapVis = catalogMapVisibility();
+      return collectDataLayersStackNodes(
+        treeIndex.roots,
+        catalogChecked.value,
+        treeIndex.parentById,
+        mapVis
+      );
+    }
+    function directChildStackIdsInCatalogOrder(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node) return [];
+      const inStack = new Set(stackNodesBottomToTop().map((n) => n.id));
+      return catalogChildNodes(node).map((c) => c.id).filter((id) => inStack.has(id));
+    }
+    const stackSortKeyById = /* @__PURE__ */ ref({});
+    function syncStackSortKeysWithCatalog() {
+      const catalogOrder = stackNodesBottomToTop().map((n) => n.id);
+      stackSortKeyById.value = ensureStackSortKeys(stackSortKeyById.value, catalogOrder);
+    }
+    function stackNodesForDisplayOrder() {
+      const nodes2 = stackNodesBottomToTop();
+      const byId = new Map(nodes2.map((n) => [n.id, n]));
+      const ids = sortIdsByStackSortKey(
+        stackSortKeyById.value,
+        nodes2.map((n) => n.id)
+      );
+      return ids.map((id) => byId.get(id)).filter(Boolean);
+    }
+    function applyMapStackOrderFromDisplay() {
+      var _a;
+      const mapVis = catalogMapVisibility();
+      const nodesBottomToTop = [...stackNodesForDisplayOrder()].reverse();
+      const panelWms = dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis);
+      const ordered = mergeWmsStackOrderWithForceOpacityOnTop(panelWms, treeIndex.roots, mapVis);
+      (_a = mapHooks == null ? void 0 : mapHooks.onStackOrder) == null ? void 0 : _a.call(mapHooks, ordered);
+    }
+    function notifyStackOrder() {
+      applyMapStackOrderFromDisplay();
+    }
+    function reapplyCatalogMapState() {
+      var _a, _b;
+      syncSplitAggregateIds();
+      const mapVis = catalogMapVisibility();
+      for (const node of treeIndex.nodesById.values()) {
+        if (!node.gpuMapLayer) continue;
+        const onMap = mapVis[node.id] ?? false;
+        syncMapVisible(node.id, onMap);
+        if (onMap) {
+          const n = treeIndex.nodesById.get(node.id);
+          const op = n.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : ((_a = panelStateById.value[node.id]) == null ? void 0 : _a.opacity) ?? catalogNodeOpacityPercent(n);
+          applyOpacityToMap(node.id, op);
+          const gs = ((_b = panelStateById.value[node.id]) == null ? void 0 : _b.grayscale) ?? false;
+          applyGrayscaleToMap(node.id, gs);
+        }
+      }
+      for (const node of [...stackNodesBottomToTop()].reverse()) {
+        syncPanelStateFromControlledWms(node, mapVis);
+      }
+      notifyStackOrder();
+    }
+    function isShownInDataLayersPanel(id) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node) return false;
+      return shouldShowInDataLayersStack(
+        node,
+        catalogChecked.value,
+        treeIndex.parentById,
+        catalogMapVisibility()
+      );
+    }
+    watch(
+      () => nodes.value,
+      (roots, prevRoots) => {
+        const prevIds = prevRoots ? flattenCatalogNodes(prevRoots).map((n) => n.id).join("|") : "";
+        const nextIds = flattenCatalogNodes(roots).map((n) => n.id).join("|");
+        const structureChanged = prevIds !== nextIds;
+        treeIndex = buildCatalogTreeIndex(roots);
+        if (structureChanged || !Object.keys(catalogChecked.value).length) {
+          initCatalogCheckedFromConfig(roots);
+        }
+        reapplyCatalogMapState();
+      },
+      { immediate: true }
+    );
+    const stackLayers = computed(() => {
+      return stackNodesBottomToTop().map((node) => toManagedLayer(node));
+    });
+    const layers = computed(() => {
+      const displayTopToBottom = stackNodesForDisplayOrder();
+      const list = displayTopToBottom.map((node) => toManagedLayer(node));
+      const ids = sortIdsByStackSortKey(
+        stackSortKeyById.value,
+        list.map((l) => l.id)
+      );
+      const byId = new Map(list.map((l) => [l.id, l]));
+      return ids.map((id) => byId.get(id));
+    });
+    const legendLayers = computed(() => {
+      const fromStack = layers.value.filter((l) => {
+        var _a;
+        return l.visible && ((_a = l.legend) == null ? void 0 : _a.length);
+      });
+      const seen = new Set(fromStack.map((l) => l.id));
+      const mapVis = catalogMapVisibility();
+      const onlyLegendRows = collectActiveOnlyLegendNodesForLegendsPanel(
+        nodes.value,
+        catalogChecked.value,
+        mapVis
+      ).filter((node) => !seen.has(node.id)).map((node) => ({
+        id: node.id,
+        title: node.title,
+        inStack: false,
+        visible: true,
+        opacity: catalogNodeOpacityPercent(node),
+        grayscale: false,
+        forceOpacity: false,
+        legend: node.legend
+      }));
+      return [...fromStack, ...onlyLegendRows];
+    });
+    const catalogCheckedById = computed(() => {
+      const out = { ...catalogChecked.value };
+      for (const node of treeIndex.nodesById.values()) {
+        if (out[node.id] === void 0) out[node.id] = false;
+      }
+      return out;
+    });
+    function setCatalogChecked(id, checked) {
+      if (!treeIndex.nodesById.has(id)) return;
+      applyUserCatalogToggle(catalogChecked.value, id, checked, treeIndex);
+      catalogChecked.value = { ...catalogChecked.value };
+      reapplyCatalogMapState();
+    }
+    function setInStack(id, inStack) {
+      setCatalogChecked(id, inStack);
+    }
+    function catalogEntryInZoomRange(nodeId, zoom) {
+      const node = treeIndex.nodesById.get(nodeId);
+      if (!node) return true;
+      return isCatalogNodeInZoomRange(node, zoom);
+    }
+    function setVisible(id, visible) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node || !isShownInDataLayersPanel(id)) return;
+      const mapVis = catalogMapVisibility();
+      patchPanelState(id, { visible });
+      for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
+        patchPanelState(wmsId, { visible });
+      }
+      applyPanelStateToControlledWms(node, getPanelState(node), mapVis);
+    }
+    function setOpacity(id, opacity) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node || node.gpuForceOpacity) return;
+      if (!isShownInDataLayersPanel(id)) return;
+      const value2 = Math.min(100, Math.max(0, opacity));
+      const mapVis = catalogMapVisibility();
+      patchPanelState(id, { opacity: value2 });
+      for (const catalogId of catalogIdsForPanelOpacityWhenEntryAdjusted(node, mapVis)) {
+        patchPanelState(catalogId, { opacity: value2 });
+      }
+      applyPanelStateToControlledWms(node, { ...getPanelState(node), opacity: value2 }, mapVis);
+      reapplyCatalogMapState();
+    }
+    function setGrayscale(id, grayscale) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node || !isShownInDataLayersPanel(id)) return;
+      const mapVis = catalogMapVisibility();
+      patchPanelState(id, { grayscale });
+      for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
+        patchPanelState(wmsId, { grayscale });
+      }
+      applyPanelStateToControlledWms(node, getPanelState(node), mapVis);
+    }
+    function toggleGrayscale(id) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node) return;
+      setGrayscale(id, !getPanelState(node).grayscale);
+    }
+    function removeFromStack(id) {
+      setCatalogChecked(id, false);
+    }
+    function enableAggregateDetail(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node || !isCatalogAggregate(node)) return;
+      if (splitAggregateIds.value.has(aggregateId)) return;
+      const activeBeforeSplit = layers.value.map((l) => l.id);
+      aggregatePanelSnapshot.value = {
+        ...aggregatePanelSnapshot.value,
+        [aggregateId]: { ...getPanelState(node) }
+      };
+      const state = getPanelState(node);
+      syncDirectChildrenPanelStateFromAggregate(node, state, (id, partial) => {
+        patchPanelState(id, partial);
+      });
+      splitAggregateIds.value = /* @__PURE__ */ new Set([...splitAggregateIds.value, aggregateId]);
+      const childIds = directChildStackIdsInCatalogOrder(aggregateId);
+      stackSortKeyById.value = reassignSortKeysAfterAggregateSplit(
+        stackSortKeyById.value,
+        activeBeforeSplit,
+        aggregateId,
+        childIds
+      );
+      reapplyCatalogMapState();
+    }
+    function regroupAggregate(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node || !isCatalogAggregate(node)) return;
+      if (!splitAggregateIds.value.has(aggregateId)) return;
+      const activeWithChildren = layers.value.map((l) => l.id);
+      const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId);
+      const saved = aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) };
+      const directChildren = catalogChildNodes(node).filter((c) => !c.gpuForceOpacity);
+      const childStates = directChildren.map((c) => getPanelState(c));
+      const merged = aggregatePanelStateAfterRegroup(node, saved, childStates);
+      patchPanelState(aggregateId, merged);
+      for (const child of directChildren) {
+        patchPanelState(child.id, {
+          opacity: merged.opacity,
+          visible: getPanelState(child).visible,
+          grayscale: getPanelState(child).grayscale
+        });
+      }
+      stackSortKeyById.value = reassignSortKeysAfterAggregateRegroup(
+        stackSortKeyById.value,
+        activeWithChildren,
+        aggregateId,
+        childIdsOrdered
+      );
+      const next = new Set(splitAggregateIds.value);
+      next.delete(aggregateId);
+      splitAggregateIds.value = next;
+      const snap2 = { ...aggregatePanelSnapshot.value };
+      delete snap2[aggregateId];
+      aggregatePanelSnapshot.value = snap2;
+      reapplyCatalogMapState();
+    }
+    watch(
+      () => stackLayers.value.map((l) => l.id).join("|"),
+      () => {
+        syncStackSortKeysWithCatalog();
+      },
+      { immediate: true }
+    );
+    function reorderStackByDisplayIndex(fromDisplayIndex, toInsertBefore) {
+      const activeTopToBottom = layers.value.map((l) => l.id);
+      stackSortKeyById.value = reorderActiveStackSortKeys(
+        stackSortKeyById.value,
+        activeTopToBottom,
+        fromDisplayIndex,
+        toInsertBefore
+      );
+      applyMapStackOrderFromDisplay();
+    }
+    return {
+      layers,
+      stackLayers,
+      legendLayers,
+      catalogCheckedById,
+      setCatalogChecked,
+      setInStack,
+      setVisible,
+      setOpacity,
+      setGrayscale,
+      toggleGrayscale,
+      removeFromStack,
+      reorderStackByDisplayIndex,
+      enableAggregateDetail,
+      regroupAggregate,
+      notifyStackOrder,
+      reapplyCatalogMapState,
+      catalogEntryInZoomRange
+    };
+  }
+  const _hoisted_1$b = ["innerHTML"];
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+    __name: "SanitizedHtml",
     props: {
-      selection: {}
+      html: {}
     },
     setup(__props) {
       const props = __props;
-      const title = computed(() => {
-        var _a;
-        return ((_a = props.selection) == null ? void 0 : _a.title) ?? DEFAULT_FICHE_EMPTY.title;
-      });
-      const bodyHtml = computed(
-        () => {
-          var _a;
-          return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml;
-        }
-      );
+      const safeHtml = computed(() => purify.sanitize(props.html));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("article", _hoisted_1$6, [
-          _cache[0] || (_cache[0] = createBaseVNode("div", {
-            class: "ec-fiche-info__rail",
-            "aria-hidden": "true"
-          }, null, -1)),
-          createBaseVNode("div", _hoisted_2$5, [
-            createBaseVNode("h2", _hoisted_3$5, toDisplayString(title.value), 1),
-            createBaseVNode("div", {
-              class: "ec-fiche-info__body",
-              innerHTML: bodyHtml.value
-            }, null, 8, _hoisted_4$5)
-          ])
-        ]);
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$b);
       };
     }
   });
-  const _hoisted_1$5 = {
+  const _hoisted_1$a = {
     class: "ec-raw-info",
     "aria-label": "Données brutes"
   };
-  const _hoisted_2$4 = {
+  const _hoisted_2$9 = {
     key: 0,
     class: "ec-raw-info__list"
   };
-  const _hoisted_3$4 = { class: "ec-raw-info__key" };
-  const _hoisted_4$4 = { class: "ec-raw-info__val" };
-  const _hoisted_5$3 = {
+  const _hoisted_3$9 = { class: "ec-raw-info__key" };
+  const _hoisted_4$8 = { class: "ec-raw-info__val" };
+  const _hoisted_5$8 = {
     key: 1,
     class: "ec-raw-info__placeholder"
   };
-  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$a = /* @__PURE__ */ defineComponent({
     __name: "RawInfoPanel",
     props: {
       selection: {}
@@ -78535,18 +80530,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         }));
       });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$5, [
-          _cache[1] || (_cache[1] = createBaseVNode("h2", { class: "ec-raw-info__title" }, " Attributs ", -1)),
-          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$4, [
+        return openBlock(), createElementBlock("section", _hoisted_1$a, [
+          _cache[1] || (_cache[1] = createBaseVNode("h2", { class: "ec-raw-info__title" }, "Attributs", -1)),
+          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$9, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(entries2.value, (row) => {
               return openBlock(), createElementBlock("li", {
                 key: row.key
               }, [
-                createBaseVNode("span", _hoisted_3$4, toDisplayString(row.key), 1),
-                createBaseVNode("span", _hoisted_4$4, toDisplayString(row.value), 1)
+                createBaseVNode("span", _hoisted_3$9, toDisplayString(row.key), 1),
+                createBaseVNode("span", _hoisted_4$8, toDisplayString(row.value), 1)
               ]);
             }), 128))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_5$3, [..._cache[0] || (_cache[0] = [
+          ])) : (openBlock(), createElementBlock("div", _hoisted_5$8, [..._cache[0] || (_cache[0] = [
             createBaseVNode("p", null, "Accédez aux informations détaillées", -1),
             createBaseVNode("p", { class: "fr-text--sm" }, " Les attributs bruts de la sélection (GetFeatureInfo) s’afficheront ici. ", -1)
           ])]))
@@ -78554,130 +80549,42 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  class XYZ extends TileImage {
-    /**
-     * @param {Options} [options] XYZ options.
-     */
-    constructor(options) {
-      options = options || {};
-      const projection = options.projection !== void 0 ? options.projection : "EPSG:3857";
-      const tileGrid = options.tileGrid !== void 0 ? options.tileGrid : createXYZ({
-        extent: extentFromProjection(projection),
-        maxResolution: options.maxResolution,
-        maxZoom: options.maxZoom,
-        minZoom: options.minZoom,
-        tileSize: options.tileSize
-      });
-      super({
-        attributions: options.attributions,
-        cacheSize: options.cacheSize,
-        crossOrigin: options.crossOrigin,
-        referrerPolicy: options.referrerPolicy,
-        interpolate: options.interpolate,
-        projection,
-        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-        tileGrid,
-        tileLoadFunction: options.tileLoadFunction,
-        tilePixelRatio: options.tilePixelRatio,
-        tileUrlFunction: options.tileUrlFunction,
-        url: options.url,
-        urls: options.urls,
-        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
-        transition: options.transition,
-        attributionsCollapsible: options.attributionsCollapsible,
-        zDirection: options.zDirection
-      });
-      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
-    }
-    /**
-     * @return {number} Gutter.
-     * @override
-     */
-    getGutter() {
-      return this.gutter_;
-    }
-  }
-  function createBaseLayerPresets() {
-    const plan = new TileLayer({
-      properties: { id: "plan", title: "Plan IGN" },
-      source: new XYZ({
-        url: "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-        attributions: "© IGN — Géoplateforme",
-        maxZoom: 19
-      })
-    });
-    const ortho2 = new TileLayer({
-      visible: false,
-      properties: { id: "ortho", title: "Photographies aériennes" },
-      source: new XYZ({
-        url: "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-        attributions: "© IGN — Géoplateforme",
-        maxZoom: 19
-      })
-    });
-    const blank = new VectorLayer({
-      visible: false,
-      properties: { id: "blank", title: "Fond blanc" },
-      source: new VectorSource(),
-      background: "#ffffff"
-    });
-    return [
-      { id: "plan", label: "Plan IGN", layer: plan },
-      { id: "ortho", label: "Ortho", layer: ortho2 },
-      { id: "blank", label: "Blanc", layer: blank }
-    ];
-  }
-  function setActiveBaseLayer(presets, id) {
-    for (const preset of presets) {
-      preset.layer.setVisible(preset.id === id);
-    }
-  }
-  const _hoisted_1$4 = {
-    class: "ec-tile-switcher",
-    "aria-label": "Fonds de plan"
-  };
-  const _hoisted_2$3 = { class: "ec-tile-switcher__list" };
-  const _hoisted_3$3 = ["aria-pressed", "onClick"];
-  const _hoisted_4$3 = { class: "ec-tile-switcher__label" };
-  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
-    __name: "TileLayerSwitcher",
+  const _hoisted_1$9 = { class: "ec-fiche-info" };
+  const _hoisted_2$8 = { class: "ec-fiche-info__inner" };
+  const _hoisted_3$8 = { class: "ec-fiche-info__title" };
+  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+    __name: "FicheInfoPanel",
     props: {
-      presets: {},
-      modelValue: {}
+      selection: {}
     },
-    emits: ["update:modelValue"],
-    setup(__props, { emit: __emit }) {
+    setup(__props) {
       const props = __props;
-      const emit2 = __emit;
-      function select(id) {
-        setActiveBaseLayer(props.presets, id);
-        emit2("update:modelValue", id);
-      }
-      function thumbClass(id) {
-        return `ec-tile-switcher__thumb ec-tile-switcher__thumb--${id}`;
-      }
+      const title = computed(() => {
+        var _a;
+        return ((_a = props.selection) == null ? void 0 : _a.title) ?? DEFAULT_FICHE_EMPTY.title;
+      });
+      const bodyHtml = computed(() => {
+        var _a;
+        return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml;
+      });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$4, [
-          _cache[0] || (_cache[0] = createBaseVNode("h3", { class: "ec-tile-switcher__title" }, "Fonds de plan", -1)),
-          createBaseVNode("ul", _hoisted_2$3, [
-            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.presets, (preset) => {
-              return openBlock(), createElementBlock("li", {
-                key: preset.id
-              }, [
-                createBaseVNode("button", {
-                  type: "button",
-                  class: normalizeClass(["ec-tile-switcher__tile", { "is-active": __props.modelValue === preset.id }]),
-                  "aria-pressed": __props.modelValue === preset.id,
-                  onClick: ($event) => select(preset.id)
-                }, [
-                  createBaseVNode("span", {
-                    class: normalizeClass(thumbClass(preset.id)),
-                    "aria-hidden": "true"
-                  }, null, 2),
-                  createBaseVNode("span", _hoisted_4$3, toDisplayString(preset.label), 1)
-                ], 10, _hoisted_3$3)
-              ]);
-            }), 128))
+        var _a;
+        return openBlock(), createElementBlock("article", _hoisted_1$9, [
+          _cache[0] || (_cache[0] = createBaseVNode("div", {
+            class: "ec-fiche-info__rail",
+            "aria-hidden": "true"
+          }, null, -1)),
+          createBaseVNode("div", _hoisted_2$8, [
+            createBaseVNode("h2", _hoisted_3$8, toDisplayString(title.value), 1),
+            createVNode(_sfc_main$b, {
+              class: "ec-fiche-info__body",
+              html: bodyHtml.value
+            }, null, 8, ["html"]),
+            ((_a = __props.selection) == null ? void 0 : _a.raw) ? (openBlock(), createBlock(_sfc_main$a, {
+              key: 0,
+              selection: __props.selection,
+              class: "ec-fiche-info__raw"
+            }, null, 8, ["selection"])) : createCommentVNode("", true)
           ])
         ]);
       };
@@ -78690,106 +80597,1083 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const TileLayerSwitcher = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-edd3708c"]]);
-  const _hoisted_1$3 = {
-    class: "ec-tree-layers",
-    "aria-label": "Couches métier"
-  };
-  const _hoisted_2$2 = { class: "ec-tree-layers__list" };
-  const _hoisted_3$2 = { class: "fr-checkbox-group" };
-  const _hoisted_4$2 = ["id", "checked", "onChange"];
-  const _hoisted_5$2 = ["for"];
-  const _hoisted_6$1 = {
-    key: 0,
-    class: "ec-tree-layers__legend"
-  };
-  const _hoisted_7$1 = ["src"];
-  const _hoisted_8$1 = {
+  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-16a786f1"]]);
+  function flattenCatalogSwitcherNodes(roots) {
+    const out = [];
+    function walkLevel(nodes) {
+      var _a;
+      for (const node of catalogSwitcherDisplayNodes(nodes)) {
+        out.push(node);
+        if ((_a = node.children) == null ? void 0 : _a.length) walkLevel(node.children);
+      }
+    }
+    walkLevel(roots);
+    return out;
+  }
+  function normalizeCatalogSearchQuery(raw) {
+    return raw.trim().toLocaleLowerCase("fr");
+  }
+  function catalogNodesMatchingSearch(roots, query) {
+    const q = normalizeCatalogSearchQuery(query);
+    if (!q) return [];
+    return flattenCatalogSwitcherNodes(roots).filter(
+      (node) => node.title.toLocaleLowerCase("fr").includes(q)
+    );
+  }
+  function catalogDomIdFromNodeId(nodeId) {
+    return nodeId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  }
+  const _hoisted_1$8 = ["id"];
+  const _hoisted_2$7 = ["aria-expanded", "aria-label", "onClick"];
+  const _hoisted_3$7 = {
     key: 1,
-    class: "ec-tree-layers__swatch ec-tree-layers__swatch--color",
+    class: "ec-catalog-tree__fold-placeholder",
     "aria-hidden": "true"
   };
-  const _hoisted_9 = {
-    key: 0,
-    class: "ec-tree-layers__hint"
-  };
-  const _hoisted_10 = {
-    key: 1,
-    class: "ec-tree-layers__hint"
-  };
-  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
-    __name: "TreeLayerSwitcher",
+  const _hoisted_4$7 = { class: "fr-checkbox-group ec-catalog-tree__check" };
+  const _hoisted_5$7 = ["id", "checked", "onChange"];
+  const _hoisted_6$6 = ["for"];
+  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+    __name: "CatalogLayerTree",
     props: {
-      nodes: {}
+      nodes: {},
+      checkedById: {},
+      mapZoom: {},
+      depth: {},
+      catalogRoots: {},
+      expandAncestorIds: {},
+      pinnedExpandIds: {},
+      highlightedNodeIds: {},
+      focusCatalogNodeId: {}
     },
-    emits: ["toggle"],
+    emits: ["toggle", "unpin-expand"],
     setup(__props, { emit: __emit }) {
       const props = __props;
       const emit2 = __emit;
-      const flatLegend = computed(() => {
-        const items = [];
-        function walk(nodes) {
-          var _a, _b;
-          for (const n of nodes) {
-            if (n.visible && ((_a = n.legend) == null ? void 0 : _a.length)) items.push(...n.legend);
-            if ((_b = n.children) == null ? void 0 : _b.length) walk(n.children);
-          }
-        }
-        walk(props.nodes);
-        return items;
+      const displayNodes = computed(() => catalogSwitcherDisplayNodes(props.nodes));
+      const expandAncestorIds = computed(() => {
+        if (props.expandAncestorIds) return props.expandAncestorIds;
+        const roots = props.catalogRoots ?? props.nodes;
+        return catalogAncestorIdsToExpand(roots, props.checkedById);
       });
-      function onChange(node, checked) {
+      const collapsedById = /* @__PURE__ */ ref({});
+      watch(
+        () => flattenCatalogNodes(props.catalogRoots ?? props.nodes).map((n) => n.id).join("|"),
+        () => {
+          collapsedById.value = {};
+        }
+      );
+      function isCollapsed(node) {
+        var _a, _b;
+        if ((_a = props.pinnedExpandIds) == null ? void 0 : _a.has(node.id)) return false;
+        if (collapsedById.value[node.id] !== void 0) {
+          return collapsedById.value[node.id];
+        }
+        if (!((_b = node.children) == null ? void 0 : _b.length)) return false;
+        return !expandAncestorIds.value.has(node.id);
+      }
+      function toggleCollapsed(node) {
+        var _a;
+        if ((_a = props.pinnedExpandIds) == null ? void 0 : _a.has(node.id)) {
+          emit2("unpin-expand", node.id);
+          collapsedById.value[node.id] = true;
+          return;
+        }
+        const nextCollapsed = !isCollapsed(node);
+        collapsedById.value[node.id] = nextCollapsed;
+        if (nextCollapsed) emit2("unpin-expand", node.id);
+      }
+      function rowDomId(node) {
+        return `ec-cat-row-${catalogDomIdFromNodeId(node.id)}`;
+      }
+      function isHighlighted(node) {
+        var _a;
+        return Boolean((_a = props.highlightedNodeIds) == null ? void 0 : _a.has(node.id));
+      }
+      watch(
+        () => props.focusCatalogNodeId,
+        (nodeId) => {
+          if (!nodeId || (props.depth ?? 0) > 0) return;
+          nextTick(() => {
+            var _a;
+            (_a = document.getElementById(`ec-cat-row-${catalogDomIdFromNodeId(nodeId)}`)) == null ? void 0 : _a.scrollIntoView({
+              block: "nearest",
+              behavior: "smooth"
+            });
+          });
+        }
+      );
+      function onCheck(node, checked) {
         emit2("toggle", node.id, checked);
       }
+      function rowInZoomRange(node) {
+        return isCatalogNodeInZoomRange(node, props.mapZoom);
+      }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$3, [
-          _cache[0] || (_cache[0] = createBaseVNode("div", { class: "ec-tree-layers__head" }, [
-            createBaseVNode("h3", { class: "ec-tree-layers__title" }, "Afficher")
-          ], -1)),
-          createBaseVNode("ul", _hoisted_2$2, [
-            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.nodes, (node) => {
-              var _a;
-              return openBlock(), createElementBlock("li", {
-                key: node.id,
-                class: "ec-tree-layers__item"
+        const _component_CatalogLayerTree = resolveComponent("CatalogLayerTree", true);
+        return openBlock(), createElementBlock("ul", {
+          class: normalizeClass(["ec-catalog-tree", { "ec-catalog-tree--nested": (__props.depth ?? 0) > 0 }])
+        }, [
+          (openBlock(true), createElementBlock(Fragment, null, renderList(displayNodes.value, (node) => {
+            var _a, _b;
+            return openBlock(), createElementBlock("li", {
+              key: node.id,
+              class: "ec-catalog-tree__item"
+            }, [
+              createBaseVNode("div", {
+                id: rowDomId(node),
+                class: normalizeClass(["ec-catalog-tree__row", {
+                  "ec-not-in-zoom-range": !rowInZoomRange(node),
+                  "ec-catalog-tree__row--highlight": isHighlighted(node)
+                }]),
+                style: normalizeStyle({ paddingLeft: `${(__props.depth ?? 0) * 1.25}rem` })
               }, [
-                createBaseVNode("div", _hoisted_3$2, [
+                ((_a = node.children) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("button", {
+                  key: 0,
+                  type: "button",
+                  class: "ec-catalog-tree__fold fr-btn fr-btn--sm fr-btn--tertiary-no-outline",
+                  "aria-expanded": !isCollapsed(node),
+                  "aria-label": isCollapsed(node) ? "Déplier" : "Replier",
+                  onClick: ($event) => toggleCollapsed(node)
+                }, [
+                  createBaseVNode("span", {
+                    class: normalizeClass(isCollapsed(node) ? "fr-icon-arrow-right-s-line" : "fr-icon-arrow-down-s-line"),
+                    "aria-hidden": "true"
+                  }, null, 2)
+                ], 8, _hoisted_2$7)) : (openBlock(), createElementBlock("span", _hoisted_3$7)),
+                createBaseVNode("div", _hoisted_4$7, [
                   createBaseVNode("input", {
-                    id: `tls-${node.id}`,
+                    id: `ec-cat-${node.id}`,
                     type: "checkbox",
-                    checked: node.visible,
-                    onChange: ($event) => onChange(node, $event.target.checked)
-                  }, null, 40, _hoisted_4$2),
+                    checked: Boolean(__props.checkedById[node.id]),
+                    onChange: ($event) => onCheck(node, $event.target.checked)
+                  }, null, 40, _hoisted_5$7),
                   createBaseVNode("label", {
                     class: "fr-label",
-                    for: `tls-${node.id}`
-                  }, toDisplayString(node.title), 9, _hoisted_5$2)
-                ]),
-                node.visible && ((_a = node.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("ul", _hoisted_6$1, [
-                  (openBlock(true), createElementBlock(Fragment, null, renderList(node.legend, (leg) => {
-                    return openBlock(), createElementBlock("li", {
-                      key: leg.id,
-                      class: "ec-tree-layers__legend-item"
-                    }, [
-                      leg.imageUrl ? (openBlock(), createElementBlock("img", {
-                        key: 0,
-                        class: "ec-tree-layers__swatch",
-                        src: leg.imageUrl,
-                        alt: ""
-                      }, null, 8, _hoisted_7$1)) : (openBlock(), createElementBlock("span", _hoisted_8$1)),
-                      createBaseVNode("span", null, toDisplayString(leg.title), 1)
-                    ]);
-                  }), 128))
-                ])) : createCommentVNode("", true)
+                    for: `ec-cat-${node.id}`
+                  }, toDisplayString(node.title), 9, _hoisted_6$6)
+                ])
+              ], 14, _hoisted_1$8),
+              ((_b = node.children) == null ? void 0 : _b.length) && !isCollapsed(node) ? (openBlock(), createBlock(_component_CatalogLayerTree, {
+                key: 0,
+                nodes: node.children,
+                "checked-by-id": __props.checkedById,
+                "map-zoom": __props.mapZoom,
+                "catalog-roots": __props.catalogRoots ?? __props.nodes,
+                "expand-ancestor-ids": expandAncestorIds.value,
+                "pinned-expand-ids": __props.pinnedExpandIds,
+                "highlighted-node-ids": __props.highlightedNodeIds,
+                depth: (__props.depth ?? 0) + 1,
+                onToggle: _cache[0] || (_cache[0] = (id, checked) => emit2("toggle", id, checked)),
+                onUnpinExpand: _cache[1] || (_cache[1] = (id) => emit2("unpin-expand", id))
+              }, null, 8, ["nodes", "checked-by-id", "map-zoom", "catalog-roots", "expand-ancestor-ids", "pinned-expand-ids", "highlighted-node-ids", "depth"])) : createCommentVNode("", true)
+            ]);
+          }), 128))
+        ], 2);
+      };
+    }
+  });
+  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-13c46eb0"]]);
+  const _hoisted_1$7 = {
+    class: "ec-catalog-search",
+    role: "search"
+  };
+  const _hoisted_2$6 = { class: "fr-input-group" };
+  const _hoisted_3$6 = {
+    key: 0,
+    class: "ec-catalog-search__results"
+  };
+  const _hoisted_4$6 = { class: "fr-checkbox-group ec-catalog-search__check" };
+  const _hoisted_5$6 = ["id", "checked", "onChange"];
+  const _hoisted_6$5 = ["for", "onClick"];
+  const _hoisted_7$5 = {
+    key: 1,
+    class: "ec-catalog-search__empty",
+    role: "status"
+  };
+  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+    __name: "CatalogLayerSearch",
+    props: {
+      roots: {},
+      checkedById: {},
+      mapZoom: {}
+    },
+    emits: ["toggle", "focus-node"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      const emit2 = __emit;
+      const query = /* @__PURE__ */ ref("");
+      const results = computed(() => catalogNodesMatchingSearch(props.roots, query.value));
+      function onCheck(node, checked) {
+        emit2("toggle", node.id, checked);
+      }
+      function onResultLabelClick(node) {
+        emit2("focus-node", node.id);
+      }
+      function rowInZoomRange(node) {
+        return isCatalogNodeInZoomRange(node, props.mapZoom);
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", _hoisted_1$7, [
+          createBaseVNode("div", _hoisted_2$6, [
+            _cache[1] || (_cache[1] = createBaseVNode("label", {
+              class: "fr-label",
+              for: "ec-catalog-layer-search-input"
+            }, " Rechercher ", -1)),
+            withDirectives(createBaseVNode("input", {
+              id: "ec-catalog-layer-search-input",
+              "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => query.value = $event),
+              class: "fr-input",
+              type: "search",
+              name: "q",
+              placeholder: "Rechercher une donnée",
+              "aria-describedby": "ec-catalog-layer-search-messages",
+              autocomplete: "off"
+            }, null, 512), [
+              [vModelText, query.value]
+            ]),
+            _cache[2] || (_cache[2] = createBaseVNode("div", {
+              id: "ec-catalog-layer-search-messages",
+              class: "fr-messages-group",
+              "aria-live": "polite"
+            }, null, -1))
+          ]),
+          query.value.trim() && results.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$6, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(results.value, (node) => {
+              return openBlock(), createElementBlock("li", {
+                key: node.id,
+                class: "ec-catalog-search__result"
+              }, [
+                createBaseVNode("div", {
+                  class: normalizeClass(["ec-catalog-search__result-row", { "ec-not-in-zoom-range": !rowInZoomRange(node) }])
+                }, [
+                  createBaseVNode("div", _hoisted_4$6, [
+                    createBaseVNode("input", {
+                      id: `ec-cat-search-${node.id}`,
+                      type: "checkbox",
+                      checked: Boolean(__props.checkedById[node.id]),
+                      onChange: ($event) => onCheck(node, $event.target.checked)
+                    }, null, 40, _hoisted_5$6),
+                    createBaseVNode("label", {
+                      class: "fr-label",
+                      for: `ec-cat-search-${node.id}`,
+                      onClick: ($event) => onResultLabelClick(node)
+                    }, toDisplayString(node.title), 9, _hoisted_6$5)
+                  ])
+                ], 2)
               ]);
             }), 128))
-          ]),
-          !__props.nodes.length ? (openBlock(), createElementBlock("p", _hoisted_9, " Aucune couche configurée pour le moment. ")) : !flatLegend.value.length ? (openBlock(), createElementBlock("p", _hoisted_10, " Activez une couche pour afficher sa légende. ")) : createCommentVNode("", true)
+          ])) : query.value.trim() && !results.value.length ? (openBlock(), createElementBlock("p", _hoisted_7$5, " Aucune couche ne correspond à « " + toDisplayString(query.value.trim()) + " ». ", 1)) : createCommentVNode("", true)
         ]);
       };
     }
   });
-  const TreeLayerSwitcher = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-c4f63bd0"]]);
+  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-98af09f7"]]);
+  const GPU_TILE_LAYER_SWITCHER_TILE_COORD = [9, 253, -177];
+  const GPU_PREVIEW_TILE_RESOLUTION = 156543.03392804097 / 2 ** GPU_TILE_LAYER_SWITCHER_TILE_COORD[0];
+  function wmtsPreviewTileRow(storedRow) {
+    return -storedRow - 1;
+  }
+  function isWmtsVisibleAtResolution(resolution, minResolution, maxResolution) {
+    if (minResolution !== void 0 && resolution < minResolution) return false;
+    if (maxResolution !== void 0 && resolution >= maxResolution) return false;
+    return true;
+  }
+  function filterThumbnailLayersAtPreviewZoom(layers, resolution = GPU_PREVIEW_TILE_RESOLUTION) {
+    return layers.filter(
+      (l) => isWmtsVisibleAtResolution(resolution, l.minResolution, l.maxResolution)
+    );
+  }
+  function wmtsPreviewTileUrl(entry) {
+    const [matrix2, col, rowStored] = GPU_TILE_LAYER_SWITCHER_TILE_COORD;
+    const row = wmtsPreviewTileRow(rowStored);
+    const format = entry.format ?? "png";
+    const style = entry.style ?? "normal";
+    return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
+  }
+  const _hoisted_1$6 = {
+    class: "ec-base-radio-list",
+    "aria-label": "Fonds de cartes"
+  };
+  const _hoisted_2$5 = { class: "ec-base-radio-list__list" };
+  const _hoisted_3$5 = { class: "ec-base-radio-list__grid" };
+  const _hoisted_4$5 = { class: "ec-base-radio-list__radio-slot" };
+  const _hoisted_5$5 = ["for"];
+  const _hoisted_6$4 = ["id", "value", "checked", "onChange"];
+  const _hoisted_7$4 = { class: "fr-sr-only" };
+  const _hoisted_8$4 = { class: "ec-base-radio-list__thumb-slot" };
+  const _hoisted_9$3 = ["aria-label", "onClick"];
+  const _hoisted_10$3 = {
+    key: 0,
+    class: "ec-base-radio-list__thumb-stack"
+  };
+  const _hoisted_11$3 = ["src"];
+  const _hoisted_12$3 = {
+    key: 1,
+    class: "ec-base-radio-list__thumb ec-base-radio-list__thumb--blank"
+  };
+  const _hoisted_13$2 = { class: "ec-base-radio-list__title-slot" };
+  const _hoisted_14$2 = ["onClick"];
+  const _hoisted_15$1 = { class: "ec-base-radio-list__caret-slot" };
+  const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
+  const _hoisted_17$1 = ["id"];
+  const _hoisted_18$1 = { class: "ec-base-radio-list__subtitle" };
+  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
+    __name: "BaseLayerRadioList",
+    props: {
+      presets: {},
+      modelValue: {}
+    },
+    emits: ["update:modelValue"],
+    setup(__props, { emit: __emit }) {
+      function previewLayers(preset) {
+        return filterThumbnailLayersAtPreviewZoom(preset.thumbnailLayers);
+      }
+      const emit2 = __emit;
+      const openDescriptions = /* @__PURE__ */ reactive({});
+      function isDescriptionOpen(id) {
+        return openDescriptions[id] === true;
+      }
+      function toggleDescription(id) {
+        openDescriptions[id] = !openDescriptions[id];
+      }
+      function select(id) {
+        emit2("update:modelValue", id);
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$6, [
+          createBaseVNode("ul", _hoisted_2$5, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.presets, (preset) => {
+              return openBlock(), createElementBlock("li", {
+                key: preset.id,
+                class: "ec-base-radio-list__item"
+              }, [
+                createBaseVNode("div", _hoisted_3$5, [
+                  createBaseVNode("div", _hoisted_4$5, [
+                    createBaseVNode("label", {
+                      class: "ec-base-radio",
+                      for: `ec-base-${preset.id}`
+                    }, [
+                      createBaseVNode("input", {
+                        id: `ec-base-${preset.id}`,
+                        type: "radio",
+                        class: "ec-base-radio__input",
+                        name: "ec-base-layer",
+                        value: preset.id,
+                        checked: __props.modelValue === preset.id,
+                        onChange: ($event) => select(preset.id)
+                      }, null, 40, _hoisted_6$4),
+                      _cache[0] || (_cache[0] = createBaseVNode("span", {
+                        class: "ec-base-radio__ring",
+                        "aria-hidden": "true"
+                      }, null, -1)),
+                      createBaseVNode("span", _hoisted_7$4, toDisplayString(preset.label), 1)
+                    ], 8, _hoisted_5$5)
+                  ]),
+                  createBaseVNode("div", _hoisted_8$4, [
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: "ec-base-radio-list__thumb-btn",
+                      "aria-label": `Sélectionner ${preset.label}`,
+                      onClick: ($event) => select(preset.id)
+                    }, [
+                      previewLayers(preset).length ? (openBlock(), createElementBlock("span", _hoisted_10$3, [
+                        (openBlock(true), createElementBlock(Fragment, null, renderList(previewLayers(preset), (thumb, thumbIndex) => {
+                          return openBlock(), createElementBlock("img", {
+                            key: `${preset.id}-${thumbIndex}-${thumb.layer}`,
+                            class: normalizeClass(["ec-base-radio-list__thumb-layer", { "ec-base-radio-list__thumb-layer--grayscale": thumb.grayscale }]),
+                            src: unref(wmtsPreviewTileUrl)(thumb),
+                            alt: "",
+                            loading: "lazy",
+                            decoding: "async"
+                          }, null, 10, _hoisted_11$3);
+                        }), 128))
+                      ])) : (openBlock(), createElementBlock("span", _hoisted_12$3))
+                    ], 8, _hoisted_9$3)
+                  ]),
+                  createBaseVNode("div", _hoisted_13$2, [
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: "ec-base-radio-list__title",
+                      onClick: ($event) => select(preset.id)
+                    }, toDisplayString(preset.label), 9, _hoisted_14$2)
+                  ]),
+                  createBaseVNode("div", _hoisted_15$1, [
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: "ec-base-radio-list__caret fr-btn fr-btn--tertiary-no-outline fr-btn--sm",
+                      "aria-expanded": isDescriptionOpen(preset.id),
+                      "aria-controls": `ec-base-desc-${preset.id}`,
+                      "aria-label": isDescriptionOpen(preset.id) ? `Masquer la description de ${preset.label}` : `Afficher la description de ${preset.label}`,
+                      onClick: ($event) => toggleDescription(preset.id)
+                    }, [
+                      createBaseVNode("span", {
+                        class: normalizeClass([
+                          "fr-icon",
+                          isDescriptionOpen(preset.id) ? "fr-icon-arrow-up-s-line" : "fr-icon-arrow-down-s-line"
+                        ]),
+                        "aria-hidden": "true"
+                      }, null, 2)
+                    ], 8, _hoisted_16$1)
+                  ]),
+                  isDescriptionOpen(preset.id) ? (openBlock(), createElementBlock("div", {
+                    key: 0,
+                    id: `ec-base-desc-${preset.id}`,
+                    class: "ec-base-radio-list__details-slot"
+                  }, [
+                    createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
+                    createVNode(_sfc_main$b, {
+                      class: "ec-base-radio-list__desc",
+                      html: preset.description
+                    }, null, 8, ["html"])
+                  ], 8, _hoisted_17$1)) : createCommentVNode("", true)
+                ])
+              ]);
+            }), 128))
+          ])
+        ]);
+      };
+    }
+  });
+  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-ba4d31e9"]]);
+  const _hoisted_1$5 = {
+    class: "ec-layer-catalogue",
+    "aria-labelledby": "ec-layer-catalogue-title"
+  };
+  const _hoisted_2$4 = {
+    class: "fr-nav ec-layer-catalogue__nav",
+    role: "tablist",
+    "aria-label": "Catalogue de couches"
+  };
+  const _hoisted_3$4 = { class: "fr-nav__list" };
+  const _hoisted_4$4 = { class: "fr-nav__item" };
+  const _hoisted_5$4 = ["aria-selected", "aria-current", "tabindex"];
+  const _hoisted_6$3 = { class: "fr-nav__item" };
+  const _hoisted_7$3 = ["aria-selected", "aria-current", "tabindex"];
+  const _hoisted_8$3 = ["hidden"];
+  const _hoisted_9$2 = {
+    key: 1,
+    class: "ec-layer-catalogue__selection"
+  };
+  const _hoisted_10$2 = {
+    key: 2,
+    class: "ec-layer-catalogue__hint"
+  };
+  const _hoisted_11$2 = ["hidden"];
+  const _hoisted_12$2 = {
+    key: 1,
+    class: "ec-layer-catalogue__hint"
+  };
+  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+    __name: "LayerCataloguePanel",
+    props: {
+      layerNodes: {},
+      inStackById: {},
+      mapZoom: {},
+      basePresets: {},
+      baseModelValue: {}
+    },
+    emits: ["update:baseModelValue", "catalog-toggle"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      const emit2 = __emit;
+      const catalogueTab = /* @__PURE__ */ ref("donnees");
+      const catalogTreeIndex = computed(() => buildCatalogTreeIndex(props.layerNodes));
+      const pinnedExpandIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
+      const highlightedNodeIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
+      const focusCatalogNodeId = /* @__PURE__ */ ref(null);
+      let highlightClearTimer;
+      function onCatalogToggle(id, checked) {
+        emit2("catalog-toggle", id, checked);
+      }
+      function onSearchFocusNode(nodeId) {
+        const ancestors = catalogAncestorIds(nodeId, catalogTreeIndex.value.parentById);
+        pinnedExpandIds.value = new Set(ancestors);
+        highlightedNodeIds.value = /* @__PURE__ */ new Set([nodeId]);
+        focusCatalogNodeId.value = nodeId;
+        clearTimeout(highlightClearTimer);
+        highlightClearTimer = setTimeout(() => {
+          highlightedNodeIds.value = /* @__PURE__ */ new Set();
+        }, 2600);
+      }
+      function onUnpinExpand(nodeId) {
+        if (!pinnedExpandIds.value.has(nodeId)) return;
+        const next = new Set(pinnedExpandIds.value);
+        next.delete(nodeId);
+        pinnedExpandIds.value = next;
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$5, [
+          _cache[4] || (_cache[4] = createBaseVNode("h2", {
+            id: "ec-layer-catalogue-title",
+            class: "ec-layer-catalogue__title"
+          }, [
+            createBaseVNode("span", {
+              class: "ri-map-2-line ec-layer-catalogue__title-icon",
+              "aria-hidden": "true"
+            }),
+            createTextVNode(" Catalogue ")
+          ], -1)),
+          createBaseVNode("nav", _hoisted_2$4, [
+            createBaseVNode("ul", _hoisted_3$4, [
+              createBaseVNode("li", _hoisted_4$4, [
+                createBaseVNode("button", {
+                  id: "ec-catalog-tab-donnees",
+                  type: "button",
+                  class: "fr-nav__link ec-layer-catalogue__tab",
+                  role: "tab",
+                  "aria-selected": catalogueTab.value === "donnees",
+                  "aria-current": catalogueTab.value === "donnees" ? "page" : void 0,
+                  "aria-controls": "ec-catalog-panel-donnees",
+                  tabindex: catalogueTab.value === "donnees" ? 0 : -1,
+                  onClick: _cache[0] || (_cache[0] = ($event) => catalogueTab.value = "donnees")
+                }, " Données ", 8, _hoisted_5$4)
+              ]),
+              createBaseVNode("li", _hoisted_6$3, [
+                createBaseVNode("button", {
+                  id: "ec-catalog-tab-fonds",
+                  type: "button",
+                  class: "fr-nav__link ec-layer-catalogue__tab",
+                  role: "tab",
+                  "aria-selected": catalogueTab.value === "fonds",
+                  "aria-current": catalogueTab.value === "fonds" ? "page" : void 0,
+                  "aria-controls": "ec-catalog-panel-fonds",
+                  tabindex: catalogueTab.value === "fonds" ? 0 : -1,
+                  onClick: _cache[1] || (_cache[1] = ($event) => catalogueTab.value = "fonds")
+                }, " Fonds de cartes ", 8, _hoisted_7$3)
+              ])
+            ])
+          ]),
+          createBaseVNode("div", {
+            id: "ec-catalog-panel-donnees",
+            class: "ec-layer-catalogue__panel",
+            role: "tabpanel",
+            "aria-labelledby": "ec-catalog-tab-donnees",
+            hidden: catalogueTab.value !== "donnees"
+          }, [
+            __props.layerNodes.length ? (openBlock(), createBlock(CatalogLayerSearch, {
+              key: 0,
+              roots: __props.layerNodes,
+              "checked-by-id": __props.inStackById,
+              "map-zoom": __props.mapZoom,
+              onToggle: onCatalogToggle,
+              onFocusNode: onSearchFocusNode
+            }, null, 8, ["roots", "checked-by-id", "map-zoom"])) : createCommentVNode("", true),
+            __props.layerNodes.length ? (openBlock(), createElementBlock("div", _hoisted_9$2, [
+              _cache[3] || (_cache[3] = createBaseVNode("h3", {
+                id: "ec-catalog-selection-title",
+                class: "ec-layer-catalogue__section-title"
+              }, " Sélection des données ", -1)),
+              createVNode(CatalogLayerTree, {
+                nodes: __props.layerNodes,
+                "map-zoom": __props.mapZoom,
+                "catalog-roots": __props.layerNodes,
+                "checked-by-id": __props.inStackById,
+                "pinned-expand-ids": pinnedExpandIds.value,
+                "highlighted-node-ids": highlightedNodeIds.value,
+                "focus-catalog-node-id": focusCatalogNodeId.value,
+                onToggle: onCatalogToggle,
+                onUnpinExpand
+              }, null, 8, ["nodes", "map-zoom", "catalog-roots", "checked-by-id", "pinned-expand-ids", "highlighted-node-ids", "focus-catalog-node-id"])
+            ])) : (openBlock(), createElementBlock("p", _hoisted_10$2, "Aucune couche dans LAYER_CONFIG."))
+          ], 8, _hoisted_8$3),
+          createBaseVNode("div", {
+            id: "ec-catalog-panel-fonds",
+            class: "ec-layer-catalogue__panel",
+            role: "tabpanel",
+            "aria-labelledby": "ec-catalog-tab-fonds",
+            hidden: catalogueTab.value !== "fonds"
+          }, [
+            __props.basePresets.length ? (openBlock(), createBlock(BaseLayerRadioList, {
+              key: 0,
+              presets: __props.basePresets,
+              "model-value": __props.baseModelValue,
+              "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("update:baseModelValue", $event))
+            }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_12$2, "Aucun fond de plan configuré."))
+          ], 8, _hoisted_11$2)
+        ]);
+      };
+    }
+  });
+  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-e00379c6"]]);
+  const _hoisted_1$4 = {
+    class: "ec-data-layers",
+    "aria-labelledby": "ec-data-layers-title"
+  };
+  const _hoisted_2$3 = {
+    key: 0,
+    class: "ec-data-layers__hint"
+  };
+  const _hoisted_3$3 = {
+    key: 0,
+    class: "ec-data-layers__drop-marker",
+    "aria-hidden": "true"
+  };
+  const _hoisted_4$3 = ["onDragover"];
+  const _hoisted_5$3 = { class: "ec-data-layers__head" };
+  const _hoisted_6$2 = { class: "ec-data-layers__name" };
+  const _hoisted_7$2 = { class: "ec-data-layers__head-end" };
+  const _hoisted_8$2 = ["onClick"];
+  const _hoisted_9$1 = { class: "fr-sr-only" };
+  const _hoisted_10$1 = ["onClick"];
+  const _hoisted_11$1 = { class: "fr-sr-only" };
+  const _hoisted_12$1 = ["onClick"];
+  const _hoisted_13$1 = ["onDragstart"];
+  const _hoisted_14$1 = { class: "fr-sr-only" };
+  const _hoisted_15 = { class: "ec-data-layers__toolbar" };
+  const _hoisted_16 = ["title", "aria-pressed", "onClick"];
+  const _hoisted_17 = { class: "fr-sr-only" };
+  const _hoisted_18 = ["onClick"];
+  const _hoisted_19 = { class: "fr-sr-only" };
+  const _hoisted_20 = ["title", "aria-pressed", "onClick"];
+  const _hoisted_21 = { class: "fr-sr-only" };
+  const _hoisted_22 = { class: "ec-data-layers__range fr-range-group" };
+  const _hoisted_23 = ["for"];
+  const _hoisted_24 = ["id", "value", "disabled", "title", "onInput"];
+  const _hoisted_25 = ["for"];
+  const _hoisted_26 = {
+    key: 0,
+    class: "ec-data-layers__drop-marker",
+    "aria-hidden": "true"
+  };
+  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
+    __name: "DataLayersManagerPanel",
+    props: {
+      layers: {},
+      mapZoom: {},
+      catalogEntryInZoomRange: { type: Function }
+    },
+    emits: ["visible", "opacity", "toggle-grayscale", "remove", "reorder", "enable-aggregate-detail", "regroup-aggregate"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      function layerInZoomRange(layer) {
+        return props.catalogEntryInZoomRange(layer.id, props.mapZoom);
+      }
+      const emit2 = __emit;
+      const dragLayerId = /* @__PURE__ */ ref(null);
+      const dragInsertIndex = /* @__PURE__ */ ref(null);
+      let dropCommitted = false;
+      function toggleVisible(layer) {
+        emit2("visible", layer.id, !layer.visible);
+      }
+      function openLegendsForLayer(layer) {
+        var _a;
+        (_a = tabPanelsApiRef.value) == null ? void 0 : _a.openLegendForLayer(layer.id);
+      }
+      function onDragStart(event, index2) {
+        const layer = props.layers[index2];
+        if (!layer) return;
+        dropCommitted = false;
+        dragLayerId.value = layer.id;
+        dragInsertIndex.value = index2;
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", layer.id);
+          if (event.target instanceof HTMLElement) {
+            event.dataTransfer.setDragImage(event.target, 12, 12);
+          }
+        }
+      }
+      function clearDragState() {
+        dragLayerId.value = null;
+        dragInsertIndex.value = null;
+      }
+      function onDragEnd() {
+        window.setTimeout(() => {
+          if (!dropCommitted) clearDragState();
+          dropCommitted = false;
+        }, 0);
+      }
+      function insertIndexFromPointer(event, index2, layerCount) {
+        const el = event.currentTarget;
+        const rect = el.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const before = event.clientY < mid ? index2 : index2 + 1;
+        return Math.min(Math.max(0, before), layerCount);
+      }
+      function onItemDragOver(event, index2) {
+        if (!dragLayerId.value) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragInsertIndex.value = insertIndexFromPointer(event, index2, props.layers.length);
+      }
+      function onListDragOver(event) {
+        if (!dragLayerId.value) return;
+        event.preventDefault();
+      }
+      function onTailDragOver(event) {
+        if (!dragLayerId.value) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragInsertIndex.value = props.layers.length;
+      }
+      function onDrop() {
+        const fromIndex = props.layers.findIndex((l) => l.id === dragLayerId.value);
+        const toInsertBefore = dragInsertIndex.value;
+        if (fromIndex >= 0 && toInsertBefore !== null) {
+          emit2("reorder", fromIndex, toInsertBefore);
+          dropCommitted = true;
+        }
+        clearDragState();
+      }
+      function dragFromIndex() {
+        if (!dragLayerId.value) return null;
+        const i = props.layers.findIndex((l) => l.id === dragLayerId.value);
+        return i >= 0 ? i : null;
+      }
+      function showDropMarkerBefore(index2) {
+        const from = dragFromIndex();
+        return from !== null && dragInsertIndex.value === index2;
+      }
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$4, [
+          _cache[6] || (_cache[6] = createBaseVNode("h2", {
+            id: "ec-data-layers-title",
+            class: "ec-data-layers__title"
+          }, [
+            createBaseVNode("i", {
+              class: "ri-stack-line ec-data-layers__title-icon",
+              "aria-hidden": "true"
+            }),
+            createTextVNode(" Couches de données ")
+          ], -1)),
+          !__props.layers.length ? (openBlock(), createElementBlock("p", _hoisted_2$3, " Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données. ")) : (openBlock(), createElementBlock("ul", {
+            key: 1,
+            class: "ec-data-layers__list",
+            onDragover: onListDragOver,
+            onDrop: withModifiers(onDrop, ["prevent"])
+          }, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(__props.layers, (layer, index2) => {
+              var _a;
+              return openBlock(), createElementBlock(Fragment, {
+                key: layer.id
+              }, [
+                showDropMarkerBefore(index2) ? (openBlock(), createElementBlock("li", _hoisted_3$3)) : createCommentVNode("", true),
+                createBaseVNode("li", {
+                  class: normalizeClass(["ec-data-layers__item", {
+                    "ec-data-layers__item--dragging": dragFromIndex() === index2,
+                    "ec-not-in-zoom-range": !layerInZoomRange(layer)
+                  }]),
+                  onDragover: ($event) => onItemDragOver($event, index2),
+                  onDrop: withModifiers(onDrop, ["prevent"])
+                }, [
+                  createBaseVNode("div", _hoisted_5$3, [
+                    createBaseVNode("p", _hoisted_6$2, toDisplayString(layer.title), 1),
+                    createBaseVNode("div", _hoisted_7$2, [
+                      layer.aggregateRegroup ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "ec-data-layers__regroup-handle",
+                        title: "Regrouper en une seule couche (agrégat)",
+                        onClick: ($event) => emit2("regroup-aggregate", layer.aggregateRegroup.aggregateId)
+                      }, [
+                        _cache[0] || (_cache[0] = createBaseVNode("i", {
+                          class: "ri-separator",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createBaseVNode("span", _hoisted_9$1, "Regrouper — " + toDisplayString(layer.title), 1)
+                      ], 8, _hoisted_8$2)) : createCommentVNode("", true),
+                      layer.aggregateDetailToggle ? (openBlock(), createElementBlock("button", {
+                        key: 1,
+                        type: "button",
+                        class: "ec-data-layers__detail-handle",
+                        title: "Détailler les couches (tuiles séparées, réordonnables)",
+                        onClick: ($event) => emit2("enable-aggregate-detail", layer.aggregateDetailToggle.aggregateId)
+                      }, [
+                        _cache[1] || (_cache[1] = createBaseVNode("i", {
+                          class: "ri-list-unordered",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createBaseVNode("span", _hoisted_11$1, "Détailler les couches — " + toDisplayString(layer.title), 1)
+                      ], 8, _hoisted_10$1)) : createCommentVNode("", true),
+                      ((_a = layer.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("button", {
+                        key: 2,
+                        type: "button",
+                        class: "ec-data-layers__legend-btn fr-btn fr-btn--sm fr-btn--secondary",
+                        onClick: ($event) => openLegendsForLayer(layer)
+                      }, [..._cache[2] || (_cache[2] = [
+                        createBaseVNode("i", {
+                          class: "ri-list-indefinite ec-data-layers__legend-icon",
+                          "aria-hidden": "true"
+                        }, null, -1),
+                        createTextVNode(" Légendes ", -1)
+                      ])], 8, _hoisted_12$1)) : createCommentVNode("", true),
+                      createBaseVNode("button", {
+                        type: "button",
+                        class: "ec-data-layers__drag-handle",
+                        draggable: "true",
+                        title: "Glisser pour modifier l’ordre d’affichage",
+                        onDragstart: ($event) => onDragStart($event, index2),
+                        onDragend: onDragEnd
+                      }, [
+                        _cache[3] || (_cache[3] = createBaseVNode("i", {
+                          class: "ri-drag-move-2-fill",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createBaseVNode("span", _hoisted_14$1, "Réordonner " + toDisplayString(layer.title), 1)
+                      ], 40, _hoisted_13$1)
+                    ])
+                  ]),
+                  createBaseVNode("div", _hoisted_15, [
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: "ec-data-layers__icon-btn",
+                      title: layer.visible ? "Masquer la couche" : "Afficher la couche",
+                      "aria-pressed": layer.visible,
+                      onClick: ($event) => toggleVisible(layer)
+                    }, [
+                      createBaseVNode("i", {
+                        class: normalizeClass(layer.visible ? "ri-eye-line" : "ri-eye-off-line"),
+                        "aria-hidden": "true"
+                      }, null, 2),
+                      createBaseVNode("span", _hoisted_17, toDisplayString(layer.visible ? "Masquer" : "Afficher") + " " + toDisplayString(layer.title), 1)
+                    ], 8, _hoisted_16),
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: "ec-data-layers__icon-btn",
+                      title: "Retirer de la pile",
+                      onClick: ($event) => emit2("remove", layer.id)
+                    }, [
+                      _cache[4] || (_cache[4] = createBaseVNode("i", {
+                        class: "ri-delete-bin-line",
+                        "aria-hidden": "true"
+                      }, null, -1)),
+                      createBaseVNode("span", _hoisted_19, "Retirer " + toDisplayString(layer.title), 1)
+                    ], 8, _hoisted_18),
+                    createBaseVNode("button", {
+                      type: "button",
+                      class: normalizeClass(["ec-data-layers__icon-btn", { "ec-data-layers__icon-btn--active": layer.grayscale }]),
+                      title: layer.grayscale ? "Afficher en couleurs" : "Afficher en niveaux de gris",
+                      "aria-pressed": layer.grayscale,
+                      onClick: ($event) => emit2("toggle-grayscale", layer.id)
+                    }, [
+                      _cache[5] || (_cache[5] = createBaseVNode("i", {
+                        class: "ri-contrast-fill",
+                        "aria-hidden": "true"
+                      }, null, -1)),
+                      createBaseVNode("span", _hoisted_21, toDisplayString(layer.grayscale ? "Couleurs" : "Niveaux de gris") + " — " + toDisplayString(layer.title), 1)
+                    ], 10, _hoisted_20),
+                    createBaseVNode("div", _hoisted_22, [
+                      createBaseVNode("label", {
+                        class: "fr-sr-only",
+                        for: `ec-dlm-op-${layer.id}`
+                      }, "Opacité", 8, _hoisted_23),
+                      createBaseVNode("input", {
+                        id: `ec-dlm-op-${layer.id}`,
+                        class: "fr-range",
+                        type: "range",
+                        min: "0",
+                        max: "100",
+                        step: "5",
+                        value: layer.opacity,
+                        disabled: layer.forceOpacity,
+                        title: layer.forceOpacity ? "Opacité fixée par la configuration" : void 0,
+                        onInput: ($event) => emit2("opacity", layer.id, Number($event.target.value))
+                      }, null, 40, _hoisted_24),
+                      createBaseVNode("output", {
+                        class: "ec-data-layers__range-value",
+                        for: `ec-dlm-op-${layer.id}`
+                      }, toDisplayString(layer.opacity) + " % ", 9, _hoisted_25)
+                    ])
+                  ])
+                ], 42, _hoisted_4$3)
+              ], 64);
+            }), 128)),
+            dragLayerId.value && dragInsertIndex.value === __props.layers.length ? (openBlock(), createElementBlock("li", _hoisted_26)) : createCommentVNode("", true),
+            dragLayerId.value ? (openBlock(), createElementBlock("li", {
+              key: 1,
+              class: "ec-data-layers__drop-tail",
+              "aria-hidden": "true",
+              onDragover: onTailDragOver,
+              onDrop: withModifiers(onDrop, ["prevent"])
+            }, null, 32)) : createCommentVNode("", true)
+          ], 32))
+        ]);
+      };
+    }
+  });
+  function rewriteLocalGpuSiteUrl(url) {
+    return url;
+  }
+  const _hoisted_1$3 = {
+    class: "ec-layer-legends",
+    "aria-labelledby": "ec-layer-legends-title"
+  };
+  const _hoisted_2$2 = {
+    key: 0,
+    class: "ec-layer-legends__hint"
+  };
+  const _hoisted_3$2 = {
+    key: 1,
+    class: "fr-accordions-group"
+  };
+  const _hoisted_4$2 = ["id"];
+  const _hoisted_5$2 = { class: "fr-accordion__title" };
+  const _hoisted_6$1 = ["aria-expanded", "aria-controls", "onClick"];
+  const _hoisted_7$1 = ["id"];
+  const _hoisted_8$1 = { class: "ec-layer-legends__collapse-inner" };
+  const _hoisted_9 = {
+    key: 0,
+    class: "ec-layer-legends__list"
+  };
+  const _hoisted_10 = {
+    class: "ec-layer-legends__symbols",
+    "aria-hidden": "true"
+  };
+  const _hoisted_11 = ["src"];
+  const _hoisted_12 = {
+    key: 1,
+    class: "ec-layer-legends__swatch"
+  };
+  const _hoisted_13 = {
+    key: 1,
+    class: "ec-layer-legends__hint"
+  };
+  const _hoisted_14 = {
+    key: 0,
+    class: "ec-layer-legends__hint"
+  };
+  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
+    __name: "LayerLegendsPanel",
+    props: {
+      layers: {},
+      mapZoom: {},
+      catalogEntryInZoomRange: { type: Function }
+    },
+    setup(__props) {
+      const props = __props;
+      const expandedByLayerId = /* @__PURE__ */ ref({});
+      function layerInZoomRange(layer) {
+        return props.catalogEntryInZoomRange(layer.id, props.mapZoom);
+      }
+      function collapseDomId(layerId) {
+        const safe = layerId.replace(/[^a-zA-Z0-9_-]/g, "_");
+        return `ec-legend-collapse-${safe}`;
+      }
+      function sectionDomId(layerId) {
+        const safe = layerId.replace(/[^a-zA-Z0-9_-]/g, "_");
+        return `ec-legend-section-${safe}`;
+      }
+      function isExpanded(layerId) {
+        return Boolean(expandedByLayerId.value[layerId]);
+      }
+      function toggleExpanded(layerId) {
+        expandedByLayerId.value = {
+          ...expandedByLayerId.value,
+          [layerId]: !expandedByLayerId.value[layerId]
+        };
+      }
+      function legendImageSrcs(leg) {
+        return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url));
+      }
+      const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers));
+      const legendItems = computed(() => {
+        var _a;
+        const items = [];
+        for (const layer of displayLayers.value) {
+          if ((_a = layer.legend) == null ? void 0 : _a.length) items.push(...layer.legend);
+        }
+        return items;
+      });
+      async function focusLegendLayer(layerId) {
+        expandedByLayerId.value = {
+          ...expandedByLayerId.value,
+          [layerId]: true
+        };
+        await nextTick();
+        requestAnimationFrame(() => {
+          const el = document.getElementById(sectionDomId(layerId));
+          el == null ? void 0 : el.scrollIntoView({ block: "start", behavior: "smooth" });
+        });
+      }
+      watch(
+        legendPanelFocusRef,
+        (focus2) => {
+          if (!(focus2 == null ? void 0 : focus2.layerId)) return;
+          if (!props.layers.some((l) => l.id === focus2.layerId)) return;
+          void focusLegendLayer(focus2.layerId);
+        },
+        { flush: "post" }
+      );
+      watch(
+        () => props.layers.map((l) => l.id).join("|"),
+        (sig, prev) => {
+          if (sig === prev) return;
+          const ids = new Set(props.layers.map((l) => l.id));
+          const next = {};
+          for (const [id, open] of Object.entries(expandedByLayerId.value)) {
+            if (ids.has(id) && open) next[id] = true;
+          }
+          expandedByLayerId.value = next;
+        }
+      );
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("section", _hoisted_1$3, [
+          _cache[0] || (_cache[0] = createBaseVNode("h2", {
+            id: "ec-layer-legends-title",
+            class: "ec-layer-legends__title"
+          }, [
+            createBaseVNode("span", {
+              class: "ri-list-indefinite ec-layer-legends__title-icon",
+              "aria-hidden": "true"
+            }),
+            createTextVNode(" Légendes ")
+          ], -1)),
+          !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$2, " Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici. ")) : (openBlock(), createElementBlock("div", _hoisted_3$2, [
+            (openBlock(true), createElementBlock(Fragment, null, renderList(displayLayers.value, (layer) => {
+              var _a;
+              return openBlock(), createElementBlock("section", {
+                id: sectionDomId(layer.id),
+                key: layer.id,
+                class: normalizeClass(["fr-accordion", { "ec-not-in-zoom-range": !layerInZoomRange(layer) }])
+              }, [
+                createBaseVNode("h3", _hoisted_5$2, [
+                  createBaseVNode("button", {
+                    type: "button",
+                    class: "fr-accordion__btn",
+                    "aria-expanded": isExpanded(layer.id),
+                    "aria-controls": collapseDomId(layer.id),
+                    onClick: ($event) => toggleExpanded(layer.id)
+                  }, toDisplayString(layer.title), 9, _hoisted_6$1)
+                ]),
+                createBaseVNode("div", {
+                  id: collapseDomId(layer.id),
+                  class: normalizeClass(["fr-collapse", { "fr-collapse--expanded": isExpanded(layer.id) }])
+                }, [
+                  createBaseVNode("div", _hoisted_8$1, [
+                    ((_a = layer.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("ul", _hoisted_9, [
+                      (openBlock(true), createElementBlock(Fragment, null, renderList(layer.legend, (leg) => {
+                        return openBlock(), createElementBlock("li", {
+                          key: leg.id,
+                          class: "ec-layer-legends__item"
+                        }, [
+                          createBaseVNode("span", _hoisted_10, [
+                            legendImageSrcs(leg).length ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(legendImageSrcs(leg), (src, imgIdx) => {
+                              return openBlock(), createElementBlock("img", {
+                                key: imgIdx,
+                                class: "ec-layer-legends__img",
+                                src,
+                                alt: "",
+                                loading: "lazy",
+                                decoding: "async"
+                              }, null, 8, _hoisted_11);
+                            }), 128)) : (openBlock(), createElementBlock("span", _hoisted_12))
+                          ]),
+                          createBaseVNode("span", null, toDisplayString(leg.title), 1)
+                        ]);
+                      }), 128))
+                    ])) : (openBlock(), createElementBlock("p", _hoisted_13, "Pas de légende pour cette couche."))
+                  ])
+                ], 10, _hoisted_7$1)
+              ], 10, _hoisted_4$2);
+            }), 128)),
+            !legendItems.value.length ? (openBlock(), createElementBlock("p", _hoisted_14, " Aucune entrée de légende disponible pour les couches affichées. ")) : createCommentVNode("", true)
+          ]))
+        ]);
+      };
+    }
+  });
+  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-1d4fcda0"]]);
   const _hoisted_1$2 = {
     class: "ec-tab-panels__tabs",
     role: "tablist",
@@ -78807,11 +81691,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     __name: "TabPanelsControl",
     props: {
       basePresets: { default: () => [] },
-      baseModelValue: { default: "plan" },
-      layerNodes: { default: () => [] }
+      baseModelValue: { default: "carte" },
+      layerNodes: { default: () => [] },
+      layerMapHooks: { default: void 0 }
     },
     emits: ["update:baseModelValue", "toggle-layer"],
     setup(__props, { expose: __expose, emit: __emit }) {
+      const props = __props;
       const emit2 = __emit;
       const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
       const rootEl2 = /* @__PURE__ */ ref(null);
@@ -78819,26 +81705,56 @@ Expected function or array of functions, received type ${typeof value2}.`
       const isOpen = /* @__PURE__ */ ref(false);
       const activeTab = /* @__PURE__ */ ref(null);
       const selection = /* @__PURE__ */ ref(null);
+      const layerNodesRef = /* @__PURE__ */ toRef(props, "layerNodes");
+      const { mapZoom } = useMapZoom();
+      const {
+        layers,
+        legendLayers,
+        catalogCheckedById,
+        catalogEntryInZoomRange,
+        setCatalogChecked,
+        setVisible,
+        setOpacity,
+        toggleGrayscale,
+        removeFromStack,
+        reorderStackByDisplayIndex,
+        enableAggregateDetail,
+        regroupAggregate,
+        notifyStackOrder
+      } = useManagedLayers(
+        layerNodesRef,
+        (id, visible) => emit2("toggle-layer", id, visible),
+        props.layerMapHooks
+      );
+      watch(
+        () => layers.value.filter((l) => l.inStack).map((l) => l.id).join(","),
+        () => notifyStackOrder(),
+        { immediate: true }
+      );
       const tabs = [
         {
           id: TAB_PANEL_IDS.fiche,
           label: "Informations / localisation",
-          icon: "fr-icon-map-pin-2-line"
+          iconKind: "dsfr",
+          iconClass: "fr-icon-map-pin-2-line"
         },
         {
-          id: TAB_PANEL_IDS.empty,
-          label: "Onglet réservé",
-          icon: "fr-icon-road-map-line"
+          id: TAB_PANEL_IDS.catalogue,
+          label: "Catalogue",
+          iconKind: "remix",
+          iconClass: "ri-map-2-line"
         },
         {
-          id: TAB_PANEL_IDS.layers,
-          label: "Couches et légende",
-          icon: "fr-icon-layout-grid-line"
+          id: TAB_PANEL_IDS.dataLayers,
+          label: "Couches de données",
+          iconKind: "remix",
+          iconClass: "ri-stack-line"
         },
         {
-          id: TAB_PANEL_IDS.raw,
-          label: "Données brutes",
-          icon: "fr-icon-list-unordered"
+          id: TAB_PANEL_IDS.legends,
+          label: "Légendes",
+          iconKind: "remix",
+          iconClass: "ri-list-indefinite"
         }
       ];
       function openTab(index2) {
@@ -78861,6 +81777,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         selection.value = next;
         openTab(TAB_PANEL_IDS.fiche);
       }
+      function openLegendForLayer(layerId) {
+        legendPanelFocusRef.value = { layerId, at: Date.now() };
+        openTab(TAB_PANEL_IDS.legends);
+      }
       function clearSelection() {
         selection.value = null;
       }
@@ -78872,6 +81792,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const api = {
         openTab,
+        openLegendForLayer,
         closePanels,
         showSelection,
         clearSelection,
@@ -78928,12 +81849,21 @@ Expected function or array of functions, received type ${typeof value2}.`
                 key: tab.id,
                 type: "button",
                 role: "tab",
-                class: normalizeClass(["ec-tab-panels__tab", [tab.icon, { "is-active": isOpen.value && activeTab.value === tab.id }]]),
+                class: normalizeClass(["ec-tab-panels__tab", [
+                  tab.iconKind === "dsfr" ? tab.iconClass : "ec-tab-panels__tab--remix",
+                  { "is-active": isOpen.value && activeTab.value === tab.id }
+                ]]),
                 "aria-selected": isOpen.value && activeTab.value === tab.id,
                 "aria-controls": `ec-tab-panel-${tab.id}`,
                 "aria-label": tab.label,
                 onClick: ($event) => onTabClick(tab.id)
-              }, null, 10, _hoisted_2$1);
+              }, [
+                tab.iconKind === "remix" ? (openBlock(), createElementBlock("i", {
+                  key: 0,
+                  class: normalizeClass(tab.iconClass),
+                  "aria-hidden": "true"
+                }, null, 2)) : createCommentVNode("", true)
+              ], 10, _hoisted_2$1);
             }), 64))
           ]),
           createBaseVNode("div", _hoisted_3$1, [
@@ -78945,43 +81875,57 @@ Expected function or array of functions, received type ${typeof value2}.`
                 hidden: activeTab.value !== unref(TAB_PANEL_IDS).fiche,
                 "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).fiche}`
               }, [
-                createVNode(_sfc_main$6, { selection: selection.value }, null, 8, ["selection"])
+                createVNode(FicheInfoPanel, { selection: selection.value }, null, 8, ["selection"])
               ], 8, _hoisted_5$1),
               createBaseVNode("div", {
-                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).empty}`,
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).catalogue}`,
                 class: "ec-tab-panels__pane",
                 role: "tabpanel",
-                hidden: activeTab.value !== unref(TAB_PANEL_IDS).empty,
-                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).empty}`
-              }, [..._cache[2] || (_cache[2] = [
-                createBaseVNode("p", { class: "ec-tab-panels__empty" }, " Contenu à venir. ", -1)
-              ])], 8, _hoisted_6),
-              createBaseVNode("div", {
-                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).layers}`,
-                class: "ec-tab-panels__pane",
-                role: "tabpanel",
-                hidden: activeTab.value !== unref(TAB_PANEL_IDS).layers,
-                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).layers}`
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).catalogue,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).catalogue}`
               }, [
-                __props.basePresets.length ? (openBlock(), createBlock(TileLayerSwitcher, {
-                  key: 0,
-                  presets: __props.basePresets,
-                  "model-value": __props.baseModelValue,
-                  "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => emit2("update:baseModelValue", $event))
-                }, null, 8, ["presets", "model-value"])) : createCommentVNode("", true),
-                createVNode(TreeLayerSwitcher, {
-                  nodes: __props.layerNodes,
-                  onToggle: _cache[1] || (_cache[1] = (id, visible) => emit2("toggle-layer", id, visible))
-                }, null, 8, ["nodes"])
+                createVNode(LayerCataloguePanel, {
+                  "layer-nodes": __props.layerNodes,
+                  "in-stack-by-id": unref(catalogCheckedById),
+                  "map-zoom": unref(mapZoom),
+                  "base-presets": __props.basePresets,
+                  "base-model-value": __props.baseModelValue,
+                  "onUpdate:baseModelValue": _cache[0] || (_cache[0] = ($event) => emit2("update:baseModelValue", $event)),
+                  onCatalogToggle: unref(setCatalogChecked)
+                }, null, 8, ["layer-nodes", "in-stack-by-id", "map-zoom", "base-presets", "base-model-value", "onCatalogToggle"])
+              ], 8, _hoisted_6),
+              createBaseVNode("div", {
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).dataLayers}`,
+                class: "ec-tab-panels__pane",
+                role: "tabpanel",
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).dataLayers,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).dataLayers}`
+              }, [
+                createVNode(_sfc_main$4, {
+                  layers: unref(layers),
+                  "map-zoom": unref(mapZoom),
+                  "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange),
+                  onVisible: unref(setVisible),
+                  onOpacity: unref(setOpacity),
+                  onToggleGrayscale: unref(toggleGrayscale),
+                  onRemove: unref(removeFromStack),
+                  onReorder: unref(reorderStackByDisplayIndex),
+                  onEnableAggregateDetail: unref(enableAggregateDetail),
+                  onRegroupAggregate: unref(regroupAggregate)
+                }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range", "onVisible", "onOpacity", "onToggleGrayscale", "onRemove", "onReorder", "onEnableAggregateDetail", "onRegroupAggregate"])
               ], 8, _hoisted_7),
               createBaseVNode("div", {
-                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).raw}`,
+                id: `ec-tab-panel-${unref(TAB_PANEL_IDS).legends}`,
                 class: "ec-tab-panels__pane",
                 role: "tabpanel",
-                hidden: activeTab.value !== unref(TAB_PANEL_IDS).raw,
-                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).raw}`
+                hidden: activeTab.value !== unref(TAB_PANEL_IDS).legends,
+                "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).legends}`
               }, [
-                createVNode(_sfc_main$5, { selection: selection.value }, null, 8, ["selection"])
+                createVNode(LayerLegendsPanel, {
+                  layers: unref(legendLayers),
+                  "map-zoom": unref(mapZoom),
+                  "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange)
+                }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range"])
               ], 8, _hoisted_8)
             ])
           ])
@@ -78989,6 +81933,292 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  class XYZ extends TileImage {
+    /**
+     * @param {Options} [options] XYZ options.
+     */
+    constructor(options) {
+      options = options || {};
+      const projection = options.projection !== void 0 ? options.projection : "EPSG:3857";
+      const tileGrid = options.tileGrid !== void 0 ? options.tileGrid : createXYZ({
+        extent: extentFromProjection(projection),
+        maxResolution: options.maxResolution,
+        maxZoom: options.maxZoom,
+        minZoom: options.minZoom,
+        tileSize: options.tileSize
+      });
+      super({
+        attributions: options.attributions,
+        cacheSize: options.cacheSize,
+        crossOrigin: options.crossOrigin,
+        referrerPolicy: options.referrerPolicy,
+        interpolate: options.interpolate,
+        projection,
+        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+        tileGrid,
+        tileLoadFunction: options.tileLoadFunction,
+        tilePixelRatio: options.tilePixelRatio,
+        tileUrlFunction: options.tileUrlFunction,
+        url: options.url,
+        urls: options.urls,
+        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
+        transition: options.transition,
+        attributionsCollapsible: options.attributionsCollapsible,
+        zDirection: options.zDirection
+      });
+      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
+    }
+    /**
+     * @return {number} Gutter.
+     * @override
+     */
+    getGutter() {
+      return this.gutter_;
+    }
+  }
+  const RES_REGION_MIN = 1222.99245256282;
+  const RES_REGION_MAX = 2445.98490512564;
+  const RES_DEPT_MAX = 1222.99245256282;
+  const MAP_PROJECTION = "EPSG:3857";
+  const DATA_PROJECTION = "EPSG:4326";
+  const limitStyle = new Style({
+    stroke: new Stroke({ width: 2, color: "#000000" })
+  });
+  const geoJson = new GeoJSON();
+  let regionsFeatures = null;
+  let departmentsFeatures = null;
+  let regionsLoad = null;
+  let departmentsLoad = null;
+  function readGeoJsonFeatures(data) {
+    return geoJson.readFeatures(data, {
+      dataProjection: DATA_PROJECTION,
+      featureProjection: MAP_PROJECTION
+    });
+  }
+  async function loadRegions() {
+    if (regionsFeatures) return regionsFeatures;
+    if (!regionsLoad) {
+      regionsLoad = fetch("/json-data/region-fr-geojson.json").then(async (res) => {
+        if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`);
+        regionsFeatures = readGeoJsonFeatures(await res.json());
+        return regionsFeatures;
+      }).catch((err) => {
+        regionsLoad = null;
+        throw err;
+      });
+    }
+    return regionsLoad;
+  }
+  async function loadDepartments() {
+    if (departmentsFeatures) return departmentsFeatures;
+    if (!departmentsLoad) {
+      departmentsLoad = fetch("/json-data/department-fr-geojson.json").then(async (res) => {
+        if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`);
+        departmentsFeatures = readGeoJsonFeatures(await res.json());
+        return departmentsFeatures;
+      }).catch((err) => {
+        departmentsLoad = null;
+        throw err;
+      });
+    }
+    return departmentsLoad;
+  }
+  function preloadLimitGeoJson() {
+    void loadRegions().catch((err) => {
+      console.warn("[entree-carto] limites régions", err);
+    });
+    void loadDepartments().catch((err) => {
+      console.warn("[entree-carto] limites départements", err);
+    });
+  }
+  function createLimitVectorLayer(load2, minResolution, maxResolution) {
+    const source = new VectorSource();
+    void load2().then((features) => {
+      source.addFeatures(features);
+      source.changed();
+    }).catch((err) => {
+      console.warn("[entree-carto] limites administratives GeoJSON", err);
+    });
+    return new VectorLayer({
+      visible: false,
+      minResolution,
+      maxResolution,
+      zIndex: 20,
+      style: limitStyle,
+      source,
+      properties: { ecGpuLimitOverlay: true }
+    });
+  }
+  function createLimitRegionalLayer() {
+    return createLimitVectorLayer(loadRegions, RES_REGION_MIN, RES_REGION_MAX);
+  }
+  function createLimitDepartmentalLayer() {
+    return createLimitVectorLayer(loadDepartments, void 0, RES_DEPT_MAX);
+  }
+  function normalizeDir(dir) {
+    return dir.replace(/\/$/, "");
+  }
+  function ignGeoportalAttributionsImgDir(override) {
+    if (override !== void 0 && override !== "") {
+      return normalizeDir(override);
+    }
+    const scriptDir = typeof config.scriptDir === "string" ? normalizeDir(config.scriptDir) : "";
+    if (scriptDir && scriptDir !== "/") {
+      return scriptDir;
+    }
+    return normalizeDir("/");
+  }
+  function ignGeoportalAttributions(options = {}) {
+    const year = options.yearOfIgnCopyright ?? (typeof config.yearOfIgnCopyright === "number" ? config.yearOfIgnCopyright : 2019);
+    const imgDir = ignGeoportalAttributionsImgDir(options.imgDir);
+    return [
+      `<a href="http://www.ign.fr/" target="_blank" class="legal-attribution">© IGN – ${year} – copie et reproduction interdite</a>`,
+      `<a href="http://www.ign.fr/" target="_blank"><img class="map-logo-ign-svg" src="${imgDir}/img/logos/logo-ign.svg" /></a>`,
+      `<a href="http://www.cohesion-territoires.gouv.fr/" target="_blank"><img class="map-logo-ministere-svg" src="${imgDir}/img/logos/logo-ministere.png" /></a>`
+    ];
+  }
+  const RES_ZOOM_17 = 156543.03392804097 / 2 ** 17;
+  const WMTS_CACHE_SIZE = 256;
+  const THUMBNAIL_BY_MAIN_KEY = {
+    cadastreLow: {
+      layer: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+      style: "PCI vecteur",
+      maxResolution: RES_ZOOM_17
+    },
+    cadastreHigh: {
+      layer: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+      style: "PCI vecteur",
+      minResolution: RES_ZOOM_17
+    },
+    planign: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2" },
+    planignGris: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", grayscale: true },
+    ortho: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "jpeg" },
+    names: { layer: "GEOGRAPHICALNAMES.NAMES" },
+    roads: { layer: "TRANSPORTNETWORKS.ROADS" },
+    limitesAdmin: { layer: "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST" },
+    limitRegional: null,
+    limitDepartmental: null,
+    blank: null
+  };
+  function buildPreset(input) {
+    const thumbnailLayers = input.stack.map((key2) => THUMBNAIL_BY_MAIN_KEY[key2]).filter((t) => t != null);
+    return {
+      ...input,
+      thumbnailLayers,
+      layerKeys: input.stack
+    };
+  }
+  function wmtsLayer(layer, format = "png", options) {
+    const style = (options == null ? void 0 : options.style) ?? "normal";
+    const tileLayer = new TileLayer({
+      visible: false,
+      className: (options == null ? void 0 : options.grayscale) ? "ec-gpu-layer-grayscale" : void 0,
+      minResolution: options == null ? void 0 : options.minResolution,
+      maxResolution: options == null ? void 0 : options.maxResolution,
+      source: new XYZ({
+        url: `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`,
+        attributions: () => ignGeoportalAttributions(),
+        attributionsCollapsible: false,
+        crossOrigin: "anonymous",
+        maxZoom: 19,
+        cacheSize: WMTS_CACHE_SIZE
+      })
+    });
+    if (options == null ? void 0 : options.grayscale) {
+      tileLayer.set("grayscale", true);
+    }
+    return tileLayer;
+  }
+  function createMainLayerPool() {
+    return {
+      cadastreLow: wmtsLayer("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", "png", {
+        style: "PCI vecteur",
+        maxResolution: RES_ZOOM_17
+      }),
+      cadastreHigh: wmtsLayer("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", "png", {
+        style: "PCI vecteur",
+        minResolution: RES_ZOOM_17
+      }),
+      planign: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2"),
+      planignGris: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", "png", { grayscale: true }),
+      ortho: wmtsLayer("ORTHOIMAGERY.ORTHOPHOTOS", "jpeg"),
+      names: wmtsLayer("GEOGRAPHICALNAMES.NAMES"),
+      roads: wmtsLayer("TRANSPORTNETWORKS.ROADS"),
+      limitesAdmin: wmtsLayer("LIMITES_ADMINISTRATIVES_EXPRESS.LATEST"),
+      limitRegional: createLimitRegionalLayer(),
+      limitDepartmental: createLimitDepartmentalLayer(),
+      blank: new VectorLayer({
+        visible: false,
+        source: new VectorSource(),
+        background: "#ffffff"
+      })
+    };
+  }
+  const LIMIT_STACK = ["limitRegional", "limitDepartmental"];
+  const PRESET_INPUTS = [
+    {
+      id: "carte",
+      label: "Plan IGN",
+      subtitle: "Plan IGN — WMTS",
+      description: "Cartographie multi-échelles sur le territoire national, issue de bases de données vecteur de l’IGN, mise à jour régulièrement et réalisée selon un processus entièrement automatisé.",
+      stack: ["cadastreLow", "planign", ...LIMIT_STACK]
+    },
+    {
+      id: "carte-nb",
+      label: "Plan IGN Noir & Blanc",
+      subtitle: "Plan IGN — WMTS",
+      description: "Cartographie multi-échelles sur le territoire national, issue de bases de données vecteur de l’IGN, mise à jour régulièrement et réalisée selon un processus entièrement automatisé en niveaux de gris.",
+      stack: ["cadastreLow", "planignGris", ...LIMIT_STACK]
+    },
+    {
+      id: "photo",
+      label: "Photographies aériennes",
+      subtitle: "Orthophotos — WMTS",
+      description: 'Photographies aériennes. Date de prise de vue aérienne disponible via cet url: <a target="_blank" href="https://data.geopf.fr/annexes/ressources/fiches/photographies-aeriennes-RVB/geoportail_dates_des_prises_de_vues_aeriennes-RVB.pdf">https://data.geopf.fr/annexes/ressources/fiches/photographies-aeriennes-RVB/geoportail_dates_des_prises_de_vues_aeriennes-RVB.pdf</a>',
+      stack: ["cadastreLow", "ortho", ...LIMIT_STACK]
+    },
+    {
+      id: "mixte",
+      label: "Mixte",
+      subtitle: "Orthophotos + Routes - WMTS",
+      description: "Combinaison de photographies aériennes et de réseaux de transports.",
+      stack: ["cadastreLow", "ortho", "names", "roads", "limitesAdmin", ...LIMIT_STACK]
+    },
+    {
+      id: "cadastre",
+      label: "Cadastre",
+      subtitle: "Parcellaire cadastral édition : 2026-06-01 — WMTS Géoplateforme",
+      description: '<br>Métadonnées<br><a target="_blank" href="https://data.geopf.fr/csw?REQUEST=GetRecordById&amp;SERVICE=CSW&amp;VERSION=2.0.2&amp;OUTPUTSCHEMA=http://standards.iso.org/iso/19115/-3/mdb/2.0&amp;elementSetName=full&amp;ID=IGNF_PARCELLAIRE-EXPRESS-PCI">https://data.geopf.fr/csw?REQUEST=GetRecordById&amp;SERVICE=CSW&amp;VERSION=2.0.2&amp;OUTPUTSCHEMA=http://standards.iso.org/iso/19115/-3/mdb/2.0&amp;elementSetName=full&amp;ID=IGNF_PARCELLAIRE-EXPRESS-PCI</a><br><a target="_blank"href="https://cartes.gouv.fr/catalogue/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI">https://cartes.gouv.fr/catalogue/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI</a><br><a target="_blank" href="https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI">https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PARCELLAIRE-EXPRESS-PCI</a><br><br>Légende<br><a class="fr-link" href="https://data.geopf.fr/annexes/ressources/legendes/CADASTRALPARCELS.PARCELLAIRE_EXPRESS.png" target="_blank">Du 1/0 au 1/560000000</a><br><a class="fr-link" href="https://data.geopf.fr/annexes/ressources/legendes/CADASTRALPARCELS.PARCELLAIRE_EXPRESS-legend.png" target="_blank">Du 1/1000 au 1/560000000</a>',
+      stack: ["cadastreLow", "cadastreHigh", ...LIMIT_STACK]
+    },
+    {
+      id: "blank",
+      label: "Fond blanc",
+      subtitle: "Couche vectorielle vide",
+      description: "Aucun fond cartographique : met en avant uniquement les couches de données actives.",
+      stack: ["blank"]
+    }
+  ];
+  function createGpuBaseLayerEnvironment() {
+    preloadLimitGeoJson();
+    const mainLayers = createMainLayerPool();
+    const presets = PRESET_INPUTS.map(buildPreset);
+    return {
+      presets,
+      mainLayers,
+      allLayers: Object.values(mainLayers)
+    };
+  }
+  function setActiveGpuBaseLayer(env, id) {
+    for (const layer of env.allLayers) {
+      layer.setVisible(false);
+    }
+    const preset = env.presets.find((p5) => p5.id === id);
+    if (!preset) return;
+    for (const key2 of preset.stack) {
+      env.mainLayers[key2].setVisible(true);
+    }
+  }
   const _hoisted_1$1 = {
     class: "ec-embed-viewer gpu-client",
     "data-testid": "embed-map-viewer"
@@ -79000,39 +82230,48 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(__props) {
       const props = __props;
-      const presets = createBaseLayerPresets();
-      const activeBase = /* @__PURE__ */ ref("plan");
-      const baseLayers = computed(() => presets.map((p5) => p5.layer));
+      const gpuBaseEnv = createGpuBaseLayerEnvironment();
+      const presets = gpuBaseEnv.presets;
+      const activeBase = /* @__PURE__ */ ref("carte");
+      setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value);
+      const baseLayers = computed(() => gpuBaseEnv.allLayers);
       const initialSearch = computed(() => {
         var _a;
         return ((_a = props.params) == null ? void 0 : _a.search) ?? null;
       });
       const layerNodes = /* @__PURE__ */ ref([]);
+      function onUpdateBase(id) {
+        activeBase.value = id;
+        setActiveGpuBaseLayer(gpuBaseEnv, id);
+      }
       function onToggleLayer(id, visible) {
         const node = layerNodes.value.find((n) => n.id === id);
         if (node) node.visible = visible;
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$e, {
+          createVNode(_sfc_main$j, {
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
             default: withCtx(() => [
               createVNode(_sfc_main$2, {
                 "base-model-value": activeBase.value,
-                "onUpdate:baseModelValue": _cache[0] || (_cache[0] = ($event) => activeBase.value = $event),
+                "onUpdate:baseModelValue": [
+                  _cache[0] || (_cache[0] = ($event) => activeBase.value = $event),
+                  onUpdateBase
+                ],
                 "base-presets": unref(presets),
                 "layer-nodes": layerNodes.value,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$a, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
-              createVNode(_sfc_main$9),
-              createVNode(_sfc_main$7),
-              createVNode(_sfc_main$8),
-              createVNode(_sfc_main$d),
+              createVNode(_sfc_main$f, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$e),
               createVNode(_sfc_main$c),
-              createVNode(_sfc_main$b)
+              createVNode(_sfc_main$d),
+              createVNode(_sfc_main$i),
+              createVNode(_sfc_main$h),
+              createVNode(_sfc_main$g)
             ]),
             _: 1
           }, 8, ["layers"])
@@ -79040,7 +82279,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-d9f18abc"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-f006e734"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -79165,7 +82404,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       void this.fetchCompletion(trimmed, maximumResponses, type).then(success, () => fail());
     }
     async fetchCompletion(text2, maximumResponses, type) {
-      const url = new URL(this.settings.completionUrl.endsWith("/") ? this.settings.completionUrl : `${this.settings.completionUrl}/`);
+      const url = new URL(
+        this.settings.completionUrl.endsWith("/") ? this.settings.completionUrl : `${this.settings.completionUrl}/`
+      );
       url.searchParams.set("text", text2);
       url.searchParams.set("type", type);
       url.searchParams.set("maximumResponses", String(maximumResponses));
@@ -79465,7 +82706,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LocationSearchWidget = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-be2d8819"]]);
+  const LocationSearchWidget = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-acdebc4c"]]);
   function mountLocationSearch(container, options = {}) {
     container.innerHTML = "";
     const app = createApp(LocationSearchWidget, {

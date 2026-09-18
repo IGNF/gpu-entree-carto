@@ -11,6 +11,7 @@ useOlControl(
   () =>
     new ScaleLine({
       units: 'metric',
+      minWidth: 100,
     }),
 )
 </script>

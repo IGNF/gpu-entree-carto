@@ -13,16 +13,16 @@ import type { Geometry as OlGeometry } from 'ol/geom'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
-import GeoJSON from 'ol/format/GeoJSON'
 import Draw from 'ol/interaction/Draw'
 import { DrawToolsBar, type DrawBarExtraTool } from './DrawToolsBar'
+import { appendGeometryToolIcon } from './geometryToolIcons'
 import { geometryStyleFunction } from './styles'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
 import { restoreCircleFeaturesForKind } from './circleHelpers'
 import { parseGeometryTypes, primaryGeometryType } from './geometryTypeUtils'
 import type { GeometryOutputFormat, GeometryTypeOption, ToolsToggleCorner } from './types'
-import { SketchHistory } from './sketch/SketchHistory'
+import { SketchHistory, sketchHistoryStorageKey } from './sketch/SketchHistory'
 import {
   applySketchTextStyle,
   isSketchTextFeature,
@@ -34,9 +34,10 @@ import { SketchExportDialog } from './sketch/SketchExportDialog'
 import {
   downloadBlob,
   formatFromFilename,
-  hydrateImportedSketchFeatures,
   pickSketchFile,
   readSketchFile,
+  sketchFeaturesFromSnapshot,
+  sketchFeaturesSnapshot,
   writeSketchFile,
 } from './sketch/sketchIo'
 
@@ -82,8 +83,6 @@ export interface SketchControlOptions {
    */
   enableFeatureStyleEditor?: boolean
 }
-
-const GEOJSON = new GeoJSON()
 
 const EXTRA_DEFS: Record<
   SketchExtraTool,
@@ -230,11 +229,7 @@ export class SketchControl extends Control {
     this.ensureLayer(map)
     this.mountDrawBar(map)
     this.placeInGeopfContainer(map)
-    this.restoreFromLocalStorage()
-    this.history?.resetFromSource()
-    if (this.localStorageKey && this.source.getFeatures().length) {
-      this.savedSnapshot = this.sketchSnapshot()
-    }
+    this.restoreSketchFromLocalStorage()
     this.syncHistoryButtons()
     this.syncSaveButtonState()
   }
@@ -384,9 +379,7 @@ export class SketchControl extends Control {
   private mountDrawBar(map: Map): void {
     if (!this.layer) return
     this.drawBar?.destroy()
-    this.history = this.historyEnabled
-      ? new SketchHistory(this.source, () => map.getView().getProjection())
-      : null
+    this.history = this.historyEnabled ? new SketchHistory(this.source, () => map) : null
     this.stylePopup?.destroy()
     this.stylePopup = null
     if (this.enableFeatureStyleEditor) {
@@ -606,13 +599,9 @@ export class SketchControl extends Control {
   }
 
   private sketchSnapshot(): string {
-    const features = this.getFeatures()
-    return JSON.stringify(
-      GEOJSON.writeFeaturesObject(features, {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      }),
-    )
+    const map = this.getMap()
+    if (!map) return '{"type":"FeatureCollection","features":[]}'
+    return sketchFeaturesSnapshot(map, this.getFeatures())
   }
 
   private syncSaveButtonState(): void {
@@ -629,34 +618,57 @@ export class SketchControl extends Control {
     if (!this.localStorageKey || typeof localStorage === 'undefined') return
     try {
       const features = this.getFeatures()
+      const historyKey = sketchHistoryStorageKey(this.localStorageKey)
       if (!features.length) {
         localStorage.removeItem(this.localStorageKey)
+        this.history?.clearLocalStorage(historyKey)
+        this.history?.resetFromSource()
         this.savedSnapshot = this.sketchSnapshot()
         this.syncSaveButtonState()
+        this.syncHistoryButtons()
         return
       }
-      const json = GEOJSON.writeFeaturesObject(features, {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      })
-      localStorage.setItem(this.localStorageKey, JSON.stringify(json))
-      this.savedSnapshot = JSON.stringify(json)
+      const map = this.getMap()
+      if (!map) return
+      const json = sketchFeaturesSnapshot(map, features)
+      localStorage.setItem(this.localStorageKey, json)
+      this.history?.persistToLocalStorage(historyKey)
+      this.savedSnapshot = json
       this.syncSaveButtonState()
+      this.syncHistoryButtons()
     } catch (err) {
       console.warn('[SketchControl] localStorage save failed', err)
     }
   }
 
-  private restoreFromLocalStorage(): void {
+  /**
+   * Au montage : dernier Enregistrer (croquis + historique `:history`).
+   * Modifications non enregistrées avant rechargement sont perdues.
+   */
+  private restoreSketchFromLocalStorage(): void {
+    if (!this.localStorageKey || typeof localStorage === 'undefined') {
+      this.history?.resetFromSource()
+      return
+    }
+    const saved = localStorage.getItem(this.localStorageKey)
+    this.savedSnapshot = saved
+    const historyKey = sketchHistoryStorageKey(this.localStorageKey)
+    const restoredHistory =
+      this.historyEnabled && saved && this.history?.restoreFromLocalStorage(historyKey)
+    if (!restoredHistory) {
+      this.restoreSavedSnapshotFromLocalStorage()
+      this.history?.resetFromSource()
+    }
+  }
+
+  private restoreSavedSnapshotFromLocalStorage(): void {
     if (!this.localStorageKey || typeof localStorage === 'undefined') return
     try {
       const raw = localStorage.getItem(this.localStorageKey)
       if (!raw) return
-      const features = GEOJSON.readFeatures(JSON.parse(raw), {
-        featureProjection: this.getMap()?.getView().getProjection(),
-        dataProjection: 'EPSG:4326',
-      }) as OlFeature<OlGeometry>[]
-      hydrateImportedSketchFeatures(features)
+      const map = this.getMap()
+      if (!map) return
+      const features = sketchFeaturesFromSnapshot(map, raw)
       this.source.clear(true)
       if (features.length) this.source.addFeatures(features)
     } catch (err) {
@@ -693,6 +705,7 @@ export class SketchControl extends Control {
           e.stopPropagation()
           this.setToolsMenuOpen(!this.toolsMenuOpen)
         })
+        appendGeometryToolIcon(btn, 'ec-geometry-editor__tool--tools-toggle')
         this.toolsToggleBtn = btn
       }
       this.toolbarHost.id = this.toolbarDomId

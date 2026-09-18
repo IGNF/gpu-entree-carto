@@ -1,9 +1,13 @@
 import { createApp, type Component } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import { createNotivue } from 'notivue'
+import 'notivue/notification.css'
+import 'notivue/animations.css'
 import '@gouvfr/dsfr/dist/dsfr.min.css'
 /* Pictos Remix / DSFR (`fr-icon-*`) — absents de dsfr.min.css seul */
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvminint/vue-dsfr/styles'
+import 'remixicon/fonts/remixicon.css'
 import * as VueDsfrExports from '@gouvminint/vue-dsfr'
 
 import App from './App.vue'
@@ -12,6 +16,19 @@ import DemoView from './views/DemoView.vue'
 import GeometryEditorView from './views/GeometryEditorView.vue'
 import SketchDemoView from './views/SketchDemoView.vue'
 import './styles/main.css'
+import './styles/notifications.css'
+
+const notivue = createNotivue({
+  position: 'bottom-center',
+  limit: 3,
+  enqueue: true,
+  avoidDuplicates: false,
+  notifications: {
+    global: {
+      duration: 5000,
+    },
+  },
+})
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +50,7 @@ const router = createRouter({
 
 const app = createApp(App)
 app.use(router)
+app.use(notivue)
 
 /*
  * Enregistrement manuel des composants vue-dsfr :

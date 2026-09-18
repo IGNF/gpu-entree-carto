@@ -10,7 +10,11 @@ import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import { createBaseLayerPresets, type BaseLayerId } from '@/ol/baseLayers'
+import {
+  createGpuBaseLayerEnvironment,
+  setActiveGpuBaseLayer,
+  type GpuBaseLayerId,
+} from '@/ol/gpuBaseLayerPresets'
 import type { StandardViewerParams } from '@/lib/types'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
@@ -21,13 +25,20 @@ const props = defineProps<{
   params?: StandardViewerParams
 }>()
 
-const presets = createBaseLayerPresets()
-const activeBase = ref<BaseLayerId>('plan')
-const baseLayers = computed(() => presets.map((p) => p.layer))
+const gpuBaseEnv = createGpuBaseLayerEnvironment()
+const presets = gpuBaseEnv.presets
+const activeBase = ref<GpuBaseLayerId>('carte')
+setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value)
+const baseLayers = computed(() => gpuBaseEnv.allLayers)
 const initialSearch = computed(() => props.params?.search ?? null)
 
 /** Stub jusqu’à consommation de layerConfig / legendConfig. */
 const layerNodes = ref<TreeLayerNode[]>([])
+
+function onUpdateBase(id: GpuBaseLayerId) {
+  activeBase.value = id
+  setActiveGpuBaseLayer(gpuBaseEnv, id)
+}
 
 function onToggleLayer(id: string, visible: boolean) {
   const node = layerNodes.value.find((n) => n.id === id)
@@ -42,6 +53,7 @@ function onToggleLayer(id: string, visible: boolean) {
         v-model:base-model-value="activeBase"
         :base-presets="presets"
         :layer-nodes="layerNodes"
+        @update:base-model-value="onUpdateBase"
         @toggle-layer="onToggleLayer"
       />
       <SearchEngineControl :initial-search="initialSearch" />

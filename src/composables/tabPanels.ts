@@ -4,13 +4,21 @@ import { shallowRef, type InjectionKey, type Ref } from 'vue'
 export interface FicheInfoSelection {
   title: string
   bodyHtml?: string
-  /** Attributs bruts pour l’onglet 4. */
+  /** Attributs bruts (affichés dans l’onglet fiche si présents). */
   raw?: Record<string, unknown> | null
+}
+
+/** Demande d’ouverture / dépliage d’une légende couche (onglet Légendes). */
+export type LegendPanelFocus = {
+  layerId: string
+  at: number
 }
 
 export interface TabPanelsApi {
   /** Ouvre le panneau sur l’onglet `index` (0–3). */
   openTab: (index: number) => void
+  /** Ouvre l’onglet Légendes, déplie et scroll vers la couche `layerId`. */
+  openLegendForLayer: (layerId: string) => void
   /** Ferme le panneau et désactive l’onglet. */
   closePanels: () => void
   /** Met à jour la fiche info (+ raw optionnel) et ouvre l’onglet 0. */
@@ -21,6 +29,9 @@ export interface TabPanelsApi {
   activeTab: Ref<number | null>
   selection: Ref<FicheInfoSelection | null>
 }
+
+/** Consommé par `LayerLegendsPanel` (focus depuis Couches de données). */
+export const legendPanelFocusRef = shallowRef<LegendPanelFocus | null>(null)
 
 export const TAB_PANELS_KEY: InjectionKey<TabPanelsApi> = Symbol('ecTabPanels')
 
@@ -36,9 +47,9 @@ export function registerTabPanelsApi(api: TabPanelsApi | null): void {
 
 export const TAB_PANEL_IDS = {
   fiche: 0,
-  empty: 1,
-  layers: 2,
-  raw: 3,
+  catalogue: 1,
+  dataLayers: 2,
+  legends: 3,
 } as const
 
 export const DEFAULT_FICHE_EMPTY = {

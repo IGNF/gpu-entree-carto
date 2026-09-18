@@ -3,7 +3,9 @@
  * Contenu onglet 1 — fiche info / localisation.
  */
 import { computed } from 'vue'
+import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import { DEFAULT_FICHE_EMPTY, type FicheInfoSelection } from '@/composables/tabPanels'
+import RawInfoPanel from '@/components/panels/RawInfoPanel.vue'
 
 const props = defineProps<{
   selection: FicheInfoSelection | null
@@ -20,7 +22,16 @@ const bodyHtml = computed(() => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY
       <h2 class="ec-fiche-info__title">
         {{ title }}
       </h2>
-      <div class="ec-fiche-info__body" v-html="bodyHtml" />
+      <SanitizedHtml class="ec-fiche-info__body" :html="bodyHtml" />
+      <RawInfoPanel v-if="selection?.raw" :selection="selection" class="ec-fiche-info__raw" />
     </div>
   </article>
 </template>
+
+<style scoped>
+.ec-fiche-info__raw {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-default-grey, #ddd);
+}
+</style>

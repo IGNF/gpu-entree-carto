@@ -6,6 +6,8 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 **Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `SearchEngine.vue` (clone `cartes.gouv.fr-entree-carto`)  
 **Dépendance :** `geopf-extensions-openlayers` (`SearchEngineAdvanced`, `InseeAdvancedSearch`, `LocationAdvancedSearch`, `CoordinateAdvancedSearch`, `ParcelAdvancedSearch`)
 
+Au build, le plugin Vite `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) remplace l’`eval` de `Services/Search.js` (upstream) par une affectation de chaîne — nos URLs de service sont des HTTPS fixes.
+
 ## Props
 
 | Prop             | Type                           | Défaut                    | Description                                                                  |
@@ -32,7 +34,8 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 
 ## Placement
 
-**Haut-gauche** via CSS (`.gpf-widget[id^='GPsearchEngine-Advanced']`), pas via `position` geopf.
+**Haut-gauche** via CSS (`.gpf-widget[id^='GPsearchEngine-Advanced']`), pas via `position` geopf.  
+Si **SketchControl** est monté : décalage horizontal `--ec-search-left-inset` (= largeur colonne croquis + gap) pour éviter le chevauchement avec la barre d’outils et les panneaux autocomplete / avancée.
 
 ## Dépendances
 

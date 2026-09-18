@@ -3,6 +3,7 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import XYZ from 'ol/source/XYZ'
 import type BaseLayer from 'ol/layer/Base'
+import { ignGeoportalAttributions } from '@/ol/ignGeoportalAttributions'
 
 export type BaseLayerId = 'plan' | 'ortho' | 'blank'
 
@@ -21,7 +22,8 @@ export function createBaseLayerPresets(): BaseLayerPreset[] {
     properties: { id: 'plan', title: 'Plan IGN' },
     source: new XYZ({
       url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-      attributions: '© IGN — Géoplateforme',
+      attributions: () => ignGeoportalAttributions(),
+      attributionsCollapsible: false,
       maxZoom: 19,
     }),
   })
@@ -31,7 +33,8 @@ export function createBaseLayerPresets(): BaseLayerPreset[] {
     properties: { id: 'ortho', title: 'Photographies aériennes' },
     source: new XYZ({
       url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-      attributions: '© IGN — Géoplateforme',
+      attributions: () => ignGeoportalAttributions(),
+      attributionsCollapsible: false,
       maxZoom: 19,
     }),
   })

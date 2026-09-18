@@ -1089,6 +1089,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return intersection;
   }
+  function getDifference(extent1, extent2) {
+    if (!intersects$1(extent1, extent2)) {
+      return [extent1.slice()];
+    }
+    if (containsExtent(extent2, extent1)) {
+      return [];
+    }
+    const [x1, y1, x2, y2] = extent1;
+    const ix1 = Math.max(x1, extent2[0]);
+    const iy1 = Math.max(y1, extent2[1]);
+    const ix2 = Math.min(x2, extent2[2]);
+    const iy2 = Math.min(y2, extent2[3]);
+    const result = [];
+    if (ix1 > x1) {
+      result.push([x1, y1, ix1, y2]);
+    }
+    if (ix2 < x2) {
+      result.push([ix2, y1, x2, y2]);
+    }
+    if (iy1 > y1) {
+      result.push([ix1, y1, ix2, iy1]);
+    }
+    if (iy2 < y2) {
+      result.push([ix1, iy2, ix2, y2]);
+    }
+    return result;
+  }
   function getTopLeft(extent) {
     return [extent[0], extent[3]];
   }
@@ -1189,6 +1216,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     return [extent];
+  }
+  function subtractExtents(base, subtract) {
+    let remainder = [base];
+    for (let i = 0, ii = subtract.length; i < ii && remainder.length > 0; ++i) {
+      const next = [];
+      for (let j = 0, jj = remainder.length; j < jj; ++j) {
+        next.push(...getDifference(remainder[j], subtract[i]));
+      }
+      remainder = next;
+    }
+    return remainder;
   }
   function clamp$1(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -3366,24 +3404,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let timeout, fontFaceSet;
     async function isAvailable(fontSpec) {
       await fontFaceSet.ready;
-      const fontFaces = await fontFaceSet.load(fontSpec);
-      if (fontFaces.length === 0) {
-        return false;
-      }
       const font = getFontParameters(fontSpec);
       const checkFamily = font.families[0].toLowerCase();
       const checkWeight = font.weight;
-      return fontFaces.some(
+      const matching = [];
+      fontFaceSet.forEach(
         /**
-         * @param {import('../css.js').FontParameters} f Font.
-         * @return {boolean} Font matches.
+         * @param {FontFace} f Font face.
          */
         (f) => {
           const family = f.family.replace(/^['"]|['"]$/g, "").toLowerCase();
           const weight = fontWeights[f.weight] || f.weight;
-          return family === checkFamily && f.style === font.style && weight == checkWeight;
+          if (family === checkFamily && f.style === font.style && weight == checkWeight) {
+            matching.push(f);
+          }
         }
       );
+      if (matching.length === 0) {
+        return false;
+      }
+      const loaded = await Promise.all(
+        matching.map(
+          (f) => f.load().then(
+            () => true,
+            // available
+            () => false
+            // not available
+          )
+        )
+      );
+      return loaded.some((available) => available);
     }
     async function check() {
       await fontFaceSet.ready;
@@ -4922,6 +4972,109 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return false;
     }
   }
+  let clipSegmentStart = 0;
+  let clipSegmentEnd = 1;
+  function clipSegment(minX, minY, maxX, maxY, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let t0 = 0;
+    let t1 = 1;
+    if (dx === 0) {
+      if (x0 < minX || x0 > maxX) {
+        return false;
+      }
+    } else {
+      let ta = (minX - x0) / dx;
+      let tb = (maxX - x0) / dx;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    if (dy === 0) {
+      if (y0 < minY || y0 > maxY) {
+        return false;
+      }
+    } else {
+      let ta = (minY - y0) / dy;
+      let tb = (maxY - y0) / dy;
+      if (ta > tb) {
+        const tmp = ta;
+        ta = tb;
+        tb = tmp;
+      }
+      if (ta > t0) {
+        t0 = ta;
+      }
+      if (tb < t1) {
+        t1 = tb;
+      }
+      if (t0 > t1) {
+        return false;
+      }
+    }
+    clipSegmentStart = t0;
+    clipSegmentEnd = t1;
+    return true;
+  }
+  function clipFlatLineStrings(flatCoordinates, ends, stride, extent) {
+    const minX = extent[0];
+    const minY = extent[1];
+    const maxX = extent[2];
+    const maxY = extent[3];
+    const dest = [];
+    const destEnds = [];
+    let open = false;
+    let lastX, lastY;
+    let offset = 0;
+    for (let e = 0, ee = ends.length; e < ee; ++e) {
+      const end = ends[e];
+      let prevX = flatCoordinates[offset];
+      let prevY = flatCoordinates[offset + 1];
+      let lineHasLast = false;
+      for (let i = offset + stride; i < end; i += stride) {
+        const curX = flatCoordinates[i];
+        const curY = flatCoordinates[i + 1];
+        if (clipSegment(minX, minY, maxX, maxY, prevX, prevY, curX, curY)) {
+          const dx = curX - prevX;
+          const dy = curY - prevY;
+          const ax = prevX + clipSegmentStart * dx;
+          const ay = prevY + clipSegmentStart * dy;
+          const bx = prevX + clipSegmentEnd * dx;
+          const by = prevY + clipSegmentEnd * dy;
+          if (open && lineHasLast && ax === lastX && ay === lastY) {
+            dest.push(bx, by);
+          } else {
+            if (open) {
+              destEnds.push(dest.length);
+            }
+            dest.push(ax, ay, bx, by);
+            open = true;
+          }
+          lastX = bx;
+          lastY = by;
+          lineHasLast = true;
+        }
+        prevX = curX;
+        prevY = curY;
+      }
+      offset = end;
+    }
+    if (open) {
+      destEnds.push(dest.length);
+    }
+    return { flatCoordinates: dest, ends: destEnds };
+  }
   function lineChunk(chunkLength, flatCoordinates, offset, end, stride) {
     const chunks = [];
     let cursor = offset;
@@ -5076,7 +5229,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let flatCoordinates = null;
       let stride = geometry.getStride();
       if (textState.placement === "line" && (geometryType == "LineString" || geometryType == "MultiLineString" || geometryType == "Polygon" || geometryType == "MultiPolygon")) {
-        if (!intersects$1(this.maxExtent, geometry.getExtent())) {
+        const geometryExtent = geometry.getExtent();
+        if (!intersects$1(this.maxExtent, geometryExtent)) {
           return;
         }
         let ends;
@@ -5097,6 +5251,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ends = [];
           for (let i = 0, ii = endss.length; i < ii; ++i) {
             ends.push(endss[i][0]);
+          }
+        }
+        if ((geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
+          const clipped = clipFlatLineStrings(
+            flatCoordinates,
+            ends,
+            stride,
+            this.getBufferedMaxExtent()
+          );
+          flatCoordinates = clipped.flatCoordinates;
+          ends = clipped.ends;
+          stride = 2;
+          if (ends.length === 0) {
+            return;
           }
         }
         this.beginGeometry(geometry, feature, index);
@@ -5343,6 +5511,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.saveTextStates_();
       const pixelRatio = this.pixelRatio;
       const baseline = TEXT_ALIGN[textState.textBaseline];
+      const offsetX = this.textOffsetX_ * pixelRatio;
       const offsetY = this.textOffsetY_ * pixelRatio;
       const text = this.text_;
       const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textState.scale[0]) / 2 : 0;
@@ -5362,7 +5531,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textKey,
         1,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
       this.hitDetectionInstructions.push([
         Instruction.DRAW_CHARS,
@@ -5380,7 +5550,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textKey,
         1 / pixelRatio,
         this.declutterMode_,
-        this.textKeepUpright_
+        this.textKeepUpright_,
+        offsetX
       ]);
     }
     /**
@@ -5609,9 +5780,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       throw new Error(errorMessage);
     }
   }
+  const IDENTITY_TRANSFORM = [1, 0, 0, 1, 0, 0];
   new Array(6);
   function create() {
-    return [1, 0, 0, 1, 0, 0];
+    return IDENTITY_TRANSFORM.slice(0);
   }
   function setFromArray(transform1, transform2) {
     transform1[0] = transform2[0];
@@ -5775,9 +5947,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const dy = by * (1 / sin);
     return [x + dx * offset, y + dy * offset];
   }
-  function removeOffsetCycles(coords, stride) {
+  function removeOffsetCycles(coords, stride, closedLine = false) {
     for (let i = 0, ii = coords.length - 2; i < ii; i += stride) {
-      for (let j = coords.length - 2 * stride; j > i + stride; j -= stride) {
+      const jMax = closedLine && i === 0 ? coords.length - 3 * stride : coords.length - 2 * stride;
+      for (let j = jMax; j > i + stride; j -= stride) {
         const p1x = coords[i];
         const p1y = coords[i + 1];
         const p2x = coords[i + stride];
@@ -5803,6 +5976,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     return coords;
+  }
+  let segmenter;
+  function getSegmenter() {
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+    }
+    return segmenter;
   }
   function drawTextOnPath(flatCoordinates, offset, end, stride, text, startM, maxAngle, scale2, measureAndCacheTextWidth2, font, cache2, rotation, keepUpright = true) {
     let x2 = flatCoordinates[offset];
@@ -5866,7 +6046,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return result;
     }
     text = text.replace(/\n/g, " ");
-    for (let i = 0, ii = text.length; i < ii; ) {
+    const segments = Array.from(getSegmenter().segment(text), (s) => s.segment);
+    for (let i = 0, ii = segments.length; i < ii; ) {
       advance();
       let angle = Math.atan2(y2 - y1, x2 - x1);
       if (reverse) {
@@ -5884,7 +6065,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let charLength = 0;
       for (; i < ii; ++i) {
         const index = reverse ? ii - i - 1 : i;
-        const len = scale2 * measureAndCacheTextWidth2(font, text[index], cache2);
+        const len = scale2 * measureAndCacheTextWidth2(font, segments[index], cache2);
         if (offset + stride < end && segmentM + segmentLength < startM + charLength + len / 2) {
           break;
         }
@@ -5893,7 +6074,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (i === iStart) {
         continue;
       }
-      const chars = reverse ? text.substring(ii - iStart, ii - i) : text.substring(iStart, i);
+      const chars = (reverse ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
       interpolate = segmentLength === 0 ? 0 : (startM + charLength / 2 - segmentM) / segmentLength;
       const x = lerp(x1, x2, interpolate);
       const y = lerp(y1, y2, interpolate);
@@ -5905,25 +6086,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   class ZIndexContext {
     constructor() {
       /**
-       * @private
+       * Pushes the method name captured at access time together with the arguments
+       * passed at call time. Reused across all proxied method calls.
        * @param {...*} args Args.
-       * @return {ZIndexContext} This.
+       * @private
        */
       __publicField(this, "pushMethodArgs_", (...args) => {
-        this.push_(args);
-        return this;
+        this.push_(this.pendingMethod_, args);
       });
       this.instructions_ = [];
       this.zIndex = 0;
       this.offset_ = 0;
+      this.pendingMethod_;
       this.context_ = /** @type {ZIndexContextProxy} */
       new Proxy(getSharedCanvasContext2D(), {
         get: (target, property) => {
           if (typeof /** @type {*} */
-          getSharedCanvasContext2D()[property] !== "function") {
+          target[property] !== "function") {
             return void 0;
           }
-          this.push_(property);
+          this.pendingMethod_ = property;
           return this.pushMethodArgs_;
         },
         set: (target, property, value) => {
@@ -5976,11 +6158,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           if (typeof /** @type {*} */
           context[property] === "function") {
             context[property](...instructionAtIndex);
+          } else if (typeof instructionAtIndex === "function") {
+            context[property] = instructionAtIndex(context);
           } else {
-            if (typeof instructionAtIndex === "function") {
-              context[property] = instructionAtIndex(context);
-              continue;
-            }
             context[property] = instructionAtIndex;
           }
         }
@@ -6799,6 +6979,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               /** @type {boolean} */
               instruction[15]
             );
+            const offsetX = (
+              /** @type {number} */
+              instruction[16]
+            );
             const textState = this.textStates[textKey];
             const font = textState.font;
             const textScale = [
@@ -6842,7 +7026,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     part[4];
                     label = this.createLabel(chars, textKey, "", strokeKey);
                     anchorX = /** @type {number} */
-                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth);
+                    part[2] + (textScale[0] < 0 ? -strokeWidth : strokeWidth) - offsetX;
                     anchorY = baseline * label.height + (0.5 - baseline) * 2 * strokeWidth * textScale[1] / textScale[0] - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -6883,7 +7067,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                     part[4];
                     label = this.createLabel(chars, textKey, fillKey, "");
                     anchorX = /** @type {number} */
-                    part[2];
+                    part[2] - offsetX;
                     anchorY = baseline * label.height - offsetY;
                     const dimensions = this.calculateImageOrLabelDimensions_(
                       label.width,
@@ -6963,16 +7147,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 /** @type {boolean|undefined} */
                 instruction[4] ?? false
               );
+              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd - 1]) < 1e-6;
               offsetLineString(
                 pixelCoordinates,
                 d,
                 dd,
                 2,
                 lineOffsetPx,
-                isClosedRing,
+                isClosedLine,
                 offsetCoords
               );
-              removeOffsetCycles(offsetCoords, 2);
+              removeOffsetCycles(offsetCoords, 2, isClosedLine);
               lineCoords = offsetCoords;
               lineStart = 0;
               lineEnd = lineCoords.length;
@@ -8882,16 +9067,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.pixelCoordinates_
       );
       if (Math.abs(strokeOffset) > 0) {
+        const n = pixelCoordinates.length;
+        const isClosedLine = close || Math.abs(pixelCoordinates[0] - pixelCoordinates[n - 2]) < 1e-6 && Math.abs(pixelCoordinates[1] - pixelCoordinates[n - 1]) < 1e-6;
         pixelCoordinates = offsetLineString(
           pixelCoordinates,
           0,
-          pixelCoordinates.length,
+          n,
           2,
           strokeOffset,
-          close,
+          isClosedLine,
           pixelCoordinates
         );
-        removeOffsetCycles(pixelCoordinates, 2);
+        removeOffsetCycles(pixelCoordinates, 2, isClosedLine);
       }
       context.moveTo(pixelCoordinates[0], pixelCoordinates[1]);
       let length = pixelCoordinates.length;
@@ -9988,6 +10175,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.layer_ = layer;
       this.staleKeys_ = new Array();
       this.maxStaleKeys = maxStaleKeys;
+      this.renderedSourceKey_;
     }
     /**
      * @return {Array<string>} Get the list of stale keys.
@@ -10002,6 +10190,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.staleKeys_.unshift(key);
       if (this.staleKeys_.length > this.maxStaleKeys) {
         this.staleKeys_.length = this.maxStaleKeys;
+      }
+    }
+    /**
+     * Remember the previous source key as stale when the key changes.
+     * @param {string} sourceKey The current source key.
+     * @protected
+     */
+    updateStaleKeys(sourceKey) {
+      if (!this.renderedSourceKey_) {
+        this.renderedSourceKey_ = sourceKey;
+      } else if (this.renderedSourceKey_ !== sourceKey) {
+        this.prependStaleKey(this.renderedSourceKey_);
+        this.renderedSourceKey_ = sourceKey;
       }
     }
     /**
@@ -10180,8 +10381,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {HTMLElement} target Potential render target.
      * @param {string} transform CSS transform matrix.
      * @param {string} [backgroundColor] Background color.
+     * @param {number} [width] Physical pixel width of the rendering canvas.
+     * @param {number} [height] Physical pixel height of the rendering canvas.
      */
-    useContainer(target, transform2, backgroundColor) {
+    useContainer(target, transform2, backgroundColor, width, height) {
+      if (isCanvas(target) && this.pixelTransform[1] === 0 && this.pixelTransform[2] === 0 && this.pixelTransform[4] === 0 && this.pixelTransform[5] === 0 && target.width === width && target.height === height) {
+        const targetCanvas = (
+          /** @type {HTMLCanvasElement} */
+          target
+        );
+        const context2 = targetCanvas.getContext("2d");
+        if (context2) {
+          this.container = target;
+          this.context = context2;
+          this.containerReused = true;
+          if (backgroundColor) {
+            context2.fillStyle = backgroundColor;
+            context2.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+          }
+          return;
+        }
+      }
       const layerClassName = this.getLayer().getClassName();
       let container, context;
       if (target && target.className === layerClassName && (!backgroundColor || target && target.style.backgroundColor && equals$2(
@@ -10280,7 +10500,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       makeInverse(this.inversePixelTransform, this.pixelTransform);
       const canvasTransform = toString(this.pixelTransform);
-      this.useContainer(target, canvasTransform, this.getBackground(frameState));
+      const backgroundColor = this.getBackground(frameState);
+      this.useContainer(target, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
         const canvas = this.context.canvas;
         if (canvas.width != width || canvas.height != height) {
@@ -11391,6 +11612,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   let numTypes = 0;
+  const NoneType = 0;
   const BooleanType = 1 << numTypes++;
   const NumberType = 1 << numTypes++;
   const StringType = 1 << numTypes++;
@@ -11428,12 +11650,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function includesType(broad, specific) {
     return (broad & specific) === specific;
   }
+  function overlapsType(oneType, otherType) {
+    return !!(oneType & otherType);
+  }
   function isType(type, expected) {
     return type === expected;
   }
   class LiteralExpression {
     /**
-     * @param {number} type The value type.
+     * @param {ValueType} type The value type.
      * @param {LiteralValue} value The literal value.
      */
     constructor(type, value) {
@@ -11448,7 +11673,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   class CallExpression {
     /**
-     * @param {number} type The return type.
+     * @param {ValueType} type The return type.
      * @param {string} operator The operator.
      * @param {...Expression} args The arguments.
      */
@@ -11458,14 +11683,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.args = args;
     }
   }
-  function newParsingContext() {
+  function newParsingContext(inputVariables) {
     return {
-      variables: /* @__PURE__ */ new Set(),
-      properties: /* @__PURE__ */ new Set(),
+      variables: /* @__PURE__ */ new Map(),
+      properties: /* @__PURE__ */ new Map(),
       featureId: false,
       geometryType: false,
       mCoordinate: false,
-      mapState: false
+      mapState: false,
+      inputVariables
     };
   }
   function parse$1(encoded, expectedType, context) {
@@ -11600,7 +11826,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   };
   const parsers = {
     [Ops.Get]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
-    [Ops.Var]: createCallExpressionParser(hasArgsCount(1, 1), withVarArgs),
+    [Ops.Var]: createVarExpressionParser(),
     [Ops.Has]: createCallExpressionParser(hasArgsCount(1, Infinity), withGetArgs),
     [Ops.Id]: createCallExpressionParser(usesFeatureId, withNoArgs),
     [Ops.Concat]: createCallExpressionParser(
@@ -11626,11 +11852,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     ),
     [Ops.Equal]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.NotEqual]: createCallExpressionParser(
       hasArgsCount(2, 2),
-      withArgsOfType(AnyType)
+      withArgsOfIdenticalType()
     ),
     [Ops.GreaterThan]: createCallExpressionParser(
       hasArgsCount(2, 2),
@@ -11782,18 +12008,56 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (i === 0) {
-        context.properties.add(String(key));
+        context.properties.set(String(key), returnType);
       }
     }
     return args;
   }
-  function withVarArgs(encoded, returnType, context) {
-    const name = encoded[1];
-    if (typeof name !== "string") {
-      throw new Error("expected a string argument for var operation");
-    }
-    context.variables.add(name);
-    return [new LiteralExpression(StringType, name)];
+  function createVarExpressionParser() {
+    return function(encoded, returnType, context) {
+      var _a;
+      const name = encoded[1];
+      if (typeof name !== "string") {
+        throw new Error("expected a string argument for var operation");
+      }
+      let type = returnType;
+      const variableValue = (_a = context.inputVariables) == null ? void 0 : _a[name];
+      if (variableValue !== void 0) {
+        const parsedInput = parse$1(variableValue, AnyType, context);
+        if (!(parsedInput instanceof LiteralExpression)) {
+          throw new Error(
+            `style variables should only be literal values (no expressions!), variable name: ${name}`
+          );
+        }
+        let parsedType = parsedInput.type;
+        if (typeof variableValue === "string" && overlapsType(type, ColorType) && !overlapsType(type, StringType)) {
+          parsedType = ColorType;
+        } else if (Array.isArray(variableValue) && variableValue.length === 2 && overlapsType(type, SizeType) && !overlapsType(type, NumberArrayType)) {
+          parsedType = SizeType;
+        }
+        type &= parsedType;
+        if (type === NoneType) {
+          throw new Error(
+            `the type expected from the var operator (${typeName(returnType)}) did not have any overlap with the type of the corresponding style variables (${typeName(parsedType)}), variable name: ${name}`
+          );
+        }
+      }
+      if (context.variables.has(name)) {
+        const existingType = context.variables.get(name);
+        type &= existingType;
+        if (type === NoneType) {
+          throw new Error(
+            `a new type expected from the var operator (${typeName(returnType)}) did not have any overlap with the previous type expected for it (${typeName(existingType)}), variable name: ${name}`
+          );
+        }
+      }
+      context.variables.set(name, type);
+      return new CallExpression(
+        type,
+        "var",
+        new LiteralExpression(StringType, name)
+      );
+    };
   }
   function usesFeatureId(encoded, returnType, context) {
     context.featureId = true;
@@ -11853,6 +12117,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return args;
     };
   }
+  function withArgsOfIdenticalType() {
+    return function(encoded, returnType, context) {
+      const operation = encoded[0];
+      const argCount = encoded.length - 1;
+      const args = new Array(argCount);
+      let commonType = AnyType;
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$1(encoded[i + 1], commonType, context);
+        commonType &= expression.type;
+      }
+      if (commonType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of ${operation}`
+        );
+      }
+      for (let i = 0; i < argCount; ++i) {
+        const expression = parse$1(encoded[i + 1], commonType, context);
+        args[i] = expression;
+      }
+      return args;
+    };
+  }
   function hasOddArgs(encoded, returnType, context) {
     const operation = encoded[0];
     const argCount = encoded.length - 1;
@@ -11873,13 +12159,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function withMatchArgs(encoded, returnType, context) {
     const argsCount = encoded.length - 1;
-    const inputType = StringType | NumberType | BooleanType;
-    const input = parse$1(encoded[1], inputType, context);
     const fallback = parse$1(encoded[encoded.length - 1], returnType, context);
+    let inputType = StringType | NumberType | BooleanType;
     const args = new Array(argsCount - 2);
     for (let i = 0; i < argsCount - 2; i += 2) {
       try {
-        const match = parse$1(encoded[i + 2], input.type, context);
+        const match = parse$1(encoded[i + 2], inputType, context);
+        inputType &= match.type;
+      } catch (err) {
+        throw new Error(
+          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+        );
+      }
+      if (inputType === NoneType) {
+        throw new Error(
+          `no common type was found among the arguments of match expression`
+        );
+      }
+    }
+    for (let i = 0; i < argsCount - 2; i += 2) {
+      try {
+        const match = parse$1(encoded[i + 2], inputType, context);
         args[i] = match;
       } catch (err) {
         throw new Error(
@@ -11895,6 +12195,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         );
       }
     }
+    const input = parse$1(encoded[1], inputType, context);
     return [input, ...args, fallback];
   }
   function withInterpolateArgs(encoded, returnType, context) {
@@ -14078,8 +14379,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function always$1(context) {
     return true;
   }
-  function rulesToStyleFunction(rules) {
-    const parsingContext = newParsingContext();
+  function rulesToStyleFunction(rules, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const evaluator = buildRuleSet(rules, parsingContext);
     const evaluationContext = newEvaluationContext();
     return function(feature, resolution) {
@@ -14101,8 +14402,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return evaluator(evaluationContext);
     };
   }
-  function flatStylesToStyleFunction(flatStyles) {
-    const parsingContext = newParsingContext();
+  function flatStylesToStyleFunction(flatStyles, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
     const length = flatStyles.length;
     const evaluators = new Array(length);
     for (let i = 0; i < length; ++i) {
@@ -14121,6 +14422,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           evaluationContext.featureId = null;
         }
       }
+      if (parsingContext.geometryType) {
+        evaluationContext.geometryType = computeGeometryType(
+          feature.getGeometry()
+        );
+      }
       let nonNullCount = 0;
       for (let i = 0; i < length; ++i) {
         const style = evaluators[i](evaluationContext);
@@ -14132,6 +14438,30 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       styles.length = nonNullCount;
       return styles;
     };
+  }
+  function flatStyleLikeToStyleFunction(flatStyleLike, parsingContext) {
+    parsingContext = parsingContext ?? newParsingContext();
+    if (!Array.isArray(flatStyleLike)) {
+      return flatStylesToStyleFunction([flatStyleLike], parsingContext);
+    }
+    const length = flatStyleLike.length;
+    const first = flatStyleLike[0];
+    if ("style" in first) {
+      const rules = new Array(length);
+      for (let i = 0; i < length; ++i) {
+        const candidate = flatStyleLike[i];
+        if (!("style" in candidate)) {
+          throw new Error("Expected a list of rules with a style property");
+        }
+        rules[i] = candidate;
+      }
+      return rulesToStyleFunction(rules, parsingContext);
+    }
+    const flatStyles = (
+      /** @type {Array<import("../../style/flat.js").FlatStyle>} */
+      flatStyleLike
+    );
+    return flatStylesToStyleFunction(flatStyles, parsingContext);
   }
   function buildRuleSet(rules, context) {
     const length = rules.length;
@@ -15337,265 +15667,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     endss.length = i;
     return endss;
   }
-  class LinearRing extends SimpleGeometry {
-    /**
-     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
-     *     For internal use, flat coordinates in combination with `layout` are also accepted.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(coordinates2, layout) {
-      super();
-      this.maxDelta_ = -1;
-      this.maxDeltaRevision_ = -1;
-      if (layout !== void 0 && !Array.isArray(coordinates2[0])) {
-        this.setFlatCoordinates(
-          layout,
-          /** @type {Array<number>} */
-          coordinates2
-        );
-      } else {
-        this.setCoordinates(
-          /** @type {Array<import("../coordinate.js").Coordinate>} */
-          coordinates2,
-          layout
-        );
-      }
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!LinearRing} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      return new LinearRing(this.flatCoordinates.slice(), this.layout);
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      if (this.maxDeltaRevision_ != this.getRevision()) {
-        this.maxDelta_ = Math.sqrt(
-          maxSquaredDelta(
-            this.flatCoordinates,
-            0,
-            this.flatCoordinates.length,
-            this.stride,
-            0
-          )
-        );
-        this.maxDeltaRevision_ = this.getRevision();
-      }
-      return assignClosestPoint(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        this.maxDelta_,
-        true,
-        x,
-        y,
-        closestPoint,
-        minSquaredDistance
-      );
-    }
-    /**
-     * Return the area of the linear ring on projected plane.
-     * @return {number} Area (on projected plane).
-     * @api
-     */
-    getArea() {
-      return linearRing(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride
-      );
-    }
-    /**
-     * Return the coordinates of the linear ring.
-     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates() {
-      return inflateCoordinates(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride
-      );
-    }
-    /**
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {LinearRing} Simplified LinearRing.
-     * @protected
-     * @override
-     */
-    getSimplifiedGeometryInternal(squaredTolerance) {
-      const simplifiedFlatCoordinates = [];
-      simplifiedFlatCoordinates.length = douglasPeucker(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        squaredTolerance,
-        simplifiedFlatCoordinates,
-        0
-      );
-      return new LinearRing(simplifiedFlatCoordinates, "XY");
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "LinearRing";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      return false;
-    }
-    /**
-     * Set the coordinates of the linear ring.
-     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 1);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      this.flatCoordinates.length = deflateCoordinates(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride
-      );
-      this.changed();
-    }
-  }
-  class Point extends SimpleGeometry {
-    /**
-     * @param {import("../coordinate.js").Coordinate} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(coordinates2, layout) {
-      super();
-      this.setCoordinates(coordinates2, layout);
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!Point} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const point = new Point(this.flatCoordinates.slice(), this.layout);
-      point.applyProperties(this);
-      return point;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      const flatCoordinates = this.flatCoordinates;
-      const squaredDistance2 = squaredDistance$1(
-        x,
-        y,
-        flatCoordinates[0],
-        flatCoordinates[1]
-      );
-      if (squaredDistance2 < minSquaredDistance) {
-        const stride = this.stride;
-        for (let i = 0; i < stride; ++i) {
-          closestPoint[i] = flatCoordinates[i];
-        }
-        closestPoint.length = stride;
-        return squaredDistance2;
-      }
-      return minSquaredDistance;
-    }
-    /**
-     * Return the coordinate of the point.
-     * @return {import("../coordinate.js").Coordinate} Coordinates.
-     * @api
-     * @override
-     */
-    getCoordinates() {
-      return this.flatCoordinates.slice();
-    }
-    /**
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @override
-     */
-    computeExtent(extent) {
-      return createOrUpdateFromCoordinate(this.flatCoordinates, extent);
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "Point";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      return containsXY(extent, this.flatCoordinates[0], this.flatCoordinates[1]);
-    }
-    /**
-     * @param {!Array<*>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-      this.setLayout(layout, coordinates2, 0);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      this.flatCoordinates.length = deflateCoordinate(
-        this.flatCoordinates,
-        0,
-        coordinates2,
-        this.stride
-      );
-      this.changed();
-    }
-  }
   function linearRingContainsExtent(flatCoordinates, offset, end, stride, extent) {
     const outside = forEachCorner(
       extent,
@@ -15661,67 +15732,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       offset = ends[ends.length - 1];
     }
     return false;
-  }
-  function getInteriorPointOfArray(flatCoordinates, offset, ends, stride, flatCenters, flatCentersOffset, dest) {
-    let i, ii, x, x1, x2, y1, y2;
-    const y = flatCenters[flatCentersOffset + 1];
-    const intersections = [];
-    for (let r = 0, rr = ends.length; r < rr; ++r) {
-      const end = ends[r];
-      x1 = flatCoordinates[end - stride];
-      y1 = flatCoordinates[end - stride + 1];
-      for (i = offset; i < end; i += stride) {
-        x2 = flatCoordinates[i];
-        y2 = flatCoordinates[i + 1];
-        if (y <= y1 && y2 <= y || y1 <= y && y <= y2) {
-          x = (y - y1) / (y2 - y1) * (x2 - x1) + x1;
-          intersections.push(x);
-        }
-        x1 = x2;
-        y1 = y2;
-      }
-    }
-    let pointX = NaN;
-    let maxSegmentLength = -Infinity;
-    intersections.sort(ascending);
-    x1 = intersections[0];
-    for (i = 1, ii = intersections.length; i < ii; ++i) {
-      x2 = intersections[i];
-      const segmentLength = Math.abs(x2 - x1);
-      if (segmentLength > maxSegmentLength) {
-        x = (x1 + x2) / 2;
-        if (linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y)) {
-          pointX = x;
-          maxSegmentLength = segmentLength;
-        }
-      }
-      x1 = x2;
-    }
-    if (isNaN(pointX)) {
-      pointX = flatCenters[flatCentersOffset];
-    }
-    if (dest) {
-      dest.push(pointX, y, maxSegmentLength);
-      return dest;
-    }
-    return [pointX, y, maxSegmentLength];
-  }
-  function getInteriorPointsOfMultiArray(flatCoordinates, offset, endss, stride, flatCenters) {
-    let interiorPoints = [];
-    for (let i = 0, ii = endss.length; i < ii; ++i) {
-      const ends = endss[i];
-      interiorPoints = getInteriorPointOfArray(
-        flatCoordinates,
-        offset,
-        ends,
-        stride,
-        flatCenters,
-        2 * i,
-        interiorPoints
-      );
-      offset = ends[ends.length - 1];
-    }
-    return interiorPoints;
   }
   function forEach(flatCoordinates, offset, end, stride, callback) {
     let ret;
@@ -15863,6 +15873,333 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       offset = ends[ends.length - 1];
     }
     return false;
+  }
+  class LinearRing extends SimpleGeometry {
+    /**
+     * @param {Array<import("../coordinate.js").Coordinate>|Array<number>} coordinates Coordinates.
+     *     For internal use, flat coordinates in combination with `layout` are also accepted.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(coordinates2, layout) {
+      super();
+      this.maxDelta_ = -1;
+      this.maxDeltaRevision_ = -1;
+      if (layout !== void 0 && !Array.isArray(coordinates2[0])) {
+        this.setFlatCoordinates(
+          layout,
+          /** @type {Array<number>} */
+          coordinates2
+        );
+      } else {
+        this.setCoordinates(
+          /** @type {Array<import("../coordinate.js").Coordinate>} */
+          coordinates2,
+          layout
+        );
+      }
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!LinearRing} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      return new LinearRing(this.flatCoordinates.slice(), this.layout);
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      if (this.maxDeltaRevision_ != this.getRevision()) {
+        this.maxDelta_ = Math.sqrt(
+          maxSquaredDelta(
+            this.flatCoordinates,
+            0,
+            this.flatCoordinates.length,
+            this.stride,
+            0
+          )
+        );
+        this.maxDeltaRevision_ = this.getRevision();
+      }
+      return assignClosestPoint(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        this.maxDelta_,
+        true,
+        x,
+        y,
+        closestPoint,
+        minSquaredDistance
+      );
+    }
+    /**
+     * Return the area of the linear ring on projected plane.
+     * @return {number} Area (on projected plane).
+     * @api
+     */
+    getArea() {
+      return linearRing(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride
+      );
+    }
+    /**
+     * Return the coordinates of the linear ring.
+     * @return {Array<import("../coordinate.js").Coordinate>} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates() {
+      return inflateCoordinates(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride
+      );
+    }
+    /**
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {LinearRing} Simplified LinearRing.
+     * @protected
+     * @override
+     */
+    getSimplifiedGeometryInternal(squaredTolerance) {
+      const simplifiedFlatCoordinates = [];
+      simplifiedFlatCoordinates.length = douglasPeucker(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        squaredTolerance,
+        simplifiedFlatCoordinates,
+        0
+      );
+      return new LinearRing(simplifiedFlatCoordinates, "XY");
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "LinearRing";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect. A linear ring is
+     * treated as a line string for this test.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      return intersectsLineString(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        extent
+      );
+    }
+    /**
+     * Set the coordinates of the linear ring.
+     * @param {!Array<import("../coordinate.js").Coordinate>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 1);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      this.flatCoordinates.length = deflateCoordinates(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride
+      );
+      this.changed();
+    }
+  }
+  class Point extends SimpleGeometry {
+    /**
+     * @param {import("../coordinate.js").Coordinate} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(coordinates2, layout) {
+      super();
+      this.setCoordinates(coordinates2, layout);
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!Point} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const point = new Point(this.flatCoordinates.slice(), this.layout);
+      point.applyProperties(this);
+      return point;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      const flatCoordinates = this.flatCoordinates;
+      const squaredDistance2 = squaredDistance$1(
+        x,
+        y,
+        flatCoordinates[0],
+        flatCoordinates[1]
+      );
+      if (squaredDistance2 < minSquaredDistance) {
+        const stride = this.stride;
+        for (let i = 0; i < stride; ++i) {
+          closestPoint[i] = flatCoordinates[i];
+        }
+        closestPoint.length = stride;
+        return squaredDistance2;
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * Return the coordinate of the point.
+     * @return {import("../coordinate.js").Coordinate} Coordinates.
+     * @api
+     * @override
+     */
+    getCoordinates() {
+      return this.flatCoordinates.slice();
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      return createOrUpdateFromCoordinate(this.flatCoordinates, extent);
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "Point";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      return containsXY(extent, this.flatCoordinates[0], this.flatCoordinates[1]);
+    }
+    /**
+     * @param {!Array<*>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+      this.setLayout(layout, coordinates2, 0);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      this.flatCoordinates.length = deflateCoordinate(
+        this.flatCoordinates,
+        0,
+        coordinates2,
+        this.stride
+      );
+      this.changed();
+    }
+  }
+  function getInteriorPointOfArray(flatCoordinates, offset, ends, stride, flatCenters, flatCentersOffset, dest) {
+    let i, ii, x, x1, x2, y1, y2;
+    const y = flatCenters[flatCentersOffset + 1];
+    const intersections = [];
+    for (let r = 0, rr = ends.length; r < rr; ++r) {
+      const end = ends[r];
+      x1 = flatCoordinates[end - stride];
+      y1 = flatCoordinates[end - stride + 1];
+      for (i = offset; i < end; i += stride) {
+        x2 = flatCoordinates[i];
+        y2 = flatCoordinates[i + 1];
+        if (y <= y1 && y2 <= y || y1 <= y && y <= y2) {
+          x = (y - y1) / (y2 - y1) * (x2 - x1) + x1;
+          intersections.push(x);
+        }
+        x1 = x2;
+        y1 = y2;
+      }
+    }
+    let pointX = NaN;
+    let maxSegmentLength = -Infinity;
+    intersections.sort(ascending);
+    x1 = intersections[0];
+    for (i = 1, ii = intersections.length; i < ii; ++i) {
+      x2 = intersections[i];
+      const segmentLength = Math.abs(x2 - x1);
+      if (segmentLength > maxSegmentLength) {
+        x = (x1 + x2) / 2;
+        if (linearRingsContainsXY(flatCoordinates, offset, ends, stride, x, y)) {
+          pointX = x;
+          maxSegmentLength = segmentLength;
+        }
+      }
+      x1 = x2;
+    }
+    if (isNaN(pointX)) {
+      pointX = flatCenters[flatCentersOffset];
+    }
+    if (dest) {
+      dest.push(pointX, y, maxSegmentLength);
+      return dest;
+    }
+    return [pointX, y, maxSegmentLength];
+  }
+  function getInteriorPointsOfMultiArray(flatCoordinates, offset, endss, stride, flatCenters) {
+    let interiorPoints = [];
+    for (let i = 0, ii = endss.length; i < ii; ++i) {
+      const ends = endss[i];
+      interiorPoints = getInteriorPointOfArray(
+        flatCoordinates,
+        offset,
+        ends,
+        stride,
+        flatCenters,
+        2 * i,
+        interiorPoints
+      );
+      offset = ends[ends.length - 1];
+    }
+    return interiorPoints;
   }
   function coordinates(flatCoordinates, offset, end, stride) {
     while (offset < end - stride) {
@@ -18911,15 +19248,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (style instanceof Style) {
       return style;
     }
-    if (!Array.isArray(style)) {
-      return flatStylesToStyleFunction([style]);
-    }
-    if (style.length === 0) {
+    if (Array.isArray(style) && style.length === 0) {
       return [];
     }
-    const length = style.length;
-    const first = style[0];
-    if (first instanceof Style) {
+    if (Array.isArray(style) && style[0] instanceof Style) {
+      const length = style.length;
       const styles = new Array(length);
       for (let i = 0; i < length; ++i) {
         const candidate = style[i];
@@ -18930,22 +19263,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return styles;
     }
-    if ("style" in first) {
-      const rules = new Array(length);
-      for (let i = 0; i < length; ++i) {
-        const candidate = style[i];
-        if (!("style" in candidate)) {
-          throw new Error("Expected a list of rules with a style property");
-        }
-        rules[i] = candidate;
-      }
-      return rulesToStyleFunction(rules);
-    }
-    const flatStyles = (
-      /** @type {Array<import("../style/flat.js").FlatStyle>} */
+    const flatStyleLike = (
+      /** @type {import("../style/flat.js").FlatStyleLike} */
       style
     );
-    return flatStylesToStyleFunction(flatStyles);
+    return flatStyleLikeToStyleFunction(flatStyleLike);
   }
   class VectorLayer extends BaseVectorLayer {
     /**
@@ -21356,6 +21678,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.viewPromise_;
     }
     /**
+     * Resolve once the source is ready to be used (its state is `ready`), or
+     * reject if it fails to load (its state is `error`). Sources that configure
+     * asynchronously can use this to expose data (e.g. dimensions) through a
+     * promise instead of the `change` event.
+     * @return {Promise<void>} Resolves when the source is ready.
+     * @protected
+     */
+    ready() {
+      const state = this.getState();
+      if (state === "ready") {
+        return Promise.resolve();
+      }
+      if (state === "error") {
+        return Promise.reject(new Error("Source failed to load"));
+      }
+      return new Promise((resolve, reject) => {
+        const onChange = () => {
+          const changedState = this.getState();
+          if (changedState === "ready") {
+            this.un("change", onChange);
+            resolve();
+          } else if (changedState === "error") {
+            this.un("change", onChange);
+            reject(new Error("Source failed to load"));
+          }
+        };
+        this.on("change", onChange);
+      });
+    }
+    /**
      * Get the state of the source, see {@link import("./Source.js").State} for possible states.
      * @return {import("./Source.js").State} State.
      * @api
@@ -22110,7 +22462,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     hasFeature(feature) {
       const id = feature.getId();
       if (id !== void 0) {
-        return id in this.idIndex_;
+        const indexed = this.idIndex_[String(id)];
+        if (Array.isArray(indexed)) {
+          return indexed.includes(feature);
+        }
+        return indexed === feature;
       }
       return getUid(feature) in this.uidIndex_;
     }
@@ -22199,20 +22555,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super.refresh();
     }
     /**
-     * Remove an extent from the list of loaded extents.
-     * @param {import("../extent.js").Extent} extent Extent.
+     * Marks an extent as not loaded, preserving any loaded areas outside it.
+     *
+     * Any previously loaded extent overlapping the given extent is split into its
+     * remaining non-overlapping parts using {@link module:ol/extent~getDifference getDifference()},
+     * which are then re-inserted into the tree.
+     *
+     * @param {import("../extent.js").Extent} extent Extent to mark as not loaded.
      * @api
      */
     removeLoadedExtent(extent) {
       const loadedExtentsRtree = this.loadedExtentsRtree_;
-      const obj = loadedExtentsRtree.forEachInExtent(extent, function(object) {
-        if (equals$1(object.extent, extent)) {
-          return object;
+      const intersectingExtents = [];
+      loadedExtentsRtree.forEachInExtent(extent, function(object) {
+        intersectingExtents.push(object);
+      });
+      intersectingExtents.forEach((intersectingExtent) => {
+        loadedExtentsRtree.remove(intersectingExtent);
+        const remainders = getDifference(intersectingExtent.extent, extent);
+        for (const remainder of remainders) {
+          loadedExtentsRtree.insert(remainder, { extent: remainder });
         }
       });
-      if (obj) {
-        loadedExtentsRtree.remove(obj);
-      }
     }
     /**
      * Batch remove features from the source.  If you want to remove all features
@@ -22328,1205 +22692,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.overlaps_ = overlaps;
       this.changed();
     }
-  }
-  class GeometryCollection extends Geometry {
-    /**
-     * @param {Array<Geometry>} geometries Geometries.
-     */
-    constructor(geometries) {
-      super();
-      this.geometries_ = geometries;
-      this.changeEventsKeys_ = [];
-      this.listenGeometriesChange_();
-    }
-    /**
-     * @private
-     */
-    unlistenGeometriesChange_() {
-      this.changeEventsKeys_.forEach(unlistenByKey);
-      this.changeEventsKeys_.length = 0;
-    }
-    /**
-     * @private
-     */
-    listenGeometriesChange_() {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        this.changeEventsKeys_.push(
-          listen(geometries[i], EventType.CHANGE, this.changed, this)
-        );
-      }
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!GeometryCollection} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const geometryCollection = new GeometryCollection(
-        cloneGeometries(this.geometries_)
-      );
-      geometryCollection.applyProperties(this);
-      return geometryCollection;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
-        return minSquaredDistance;
-      }
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        minSquaredDistance = geometries[i].closestPointXY(
-          x,
-          y,
-          closestPoint,
-          minSquaredDistance
-        );
-      }
-      return minSquaredDistance;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @return {boolean} Contains (x, y).
-     * @override
-     */
-    containsXY(x, y) {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        if (geometries[i].containsXY(x, y)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    /**
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @override
-     */
-    computeExtent(extent) {
-      createOrUpdateEmpty(extent);
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        extend$1(extent, geometries[i].getExtent());
-      }
-      return extent;
-    }
-    /**
-     * Return the geometries that make up this geometry collection.
-     * @return {Array<Geometry>} Geometries.
-     * @api
-     */
-    getGeometries() {
-      return cloneGeometries(this.geometries_);
-    }
-    /**
-     * @return {Array<Geometry>} Geometries.
-     */
-    getGeometriesArray() {
-      return this.geometries_;
-    }
-    /**
-     * @return {Array<Geometry>} Geometries.
-     */
-    getGeometriesArrayRecursive() {
-      let geometriesArray = [];
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        if (geometries[i].getType() === this.getType()) {
-          geometriesArray = geometriesArray.concat(
-            /** @type {GeometryCollection} */
-            geometries[i].getGeometriesArrayRecursive()
-          );
-        } else {
-          geometriesArray.push(geometries[i]);
-        }
-      }
-      return geometriesArray;
-    }
-    /**
-     * Create a simplified version of this geometry using the Douglas Peucker algorithm.
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {GeometryCollection} Simplified GeometryCollection.
-     * @override
-     */
-    getSimplifiedGeometry(squaredTolerance) {
-      if (this.simplifiedGeometryRevision !== this.getRevision()) {
-        this.simplifiedGeometryMaxMinSquaredTolerance = 0;
-        this.simplifiedGeometryRevision = this.getRevision();
-      }
-      if (squaredTolerance < 0 || this.simplifiedGeometryMaxMinSquaredTolerance !== 0 && squaredTolerance < this.simplifiedGeometryMaxMinSquaredTolerance) {
-        return this;
-      }
-      const simplifiedGeometries = [];
-      const geometries = this.geometries_;
-      let simplified = false;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        const geometry = geometries[i];
-        const simplifiedGeometry = geometry.getSimplifiedGeometry(squaredTolerance);
-        simplifiedGeometries.push(simplifiedGeometry);
-        if (simplifiedGeometry !== geometry) {
-          simplified = true;
-        }
-      }
-      if (simplified) {
-        const simplifiedGeometryCollection = new GeometryCollection(
-          simplifiedGeometries
-        );
-        return simplifiedGeometryCollection;
-      }
-      this.simplifiedGeometryMaxMinSquaredTolerance = squaredTolerance;
-      return this;
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "GeometryCollection";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        if (geometries[i].intersectsExtent(extent)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    /**
-     * @return {boolean} Is empty.
-     */
-    isEmpty() {
-      return this.geometries_.length === 0;
-    }
-    /**
-     * Rotate the geometry around a given coordinate. This modifies the geometry
-     * coordinates in place.
-     * @param {number} angle Rotation angle in radians.
-     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
-     * @api
-     * @override
-     */
-    rotate(angle, anchor) {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        geometries[i].rotate(angle, anchor);
-      }
-      this.changed();
-    }
-    /**
-     * Scale the geometry (with an optional origin).  This modifies the geometry
-     * coordinates in place.
-     * @abstract
-     * @param {number} sx The scaling factor in the x-direction.
-     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
-     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
-     *     of the geometry extent).
-     * @api
-     * @override
-     */
-    scale(sx, sy, anchor) {
-      if (!anchor) {
-        anchor = getCenter(this.getExtent());
-      }
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        geometries[i].scale(sx, sy, anchor);
-      }
-      this.changed();
-    }
-    /**
-     * Set the geometries that make up this geometry collection.
-     * @param {Array<Geometry>} geometries Geometries.
-     * @api
-     */
-    setGeometries(geometries) {
-      this.setGeometriesArray(cloneGeometries(geometries));
-    }
-    /**
-     * @param {Array<Geometry>} geometries Geometries.
-     */
-    setGeometriesArray(geometries) {
-      this.unlistenGeometriesChange_();
-      this.geometries_ = geometries;
-      this.listenGeometriesChange_();
-      this.changed();
-    }
-    /**
-     * Apply a transform function to the coordinates of the geometry.
-     * The geometry is modified in place.
-     * If you do not want the geometry modified in place, first `clone()` it and
-     * then use this function on the clone.
-     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
-     * Called with a flat array of geometry coordinates.
-     * @api
-     * @override
-     */
-    applyTransform(transformFn) {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        geometries[i].applyTransform(transformFn);
-      }
-      this.changed();
-    }
-    /**
-     * Translate the geometry.  This modifies the geometry coordinates in place.  If
-     * instead you want a new geometry, first `clone()` this geometry.
-     * @param {number} deltaX Delta X.
-     * @param {number} deltaY Delta Y.
-     * @api
-     * @override
-     */
-    translate(deltaX, deltaY) {
-      const geometries = this.geometries_;
-      for (let i = 0, ii = geometries.length; i < ii; ++i) {
-        geometries[i].translate(deltaX, deltaY);
-      }
-      this.changed();
-    }
-    /**
-     * Clean up.
-     * @override
-     */
-    disposeInternal() {
-      this.unlistenGeometriesChange_();
-      super.disposeInternal();
-    }
-  }
-  function cloneGeometries(geometries) {
-    return geometries.map((geometry) => geometry.clone());
-  }
-  class FeatureFormat {
-    constructor() {
-      this.dataProjection = void 0;
-      this.defaultFeatureProjection = void 0;
-      this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
-      Feature;
-      this.supportedMediaTypes = null;
-    }
-    /**
-     * Adds the data projection to the read options.
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Options.
-     * @return {ReadOptions|undefined} Options.
-     * @protected
-     */
-    getReadOptions(source, options) {
-      if (options) {
-        let dataProjection = options.dataProjection ? get$1(options.dataProjection) : this.readProjection(source);
-        if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
-          dataProjection = get$1(dataProjection);
-          dataProjection.setWorldExtent(options.extent);
-        }
-        options = {
-          dataProjection,
-          featureProjection: options.featureProjection
-        };
-      }
-      return this.adaptOptions(options);
-    }
-    /**
-     * Sets the `dataProjection` on the options, if no `dataProjection`
-     * is set.
-     * @param {WriteOptions|ReadOptions|undefined} options
-     *     Options.
-     * @protected
-     * @return {WriteOptions|ReadOptions|undefined}
-     *     Updated options.
-     */
-    adaptOptions(options) {
-      return Object.assign(
-        {
-          dataProjection: this.dataProjection,
-          featureProjection: this.defaultFeatureProjection,
-          featureClass: this.featureClass
-        },
-        options
-      );
-    }
-    /**
-     * @abstract
-     * @return {Type} The format type.
-     */
-    getType() {
-      return abstract();
-    }
-    /**
-     * Read a single feature from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     */
-    readFeature(source, options) {
-      return abstract();
-    }
-    /**
-     * Read all features from a source.
-     *
-     * @abstract
-     * @param {Document|Element|ArrayBuffer|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {Array<FeatureType>} Features.
-     */
-    readFeatures(source, options) {
-      return abstract();
-    }
-    /**
-     * Read a single geometry from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @param {ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometry(source, options) {
-      return abstract();
-    }
-    /**
-     * Read the projection from a source.
-     *
-     * @abstract
-     * @param {Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default|undefined} Projection.
-     */
-    readProjection(source) {
-      return abstract();
-    }
-    /**
-     * Encode a feature in this format.
-     *
-     * @abstract
-     * @param {Feature} feature Feature.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeFeature(feature, options) {
-      return abstract();
-    }
-    /**
-     * Encode an array of features in this format.
-     *
-     * @abstract
-     * @param {Array<Feature>} features Features.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeFeatures(features, options) {
-      return abstract();
-    }
-    /**
-     * Write a single geometry in this format.
-     *
-     * @abstract
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {WriteOptions} [options] Write options.
-     * @return {string|ArrayBuffer} Result.
-     */
-    writeGeometry(geometry, options) {
-      return abstract();
-    }
-  }
-  function transformGeometryWithOptions(geometry, write, options) {
-    const featureProjection = options ? get$1(options.featureProjection) : null;
-    const dataProjection = options ? get$1(options.dataProjection) : null;
-    let transformed = geometry;
-    if (featureProjection && dataProjection && !equivalent$1(featureProjection, dataProjection)) {
-      if (write) {
-        transformed = /** @type {T} */
-        geometry.clone();
-      }
-      const fromProjection = write ? featureProjection : dataProjection;
-      const toProjection = write ? dataProjection : featureProjection;
-      if (fromProjection.getUnits() === "tile-pixels") {
-        transformed.transform(fromProjection, toProjection);
-      } else {
-        transformed.applyTransform(getTransform(fromProjection, toProjection));
-      }
-    }
-    if (write && options && /** @type {WriteOptions} */
-    options.decimals !== void 0) {
-      const power = Math.pow(
-        10,
-        /** @type {WriteOptions} */
-        options.decimals
-      );
-      const transform2 = function(coordinates2) {
-        for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
-          coordinates2[i] = Math.round(coordinates2[i] * power) / power;
-        }
-        return coordinates2;
-      };
-      if (transformed === geometry) {
-        transformed = /** @type {T} */
-        geometry.clone();
-      }
-      transformed.applyTransform(transform2);
-    }
-    return transformed;
-  }
-  const GeometryConstructor = {
-    Point,
-    LineString,
-    Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon
-  };
-  function orientFlatCoordinates(flatCoordinates, ends, stride) {
-    if (Array.isArray(ends[0])) {
-      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
-        flatCoordinates = flatCoordinates.slice();
-        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
-      }
-      return flatCoordinates;
-    }
-    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
-      flatCoordinates = flatCoordinates.slice();
-      orientLinearRings(flatCoordinates, 0, ends, stride);
-    }
-    return flatCoordinates;
-  }
-  function createRenderFeature(object, options) {
-    var _a;
-    const geometry = object.geometry;
-    if (!geometry) {
-      return [];
-    }
-    if (Array.isArray(geometry)) {
-      return geometry.map((geometry2) => createRenderFeature({ ...object, geometry: geometry2 })).flat();
-    }
-    const geometryType = geometry.type === "MultiPolygon" ? "Polygon" : geometry.type;
-    if (geometryType === "GeometryCollection" || geometryType === "Circle") {
-      throw new Error("Unsupported geometry type: " + geometryType);
-    }
-    const stride = geometry.layout.length;
-    return transformGeometryWithOptions(
-      new RenderFeature(
-        geometryType,
-        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
-        (_a = geometry.ends) == null ? void 0 : _a.flat(),
-        stride,
-        object.properties || {},
-        object.id
-      ).enableSimplifyTransformed(),
-      false,
-      options
-    );
-  }
-  function createGeometry(object, options) {
-    if (!object) {
-      return null;
-    }
-    if (Array.isArray(object)) {
-      const geometries = object.map(
-        (geometry) => createGeometry(geometry, options)
-      );
-      return new GeometryCollection(geometries);
-    }
-    const Geometry2 = GeometryConstructor[object.type];
-    return transformGeometryWithOptions(
-      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
-      false,
-      options
-    );
-  }
-  class JSONFeature extends FeatureFormat {
-    constructor() {
-      super();
-    }
-    /**
-     * @return {import("./Feature.js").Type} Format.
-     * @override
-     */
-    getType() {
-      return "json";
-    }
-    /**
-     * Read a feature.  Only works for a single feature. Use `readFeatures` to
-     * read a feature collection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     * @api
-     * @override
-     */
-    readFeature(source, options) {
-      return this.readFeatureFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * Read all features.  Works with both a single feature and a feature
-     * collection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {Array<FeatureType>} Features.
-     * @api
-     * @override
-     */
-    readFeatures(source, options) {
-      return this.readFeaturesFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     */
-    readFeatureFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {Array<FeatureType>} Features.
-     */
-    readFeaturesFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * Read a geometry.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     * @api
-     * @override
-     */
-    readGeometry(source, options) {
-      return this.readGeometryFromObject(
-        getObject(source),
-        this.getReadOptions(source, options)
-      );
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     */
-    readGeometryFromObject(object, options) {
-      return abstract();
-    }
-    /**
-     * Read the projection.
-     *
-     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default} Projection.
-     * @api
-     * @override
-     */
-    readProjection(source) {
-      return this.readProjectionFromObject(getObject(source));
-    }
-    /**
-     * @abstract
-     * @param {Object} object Object.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     */
-    readProjectionFromObject(object) {
-      return abstract();
-    }
-    /**
-     * Encode a feature as string.
-     *
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded feature.
-     * @api
-     * @override
-     */
-    writeFeature(feature, options) {
-      return JSON.stringify(this.writeFeatureObject(feature, options));
-    }
-    /**
-     * @abstract
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeFeatureObject(feature, options) {
-      return abstract();
-    }
-    /**
-     * Encode an array of features as string.
-     *
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded features.
-     * @api
-     * @override
-     */
-    writeFeatures(features, options) {
-      return JSON.stringify(this.writeFeaturesObject(features, options));
-    }
-    /**
-     * @abstract
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeFeaturesObject(features, options) {
-      return abstract();
-    }
-    /**
-     * Encode a geometry as string.
-     *
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {string} Encoded geometry.
-     * @api
-     * @override
-     */
-    writeGeometry(geometry, options) {
-      return JSON.stringify(this.writeGeometryObject(geometry, options));
-    }
-    /**
-     * @abstract
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {Object} Object.
-     */
-    writeGeometryObject(geometry, options) {
-      return abstract();
-    }
-  }
-  function getObject(source) {
-    if (typeof source === "string") {
-      const object = JSON.parse(source);
-      return object ? (
-        /** @type {Object} */
-        object
-      ) : null;
-    }
-    if (source !== null) {
-      return source;
-    }
-    return null;
-  }
-  class GeoJSON extends JSONFeature {
-    /**
-     * @param {Options<FeatureType>} [options] Options.
-     */
-    constructor(options) {
-      options = options ? options : {};
-      super();
-      this.dataProjection = get$1(
-        options.dataProjection ? options.dataProjection : "EPSG:4326"
-      );
-      if (options.featureProjection) {
-        this.defaultFeatureProjection = get$1(options.featureProjection);
-      }
-      if (options.featureClass) {
-        this.featureClass = options.featureClass;
-      }
-      this.geometryName_ = options.geometryName;
-      this.extractGeometryName_ = options.extractGeometryName;
-      this.supportedMediaTypes = [
-        "application/geo+json",
-        "application/vnd.geo+json"
-      ];
-    }
-    /**
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {FeatureType|Array<FeatureType>} Feature.
-     * @override
-     */
-    readFeatureFromObject(object, options) {
-      let geoJSONFeature = null;
-      if (object["type"] === "Feature") {
-        geoJSONFeature = /** @type {GeoJSONFeature} */
-        object;
-      } else {
-        geoJSONFeature = {
-          "type": "Feature",
-          "geometry": (
-            /** @type {GeoJSONGeometry} */
-            object
-          ),
-          "properties": null
-        };
-      }
-      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
-      if (this.featureClass === RenderFeature) {
-        return (
-          /** @type {FeatureType|Array<FeatureType>} */
-          createRenderFeature(
-            {
-              geometry,
-              id: geoJSONFeature["id"],
-              properties: geoJSONFeature["properties"]
-            },
-            options
-          )
-        );
-      }
-      const feature = new Feature();
-      if (this.geometryName_) {
-        feature.setGeometryName(this.geometryName_);
-      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
-        feature.setGeometryName(geoJSONFeature["geometry_name"]);
-      }
-      feature.setGeometry(createGeometry(geometry, options));
-      if ("id" in geoJSONFeature) {
-        feature.setId(geoJSONFeature["id"]);
-      }
-      if (geoJSONFeature["properties"]) {
-        feature.setProperties(geoJSONFeature["properties"], true);
-      }
-      return (
-        /** @type {FeatureType|Array<FeatureType>} */
-        feature
-      );
-    }
-    /**
-     * @param {Object} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {Array<FeatureType>} Features.
-     * @override
-     */
-    readFeaturesFromObject(object, options) {
-      const geoJSONObject = (
-        /** @type {GeoJSONObject} */
-        object
-      );
-      let features = null;
-      if (geoJSONObject["type"] === "FeatureCollection") {
-        const geoJSONFeatureCollection = (
-          /** @type {GeoJSONFeatureCollection} */
-          object
-        );
-        features = [];
-        const geoJSONFeatures = geoJSONFeatureCollection["features"];
-        for (let i = 0, ii = geoJSONFeatures.length; i < ii; ++i) {
-          const featureObject = this.readFeatureFromObject(
-            geoJSONFeatures[i],
-            options
-          );
-          if (!featureObject) {
-            continue;
-          }
-          features.push(featureObject);
-        }
-      } else {
-        features = [this.readFeatureFromObject(object, options)];
-      }
-      return (
-        /** @type {Array<FeatureType>} */
-        features.flat()
-      );
-    }
-    /**
-     * @param {GeoJSONGeometry} object Object.
-     * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
-     * @override
-     */
-    readGeometryFromObject(object, options) {
-      return readGeometry(object, options);
-    }
-    /**
-     * @param {Object} object Object.
-     * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
-     * @override
-     */
-    readProjectionFromObject(object) {
-      const crs = object["crs"];
-      let projection;
-      if (crs) {
-        if (crs["type"] == "name") {
-          projection = get$1(crs["properties"]["name"]);
-        } else if (crs["type"] === "EPSG") {
-          projection = get$1("EPSG:" + crs["properties"]["code"]);
-        } else {
-          throw new Error("Unknown SRS type");
-        }
-      } else {
-        projection = this.dataProjection;
-      }
-      return (
-        /** @type {import("../proj/Projection.js").default} */
-        projection
-      );
-    }
-    /**
-     * Encode a feature as a GeoJSON Feature object.
-     *
-     * @param {import("../Feature.js").default} feature Feature.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONFeature} Object.
-     * @api
-     * @override
-     */
-    writeFeatureObject(feature, options) {
-      options = this.adaptOptions(options);
-      const object = {
-        "type": "Feature",
-        geometry: null,
-        properties: null
-      };
-      const id = feature.getId();
-      if (id !== void 0) {
-        object.id = id;
-      }
-      if (!feature.hasProperties()) {
-        return object;
-      }
-      const properties = feature.getProperties();
-      const geometry = feature.getGeometry();
-      if (geometry) {
-        object.geometry = writeGeometry(geometry, options);
-        delete properties[feature.getGeometryName()];
-      }
-      if (!isEmpty$1(properties)) {
-        object.properties = properties;
-      }
-      return object;
-    }
-    /**
-     * Encode an array of features as a GeoJSON object.
-     *
-     * @param {Array<import("../Feature.js").default>} features Features.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONFeatureCollection} GeoJSON Object.
-     * @api
-     * @override
-     */
-    writeFeaturesObject(features, options) {
-      options = this.adaptOptions(options);
-      const objects = [];
-      for (let i = 0, ii = features.length; i < ii; ++i) {
-        objects.push(this.writeFeatureObject(features[i], options));
-      }
-      return {
-        type: "FeatureCollection",
-        features: objects
-      };
-    }
-    /**
-     * Encode a geometry as a GeoJSON object.
-     *
-     * @param {import("../geom/Geometry.js").default} geometry Geometry.
-     * @param {import("./Feature.js").WriteOptions} [options] Write options.
-     * @return {GeoJSONGeometry|GeoJSONGeometryCollection} Object.
-     * @api
-     * @override
-     */
-    writeGeometryObject(geometry, options) {
-      return writeGeometry(geometry, this.adaptOptions(options));
-    }
-  }
-  function readGeometryInternal(object, options) {
-    if (!object) {
-      return null;
-    }
-    let geometry;
-    switch (object["type"]) {
-      case "Point": {
-        geometry = readPointGeometry(
-          /** @type {GeoJSONPoint} */
-          object
-        );
-        break;
-      }
-      case "LineString": {
-        geometry = readLineStringGeometry(
-          /** @type {GeoJSONLineString} */
-          object
-        );
-        break;
-      }
-      case "Polygon": {
-        geometry = readPolygonGeometry(
-          /** @type {GeoJSONPolygon} */
-          object
-        );
-        break;
-      }
-      case "MultiPoint": {
-        geometry = readMultiPointGeometry(
-          /** @type {GeoJSONMultiPoint} */
-          object
-        );
-        break;
-      }
-      case "MultiLineString": {
-        geometry = readMultiLineStringGeometry(
-          /** @type {GeoJSONMultiLineString} */
-          object
-        );
-        break;
-      }
-      case "MultiPolygon": {
-        geometry = readMultiPolygonGeometry(
-          /** @type {GeoJSONMultiPolygon} */
-          object
-        );
-        break;
-      }
-      case "GeometryCollection": {
-        geometry = readGeometryCollectionGeometry(
-          /** @type {GeoJSONGeometryCollection} */
-          object
-        );
-        break;
-      }
-      default: {
-        throw new Error("Unsupported GeoJSON type: " + object["type"]);
-      }
-    }
-    return geometry;
-  }
-  function readGeometry(object, options) {
-    const geometryObject = readGeometryInternal(object);
-    return createGeometry(geometryObject, options);
-  }
-  function readGeometryCollectionGeometry(object, options) {
-    const geometries = object["geometries"].map(
-      /**
-       * @param {GeoJSONGeometry} geometry Geometry.
-       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
-       */
-      function(geometry) {
-        return readGeometryInternal(geometry);
-      }
-    );
-    return geometries;
-  }
-  function readPointGeometry(object) {
-    const flatCoordinates = object["coordinates"];
-    return {
-      type: "Point",
-      flatCoordinates,
-      layout: getLayoutForStride(flatCoordinates.length)
-    };
-  }
-  function readLineStringGeometry(object) {
-    var _a;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = coordinates2.flat();
-    return {
-      type: "LineString",
-      flatCoordinates,
-      ends: [flatCoordinates.length],
-      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
-    };
-  }
-  function readMultiLineStringGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
-    const flatCoordinates = [];
-    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
-    return {
-      type: "MultiLineString",
-      flatCoordinates,
-      ends,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function readMultiPointGeometry(object) {
-    var _a;
-    const coordinates2 = object["coordinates"];
-    return {
-      type: "MultiPoint",
-      flatCoordinates: coordinates2.flat(),
-      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
-    };
-  }
-  function readMultiPolygonGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
-    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
-    const endss = deflateMultiCoordinatesArray(
-      flatCoordinates,
-      0,
-      coordinates2,
-      stride
-    );
-    return {
-      type: "MultiPolygon",
-      flatCoordinates,
-      ends: endss,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function readPolygonGeometry(object) {
-    var _a, _b;
-    const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
-    const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
-    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
-    return {
-      type: "Polygon",
-      flatCoordinates,
-      ends,
-      layout: getLayoutForStride(stride)
-    };
-  }
-  function writeGeometry(geometry, options) {
-    geometry = transformGeometryWithOptions(geometry, true, options);
-    const type = geometry.getType();
-    let geoJSON;
-    switch (type) {
-      case "Point": {
-        geoJSON = writePointGeometry(
-          /** @type {import("../geom/Point.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "LineString": {
-        geoJSON = writeLineStringGeometry(
-          /** @type {import("../geom/LineString.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "Polygon": {
-        geoJSON = writePolygonGeometry(
-          /** @type {import("../geom/Polygon.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "MultiPoint": {
-        geoJSON = writeMultiPointGeometry(
-          /** @type {import("../geom/MultiPoint.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "MultiLineString": {
-        geoJSON = writeMultiLineStringGeometry(
-          /** @type {import("../geom/MultiLineString.js").default} */
-          geometry
-        );
-        break;
-      }
-      case "MultiPolygon": {
-        geoJSON = writeMultiPolygonGeometry(
-          /** @type {import("../geom/MultiPolygon.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "GeometryCollection": {
-        geoJSON = writeGeometryCollectionGeometry(
-          /** @type {import("../geom/GeometryCollection.js").default} */
-          geometry,
-          options
-        );
-        break;
-      }
-      case "Circle": {
-        geoJSON = {
-          type: "GeometryCollection",
-          geometries: []
-        };
-        break;
-      }
-      default: {
-        throw new Error("Unsupported geometry type: " + type);
-      }
-    }
-    return geoJSON;
-  }
-  function writeGeometryCollectionGeometry(geometry, options) {
-    options = Object.assign({}, options);
-    delete options.featureProjection;
-    const geometries = geometry.getGeometriesArray().map(function(geometry2) {
-      return writeGeometry(geometry2, options);
-    });
-    return {
-      type: "GeometryCollection",
-      geometries
-    };
-  }
-  function writeLineStringGeometry(geometry, options) {
-    return {
-      type: "LineString",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiLineStringGeometry(geometry, options) {
-    return {
-      type: "MultiLineString",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiPointGeometry(geometry, options) {
-    return {
-      type: "MultiPoint",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writeMultiPolygonGeometry(geometry, options) {
-    let right;
-    if (options) {
-      right = options.rightHanded;
-    }
-    return {
-      type: "MultiPolygon",
-      coordinates: geometry.getCoordinates(right)
-    };
-  }
-  function writePointGeometry(geometry, options) {
-    return {
-      type: "Point",
-      coordinates: geometry.getCoordinates()
-    };
-  }
-  function writePolygonGeometry(geometry, options) {
-    let right;
-    if (options) {
-      right = options.rightHanded;
-    }
-    return {
-      type: "Polygon",
-      coordinates: geometry.getCoordinates(right)
-    };
   }
   class MapEvent extends BaseEvent {
     /**
@@ -24176,6 +23341,293 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       clientY += pointerEvents[i].clientY;
     }
     return { clientX: clientX / length, clientY: clientY / length };
+  }
+  class GeometryCollection extends Geometry {
+    /**
+     * @param {Array<Geometry>} geometries Geometries.
+     */
+    constructor(geometries) {
+      super();
+      this.geometries_ = geometries;
+      this.changeEventsKeys_ = [];
+      this.listenGeometriesChange_();
+    }
+    /**
+     * @private
+     */
+    unlistenGeometriesChange_() {
+      this.changeEventsKeys_.forEach(unlistenByKey);
+      this.changeEventsKeys_.length = 0;
+    }
+    /**
+     * @private
+     */
+    listenGeometriesChange_() {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        this.changeEventsKeys_.push(
+          listen(geometries[i], EventType.CHANGE, this.changed, this)
+        );
+      }
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!GeometryCollection} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const geometryCollection = new GeometryCollection(
+        cloneGeometries(this.geometries_)
+      );
+      geometryCollection.applyProperties(this);
+      return geometryCollection;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      if (minSquaredDistance < closestSquaredDistanceXY(this.getExtent(), x, y)) {
+        return minSquaredDistance;
+      }
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        minSquaredDistance = geometries[i].closestPointXY(
+          x,
+          y,
+          closestPoint,
+          minSquaredDistance
+        );
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     * @override
+     */
+    containsXY(x, y) {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        if (geometries[i].containsXY(x, y)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      createOrUpdateEmpty(extent);
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        extend$1(extent, geometries[i].getExtent());
+      }
+      return extent;
+    }
+    /**
+     * Return the geometries that make up this geometry collection.
+     * @return {Array<Geometry>} Geometries.
+     * @api
+     */
+    getGeometries() {
+      return cloneGeometries(this.geometries_);
+    }
+    /**
+     * @return {Array<Geometry>} Geometries.
+     */
+    getGeometriesArray() {
+      return this.geometries_;
+    }
+    /**
+     * @return {Array<Geometry>} Geometries.
+     */
+    getGeometriesArrayRecursive() {
+      let geometriesArray = [];
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        if (geometries[i].getType() === this.getType()) {
+          geometriesArray = geometriesArray.concat(
+            /** @type {GeometryCollection} */
+            geometries[i].getGeometriesArrayRecursive()
+          );
+        } else {
+          geometriesArray.push(geometries[i]);
+        }
+      }
+      return geometriesArray;
+    }
+    /**
+     * Create a simplified version of this geometry using the Douglas Peucker algorithm.
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {GeometryCollection} Simplified GeometryCollection.
+     * @override
+     */
+    getSimplifiedGeometry(squaredTolerance) {
+      if (this.simplifiedGeometryRevision !== this.getRevision()) {
+        this.simplifiedGeometryMaxMinSquaredTolerance = 0;
+        this.simplifiedGeometryRevision = this.getRevision();
+      }
+      if (squaredTolerance < 0 || this.simplifiedGeometryMaxMinSquaredTolerance !== 0 && squaredTolerance < this.simplifiedGeometryMaxMinSquaredTolerance) {
+        return this;
+      }
+      const simplifiedGeometries = [];
+      const geometries = this.geometries_;
+      let simplified = false;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        const geometry = geometries[i];
+        const simplifiedGeometry = geometry.getSimplifiedGeometry(squaredTolerance);
+        simplifiedGeometries.push(simplifiedGeometry);
+        if (simplifiedGeometry !== geometry) {
+          simplified = true;
+        }
+      }
+      if (simplified) {
+        const simplifiedGeometryCollection = new GeometryCollection(
+          simplifiedGeometries
+        );
+        return simplifiedGeometryCollection;
+      }
+      this.simplifiedGeometryMaxMinSquaredTolerance = squaredTolerance;
+      return this;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "GeometryCollection";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        if (geometries[i].intersectsExtent(extent)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * @return {boolean} Is empty.
+     */
+    isEmpty() {
+      return this.geometries_.length === 0;
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @param {number} angle Rotation angle in radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     * @override
+     */
+    rotate(angle, anchor) {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        geometries[i].rotate(angle, anchor);
+      }
+      this.changed();
+    }
+    /**
+     * Scale the geometry (with an optional origin).  This modifies the geometry
+     * coordinates in place.
+     * @abstract
+     * @param {number} sx The scaling factor in the x-direction.
+     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
+     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
+     *     of the geometry extent).
+     * @api
+     * @override
+     */
+    scale(sx, sy, anchor) {
+      if (!anchor) {
+        anchor = getCenter(this.getExtent());
+      }
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        geometries[i].scale(sx, sy, anchor);
+      }
+      this.changed();
+    }
+    /**
+     * Set the geometries that make up this geometry collection.
+     * @param {Array<Geometry>} geometries Geometries.
+     * @api
+     */
+    setGeometries(geometries) {
+      this.setGeometriesArray(cloneGeometries(geometries));
+    }
+    /**
+     * @param {Array<Geometry>} geometries Geometries.
+     */
+    setGeometriesArray(geometries) {
+      this.unlistenGeometriesChange_();
+      this.geometries_ = geometries;
+      this.listenGeometriesChange_();
+      this.changed();
+    }
+    /**
+     * Apply a transform function to the coordinates of the geometry.
+     * The geometry is modified in place.
+     * If you do not want the geometry modified in place, first `clone()` it and
+     * then use this function on the clone.
+     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
+     * Called with a flat array of geometry coordinates.
+     * @api
+     * @override
+     */
+    applyTransform(transformFn) {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        geometries[i].applyTransform(transformFn);
+      }
+      this.changed();
+    }
+    /**
+     * Translate the geometry.  This modifies the geometry coordinates in place.  If
+     * instead you want a new geometry, first `clone()` this geometry.
+     * @param {number} deltaX Delta X.
+     * @param {number} deltaY Delta Y.
+     * @api
+     * @override
+     */
+    translate(deltaX, deltaY) {
+      const geometries = this.geometries_;
+      for (let i = 0, ii = geometries.length; i < ii; ++i) {
+        geometries[i].translate(deltaX, deltaY);
+      }
+      this.changed();
+    }
+    /**
+     * Clean up.
+     * @override
+     */
+    disposeInternal() {
+      this.unlistenGeometriesChange_();
+      super.disposeInternal();
+    }
+  }
+  function cloneGeometries(geometries) {
+    return geometries.map((geometry) => geometry.clone());
   }
   function getCoordinate(coordinates2, index) {
     const count = coordinates2.length;
@@ -26162,8 +25614,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.traceState_ = { active: false };
     }
     /**
+     * Determine whether a trace from `fromIndex` to `toIndex` passes at least one
+     * vertex of the target (i.e. whether it would add any traced coordinates).
+     * The index math mirrors {@link addTracedCoordinates_}.
+     * @param {number} fromIndex The start index.
+     * @param {number} toIndex The end index.
+     * @return {boolean} At least one target vertex lies between the indices.
+     * @private
+     */
+    tracePassesVertex_(fromIndex, toIndex) {
+      if (fromIndex === toIndex) {
+        return false;
+      }
+      if (fromIndex < toIndex) {
+        const start2 = Math.ceil(fromIndex);
+        let end2 = Math.floor(toIndex);
+        if (end2 === toIndex) {
+          end2 -= 1;
+        }
+        return start2 <= end2;
+      }
+      const start = Math.floor(fromIndex);
+      let end = Math.ceil(toIndex);
+      if (end === toIndex) {
+        end += 1;
+      }
+      return start >= end;
+    }
+    /**
      * Update the trace.
      * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @return {import('../coordinate.js').Coordinate|undefined} The coordinate the
+     * dragged vertex was snapped onto a target edge, if any.
      * @private
      */
     updateTrace_(event) {
@@ -26186,41 +25668,45 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / event.map.getView().getResolution() > this.pixelTolerance_) {
         return;
       }
-      if (traceState.targetIndex !== updatedTraceTarget.index) {
-        if (traceState.targetIndex !== -1) {
-          const oldTarget = traceState.targets[traceState.targetIndex];
-          this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
-        } else {
-          for (const traceSegment of this.traceSegments_) {
-            const segmentData = traceSegment[0];
-            const geometry = segmentData.geometry;
-            const index = traceSegment[1];
-            const coordinates2 = geometry.getCoordinates();
-            const coordinatesArray = getCoordinatesArray(
-              coordinates2,
-              geometry.getType(),
-              segmentData.depth
-            );
-            coordinatesArray.splice(segmentData.index + index, 1);
-            geometry.setCoordinates(coordinates2);
-            if (index === 0) {
-              segmentData.index -= 1;
-            }
-          }
-        }
-        const newTarget = traceState.targets[updatedTraceTarget.index];
-        this.addTracedCoordinates_(
-          newTarget,
-          newTarget.startIndex,
+      let commit = true;
+      if (traceState.targetIndex === -1) {
+        const candidateTarget = traceState.targets[updatedTraceTarget.index];
+        commit = this.tracePassesVertex_(
+          candidateTarget.startIndex,
           updatedTraceTarget.endIndex
         );
-      } else {
-        const target2 = traceState.targets[traceState.targetIndex];
-        this.addOrRemoveTracedCoordinates_(target2, updatedTraceTarget.endIndex);
       }
-      traceState.targetIndex = updatedTraceTarget.index;
-      const target = traceState.targets[traceState.targetIndex];
-      target.endIndex = updatedTraceTarget.endIndex;
+      if (commit) {
+        if (traceState.targetIndex !== updatedTraceTarget.index) {
+          if (traceState.targetIndex !== -1) {
+            const oldTarget = traceState.targets[traceState.targetIndex];
+            this.removeTracedCoordinates_(
+              oldTarget.startIndex,
+              oldTarget.endIndex
+            );
+          }
+          const newTarget = traceState.targets[updatedTraceTarget.index];
+          this.addTracedCoordinates_(
+            newTarget,
+            newTarget.startIndex,
+            updatedTraceTarget.endIndex
+          );
+        } else {
+          const target = traceState.targets[traceState.targetIndex];
+          this.addOrRemoveTracedCoordinates_(target, updatedTraceTarget.endIndex);
+        }
+        traceState.targetIndex = updatedTraceTarget.index;
+        traceState.targets[traceState.targetIndex].endIndex = updatedTraceTarget.endIndex;
+      }
+      const snapTarget = traceState.targets[updatedTraceTarget.index];
+      const snappedVertex = interpolateCoordinate(
+        snapTarget.coordinates,
+        updatedTraceTarget.endIndex
+      );
+      for (const dragSegment of this.dragSegments_) {
+        this.updateGeometry_(snappedVertex.slice(), dragSegment);
+      }
+      return snappedVertex;
     }
     getTraceCandidates_(event) {
       const map = this.getMap();
@@ -26285,6 +25771,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
+     * Tracing splices coordinates into a ring next to the dragged vertex, but only
+     * adjusts the index of the trace segment itself.  The dragged vertex' other
+     * segments in `dragSegments_` reference the same ring, so their stored index
+     * must be shifted too - otherwise the next {@link updateGeometry_} writes the
+     * dragged vertex to the wrong coordinate and scrambles the ring.
+     * @param {SegmentData} traceSegmentData The trace segment (adjusted by the
+     * caller and skipped here).
+     * @param {number} atIndex Segments at or after this coordinate index shift.
+     * @param {number} delta Coordinates added (positive) or removed (negative).
+     * @private
+     */
+    shiftTracedSegmentIndices_(traceSegmentData, atIndex, delta) {
+      for (const dragSegment of this.dragSegments_) {
+        const segmentData = dragSegment[0];
+        if (segmentData !== traceSegmentData && segmentData.geometry === traceSegmentData.geometry && (segmentData.depth === void 0 || traceSegmentData.depth === void 0 || equals$2(segmentData.depth, traceSegmentData.depth)) && segmentData.index >= atIndex) {
+          segmentData.index += delta;
+        }
+      }
+    }
+    /**
      * @param {number} fromIndex The start index.
      * @param {number} toIndex The end index.
      * @private
@@ -26325,7 +25831,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             segmentData.depth
           );
           coordinatesArray.splice(removeIndex, remove);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            removeIndex + remove,
+            -remove
+          );
           if (index === 1) {
             segmentData.index -= remove;
           }
@@ -26378,7 +25889,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             segmentData.depth
           );
           coordinatesArray.splice(insertIndex, 0, ...newCoordinates);
-          geometry.setCoordinates(coordinates2);
+          this.setGeometryCoordinates_(geometry, coordinates2);
+          this.shiftTracedSegmentIndices_(
+            segmentData,
+            insertIndex,
+            newCoordinates.length
+          );
           if (index === 1) {
             segmentData.index += newCoordinates.length;
           }
@@ -26514,6 +26030,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             this.traceSegments_.push(dragSegment);
           }
         }
+        if (this.traceSegments_.length > 1) {
+          this.deactivateTrace_();
+          this.traceSegments_ = null;
+        }
       }
       for (let i = 0, ii = this.dragSegments_.length; i < ii; ++i) {
         const dragSegment = this.dragSegments_[i];
@@ -26528,8 +26048,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         this.updateGeometry_(vertex, dragSegment);
       }
-      this.updateTrace_(evt);
-      this.createOrUpdateVertexFeature_(vertex, features, geometries, true);
+      const snappedVertex = this.updateTrace_(evt);
+      this.createOrUpdateVertexFeature_(
+        snappedVertex || vertex,
+        features,
+        geometries,
+        true
+      );
     }
     /**
      * Handle pointer down events.
@@ -26562,8 +26087,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     handleUpEvent(evt) {
+      const tracedFeatures = this.traceState_.active ? /* @__PURE__ */ new Set() : null;
       for (let i = this.dragSegments_.length - 1; i >= 0; --i) {
         const segmentData = this.dragSegments_[i][0];
+        if (tracedFeatures) {
+          tracedFeatures.add(segmentData.feature);
+        }
         const geometry = segmentData.geometry;
         if (geometry.getType() === "Circle") {
           const circle = (
@@ -26585,6 +26114,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
         } else {
           this.rBush_.update(boundingExtent(segmentData.segment), segmentData);
+        }
+      }
+      if (tracedFeatures) {
+        for (const feature of tracedFeatures) {
+          this.removeFeature_(feature);
+          if (this.filter_(feature)) {
+            this.addFeature_(feature);
+          }
         }
       }
       if (this.featuresBeingModified_) {
@@ -27204,9 +26741,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const segments = [];
       const geometries = geometry.getGeometriesArray();
       for (let i = 0; i < geometries.length; ++i) {
-        const segmenter = this[geometries[i].getType()];
-        if (segmenter) {
-          segments.push(segmenter(geometries[i], projection));
+        const segmenter2 = this[geometries[i].getType()];
+        if (segmenter2) {
+          segments.push(segmenter2(geometries[i], projection));
         }
       }
       return segments.flat();
@@ -27384,10 +26921,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const feature_uid = getUid(feature);
       const geometry = feature.getGeometry();
       if (geometry) {
-        const segmenter = this.segmenters_[geometry.getType()];
-        if (segmenter) {
+        const segmenter2 = this.segmenters_[geometry.getType()];
+        if (segmenter2) {
           this.indexedFeaturesExtents_[feature_uid] = geometry.getExtent(createEmpty());
-          const segments = segmenter.call(
+          const segments = segmenter2.call(
             this.segmenters_,
             geometry,
             this.getMap().getView().getProjection()
@@ -27805,10 +27342,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const kind = data.type === "MultiDisc" ? "disc" : "circle";
     const simpleType = kind === "disc" ? "Disc" : "Circle";
     return data.geometries.map(
-      (g) => featureFromCircleJson(
-        { type: simpleType, center: g.center, radius: g.radius },
-        mapProjection
-      )
+      (g) => featureFromCircleJson({ type: simpleType, center: g.center, radius: g.radius }, mapProjection)
     );
   }
   function circleParts(feature, precision, mapProjection) {
@@ -28198,9 +27732,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       fontSize: (stored == null ? void 0 : stored.fontSize) ?? (textStored == null ? void 0 : textStored.fontSize) ?? base.fontSize,
       fontColor: (stored == null ? void 0 : stored.fontColor) ?? (textStored == null ? void 0 : textStored.fontColor) ?? base.fontColor,
       textStrokeColor: (stored == null ? void 0 : stored.textStrokeColor) ?? (textStored == null ? void 0 : textStored.strokeColor) ?? base.textStrokeColor,
-      rotation: clampRotationDeg(
-        (stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation
-      )
+      rotation: clampRotationDeg((stored == null ? void 0 : stored.rotation) ?? (textStored == null ? void 0 : textStored.rotation) ?? base.rotation)
     };
   }
   function strokeFromAttrs(attrs) {
@@ -28365,29 +27897,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    if (!mapSize || !getPixel) {
+    {
       return candidates[0];
     }
-    const scored = candidates.map((c, index) => {
-      const p = getPixel(c);
-      const onScreen = Boolean(
-        p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1]
-      );
-      return {
-        c,
-        p,
-        onScreen,
-        index,
-        // Plus haut à l’écran = meilleur pour une popup au-dessus
-        topRank: p ? p[1] : Number.POSITIVE_INFINITY
-      };
-    });
-    const pool = scored.filter((s) => s.onScreen);
-    const use = pool.length ? pool : scored;
-    const interior = use.find((s) => s.index === 0);
-    if (interior && interior.onScreen) return interior.c;
-    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
-    return use[0].c;
   }
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
@@ -28468,9 +27980,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return;
     }
     if (geom instanceof LineString) {
-      geom.setCoordinates(
-        geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin))
-      );
+      geom.setCoordinates(geom.getCoordinates().map((c) => rotateCoordinate(c, angle, origin)));
       return;
     }
     if (geom instanceof Polygon) {
@@ -28539,10 +28049,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let total = 0;
     const segLens = [];
     for (let i = 0; i < coords.length - 1; i++) {
-      const len = Math.hypot(
-        coords[i + 1][0] - coords[i][0],
-        coords[i + 1][1] - coords[i][1]
-      );
+      const len = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1]);
       segLens.push(len);
       total += len;
     }
@@ -28854,17 +28361,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const t = circleSideTranslateAnchor(geom, res);
           add2("translate", t);
           if (this.styleEditEnabled) {
-            add2("style-edit", [
-              t[0],
-              t[1] + STYLE_EDIT_GAP_PX * res
-            ]);
+            add2("style-edit", [t[0], t[1] + STYLE_EDIT_GAP_PX * res]);
           }
         } else if (this.styleEditEnabled) {
           const c = geom.getCenter();
-          add2("style-edit", [
-            c[0],
-            c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)
-          ]);
+          add2("style-edit", [c[0], c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)]);
         }
         return;
       }
@@ -28882,10 +28383,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("resize-sw", [minX, minY]);
         add2("resize-w", [minX, midY]);
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            midX,
-            maxY + STYLE_EDIT_GAP_PX * res
-          ]);
+          add2("style-edit", [midX, maxY + STYLE_EDIT_GAP_PX * res]);
         }
         return;
       }
@@ -28916,10 +28414,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
           const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
-          add2("style-edit", [
-            r[0] - STYLE_EDIT_GAP_PX * res,
-            r[1]
-          ]);
+          add2("style-edit", [r[0] - STYLE_EDIT_GAP_PX * res, r[1]]);
         }
         return;
       }
@@ -28931,10 +28426,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
         add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
         if (this.styleEditEnabled) {
-          add2("style-edit", [
-            rotateAt[0] - STYLE_EDIT_GAP_PX * res,
-            rotateAt[1]
-          ]);
+          add2("style-edit", [rotateAt[0] - STYLE_EDIT_GAP_PX * res, rotateAt[1]]);
         }
       }
     }
@@ -29188,9 +28680,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (this.mode === "bbox" && role.startsWith("resize-")) {
-        feature.setGeometry(
-          bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord))
-        );
+        feature.setGeometry(bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)));
         this.placeHandles(feature);
       }
     }
@@ -29223,6 +28713,54 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (primary === "Circle" || primary === "MultiCircle") return "circle";
     if (primary === "Disc" || primary === "MultiDisc") return "disc";
     return "line-polygon";
+  }
+  const REMIX_BY_TOOL_CLASS = {
+    "ec-geometry-editor__tool--tools-toggle": "ri-tools-fill",
+    "ec-geometry-editor__tool--measure-distance": "ri-ruler-line",
+    "ec-geometry-editor__tool--measure-area": "ri-custom-size",
+    "ec-geometry-editor__tool--save": "ri-save-line",
+    "ec-geometry-editor__tool--undo": "ri-corner-up-left-line",
+    "ec-geometry-editor__tool--redo": "ri-corner-up-right-line",
+    "ec-geometry-editor__tool--point": "ri-map-pin-5-line",
+    "ec-geometry-editor__tool--line": "ri-draw-line",
+    "ec-geometry-editor__tool--polygon": "ri-pentagon-line",
+    "ec-geometry-editor__tool--rectangle": "ri-rectangle-line",
+    "ec-geometry-editor__tool--circle": "ri-circle-line",
+    "ec-geometry-editor__tool--disc": "ri-circle-line",
+    "ec-geometry-editor__tool--text": "ri-text",
+    "ec-geometry-editor__tool--modify": "ri-edit-line",
+    "ec-geometry-editor__tool--remove": "ri-close-circle-line",
+    "ec-geometry-editor__tool--clear-all": "ri-delete-bin-6-fill",
+    "ec-geometry-editor__tool--export": "ri-upload-line",
+    "ec-geometry-editor__tool--import": "ri-download-line",
+    "ec-geometry-editor__tool--settings": "ri-settings-3-line"
+  };
+  function remixIconClassForToolModifier(iconClass) {
+    return REMIX_BY_TOOL_CLASS[iconClass] ?? null;
+  }
+  function appendGeometryToolIcon(button, iconClass) {
+    const remix = remixIconClassForToolModifier(iconClass);
+    if (!remix) return;
+    const icon = document.createElement("i");
+    icon.className = `${remix} ec-geometry-editor__tool-icon`;
+    icon.setAttribute("aria-hidden", "true");
+    button.appendChild(icon);
+  }
+  function updateSaveToolBadge(badge, state) {
+    badge.hidden = state === "idle";
+    badge.dataset.state = state;
+    badge.replaceChildren();
+    if (state === "dirty") {
+      const icon = document.createElement("i");
+      icon.className = "ri-alert-line";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    } else if (state === "saved") {
+      const icon = document.createElement("i");
+      icon.className = "ri-checkbox-circle-fill";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    }
   }
   const modifyTool = {
     id: "modify",
@@ -29458,9 +28996,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         action: t.mode === "action",
         extraToggle: t.mode === "toggle"
       });
-      const extrasById = new globalThis.Map(
-        this.extraTools.map((t) => [t.id, toDef(t)])
-      );
+      const extrasById = new globalThis.Map(this.extraTools.map((t) => [t.id, toDef(t)]));
       const pickExtras = (...ids) => ids.flatMap((id) => {
         const t = extrasById.get(id);
         return t ? [t] : [];
@@ -29501,25 +29037,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /** Active / désactive visuellement un bouton extra (enabled). */
     setExtraEnabled(id, enabled) {
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${id}"]`);
       if (!btn) return;
       btn.disabled = !enabled;
       btn.setAttribute("aria-disabled", enabled ? "false" : "true");
     }
     /** État visuel du bouton Enregistrer (badge sauvegardé / modifié). */
     setSaveState(state) {
-      const btn = this.target.querySelector(
-        'button[data-tool-id="save"]'
-      );
+      const btn = this.target.querySelector('button[data-tool-id="save"]');
       if (!btn) return;
       btn.classList.toggle("ec-geometry-editor__tool--save-saved", state === "saved");
       btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
       const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
       if (badge instanceof HTMLElement) {
-        badge.hidden = state === "idle";
-        badge.dataset.state = state;
+        updateSaveToolBadge(badge, state);
       }
     }
     /** Désactive tout outil transient (dessin, measure externe, etc.). */
@@ -29548,11 +29079,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        appendGeometryToolIcon(btn, tool.iconClass);
         if (tool.id === "save") {
           const badge = document.createElement("span");
           badge.className = "ec-geometry-editor__tool-badge";
           badge.setAttribute("aria-hidden", "true");
-          badge.hidden = true;
+          updateSaveToolBadge(badge, "idle");
           btn.appendChild(badge);
         }
         btn.addEventListener("click", () => this.activate(tool));
@@ -29605,9 +29137,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clearTransient();
       if (already) return;
       this.activeId = tool.id;
-      const btn = this.target.querySelector(
-        `button[data-tool-id="${tool.id}"]`
-      );
+      const btn = this.target.querySelector(`button[data-tool-id="${tool.id}"]`);
       btn == null ? void 0 : btn.setAttribute("aria-pressed", "true");
       btn == null ? void 0 : btn.classList.add("is-active");
       if (tool.extraToggle) {
@@ -29662,6 +29192,922 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.snap) this.map.removeInteraction(this.snap);
       this.target.replaceChildren();
     }
+  }
+  class FeatureFormat {
+    constructor() {
+      this.dataProjection = void 0;
+      this.defaultFeatureProjection = void 0;
+      this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
+      Feature;
+      this.supportedMediaTypes = null;
+    }
+    /**
+     * Adds the data projection to the read options.
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Options.
+     * @return {ReadOptions|undefined} Options.
+     * @protected
+     */
+    getReadOptions(source, options) {
+      if (options) {
+        let dataProjection = options.dataProjection ? get$1(options.dataProjection) : this.readProjection(source);
+        if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
+          dataProjection = get$1(dataProjection);
+          dataProjection.setWorldExtent(options.extent);
+        }
+        options = {
+          dataProjection,
+          featureProjection: options.featureProjection
+        };
+      }
+      return this.adaptOptions(options);
+    }
+    /**
+     * Sets the `dataProjection` on the options, if no `dataProjection`
+     * is set.
+     * @param {WriteOptions|ReadOptions|undefined} options
+     *     Options.
+     * @protected
+     * @return {WriteOptions|ReadOptions|undefined}
+     *     Updated options.
+     */
+    adaptOptions(options) {
+      return Object.assign(
+        {
+          dataProjection: this.dataProjection,
+          featureProjection: this.defaultFeatureProjection,
+          featureClass: this.featureClass
+        },
+        options
+      );
+    }
+    /**
+     * @abstract
+     * @return {Type} The format type.
+     */
+    getType() {
+      return abstract();
+    }
+    /**
+     * Read a single feature from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     */
+    readFeature(source, options) {
+      return abstract();
+    }
+    /**
+     * Read all features from a source.
+     *
+     * @abstract
+     * @param {Document|Element|ArrayBuffer|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {Array<FeatureType>} Features.
+     */
+    readFeatures(source, options) {
+      return abstract();
+    }
+    /**
+     * Read a single geometry from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @param {ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometry(source, options) {
+      return abstract();
+    }
+    /**
+     * Read the projection from a source.
+     *
+     * @abstract
+     * @param {Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
+     */
+    readProjection(source) {
+      return abstract();
+    }
+    /**
+     * Encode a feature in this format.
+     *
+     * @abstract
+     * @param {Feature} feature Feature.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeFeature(feature, options) {
+      return abstract();
+    }
+    /**
+     * Encode an array of features in this format.
+     *
+     * @abstract
+     * @param {Array<Feature>} features Features.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeFeatures(features, options) {
+      return abstract();
+    }
+    /**
+     * Write a single geometry in this format.
+     *
+     * @abstract
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {WriteOptions} [options] Write options.
+     * @return {string|ArrayBuffer} Result.
+     */
+    writeGeometry(geometry, options) {
+      return abstract();
+    }
+  }
+  function transformGeometryWithOptions(geometry, write, options) {
+    const featureProjection = options ? get$1(options.featureProjection) : null;
+    const dataProjection = options ? get$1(options.dataProjection) : null;
+    let transformed = geometry;
+    if (featureProjection && dataProjection && !equivalent$1(featureProjection, dataProjection)) {
+      if (write) {
+        transformed = /** @type {T} */
+        geometry.clone();
+      }
+      const fromProjection = write ? featureProjection : dataProjection;
+      const toProjection = write ? dataProjection : featureProjection;
+      if (fromProjection.getUnits() === "tile-pixels") {
+        transformed.transform(fromProjection, toProjection);
+      } else {
+        transformed.applyTransform(getTransform(fromProjection, toProjection));
+      }
+    }
+    if (write && options && /** @type {WriteOptions} */
+    options.decimals !== void 0) {
+      const power = Math.pow(
+        10,
+        /** @type {WriteOptions} */
+        options.decimals
+      );
+      const transform2 = function(coordinates2) {
+        for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+          coordinates2[i] = Math.round(coordinates2[i] * power) / power;
+        }
+        return coordinates2;
+      };
+      if (transformed === geometry) {
+        transformed = /** @type {T} */
+        geometry.clone();
+      }
+      transformed.applyTransform(transform2);
+    }
+    return transformed;
+  }
+  const GeometryConstructor = {
+    Point,
+    LineString,
+    Polygon,
+    MultiPoint,
+    MultiLineString,
+    MultiPolygon
+  };
+  function orientFlatCoordinates(flatCoordinates, ends, stride) {
+    if (Array.isArray(ends[0])) {
+      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
+        flatCoordinates = flatCoordinates.slice();
+        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
+      }
+      return flatCoordinates;
+    }
+    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
+      flatCoordinates = flatCoordinates.slice();
+      orientLinearRings(flatCoordinates, 0, ends, stride);
+    }
+    return flatCoordinates;
+  }
+  function createRenderFeature(object, options) {
+    var _a;
+    const geometry = object.geometry;
+    if (!geometry) {
+      return [];
+    }
+    if (Array.isArray(geometry)) {
+      return geometry.map((geometry2) => createRenderFeature({ ...object, geometry: geometry2 })).flat();
+    }
+    const geometryType = geometry.type === "MultiPolygon" ? "Polygon" : geometry.type;
+    if (geometryType === "GeometryCollection" || geometryType === "Circle") {
+      throw new Error("Unsupported geometry type: " + geometryType);
+    }
+    const stride = geometry.layout.length;
+    return transformGeometryWithOptions(
+      new RenderFeature(
+        geometryType,
+        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
+        (_a = geometry.ends) == null ? void 0 : _a.flat(),
+        stride,
+        object.properties || {},
+        object.id
+      ).enableSimplifyTransformed(),
+      false,
+      options
+    );
+  }
+  function createGeometry(object, options) {
+    if (!object) {
+      return null;
+    }
+    if (Array.isArray(object)) {
+      const geometries = object.map(
+        (geometry) => createGeometry(geometry, options)
+      );
+      return new GeometryCollection(geometries);
+    }
+    const Geometry2 = GeometryConstructor[object.type];
+    return transformGeometryWithOptions(
+      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
+      false,
+      options
+    );
+  }
+  class JSONFeature extends FeatureFormat {
+    constructor() {
+      super();
+    }
+    /**
+     * @return {import("./Feature.js").Type} Format.
+     * @override
+     */
+    getType() {
+      return "json";
+    }
+    /**
+     * Read a feature.  Only works for a single feature. Use `readFeatures` to
+     * read a feature collection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @api
+     * @override
+     */
+    readFeature(source, options) {
+      return this.readFeatureFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * Read all features.  Works with both a single feature and a feature
+     * collection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {Array<FeatureType>} Features.
+     * @api
+     * @override
+     */
+    readFeatures(source, options) {
+      return this.readFeaturesFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     */
+    readFeatureFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<FeatureType>} Features.
+     */
+    readFeaturesFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * Read a geometry.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @api
+     * @override
+     */
+    readGeometry(source, options) {
+      return this.readGeometryFromObject(
+        getObject(source),
+        this.getReadOptions(source, options)
+      );
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     */
+    readGeometryFromObject(object, options) {
+      return abstract();
+    }
+    /**
+     * Read the projection.
+     *
+     * @param {ArrayBuffer|Document|Element|Object|string} source Source.
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @api
+     * @override
+     */
+    readProjection(source) {
+      return this.readProjectionFromObject(getObject(source));
+    }
+    /**
+     * @abstract
+     * @param {Object} object Object.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     */
+    readProjectionFromObject(object) {
+      return abstract();
+    }
+    /**
+     * Encode a feature as string.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded feature.
+     * @api
+     * @override
+     */
+    writeFeature(feature, options) {
+      return JSON.stringify(this.writeFeatureObject(feature, options));
+    }
+    /**
+     * @abstract
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeFeatureObject(feature, options) {
+      return abstract();
+    }
+    /**
+     * Encode an array of features as string.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded features.
+     * @api
+     * @override
+     */
+    writeFeatures(features, options) {
+      return JSON.stringify(this.writeFeaturesObject(features, options));
+    }
+    /**
+     * @abstract
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeFeaturesObject(features, options) {
+      return abstract();
+    }
+    /**
+     * Encode a geometry as string.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {string} Encoded geometry.
+     * @api
+     * @override
+     */
+    writeGeometry(geometry, options) {
+      return JSON.stringify(this.writeGeometryObject(geometry, options));
+    }
+    /**
+     * @abstract
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {Object} Object.
+     */
+    writeGeometryObject(geometry, options) {
+      return abstract();
+    }
+  }
+  function getObject(source) {
+    if (typeof source === "string") {
+      const object = JSON.parse(source);
+      return object ? (
+        /** @type {Object} */
+        object
+      ) : null;
+    }
+    if (source !== null) {
+      return source;
+    }
+    return null;
+  }
+  class GeoJSON extends JSONFeature {
+    /**
+     * @param {Options<FeatureType>} [options] Options.
+     */
+    constructor(options) {
+      options = options ? options : {};
+      super();
+      this.dataProjection = get$1(
+        options.dataProjection ? options.dataProjection : "EPSG:4326"
+      );
+      if (options.featureProjection) {
+        this.defaultFeatureProjection = get$1(options.featureProjection);
+      }
+      if (options.featureClass) {
+        this.featureClass = options.featureClass;
+      }
+      this.geometryName_ = options.geometryName;
+      this.extractGeometryName_ = options.extractGeometryName;
+      this.supportedMediaTypes = [
+        "application/geo+json",
+        "application/vnd.geo+json"
+      ];
+    }
+    /**
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @override
+     */
+    readFeatureFromObject(object, options) {
+      let geoJSONFeature = null;
+      if (object["type"] === "Feature") {
+        geoJSONFeature = /** @type {GeoJSONFeature} */
+        object;
+      } else {
+        geoJSONFeature = {
+          "type": "Feature",
+          "geometry": (
+            /** @type {GeoJSONGeometry} */
+            object
+          ),
+          "properties": null
+        };
+      }
+      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
+      if (this.featureClass === RenderFeature) {
+        return (
+          /** @type {FeatureType|Array<FeatureType>} */
+          createRenderFeature(
+            {
+              geometry,
+              id: geoJSONFeature["id"],
+              properties: geoJSONFeature["properties"]
+            },
+            options
+          )
+        );
+      }
+      const FeatureClass = (
+        /** @type {typeof import("../Feature.js").default} */
+        this.featureClass
+      );
+      const feature = new FeatureClass();
+      if (this.geometryName_) {
+        feature.setGeometryName(this.geometryName_);
+      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
+        feature.setGeometryName(geoJSONFeature["geometry_name"]);
+      }
+      feature.setGeometry(createGeometry(geometry, options));
+      if ("id" in geoJSONFeature) {
+        feature.setId(geoJSONFeature["id"]);
+      }
+      if (geoJSONFeature["properties"]) {
+        feature.setProperties(geoJSONFeature["properties"], true);
+      }
+      return (
+        /** @type {FeatureType|Array<FeatureType>} */
+        feature
+      );
+    }
+    /**
+     * @param {Object} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {Array<FeatureType>} Features.
+     * @override
+     */
+    readFeaturesFromObject(object, options) {
+      const geoJSONObject = (
+        /** @type {GeoJSONObject} */
+        object
+      );
+      let features = null;
+      if (geoJSONObject["type"] === "FeatureCollection") {
+        const geoJSONFeatureCollection = (
+          /** @type {GeoJSONFeatureCollection} */
+          object
+        );
+        features = [];
+        const geoJSONFeatures = geoJSONFeatureCollection["features"];
+        for (let i = 0, ii = geoJSONFeatures.length; i < ii; ++i) {
+          const featureObject = this.readFeatureFromObject(
+            geoJSONFeatures[i],
+            options
+          );
+          if (!featureObject) {
+            continue;
+          }
+          features.push(featureObject);
+        }
+      } else {
+        features = [this.readFeatureFromObject(object, options)];
+      }
+      return (
+        /** @type {Array<FeatureType>} */
+        features.flat()
+      );
+    }
+    /**
+     * @param {GeoJSONGeometry} object Object.
+     * @param {import("./Feature.js").ReadOptions} [options] Read options.
+     * @protected
+     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @override
+     */
+    readGeometryFromObject(object, options) {
+      return readGeometry(object, options);
+    }
+    /**
+     * @param {Object} object Object.
+     * @protected
+     * @return {import("../proj/Projection.js").default} Projection.
+     * @override
+     */
+    readProjectionFromObject(object) {
+      const crs = object["crs"];
+      let projection;
+      if (crs) {
+        if (crs["type"] == "name") {
+          projection = get$1(crs["properties"]["name"]);
+        } else if (crs["type"] === "EPSG") {
+          projection = get$1("EPSG:" + crs["properties"]["code"]);
+        } else {
+          throw new Error("Unknown SRS type");
+        }
+      } else {
+        projection = this.dataProjection;
+      }
+      return (
+        /** @type {import("../proj/Projection.js").default} */
+        projection
+      );
+    }
+    /**
+     * Encode a feature as a GeoJSON Feature object.
+     *
+     * @param {import("../Feature.js").default} feature Feature.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONFeature} Object.
+     * @api
+     * @override
+     */
+    writeFeatureObject(feature, options) {
+      options = this.adaptOptions(options);
+      const object = {
+        "type": "Feature",
+        geometry: null,
+        properties: null
+      };
+      const id = feature.getId();
+      if (id !== void 0) {
+        object.id = id;
+      }
+      if (!feature.hasProperties()) {
+        return object;
+      }
+      const properties = feature.getProperties();
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        object.geometry = writeGeometry(geometry, options);
+        delete properties[feature.getGeometryName()];
+      }
+      if (!isEmpty$1(properties)) {
+        object.properties = properties;
+      }
+      return object;
+    }
+    /**
+     * Encode an array of features as a GeoJSON object.
+     *
+     * @param {Array<import("../Feature.js").default>} features Features.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONFeatureCollection} GeoJSON Object.
+     * @api
+     * @override
+     */
+    writeFeaturesObject(features, options) {
+      options = this.adaptOptions(options);
+      const objects = [];
+      for (let i = 0, ii = features.length; i < ii; ++i) {
+        objects.push(this.writeFeatureObject(features[i], options));
+      }
+      return {
+        type: "FeatureCollection",
+        features: objects
+      };
+    }
+    /**
+     * Encode a geometry as a GeoJSON object.
+     *
+     * @param {import("../geom/Geometry.js").default} geometry Geometry.
+     * @param {import("./Feature.js").WriteOptions} [options] Write options.
+     * @return {GeoJSONGeometry|GeoJSONGeometryCollection} Object.
+     * @api
+     * @override
+     */
+    writeGeometryObject(geometry, options) {
+      return writeGeometry(geometry, this.adaptOptions(options));
+    }
+  }
+  function readGeometryInternal(object, options) {
+    if (!object) {
+      return null;
+    }
+    let geometry;
+    switch (object["type"]) {
+      case "Point": {
+        geometry = readPointGeometry(
+          /** @type {GeoJSONPoint} */
+          object
+        );
+        break;
+      }
+      case "LineString": {
+        geometry = readLineStringGeometry(
+          /** @type {GeoJSONLineString} */
+          object
+        );
+        break;
+      }
+      case "Polygon": {
+        geometry = readPolygonGeometry(
+          /** @type {GeoJSONPolygon} */
+          object
+        );
+        break;
+      }
+      case "MultiPoint": {
+        geometry = readMultiPointGeometry(
+          /** @type {GeoJSONMultiPoint} */
+          object
+        );
+        break;
+      }
+      case "MultiLineString": {
+        geometry = readMultiLineStringGeometry(
+          /** @type {GeoJSONMultiLineString} */
+          object
+        );
+        break;
+      }
+      case "MultiPolygon": {
+        geometry = readMultiPolygonGeometry(
+          /** @type {GeoJSONMultiPolygon} */
+          object
+        );
+        break;
+      }
+      case "GeometryCollection": {
+        geometry = readGeometryCollectionGeometry(
+          /** @type {GeoJSONGeometryCollection} */
+          object
+        );
+        break;
+      }
+      default: {
+        throw new Error("Unsupported GeoJSON type: " + object["type"]);
+      }
+    }
+    return geometry;
+  }
+  function readGeometry(object, options) {
+    const geometryObject = readGeometryInternal(object);
+    return createGeometry(geometryObject, options);
+  }
+  function readGeometryCollectionGeometry(object, options) {
+    const geometries = object["geometries"].map(
+      /**
+       * @param {GeoJSONGeometry} geometry Geometry.
+       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
+       */
+      function(geometry) {
+        return readGeometryInternal(geometry);
+      }
+    );
+    return geometries;
+  }
+  function readPointGeometry(object) {
+    const flatCoordinates = object["coordinates"];
+    return {
+      type: "Point",
+      flatCoordinates,
+      layout: getLayoutForStride(flatCoordinates.length)
+    };
+  }
+  function readLineStringGeometry(object) {
+    var _a;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = coordinates2.flat();
+    return {
+      type: "LineString",
+      flatCoordinates,
+      ends: [flatCoordinates.length],
+      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
+    };
+  }
+  function readMultiLineStringGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
+    const flatCoordinates = [];
+    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
+    return {
+      type: "MultiLineString",
+      flatCoordinates,
+      ends,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function readMultiPointGeometry(object) {
+    var _a;
+    const coordinates2 = object["coordinates"];
+    return {
+      type: "MultiPoint",
+      flatCoordinates: coordinates2.flat(),
+      layout: getLayoutForStride(((_a = coordinates2[0]) == null ? void 0 : _a.length) || 2)
+    };
+  }
+  function readMultiPolygonGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = [];
+    const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
+    const endss = deflateMultiCoordinatesArray(
+      flatCoordinates,
+      0,
+      coordinates2,
+      stride
+    );
+    return {
+      type: "MultiPolygon",
+      flatCoordinates,
+      ends: endss,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function readPolygonGeometry(object) {
+    var _a, _b;
+    const coordinates2 = object["coordinates"];
+    const flatCoordinates = [];
+    const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
+    const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
+    return {
+      type: "Polygon",
+      flatCoordinates,
+      ends,
+      layout: getLayoutForStride(stride)
+    };
+  }
+  function writeGeometry(geometry, options) {
+    geometry = transformGeometryWithOptions(geometry, true, options);
+    const type = geometry.getType();
+    let geoJSON;
+    switch (type) {
+      case "Point": {
+        geoJSON = writePointGeometry(
+          /** @type {import("../geom/Point.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "LineString": {
+        geoJSON = writeLineStringGeometry(
+          /** @type {import("../geom/LineString.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "Polygon": {
+        geoJSON = writePolygonGeometry(
+          /** @type {import("../geom/Polygon.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "MultiPoint": {
+        geoJSON = writeMultiPointGeometry(
+          /** @type {import("../geom/MultiPoint.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "MultiLineString": {
+        geoJSON = writeMultiLineStringGeometry(
+          /** @type {import("../geom/MultiLineString.js").default} */
+          geometry
+        );
+        break;
+      }
+      case "MultiPolygon": {
+        geoJSON = writeMultiPolygonGeometry(
+          /** @type {import("../geom/MultiPolygon.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "GeometryCollection": {
+        geoJSON = writeGeometryCollectionGeometry(
+          /** @type {import("../geom/GeometryCollection.js").default} */
+          geometry,
+          options
+        );
+        break;
+      }
+      case "Circle": {
+        geoJSON = {
+          type: "GeometryCollection",
+          geometries: []
+        };
+        break;
+      }
+      default: {
+        throw new Error("Unsupported geometry type: " + type);
+      }
+    }
+    return geoJSON;
+  }
+  function writeGeometryCollectionGeometry(geometry, options) {
+    options = Object.assign({}, options);
+    delete options.featureProjection;
+    const geometries = geometry.getGeometriesArray().map(function(geometry2) {
+      return writeGeometry(geometry2, options);
+    });
+    return {
+      type: "GeometryCollection",
+      geometries
+    };
+  }
+  function writeLineStringGeometry(geometry, options) {
+    return {
+      type: "LineString",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiLineStringGeometry(geometry, options) {
+    return {
+      type: "MultiLineString",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiPointGeometry(geometry, options) {
+    return {
+      type: "MultiPoint",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writeMultiPolygonGeometry(geometry, options) {
+    let right;
+    if (options) {
+      right = options.rightHanded;
+    }
+    return {
+      type: "MultiPolygon",
+      coordinates: geometry.getCoordinates(right)
+    };
+  }
+  function writePointGeometry(geometry, options) {
+    return {
+      type: "Point",
+      coordinates: geometry.getCoordinates()
+    };
+  }
+  function writePolygonGeometry(geometry, options) {
+    let right;
+    if (options) {
+      right = options.rightHanded;
+    }
+    return {
+      type: "Polygon",
+      coordinates: geometry.getCoordinates(right)
+    };
   }
   const XML_SCHEMA_INSTANCE_URI = "http://www.w3.org/2001/XMLSchema-instance";
   function createElementNS(namespaceURI, qualifiedName) {
@@ -32613,12 +33059,62 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     node.setAttribute("xunits", vec2.xunits);
     node.setAttribute("yunits", vec2.yunits);
   }
+  const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i;
+  const EVENT_HANDLER = /\son[a-z]+\s*=/i;
+  const JAVASCRIPT_URI = /javascript\s*:/i;
+  const DISALLOWED_LOCAL = /* @__PURE__ */ new Set([
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "foreignobject",
+    "link",
+    "meta"
+  ]);
+  function assertSafeKmlXmlText(text) {
+    if (UNSAFE_TAG.test(text) || EVENT_HANDLER.test(text) || JAVASCRIPT_URI.test(text)) {
+      throw new Error("[entree-carto-geometry-editor] unsafe KML markup rejected");
+    }
+  }
+  function looksLikeKmlDocument(raw) {
+    const t = raw.trim();
+    if (!t.startsWith("<")) return false;
+    if (UNSAFE_TAG.test(t) || EVENT_HANDLER.test(t) || JAVASCRIPT_URI.test(t)) return false;
+    return /^<\?xml[\s\S]*?>\s*<kml[\s>/]/i.test(t) || /^<kml[\s>/]/i.test(t);
+  }
+  function stripUnsafeNodes(root) {
+    for (let i = root.children.length - 1; i >= 0; i--) {
+      const child = root.children[i];
+      const local = child.localName.toLowerCase();
+      if (DISALLOWED_LOCAL.has(local)) {
+        child.remove();
+        continue;
+      }
+      for (const attr of [...child.attributes]) {
+        const name = attr.name.toLowerCase();
+        const value = attr.value;
+        if (name.startsWith("on") || /javascript\s*:/i.test(value) || name === "href" && /^\s*javascript:/i.test(value)) {
+          child.removeAttribute(attr.name);
+        }
+      }
+      stripUnsafeNodes(child);
+    }
+  }
+  function parseUserKmlDocument(text) {
+    assertSafeKmlXmlText(text);
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (doc.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("[entree-carto-geometry-editor] invalid KML XML");
+    }
+    const root = doc.documentElement;
+    if (!root || root.localName.toLowerCase() !== "kml") {
+      throw new Error("[entree-carto-geometry-editor] KML root element required");
+    }
+    stripUnsafeNodes(root);
+    return doc;
+  }
   const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat$1 = new KML({ extractStyles: false });
-  function looksLikeKml(raw) {
-    const t = raw.trim();
-    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
-  }
   function looksLikeBbox(raw) {
     try {
       const v = JSON.parse(raw);
@@ -32665,12 +33161,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function parseRawToFeatures(raw, mapProjection = "EPSG:3857") {
     const text = raw.trim();
     if (!text) return [];
-    let features = [];
-    if (looksLikeKml(text)) {
-      features = kmlFormat$1.readFeatures(text, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
+    let features;
+    if (looksLikeKmlDocument(text)) {
+      try {
+        const doc = parseUserKmlDocument(text);
+        features = kmlFormat$1.readFeatures(doc, {
+          dataProjection: "EPSG:4326",
+          featureProjection: mapProjection
+        });
+      } catch {
+        console.error("[entree-carto-geometry-editor] KML rejected or invalid");
+        return [];
+      }
     } else if (looksLikeBbox(text)) {
       const bbox = JSON.parse(text);
       const poly = bboxToPolygon(bbox);
@@ -32724,12 +33226,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return value;
   }
   function serializeFeatures(features, options) {
-    const {
-      geometryType,
-      precision,
-      outputFormat,
-      mapProjection = "EPSG:3857"
-    } = options;
+    const { geometryType, precision, outputFormat, mapProjection = "EPSG:3857" } = options;
     if (!features.length) return "";
     const primary = primaryGeometryType(parseGeometryTypes(geometryType));
     if (outputFormat === "kml") {
@@ -32751,21 +33248,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     if (primary === "MultiCircle") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "circle",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "circle", precision, mapProjection);
       if (s) return s;
     }
     if (primary === "MultiDisc") {
-      const s = serializeMultiCircleFeatures(
-        features,
-        "disc",
-        precision,
-        mapProjection
-      );
+      const s = serializeMultiCircleFeatures(features, "disc", precision, mapProjection);
       if (s) return s;
     }
     if ((primary === "Circle" || primary === "Disc") && features.length === 1) {
@@ -32815,11 +33302,118 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return null;
   }
-  const GEOJSON$2 = new GeoJSON();
+  function parseGpuStyle(raw) {
+    if (!raw) return null;
+    if (typeof raw === "string") {
+      try {
+        return parseGpuStyle(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof raw !== "object") return null;
+    return raw;
+  }
+  function parseGpuFont(textFont) {
+    const fallback = {
+      fontSize: 14,
+      fontFamily: "Marianne, Calibri, sans-serif",
+      fontBold: false,
+      fontItalic: false
+    };
+    if (!textFont) return fallback;
+    const fontBold = /\bbold\b/i.test(textFont);
+    const fontItalic = /\bitalic\b/i.test(textFont);
+    const sizeMatch = /(\d+(?:\.\d+)?)\s*pt/i.exec(textFont);
+    const fontSize = sizeMatch ? Math.round(Number(sizeMatch[1])) : fallback.fontSize;
+    const afterPt = textFont.replace(/^.*?\d+(?:\.\d+)?\s*pt\s+/i, "").trim();
+    const fontFamily = afterPt || fallback.fontFamily;
+    return { fontSize, fontFamily, fontBold, fontItalic };
+  }
+  function numOr(value, fallback) {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  }
+  function strOr(value, fallback) {
+    return typeof value === "string" && value.length > 0 ? value : fallback;
+  }
+  function kindFromGpuType(gpuGeometryType, feature) {
+    const t = typeof gpuGeometryType === "string" ? gpuGeometryType : "";
+    if (t === "Text") return "text";
+    if (t === "Point") return "point";
+    if (t === "LineString") return "line";
+    if (t === "Polygon") return "polygon";
+    if (t === "Disc") return "disc";
+    if (t === "Circle") return "circle";
+    return featureStyleKindOf(feature);
+  }
+  function gpuClientStyleToFeatureStyleAttrs(kind, style) {
+    const base = defaultFeatureStyleAttrs(kind);
+    const font = parseGpuFont(style.textFont);
+    if (kind === "text") {
+      return {
+        ...base,
+        kind,
+        text: strOr(style.textText, base.text),
+        fontSize: font.fontSize,
+        fontFamily: font.fontFamily,
+        fontBold: font.fontBold,
+        fontItalic: font.fontItalic,
+        fontColor: strOr(style.textFillColor, base.fontColor),
+        textStrokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        textStrokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        strokeColor: strOr(style.textStrokeColor, base.textStrokeColor),
+        strokeWidth: numOr(style.textStrokeWidth, base.textStrokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    if (kind === "point") {
+      return {
+        ...base,
+        kind,
+        radius: numOr(style.imageRadius, base.radius),
+        fillColor: strOr(style.imageFillColor ?? style.fillColor, base.fillColor),
+        strokeColor: strOr(style.imageStrokeColor ?? style.strokeColor, base.strokeColor),
+        strokeWidth: numOr(style.imageStrokeWidth ?? style.strokeWidth, base.strokeWidth)
+      };
+    }
+    if (kind === "line") {
+      return {
+        ...base,
+        kind,
+        strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+        strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth),
+        fillColor: "rgba(0, 0, 0, 0)"
+      };
+    }
+    return {
+      ...base,
+      kind,
+      fillColor: strOr(style.fillColor ?? style.imageFillColor, base.fillColor),
+      strokeColor: strOr(style.strokeColor ?? style.imageStrokeColor, base.strokeColor),
+      strokeWidth: numOr(style.strokeWidth ?? style.imageStrokeWidth, base.strokeWidth)
+    };
+  }
+  function adaptGpuClientSketchFeatures(features) {
+    for (const feature of features) {
+      if (feature.get(FEATURE_STYLE_PROP)) continue;
+      const gpuStyle = parseGpuStyle(feature.get("style"));
+      if (!gpuStyle) continue;
+      const kind = kindFromGpuType(feature.get("gpuGeometryType"), feature);
+      const attrs = gpuClientStyleToFeatureStyleAttrs(kind, gpuStyle);
+      applyFeatureStyle(feature, attrs);
+      feature.unset("style");
+    }
+  }
+  const GEOJSON = new GeoJSON();
   const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
+  const SKETCH_PRECISION = 7;
   const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
   function projectionOf(map) {
     return map.getView().getProjection();
+  }
+  function mapProjectionCode(map) {
+    const p = projectionOf(map);
+    return typeof p === "string" ? p : p.getCode();
   }
   function cloneForKmlExport(features) {
     return features.map((f) => {
@@ -32847,14 +33441,115 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     restoreFeaturesStyles(features);
   }
-  function readSketchFile(map, text, format) {
+  function restoreImportedCircleFeatures(features) {
+    return features.map((f) => {
+      const g = f.getGeometry();
+      if (g instanceof Circle) return f;
+      const kind = f.get(EC_KIND_PROP);
+      if (kind === "disc" || kind === "circle") {
+        return polygonApproxToCircleFeature(f, kind);
+      }
+      return f;
+    });
+  }
+  function copyFeatureProperties(feature, props) {
+    if (!props) return;
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "geometry") continue;
+      feature.set(key, value);
+    }
+  }
+  function readSketchGeoJsonFeature(raw, mapProjection) {
+    const geom = raw.geometry;
+    if (looksLikeCircleOrDisc(geom)) {
+      const feature = featureFromCircleJson(geom, mapProjection);
+      copyFeatureProperties(feature, raw.properties);
+      return [feature];
+    }
+    if (looksLikeMultiCircleOrDisc(geom)) {
+      const features = featuresFromMultiCircleJson(geom, mapProjection);
+      const props = raw.properties;
+      if (props) {
+        for (const f of features) copyFeatureProperties(f, props);
+      }
+      return features;
+    }
+    return GEOJSON.readFeatures(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: mapProjection
+    });
+  }
+  function readSketchGeoJsonObject(map, data) {
+    const mapProjection = mapProjectionCode(map);
+    if (!data || typeof data !== "object") return [];
+    const root = data;
+    let features;
+    if (looksLikeMultiCircleOrDisc(data)) {
+      features = featuresFromMultiCircleJson(data, mapProjection);
+    } else if (looksLikeCircleOrDisc(data)) {
+      features = [featureFromCircleJson(data, mapProjection)];
+    } else if (root.type === "FeatureCollection" && Array.isArray(root.features)) {
+      features = root.features.flatMap((f) => readSketchGeoJsonFeature(f, mapProjection));
+    } else if (root.type === "Feature") {
+      features = readSketchGeoJsonFeature(root, mapProjection);
+    } else {
+      features = GEOJSON.readFeatures(
+        { type: "Feature", geometry: data, properties: {} },
+        { dataProjection: "EPSG:4326", featureProjection: mapProjection }
+      );
+    }
+    features = restoreImportedCircleFeatures(features);
+    adaptGpuClientSketchFeatures(features);
+    hydrateImportedSketchFeatures(features);
+    return features;
+  }
+  function writeSketchGeoJsonObject(map, features) {
+    const mapProjection = mapProjectionCode(map);
     const opts = {
       featureProjection: projectionOf(map),
       dataProjection: "EPSG:4326"
     };
-    const features = format === "kml" ? KML_FMT.readFeatures(text, opts) : GEOJSON$2.readFeatures(JSON.parse(text), opts);
-    hydrateImportedSketchFeatures(features);
-    return features;
+    const out = features.map((f) => {
+      if (f.getGeometry() instanceof Circle) {
+        const geomJson = JSON.parse(
+          serializeCircleFeature(f, SKETCH_PRECISION, mapProjection)
+        );
+        const props = { ...f.getProperties() };
+        delete props.geometry;
+        return { type: "Feature", geometry: geomJson, properties: props };
+      }
+      return GEOJSON.writeFeatureObject(f, opts);
+    });
+    return { type: "FeatureCollection", features: out };
+  }
+  function sketchFeaturesSnapshot(map, features) {
+    return JSON.stringify(writeSketchGeoJsonObject(map, features));
+  }
+  function sketchFeaturesFromSnapshot(map, raw) {
+    try {
+      return readSketchGeoJsonObject(map, JSON.parse(raw));
+    } catch {
+      return [];
+    }
+  }
+  function readSketchFile(map, text, format) {
+    if (format === "kml") {
+      let features;
+      try {
+        const doc = parseUserKmlDocument(text);
+        features = KML_FMT.readFeatures(doc, {
+          featureProjection: projectionOf(map),
+          dataProjection: "EPSG:4326"
+        });
+      } catch {
+        return [];
+      }
+      const restored = restoreImportedCircleFeatures(features);
+      adaptGpuClientSketchFeatures(restored);
+      hydrateImportedSketchFeatures(restored);
+      return restored;
+    }
+    return readSketchGeoJsonObject(map, JSON.parse(text));
   }
   function writeSketchFile(map, source, format) {
     const features = source.getFeatures();
@@ -32863,9 +33558,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       dataProjection: "EPSG:4326"
     };
     if (format === "kml") {
-      return KML_FMT.writeFeatures(cloneForKmlExport(features), opts);
+      const forKml = features.map(
+        (f) => f.getGeometry() instanceof Circle ? circleToPolygonFeature(f) : f
+      );
+      return KML_FMT.writeFeatures(cloneForKmlExport(forKml), opts);
     }
-    return JSON.stringify(GEOJSON$2.writeFeaturesObject(features, opts), null, 2);
+    return JSON.stringify(writeSketchGeoJsonObject(map, features), null, 2);
   }
   function downloadBlob(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
@@ -32898,15 +33596,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function formatFromFilename(name) {
     return /\.kml$/i.test(name) ? "kml" : "geojson";
   }
-  const GEOJSON$1 = new GeoJSON();
   const MAX = 50;
+  function sketchHistoryStorageKey(baseKey) {
+    return `${baseKey}:history`;
+  }
   class SketchHistory {
-    constructor(source, getProjection) {
+    constructor(source, getMap) {
       __publicField(this, "undoStack", []);
       __publicField(this, "redoStack", []);
       __publicField(this, "suppress", false);
       this.source = source;
-      this.getProjection = getProjection;
+      this.getMap = getMap;
     }
     /** Enregistre l’état courant (avant mutation ou après stabilisation). */
     push() {
@@ -32939,787 +33639,73 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.restore(next);
       return true;
     }
-    /** Après restoreFromLocalStorage / setFeatures externe. */
+    /** Initialise l’historique depuis l’état courant (sans persistance). */
     resetFromSource() {
       this.undoStack = [this.snapshot()];
       this.redoStack = [];
     }
+    /** Restaure piles + features depuis le dernier Enregistrer. */
+    restoreFromLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return false;
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if ((data == null ? void 0 : data.version) !== 1 || !Array.isArray(data.undo) || !data.undo.length) {
+          return false;
+        }
+        this.undoStack = data.undo.slice(-MAX);
+        this.redoStack = Array.isArray(data.redo) ? data.redo.slice(-MAX) : [];
+        const current = this.undoStack[this.undoStack.length - 1];
+        this.restore(current);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    /** Sérialise les piles undo/redo (appelé au Enregistrer). */
+    persistToLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        if (!this.undoStack.length) {
+          localStorage.removeItem(storageKey);
+          return;
+        }
+        const payload = {
+          version: 1,
+          undo: this.undoStack,
+          redo: this.redoStack
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (err) {
+        console.warn("[SketchHistory] localStorage persist failed", err);
+      }
+    }
+    clearLocalStorage(storageKey) {
+      if (typeof localStorage === "undefined") return;
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+      }
+    }
     snapshot() {
+      const map = this.getMap();
+      if (!map) return '{"type":"FeatureCollection","features":[]}';
       const features = this.source.getFeatures();
-      const projection = this.getProjection();
-      return JSON.stringify(
-        GEOJSON$1.writeFeaturesObject(features, {
-          featureProjection: projection,
-          dataProjection: "EPSG:4326"
-        })
-      );
+      return sketchFeaturesSnapshot(map, features);
     }
     restore(raw) {
+      const map = this.getMap();
+      if (!map) return;
       this.suppress = true;
       try {
-        const features = GEOJSON$1.readFeatures(JSON.parse(raw), {
-          featureProjection: this.getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const features = sketchFeaturesFromSnapshot(map, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } finally {
         this.suppress = false;
       }
     }
-  }
-  function clamp01(n) {
-    if (!Number.isFinite(n)) return 1;
-    return Math.min(1, Math.max(0, n));
-  }
-  function parseColor(value, fallback = { r: 0, g: 0, b: 145, a: 1 }) {
-    const v = (value || "").trim();
-    if (!v || v === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
-    const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(v);
-    if (hex) {
-      let h = hex[1];
-      if (h.length === 3) {
-        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-      }
-      const r = parseInt(h.slice(0, 2), 16);
-      const g = parseInt(h.slice(2, 4), 16);
-      const b = parseInt(h.slice(4, 6), 16);
-      const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-      return { r, g, b, a: clamp01(a) };
-    }
-    const rgba = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v);
-    if (rgba) {
-      return {
-        r: Math.round(Number(rgba[1])),
-        g: Math.round(Number(rgba[2])),
-        b: Math.round(Number(rgba[3])),
-        a: clamp01(rgba[4] !== void 0 ? Number(rgba[4]) : 1)
-      };
-    }
-    return { ...fallback };
-  }
-  function toRgbaString(c) {
-    const a = Math.round(clamp01(c.a) * 1e3) / 1e3;
-    if (a <= 0) return "rgba(0, 0, 0, 0)";
-    if (a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
-    return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
-  }
-  function toHexRgb(c) {
-    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
-    return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
-  }
-  class SketchColorPicker {
-    constructor(label, initial = "rgba(0, 0, 145, 1)") {
-      __publicField(this, "root");
-      __publicField(this, "swatch");
-      __publicField(this, "panel");
-      __publicField(this, "hexInput");
-      __publicField(this, "hueInput");
-      __publicField(this, "alphaInput");
-      __publicField(this, "alphaValue");
-      __publicField(this, "color");
-      __publicField(this, "open", false);
-      __publicField(this, "onChange", null);
-      __publicField(this, "onDocDown", (evt) => {
-        if (!this.open) return;
-        const t = evt.target;
-        if (this.root.contains(t) || this.panel.contains(t)) return;
-        this.closePanel();
-      });
-      this.color = parseColor(initial);
-      this.root = document.createElement("div");
-      this.root.className = "ec-sketch-color";
-      this.root.innerHTML = `
-      <span class="ec-sketch-color__label">${label}</span>
-      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}" aria-haspopup="dialog" aria-expanded="false"></button>
-    `;
-      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
-      this.swatch.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.open) this.closePanel();
-        else this.openPanel();
-      });
-      this.panel = document.createElement("div");
-      this.panel.className = "ec-sketch-color__panel";
-      this.panel.hidden = true;
-      this.panel.setAttribute("role", "dialog");
-      this.panel.setAttribute("aria-label", label);
-      this.panel.innerHTML = `
-      <p class="ec-sketch-color__panel-title">${label}</p>
-      <label class="ec-sketch-color__hue-field">
-        <span>Couleur</span>
-        <input type="color" class="ec-sketch-color__hue" />
-      </label>
-      <label class="ec-sketch-color__hex-field">
-        <span>Hexadécimal</span>
-        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" />
-      </label>
-      <label class="ec-sketch-color__alpha-field">
-        <span>Opacité (<output class="ec-sketch-color__alpha-value">100</output>%)</span>
-        <input type="range" min="0" max="100" step="1" class="ec-sketch-color__alpha" />
-      </label>
-    `;
-      this.hueInput = this.panel.querySelector(".ec-sketch-color__hue");
-      this.hexInput = this.panel.querySelector(".ec-sketch-color__hex");
-      this.alphaInput = this.panel.querySelector(".ec-sketch-color__alpha");
-      this.alphaValue = this.panel.querySelector(".ec-sketch-color__alpha-value");
-      this.hueInput.addEventListener("input", () => {
-        const c = parseColor(this.hueInput.value);
-        this.color = { ...c, a: this.color.a };
-        this.syncUi(false);
-        this.emit();
-      });
-      this.hexInput.addEventListener("input", () => {
-        const next = parseColor(this.hexInput.value, this.color);
-        const raw = this.hexInput.value.trim();
-        if (raw === "transparent" || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw) || /^rgba?\(/i.test(raw)) {
-          this.color = next;
-          this.syncUi(true);
-          this.emit();
-        }
-      });
-      this.hexInput.addEventListener("change", () => {
-        this.color = parseColor(this.hexInput.value, this.color);
-        this.syncUi(true);
-        this.emit();
-      });
-      this.alphaInput.addEventListener("input", () => {
-        this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
-        this.alphaValue.textContent = this.alphaInput.value;
-        this.paintSwatch();
-        this.emit();
-      });
-      document.body.appendChild(this.panel);
-      this.syncUi(true);
-    }
-    setOnChange(cb) {
-      this.onChange = cb;
-    }
-    getValue() {
-      return toRgbaString(this.color);
-    }
-    setValue(value) {
-      this.color = parseColor(value);
-      this.syncUi(true);
-    }
-    close() {
-      this.closePanel();
-    }
-    destroy() {
-      this.closePanel();
-      this.panel.remove();
-      this.root.remove();
-    }
-    /** Inclure le panneau dans les tests « clic intérieur ». */
-    containsNode(node) {
-      if (!node) return false;
-      return this.root.contains(node) || this.panel.contains(node);
-    }
-    emit() {
-      var _a;
-      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
-    }
-    syncUi(syncHue) {
-      if (syncHue) this.hueInput.value = toHexRgb(this.color);
-      this.hexInput.value = toHexRgb(this.color);
-      const pct = Math.round(this.color.a * 100);
-      this.alphaInput.value = String(pct);
-      this.alphaValue.textContent = String(pct);
-      this.paintSwatch();
-    }
-    paintSwatch() {
-      this.swatch.style.backgroundColor = toRgbaString(this.color);
-      this.swatch.classList.toggle("is-transparent", this.color.a <= 1e-3);
-    }
-    openPanel() {
-      this.open = true;
-      this.swatch.setAttribute("aria-expanded", "true");
-      this.panel.hidden = false;
-      const rect = this.swatch.getBoundingClientRect();
-      this.panel.style.position = "fixed";
-      this.panel.style.zIndex = "10050";
-      let left = rect.left;
-      let top = rect.bottom + 4;
-      this.panel.style.left = `${left}px`;
-      this.panel.style.top = `${top}px`;
-      requestAnimationFrame(() => {
-        const pr = this.panel.getBoundingClientRect();
-        if (pr.right > window.innerWidth - 8) {
-          left = Math.max(8, window.innerWidth - pr.width - 8);
-        }
-        if (pr.bottom > window.innerHeight - 8) {
-          top = Math.max(8, rect.top - pr.height - 4);
-        }
-        this.panel.style.left = `${left}px`;
-        this.panel.style.top = `${top}px`;
-        try {
-          if (typeof this.hueInput.showPicker === "function") {
-            this.hueInput.showPicker();
-          } else {
-            this.hueInput.focus();
-            this.hueInput.click();
-          }
-        } catch {
-          this.hueInput.focus();
-        }
-      });
-      document.addEventListener("pointerdown", this.onDocDown, true);
-    }
-    closePanel() {
-      this.open = false;
-      this.swatch.setAttribute("aria-expanded", "false");
-      this.panel.hidden = true;
-      document.removeEventListener("pointerdown", this.onDocDown, true);
-    }
-  }
-  const BASIC_BY_KIND = {
-    text: ["text", "fontSize", "fontColor", "textStrokeColor", "rotation"],
-    point: ["radius", "fillColor", "strokeColor", "strokeWidth"],
-    line: ["strokeColor", "strokeWidth"],
-    polygon: ["fillColor", "strokeColor", "strokeWidth"],
-    circle: ["strokeColor", "strokeWidth"],
-    disc: ["fillColor", "strokeColor", "strokeWidth"]
-  };
-  const ADVANCED_BY_KIND = {
-    text: ["fontFamily", "fontBold", "fontItalic", "textStrokeWidth", "zIndex"],
-    point: ["pointShape", "pointRotation", "zIndex"],
-    line: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
-    polygon: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
-    circle: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
-    disc: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"]
-  };
-  class SketchFeatureStylePopup {
-    constructor(map) {
-      __publicField(this, "root");
-      __publicField(this, "basicFields");
-      __publicField(this, "advancedFields");
-      __publicField(this, "advancedToggle");
-      __publicField(this, "colorPickers");
-      __publicField(this, "els");
-      __publicField(this, "feature", null);
-      __publicField(this, "kind", "polygon");
-      __publicField(this, "onCommit", null);
-      __publicField(this, "openFlag", false);
-      __publicField(this, "advancedOpen", false);
-      __publicField(this, "outsideDown", false);
-      __publicField(this, "mapDragged", false);
-      __publicField(this, "repositionBound", false);
-      __publicField(this, "scrollGuardBound", false);
-      __publicField(this, "mapResizeObserver", null);
-      __publicField(this, "repositionRaf", 0);
-      __publicField(this, "onMapPointerDrag", () => {
-        this.mapDragged = true;
-      });
-      __publicField(this, "onPopupWheel", (evt) => {
-        evt.stopPropagation();
-        const scroll = this.root.querySelector(
-          ".ec-sketch-style-popup__scroll"
-        );
-        if (!scroll) {
-          evt.preventDefault();
-          return;
-        }
-        const canScroll = scroll.scrollHeight > scroll.clientHeight + 1;
-        if (!canScroll) {
-          evt.preventDefault();
-          return;
-        }
-        const delta = evt.deltaY;
-        const atTop = scroll.scrollTop <= 0 && delta < 0;
-        const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0;
-        if (atTop || atBottom) evt.preventDefault();
-      });
-      __publicField(this, "onDocPointerDown", (evt) => {
-        if (!this.openFlag) return;
-        const t = evt.target;
-        if (this.containsUi(t)) return;
-        this.outsideDown = true;
-        this.mapDragged = false;
-      });
-      __publicField(this, "onDocPointerUp", () => {
-        if (!this.outsideDown) return;
-        this.outsideDown = false;
-        if (this.mapDragged) {
-          this.mapDragged = false;
-          return;
-        }
-        this.hide();
-      });
-      __publicField(this, "onViewChange", () => {
-        if (!this.openFlag) return;
-        this.scheduleReposition(false);
-      });
-      __publicField(this, "onWindowResize", () => {
-        if (!this.openFlag) return;
-        this.scheduleReposition(true);
-      });
-      this.map = map;
-      this.root = document.createElement("div");
-      this.root.className = "ec-sketch-style-popup";
-      this.root.hidden = true;
-      this.root.innerHTML = `
-      <div class="ec-sketch-style-popup__scroll">
-        <div class="ec-sketch-style-popup__fields" data-section="basic"></div>
-        <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__advanced-toggle" aria-expanded="false">
-          Options avancées
-        </button>
-        <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
-        <div class="ec-sketch-style-popup__actions">
-          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
-          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
-        </div>
-      </div>
-    `;
-      this.basicFields = this.root.querySelector('[data-section="basic"]');
-      this.advancedFields = this.root.querySelector('[data-section="advanced"]');
-      this.advancedToggle = this.root.querySelector(
-        ".ec-sketch-style-popup__advanced-toggle"
-      );
-      this.basicFields.innerHTML = `
-      <label class="ec-sketch-style-popup__field" data-field="text">
-        <span>Texte</span>
-        <input type="text" class="fr-input" data-input="text" />
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="fontSize">
-        <span>Taille (<output data-output="fontSize">14</output> pt)</span>
-        <input type="range" min="8" max="72" step="1" value="14" data-input="fontSize" />
-      </label>
-      <div class="ec-sketch-style-popup__field" data-field="fontColor" data-color-slot="fontColor"></div>
-      <div class="ec-sketch-style-popup__field" data-field="textStrokeColor" data-color-slot="textStrokeColor"></div>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="rotation">
-        <span>Rotation (<output data-output="rotation">0</output>°)</span>
-        <input type="range" min="-180" max="180" step="1" value="0" data-input="rotation" />
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="radius">
-        <span>Rayon (<output data-output="radius">6</output> px)</span>
-        <input type="range" min="1" max="48" step="1" value="6" data-input="radius" />
-      </label>
-      <div class="ec-sketch-style-popup__field" data-field="fillColor" data-color-slot="fillColor"></div>
-      <div class="ec-sketch-style-popup__field" data-field="strokeColor" data-color-slot="strokeColor"></div>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="strokeWidth">
-        <span>Épaisseur (<output data-output="strokeWidth">2</output> px)</span>
-        <input type="range" min="0" max="40" step="1" value="2" data-input="strokeWidth" />
-      </label>
-    `;
-      this.advancedFields.innerHTML = `
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDash">
-        <span>Tirets (<output data-output="lineDash">0</output> px, 0 = plein)</span>
-        <input type="range" min="0" max="64" step="1" value="0" data-input="lineDash" />
-      </label>
-      <label class="ec-sketch-style-popup__field" data-field="lineCap">
-        <span>Extrémités</span>
-        <select class="fr-select" data-input="lineCap">
-          <option value="butt">Coupées</option>
-          <option value="round">Arrondies</option>
-          <option value="square">Carrées</option>
-        </select>
-      </label>
-      <label class="ec-sketch-style-popup__field" data-field="lineJoin">
-        <span>Jonctions (coins du tracé)</span>
-        <select class="fr-select" data-input="lineJoin">
-          <option value="round">Arrondi</option>
-          <option value="bevel">Biseau</option>
-          <option value="miter">Pointe</option>
-        </select>
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDashOffset">
-        <span>Décalage tirets (<output data-output="lineDashOffset">0</output>)</span>
-        <input type="range" min="0" max="100" step="1" value="0" data-input="lineDashOffset" />
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="miterLimit">
-        <span>Limite des pointes (<output data-output="miterLimit">10</output>)</span>
-        <input type="range" min="1" max="50" step="0.5" value="10" data-input="miterLimit" />
-      </label>
-      <label class="ec-sketch-style-popup__field" data-field="fontFamily">
-        <span>Police</span>
-        <input type="text" class="fr-input" data-input="fontFamily" />
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontBold">
-        <input type="checkbox" data-input="fontBold" />
-        <span>Gras</span>
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontItalic">
-        <input type="checkbox" data-input="fontItalic" />
-        <span>Italique</span>
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="textStrokeWidth">
-        <span>Épaisseur contour texte (<output data-output="textStrokeWidth">3</output> px)</span>
-        <input type="range" min="0" max="20" step="1" value="3" data-input="textStrokeWidth" />
-      </label>
-      <label class="ec-sketch-style-popup__field" data-field="pointShape">
-        <span>Forme du point</span>
-        <select class="fr-select" data-input="pointShape">
-          <option value="circle">Cercle</option>
-          <option value="square">Carré</option>
-          <option value="triangle">Triangle</option>
-          <option value="star">Étoile</option>
-        </select>
-      </label>
-      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="pointRotation">
-        <span>Rotation symbole (<output data-output="pointRotation">0</output>°)</span>
-        <input type="range" min="-180" max="180" step="1" value="0" data-input="pointRotation" />
-      </label>
-      <label class="ec-sketch-style-popup__field" data-field="zIndex">
-        <span>zIndex</span>
-        <input type="number" min="0" max="9999" class="fr-input" data-input="zIndex" />
-      </label>
-    `;
-      this.colorPickers = {
-        fontColor: new SketchColorPicker("Couleur du texte", "#000091"),
-        textStrokeColor: new SketchColorPicker("Contour du texte", "#ffffff"),
-        fillColor: new SketchColorPicker("Remplissage", "rgba(0, 0, 145, 0.2)"),
-        strokeColor: new SketchColorPicker("Contour", "#000091")
-      };
-      for (const [key, picker] of Object.entries(this.colorPickers)) {
-        const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`);
-        slot == null ? void 0 : slot.appendChild(picker.root);
-        picker.setOnChange(() => this.applyFromForm());
-      }
-      this.els = {
-        text: this.root.querySelector('[data-input="text"]'),
-        fontSize: this.root.querySelector('[data-input="fontSize"]'),
-        fontSizeValue: this.root.querySelector('[data-output="fontSize"]'),
-        rotation: this.root.querySelector('[data-input="rotation"]'),
-        rotationValue: this.root.querySelector('[data-output="rotation"]'),
-        strokeWidth: this.root.querySelector('[data-input="strokeWidth"]'),
-        strokeWidthValue: this.root.querySelector('[data-output="strokeWidth"]'),
-        radius: this.root.querySelector('[data-input="radius"]'),
-        radiusValue: this.root.querySelector('[data-output="radius"]'),
-        lineDash: this.root.querySelector('[data-input="lineDash"]'),
-        lineDashValue: this.root.querySelector('[data-output="lineDash"]'),
-        lineCap: this.root.querySelector('[data-input="lineCap"]'),
-        lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
-        lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
-        lineDashOffsetValue: this.root.querySelector(
-          '[data-output="lineDashOffset"]'
-        ),
-        miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
-        miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
-        fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
-        fontBold: this.root.querySelector('[data-input="fontBold"]'),
-        fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
-        textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
-        textStrokeWidthValue: this.root.querySelector(
-          '[data-output="textStrokeWidth"]'
-        ),
-        pointShape: this.root.querySelector('[data-input="pointShape"]'),
-        pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
-        pointRotationValue: this.root.querySelector(
-          '[data-output="pointRotation"]'
-        ),
-        zIndex: this.root.querySelector('[data-input="zIndex"]')
-      };
-      const syncOutputs = () => {
-        this.els.fontSizeValue.textContent = this.els.fontSize.value;
-        this.els.rotationValue.textContent = this.els.rotation.value;
-        this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
-        this.els.radiusValue.textContent = this.els.radius.value;
-        this.els.lineDashValue.textContent = this.els.lineDash.value;
-        this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
-        this.els.miterLimitValue.textContent = this.els.miterLimit.value;
-        this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
-        this.els.pointRotationValue.textContent = this.els.pointRotation.value;
-      };
-      const live = () => {
-        syncOutputs();
-        this.syncDependentFields();
-        this.applyFromForm();
-      };
-      for (const input of Object.values(this.els)) {
-        if (input instanceof HTMLOutputElement) continue;
-        input.addEventListener("input", live);
-        input.addEventListener("change", live);
-      }
-      this.advancedToggle.addEventListener("click", () => {
-        this.setAdvancedOpen(!this.advancedOpen);
-        this.reposition();
-      });
-      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
-        var _a;
-        this.applyFromForm();
-        (_a = this.onCommit) == null ? void 0 : _a.call(this);
-        this.hide();
-      });
-      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
-      document.body.appendChild(this.root);
-    }
-    scheduleReposition(updateMapSize) {
-      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
-      this.repositionRaf = requestAnimationFrame(() => {
-        this.repositionRaf = 0;
-        if (updateMapSize) this.map.updateSize();
-        this.reposition();
-      });
-    }
-    open(feature, onCommit) {
-      this.unbindOutside();
-      this.feature = feature;
-      this.onCommit = onCommit ?? null;
-      this.kind = featureStyleKindOf(feature);
-      this.setAdvancedOpen(false);
-      const attrs = getFeatureStyleAttrs(feature);
-      this.syncFieldsVisibility();
-      this.fillForm(attrs);
-      this.syncDependentFields();
-      applyFeatureStyle(feature, attrs);
-      this.root.hidden = false;
-      this.openFlag = true;
-      this.reposition();
-      this.bindOutside();
-      this.bindScrollGuard();
-      if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
-        this.els.text.focus();
-        this.els.text.select();
-      }
-    }
-    hide() {
-      this.unbindOutside();
-      this.unbindScrollGuard();
-      this.setAdvancedOpen(false);
-      this.root.hidden = true;
-      this.openFlag = false;
-      this.feature = null;
-      this.onCommit = null;
-      this.outsideDown = false;
-      this.mapDragged = false;
-      for (const p of Object.values(this.colorPickers)) p.close();
-    }
-    destroy() {
-      this.hide();
-      for (const p of Object.values(this.colorPickers)) p.destroy();
-      this.root.remove();
-    }
-    setAdvancedOpen(open) {
-      this.advancedOpen = open;
-      this.advancedFields.hidden = !open;
-      this.advancedToggle.setAttribute("aria-expanded", open ? "true" : "false");
-      this.advancedToggle.textContent = open ? "Masquer les options avancées" : "Options avancées";
-    }
-    containsUi(node) {
-      if (!node) return false;
-      if (this.root.contains(node)) return true;
-      return Object.values(this.colorPickers).some((p) => p.containsNode(node));
-    }
-    bindOutside() {
-      var _a, _b;
-      this.map.on("pointerdrag", this.onMapPointerDrag);
-      this.map.getView().on("change:center", this.onViewChange);
-      this.map.getView().on("change:resolution", this.onViewChange);
-      this.map.on("change:size", this.onViewChange);
-      window.addEventListener("resize", this.onWindowResize);
-      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", this.onWindowResize);
-      window.addEventListener("scroll", this.onViewChange, true);
-      document.addEventListener("pointerdown", this.onDocPointerDown, true);
-      document.addEventListener("pointerup", this.onDocPointerUp, true);
-      const mapEl = this.map.getTargetElement();
-      if (mapEl && typeof ResizeObserver !== "undefined") {
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize());
-        this.mapResizeObserver.observe(mapEl);
-      }
-      this.repositionBound = true;
-    }
-    unbindOutside() {
-      var _a, _b;
-      this.map.un("pointerdrag", this.onMapPointerDrag);
-      if (this.repositionBound) {
-        this.map.getView().un("change:center", this.onViewChange);
-        this.map.getView().un("change:resolution", this.onViewChange);
-        this.map.un("change:size", this.onViewChange);
-        window.removeEventListener("resize", this.onWindowResize);
-        (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", this.onWindowResize);
-        window.removeEventListener("scroll", this.onViewChange, true);
-        (_b = this.mapResizeObserver) == null ? void 0 : _b.disconnect();
-        this.mapResizeObserver = null;
-      }
-      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
-      document.removeEventListener("pointerup", this.onDocPointerUp, true);
-      if (this.repositionRaf) {
-        cancelAnimationFrame(this.repositionRaf);
-        this.repositionRaf = 0;
-      }
-      this.repositionBound = false;
-    }
-    bindScrollGuard() {
-      if (this.scrollGuardBound) return;
-      this.root.addEventListener("wheel", this.onPopupWheel, {
-        passive: false,
-        capture: true
-      });
-      this.scrollGuardBound = true;
-    }
-    unbindScrollGuard() {
-      if (!this.scrollGuardBound) return;
-      this.root.removeEventListener("wheel", this.onPopupWheel, true);
-      this.scrollGuardBound = false;
-    }
-    /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
-    reposition() {
-      if (!this.feature || this.root.hidden) return;
-      const mapSize = this.map.getSize();
-      const anchor = featureStylePopupAnchor(
-        this.feature,
-        mapSize,
-        (c) => this.map.getPixelFromCoordinate(c)
-      );
-      if (!anchor) return;
-      const pixel = this.map.getPixelFromCoordinate(anchor);
-      if (!pixel) return;
-      const mapEl = this.map.getTargetElement();
-      if (!mapEl) return;
-      const mapRect = mapEl.getBoundingClientRect();
-      const tipX = mapRect.left + pixel[0];
-      const tipY = mapRect.top + pixel[1];
-      this.root.style.position = "fixed";
-      this.root.style.zIndex = "10040";
-      this.root.style.left = "0";
-      this.root.style.top = "0";
-      this.root.style.visibility = "hidden";
-      this.root.hidden = false;
-      requestAnimationFrame(() => {
-        const pr = this.root.getBoundingClientRect();
-        const gap = 20;
-        const tipPad = 18;
-        let below = false;
-        let top = tipY - pr.height - gap;
-        if (top < 8) {
-          top = tipY + gap;
-          below = true;
-        }
-        let tipLocalX = pr.width / 2;
-        let left = tipX - tipLocalX;
-        const minLeft = 8;
-        const maxLeft = window.innerWidth - pr.width - 8;
-        if (left < minLeft) {
-          left = minLeft;
-          tipLocalX = tipX - left;
-        } else if (left > maxLeft) {
-          left = maxLeft;
-          tipLocalX = tipX - left;
-        }
-        tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad);
-        left = tipX - tipLocalX;
-        left = Math.min(Math.max(minLeft, left), maxLeft);
-        tipLocalX = tipX - left;
-        top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8);
-        if (!below && top + 4 > tipY) below = true;
-        this.root.style.left = `${left}px`;
-        this.root.style.top = `${top}px`;
-        this.root.style.setProperty("--ec-tip-x", `${tipLocalX}px`);
-        this.root.style.visibility = "visible";
-        this.root.classList.toggle("ec-sketch-style-popup--below", below);
-      });
-    }
-    syncFieldsVisibility() {
-      const basic = new Set(BASIC_BY_KIND[this.kind]);
-      const advanced = new Set(ADVANCED_BY_KIND[this.kind]);
-      for (const label of this.basicFields.querySelectorAll("[data-field]")) {
-        label.hidden = !basic.has(label.dataset.field);
-      }
-      for (const label of this.advancedFields.querySelectorAll("[data-field]")) {
-        label.hidden = !advanced.has(label.dataset.field);
-      }
-      const hasAdvanced = advanced.size > 0;
-      this.advancedToggle.hidden = !hasAdvanced;
-      if (!hasAdvanced) this.setAdvancedOpen(false);
-      else this.advancedFields.hidden = !this.advancedOpen;
-    }
-    /** Désactive les champs devenus non pertinents. */
-    syncDependentFields() {
-      const dash = Number(this.els.lineDash.value) || 0;
-      const dashOffsetField = this.els.lineDashOffset.closest(
-        ".ec-sketch-style-popup__field"
-      );
-      this.els.lineDashOffset.disabled = dash <= 0;
-      dashOffsetField == null ? void 0 : dashOffsetField.classList.toggle("is-disabled", dash <= 0);
-      const join = this.els.lineJoin.value;
-      const miterField = this.els.miterLimit.closest(
-        ".ec-sketch-style-popup__field"
-      );
-      this.els.miterLimit.disabled = join !== "miter";
-      miterField == null ? void 0 : miterField.classList.toggle("is-disabled", join !== "miter");
-      const shape = this.els.pointShape.value;
-      const rotField = this.els.pointRotation.closest(
-        ".ec-sketch-style-popup__field"
-      );
-      this.els.pointRotation.disabled = shape === "circle";
-      rotField == null ? void 0 : rotField.classList.toggle("is-disabled", shape === "circle");
-    }
-    fillForm(attrs) {
-      this.els.text.value = attrs.text;
-      this.els.fontSize.value = String(attrs.fontSize);
-      this.els.fontSizeValue.textContent = this.els.fontSize.value;
-      this.colorPickers.fontColor.setValue(attrs.fontColor);
-      this.colorPickers.textStrokeColor.setValue(attrs.textStrokeColor);
-      this.els.rotation.value = String(Math.round(attrs.rotation));
-      this.els.rotationValue.textContent = this.els.rotation.value;
-      this.colorPickers.strokeColor.setValue(attrs.strokeColor);
-      this.els.strokeWidth.value = String(attrs.strokeWidth);
-      this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
-      this.colorPickers.fillColor.setValue(attrs.fillColor);
-      this.els.radius.value = String(attrs.radius);
-      this.els.radiusValue.textContent = this.els.radius.value;
-      this.els.lineDash.value = String(attrs.lineDash);
-      this.els.lineDashValue.textContent = this.els.lineDash.value;
-      this.els.lineCap.value = attrs.lineCap;
-      this.els.lineJoin.value = attrs.lineJoin;
-      this.els.lineDashOffset.value = String(attrs.lineDashOffset);
-      this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
-      this.els.miterLimit.value = String(attrs.miterLimit);
-      this.els.miterLimitValue.textContent = this.els.miterLimit.value;
-      this.els.fontFamily.value = attrs.fontFamily;
-      this.els.fontBold.checked = attrs.fontBold;
-      this.els.fontItalic.checked = attrs.fontItalic;
-      this.els.textStrokeWidth.value = String(attrs.textStrokeWidth);
-      this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
-      this.els.pointShape.value = attrs.pointShape;
-      this.els.pointRotation.value = String(attrs.pointRotation);
-      this.els.pointRotationValue.textContent = this.els.pointRotation.value;
-      this.els.zIndex.value = String(attrs.zIndex);
-    }
-    applyFromForm() {
-      if (!this.feature) return;
-      const base = defaultFeatureStyleAttrs(this.kind);
-      const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
-      const shape = this.els.pointShape.value || base.pointShape;
-      const join = this.els.lineJoin.value || base.lineJoin;
-      const attrs = {
-        ...base,
-        text: this.els.text.value.trim() || base.text,
-        fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
-        fontColor: this.colorPickers.fontColor.getValue(),
-        textStrokeColor: this.colorPickers.textStrokeColor.getValue(),
-        rotation: Number(this.els.rotation.value) || 0,
-        strokeColor: this.colorPickers.strokeColor.getValue(),
-        strokeWidth: clamp(Number(this.els.strokeWidth.value), 0, 40, base.strokeWidth),
-        fillColor: this.colorPickers.fillColor.getValue(),
-        radius: clamp(Number(this.els.radius.value), 1, 48, base.radius),
-        lineDash: dash,
-        lineCap: this.els.lineCap.value || base.lineCap,
-        lineJoin: join,
-        lineDashOffset: dash <= 0 ? 0 : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
-        miterLimit: join !== "miter" ? base.miterLimit : clamp(Number(this.els.miterLimit.value), 1, 50, base.miterLimit),
-        fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
-        fontBold: this.els.fontBold.checked,
-        fontItalic: this.els.fontItalic.checked,
-        textStrokeWidth: clamp(
-          Number(this.els.textStrokeWidth.value),
-          0,
-          20,
-          base.textStrokeWidth
-        ),
-        pointShape: shape,
-        pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
-        zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
-      };
-      applyFeatureStyle(this.feature, attrs);
-    }
-  }
-  function clamp(n, min, max, fallback) {
-    if (!Number.isFinite(n)) return fallback;
-    return Math.min(max, Math.max(min, n));
   }
   const Property$1 = {
     ELEMENT: "element",
@@ -34089,6 +34075,636 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.options;
     }
   }
+  function clamp01(n) {
+    if (!Number.isFinite(n)) return 1;
+    return Math.min(1, Math.max(0, n));
+  }
+  function parseColor(value, fallback = { r: 0, g: 0, b: 145, a: 1 }) {
+    const v = (value || "").trim();
+    if (!v || v === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
+    const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.exec(v);
+    if (hex) {
+      let h = hex[1];
+      if (h.length === 3) {
+        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      }
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+      return { r, g, b, a: clamp01(a) };
+    }
+    const rgba = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i.exec(v);
+    if (rgba) {
+      return {
+        r: Math.round(Number(rgba[1])),
+        g: Math.round(Number(rgba[2])),
+        b: Math.round(Number(rgba[3])),
+        a: clamp01(rgba[4] !== void 0 ? Number(rgba[4]) : 1)
+      };
+    }
+    return { ...fallback };
+  }
+  function toRgbaString(c) {
+    const a = Math.round(clamp01(c.a) * 1e3) / 1e3;
+    if (a <= 0) return "rgba(0, 0, 0, 0)";
+    if (a >= 1) return `rgb(${c.r}, ${c.g}, ${c.b})`;
+    return `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
+  }
+  function toHexRgb(c) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+    return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+  }
+  class SketchColorPicker {
+    constructor(label, initial = "rgba(0, 0, 145, 1)") {
+      __publicField(this, "root");
+      __publicField(this, "swatch");
+      __publicField(this, "panel");
+      __publicField(this, "hexInput");
+      __publicField(this, "hueInput");
+      __publicField(this, "alphaInput");
+      __publicField(this, "alphaValue");
+      __publicField(this, "color");
+      __publicField(this, "open", false);
+      __publicField(this, "onChange", null);
+      __publicField(this, "onDocDown", (evt) => {
+        if (!this.open) return;
+        const t = evt.target;
+        if (this.root.contains(t) || this.panel.contains(t)) return;
+        this.closePanel();
+      });
+      this.color = parseColor(initial);
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-color";
+      this.root.innerHTML = `
+      <span class="ec-sketch-color__label">${label}</span>
+      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}" aria-haspopup="dialog" aria-expanded="false"></button>
+    `;
+      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
+      this.swatch.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.open) this.closePanel();
+        else this.openPanel();
+      });
+      this.panel = document.createElement("div");
+      this.panel.className = "ec-sketch-color__panel";
+      this.panel.hidden = true;
+      this.panel.setAttribute("role", "dialog");
+      this.panel.setAttribute("aria-label", label);
+      this.panel.innerHTML = `
+      <p class="ec-sketch-color__panel-title">${label}</p>
+      <label class="ec-sketch-color__hue-field">
+        <span>Couleur</span>
+        <input type="color" class="ec-sketch-color__hue" />
+      </label>
+      <label class="ec-sketch-color__hex-field">
+        <span>Hexadécimal</span>
+        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" />
+      </label>
+      <label class="ec-sketch-color__alpha-field">
+        <span>Opacité (<output class="ec-sketch-color__alpha-value">100</output>%)</span>
+        <input type="range" min="0" max="100" step="1" class="ec-sketch-color__alpha" />
+      </label>
+    `;
+      this.hueInput = this.panel.querySelector(".ec-sketch-color__hue");
+      this.hexInput = this.panel.querySelector(".ec-sketch-color__hex");
+      this.alphaInput = this.panel.querySelector(".ec-sketch-color__alpha");
+      this.alphaValue = this.panel.querySelector(".ec-sketch-color__alpha-value");
+      this.hueInput.addEventListener("input", () => {
+        const c = parseColor(this.hueInput.value);
+        this.color = { ...c, a: this.color.a };
+        this.syncUi(false);
+        this.emit();
+      });
+      this.hexInput.addEventListener("input", () => {
+        const next = parseColor(this.hexInput.value, this.color);
+        const raw = this.hexInput.value.trim();
+        if (raw === "transparent" || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw) || /^rgba?\(/i.test(raw)) {
+          this.color = next;
+          this.syncUi(true);
+          this.emit();
+        }
+      });
+      this.hexInput.addEventListener("change", () => {
+        this.color = parseColor(this.hexInput.value, this.color);
+        this.syncUi(true);
+        this.emit();
+      });
+      this.alphaInput.addEventListener("input", () => {
+        this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
+        this.alphaValue.textContent = this.alphaInput.value;
+        this.paintSwatch();
+        this.emit();
+      });
+      document.body.appendChild(this.panel);
+      this.syncUi(true);
+    }
+    setOnChange(cb) {
+      this.onChange = cb;
+    }
+    getValue() {
+      return toRgbaString(this.color);
+    }
+    setValue(value) {
+      this.color = parseColor(value);
+      this.syncUi(true);
+    }
+    close() {
+      this.closePanel();
+    }
+    destroy() {
+      this.closePanel();
+      this.panel.remove();
+      this.root.remove();
+    }
+    /** Inclure le panneau dans les tests « clic intérieur ». */
+    containsNode(node) {
+      if (!node) return false;
+      return this.root.contains(node) || this.panel.contains(node);
+    }
+    emit() {
+      var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    syncUi(syncHue) {
+      if (syncHue) this.hueInput.value = toHexRgb(this.color);
+      this.hexInput.value = toHexRgb(this.color);
+      const pct = Math.round(this.color.a * 100);
+      this.alphaInput.value = String(pct);
+      this.alphaValue.textContent = String(pct);
+      this.paintSwatch();
+    }
+    paintSwatch() {
+      this.swatch.style.backgroundColor = toRgbaString(this.color);
+      this.swatch.classList.toggle("is-transparent", this.color.a <= 1e-3);
+    }
+    openPanel() {
+      this.open = true;
+      this.swatch.setAttribute("aria-expanded", "true");
+      this.panel.hidden = false;
+      const rect = this.swatch.getBoundingClientRect();
+      this.panel.style.position = "fixed";
+      this.panel.style.zIndex = "10050";
+      let left = rect.left;
+      let top = rect.bottom + 4;
+      this.panel.style.left = `${left}px`;
+      this.panel.style.top = `${top}px`;
+      requestAnimationFrame(() => {
+        const pr = this.panel.getBoundingClientRect();
+        if (pr.right > window.innerWidth - 8) {
+          left = Math.max(8, window.innerWidth - pr.width - 8);
+        }
+        if (pr.bottom > window.innerHeight - 8) {
+          top = Math.max(8, rect.top - pr.height - 4);
+        }
+        this.panel.style.left = `${left}px`;
+        this.panel.style.top = `${top}px`;
+        try {
+          if (typeof this.hueInput.showPicker === "function") {
+            this.hueInput.showPicker();
+          } else {
+            this.hueInput.focus();
+            this.hueInput.click();
+          }
+        } catch {
+          this.hueInput.focus();
+        }
+      });
+      document.addEventListener("pointerdown", this.onDocDown, true);
+    }
+    closePanel() {
+      this.open = false;
+      this.swatch.setAttribute("aria-expanded", "false");
+      this.panel.hidden = true;
+      document.removeEventListener("pointerdown", this.onDocDown, true);
+    }
+  }
+  const BASIC_BY_KIND = {
+    text: ["text", "fontSize", "fontColor", "textStrokeColor", "rotation"],
+    point: ["radius", "fillColor", "strokeColor", "strokeWidth"],
+    line: ["strokeColor", "strokeWidth"],
+    polygon: ["fillColor", "strokeColor", "strokeWidth"],
+    circle: ["strokeColor", "strokeWidth"],
+    disc: ["fillColor", "strokeColor", "strokeWidth"]
+  };
+  const ADVANCED_BY_KIND = {
+    text: ["fontFamily", "fontBold", "fontItalic", "textStrokeWidth", "zIndex"],
+    point: ["pointShape", "pointRotation", "zIndex"],
+    line: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    polygon: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    circle: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
+    disc: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"]
+  };
+  class SketchFeatureStylePopup {
+    constructor(map) {
+      __publicField(this, "root");
+      __publicField(this, "overlay");
+      __publicField(this, "basicFields");
+      __publicField(this, "advancedFields");
+      __publicField(this, "advancedToggle");
+      __publicField(this, "colorPickers");
+      __publicField(this, "els");
+      __publicField(this, "feature", null);
+      __publicField(this, "kind", "polygon");
+      __publicField(this, "onCommit", null);
+      __publicField(this, "openFlag", false);
+      __publicField(this, "advancedOpen", false);
+      __publicField(this, "outsideDown", false);
+      __publicField(this, "mapDragged", false);
+      __publicField(this, "geomChangeKey", null);
+      __publicField(this, "onMapPointerDrag", () => {
+        this.mapDragged = true;
+      });
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.openFlag) return;
+        const t = evt.target;
+        if (this.containsUi(t)) return;
+        this.outsideDown = true;
+        this.mapDragged = false;
+      });
+      __publicField(this, "onDocPointerUp", () => {
+        if (!this.outsideDown) return;
+        this.outsideDown = false;
+        if (this.mapDragged) {
+          this.mapDragged = false;
+          return;
+        }
+        this.hide();
+      });
+      __publicField(this, "onViewChange", () => {
+        if (!this.openFlag) return;
+        this.reposition();
+      });
+      this.map = map;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-style-popup";
+      this.root.hidden = true;
+      this.root.innerHTML = `
+      <div class="ec-sketch-style-popup__scroll">
+        <div class="ec-sketch-style-popup__fields" data-section="basic"></div>
+        <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__advanced-toggle" aria-expanded="false">
+          Options avancées
+        </button>
+        <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
+        <div class="ec-sketch-style-popup__actions">
+          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
+          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+        </div>
+      </div>
+    `;
+      this.basicFields = this.root.querySelector('[data-section="basic"]');
+      this.advancedFields = this.root.querySelector('[data-section="advanced"]');
+      this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
+      this.basicFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field" data-field="text">
+        <span>Texte</span>
+        <input type="text" class="fr-input" data-input="text" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="fontSize">
+        <span>Taille (<output data-output="fontSize">14</output> pt)</span>
+        <input type="range" min="8" max="72" step="1" value="14" data-input="fontSize" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fontColor" data-color-slot="fontColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="textStrokeColor" data-color-slot="textStrokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="rotation">
+        <span>Rotation (<output data-output="rotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="rotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="radius">
+        <span>Rayon (<output data-output="radius">6</output> px)</span>
+        <input type="range" min="1" max="48" step="1" value="6" data-input="radius" />
+      </label>
+      <div class="ec-sketch-style-popup__field" data-field="fillColor" data-color-slot="fillColor"></div>
+      <div class="ec-sketch-style-popup__field" data-field="strokeColor" data-color-slot="strokeColor"></div>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="strokeWidth">
+        <span>Épaisseur (<output data-output="strokeWidth">2</output> px)</span>
+        <input type="range" min="0" max="40" step="1" value="2" data-input="strokeWidth" />
+      </label>
+    `;
+      this.advancedFields.innerHTML = `
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDash">
+        <span>Tirets (<output data-output="lineDash">0</output> px, 0 = plein)</span>
+        <input type="range" min="0" max="64" step="1" value="0" data-input="lineDash" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineCap">
+        <span>Extrémités</span>
+        <select class="fr-select" data-input="lineCap">
+          <option value="butt">Coupées</option>
+          <option value="round">Arrondies</option>
+          <option value="square">Carrées</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="lineJoin">
+        <span>Jonctions (coins du tracé)</span>
+        <select class="fr-select" data-input="lineJoin">
+          <option value="round">Arrondi</option>
+          <option value="bevel">Biseau</option>
+          <option value="miter">Pointe</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="lineDashOffset">
+        <span>Décalage tirets (<output data-output="lineDashOffset">0</output>)</span>
+        <input type="range" min="0" max="100" step="1" value="0" data-input="lineDashOffset" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="miterLimit">
+        <span>Limite des pointes (<output data-output="miterLimit">10</output>)</span>
+        <input type="range" min="1" max="50" step="0.5" value="10" data-input="miterLimit" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="fontFamily">
+        <span>Police</span>
+        <input type="text" class="fr-input" data-input="fontFamily" />
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontBold">
+        <input type="checkbox" data-input="fontBold" />
+        <span>Gras</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--check" data-field="fontItalic">
+        <input type="checkbox" data-input="fontItalic" />
+        <span>Italique</span>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="textStrokeWidth">
+        <span>Épaisseur contour texte (<output data-output="textStrokeWidth">3</output> px)</span>
+        <input type="range" min="0" max="20" step="1" value="3" data-input="textStrokeWidth" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="pointShape">
+        <span>Forme du point</span>
+        <select class="fr-select" data-input="pointShape">
+          <option value="circle">Cercle</option>
+          <option value="square">Carré</option>
+          <option value="triangle">Triangle</option>
+          <option value="star">Étoile</option>
+        </select>
+      </label>
+      <label class="ec-sketch-style-popup__field ec-sketch-style-popup__field--range" data-field="pointRotation">
+        <span>Rotation symbole (<output data-output="pointRotation">0</output>°)</span>
+        <input type="range" min="-180" max="180" step="1" value="0" data-input="pointRotation" />
+      </label>
+      <label class="ec-sketch-style-popup__field" data-field="zIndex">
+        <span>zIndex</span>
+        <input type="number" min="0" max="9999" class="fr-input" data-input="zIndex" />
+      </label>
+    `;
+      this.colorPickers = {
+        fontColor: new SketchColorPicker("Couleur du texte", "#000091"),
+        textStrokeColor: new SketchColorPicker("Contour du texte", "#ffffff"),
+        fillColor: new SketchColorPicker("Remplissage", "rgba(0, 0, 145, 0.2)"),
+        strokeColor: new SketchColorPicker("Contour", "#000091")
+      };
+      for (const [key, picker] of Object.entries(this.colorPickers)) {
+        const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`);
+        slot == null ? void 0 : slot.appendChild(picker.root);
+        picker.setOnChange(() => this.applyFromForm());
+      }
+      this.els = {
+        text: this.root.querySelector('[data-input="text"]'),
+        fontSize: this.root.querySelector('[data-input="fontSize"]'),
+        fontSizeValue: this.root.querySelector('[data-output="fontSize"]'),
+        rotation: this.root.querySelector('[data-input="rotation"]'),
+        rotationValue: this.root.querySelector('[data-output="rotation"]'),
+        strokeWidth: this.root.querySelector('[data-input="strokeWidth"]'),
+        strokeWidthValue: this.root.querySelector('[data-output="strokeWidth"]'),
+        radius: this.root.querySelector('[data-input="radius"]'),
+        radiusValue: this.root.querySelector('[data-output="radius"]'),
+        lineDash: this.root.querySelector('[data-input="lineDash"]'),
+        lineDashValue: this.root.querySelector('[data-output="lineDash"]'),
+        lineCap: this.root.querySelector('[data-input="lineCap"]'),
+        lineJoin: this.root.querySelector('[data-input="lineJoin"]'),
+        lineDashOffset: this.root.querySelector('[data-input="lineDashOffset"]'),
+        lineDashOffsetValue: this.root.querySelector('[data-output="lineDashOffset"]'),
+        miterLimit: this.root.querySelector('[data-input="miterLimit"]'),
+        miterLimitValue: this.root.querySelector('[data-output="miterLimit"]'),
+        fontFamily: this.root.querySelector('[data-input="fontFamily"]'),
+        fontBold: this.root.querySelector('[data-input="fontBold"]'),
+        fontItalic: this.root.querySelector('[data-input="fontItalic"]'),
+        textStrokeWidth: this.root.querySelector('[data-input="textStrokeWidth"]'),
+        textStrokeWidthValue: this.root.querySelector('[data-output="textStrokeWidth"]'),
+        pointShape: this.root.querySelector('[data-input="pointShape"]'),
+        pointRotation: this.root.querySelector('[data-input="pointRotation"]'),
+        pointRotationValue: this.root.querySelector('[data-output="pointRotation"]'),
+        zIndex: this.root.querySelector('[data-input="zIndex"]')
+      };
+      const syncOutputs = () => {
+        this.els.fontSizeValue.textContent = this.els.fontSize.value;
+        this.els.rotationValue.textContent = this.els.rotation.value;
+        this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+        this.els.radiusValue.textContent = this.els.radius.value;
+        this.els.lineDashValue.textContent = this.els.lineDash.value;
+        this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+        this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+        this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+        this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      };
+      const live = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.applyFromForm();
+      };
+      for (const input of Object.values(this.els)) {
+        if (input instanceof HTMLOutputElement) continue;
+        input.addEventListener("input", live);
+        input.addEventListener("change", live);
+      }
+      this.advancedToggle.addEventListener("click", () => {
+        this.setAdvancedOpen(!this.advancedOpen);
+      });
+      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+        var _a;
+        this.applyFromForm();
+        (_a = this.onCommit) == null ? void 0 : _a.call(this);
+        this.hide();
+      });
+      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
+      this.overlay = new Overlay({
+        element: this.root,
+        positioning: "bottom-center",
+        offset: [0, -8],
+        stopEvent: true
+      });
+      this.map.addOverlay(this.overlay);
+    }
+    open(feature, onCommit) {
+      this.unbindOutside();
+      this.feature = feature;
+      this.onCommit = onCommit ?? null;
+      this.kind = featureStyleKindOf(feature);
+      this.setAdvancedOpen(false);
+      const attrs = getFeatureStyleAttrs(feature);
+      this.syncFieldsVisibility();
+      this.fillForm(attrs);
+      this.syncDependentFields();
+      applyFeatureStyle(feature, attrs);
+      this.root.hidden = false;
+      this.openFlag = true;
+      this.reposition();
+      this.bindOutside();
+      if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
+        this.els.text.focus();
+        this.els.text.select();
+      }
+    }
+    hide() {
+      this.unbindOutside();
+      this.setAdvancedOpen(false);
+      this.root.hidden = true;
+      this.overlay.setPosition(void 0);
+      this.openFlag = false;
+      this.feature = null;
+      this.onCommit = null;
+      this.outsideDown = false;
+      this.mapDragged = false;
+      for (const p of Object.values(this.colorPickers)) p.close();
+    }
+    destroy() {
+      this.hide();
+      for (const p of Object.values(this.colorPickers)) p.destroy();
+      this.map.removeOverlay(this.overlay);
+      this.root.remove();
+    }
+    setAdvancedOpen(open) {
+      this.advancedOpen = open;
+      this.advancedFields.hidden = !open;
+      this.advancedToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      this.advancedToggle.textContent = open ? "Masquer les options avancées" : "Options avancées";
+    }
+    containsUi(node) {
+      if (!node) return false;
+      if (this.root.contains(node)) return true;
+      return Object.values(this.colorPickers).some((p) => p.containsNode(node));
+    }
+    bindOutside() {
+      var _a;
+      this.map.on("pointerdrag", this.onMapPointerDrag);
+      this.map.getView().on("change:center", this.onViewChange);
+      this.map.getView().on("change:resolution", this.onViewChange);
+      document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      document.addEventListener("pointerup", this.onDocPointerUp, true);
+      const geom = (_a = this.feature) == null ? void 0 : _a.getGeometry();
+      if (geom) {
+        this.geomChangeKey = geom.on("change", this.onViewChange);
+      }
+    }
+    unbindOutside() {
+      this.map.un("pointerdrag", this.onMapPointerDrag);
+      this.map.getView().un("change:center", this.onViewChange);
+      this.map.getView().un("change:resolution", this.onViewChange);
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("pointerup", this.onDocPointerUp, true);
+      if (this.geomChangeKey) {
+        unByKey(this.geomChangeKey);
+        this.geomChangeKey = null;
+      }
+    }
+    /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
+    reposition() {
+      if (!this.feature || this.root.hidden) return;
+      const anchor = featureStylePopupAnchor(this.feature);
+      if (anchor) this.overlay.setPosition(anchor);
+    }
+    syncFieldsVisibility() {
+      const basic = new Set(BASIC_BY_KIND[this.kind]);
+      const advanced = new Set(ADVANCED_BY_KIND[this.kind]);
+      for (const label of this.basicFields.querySelectorAll("[data-field]")) {
+        label.hidden = !basic.has(label.dataset.field);
+      }
+      for (const label of this.advancedFields.querySelectorAll("[data-field]")) {
+        label.hidden = !advanced.has(label.dataset.field);
+      }
+      const hasAdvanced = advanced.size > 0;
+      this.advancedToggle.hidden = !hasAdvanced;
+      if (!hasAdvanced) this.setAdvancedOpen(false);
+      else this.advancedFields.hidden = !this.advancedOpen;
+    }
+    /** Désactive les champs devenus non pertinents. */
+    syncDependentFields() {
+      const dash = Number(this.els.lineDash.value) || 0;
+      const dashOffsetField = this.els.lineDashOffset.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.lineDashOffset.disabled = dash <= 0;
+      dashOffsetField == null ? void 0 : dashOffsetField.classList.toggle("is-disabled", dash <= 0);
+      const join = this.els.lineJoin.value;
+      const miterField = this.els.miterLimit.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.miterLimit.disabled = join !== "miter";
+      miterField == null ? void 0 : miterField.classList.toggle("is-disabled", join !== "miter");
+      const shape = this.els.pointShape.value;
+      const rotField = this.els.pointRotation.closest(
+        ".ec-sketch-style-popup__field"
+      );
+      this.els.pointRotation.disabled = shape === "circle";
+      rotField == null ? void 0 : rotField.classList.toggle("is-disabled", shape === "circle");
+    }
+    fillForm(attrs) {
+      this.els.text.value = attrs.text;
+      this.els.fontSize.value = String(attrs.fontSize);
+      this.els.fontSizeValue.textContent = this.els.fontSize.value;
+      this.colorPickers.fontColor.setValue(attrs.fontColor);
+      this.colorPickers.textStrokeColor.setValue(attrs.textStrokeColor);
+      this.els.rotation.value = String(Math.round(attrs.rotation));
+      this.els.rotationValue.textContent = this.els.rotation.value;
+      this.colorPickers.strokeColor.setValue(attrs.strokeColor);
+      this.els.strokeWidth.value = String(attrs.strokeWidth);
+      this.els.strokeWidthValue.textContent = this.els.strokeWidth.value;
+      this.colorPickers.fillColor.setValue(attrs.fillColor);
+      this.els.radius.value = String(attrs.radius);
+      this.els.radiusValue.textContent = this.els.radius.value;
+      this.els.lineDash.value = String(attrs.lineDash);
+      this.els.lineDashValue.textContent = this.els.lineDash.value;
+      this.els.lineCap.value = attrs.lineCap;
+      this.els.lineJoin.value = attrs.lineJoin;
+      this.els.lineDashOffset.value = String(attrs.lineDashOffset);
+      this.els.lineDashOffsetValue.textContent = this.els.lineDashOffset.value;
+      this.els.miterLimit.value = String(attrs.miterLimit);
+      this.els.miterLimitValue.textContent = this.els.miterLimit.value;
+      this.els.fontFamily.value = attrs.fontFamily;
+      this.els.fontBold.checked = attrs.fontBold;
+      this.els.fontItalic.checked = attrs.fontItalic;
+      this.els.textStrokeWidth.value = String(attrs.textStrokeWidth);
+      this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
+      this.els.pointShape.value = attrs.pointShape;
+      this.els.pointRotation.value = String(attrs.pointRotation);
+      this.els.pointRotationValue.textContent = this.els.pointRotation.value;
+      this.els.zIndex.value = String(attrs.zIndex);
+    }
+    applyFromForm() {
+      if (!this.feature) return;
+      const base = defaultFeatureStyleAttrs(this.kind);
+      const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
+      const shape = this.els.pointShape.value || base.pointShape;
+      const join = this.els.lineJoin.value || base.lineJoin;
+      const attrs = {
+        ...base,
+        text: this.els.text.value.trim() || base.text,
+        fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
+        fontColor: this.colorPickers.fontColor.getValue(),
+        textStrokeColor: this.colorPickers.textStrokeColor.getValue(),
+        rotation: Number(this.els.rotation.value) || 0,
+        strokeColor: this.colorPickers.strokeColor.getValue(),
+        strokeWidth: clamp(Number(this.els.strokeWidth.value), 0, 40, base.strokeWidth),
+        fillColor: this.colorPickers.fillColor.getValue(),
+        radius: clamp(Number(this.els.radius.value), 1, 48, base.radius),
+        lineDash: dash,
+        lineCap: this.els.lineCap.value || base.lineCap,
+        lineJoin: join,
+        lineDashOffset: dash <= 0 ? 0 : clamp(Number(this.els.lineDashOffset.value), 0, 100, base.lineDashOffset),
+        miterLimit: join !== "miter" ? base.miterLimit : clamp(Number(this.els.miterLimit.value), 1, 50, base.miterLimit),
+        fontFamily: this.els.fontFamily.value.trim() || base.fontFamily,
+        fontBold: this.els.fontBold.checked,
+        fontItalic: this.els.fontItalic.checked,
+        textStrokeWidth: clamp(Number(this.els.textStrokeWidth.value), 0, 20, base.textStrokeWidth),
+        pointShape: shape,
+        pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
+        zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
+      };
+      applyFeatureStyle(this.feature, attrs);
+    }
+  }
+  function clamp(n, min, max, fallback) {
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  }
   function formatMapLength(map, line) {
     const proj = map.getView().getProjection();
     const clone2 = line.clone().transform(proj, "EPSG:4326");
@@ -34232,9 +34848,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         offset: [0, -8],
         stopEvent: true
       });
-      overlay.setPosition(
-        measureAnchor(this.map, geom)
-      );
+      overlay.setPosition(measureAnchor(this.map, geom));
       this.map.addOverlay(overlay);
       this.overlays.set(feature, overlay);
       remove.addEventListener("click", (e) => {
@@ -34246,9 +34860,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const g = feature.getGeometry();
         if (!g) return;
         content.textContent = this.formatFeature(feature);
-        overlay.setPosition(
-          measureAnchor(this.map, g)
-        );
+        overlay.setPosition(measureAnchor(this.map, g));
       });
     }
     formatFeature(feature) {
@@ -34353,7 +34965,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       r == null ? void 0 : r(format);
     }
   }
-  const GEOJSON = new GeoJSON();
   const EXTRA_DEFS = {
     Text: {
       id: "text",
@@ -34467,7 +35078,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.applyToolsChrome();
     }
     setMap(map) {
-      var _a;
       const prev = this.getMap();
       if (prev) {
         this.teardownExtras(prev);
@@ -34482,11 +35092,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.ensureLayer(map);
       this.mountDrawBar(map);
       this.placeInGeopfContainer(map);
-      this.restoreFromLocalStorage();
-      (_a = this.history) == null ? void 0 : _a.resetFromSource();
-      if (this.localStorageKey && this.source.getFeatures().length) {
-        this.savedSnapshot = this.sketchSnapshot();
-      }
+      this.restoreSketchFromLocalStorage();
       this.syncHistoryButtons();
       this.syncSaveButtonState();
     }
@@ -34622,7 +35228,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       var _a, _b, _c, _d;
       if (!this.layer) return;
       (_a = this.drawBar) == null ? void 0 : _a.destroy();
-      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map.getView().getProjection()) : null;
+      this.history = this.historyEnabled ? new SketchHistory(this.source, () => map) : null;
       (_b = this.stylePopup) == null ? void 0 : _b.destroy();
       this.stylePopup = null;
       if (this.enableFeatureStyleEditor) {
@@ -34768,18 +35374,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     runImport() {
       const map = this.getMap();
       if (!map) return;
-      pickSketchFile(".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml", (text, name) => {
-        var _a;
-        try {
-          const format = formatFromFilename(name);
-          const features = readSketchFile(map, text, format);
-          this.source.addFeatures(features);
-          (_a = this.history) == null ? void 0 : _a.push();
-          this.notifyChange();
-        } catch (err) {
-          console.warn("[SketchControl] import failed", err);
+      pickSketchFile(
+        ".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml",
+        (text, name) => {
+          var _a;
+          try {
+            const format = formatFromFilename(name);
+            const features = readSketchFile(map, text, format);
+            this.source.addFeatures(features);
+            (_a = this.history) == null ? void 0 : _a.push();
+            this.notifyChange();
+          } catch (err) {
+            console.warn("[SketchControl] import failed", err);
+          }
         }
-      });
+      );
     }
     async runExport() {
       const map = this.getMap();
@@ -34828,14 +35437,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.syncSaveButtonState();
     }
     sketchSnapshot() {
-      var _a;
-      const features = this.getFeatures();
-      return JSON.stringify(
-        GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        })
-      );
+      const map = this.getMap();
+      if (!map) return '{"type":"FeatureCollection","features":[]}';
+      return sketchFeaturesSnapshot(map, this.getFeatures());
     }
     syncSaveButtonState() {
       if (!this.localStorageKey || !this.drawBar) return;
@@ -34847,38 +35451,59 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.drawBar.setSaveState(dirty ? "dirty" : "saved");
     }
     saveToLocalStorage() {
-      var _a;
+      var _a, _b, _c;
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const features = this.getFeatures();
+        const historyKey = sketchHistoryStorageKey(this.localStorageKey);
         if (!features.length) {
           localStorage.removeItem(this.localStorageKey);
+          (_a = this.history) == null ? void 0 : _a.clearLocalStorage(historyKey);
+          (_b = this.history) == null ? void 0 : _b.resetFromSource();
           this.savedSnapshot = this.sketchSnapshot();
           this.syncSaveButtonState();
+          this.syncHistoryButtons();
           return;
         }
-        const json = GEOJSON.writeFeaturesObject(features, {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        localStorage.setItem(this.localStorageKey, JSON.stringify(json));
-        this.savedSnapshot = JSON.stringify(json);
+        const map = this.getMap();
+        if (!map) return;
+        const json = sketchFeaturesSnapshot(map, features);
+        localStorage.setItem(this.localStorageKey, json);
+        (_c = this.history) == null ? void 0 : _c.persistToLocalStorage(historyKey);
+        this.savedSnapshot = json;
         this.syncSaveButtonState();
+        this.syncHistoryButtons();
       } catch (err) {
         console.warn("[SketchControl] localStorage save failed", err);
       }
     }
-    restoreFromLocalStorage() {
-      var _a;
+    /**
+     * Au montage : dernier Enregistrer (croquis + historique `:history`).
+     * Modifications non enregistrées avant rechargement sont perdues.
+     */
+    restoreSketchFromLocalStorage() {
+      var _a, _b, _c;
+      if (!this.localStorageKey || typeof localStorage === "undefined") {
+        (_a = this.history) == null ? void 0 : _a.resetFromSource();
+        return;
+      }
+      const saved = localStorage.getItem(this.localStorageKey);
+      this.savedSnapshot = saved;
+      const historyKey = sketchHistoryStorageKey(this.localStorageKey);
+      const restoredHistory = this.historyEnabled && saved && ((_b = this.history) == null ? void 0 : _b.restoreFromLocalStorage(historyKey));
+      if (!restoredHistory) {
+        this.restoreSavedSnapshotFromLocalStorage();
+        (_c = this.history) == null ? void 0 : _c.resetFromSource();
+      }
+    }
+    restoreSavedSnapshotFromLocalStorage() {
       if (!this.localStorageKey || typeof localStorage === "undefined") return;
       try {
         const raw = localStorage.getItem(this.localStorageKey);
         if (!raw) return;
-        const features = GEOJSON.readFeatures(JSON.parse(raw), {
-          featureProjection: (_a = this.getMap()) == null ? void 0 : _a.getView().getProjection(),
-          dataProjection: "EPSG:4326"
-        });
-        hydrateImportedSketchFeatures(features);
+        const map = this.getMap();
+        if (!map) return;
+        const features = sketchFeaturesFromSnapshot(map, raw);
         this.source.clear(true);
         if (features.length) this.source.addFeatures(features);
       } catch (err) {
@@ -34912,6 +35537,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             e.stopPropagation();
             this.setToolsMenuOpen(!this.toolsMenuOpen);
           });
+          appendGeometryToolIcon(btn, "ec-geometry-editor__tool--tools-toggle");
           this.toolsToggleBtn = btn;
         }
         this.toolbarHost.id = this.toolbarDomId;
@@ -37633,8 +38259,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const viewState = frameState.viewState;
       this.children_.length = 0;
+      const map = this.getMap();
+      const mapCanvas = map.getTargetElement();
+      let mapContext;
+      if (isCanvas(mapCanvas)) {
+        mapContext = /** @type {CanvasRenderingContext2D} */
+        mapCanvas.getContext("2d");
+        mapContext.setTransform(1, 0, 0, 1, 0, 0);
+        mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+      }
       const renderedLayerStates = [];
-      let previousElement = null;
+      let previousElement = mapContext ? mapCanvas : null;
       for (let i = 0, ii = layerStatesArray.length; i < ii; ++i) {
         const layerState = layerStatesArray[i];
         frameState.layerIndex = i;
@@ -37656,36 +38291,37 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.declutter(frameState, renderedLayerStates);
       replaceChildren(this.element_, this.children_);
-      const map = this.getMap();
-      const mapCanvas = map.getTargetElement();
-      if (isCanvas(mapCanvas)) {
-        const mapContext = mapCanvas.getContext("2d");
-        for (const container of this.children_) {
-          const canvas = container.firstElementChild || container;
-          const backgroundColor = container.style.backgroundColor;
-          if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
-            mapContext.fillStyle = backgroundColor;
-            mapContext.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-          }
-          if (isCanvas(canvas) && canvas.width > 0) {
-            mapContext.save();
-            const opacity = container.style.opacity || canvas.style.opacity;
-            mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
-            const transform2 = canvas.style.transform;
-            if (transform2) {
-              mapContext.transform(
-                .../** @type {[number, number, number, number, number, number]} */
-                fromString(transform2)
-              );
-            } else {
-              const w = parseFloat(canvas.style.width) / canvas.width;
-              const h = parseFloat(canvas.style.height) / canvas.height;
-              mapContext.transform(w, 0, 0, h, 0, 0);
-            }
-            mapContext.drawImage(canvas, 0, 0);
-            mapContext.restore();
-          }
+      for (const container of mapContext ? this.children_ : []) {
+        const canvas = container.firstElementChild || container;
+        const backgroundColor = container.style.backgroundColor;
+        if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
+          mapContext.fillStyle = backgroundColor;
+          mapContext.fillRect(
+            0,
+            0,
+            mapContext.canvas.width,
+            mapContext.canvas.height
+          );
         }
+        if (!isCanvas(canvas) || canvas.width === 0) {
+          continue;
+        }
+        mapContext.save();
+        const opacity = container.style.opacity || canvas.style.opacity;
+        mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
+        const transform2 = canvas.style.transform;
+        if (transform2) {
+          mapContext.transform(
+            .../** @type {[number, number, number, number, number, number]} */
+            fromString(transform2)
+          );
+        } else {
+          const w = parseFloat(canvas.style.width) / canvas.width;
+          const h = parseFloat(canvas.style.height) / canvas.height;
+          mapContext.transform(w, 0, 0, h, 0, 0);
+        }
+        mapContext.drawImage(canvas, 0, 0);
+        mapContext.restore();
       }
       this.dispatchRenderEvent(RenderEventType.POSTCOMPOSE, frameState);
       if (!this.renderedVisible_) {
@@ -37735,7 +38371,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
   }
-  class Map extends BaseObject {
+  let Map$1 = class Map extends BaseObject {
     /**
      * @param {MapOptions} [options] Map options.
      */
@@ -38614,7 +39250,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               this
             )
           ];
-          if (targetElement instanceof HTMLElement) {
+          if (!isCanvas(targetElement)) {
             const rootNode = targetElement.getRootNode();
             if (rootNode instanceof ShadowRoot) {
               this.resizeObserver_.observe(rootNode.host);
@@ -38969,7 +39605,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         view.setViewportSize(size);
       }
     }
-  }
+  };
   function createOptionsInternal(options) {
     let keyboardEventTarget = null;
     if (options.keyboardEventTarget !== void 0) {
@@ -40673,7 +41309,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.renderedPixelRatio;
       this.renderedProjection = null;
       this.renderedTiles = [];
-      this.renderedSourceKey_;
       this.renderedSourceRevision_;
       this.tempExtent = createEmpty();
       this.tempTileRange_ = new TileRange(0, 0, 0, 0);
@@ -41020,13 +41655,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const tileGrid = tileSource.getTileGridForProjection(projection);
       const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
       const tileResolution = tileGrid.getResolution(z);
-      const sourceKey = tileSource.getKey();
-      if (!this.renderedSourceKey_) {
-        this.renderedSourceKey_ = sourceKey;
-      } else if (this.renderedSourceKey_ !== sourceKey) {
-        this.prependStaleKey(this.renderedSourceKey_);
-        this.renderedSourceKey_ = sourceKey;
-      }
+      this.updateStaleKeys(tileSource.getKey());
       let frameExtent = frameState.extent;
       const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
       this.prepareContainer(frameState, target);
@@ -41138,9 +41767,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.preRender(context, frameState);
       const zs = Object.keys(tilesByZ).map(Number);
       zs.sort(ascending);
-      let currentClip;
       const clips = [];
       const clipZs = [];
+      const fadingTiles = [];
       for (let i = zs.length - 1; i >= 0; --i) {
         const currentZ = zs[i];
         const currentTilePixelSize = tileSource.getTilePixelSize(
@@ -41175,42 +41804,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const y = Math.round(origin[1] - yIndex * dy2);
           const w = nextX - x;
           const h = nextY - y;
-          const transition = zs.length === 1;
-          let contextSaved = false;
-          currentClip = [x, y, x + w, y, x + w, y + h, x, y + h];
-          for (let i2 = 0, ii = clips.length; i2 < ii; ++i2) {
-            if (!transition && currentZ < clipZs[i2]) {
-              const clip = clips[i2];
-              if (intersects$1(
-                [x, y, x + w, y + h],
-                [clip[0], clip[3], clip[4], clip[7]]
-              )) {
-                if (!contextSaved) {
-                  context.save();
-                  contextSaved = true;
-                }
-                context.beginPath();
-                context.moveTo(currentClip[0], currentClip[1]);
-                context.lineTo(currentClip[2], currentClip[3]);
-                context.lineTo(currentClip[4], currentClip[5]);
-                context.lineTo(currentClip[6], currentClip[7]);
-                context.moveTo(clip[6], clip[7]);
-                context.lineTo(clip[4], clip[5]);
-                context.lineTo(clip[2], clip[3]);
-                context.lineTo(clip[0], clip[1]);
-                context.clip();
-              }
+          const transition = currentZ === z;
+          if (transition && tile.inTransition(uid)) {
+            fadingTiles.push({ tile, x, y, w, h, gutter: tileGutter });
+            this.renderedTiles.unshift(tile);
+            this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
+            continue;
+          }
+          const currentRect = [x, y, x + w, y + h];
+          const covered = [];
+          for (let j = 0, jj = clips.length; j < jj; ++j) {
+            if (currentZ < clipZs[j] && intersects$1(currentRect, clips[j])) {
+              covered.push(clips[j]);
             }
           }
-          clips.push(currentClip);
-          clipZs.push(currentZ);
-          this.drawTile(tile, frameState, x, y, w, h, tileGutter, transition);
-          if (contextSaved) {
-            context.restore();
+          let clipRects;
+          if (covered.length > 0) {
+            clipRects = subtractExtents(currentRect, covered);
           }
+          clips.push(currentRect);
+          clipZs.push(currentZ);
+          this.drawTile(
+            tile,
+            frameState,
+            x,
+            y,
+            w,
+            h,
+            tileGutter,
+            transition,
+            clipRects
+          );
           this.renderedTiles.unshift(tile);
           this.updateUsedTiles(frameState.usedTiles, tileSource, tile);
         }
+      }
+      for (let i = 0, ii = fadingTiles.length; i < ii; ++i) {
+        const { tile, x, y, w, h, gutter } = fadingTiles[i];
+        this.drawTile(tile, frameState, x, y, w, h, gutter, true, void 0);
       }
       this.renderedResolution = tileResolution;
       this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
@@ -41254,9 +41885,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {number} h Height of the tile.
      * @param {number} gutter Tile gutter.
      * @param {boolean} transition Apply an alpha transition.
+     * @param {Array<import("../../extent.js").Extent>} [clipRects] Sub-rectangles
+     *     of the tile to draw. When not provided, the whole tile is drawn; when an
+     *     empty array is provided, nothing is drawn (the tile is fully covered by
+     *     higher-z tiles).
      * @protected
      */
-    drawTile(tile, frameState, x, y, w, h, gutter, transition) {
+    drawTile(tile, frameState, x, y, w, h, gutter, transition, clipRects) {
       let image;
       if (tile instanceof DataTile) {
         image = asImageLike(tile.getData());
@@ -41281,17 +41916,42 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         context.save();
         context.globalAlpha = alpha;
       }
-      context.drawImage(
-        image,
-        gutter,
-        gutter,
-        image.width - 2 * gutter,
-        image.height - 2 * gutter,
-        x,
-        y,
-        w,
-        h
-      );
+      const imageWidth = image.width - 2 * gutter;
+      const imageHeight = image.height - 2 * gutter;
+      if (clipRects) {
+        const scaleX = imageWidth / w;
+        const scaleY = imageHeight / h;
+        for (let i = 0, ii = clipRects.length; i < ii; ++i) {
+          const rect = clipRects[i];
+          const rx = rect[0];
+          const ry = rect[1];
+          const rw = rect[2] - rect[0];
+          const rh = rect[3] - rect[1];
+          context.drawImage(
+            image,
+            gutter + (rx - x) * scaleX,
+            gutter + (ry - y) * scaleY,
+            rw * scaleX,
+            rh * scaleY,
+            rx,
+            ry,
+            rw,
+            rh
+          );
+        }
+      } else {
+        context.drawImage(
+          image,
+          gutter,
+          gutter,
+          imageWidth,
+          imageHeight,
+          x,
+          y,
+          w,
+          h
+        );
+      }
       if (alphaChanged) {
         context.restore();
       }
@@ -41449,8 +42109,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Options} options Tile grid options.
      */
     constructor(options) {
-      this.minZoom = options.minZoom !== void 0 ? options.minZoom : 0;
-      this.resolutions_ = options.resolutions;
+      let minZoom = options.minZoom;
+      const resolutions = options.resolutions;
+      if (minZoom === void 0 && resolutions) {
+        minZoom = resolutions.findIndex((resolution) => resolution !== void 0);
+      }
+      this.minZoom = minZoom !== void 0 ? minZoom : 0;
+      this.resolutions_ = resolutions;
       assert(
         isSorted(
           this.resolutions_,
@@ -41512,7 +42177,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.fullTileRanges_ = null;
       this.tmpSize_ = [0, 0];
       this.tmpExtent_ = [0, 0, 0, 0];
-      if (options.sizes !== void 0) {
+      if (options.tileRanges !== void 0) {
+        this.fullTileRanges_ = options.tileRanges;
+      } else if (options.sizes !== void 0) {
         this.fullTileRanges_ = options.sizes.map((size, z) => {
           const tileRange = new TileRange(
             Math.min(0, size[0]),
@@ -42783,7 +43450,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     mapTarget.style.width = "100%";
     mapTarget.style.height = "100%";
     el.appendChild(mapTarget);
-    const map = new Map({
+    const map = new Map$1({
       target: mapTarget,
       layers: tileLayers.map(createTileLayer),
       view: new View({

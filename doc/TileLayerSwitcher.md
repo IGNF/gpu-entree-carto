@@ -3,7 +3,7 @@
 Sélecteur de **fonds de plan** en tuiles cliquables (équivalent `TileLayerSwitcherControl` de gpu-client).
 
 **Source :** `src/components/layers/TileLayerSwitcher.vue`  
-**Utilisé dans :** onglet 3 de [TabPanelsControl](./TabPanelsControl.md)
+**Utilisé dans :** démos / intégrations légères (grille de tuiles). Le panneau Catalogue gpu utilise [BaseLayerRadioList](./BaseLayerRadioList.md).
 
 ## Props
 
@@ -20,5 +20,5 @@ Grille de tuiles (aperçu + label). La tuile active est bordée en bleu France.
 
 ## Limites actuelles
 
-- 3 fonds démo (Plan / Ortho / Blanc) — les 6 fonds gpu-client (NB, Mixte, Cadastre…) viendront avec la config Géoplateforme.
-- Aperçus CSS (pas encore d’imagettes WMTS `getLayerImageUrl`).
+- Fonds « Plan / Ortho / Blanc » (`createBaseLayerPresets`) — distincts des 6 fonds gpu ([BaseLayerRadioList](./BaseLayerRadioList.md)).
+- Aperçus CSS (pas d’imagettes WMTS).

@@ -1,0 +1,18 @@
+/**
+ * Notifications toast — style cartes.gouv.fr (Notivue).
+ * Réf. : cartes.gouv.fr-entree-carto/src/views/Main.vue
+ */
+
+.Notivue__content {
+  width: min(92vw, 34rem);
+  max-width: min(92vw, 34rem);
+}
+
+.Notivue__content-message {
+  max-height: min(32vh, 12rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

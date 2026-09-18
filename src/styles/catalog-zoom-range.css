@@ -1,0 +1,23 @@
+/**
+ * Entrées hors plage min/max zoom LAYER_CONFIG (gpu-client `.tls-item.notInZoomRange`).
+ */
+
+.ec-not-in-zoom-range .fr-label,
+.ec-not-in-zoom-range .ec-data-layers__name,
+.ec-not-in-zoom-range.fr-accordion .fr-accordion__btn {
+  color: var(--text-disabled-grey, #929292);
+}
+
+.ec-not-in-zoom-range input[type='checkbox'] {
+  opacity: 0.5;
+}
+
+.ec-not-in-zoom-range .ec-layer-legends__img {
+  opacity: 0.5;
+}
+
+.ec-not-in-zoom-range .ec-data-layers__legend-btn,
+.ec-not-in-zoom-range .ec-data-layers__icon-btn,
+.ec-not-in-zoom-range .ec-data-layers__drag-handle {
+  opacity: 0.65;
+}

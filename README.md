@@ -34,15 +34,19 @@ make install   # npm install
 make dev       # serveur de développement (Vite)
 ```
 
+Node **22** (voir `.nvmrc`, aligné sur la CI). Les versions **25.x** ne sont pas supportées par `jsdom` / Vitest : `nvm use` ou `fnm use` avant `npm install` pour éviter les avertissements `EBADENGINE`.
+
 Autres cibles :
 
-| Commande         | Effet                                       |
-| ---------------- | ------------------------------------------- |
-| `make build`     | Build démo + bibliothèque (`dist/`)         |
-| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS) |
-| `make test`      | Tests Vitest                                |
-| `make preview`   | Prévisualiser le build                      |
-| `make typecheck` | Vérification TypeScript                     |
+| Commande         | Effet                                                                       |
+| ---------------- | --------------------------------------------------------------------------- |
+| `make build`     | Build démo + bibliothèque (`dist/`)                                         |
+| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS)                                 |
+| `make test`      | Tests Vitest                                                                |
+| `make preview`   | Prévisualiser le build                                                      |
+| `make typecheck` | Vérification TypeScript                                                     |
+| `make verify`    | ESLint (0 avertissement) + Prettier + typecheck — exécuté au **pre-commit** |
+| `make fix`       | ESLint --fix + Prettier --write                                             |
 
 ---
 
