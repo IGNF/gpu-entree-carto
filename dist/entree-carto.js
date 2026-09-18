@@ -77336,12 +77336,62 @@ Expected function or array of functions, received type ${typeof value2}.`
     node.setAttribute("xunits", vec2.xunits);
     node.setAttribute("yunits", vec2.yunits);
   }
+  const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i;
+  const EVENT_HANDLER = /\son[a-z]+\s*=/i;
+  const JAVASCRIPT_URI = /javascript\s*:/i;
+  const DISALLOWED_LOCAL = /* @__PURE__ */ new Set([
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "foreignobject",
+    "link",
+    "meta"
+  ]);
+  function assertSafeKmlXmlText(text2) {
+    if (UNSAFE_TAG.test(text2) || EVENT_HANDLER.test(text2) || JAVASCRIPT_URI.test(text2)) {
+      throw new Error("[entree-carto-geometry-editor] unsafe KML markup rejected");
+    }
+  }
+  function looksLikeKmlDocument(raw) {
+    const t = raw.trim();
+    if (!t.startsWith("<")) return false;
+    if (UNSAFE_TAG.test(t) || EVENT_HANDLER.test(t) || JAVASCRIPT_URI.test(t)) return false;
+    return /^<\?xml[\s\S]*?>\s*<kml[\s>/]/i.test(t) || /^<kml[\s>/]/i.test(t);
+  }
+  function stripUnsafeNodes(root) {
+    for (let i = root.children.length - 1; i >= 0; i--) {
+      const child = root.children[i];
+      const local = child.localName.toLowerCase();
+      if (DISALLOWED_LOCAL.has(local)) {
+        child.remove();
+        continue;
+      }
+      for (const attr of [...child.attributes]) {
+        const name2 = attr.name.toLowerCase();
+        const value2 = attr.value;
+        if (name2.startsWith("on") || /javascript\s*:/i.test(value2) || name2 === "href" && /^\s*javascript:/i.test(value2)) {
+          child.removeAttribute(attr.name);
+        }
+      }
+      stripUnsafeNodes(child);
+    }
+  }
+  function parseUserKmlDocument(text2) {
+    assertSafeKmlXmlText(text2);
+    const doc2 = new DOMParser().parseFromString(text2, "application/xml");
+    if (doc2.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("[entree-carto-geometry-editor] invalid KML XML");
+    }
+    const root = doc2.documentElement;
+    if (!root || root.localName.toLowerCase() !== "kml") {
+      throw new Error("[entree-carto-geometry-editor] KML root element required");
+    }
+    stripUnsafeNodes(root);
+    return doc2;
+  }
   const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat$1 = new KML({ extractStyles: false });
-  function looksLikeKml(raw) {
-    const t = raw.trim();
-    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
-  }
   function looksLikeBbox(raw) {
     try {
       const v = JSON.parse(raw);
@@ -77389,11 +77439,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     const text2 = raw.trim();
     if (!text2) return [];
     let features;
-    if (looksLikeKml(text2)) {
-      features = kmlFormat$1.readFeatures(text2, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
+    if (looksLikeKmlDocument(text2)) {
+      try {
+        const doc2 = parseUserKmlDocument(text2);
+        features = kmlFormat$1.readFeatures(doc2, {
+          dataProjection: "EPSG:4326",
+          featureProjection: mapProjection
+        });
+      } catch {
+        console.error("[entree-carto-geometry-editor] KML rejected or invalid");
+        return [];
+      }
     } else if (looksLikeBbox(text2)) {
       const bbox = JSON.parse(text2);
       const poly2 = bboxToPolygon(bbox);
@@ -77755,10 +77811,16 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function readSketchFile(map2, text2, format) {
     if (format === "kml") {
-      const features = KML_FMT.readFeatures(text2, {
-        featureProjection: projectionOf(map2),
-        dataProjection: "EPSG:4326"
-      });
+      let features;
+      try {
+        const doc2 = parseUserKmlDocument(text2);
+        features = KML_FMT.readFeatures(doc2, {
+          featureProjection: projectionOf(map2),
+          dataProjection: "EPSG:4326"
+        });
+      } catch {
+        return [];
+      }
       const restored = restoreImportedCircleFeatures(features);
       adaptGpuClientSketchFeatures(restored);
       hydrateImportedSketchFeatures(restored);

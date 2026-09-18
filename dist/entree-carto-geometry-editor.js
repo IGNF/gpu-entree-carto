@@ -39527,12 +39527,62 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return f;
     });
   }
+  const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i;
+  const EVENT_HANDLER = /\son[a-z]+\s*=/i;
+  const JAVASCRIPT_URI = /javascript\s*:/i;
+  const DISALLOWED_LOCAL = /* @__PURE__ */ new Set([
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "foreignobject",
+    "link",
+    "meta"
+  ]);
+  function assertSafeKmlXmlText(text) {
+    if (UNSAFE_TAG.test(text) || EVENT_HANDLER.test(text) || JAVASCRIPT_URI.test(text)) {
+      throw new Error("[entree-carto-geometry-editor] unsafe KML markup rejected");
+    }
+  }
+  function looksLikeKmlDocument(raw) {
+    const t = raw.trim();
+    if (!t.startsWith("<")) return false;
+    if (UNSAFE_TAG.test(t) || EVENT_HANDLER.test(t) || JAVASCRIPT_URI.test(t)) return false;
+    return /^<\?xml[\s\S]*?>\s*<kml[\s>/]/i.test(t) || /^<kml[\s>/]/i.test(t);
+  }
+  function stripUnsafeNodes(root) {
+    for (let i = root.children.length - 1; i >= 0; i--) {
+      const child = root.children[i];
+      const local = child.localName.toLowerCase();
+      if (DISALLOWED_LOCAL.has(local)) {
+        child.remove();
+        continue;
+      }
+      for (const attr of [...child.attributes]) {
+        const name = attr.name.toLowerCase();
+        const value = attr.value;
+        if (name.startsWith("on") || /javascript\s*:/i.test(value) || name === "href" && /^\s*javascript:/i.test(value)) {
+          child.removeAttribute(attr.name);
+        }
+      }
+      stripUnsafeNodes(child);
+    }
+  }
+  function parseUserKmlDocument(text) {
+    assertSafeKmlXmlText(text);
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    if (doc.getElementsByTagName("parsererror").length > 0) {
+      throw new Error("[entree-carto-geometry-editor] invalid KML XML");
+    }
+    const root = doc.documentElement;
+    if (!root || root.localName.toLowerCase() !== "kml") {
+      throw new Error("[entree-carto-geometry-editor] KML root element required");
+    }
+    stripUnsafeNodes(root);
+    return doc;
+  }
   const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat$1 = new KML({ extractStyles: false });
-  function looksLikeKml(raw) {
-    const t = raw.trim();
-    return t.startsWith("<") && /<\/?kml[\s>]/i.test(t);
-  }
   function looksLikeBbox(raw) {
     try {
       const v = JSON.parse(raw);
@@ -39580,11 +39630,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const text = raw.trim();
     if (!text) return [];
     let features;
-    if (looksLikeKml(text)) {
-      features = kmlFormat$1.readFeatures(text, {
-        dataProjection: "EPSG:4326",
-        featureProjection: mapProjection
-      });
+    if (looksLikeKmlDocument(text)) {
+      try {
+        const doc = parseUserKmlDocument(text);
+        features = kmlFormat$1.readFeatures(doc, {
+          dataProjection: "EPSG:4326",
+          featureProjection: mapProjection
+        });
+      } catch {
+        console.error("[entree-carto-geometry-editor] KML rejected or invalid");
+        return [];
+      }
     } else if (looksLikeBbox(text)) {
       const bbox = JSON.parse(text);
       const poly = bboxToPolygon(bbox);
@@ -41656,10 +41712,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function readSketchFile(map, text, format) {
     if (format === "kml") {
-      const features = KML_FMT.readFeatures(text, {
-        featureProjection: projectionOf(map),
-        dataProjection: "EPSG:4326"
-      });
+      let features;
+      try {
+        const doc = parseUserKmlDocument(text);
+        features = KML_FMT.readFeatures(doc, {
+          featureProjection: projectionOf(map),
+          dataProjection: "EPSG:4326"
+        });
+      } catch {
+        return [];
+      }
       const restored = restoreImportedCircleFeatures(features);
       adaptGpuClientSketchFeatures(restored);
       hydrateImportedSketchFeatures(restored);

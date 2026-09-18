@@ -19,6 +19,7 @@ import {
   serializeCircleFeature,
   type CircleKind,
 } from '../circleHelpers'
+import { parseUserKmlDocument } from '../safeKmlParse'
 
 const GEOJSON = new GeoJSON()
 const KML_FMT = new KML({ extractStyles: true, writeStyles: true })
@@ -196,10 +197,16 @@ export function readSketchFile(
   format: SketchIoFormat,
 ): OlFeature<OlGeometry>[] {
   if (format === 'kml') {
-    const features = KML_FMT.readFeatures(text, {
-      featureProjection: projectionOf(map),
-      dataProjection: 'EPSG:4326',
-    }) as OlFeature<OlGeometry>[]
+    let features: OlFeature<OlGeometry>[]
+    try {
+      const doc = parseUserKmlDocument(text)
+      features = KML_FMT.readFeatures(doc, {
+        featureProjection: projectionOf(map),
+        dataProjection: 'EPSG:4326',
+      }) as OlFeature<OlGeometry>[]
+    } catch {
+      return []
+    }
     const restored = restoreImportedCircleFeatures(features)
     adaptGpuClientSketchFeatures(restored)
     hydrateImportedSketchFeatures(restored)
