@@ -2,8 +2,8 @@ var __defProp = Object.defineProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
 };
-var __defNormalProp = (obj, key2, value2) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key2] = value2;
-var __publicField = (obj, key2, value2) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value2);
+var __defNormalProp = (obj, key, value2) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key] = value2;
+var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value2);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateAdd = (obj, member, value2) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value2);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
@@ -39052,8 +39052,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   const setSize = (value2) => {
     m_size = parseInt(value2);
   };
-  const setUrl = (value) => {
-    m_url = eval("`" + value + "`");
+  const setUrl = (value2) => {
+    m_url = String(value2 ?? "");
   };
   const setMaximumResponses = (value2) => {
     m_maximumResponses = parseInt(value2);
@@ -80597,7 +80597,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-e12a4bce"]]);
+  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-16a786f1"]]);
   function flattenCatalogSwitcherNodes(roots) {
     const out = [];
     function walkLevel(nodes) {
