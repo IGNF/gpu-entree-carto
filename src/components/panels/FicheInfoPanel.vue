@@ -4,6 +4,7 @@
  */
 import { computed } from 'vue'
 import { DEFAULT_FICHE_EMPTY, type FicheInfoSelection } from '@/composables/tabPanels'
+import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import RawInfoPanel from '@/components/panels/RawInfoPanel.vue'
 
 const props = defineProps<{
@@ -21,7 +22,7 @@ const bodyHtml = computed(() => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY
       <h2 class="ec-fiche-info__title">
         {{ title }}
       </h2>
-      <div class="ec-fiche-info__body" v-html="bodyHtml" />
+      <SanitizedHtml class="ec-fiche-info__body" :html="bodyHtml" />
       <RawInfoPanel v-if="selection?.raw" :selection="selection" class="ec-fiche-info__raw" />
     </div>
   </article>

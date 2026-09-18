@@ -22,7 +22,7 @@ export function pruneSplitAggregateIds(
   for (const id of splitIds) {
     const node = index.nodesById.get(id)
     if (!node || !isCatalogAggregate(node)) continue
-    if (!Boolean(checked[id])) continue
+    if (!checked[id]) continue
     next.add(id)
   }
   return next

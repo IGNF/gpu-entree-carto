@@ -53,7 +53,7 @@ export function catalogSubtreeFullyChecked(
   node: TreeLayerNode,
   checkedById: Record<string, boolean>,
 ): boolean {
-  if (!Boolean(checkedById[node.id])) return false
+  if (!checkedById[node.id]) return false
   for (const child of catalogChildNodes(node)) {
     if (!catalogSubtreeFullyChecked(child, checkedById)) return false
   }
@@ -69,7 +69,7 @@ export function catalogSubtreePartiallyChecked(
   let anyUnchecked = false
 
   function walk(n: TreeLayerNode) {
-    if (Boolean(checkedById[n.id])) anyChecked = true
+    if (checkedById[n.id]) anyChecked = true
     else anyUnchecked = true
     for (const child of catalogChildNodes(n)) walk(child)
   }

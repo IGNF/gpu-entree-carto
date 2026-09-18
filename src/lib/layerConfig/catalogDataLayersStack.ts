@@ -38,7 +38,7 @@ export function isDataLayersPanelEntry(
   checkedById: Record<string, boolean>,
   parentById?: Map<string, TreeLayerNode | null>,
 ): boolean {
-  if (!Boolean(checkedById[node.id]) || node.gpuForceOpacity) return false
+  if (!checkedById[node.id] || node.gpuForceOpacity) return false
   if (parentById && isUnderHideLayersCatalogBranch(node, parentById)) return false
   return true
 }

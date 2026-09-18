@@ -17,7 +17,7 @@ Liste verticale de **boutons radio** pour les fonds de plan, avec **vignette** e
 ## Comportement
 
 - Une seule sélection (pastille `.ec-base-radio`, tokens DSFR bleu France), alignée au centre de la vignette carrée.
-- Bouton **caret** (`fr-icon-arrow-*-s-line`) à droite du titre : affiche/masque sous-titre + description (HTML autorisé dans `description` via `v-html`).
+- Bouton **caret** (`fr-icon-arrow-*-s-line`) à droite du titre : affiche/masque sous-titre + description (HTML dans `description`, rendu via `SanitizedHtml` / DOMPurify).
 - **Titre** (label) en gris foncé ; **sous-titre** et **description** en gris mention (même teinte).
 - Vignettes carrées : empilement de tuiles WMTS (comme gpu-client `TileLayerSwitcher`), coordonnées `[9, 253, -177]`, couches filtrées selon `minResolution` / `maxResolution` au zoom d’aperçu (`gpuBaseLayerThumbnails.ts`). Images `loading="lazy"` / `decoding="async"`.
 

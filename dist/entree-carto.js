@@ -27799,11 +27799,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$i = {
+  const _hoisted_1$j = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$i = /* @__PURE__ */ defineComponent({
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27828,7 +27828,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$i, [
+        return openBlock(), createElementBlock("div", _hoisted_1$j, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -28378,12 +28378,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$h = {
+  const _hoisted_1$i = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -28398,7 +28398,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$h);
+        return openBlock(), createElementBlock("span", _hoisted_1$i);
       };
     }
   });
@@ -28518,12 +28518,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$g = {
+  const _hoisted_1$h = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$g = /* @__PURE__ */ defineComponent({
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -28537,16 +28537,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$g);
+        return openBlock(), createElementBlock("span", _hoisted_1$h);
       };
     }
   });
-  const _hoisted_1$f = {
+  const _hoisted_1$g = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$f = /* @__PURE__ */ defineComponent({
+  const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -28556,7 +28556,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$f);
+        return openBlock(), createElementBlock("span", _hoisted_1$g);
       };
     }
   });
@@ -39642,7 +39642,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.14 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.14/LICENSE */
+  /*! @license DOMPurify 3.4.15 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.15/LICENSE */
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
     for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -39974,7 +39974,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.14";
+    DOMPurify.version = "3.4.15";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -39991,6 +39991,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const ElementPrototype = Element2.prototype;
     const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
     const remove2 = lookupGetter(ElementPrototype, "remove");
+    const removeAttributeNode = lookupGetter(ElementPrototype, "removeAttributeNode");
     const getNextSibling = lookupGetter(ElementPrototype, "nextSibling");
     const getChildNodes = lookupGetter(ElementPrototype, "childNodes");
     const getParentNode = lookupGetter(ElementPrototype, "parentNode");
@@ -40424,7 +40425,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _stripAttributeNode = function _stripAttributeNode2(element, attribute, name2) {
       try {
-        element.removeAttributeNode(attribute);
+        removeAttributeNode(element, attribute);
       } catch (_) {
         try {
           element.removeAttribute(name2);
@@ -40472,7 +40473,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       try {
         if (attr) {
-          element.removeAttributeNode(attr);
+          removeAttributeNode(element, attr);
         } else {
           element.removeAttribute(name2);
         }
@@ -40660,7 +40661,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       // makes the direct read diverge from the cached read; a clean form
       // (same-realm OR foreign-realm) has both reads pointing at the same
       // canonical NamedNodeMap.
-      element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || // NodeType clobbering probe. Cached Node.prototype.nodeType getter
+      element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || // A form descendant named "removeAttributeNode" or "getAttributeNode"
+      // shadows these Attr-node methods via [LegacyOverrideBuiltIns].
+      // _removeAttribute() / _stripAttributeNode() reach for
+      // element.removeAttributeNode(attr) first; when it is shadowed the call
+      // throws and the name-based fallback element.removeAttribute(name)
+      // ASCII-lowercases its lookup key in an HTML document, silently missing
+      // a case-preserved event-handler attribute (e.g. an ONANIMATIONSTART
+      // that reached the sanitizer through an XML/XHTML parse). Flag the form
+      // so it is removed wholesale, exactly as for the other shadowed methods.
+      typeof element.removeAttributeNode !== "function" || typeof element.getAttributeNode !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || // NodeType clobbering probe. Cached Node.prototype.nodeType getter
       // returns the integer 1 for any Element regardless of realm; direct
       // read on a clobbered form (e.g. <input name="nodeType">) returns
       // the named child element. Cheap addition — nodeType is read from
@@ -40886,11 +40896,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         if (_isClobbered(currentNode)) {
           _forceRemove(currentNode);
-        } else {
-          arrayPop(DOMPurify.removed);
+          return false;
         }
+        return true;
       } catch (_) {
         _removeAttribute(name2, currentNode);
+        return false;
       }
     };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode) {
@@ -40915,6 +40926,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const lcName = transformCaseFunc(name2);
         const initValue = attrValue;
         let value2 = name2 === "value" ? initValue : stringTrim(initValue);
+        let recreatedNamedProp = false;
         hookEvent.attrName = lcName;
         hookEvent.attrValue = value2;
         hookEvent.keepAttr = true;
@@ -40924,6 +40936,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (SANITIZE_NAMED_PROPS && (lcName === "id" || lcName === "name") && stringIndexOf(value2, SANITIZE_NAMED_PROPS_PREFIX) !== 0) {
           _removeAttribute(name2, currentNode, attr);
           value2 = SANITIZE_NAMED_PROPS_PREFIX + value2;
+          recreatedNamedProp = true;
         }
         if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) {
           _removeAttribute(name2, currentNode, attr);
@@ -40953,7 +40966,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         value2 = _applyTrustedTypesToAttribute(lcTag, lcName, namespaceURI, value2);
         if (value2 !== initValue) {
-          _setAttributeValue(currentNode, name2, namespaceURI, value2);
+          const cleanWrite = _setAttributeValue(currentNode, name2, namespaceURI, value2);
+          if (cleanWrite && recreatedNamedProp) {
+            arrayPop(DOMPurify.removed);
+          }
         }
       }
       _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
@@ -41091,7 +41107,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         } else {
           body.appendChild(importedNode);
         }
-        _sanitizeAttachedShadowRoots(importedNode);
+        _sanitizeAttachedShadowRoots(body);
       } else {
         if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && // eslint-disable-next-line unicorn/prefer-includes
         dirty.indexOf("<") === -1) {
@@ -61906,12 +61922,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     title: "Aucune sélection en cours",
     bodyHtml: "<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>"
   };
-  const _hoisted_1$e = {
+  const _hoisted_1$f = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$e = /* @__PURE__ */ defineComponent({
+  const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -62066,7 +62082,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$e);
+        return openBlock(), createElementBlock("span", _hoisted_1$f);
       };
     }
   });
@@ -64678,12 +64694,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$d = {
+  const _hoisted_1$e = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -64699,7 +64715,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$d);
+        return openBlock(), createElementBlock("span", _hoisted_1$e);
       };
     }
   });
@@ -68523,13 +68539,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$c = {
+  const _hoisted_1$d = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$c = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -68579,7 +68595,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$c);
+        return openBlock(), createElementBlock("span", _hoisted_1$d);
       };
     }
   });
@@ -79403,12 +79419,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
-  const _hoisted_1$b = {
+  const _hoisted_1$c = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -79439,7 +79455,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$b);
+        return openBlock(), createElementBlock("span", _hoisted_1$c);
       };
     }
   });
@@ -79600,7 +79616,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
     if (!node.gpuMapLayer || node.gpuVirtual) return false;
-    if (!Boolean(checked[node.id])) return false;
+    if (!checked[node.id]) return false;
     const split = options == null ? void 0 : options.splitAggregateIds;
     if ((split == null ? void 0 : split.has(node.id)) && isCatalogAggregate(node) && isSameAsDescendants(checked, node, index2, opacityById)) {
       return false;
@@ -79615,7 +79631,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return false;
   }
-  function propagateCheckedToDescendants(checked, node, value2, _index) {
+  function propagateCheckedToDescendants(checked, node, value2) {
     for (const child of directCatalogChildren(node)) {
       checked[child.id] = value2;
       propagateCheckedToDescendants(checked, child, value2);
@@ -79627,7 +79643,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let parentChecked = false;
     for (const child of directCatalogChildren(parent)) {
       if (child.gpuOnlyLegend) continue;
-      if (Boolean(checked[child.id])) {
+      if (checked[child.id]) {
         parentChecked = true;
         break;
       }
@@ -79673,7 +79689,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return false;
   }
   function isDataLayersPanelEntry(node, checkedById, parentById) {
-    if (!Boolean(checkedById[node.id]) || node.gpuForceOpacity) return false;
+    if (!checkedById[node.id] || node.gpuForceOpacity) return false;
     if (parentById && isUnderHideLayersCatalogBranch(node, parentById)) return false;
     return true;
   }
@@ -79809,7 +79825,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const id of splitIds) {
       const node = index2.nodesById.get(id);
       if (!node || !isCatalogAggregate(node)) continue;
-      if (!Boolean(checked[id])) continue;
+      if (!checked[id]) continue;
       next.add(id);
     }
     return next;
@@ -79880,7 +79896,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let anyChecked = false;
     let anyUnchecked = false;
     function walk(n) {
-      if (Boolean(checkedById[n.id])) anyChecked = true;
+      if (checkedById[n.id]) anyChecked = true;
       else anyUnchecked = true;
       for (const child of catalogChildNodes(n)) walk(child);
     }
@@ -80413,6 +80429,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogEntryInZoomRange
     };
   }
+  const _hoisted_1$b = ["innerHTML"];
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+    __name: "SanitizedHtml",
+    props: {
+      html: {}
+    },
+    setup(__props) {
+      const props = __props;
+      const safeHtml = computed(() => purify.sanitize(props.html));
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$b);
+      };
+    }
+  });
   const _hoisted_1$a = {
     class: "ec-raw-info",
     "aria-label": "Données brutes"
@@ -80422,7 +80452,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-raw-info__list"
   };
   const _hoisted_3$9 = { class: "ec-raw-info__key" };
-  const _hoisted_4$9 = { class: "ec-raw-info__val" };
+  const _hoisted_4$8 = { class: "ec-raw-info__val" };
   const _hoisted_5$8 = {
     key: 1,
     class: "ec-raw-info__placeholder"
@@ -80452,7 +80482,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 key: row.key
               }, [
                 createBaseVNode("span", _hoisted_3$9, toDisplayString(row.key), 1),
-                createBaseVNode("span", _hoisted_4$9, toDisplayString(row.value), 1)
+                createBaseVNode("span", _hoisted_4$8, toDisplayString(row.value), 1)
               ]);
             }), 128))
           ])) : (openBlock(), createElementBlock("div", _hoisted_5$8, [..._cache[0] || (_cache[0] = [
@@ -80466,7 +80496,6 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_1$9 = { class: "ec-fiche-info" };
   const _hoisted_2$8 = { class: "ec-fiche-info__inner" };
   const _hoisted_3$8 = { class: "ec-fiche-info__title" };
-  const _hoisted_4$8 = ["innerHTML"];
   const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -80491,10 +80520,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           }, null, -1)),
           createBaseVNode("div", _hoisted_2$8, [
             createBaseVNode("h2", _hoisted_3$8, toDisplayString(title.value), 1),
-            createBaseVNode("div", {
+            createVNode(_sfc_main$b, {
               class: "ec-fiche-info__body",
-              innerHTML: bodyHtml.value
-            }, null, 8, _hoisted_4$8),
+              html: bodyHtml.value
+            }, null, 8, ["html"]),
             ((_a = __props.selection) == null ? void 0 : _a.raw) ? (openBlock(), createBlock(_sfc_main$a, {
               key: 0,
               selection: __props.selection,
@@ -80512,7 +80541,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-e7d0ce12"]]);
+  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-e12a4bce"]]);
   function flattenCatalogSwitcherNodes(roots) {
     const out = [];
     function walkLevel(nodes) {
@@ -80833,7 +80862,6 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
   const _hoisted_17$1 = ["id"];
   const _hoisted_18$1 = { class: "ec-base-radio-list__subtitle" };
-  const _hoisted_19$1 = ["innerHTML"];
   const _sfc_main$6 = /* @__PURE__ */ defineComponent({
     __name: "BaseLayerRadioList",
     props: {
@@ -80938,10 +80966,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "ec-base-radio-list__details-slot"
                   }, [
                     createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
-                    createBaseVNode("div", {
+                    createVNode(_sfc_main$b, {
                       class: "ec-base-radio-list__desc",
-                      innerHTML: preset.description
-                    }, null, 8, _hoisted_19$1)
+                      html: preset.description
+                    }, null, 8, ["html"])
                   ], 8, _hoisted_17$1)) : createCommentVNode("", true)
                 ])
               ]);
@@ -80951,7 +80979,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-f7c62c00"]]);
+  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-e72d9cac"]]);
   const _hoisted_1$5 = {
     class: "ec-layer-catalogue",
     "aria-labelledby": "ec-layer-catalogue-title"
@@ -82166,7 +82194,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$i, {
+          createVNode(_sfc_main$j, {
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
@@ -82181,13 +82209,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-nodes": layerNodes.value,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$e, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
-              createVNode(_sfc_main$d),
-              createVNode(_sfc_main$b),
+              createVNode(_sfc_main$f, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$e),
               createVNode(_sfc_main$c),
+              createVNode(_sfc_main$d),
+              createVNode(_sfc_main$i),
               createVNode(_sfc_main$h),
-              createVNode(_sfc_main$g),
-              createVNode(_sfc_main$f)
+              createVNode(_sfc_main$g)
             ]),
             _: 1
           }, 8, ["layers"])

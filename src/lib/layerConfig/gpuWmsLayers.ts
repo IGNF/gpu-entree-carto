@@ -146,7 +146,7 @@ export class GpuWmsLayerRegistry {
   }
 
   private ensureLayer(catalogId: string): TileLayer | undefined {
-    let layer = this.olLayers.get(catalogId)
+    const layer = this.olLayers.get(catalogId)
     if (layer) return layer
 
     const entry = this.entries.get(catalogId)

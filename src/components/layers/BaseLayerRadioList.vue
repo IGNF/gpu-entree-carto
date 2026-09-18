@@ -8,6 +8,7 @@ import {
   filterThumbnailLayersAtPreviewZoom,
   wmtsPreviewTileUrl,
 } from '@/ol/gpuBaseLayerThumbnails'
+import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import '@/styles/base-layer-radio-list.css'
 
 function previewLayers(preset: GpuBaseLayerPreset) {
@@ -122,7 +123,7 @@ function select(id: GpuBaseLayerId) {
             class="ec-base-radio-list__details-slot"
           >
             <p class="ec-base-radio-list__subtitle">{{ preset.subtitle }}</p>
-            <div class="ec-base-radio-list__desc" v-html="preset.description" />
+            <SanitizedHtml class="ec-base-radio-list__desc" :html="preset.description" />
           </div>
         </div>
       </li>

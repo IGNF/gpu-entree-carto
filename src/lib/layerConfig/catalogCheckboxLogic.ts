@@ -91,7 +91,7 @@ export function shouldShowMapLayerForNode(
   options?: MapVisibilityComputeOptions,
 ): boolean {
   if (!node.gpuMapLayer || node.gpuVirtual) return false
-  if (!Boolean(checked[node.id])) return false
+  if (!checked[node.id]) return false
 
   const split = options?.splitAggregateIds
   if (
@@ -123,7 +123,6 @@ export function propagateCheckedToDescendants(
   checked: Record<string, boolean>,
   node: TreeLayerNode,
   value: boolean,
-  _index?: CatalogTreeIndex,
 ): void {
   for (const child of directCatalogChildren(node)) {
     checked[child.id] = value
@@ -143,7 +142,7 @@ export function propagateCheckedToAncestors(
   let parentChecked = false
   for (const child of directCatalogChildren(parent)) {
     if (child.gpuOnlyLegend) continue
-    if (Boolean(checked[child.id])) {
+    if (checked[child.id]) {
       parentChecked = true
       break
     }
@@ -177,7 +176,7 @@ export function applyUserCatalogToggle(
 
   checked[nodeId] = value
   propagateCheckedToAncestors(checked, nodeId, index)
-  propagateCheckedToDescendants(checked, node, value, index)
+  propagateCheckedToDescendants(checked, node, value)
 }
 
 export function computeMapVisibilityById(
