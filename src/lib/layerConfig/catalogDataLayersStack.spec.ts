@@ -5,7 +5,9 @@ import {
   aggregateStackNodeLegend,
   collectActiveOnlyLegendNodesForLegendsPanel,
   collectDataLayersStackNodes,
+  collectForceOpacityWmsIdsBottomToTop,
   isDataLayersPanelEntry,
+  mergeWmsStackOrderWithForceOpacityOnTop,
   shouldShowInDataLayersStack,
   catalogIdsForPanelOpacityWhenEntryAdjusted,
 } from '@/lib/layerConfig/catalogDataLayersStack'
@@ -83,12 +85,19 @@ describe('collectDataLayersStackNodes', () => {
     expect(ids).toContain('zone')
   })
 
+  it('mergeWmsStackOrderWithForceOpacityOnTop place MEC au sommet', () => {
+    const mapVis = { zone: true, mec: true }
+    const merged = mergeWmsStackOrderWithForceOpacityOnTop(['zone'], roots, mapVis)
+    expect(merged).toEqual(['zone', 'mec'])
+    expect(collectForceOpacityWmsIdsBottomToTop(roots, mapVis)).toEqual(['mec'])
+  })
+
   it('isDataLayersPanelEntry exclut forceOpacity', () => {
     const mec = index.nodesById.get('mec')!
     expect(isDataLayersPanelEntry(mec, { mec: true })).toBe(false)
   })
 
-  it('isDataLayersPanelEntry exclut onlyLegend', () => {
+  it('isDataLayersPanelEntry inclut onlyLegend coché (ex. schéma de cohérence)', () => {
     const onlyLegend: TreeLayerNode = {
       id: 'ol',
       title: 'Légende seule',
@@ -97,7 +106,42 @@ describe('collectDataLayersStackNodes', () => {
       gpuOnlyLegend: true,
       legend: [{ id: 'x', title: 'Symbole' }],
     }
-    expect(isDataLayersPanelEntry(onlyLegend, { ol: true })).toBe(false)
+    expect(isDataLayersPanelEntry(onlyLegend, { ol: true })).toBe(true)
+  })
+
+  it('shouldShowInDataLayersStack affiche onlyLegend actif sur la carte', () => {
+    const roots: TreeLayerNode[] = [
+      {
+        id: 'scot-v',
+        title: 'SCOT',
+        visible: true,
+        gpuVirtual: true,
+        children: [
+          {
+            id: 'sct',
+            title: 'SCHEMA DE COHERENCE TERRITORIALE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+            legend: [{ id: 'x', title: 'Symbole' }],
+          },
+        ],
+      },
+    ]
+    const index = buildCatalogTreeIndex(roots)
+    const checked = { 'scot-v': true, sct: true }
+    const mapVis = { sct: true }
+    const sct = index.nodesById.get('sct')!
+    expect(
+      shouldShowInDataLayersStack(sct, checked, index.parentById, mapVis),
+    ).toBe(true)
+    const ids = collectDataLayersStackNodes(
+      roots,
+      checked,
+      index.parentById,
+      mapVis,
+    ).map((n) => n.id)
+    expect(ids).toContain('sct')
   })
 
   it('collectActiveOnlyLegendNodesForLegendsPanel liste les onlyLegend actifs sur la carte', () => {

@@ -38,7 +38,6 @@ export function isDataLayersPanelEntry(
   checkedById: Record<string, boolean>,
   parentById?: Map<string, TreeLayerNode | null>,
 ): boolean {
-  if (node.gpuOnlyLegend) return false
   if (!Boolean(checkedById[node.id]) || node.gpuForceOpacity) return false
   if (parentById && isUnderHideLayersCatalogBranch(node, parentById)) return false
   return true
@@ -88,7 +87,7 @@ export function shouldShowInDataLayersStack(
   return false
 }
 
-/** Couches `onlyLegend` actives sur la carte — onglet Légendes uniquement (pas Couches de données). */
+/** Couches `onlyLegend` actives sur la carte — complément légendes si absentes de la pile panneau. */
 export function collectActiveOnlyLegendNodesForLegendsPanel(
   roots: TreeLayerNode[],
   checkedById: Record<string, boolean>,
@@ -222,4 +221,39 @@ export function dataLayersStackToWmsIdsBottomToTop(
     ids.push(...wmsIdsControlledByDataLayersPanelEntry(node, mapVisibilityById))
   }
   return ids
+}
+
+/**
+ * Couches WMS `forceOpacity` visibles sur la carte, ordre catalogue (bas → haut).
+ * Toujours empilées au-dessus des autres tuiles utilisateur.
+ */
+export function collectForceOpacityWmsIdsBottomToTop(
+  roots: TreeLayerNode[],
+  mapVisibilityById: Record<string, boolean>,
+): string[] {
+  const ids: string[] = []
+
+  function walk(nodes: TreeLayerNode[]) {
+    for (const node of nodes) {
+      if (node.gpuMapLayer && node.gpuForceOpacity && mapVisibilityById[node.id]) {
+        ids.push(node.id)
+      }
+      walk(catalogChildNodes(node))
+    }
+  }
+
+  walk(roots)
+  return ids
+}
+
+/** Pile WMS bas → haut : panneau Couches de données, puis `forceOpacity` au sommet. */
+export function mergeWmsStackOrderWithForceOpacityOnTop(
+  panelWmsIdsBottomToTop: string[],
+  roots: TreeLayerNode[],
+  mapVisibilityById: Record<string, boolean>,
+): string[] {
+  const forceTop = collectForceOpacityWmsIdsBottomToTop(roots, mapVisibilityById)
+  const forceSet = new Set(forceTop)
+  const normal = panelWmsIdsBottomToTop.filter((id) => !forceSet.has(id))
+  return [...normal, ...forceTop]
 }

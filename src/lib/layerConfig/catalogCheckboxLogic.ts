@@ -44,21 +44,31 @@ export function isSameAsDescendants(
   return true
 }
 
+export type MapVisibilityComputeOptions = {
+  /** Agrégats affichés en tuiles séparées dans Couches de données (pas de tuile parent). */
+  splitAggregateIds?: ReadonlySet<string>
+}
+
 export function isAscendentParentAggregateActive(
   checked: Record<string, boolean>,
   node: TreeLayerNode,
   index: CatalogTreeIndex,
   opacityById: Record<string, number>,
+  options?: MapVisibilityComputeOptions,
 ): boolean {
+  const split = options?.splitAggregateIds
   const parent = index.parentById.get(node.id)
   if (!parent) return false
+  if (split?.has(parent.id)) {
+    return isAscendentParentAggregateActive(checked, parent, index, opacityById, options)
+  }
   if (
     isCatalogAggregate(parent) &&
     isSameAsDescendants(checked, parent, index, opacityById)
   ) {
     return true
   }
-  return isAscendentParentAggregateActive(checked, parent, index, opacityById)
+  return isAscendentParentAggregateActive(checked, parent, index, opacityById, options)
 }
 
 function isOpacitySameAsDirectChildren(
@@ -78,9 +88,19 @@ export function shouldShowMapLayerForNode(
   node: TreeLayerNode,
   index: CatalogTreeIndex,
   opacityById: Record<string, number>,
+  options?: MapVisibilityComputeOptions,
 ): boolean {
   if (!node.gpuMapLayer || node.gpuVirtual) return false
   if (!Boolean(checked[node.id])) return false
+
+  const split = options?.splitAggregateIds
+  if (
+    split?.has(node.id) &&
+    isCatalogAggregate(node) &&
+    isSameAsDescendants(checked, node, index, opacityById)
+  ) {
+    return false
+  }
 
   const parent = index.parentById.get(node.id)
   if (!parent) {
@@ -90,7 +110,7 @@ export function shouldShowMapLayerForNode(
 
   if (
     isSameAsDescendants(checked, node, index, opacityById) &&
-    !isAscendentParentAggregateActive(checked, node, index, opacityById)
+    !isAscendentParentAggregateActive(checked, node, index, opacityById, options)
   ) {
     return true
   }
@@ -164,11 +184,12 @@ export function computeMapVisibilityById(
   checked: Record<string, boolean>,
   index: CatalogTreeIndex,
   opacityById: Record<string, number>,
+  options?: MapVisibilityComputeOptions,
 ): Record<string, boolean> {
   const out: Record<string, boolean> = {}
   for (const node of index.nodesById.values()) {
     if (!node.gpuMapLayer) continue
-    out[node.id] = shouldShowMapLayerForNode(checked, node, index, opacityById)
+    out[node.id] = shouldShowMapLayerForNode(checked, node, index, opacityById, options)
   }
   return out
 }

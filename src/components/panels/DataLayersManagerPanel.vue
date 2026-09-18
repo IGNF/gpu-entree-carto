@@ -23,6 +23,8 @@ const emit = defineEmits<{
   'toggle-grayscale': [id: string]
   remove: [id: string]
   reorder: [fromDisplayIndex: number, toInsertBefore: number]
+  'enable-aggregate-detail': [aggregateId: string]
+  'regroup-aggregate': [aggregateId: string]
 }>()
 
 const dragLayerId = ref<string | null>(null)
@@ -148,6 +150,26 @@ function showDropMarkerBefore(index: number): boolean {
           <div class="ec-data-layers__head">
             <p class="ec-data-layers__name">{{ layer.title }}</p>
             <div class="ec-data-layers__head-end">
+              <button
+                v-if="layer.aggregateRegroup"
+                type="button"
+                class="ec-data-layers__regroup-handle"
+                title="Regrouper en une seule couche (agrégat)"
+                @click="emit('regroup-aggregate', layer.aggregateRegroup.aggregateId)"
+              >
+                <i class="ri-separator" aria-hidden="true" />
+                <span class="fr-sr-only">Regrouper — {{ layer.title }}</span>
+              </button>
+              <button
+                v-if="layer.aggregateDetailToggle"
+                type="button"
+                class="ec-data-layers__detail-handle"
+                title="Détailler les couches (tuiles séparées, réordonnables)"
+                @click="emit('enable-aggregate-detail', layer.aggregateDetailToggle.aggregateId)"
+              >
+                <i class="ri-list-unordered" aria-hidden="true" />
+                <span class="fr-sr-only">Détailler les couches — {{ layer.title }}</span>
+              </button>
               <button
                 v-if="layer.legend?.length"
                 type="button"

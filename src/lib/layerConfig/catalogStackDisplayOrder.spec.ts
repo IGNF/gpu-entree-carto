@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activeTopToBottomReplacingAggregateWithChildren,
   buildFullOrderAfterActiveReorder,
   ensureStackSortKeys,
+  reassignSortKeysAfterAggregateSplit,
   reorderActiveStackSortKeys,
   STACK_SORT_KEY_STEP,
 } from '@/lib/layerConfig/catalogStackDisplayOrder'
@@ -26,6 +28,29 @@ describe('buildFullOrderAfterActiveReorder', () => {
     }
     const full = buildFullOrderAfterActiveReorder(keys, ['presc', 'perim', 'zonages'])
     expect(full).toEqual(['vue', 'presc', 'perim', 'zonages'])
+  })
+})
+
+describe('aggregate split sort keys', () => {
+  it('remplace l’agrégat par les enfants contigus (ordre catalogue)', () => {
+    expect(
+      activeTopToBottomReplacingAggregateWithChildren(
+        ['vue', 'agg', 'other'],
+        'agg',
+        ['c1', 'c2', 'c3'],
+      ),
+    ).toEqual(['vue', 'c1', 'c2', 'c3', 'other'])
+
+    let keys = ensureStackSortKeys({}, ['vue', 'agg', 'other'])
+    keys = reassignSortKeysAfterAggregateSplit(keys, ['vue', 'agg', 'other'], 'agg', [
+      'c1',
+      'c2',
+      'c3',
+    ])
+    expect(keys.c1).toBeLessThan(keys.c2!)
+    expect(keys.c2).toBeLessThan(keys.c3!)
+    expect(keys.c3).toBeLessThan(keys.other!)
+    expect(keys.vue).toBeLessThan(keys.c1!)
   })
 })
 

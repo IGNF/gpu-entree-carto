@@ -10,6 +10,7 @@ import {
   collectActiveOnlyLegendNodesForLegendsPanel,
   collectDataLayersStackNodes,
   dataLayersStackToWmsIdsBottomToTop,
+  mergeWmsStackOrderWithForceOpacityOnTop,
   defaultPanelStateForNode,
   shouldShowInDataLayersStack,
   wmsIdsControlledByDataLayersPanelEntry,
@@ -19,8 +20,18 @@ import {
 import {
   applyUserCatalogToggle,
   computeMapVisibilityById,
+  isCatalogAggregate,
   propagateCheckedToAncestors,
 } from '@/lib/layerConfig/catalogCheckboxLogic'
+import {
+  aggregateDetailToggleForStackNode,
+  aggregatePanelStateAfterRegroup,
+  aggregateRegroupForStackNode,
+  mapVisibilityOptionsFromSplitIds,
+  pruneSplitAggregateIds,
+  syncDirectChildrenPanelStateFromAggregate,
+} from '@/lib/layerConfig/catalogAggregateDetail'
+import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import {
   buildCatalogTreeIndex,
   flattenCatalogNodes,
@@ -29,6 +40,8 @@ import {
 import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 import {
   ensureStackSortKeys,
+  reassignSortKeysAfterAggregateRegroup,
+  reassignSortKeysAfterAggregateSplit,
   reorderActiveStackSortKeys,
   sortIdsByStackSortKey,
   type StackSortKeyById,
@@ -52,6 +65,9 @@ export interface ManagedLayer {
   grayscale: boolean
   forceOpacity: boolean
   legend?: LegendItem[]
+  /** Bascule « Détailler les couches » (agrégats catalogue). */
+  aggregateDetailToggle?: { aggregateId: string }
+  aggregateRegroup?: { aggregateId: string }
 }
 
 export function useManagedLayers(
@@ -61,6 +77,10 @@ export function useManagedLayers(
 ) {
   const catalogChecked = ref<Record<string, boolean>>({})
   const panelStateById = ref<Record<string, PanelLayerState>>({})
+  /** Agrégats affichés en tuiles séparées (Couches de données). */
+  const splitAggregateIds = ref<Set<string>>(new Set())
+  /** État panneau de l’agrégat au moment où le détail a été activé. */
+  const aggregatePanelSnapshot = ref<Record<string, PanelLayerState>>({})
   let treeIndex: CatalogTreeIndex = buildCatalogTreeIndex([])
 
   function getPanelState(node: TreeLayerNode): PanelLayerState {
@@ -110,12 +130,45 @@ export function useManagedLayers(
     return map
   }
 
+  function syncSplitAggregateIds() {
+    splitAggregateIds.value = pruneSplitAggregateIds(
+      splitAggregateIds.value,
+      catalogChecked.value,
+      treeIndex,
+    )
+    const valid = splitAggregateIds.value
+    const snap = { ...aggregatePanelSnapshot.value }
+    for (const id of Object.keys(snap)) {
+      if (!valid.has(id)) delete snap[id]
+    }
+    aggregatePanelSnapshot.value = snap
+  }
+
   function catalogMapVisibility(): Record<string, boolean> {
     return computeMapVisibilityById(
       catalogChecked.value,
       treeIndex,
       opacityById(),
+      mapVisibilityOptionsFromSplitIds(splitAggregateIds.value),
     )
+  }
+
+  function toManagedLayer(node: TreeLayerNode): ManagedLayer {
+    const state = getPanelState(node)
+    const detailToggle = aggregateDetailToggleForStackNode(node, splitAggregateIds.value)
+    const regroup = aggregateRegroupForStackNode(node, splitAggregateIds.value, treeIndex)
+    return {
+      id: node.id,
+      title: node.title,
+      inStack: true,
+      visible: state.visible,
+      opacity: node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : state.opacity,
+      grayscale: state.grayscale,
+      forceOpacity: Boolean(node.gpuForceOpacity),
+      legend: aggregateStackNodeLegend(node),
+      aggregateDetailToggle: detailToggle ?? undefined,
+      aggregateRegroup: regroup ?? undefined,
+    }
   }
 
   function syncMapVisible(wmsCatalogId: string, visible: boolean) {
@@ -185,6 +238,16 @@ export function useManagedLayers(
     )
   }
 
+  /** Enfants directs présents dans la pile, ordre catalogue (haut → bas panneau). */
+  function directChildStackIdsInCatalogOrder(aggregateId: string): string[] {
+    const node = treeIndex.nodesById.get(aggregateId)
+    if (!node) return []
+    const inStack = new Set(stackNodesBottomToTop().map((n) => n.id))
+    return catalogChildNodes(node)
+      .map((c) => c.id)
+      .filter((id) => inStack.has(id))
+  }
+
   /** Clés de tri persistantes (entrées décochées incluses) — index 0 = clé min = haut panneau. */
   const stackSortKeyById = ref<StackSortKeyById>({})
 
@@ -206,9 +269,13 @@ export function useManagedLayers(
   function applyMapStackOrderFromDisplay() {
     const mapVis = catalogMapVisibility()
     const nodesBottomToTop = [...stackNodesForDisplayOrder()].reverse()
-    mapHooks?.onStackOrder?.(
-      dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis),
+    const panelWms = dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis)
+    const ordered = mergeWmsStackOrderWithForceOpacityOnTop(
+      panelWms,
+      treeIndex.roots,
+      mapVis,
     )
+    mapHooks?.onStackOrder?.(ordered)
   }
 
   function notifyStackOrder() {
@@ -216,6 +283,7 @@ export function useManagedLayers(
   }
 
   function reapplyCatalogMapState() {
+    syncSplitAggregateIds()
     const mapVis = catalogMapVisibility()
 
     for (const node of treeIndex.nodesById.values()) {
@@ -269,24 +337,12 @@ export function useManagedLayers(
   )
 
   const stackLayers = computed((): ManagedLayer[] => {
-    const stackNodes = stackNodesBottomToTop()
-    return stackNodes.map((node) => {
-      const state = getPanelState(node)
-      return {
-        id: node.id,
-        title: node.title,
-        inStack: true,
-        visible: state.visible,
-        opacity: node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : state.opacity,
-        grayscale: state.grayscale,
-        forceOpacity: Boolean(node.gpuForceOpacity),
-        legend: aggregateStackNodeLegend(node),
-      }
-    })
+    return stackNodesBottomToTop().map((node) => toManagedLayer(node))
   })
 
   const layers = computed((): ManagedLayer[] => {
-    const list = stackLayers.value
+    const displayTopToBottom = stackNodesForDisplayOrder()
+    const list = displayTopToBottom.map((node) => toManagedLayer(node))
     const ids = sortIdsByStackSortKey(
       stackSortKeyById.value,
       list.map((l) => l.id),
@@ -391,6 +447,73 @@ export function useManagedLayers(
     setCatalogChecked(id, false)
   }
 
+  function enableAggregateDetail(aggregateId: string) {
+    const node = treeIndex.nodesById.get(aggregateId)
+    if (!node || !isCatalogAggregate(node)) return
+    if (splitAggregateIds.value.has(aggregateId)) return
+
+    const activeBeforeSplit = layers.value.map((l) => l.id)
+
+    aggregatePanelSnapshot.value = {
+      ...aggregatePanelSnapshot.value,
+      [aggregateId]: { ...getPanelState(node) },
+    }
+    const state = getPanelState(node)
+    syncDirectChildrenPanelStateFromAggregate(node, state, (id, partial) => {
+      patchPanelState(id, partial)
+    })
+    splitAggregateIds.value = new Set([...splitAggregateIds.value, aggregateId])
+
+    const childIds = directChildStackIdsInCatalogOrder(aggregateId)
+    stackSortKeyById.value = reassignSortKeysAfterAggregateSplit(
+      stackSortKeyById.value,
+      activeBeforeSplit,
+      aggregateId,
+      childIds,
+    )
+
+    reapplyCatalogMapState()
+  }
+
+  function regroupAggregate(aggregateId: string) {
+    const node = treeIndex.nodesById.get(aggregateId)
+    if (!node || !isCatalogAggregate(node)) return
+    if (!splitAggregateIds.value.has(aggregateId)) return
+
+    const activeWithChildren = layers.value.map((l) => l.id)
+    const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId)
+
+    const saved =
+      aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) }
+    const directChildren = catalogChildNodes(node).filter((c) => !c.gpuForceOpacity)
+    const childStates = directChildren.map((c) => getPanelState(c))
+    const merged = aggregatePanelStateAfterRegroup(node, saved, childStates)
+    patchPanelState(aggregateId, merged)
+
+    for (const child of directChildren) {
+      patchPanelState(child.id, {
+        opacity: merged.opacity,
+        visible: getPanelState(child).visible,
+        grayscale: getPanelState(child).grayscale,
+      })
+    }
+
+    stackSortKeyById.value = reassignSortKeysAfterAggregateRegroup(
+      stackSortKeyById.value,
+      activeWithChildren,
+      aggregateId,
+      childIdsOrdered,
+    )
+
+    const next = new Set(splitAggregateIds.value)
+    next.delete(aggregateId)
+    splitAggregateIds.value = next
+    const snap = { ...aggregatePanelSnapshot.value }
+    delete snap[aggregateId]
+    aggregatePanelSnapshot.value = snap
+    reapplyCatalogMapState()
+  }
+
   watch(
     () => stackLayers.value.map((l) => l.id).join('|'),
     () => {
@@ -424,6 +547,8 @@ export function useManagedLayers(
     toggleGrayscale,
     removeFromStack,
     reorderStackByDisplayIndex,
+    enableAggregateDetail,
+    regroupAggregate,
     notifyStackOrder,
     reapplyCatalogMapState,
     catalogEntryInZoomRange,

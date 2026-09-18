@@ -190,16 +190,33 @@ export class GpuWmsLayerRegistry {
 
   /**
    * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+   * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
    * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
    */
   applyStackOrder(catalogIdsBottomToTop: string[]): void {
+    const normal: string[] = []
+    const forceInList: string[] = []
+    for (const id of catalogIdsBottomToTop) {
+      if (this.entries.get(id)?.config.forceOpacity) forceInList.push(id)
+      else normal.push(id)
+    }
+
+    const forcePinned: string[] = [...forceInList]
+    for (const [id, entry] of this.entries) {
+      if (!entry.config.forceOpacity) continue
+      const layer = this.olLayers.get(id)
+      if (!layer?.getVisible()) continue
+      if (!forcePinned.includes(id)) forcePinned.push(id)
+    }
+
+    const ordered = [...normal, ...forcePinned]
     const baseZ = 200
-    catalogIdsBottomToTop.forEach((id, index) => {
+    ordered.forEach((id, index) => {
       const layer = this.olLayers.get(id)
       if (layer) layer.setZIndex(baseZ + index)
     })
     if (!this.map) return
-    for (const id of catalogIdsBottomToTop) {
+    for (const id of ordered) {
       const layer = this.olLayers.get(id)
       if (!layer) continue
       this.map.removeLayer(layer)

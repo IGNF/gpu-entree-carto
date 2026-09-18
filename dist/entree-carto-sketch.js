@@ -28714,6 +28714,54 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (primary === "Disc" || primary === "MultiDisc") return "disc";
     return "line-polygon";
   }
+  const REMIX_BY_TOOL_CLASS = {
+    "ec-geometry-editor__tool--tools-toggle": "ri-tools-fill",
+    "ec-geometry-editor__tool--measure-distance": "ri-ruler-line",
+    "ec-geometry-editor__tool--measure-area": "ri-custom-size",
+    "ec-geometry-editor__tool--save": "ri-save-line",
+    "ec-geometry-editor__tool--undo": "ri-corner-up-left-line",
+    "ec-geometry-editor__tool--redo": "ri-corner-up-right-line",
+    "ec-geometry-editor__tool--point": "ri-map-pin-5-line",
+    "ec-geometry-editor__tool--line": "ri-draw-line",
+    "ec-geometry-editor__tool--polygon": "ri-pentagon-line",
+    "ec-geometry-editor__tool--rectangle": "ri-rectangle-line",
+    "ec-geometry-editor__tool--circle": "ri-circle-line",
+    "ec-geometry-editor__tool--disc": "ri-circle-line",
+    "ec-geometry-editor__tool--text": "ri-text",
+    "ec-geometry-editor__tool--modify": "ri-edit-line",
+    "ec-geometry-editor__tool--remove": "ri-close-circle-line",
+    "ec-geometry-editor__tool--clear-all": "ri-delete-bin-6-fill",
+    "ec-geometry-editor__tool--export": "ri-upload-line",
+    "ec-geometry-editor__tool--import": "ri-download-line",
+    "ec-geometry-editor__tool--settings": "ri-settings-3-line"
+  };
+  function remixIconClassForToolModifier(iconClass) {
+    return REMIX_BY_TOOL_CLASS[iconClass] ?? null;
+  }
+  function appendGeometryToolIcon(button, iconClass) {
+    const remix = remixIconClassForToolModifier(iconClass);
+    if (!remix) return;
+    const icon = document.createElement("i");
+    icon.className = `${remix} ec-geometry-editor__tool-icon`;
+    icon.setAttribute("aria-hidden", "true");
+    button.appendChild(icon);
+  }
+  function updateSaveToolBadge(badge, state) {
+    badge.hidden = state === "idle";
+    badge.dataset.state = state;
+    badge.replaceChildren();
+    if (state === "dirty") {
+      const icon = document.createElement("i");
+      icon.className = "ri-alert-line";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    } else if (state === "saved") {
+      const icon = document.createElement("i");
+      icon.className = "ri-checkbox-circle-fill";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    }
+  }
   const modifyTool = {
     id: "modify",
     label: "Modifier",
@@ -29002,8 +29050,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
       const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
       if (badge instanceof HTMLElement) {
-        badge.hidden = state === "idle";
-        badge.dataset.state = state;
+        updateSaveToolBadge(badge, state);
       }
     }
     /** Désactive tout outil transient (dessin, measure externe, etc.). */
@@ -29032,11 +29079,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        appendGeometryToolIcon(btn, tool.iconClass);
         if (tool.id === "save") {
           const badge = document.createElement("span");
           badge.className = "ec-geometry-editor__tool-badge";
           badge.setAttribute("aria-hidden", "true");
-          badge.hidden = true;
+          updateSaveToolBadge(badge, "idle");
           btn.appendChild(badge);
         }
         btn.addEventListener("click", () => this.activate(tool));
@@ -35427,6 +35475,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             e.stopPropagation();
             this.setToolsMenuOpen(!this.toolsMenuOpen);
           });
+          appendGeometryToolIcon(btn, "ec-geometry-editor__tool--tools-toggle");
           this.toolsToggleBtn = btn;
         }
         this.toolbarHost.id = this.toolbarDomId;

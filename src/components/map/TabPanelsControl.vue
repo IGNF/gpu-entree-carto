@@ -66,6 +66,8 @@ const {
   toggleGrayscale,
   removeFromStack,
   reorderStackByDisplayIndex,
+  enableAggregateDetail,
+  regroupAggregate,
   notifyStackOrder,
 } = useManagedLayers(
   layerNodesRef,
@@ -285,6 +287,8 @@ onUnmounted(() => {
             @toggle-grayscale="toggleGrayscale"
             @remove="removeFromStack"
             @reorder="reorderStackByDisplayIndex"
+            @enable-aggregate-detail="enableAggregateDetail"
+            @regroup-aggregate="regroupAggregate"
           />
         </div>
 

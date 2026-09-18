@@ -73891,6 +73891,54 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (primary === "Disc" || primary === "MultiDisc") return "disc";
     return "line-polygon";
   }
+  const REMIX_BY_TOOL_CLASS = {
+    "ec-geometry-editor__tool--tools-toggle": "ri-tools-fill",
+    "ec-geometry-editor__tool--measure-distance": "ri-ruler-line",
+    "ec-geometry-editor__tool--measure-area": "ri-custom-size",
+    "ec-geometry-editor__tool--save": "ri-save-line",
+    "ec-geometry-editor__tool--undo": "ri-corner-up-left-line",
+    "ec-geometry-editor__tool--redo": "ri-corner-up-right-line",
+    "ec-geometry-editor__tool--point": "ri-map-pin-5-line",
+    "ec-geometry-editor__tool--line": "ri-draw-line",
+    "ec-geometry-editor__tool--polygon": "ri-pentagon-line",
+    "ec-geometry-editor__tool--rectangle": "ri-rectangle-line",
+    "ec-geometry-editor__tool--circle": "ri-circle-line",
+    "ec-geometry-editor__tool--disc": "ri-circle-line",
+    "ec-geometry-editor__tool--text": "ri-text",
+    "ec-geometry-editor__tool--modify": "ri-edit-line",
+    "ec-geometry-editor__tool--remove": "ri-close-circle-line",
+    "ec-geometry-editor__tool--clear-all": "ri-delete-bin-6-fill",
+    "ec-geometry-editor__tool--export": "ri-upload-line",
+    "ec-geometry-editor__tool--import": "ri-download-line",
+    "ec-geometry-editor__tool--settings": "ri-settings-3-line"
+  };
+  function remixIconClassForToolModifier(iconClass) {
+    return REMIX_BY_TOOL_CLASS[iconClass] ?? null;
+  }
+  function appendGeometryToolIcon(button, iconClass) {
+    const remix = remixIconClassForToolModifier(iconClass);
+    if (!remix) return;
+    const icon = document.createElement("i");
+    icon.className = `${remix} ec-geometry-editor__tool-icon`;
+    icon.setAttribute("aria-hidden", "true");
+    button.appendChild(icon);
+  }
+  function updateSaveToolBadge(badge, state) {
+    badge.hidden = state === "idle";
+    badge.dataset.state = state;
+    badge.replaceChildren();
+    if (state === "dirty") {
+      const icon = document.createElement("i");
+      icon.className = "ri-alert-line";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    } else if (state === "saved") {
+      const icon = document.createElement("i");
+      icon.className = "ri-checkbox-circle-fill";
+      icon.setAttribute("aria-hidden", "true");
+      badge.appendChild(icon);
+    }
+  }
   const modifyTool = {
     id: "modify",
     label: "Modifier",
@@ -74179,8 +74227,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       btn.classList.toggle("ec-geometry-editor__tool--save-dirty", state === "dirty");
       const badge = btn.querySelector(".ec-geometry-editor__tool-badge");
       if (badge instanceof HTMLElement) {
-        badge.hidden = state === "idle";
-        badge.dataset.state = state;
+        updateSaveToolBadge(badge, state);
       }
     }
     /** Désactive tout outil transient (dessin, measure externe, etc.). */
@@ -74209,11 +74256,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        appendGeometryToolIcon(btn, tool.iconClass);
         if (tool.id === "save") {
           const badge = document.createElement("span");
           badge.className = "ec-geometry-editor__tool-badge";
           badge.setAttribute("aria-hidden", "true");
-          badge.hidden = true;
+          updateSaveToolBadge(badge, "idle");
           btn.appendChild(badge);
         }
         btn.addEventListener("click", () => this.activate(tool));
@@ -79320,6 +79368,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             e.stopPropagation();
             this.setToolsMenuOpen(!this.toolsMenuOpen);
           });
+          appendGeometryToolIcon(btn, "ec-geometry-editor__tool--tools-toggle");
           this.toolsToggleBtn = btn;
         }
         this.toolbarHost.id = this.toolbarDomId;
@@ -79529,13 +79578,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return true;
   }
-  function isAscendentParentAggregateActive(checked, node, index2, opacityById) {
+  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
+    const split = options == null ? void 0 : options.splitAggregateIds;
     const parent = index2.parentById.get(node.id);
     if (!parent) return false;
+    if (split == null ? void 0 : split.has(parent.id)) {
+      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+    }
     if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
       return true;
     }
-    return isAscendentParentAggregateActive(checked, parent, index2, opacityById);
+    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
   }
   function isOpacitySameAsDirectChildren(node, opacityById) {
     const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
@@ -79545,15 +79598,19 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return true;
   }
-  function shouldShowMapLayerForNode(checked, node, index2, opacityById) {
+  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
     if (!node.gpuMapLayer || node.gpuVirtual) return false;
     if (!Boolean(checked[node.id])) return false;
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    if ((split == null ? void 0 : split.has(node.id)) && isCatalogAggregate(node) && isSameAsDescendants(checked, node, index2, opacityById)) {
+      return false;
+    }
     const parent = index2.parentById.get(node.id);
     if (!parent) {
       if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
       return catalogChildNodes(node).length === 0;
     }
-    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById)) {
+    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
       return true;
     }
     return false;
@@ -79592,11 +79649,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     propagateCheckedToAncestors(checked, nodeId, index2);
     propagateCheckedToDescendants(checked, node, value2);
   }
-  function computeMapVisibilityById(checked, index2, opacityById) {
+  function computeMapVisibilityById(checked, index2, opacityById, options) {
     const out = {};
     for (const node of index2.nodesById.values()) {
       if (!node.gpuMapLayer) continue;
-      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById);
+      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
     }
     return out;
   }
@@ -79616,7 +79673,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     return false;
   }
   function isDataLayersPanelEntry(node, checkedById, parentById) {
-    if (node.gpuOnlyLegend) return false;
     if (!Boolean(checkedById[node.id]) || node.gpuForceOpacity) return false;
     if (parentById && isUnderHideLayersCatalogBranch(node, parentById)) return false;
     return true;
@@ -79728,6 +79784,66 @@ Expected function or array of functions, received type ${typeof value2}.`
       ids.push(...wmsIdsControlledByDataLayersPanelEntry(node, mapVisibilityById));
     }
     return ids;
+  }
+  function collectForceOpacityWmsIdsBottomToTop(roots, mapVisibilityById) {
+    const ids = [];
+    function walk(nodes) {
+      for (const node of nodes) {
+        if (node.gpuMapLayer && node.gpuForceOpacity && mapVisibilityById[node.id]) {
+          ids.push(node.id);
+        }
+        walk(catalogChildNodes(node));
+      }
+    }
+    walk(roots);
+    return ids;
+  }
+  function mergeWmsStackOrderWithForceOpacityOnTop(panelWmsIdsBottomToTop, roots, mapVisibilityById) {
+    const forceTop = collectForceOpacityWmsIdsBottomToTop(roots, mapVisibilityById);
+    const forceSet = new Set(forceTop);
+    const normal = panelWmsIdsBottomToTop.filter((id) => !forceSet.has(id));
+    return [...normal, ...forceTop];
+  }
+  function pruneSplitAggregateIds(splitIds, checked, index2) {
+    const next = /* @__PURE__ */ new Set();
+    for (const id of splitIds) {
+      const node = index2.nodesById.get(id);
+      if (!node || !isCatalogAggregate(node)) continue;
+      if (!Boolean(checked[id])) continue;
+      next.add(id);
+    }
+    return next;
+  }
+  function mapVisibilityOptionsFromSplitIds(splitIds) {
+    return splitIds.size ? { splitAggregateIds: splitIds } : void 0;
+  }
+  function aggregateDetailToggleForStackNode(node, splitIds) {
+    if (isCatalogAggregate(node) && !splitIds.has(node.id)) {
+      return { aggregateId: node.id };
+    }
+    return null;
+  }
+  function aggregateRegroupForStackNode(node, splitIds, index2) {
+    const parent = index2.parentById.get(node.id);
+    if (!parent || !splitIds.has(parent.id)) return null;
+    const isDirectChild = catalogChildNodes(parent).some((c) => c.id === node.id);
+    if (!isDirectChild) return null;
+    return { aggregateId: parent.id };
+  }
+  function syncDirectChildrenPanelStateFromAggregate(aggregate, state, patch) {
+    for (const child of catalogChildNodes(aggregate)) {
+      if (child.gpuForceOpacity) continue;
+      patch(child.id, state);
+    }
+  }
+  function aggregatePanelStateAfterRegroup(_aggregate, savedAggregateState, childStates) {
+    const visible = childStates.length > 0 && childStates.some((s) => s.visible);
+    const grayscale = childStates.length > 0 && childStates.every((s) => s.grayscale);
+    return {
+      opacity: savedAggregateState.opacity,
+      visible,
+      grayscale
+    };
   }
   function buildCatalogTreeIndex(roots) {
     const nodesById = /* @__PURE__ */ new Map();
@@ -79844,6 +79960,33 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return next;
   }
+  function activeTopToBottomReplacingAggregateWithChildren(activeTopToBottom, aggregateId, childIdsTopToBottom) {
+    const childSet = new Set(childIdsTopToBottom);
+    const idx = activeTopToBottom.indexOf(aggregateId);
+    if (idx < 0) return activeTopToBottom;
+    const before = activeTopToBottom.slice(0, idx);
+    const after = activeTopToBottom.slice(idx + 1).filter((id) => !childSet.has(id));
+    return [...before, ...childIdsTopToBottom, ...after];
+  }
+  function reassignSortKeysAfterAggregateSplit(sortKeyById, activeTopToBottomBeforeSplit, aggregateId, childIdsTopToBottom) {
+    const newActive = activeTopToBottomReplacingAggregateWithChildren(
+      activeTopToBottomBeforeSplit,
+      aggregateId,
+      childIdsTopToBottom
+    );
+    const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive);
+    return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder);
+  }
+  function reassignSortKeysAfterAggregateRegroup(sortKeyById, activeTopToBottomWithChildren, aggregateId, childIdsTopToBottom) {
+    const childSet = new Set(childIdsTopToBottom);
+    const indices = childIdsTopToBottom.map((id) => activeTopToBottomWithChildren.indexOf(id)).filter((i) => i >= 0);
+    if (!indices.length) return sortKeyById;
+    const insertAt = Math.min(...indices);
+    const newActive = activeTopToBottomWithChildren.filter((id) => !childSet.has(id));
+    newActive.splice(insertAt, 0, aggregateId);
+    const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive);
+    return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder);
+  }
   function reorderActiveStackSortKeys(sortKeyById, activeTopToBottom, fromDisplayIndex, toInsertBefore) {
     const order = [...activeTopToBottom];
     if (fromDisplayIndex < 0 || fromDisplayIndex >= order.length) return sortKeyById;
@@ -79861,6 +80004,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function useManagedLayers(nodes, onMapVisibleChange, mapHooks) {
     const catalogChecked = /* @__PURE__ */ ref({});
     const panelStateById = /* @__PURE__ */ ref({});
+    const splitAggregateIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
+    const aggregatePanelSnapshot = /* @__PURE__ */ ref({});
     let treeIndex = buildCatalogTreeIndex([]);
     function getPanelState(node) {
       const existing = panelStateById.value[node.id];
@@ -79903,12 +80048,43 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return map2;
     }
+    function syncSplitAggregateIds() {
+      splitAggregateIds.value = pruneSplitAggregateIds(
+        splitAggregateIds.value,
+        catalogChecked.value,
+        treeIndex
+      );
+      const valid = splitAggregateIds.value;
+      const snap2 = { ...aggregatePanelSnapshot.value };
+      for (const id of Object.keys(snap2)) {
+        if (!valid.has(id)) delete snap2[id];
+      }
+      aggregatePanelSnapshot.value = snap2;
+    }
     function catalogMapVisibility() {
       return computeMapVisibilityById(
         catalogChecked.value,
         treeIndex,
-        opacityById()
+        opacityById(),
+        mapVisibilityOptionsFromSplitIds(splitAggregateIds.value)
       );
+    }
+    function toManagedLayer(node) {
+      const state = getPanelState(node);
+      const detailToggle = aggregateDetailToggleForStackNode(node, splitAggregateIds.value);
+      const regroup = aggregateRegroupForStackNode(node, splitAggregateIds.value, treeIndex);
+      return {
+        id: node.id,
+        title: node.title,
+        inStack: true,
+        visible: state.visible,
+        opacity: node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : state.opacity,
+        grayscale: state.grayscale,
+        forceOpacity: Boolean(node.gpuForceOpacity),
+        legend: aggregateStackNodeLegend(node),
+        aggregateDetailToggle: detailToggle ?? void 0,
+        aggregateRegroup: regroup ?? void 0
+      };
     }
     function syncMapVisible(wmsCatalogId, visible) {
       var _a;
@@ -79965,6 +80141,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         mapVis
       );
     }
+    function directChildStackIdsInCatalogOrder(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node) return [];
+      const inStack = new Set(stackNodesBottomToTop().map((n) => n.id));
+      return catalogChildNodes(node).map((c) => c.id).filter((id) => inStack.has(id));
+    }
     const stackSortKeyById = /* @__PURE__ */ ref({});
     function syncStackSortKeysWithCatalog() {
       const catalogOrder = stackNodesBottomToTop().map((n) => n.id);
@@ -79983,16 +80165,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       var _a;
       const mapVis = catalogMapVisibility();
       const nodesBottomToTop = [...stackNodesForDisplayOrder()].reverse();
-      (_a = mapHooks == null ? void 0 : mapHooks.onStackOrder) == null ? void 0 : _a.call(
-        mapHooks,
-        dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis)
+      const panelWms = dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis);
+      const ordered = mergeWmsStackOrderWithForceOpacityOnTop(
+        panelWms,
+        treeIndex.roots,
+        mapVis
       );
+      (_a = mapHooks == null ? void 0 : mapHooks.onStackOrder) == null ? void 0 : _a.call(mapHooks, ordered);
     }
     function notifyStackOrder() {
       applyMapStackOrderFromDisplay();
     }
     function reapplyCatalogMapState() {
       var _a, _b;
+      syncSplitAggregateIds();
       const mapVis = catalogMapVisibility();
       for (const node of treeIndex.nodesById.values()) {
         if (!node.gpuMapLayer) continue;
@@ -80036,23 +80222,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       { immediate: true }
     );
     const stackLayers = computed(() => {
-      const stackNodes = stackNodesBottomToTop();
-      return stackNodes.map((node) => {
-        const state = getPanelState(node);
-        return {
-          id: node.id,
-          title: node.title,
-          inStack: true,
-          visible: state.visible,
-          opacity: node.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : state.opacity,
-          grayscale: state.grayscale,
-          forceOpacity: Boolean(node.gpuForceOpacity),
-          legend: aggregateStackNodeLegend(node)
-        };
-      });
+      return stackNodesBottomToTop().map((node) => toManagedLayer(node));
     });
     const layers = computed(() => {
-      const list = stackLayers.value;
+      const displayTopToBottom = stackNodesForDisplayOrder();
+      const list = displayTopToBottom.map((node) => toManagedLayer(node));
       const ids = sortIdsByStackSortKey(
         stackSortKeyById.value,
         list.map((l) => l.id)
@@ -80147,6 +80321,61 @@ Expected function or array of functions, received type ${typeof value2}.`
     function removeFromStack(id) {
       setCatalogChecked(id, false);
     }
+    function enableAggregateDetail(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node || !isCatalogAggregate(node)) return;
+      if (splitAggregateIds.value.has(aggregateId)) return;
+      const activeBeforeSplit = layers.value.map((l) => l.id);
+      aggregatePanelSnapshot.value = {
+        ...aggregatePanelSnapshot.value,
+        [aggregateId]: { ...getPanelState(node) }
+      };
+      const state = getPanelState(node);
+      syncDirectChildrenPanelStateFromAggregate(node, state, (id, partial) => {
+        patchPanelState(id, partial);
+      });
+      splitAggregateIds.value = /* @__PURE__ */ new Set([...splitAggregateIds.value, aggregateId]);
+      const childIds = directChildStackIdsInCatalogOrder(aggregateId);
+      stackSortKeyById.value = reassignSortKeysAfterAggregateSplit(
+        stackSortKeyById.value,
+        activeBeforeSplit,
+        aggregateId,
+        childIds
+      );
+      reapplyCatalogMapState();
+    }
+    function regroupAggregate(aggregateId) {
+      const node = treeIndex.nodesById.get(aggregateId);
+      if (!node || !isCatalogAggregate(node)) return;
+      if (!splitAggregateIds.value.has(aggregateId)) return;
+      const activeWithChildren = layers.value.map((l) => l.id);
+      const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId);
+      const saved = aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) };
+      const directChildren = catalogChildNodes(node).filter((c) => !c.gpuForceOpacity);
+      const childStates = directChildren.map((c) => getPanelState(c));
+      const merged = aggregatePanelStateAfterRegroup(node, saved, childStates);
+      patchPanelState(aggregateId, merged);
+      for (const child of directChildren) {
+        patchPanelState(child.id, {
+          opacity: merged.opacity,
+          visible: getPanelState(child).visible,
+          grayscale: getPanelState(child).grayscale
+        });
+      }
+      stackSortKeyById.value = reassignSortKeysAfterAggregateRegroup(
+        stackSortKeyById.value,
+        activeWithChildren,
+        aggregateId,
+        childIdsOrdered
+      );
+      const next = new Set(splitAggregateIds.value);
+      next.delete(aggregateId);
+      splitAggregateIds.value = next;
+      const snap2 = { ...aggregatePanelSnapshot.value };
+      delete snap2[aggregateId];
+      aggregatePanelSnapshot.value = snap2;
+      reapplyCatalogMapState();
+    }
     watch(
       () => stackLayers.value.map((l) => l.id).join("|"),
       () => {
@@ -80177,6 +80406,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       toggleGrayscale,
       removeFromStack,
       reorderStackByDisplayIndex,
+      enableAggregateDetail,
+      regroupAggregate,
       notifyStackOrder,
       reapplyCatalogMapState,
       catalogEntryInZoomRange
@@ -80899,20 +81130,24 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_6$2 = { class: "ec-data-layers__name" };
   const _hoisted_7$2 = { class: "ec-data-layers__head-end" };
   const _hoisted_8$2 = ["onClick"];
-  const _hoisted_9$1 = ["onDragstart"];
-  const _hoisted_10$1 = { class: "fr-sr-only" };
-  const _hoisted_11$1 = { class: "ec-data-layers__toolbar" };
-  const _hoisted_12$1 = ["title", "aria-pressed", "onClick"];
-  const _hoisted_13$1 = { class: "fr-sr-only" };
-  const _hoisted_14$1 = ["onClick"];
-  const _hoisted_15 = { class: "fr-sr-only" };
+  const _hoisted_9$1 = { class: "fr-sr-only" };
+  const _hoisted_10$1 = ["onClick"];
+  const _hoisted_11$1 = { class: "fr-sr-only" };
+  const _hoisted_12$1 = ["onClick"];
+  const _hoisted_13$1 = ["onDragstart"];
+  const _hoisted_14$1 = { class: "fr-sr-only" };
+  const _hoisted_15 = { class: "ec-data-layers__toolbar" };
   const _hoisted_16 = ["title", "aria-pressed", "onClick"];
   const _hoisted_17 = { class: "fr-sr-only" };
-  const _hoisted_18 = { class: "ec-data-layers__range fr-range-group" };
-  const _hoisted_19 = ["for"];
-  const _hoisted_20 = ["id", "value", "disabled", "title", "onInput"];
-  const _hoisted_21 = ["for"];
-  const _hoisted_22 = {
+  const _hoisted_18 = ["onClick"];
+  const _hoisted_19 = { class: "fr-sr-only" };
+  const _hoisted_20 = ["title", "aria-pressed", "onClick"];
+  const _hoisted_21 = { class: "fr-sr-only" };
+  const _hoisted_22 = { class: "ec-data-layers__range fr-range-group" };
+  const _hoisted_23 = ["for"];
+  const _hoisted_24 = ["id", "value", "disabled", "title", "onInput"];
+  const _hoisted_25 = ["for"];
+  const _hoisted_26 = {
     key: 0,
     class: "ec-data-layers__drop-marker",
     "aria-hidden": "true"
@@ -80924,7 +81159,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       mapZoom: {},
       catalogEntryInZoomRange: { type: Function }
     },
-    emits: ["visible", "opacity", "toggle-grayscale", "remove", "reorder"],
+    emits: ["visible", "opacity", "toggle-grayscale", "remove", "reorder", "enable-aggregate-detail", "regroup-aggregate"],
     setup(__props, { emit: __emit }) {
       const props = __props;
       function layerInZoomRange(layer) {
@@ -81008,7 +81243,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("section", _hoisted_1$4, [
-          _cache[4] || (_cache[4] = createBaseVNode("h2", {
+          _cache[6] || (_cache[6] = createBaseVNode("h2", {
             id: "ec-data-layers-title",
             class: "ec-data-layers__title"
           }, [
@@ -81041,18 +81276,44 @@ Expected function or array of functions, received type ${typeof value2}.`
                   createBaseVNode("div", _hoisted_5$3, [
                     createBaseVNode("p", _hoisted_6$2, toDisplayString(layer.title), 1),
                     createBaseVNode("div", _hoisted_7$2, [
-                      ((_a = layer.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("button", {
+                      layer.aggregateRegroup ? (openBlock(), createElementBlock("button", {
                         key: 0,
+                        type: "button",
+                        class: "ec-data-layers__regroup-handle",
+                        title: "Regrouper en une seule couche (agrégat)",
+                        onClick: ($event) => emit2("regroup-aggregate", layer.aggregateRegroup.aggregateId)
+                      }, [
+                        _cache[0] || (_cache[0] = createBaseVNode("i", {
+                          class: "ri-separator",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createBaseVNode("span", _hoisted_9$1, "Regrouper — " + toDisplayString(layer.title), 1)
+                      ], 8, _hoisted_8$2)) : createCommentVNode("", true),
+                      layer.aggregateDetailToggle ? (openBlock(), createElementBlock("button", {
+                        key: 1,
+                        type: "button",
+                        class: "ec-data-layers__detail-handle",
+                        title: "Détailler les couches (tuiles séparées, réordonnables)",
+                        onClick: ($event) => emit2("enable-aggregate-detail", layer.aggregateDetailToggle.aggregateId)
+                      }, [
+                        _cache[1] || (_cache[1] = createBaseVNode("i", {
+                          class: "ri-list-unordered",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createBaseVNode("span", _hoisted_11$1, "Détailler les couches — " + toDisplayString(layer.title), 1)
+                      ], 8, _hoisted_10$1)) : createCommentVNode("", true),
+                      ((_a = layer.legend) == null ? void 0 : _a.length) ? (openBlock(), createElementBlock("button", {
+                        key: 2,
                         type: "button",
                         class: "ec-data-layers__legend-btn fr-btn fr-btn--sm fr-btn--secondary",
                         onClick: ($event) => openLegendsForLayer(layer)
-                      }, [..._cache[0] || (_cache[0] = [
+                      }, [..._cache[2] || (_cache[2] = [
                         createBaseVNode("i", {
                           class: "ri-list-indefinite ec-data-layers__legend-icon",
                           "aria-hidden": "true"
                         }, null, -1),
                         createTextVNode(" Légendes ", -1)
-                      ])], 8, _hoisted_8$2)) : createCommentVNode("", true),
+                      ])], 8, _hoisted_12$1)) : createCommentVNode("", true),
                       createBaseVNode("button", {
                         type: "button",
                         class: "ec-data-layers__drag-handle",
@@ -81061,15 +81322,15 @@ Expected function or array of functions, received type ${typeof value2}.`
                         onDragstart: ($event) => onDragStart($event, index2),
                         onDragend: onDragEnd
                       }, [
-                        _cache[1] || (_cache[1] = createBaseVNode("i", {
+                        _cache[3] || (_cache[3] = createBaseVNode("i", {
                           class: "ri-drag-move-2-fill",
                           "aria-hidden": "true"
                         }, null, -1)),
-                        createBaseVNode("span", _hoisted_10$1, "Réordonner " + toDisplayString(layer.title), 1)
-                      ], 40, _hoisted_9$1)
+                        createBaseVNode("span", _hoisted_14$1, "Réordonner " + toDisplayString(layer.title), 1)
+                      ], 40, _hoisted_13$1)
                     ])
                   ]),
-                  createBaseVNode("div", _hoisted_11$1, [
+                  createBaseVNode("div", _hoisted_15, [
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-data-layers__icon-btn",
@@ -81081,20 +81342,20 @@ Expected function or array of functions, received type ${typeof value2}.`
                         class: normalizeClass(layer.visible ? "ri-eye-line" : "ri-eye-off-line"),
                         "aria-hidden": "true"
                       }, null, 2),
-                      createBaseVNode("span", _hoisted_13$1, toDisplayString(layer.visible ? "Masquer" : "Afficher") + " " + toDisplayString(layer.title), 1)
-                    ], 8, _hoisted_12$1),
+                      createBaseVNode("span", _hoisted_17, toDisplayString(layer.visible ? "Masquer" : "Afficher") + " " + toDisplayString(layer.title), 1)
+                    ], 8, _hoisted_16),
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-data-layers__icon-btn",
                       title: "Retirer de la pile",
                       onClick: ($event) => emit2("remove", layer.id)
                     }, [
-                      _cache[2] || (_cache[2] = createBaseVNode("i", {
+                      _cache[4] || (_cache[4] = createBaseVNode("i", {
                         class: "ri-delete-bin-line",
                         "aria-hidden": "true"
                       }, null, -1)),
-                      createBaseVNode("span", _hoisted_15, "Retirer " + toDisplayString(layer.title), 1)
-                    ], 8, _hoisted_14$1),
+                      createBaseVNode("span", _hoisted_19, "Retirer " + toDisplayString(layer.title), 1)
+                    ], 8, _hoisted_18),
                     createBaseVNode("button", {
                       type: "button",
                       class: normalizeClass(["ec-data-layers__icon-btn", { "ec-data-layers__icon-btn--active": layer.grayscale }]),
@@ -81102,17 +81363,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "aria-pressed": layer.grayscale,
                       onClick: ($event) => emit2("toggle-grayscale", layer.id)
                     }, [
-                      _cache[3] || (_cache[3] = createBaseVNode("i", {
+                      _cache[5] || (_cache[5] = createBaseVNode("i", {
                         class: "ri-contrast-fill",
                         "aria-hidden": "true"
                       }, null, -1)),
-                      createBaseVNode("span", _hoisted_17, toDisplayString(layer.grayscale ? "Couleurs" : "Niveaux de gris") + " — " + toDisplayString(layer.title), 1)
-                    ], 10, _hoisted_16),
-                    createBaseVNode("div", _hoisted_18, [
+                      createBaseVNode("span", _hoisted_21, toDisplayString(layer.grayscale ? "Couleurs" : "Niveaux de gris") + " — " + toDisplayString(layer.title), 1)
+                    ], 10, _hoisted_20),
+                    createBaseVNode("div", _hoisted_22, [
                       createBaseVNode("label", {
                         class: "fr-sr-only",
                         for: `ec-dlm-op-${layer.id}`
-                      }, "Opacité", 8, _hoisted_19),
+                      }, "Opacité", 8, _hoisted_23),
                       createBaseVNode("input", {
                         id: `ec-dlm-op-${layer.id}`,
                         class: "fr-range",
@@ -81124,17 +81385,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                         disabled: layer.forceOpacity,
                         title: layer.forceOpacity ? "Opacité fixée par la configuration" : void 0,
                         onInput: ($event) => emit2("opacity", layer.id, Number($event.target.value))
-                      }, null, 40, _hoisted_20),
+                      }, null, 40, _hoisted_24),
                       createBaseVNode("output", {
                         class: "ec-data-layers__range-value",
                         for: `ec-dlm-op-${layer.id}`
-                      }, toDisplayString(layer.opacity) + " % ", 9, _hoisted_21)
+                      }, toDisplayString(layer.opacity) + " % ", 9, _hoisted_25)
                     ])
                   ])
                 ], 42, _hoisted_4$3)
               ], 64);
             }), 128)),
-            dragLayerId.value && dragInsertIndex.value === __props.layers.length ? (openBlock(), createElementBlock("li", _hoisted_22)) : createCommentVNode("", true),
+            dragLayerId.value && dragInsertIndex.value === __props.layers.length ? (openBlock(), createElementBlock("li", _hoisted_26)) : createCommentVNode("", true),
             dragLayerId.value ? (openBlock(), createElementBlock("li", {
               key: 1,
               class: "ec-data-layers__drop-tail",
@@ -81373,6 +81634,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         toggleGrayscale,
         removeFromStack,
         reorderStackByDisplayIndex,
+        enableAggregateDetail,
+        regroupAggregate,
         notifyStackOrder
       } = useManagedLayers(
         layerNodesRef,
@@ -81562,8 +81825,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                   onOpacity: unref(setOpacity),
                   onToggleGrayscale: unref(toggleGrayscale),
                   onRemove: unref(removeFromStack),
-                  onReorder: unref(reorderStackByDisplayIndex)
-                }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range", "onVisible", "onOpacity", "onToggleGrayscale", "onRemove", "onReorder"])
+                  onReorder: unref(reorderStackByDisplayIndex),
+                  onEnableAggregateDetail: unref(enableAggregateDetail),
+                  onRegroupAggregate: unref(regroupAggregate)
+                }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range", "onVisible", "onOpacity", "onToggleGrayscale", "onRemove", "onReorder", "onEnableAggregateDetail", "onRegroupAggregate"])
               ], 8, _hoisted_7),
               createBaseVNode("div", {
                 id: `ec-tab-panel-${unref(TAB_PANEL_IDS).legends}`,

@@ -41310,6 +41310,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         btn.setAttribute("aria-label", tool.label);
         btn.setAttribute("aria-pressed", "false");
         btn.dataset.toolId = tool.id;
+        appendGeometryToolIcon(btn, tool.iconClass);
         if (tool.id === "save") {
           const badge = document.createElement("span");
           badge.className = "ec-geometry-editor__tool-badge";
@@ -41317,7 +41318,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           updateSaveToolBadge(badge, "idle");
           btn.appendChild(badge);
         }
-        appendGeometryToolIcon(btn, tool.iconClass);
         btn.addEventListener("click", () => this.activate(tool));
         this.target.appendChild(btn);
       }

@@ -66,6 +66,56 @@ export function assignStackSortKeysFromFullOrder(
 }
 
 /** @param toInsertBefore index d’insertion dans la liste active (0 = tout en haut). */
+/**
+ * Remplace l’agrégat par ses enfants (ordre catalogue) dans la liste active du panneau.
+ * `childIdsTopToBottom` : enfants directs visibles dans la pile, ordre catalogue (haut → bas panneau).
+ */
+export function activeTopToBottomReplacingAggregateWithChildren(
+  activeTopToBottom: string[],
+  aggregateId: string,
+  childIdsTopToBottom: string[],
+): string[] {
+  const childSet = new Set(childIdsTopToBottom)
+  const idx = activeTopToBottom.indexOf(aggregateId)
+  if (idx < 0) return activeTopToBottom
+  const before = activeTopToBottom.slice(0, idx)
+  const after = activeTopToBottom.slice(idx + 1).filter((id) => !childSet.has(id))
+  return [...before, ...childIdsTopToBottom, ...after]
+}
+
+export function reassignSortKeysAfterAggregateSplit(
+  sortKeyById: StackSortKeyById,
+  activeTopToBottomBeforeSplit: string[],
+  aggregateId: string,
+  childIdsTopToBottom: string[],
+): StackSortKeyById {
+  const newActive = activeTopToBottomReplacingAggregateWithChildren(
+    activeTopToBottomBeforeSplit,
+    aggregateId,
+    childIdsTopToBottom,
+  )
+  const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive)
+  return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder)
+}
+
+export function reassignSortKeysAfterAggregateRegroup(
+  sortKeyById: StackSortKeyById,
+  activeTopToBottomWithChildren: string[],
+  aggregateId: string,
+  childIdsTopToBottom: string[],
+): StackSortKeyById {
+  const childSet = new Set(childIdsTopToBottom)
+  const indices = childIdsTopToBottom
+    .map((id) => activeTopToBottomWithChildren.indexOf(id))
+    .filter((i) => i >= 0)
+  if (!indices.length) return sortKeyById
+  const insertAt = Math.min(...indices)
+  const newActive = activeTopToBottomWithChildren.filter((id) => !childSet.has(id))
+  newActive.splice(insertAt, 0, aggregateId)
+  const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, newActive)
+  return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder)
+}
+
 export function reorderActiveStackSortKeys(
   sortKeyById: StackSortKeyById,
   activeTopToBottom: string[],

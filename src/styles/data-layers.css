@@ -156,6 +156,54 @@
   cursor: grab;
 }
 
+.ec-tab-panels.ol-control .ec-data-layers__detail-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--text-action-high-blue-france, #000091);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ec-tab-panels.ol-control .ec-data-layers__detail-handle:hover,
+.ec-tab-panels.ol-control .ec-data-layers__detail-handle:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd);
+  outline: none;
+}
+
+.ec-tab-panels.ol-control .ec-data-layers__regroup-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--text-action-high-blue-france, #000091);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ec-tab-panels.ol-control .ec-data-layers__regroup-handle:hover,
+.ec-tab-panels.ol-control .ec-data-layers__regroup-handle:focus-visible {
+  background-color: var(--hover-tint, #e3e3fd);
+  outline: none;
+}
+
 .ec-tab-panels.ol-control .ec-data-layers__drag-handle:active {
   cursor: grabbing;
 }

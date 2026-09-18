@@ -18,7 +18,7 @@ Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dan
 - **Par défaut** : toutes les sections sont repliées (titres seuls).
 - Bouton **Légendes** dans [DataLayersManagerPanel](./DataLayersManagerPanel.md) → `openLegendForLayer(id)` : ouvre l’onglet, **déplie** la couche concernée et **scroll** pour placer son titre en haut du panneau.
 - Contenu déplié : liste d’entrées `LegendItem` (`title`, une ou plusieurs images **pct / lin / surf** sur la même ligne, ordre gpu-client).
-- **`onlyLegend: true`** : absent du catalogue et de Couches de données ; accordéon dédié ici si la tuile WMS est **active** sur la carte.
+- **`onlyLegend: true`** : absent du sélecteur catalogue ; ligne dans **Couches de données** si active ; légende ici (sans doublon si déjà dans la pile).
 - **Dédoublonnage** : une entrée déjà affichée (même libellé + mêmes symboles) n’est pas répétée ; un second accordéon au même **titre** et à la **même légende** est masqué (`dedupeLegendLayersForPanel`).
 - **Hors plage de zoom** LAYER_CONFIG : accordéon grisé (`ec-not-in-zoom-range`, même règle que le catalogue).
 - Pas de réglage d’opacité ici (réservé à [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
