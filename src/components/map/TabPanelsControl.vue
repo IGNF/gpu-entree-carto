@@ -76,7 +76,11 @@ const {
 )
 
 watch(
-  () => layers.value.filter((l) => l.inStack).map((l) => l.id).join(','),
+  () =>
+    layers.value
+      .filter((l) => l.inStack)
+      .map((l) => l.id)
+      .join(','),
   () => notifyStackOrder(),
   { immediate: true },
 )

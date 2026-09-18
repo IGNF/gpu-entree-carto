@@ -45,9 +45,7 @@ describe('collectDataLayersStackNodes', () => {
           title: 'Prescriptions',
           visible: true,
           gpuMapLayer: true,
-          children: [
-            { id: 'presc-leaf', title: 'Presc leaf', visible: true, gpuMapLayer: true },
-          ],
+          children: [{ id: 'presc-leaf', title: 'Presc leaf', visible: true, gpuMapLayer: true }],
         },
       ],
     },
@@ -68,12 +66,9 @@ describe('collectDataLayersStackNodes', () => {
     }
     const opacity = { doc: 70, com: 70, zone: 70, presc: 70, 'presc-leaf': 70 }
     const mapVis = computeMapVisibilityById(checked, index, opacity)
-    const ids = collectDataLayersStackNodes(
-      roots,
-      checked,
-      index.parentById,
-      mapVis,
-    ).map((n) => n.id)
+    const ids = collectDataLayersStackNodes(roots, checked, index.parentById, mapVis).map(
+      (n) => n.id,
+    )
     expect(ids).toContain('vue-ens')
     expect(ids).not.toContain('doc')
     expect(ids).not.toContain('com')
@@ -132,15 +127,10 @@ describe('collectDataLayersStackNodes', () => {
     const checked = { 'scot-v': true, sct: true }
     const mapVis = { sct: true }
     const sct = index.nodesById.get('sct')!
-    expect(
-      shouldShowInDataLayersStack(sct, checked, index.parentById, mapVis),
-    ).toBe(true)
-    const ids = collectDataLayersStackNodes(
-      roots,
-      checked,
-      index.parentById,
-      mapVis,
-    ).map((n) => n.id)
+    expect(shouldShowInDataLayersStack(sct, checked, index.parentById, mapVis)).toBe(true)
+    const ids = collectDataLayersStackNodes(roots, checked, index.parentById, mapVis).map(
+      (n) => n.id,
+    )
     expect(ids).toContain('sct')
   })
 
@@ -238,9 +228,7 @@ describe('catalogIdsForPanelOpacityWhenEntryAdjusted', () => {
             title: 'Groupe',
             visible: true,
             gpuVirtual: true,
-            children: [
-              { id: 'presc-leaf', title: 'Leaf', visible: true, gpuMapLayer: true },
-            ],
+            children: [{ id: 'presc-leaf', title: 'Leaf', visible: true, gpuMapLayer: true }],
           },
         ],
       },
@@ -264,17 +252,13 @@ describe('shouldShowInDataLayersStack', () => {
         title: 'Prescriptions',
         visible: true,
         gpuMapLayer: true,
-        children: [
-          { id: 'presc-leaf', title: 'Leaf', visible: true, gpuMapLayer: true },
-        ],
+        children: [{ id: 'presc-leaf', title: 'Leaf', visible: true, gpuMapLayer: true }],
       },
     ]
     const index = buildCatalogTreeIndex(roots)
     const checked = { presc: true, 'presc-leaf': true }
     const mapVis = { presc: true, 'presc-leaf': false }
     const leaf = index.nodesById.get('presc-leaf')!
-    expect(
-      shouldShowInDataLayersStack(leaf, checked, index.parentById, mapVis),
-    ).toBe(false)
+    expect(shouldShowInDataLayersStack(leaf, checked, index.parentById, mapVis)).toBe(false)
   })
 })

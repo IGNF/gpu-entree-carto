@@ -126,12 +126,7 @@ function showDropMarkerBefore(index: number): boolean {
       Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données.
     </p>
 
-    <ul
-      v-else
-      class="ec-data-layers__list"
-      @dragover="onListDragOver"
-      @drop.prevent="onDrop"
-    >
+    <ul v-else class="ec-data-layers__list" @dragover="onListDragOver" @drop.prevent="onDrop">
       <template v-for="(layer, index) in layers" :key="layer.id">
         <li
           v-if="showDropMarkerBefore(index)"
@@ -201,10 +196,7 @@ function showDropMarkerBefore(index: number): boolean {
               :aria-pressed="layer.visible"
               @click="toggleVisible(layer)"
             >
-              <i
-                :class="layer.visible ? 'ri-eye-line' : 'ri-eye-off-line'"
-                aria-hidden="true"
-              />
+              <i :class="layer.visible ? 'ri-eye-line' : 'ri-eye-off-line'" aria-hidden="true" />
               <span class="fr-sr-only">
                 {{ layer.visible ? 'Masquer' : 'Afficher' }} {{ layer.title }}
               </span>
@@ -224,19 +216,13 @@ function showDropMarkerBefore(index: number): boolean {
               type="button"
               class="ec-data-layers__icon-btn"
               :class="{ 'ec-data-layers__icon-btn--active': layer.grayscale }"
-              :title="
-                layer.grayscale
-                  ? 'Afficher en couleurs'
-                  : 'Afficher en niveaux de gris'
-              "
+              :title="layer.grayscale ? 'Afficher en couleurs' : 'Afficher en niveaux de gris'"
               :aria-pressed="layer.grayscale"
               @click="emit('toggle-grayscale', layer.id)"
             >
               <i class="ri-contrast-fill" aria-hidden="true" />
               <span class="fr-sr-only">
-                {{
-                  layer.grayscale ? 'Couleurs' : 'Niveaux de gris'
-                }}
+                {{ layer.grayscale ? 'Couleurs' : 'Niveaux de gris' }}
                 — {{ layer.title }}
               </span>
             </button>

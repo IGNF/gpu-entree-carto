@@ -3861,8 +3861,12 @@ i.ri-draw-line::before {
   margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
 }
 
-.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='top-right'] > .ec-geometry-editor__toolbar,
-.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='bottom-right'] > .ec-geometry-editor__toolbar {
+.ec-geometry-editor
+  > .ec-geometry-editor__tools-root[data-corner='top-right']
+  > .ec-geometry-editor__toolbar,
+.ec-geometry-editor
+  > .ec-geometry-editor__tools-root[data-corner='bottom-right']
+  > .ec-geometry-editor__toolbar {
   margin-inline-end: 0;
   margin-inline-start: calc(-1 * var(--ec-geom-tooltip-space));
 }
@@ -4777,52 +4781,52 @@ i.ri-draw-line::before {
   border-top: 1px solid var(--border-default-grey, #ddd);
 }
 
-.ec-catalog-tree[data-v-4d57a599] {
+.ec-catalog-tree[data-v-13c46eb0] {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.ec-catalog-tree--nested[data-v-4d57a599] {
+.ec-catalog-tree--nested[data-v-13c46eb0] {
   margin-top: 0.15rem;
 }
-.ec-catalog-tree__item[data-v-4d57a599] {
+.ec-catalog-tree__item[data-v-13c46eb0] {
   margin: 0;
 }
-.ec-catalog-tree__row[data-v-4d57a599] {
+.ec-catalog-tree__row[data-v-13c46eb0] {
   display: flex;
   align-items: flex-start;
   gap: 0.25rem;
   padding: 0.35rem 0;
   border-top: 1px solid var(--border-default-grey, #ddd);
 }
-.ec-catalog-tree__item:first-child > .ec-catalog-tree__row[data-v-4d57a599] {
+.ec-catalog-tree__item:first-child > .ec-catalog-tree__row[data-v-13c46eb0] {
   border-top: none;
 }
-.ec-catalog-tree__fold[data-v-4d57a599],
-.ec-catalog-tree__fold-placeholder[data-v-4d57a599] {
+.ec-catalog-tree__fold[data-v-13c46eb0],
+.ec-catalog-tree__fold-placeholder[data-v-13c46eb0] {
   flex: 0 0 2rem;
   width: 2rem;
   height: 2rem;
 }
-.ec-catalog-tree__fold[data-v-4d57a599] {
+.ec-catalog-tree__fold[data-v-13c46eb0] {
   padding: 0;
   min-height: 2rem;
 }
-.ec-catalog-tree__check[data-v-4d57a599] {
+.ec-catalog-tree__check[data-v-13c46eb0] {
   flex: 1 1 auto;
   margin: 0;
   min-width: 0;
 }
-.ec-catalog-tree__check .fr-label[data-v-4d57a599] {
+.ec-catalog-tree__check .fr-label[data-v-13c46eb0] {
   font-size: 0.875rem;
   line-height: 1.35;
 }
-.ec-catalog-tree__row--highlight[data-v-4d57a599] {
-  animation: ec-catalog-tree-highlight-4d57a599 2.5s ease-out;
+.ec-catalog-tree__row--highlight[data-v-13c46eb0] {
+  animation: ec-catalog-tree-highlight-13c46eb0 2.5s ease-out;
   background-color: var(--background-contrast-blue-france, #e8edff);
   border-radius: 0.25rem;
 }
-@keyframes ec-catalog-tree-highlight-4d57a599 {
+@keyframes ec-catalog-tree-highlight-13c46eb0 {
 0% {
     background-color: var(--background-open-blue-france, #e8edff);
 }
@@ -4831,10 +4835,10 @@ i.ri-draw-line::before {
 }
 }
 
-.ec-catalog-search[data-v-8b206578] {
+.ec-catalog-search[data-v-98af09f7] {
   margin: 0 0 1rem;
 }
-.ec-catalog-search__results[data-v-8b206578] {
+.ec-catalog-search__results[data-v-98af09f7] {
   margin: 0.75rem 0 0;
   padding: 0;
   list-style: none;
@@ -4843,24 +4847,24 @@ i.ri-draw-line::before {
   border: 1px solid var(--border-default-grey, #ddd);
   border-radius: 0.25rem;
 }
-.ec-catalog-search__result-row[data-v-8b206578] {
+.ec-catalog-search__result-row[data-v-98af09f7] {
   padding: 0.35rem 0.75rem;
   border-top: 1px solid var(--border-default-grey, #ddd);
 }
-.ec-catalog-search__result:first-child .ec-catalog-search__result-row[data-v-8b206578] {
+.ec-catalog-search__result:first-child .ec-catalog-search__result-row[data-v-98af09f7] {
   border-top: none;
 }
 
 /* Même disposition que `.ec-catalog-tree__check` (CatalogLayerTree) */
-.ec-catalog-search__check[data-v-8b206578] {
+.ec-catalog-search__check[data-v-98af09f7] {
   margin: 0;
   min-width: 0;
 }
-.ec-catalog-search__check .fr-label[data-v-8b206578] {
+.ec-catalog-search__check .fr-label[data-v-98af09f7] {
   font-size: 0.875rem;
   line-height: 1.35;
 }
-.ec-catalog-search__empty[data-v-8b206578] {
+.ec-catalog-search__empty[data-v-98af09f7] {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
@@ -5133,7 +5137,7 @@ i.ri-draw-line::before {
   text-decoration: none;
 }
 
-.ec-base-radio-list__title[data-v-e72d9cac] {
+.ec-base-radio-list__title[data-v-ba4d31e9] {
   margin: 0;
   border: none;
   background: transparent;
@@ -5142,11 +5146,11 @@ i.ri-draw-line::before {
   text-align: left;
   color: var(--text-title-grey, #161616);
 }
-.ec-base-radio-list__thumb-btn[data-v-e72d9cac] {
+.ec-base-radio-list__thumb-btn[data-v-ba4d31e9] {
   display: block;
   cursor: pointer;
 }
-.ec-base-radio-list__caret .fr-icon[data-v-e72d9cac] {
+.ec-base-radio-list__caret .fr-icon[data-v-ba4d31e9] {
   --icon-size: 1rem;
 }
 /*!
@@ -5209,7 +5213,9 @@ i.ri-draw-line::before {
   color: var(--text-title-grey, #161616);
 }
 
-.ec-tab-panels.ol-control .ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link::before {
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link::before {
   display: none;
 }
 
@@ -5267,7 +5273,7 @@ i.ri-draw-line::before {
   display: none !important;
 }
 
-.ec-layer-catalogue__title[data-v-dc28f81c] {
+.ec-layer-catalogue__title[data-v-e00379c6] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -5275,23 +5281,23 @@ i.ri-draw-line::before {
   font-size: 1.125rem;
   font-weight: 700;
 }
-.ec-layer-catalogue__title-icon[data-v-dc28f81c] {
+.ec-layer-catalogue__title-icon[data-v-e00379c6] {
   flex: 0 0 auto;
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
 }
-.ec-layer-catalogue__selection[data-v-dc28f81c] {
+.ec-layer-catalogue__selection[data-v-e00379c6] {
   margin-top: 1.5rem;
 }
-.ec-layer-catalogue__section-title[data-v-dc28f81c] {
+.ec-layer-catalogue__section-title[data-v-e00379c6] {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
-.ec-layer-catalogue__hint[data-v-dc28f81c] {
+.ec-layer-catalogue__hint[data-v-e00379c6] {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
@@ -5645,8 +5651,13 @@ i.ri-draw-line::before {
 
 .ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:hover,
 .ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus,
-.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus-visible {
-  background-color: var(--background-open-blue-france-hover, var(--background-open-blue-france)) !important;
+.ec-tab-panels.ol-control
+  .ec-layer-legends
+  button.fr-accordion__btn[aria-expanded='true']:focus-visible {
+  background-color: var(
+    --background-open-blue-france-hover,
+    var(--background-open-blue-france)
+  ) !important;
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
@@ -5996,27 +6007,27 @@ i.ri-draw-line::before {
  * Panneau latéral : pas de bordure / contour au survol ou au focus (OL, DSFR, navigateur).
  * Le soulignement de l’onglet catalogue actif est rétabli plus bas.
  */
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):hover,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):focus,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):focus-visible {
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):focus-visible {
   outline: none !important;
 }
 
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):hover,
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):hover,
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):focus,
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):focus,
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):focus-visible {
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):focus-visible {
   box-shadow: none !important;
   border: none !important;
 }

@@ -33,9 +33,7 @@ describe('layerConfigToTreeNodes visible', () => {
         ],
       },
     ])
-    const byTitle = Object.fromEntries(
-      flattenCatalogNodes(roots).map((n) => [n.title, n.visible]),
-    )
+    const byTitle = Object.fromEntries(flattenCatalogNodes(roots).map((n) => [n.title, n.visible]))
     expect(byTitle['Parent']).toBe(true)
     expect(byTitle['Enfant A']).toBe(true)
     expect(byTitle['Enfant B']).toBe(false)
@@ -94,13 +92,17 @@ describe('gpuLayerConfig paths', () => {
     const entries = layerConfigToCatalogEntries(layers)
     const names = new Set(
       entries
-        .filter((e) => e.config.name === 'dev-prescription' || e.config.name === 'dev-prescription_psmv')
+        .filter(
+          (e) => e.config.name === 'dev-prescription' || e.config.name === 'dev-prescription_psmv',
+        )
         .map((e) => e.config.name),
     )
     expect(names.has('dev-prescription')).toBe(true)
     expect(names.has('dev-prescription_psmv')).toBe(true)
     expect(
-      entries.filter((e) => e.config.name === 'dev-prescription' || e.config.name === 'dev-prescription_psmv').length,
+      entries.filter(
+        (e) => e.config.name === 'dev-prescription' || e.config.name === 'dev-prescription_psmv',
+      ).length,
     ).toBe(2)
   })
 })

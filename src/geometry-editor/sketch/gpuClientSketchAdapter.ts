@@ -45,10 +45,9 @@ function parseGpuStyle(raw: unknown): GpuClientSketchStyle | null {
   return raw as GpuClientSketchStyle
 }
 
-function parseGpuFont(textFont: string | null | undefined): Pick<
-  FeatureStyleAttrs,
-  'fontSize' | 'fontFamily' | 'fontBold' | 'fontItalic'
-> {
+function parseGpuFont(
+  textFont: string | null | undefined,
+): Pick<FeatureStyleAttrs, 'fontSize' | 'fontFamily' | 'fontBold' | 'fontItalic'> {
   const fallback = {
     fontSize: 14,
     fontFamily: 'Marianne, Calibri, sans-serif',

@@ -4,10 +4,7 @@
  */
 import { reactive } from 'vue'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
-import {
-  filterThumbnailLayersAtPreviewZoom,
-  wmtsPreviewTileUrl,
-} from '@/ol/gpuBaseLayerThumbnails'
+import { filterThumbnailLayersAtPreviewZoom, wmtsPreviewTileUrl } from '@/ol/gpuBaseLayerThumbnails'
 import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import '@/styles/base-layer-radio-list.css'
 
@@ -67,10 +64,7 @@ function select(id: GpuBaseLayerId) {
               :aria-label="`Sélectionner ${preset.label}`"
               @click="select(preset.id)"
             >
-              <span
-                v-if="previewLayers(preset).length"
-                class="ec-base-radio-list__thumb-stack"
-              >
+              <span v-if="previewLayers(preset).length" class="ec-base-radio-list__thumb-stack">
                 <img
                   v-for="(thumb, thumbIndex) in previewLayers(preset)"
                   :key="`${preset.id}-${thumbIndex}-${thumb.layer}`"

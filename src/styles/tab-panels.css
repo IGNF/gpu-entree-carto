@@ -271,27 +271,27 @@
  * Panneau latéral : pas de bordure / contour au survol ou au focus (OL, DSFR, navigateur).
  * Le soulignement de l’onglet catalogue actif est rétabli plus bas.
  */
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):hover,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):focus,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):focus-visible {
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):hover,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):focus,
+.ec-tab-panels.ol-control .ec-tab-panels__panel-body button:not(.fr-accordion__btn):focus-visible {
   outline: none !important;
 }
 
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):hover,
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):hover,
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):focus,
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):focus,
 .ec-tab-panels.ol-control
   .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):focus-visible {
+  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):focus-visible {
   box-shadow: none !important;
   border: none !important;
 }

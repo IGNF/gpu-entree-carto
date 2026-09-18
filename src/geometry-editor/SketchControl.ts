@@ -379,9 +379,7 @@ export class SketchControl extends Control {
   private mountDrawBar(map: Map): void {
     if (!this.layer) return
     this.drawBar?.destroy()
-    this.history = this.historyEnabled
-      ? new SketchHistory(this.source, () => map)
-      : null
+    this.history = this.historyEnabled ? new SketchHistory(this.source, () => map) : null
     this.stylePopup?.destroy()
     this.stylePopup = null
     if (this.enableFeatureStyleEditor) {

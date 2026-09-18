@@ -191,7 +191,10 @@ function isPsmvLayerName(layerName: string): boolean {
   return layerName.slice(-5) === '_psmv'
 }
 
-function hasLegendReferences(layerName: string, refs: GpuLegendBuildOptions['legendReferences']): boolean {
+function hasLegendReferences(
+  layerName: string,
+  refs: GpuLegendBuildOptions['legendReferences'],
+): boolean {
   return layerName in refs
 }
 
@@ -237,7 +240,11 @@ function getImageNameByGpuLayer(
   return imageName
 }
 
-function getImageNameByLegendReferences(layerName: string, ruleName: string, type?: string): string {
+function getImageNameByLegendReferences(
+  layerName: string,
+  ruleName: string,
+  type?: string,
+): string {
   if (type) return `${type}/${ruleName}`
   return `${normalizeLayerNameForLegend(layerName)}/${ruleName}`
 }
@@ -372,7 +379,15 @@ function buildNoFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions
         }
       }
     }
-    pushLegendItemsFromNames(items, names, ref.title, opts, scaleDependant, threshold, layerName + ruleName)
+    pushLegendItemsFromNames(
+      items,
+      names,
+      ref.title,
+      opts,
+      scaleDependant,
+      threshold,
+      layerName + ruleName,
+    )
   }
   return items
 }
@@ -394,7 +409,15 @@ function buildFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions):
       const names = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, null, g))
       const ref = getLegendReference(layerName, rule, opts.legendReferences)
       if (!ref || ref.hide) continue
-      pushLegendItemsFromNames(items, names, ref.title, opts, scaleDependant, threshold, `${layerName}${rule}`)
+      pushLegendItemsFromNames(
+        items,
+        names,
+        ref.title,
+        opts,
+        scaleDependant,
+        threshold,
+        `${layerName}${rule}`,
+      )
     } else {
       for (const subRule of subRules) {
         const geometryTypes = getGeometryTypesForLegendWithFilterAndSubFilter(
@@ -482,9 +505,7 @@ export function readGpuLegendBuildOptions(zoomAtInit = 6): GpuLegendBuildOptions
   const w = typeof window !== 'undefined' ? window : undefined
   const legendConfig = readLegendConfigArray(w?.LEGEND_CONFIG)
   const legendReferences = (
-    w?.LEGEND_REFERENCES && typeof w.LEGEND_REFERENCES === 'object'
-      ? w.LEGEND_REFERENCES
-      : {}
+    w?.LEGEND_REFERENCES && typeof w.LEGEND_REFERENCES === 'object' ? w.LEGEND_REFERENCES : {}
   ) as Record<string, Record<string, LegendReferenceEntry>>
 
   return {

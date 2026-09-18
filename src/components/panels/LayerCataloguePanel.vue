@@ -63,11 +63,7 @@ function onUnpinExpand(nodeId: string) {
       Catalogue
     </h2>
 
-    <nav
-      class="fr-nav ec-layer-catalogue__nav"
-      role="tablist"
-      aria-label="Catalogue de couches"
-    >
+    <nav class="fr-nav ec-layer-catalogue__nav" role="tablist" aria-label="Catalogue de couches">
       <ul class="fr-nav__list">
         <li class="fr-nav__item">
           <button

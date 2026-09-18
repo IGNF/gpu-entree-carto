@@ -53,8 +53,13 @@
 
 .ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:hover,
 .ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus,
-.ec-tab-panels.ol-control .ec-layer-legends button.fr-accordion__btn[aria-expanded='true']:focus-visible {
-  background-color: var(--background-open-blue-france-hover, var(--background-open-blue-france)) !important;
+.ec-tab-panels.ol-control
+  .ec-layer-legends
+  button.fr-accordion__btn[aria-expanded='true']:focus-visible {
+  background-color: var(
+    --background-open-blue-france-hover,
+    var(--background-open-blue-france)
+  ) !important;
   outline: none !important;
   box-shadow: none !important;
   border: none !important;

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import { catalogNodesMatchingSearch, flattenCatalogSwitcherNodes } from '@/lib/layerConfig/catalogTreeSearch'
+import {
+  catalogNodesMatchingSearch,
+  flattenCatalogSwitcherNodes,
+} from '@/lib/layerConfig/catalogTreeSearch'
 
 describe('catalogTreeSearch', () => {
   const roots: TreeLayerNode[] = [

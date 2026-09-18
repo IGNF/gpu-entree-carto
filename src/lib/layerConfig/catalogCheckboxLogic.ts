@@ -62,10 +62,7 @@ export function isAscendentParentAggregateActive(
   if (split?.has(parent.id)) {
     return isAscendentParentAggregateActive(checked, parent, index, opacityById, options)
   }
-  if (
-    isCatalogAggregate(parent) &&
-    isSameAsDescendants(checked, parent, index, opacityById)
-  ) {
+  if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index, opacityById)) {
     return true
   }
   return isAscendentParentAggregateActive(checked, parent, index, opacityById, options)

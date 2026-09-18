@@ -2,10 +2,7 @@ import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { LegendItem } from '@/types/stubs'
 import { dedupeLegendItems } from '@/lib/layerConfig/gpuLegendItems'
 import { isCatalogAggregate } from '@/lib/layerConfig/catalogCheckboxLogic'
-import {
-  catalogChildNodes,
-  catalogNodeOpacityPercent,
-} from '@/lib/layerConfig/catalogLayerTargets'
+import { catalogChildNodes, catalogNodeOpacityPercent } from '@/lib/layerConfig/catalogLayerTargets'
 
 export type PanelLayerState = {
   visible: boolean
@@ -51,11 +48,7 @@ export function hasActiveMapAggregateAncestor(
 ): boolean {
   let parent = parentById.get(node.id) ?? null
   while (parent) {
-    if (
-      isCatalogAggregate(parent) &&
-      parent.gpuMapLayer &&
-      Boolean(mapVisibilityById[parent.id])
-    ) {
+    if (isCatalogAggregate(parent) && parent.gpuMapLayer && Boolean(mapVisibilityById[parent.id])) {
       return true
     }
     parent = parentById.get(parent.id) ?? null
@@ -154,11 +147,7 @@ export function catalogIdsForPanelOpacityWhenEntryAdjusted(
   node: TreeLayerNode,
   mapVisibilityById: Record<string, boolean>,
 ): string[] {
-  if (
-    isCatalogAggregate(node) &&
-    node.gpuMapLayer &&
-    mapVisibilityById[node.id]
-  ) {
+  if (isCatalogAggregate(node) && node.gpuMapLayer && mapVisibilityById[node.id]) {
     const ids: string[] = []
     function walk(n: TreeLayerNode) {
       if (n.gpuForceOpacity) {

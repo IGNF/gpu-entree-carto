@@ -68,7 +68,10 @@ function createWmsTileLayer(
     TILED: true,
   }
   if (cql) {
-    params.cql_filter = layerName.split(',').map(() => cql).join(';')
+    params.cql_filter = layerName
+      .split(',')
+      .map(() => cql)
+      .join(';')
   }
 
   const minZoom = layer.minZoomLevel ?? 0
@@ -83,11 +86,7 @@ function createWmsTileLayer(
       tileGrid: createXYZ({ tileSize: 512 }),
     }),
     visible: false,
-    opacity: layer.forceOpacity
-      ? 1
-      : typeof layer.opacity === 'number'
-        ? layer.opacity
-        : 0.7,
+    opacity: layer.forceOpacity ? 1 : typeof layer.opacity === 'number' ? layer.opacity : 0.7,
     minResolution: zoomToResolution(maxZoom + 0.5),
     maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
     zIndex: layer.zIndex ? Number(layer.zIndex) : undefined,

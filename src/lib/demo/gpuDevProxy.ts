@@ -17,9 +17,7 @@ export function rewriteLocalGpuSiteUrl(url: string): string {
 }
 
 /** Réécrit les URLs gpu-site dans `config` et `window.gpu.config`. */
-export function rewriteGpuConfigUrlsForViteDev(
-  target: Record<string, unknown>,
-): void {
+export function rewriteGpuConfigUrlsForViteDev(target: Record<string, unknown>): void {
   if (!isViteDevBrowser()) return
   for (const key of Object.keys(target)) {
     const val = target[key]

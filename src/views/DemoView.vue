@@ -43,9 +43,7 @@ const mapZoom = ref(demoCfg.map?.zoom ?? 6)
 const mapLayers = computed(() => gpuBaseEnv.allLayers)
 
 const handoff = takeLocationHandoff()
-const initialSearch = ref<StandardViewerSearch | null>(
-  handoff ?? demoCfg.map?.search ?? null,
-)
+const initialSearch = ref<StandardViewerSearch | null>(handoff ?? demoCfg.map?.search ?? null)
 const layerNodes = ref<TreeLayerNode[]>(resolveDemoLayerNodes(demoCfg))
 const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const pendingBbox = ref<number[] | null>(

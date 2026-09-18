@@ -49,11 +49,7 @@ function rowInZoomRange(node: TreeLayerNode): boolean {
         aria-describedby="ec-catalog-layer-search-messages"
         autocomplete="off"
       />
-      <div
-        id="ec-catalog-layer-search-messages"
-        class="fr-messages-group"
-        aria-live="polite"
-      />
+      <div id="ec-catalog-layer-search-messages" class="fr-messages-group" aria-live="polite" />
     </div>
 
     <ul v-if="query.trim() && results.length" class="ec-catalog-search__results">
@@ -81,11 +77,7 @@ function rowInZoomRange(node: TreeLayerNode): boolean {
       </li>
     </ul>
 
-    <p
-      v-else-if="query.trim() && !results.length"
-      class="ec-catalog-search__empty"
-      role="status"
-    >
+    <p v-else-if="query.trim() && !results.length" class="ec-catalog-search__empty" role="status">
       Aucune couche ne correspond à « {{ query.trim() }} ».
     </p>
   </div>

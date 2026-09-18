@@ -26,9 +26,7 @@ export function ignGeoportalAttributionsImgDir(override?: string): string {
  * Attributions HTML des couches WMTS Géoplateforme — alignées sur
  * gpu-client `helper.createGeoportalLayer` / `createWMTSSource`.
  */
-export function ignGeoportalAttributions(
-  options: IgnGeoportalAttributionOptions = {},
-): string[] {
+export function ignGeoportalAttributions(options: IgnGeoportalAttributionOptions = {}): string[] {
   const year =
     options.yearOfIgnCopyright ??
     (typeof config.yearOfIgnCopyright === 'number' ? config.yearOfIgnCopyright : 2019)

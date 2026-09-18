@@ -7,8 +7,8 @@ Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dan
 
 ## Props
 
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
+| Prop     | Type             | Description                                                                                                                                |
+| -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `layers` | `ManagedLayer[]` | Pile **Couches de données** (`visible` + légende) + couches **`onlyLegend`** actives sur la carte (`legendLayers` dans `useManagedLayers`) |
 
 ## Comportement

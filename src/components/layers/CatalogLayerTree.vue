@@ -6,10 +6,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { catalogDomIdFromNodeId } from '@/lib/layerConfig/catalogTreeSearch'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import { catalogSwitcherDisplayNodes } from '@/lib/layerConfig/catalogLayerTargets'
-import {
-  catalogAncestorIdsToExpand,
-  flattenCatalogNodes,
-} from '@/lib/layerConfig/catalogTreeIndex'
+import { catalogAncestorIdsToExpand, flattenCatalogNodes } from '@/lib/layerConfig/catalogTreeIndex'
 import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 
 const props = defineProps<{
@@ -44,9 +41,10 @@ const expandAncestorIds = computed(() => {
 const collapsedById = ref<Record<string, boolean>>({})
 
 watch(
-  () => flattenCatalogNodes(props.catalogRoots ?? props.nodes)
-    .map((n) => n.id)
-    .join('|'),
+  () =>
+    flattenCatalogNodes(props.catalogRoots ?? props.nodes)
+      .map((n) => n.id)
+      .join('|'),
   () => {
     collapsedById.value = {}
   },

@@ -34,13 +34,13 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 
 ## Outils `extraTools`
 
-| Id                | Comportement                                                                                                                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification                 |
-| `Import`          | Fichier GeoJSON ou KML → features croquis                                                                                                                  |
-| `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                                         |
+| Id                | Comportement                                                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification   |
+| `Import`          | Fichier GeoJSON ou KML → features croquis                                                                                                    |
+| `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                           |
 | `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ri-ruler-line` |
-| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size` |
+| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size`                                                         |
 
 ## Popup style (`enableFeatureStyleEditor`)
 
@@ -106,7 +106,7 @@ const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
 | `onChange`                 | —            | Callback après dessin / modif / suppression                    |
 | `localStorageKey`          | `null`       | Clé `localStorage` (restore + bouton Enregistrer)              |
 | `clearAll`                 | `false`      | Bouton tout supprimer                                          |
-| `history`                  | `false`      | Annuler / Rétablir (persisté au Enregistrer, `{clé}:history`)   |
+| `history`                  | `false`      | Annuler / Rétablir (persisté au Enregistrer, `{clé}:history`)  |
 | `extraTools`               | `[]`         | Text, Import, Export, Measure*                                 |
 | `enableFeatureStyleEditor` | `false`      | Popup de style à la création (+ icône palette en modification) |
 

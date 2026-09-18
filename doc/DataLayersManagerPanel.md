@@ -8,14 +8,14 @@ Onglet **Couches de données** : réglage (visibilité, opacité, niveaux de gri
 
 ## Règle d’affichage
 
-| Condition | Couches de données |
-| --------- | ------------------ |
-| Case cochée + tuile WMS **affichée** sur la carte | **Une ligne** |
-| Agrégat WMS actif (`computeMapVisibilityById`) | Ligne **parent** uniquement ; **Détailler** (`ri-list-unordered`, à gauche de Légendes) → tuiles **enfants directs** séparées (le détail **ne se désactive pas** si les opacités redeviennent identiques) ; **Regrouper** (`ri-separator`, sur chaque enfant direct) → restaure l’agrégat (opacité mémorisée au moment du détail ; visibilité / grisé déduits des enfants) |
-| `forceOpacity: true` | **Aucune ligne** dans le panneau ; tuile WMS toujours **au-dessus** des autres (z-index max, non affectée par le drag des couches visibles) |
-| `hideLayers: true` | Ligne **parent** seule (enfants masqués du sélecteur et du panneau) |
-| Dossier virtual sans `hideLayers` | Pas de ligne (seules les feuilles WMS actives apparaissent) |
-| `onlyLegend: true` | **Une ligne** si cochée et tuile active (ex. schéma de cohérence) ; absent du sélecteur catalogue mais pilotable ici (opacité, œil, retrait) |
+| Condition                                         | Couches de données                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Case cochée + tuile WMS **affichée** sur la carte | **Une ligne**                                                                                                                                                                                                                                                                                                                                                              |
+| Agrégat WMS actif (`computeMapVisibilityById`)    | Ligne **parent** uniquement ; **Détailler** (`ri-list-unordered`, à gauche de Légendes) → tuiles **enfants directs** séparées (le détail **ne se désactive pas** si les opacités redeviennent identiques) ; **Regrouper** (`ri-separator`, sur chaque enfant direct) → restaure l’agrégat (opacité mémorisée au moment du détail ; visibilité / grisé déduits des enfants) |
+| `forceOpacity: true`                              | **Aucune ligne** dans le panneau ; tuile WMS toujours **au-dessus** des autres (z-index max, non affectée par le drag des couches visibles)                                                                                                                                                                                                                                |
+| `hideLayers: true`                                | Ligne **parent** seule (enfants masqués du sélecteur et du panneau)                                                                                                                                                                                                                                                                                                        |
+| Dossier virtual sans `hideLayers`                 | Pas de ligne (seules les feuilles WMS actives apparaissent)                                                                                                                                                                                                                                                                                                                |
+| `onlyLegend: true`                                | **Une ligne** si cochée et tuile active (ex. schéma de cohérence) ; absent du sélecteur catalogue mais pilotable ici (opacité, œil, retrait)                                                                                                                                                                                                                               |
 
 Pas de **lignes** parent ↔ enfant synchronisées dans le panneau. Chaque ligne pilote les tuiles WMS qu’elle représente (`wmsIdsControlledByDataLayersPanelEntry`). Exception **opacité** : si un **agrégat** est la tuile active sur la carte, la valeur est répliquée sur **tout** le sous-arbre catalogue (`catalogIdsForPanelOpacityWhenEntryAdjusted`, nœuds `virtual` inclus) pour conserver le mode agrégat gpu-client (`isSameAsDescendants`).
 
@@ -25,17 +25,17 @@ Les lignes **hors plage** `minZoomLevel` / `maxZoomLevel` (LAYER_CONFIG) sont **
 
 ## Props / events
 
-| Prop / event | Type | Description |
-| ------------ | ---- | ----------- |
-| `layers` | `ManagedLayer[]` | Ordre par **clés de tri** (`stackSortKeyById`, drag) ; entrées décochées **conservent** leur clé ; le drag ne réordonne que les couches actives ; recocher → position catalogue préservée |
-| `@visible` | `(id, visible)` | Œil afficher / masquer (WMS contrôlés par la ligne) |
-| `@opacity` | `(id, opacity)` | Opacité 0–100 % |
-| `@toggle-grayscale` | `(id)` | Niveaux de gris |
-| `@remove` | `(id)` | Décoche dans le catalogue |
-| `@reorder` | `(fromIndex, toInsertBefore)` | Réordonne la pile ; applique le z-index carte (bas → haut) |
-| `@enable-aggregate-detail` | `(aggregateId)` | Active le mode **détaillé** (`splitAggregateIds`, snapshot opacité / visibilité / grisé) |
-| `@regroup-aggregate` | `(aggregateId)` | Regroupe l’agrégat et désactive le mode détaillé |
-| (détail activé) | — | Les clés de tri (`catalogStackDisplayOrder`) **remplacent** l’agrégat par ses **enfants directs contigus**, dans l’**ordre catalogue** (plus d’éclatement dans la pile globale) |
+| Prop / event               | Type                          | Description                                                                                                                                                                               |
+| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layers`                   | `ManagedLayer[]`              | Ordre par **clés de tri** (`stackSortKeyById`, drag) ; entrées décochées **conservent** leur clé ; le drag ne réordonne que les couches actives ; recocher → position catalogue préservée |
+| `@visible`                 | `(id, visible)`               | Œil afficher / masquer (WMS contrôlés par la ligne)                                                                                                                                       |
+| `@opacity`                 | `(id, opacity)`               | Opacité 0–100 %                                                                                                                                                                           |
+| `@toggle-grayscale`        | `(id)`                        | Niveaux de gris                                                                                                                                                                           |
+| `@remove`                  | `(id)`                        | Décoche dans le catalogue                                                                                                                                                                 |
+| `@reorder`                 | `(fromIndex, toInsertBefore)` | Réordonne la pile ; applique le z-index carte (bas → haut)                                                                                                                                |
+| `@enable-aggregate-detail` | `(aggregateId)`               | Active le mode **détaillé** (`splitAggregateIds`, snapshot opacité / visibilité / grisé)                                                                                                  |
+| `@regroup-aggregate`       | `(aggregateId)`               | Regroupe l’agrégat et désactive le mode détaillé                                                                                                                                          |
+| (détail activé)            | —                             | Les clés de tri (`catalogStackDisplayOrder`) **remplacent** l’agrégat par ses **enfants directs contigus**, dans l’**ordre catalogue** (plus d’éclatement dans la pile globale)           |
 
 ## Ordre et z-index
 

@@ -80182,11 +80182,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const mapVis = catalogMapVisibility();
       const nodesBottomToTop = [...stackNodesForDisplayOrder()].reverse();
       const panelWms = dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis);
-      const ordered = mergeWmsStackOrderWithForceOpacityOnTop(
-        panelWms,
-        treeIndex.roots,
-        mapVis
-      );
+      const ordered = mergeWmsStackOrderWithForceOpacityOnTop(panelWms, treeIndex.roots, mapVis);
       (_a = mapHooks == null ? void 0 : mapHooks.onStackOrder) == null ? void 0 : _a.call(mapHooks, ordered);
     }
     function notifyStackOrder() {
@@ -80261,18 +80257,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         nodes.value,
         catalogChecked.value,
         mapVis
-      ).filter((node) => !seen.has(node.id)).map(
-        (node) => ({
-          id: node.id,
-          title: node.title,
-          inStack: false,
-          visible: true,
-          opacity: catalogNodeOpacityPercent(node),
-          grayscale: false,
-          forceOpacity: false,
-          legend: node.legend
-        })
-      );
+      ).filter((node) => !seen.has(node.id)).map((node) => ({
+        id: node.id,
+        title: node.title,
+        inStack: false,
+        visible: true,
+        opacity: catalogNodeOpacityPercent(node),
+        grayscale: false,
+        forceOpacity: false,
+        legend: node.legend
+      }));
       return [...fromStack, ...onlyLegendRows];
     });
     const catalogCheckedById = computed(() => {
@@ -80717,7 +80711,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-4d57a599"]]);
+  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-13c46eb0"]]);
   const _hoisted_1$7 = {
     class: "ec-catalog-search",
     role: "search"
@@ -80812,7 +80806,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-8b206578"]]);
+  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-98af09f7"]]);
   const GPU_TILE_LAYER_SWITCHER_TILE_COORD = [9, 253, -177];
   const GPU_PREVIEW_TILE_RESOLUTION = 156543.03392804097 / 2 ** GPU_TILE_LAYER_SWITCHER_TILE_COORD[0];
   function wmtsPreviewTileRow(storedRow) {
@@ -80979,7 +80973,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-e72d9cac"]]);
+  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-ba4d31e9"]]);
   const _hoisted_1$5 = {
     class: "ec-layer-catalogue",
     "aria-labelledby": "ec-layer-catalogue-title"
@@ -81139,7 +81133,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-dc28f81c"]]);
+  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-e00379c6"]]);
   const _hoisted_1$4 = {
     class: "ec-data-layers",
     "aria-labelledby": "ec-data-layers-title"

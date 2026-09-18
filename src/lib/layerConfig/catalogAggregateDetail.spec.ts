@@ -49,12 +49,9 @@ describe('catalog aggregate detail (split)', () => {
     expect(splitVis['presc-a']).toBe(true)
     expect(splitVis['presc-b']).toBe(true)
 
-    const stackIds = collectDataLayersStackNodes(
-      roots,
-      checked,
-      index.parentById,
-      splitVis,
-    ).map((n) => n.id)
+    const stackIds = collectDataLayersStackNodes(roots, checked, index.parentById, splitVis).map(
+      (n) => n.id,
+    )
     expect(stackIds).not.toContain('presc')
     expect(stackIds).toContain('presc-a')
     expect(stackIds).toContain('presc-b')
@@ -79,8 +76,7 @@ describe('catalog aggregate detail (split)', () => {
   it('boutons détailler / regrouper', () => {
     const emptySplit = new Set<string>()
     expect(
-      aggregateDetailToggleForStackNode(index.nodesById.get('presc')!, emptySplit)
-        ?.aggregateId,
+      aggregateDetailToggleForStackNode(index.nodesById.get('presc')!, emptySplit)?.aggregateId,
     ).toBe('presc')
 
     const split = new Set(['presc'])

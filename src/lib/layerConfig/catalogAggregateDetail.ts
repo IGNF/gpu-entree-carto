@@ -1,5 +1,8 @@
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import { isCatalogAggregate, type MapVisibilityComputeOptions } from '@/lib/layerConfig/catalogCheckboxLogic'
+import {
+  isCatalogAggregate,
+  type MapVisibilityComputeOptions,
+} from '@/lib/layerConfig/catalogCheckboxLogic'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import type { CatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
 import type { PanelLayerState } from '@/lib/layerConfig/catalogDataLayersStack'
@@ -76,10 +79,8 @@ export function aggregatePanelStateAfterRegroup(
   savedAggregateState: PanelLayerState,
   childStates: PanelLayerState[],
 ): PanelLayerState {
-  const visible =
-    childStates.length > 0 && childStates.some((s) => s.visible)
-  const grayscale =
-    childStates.length > 0 && childStates.every((s) => s.grayscale)
+  const visible = childStates.length > 0 && childStates.some((s) => s.visible)
+  const grayscale = childStates.length > 0 && childStates.every((s) => s.grayscale)
   return {
     opacity: savedAggregateState.opacity,
     visible,

@@ -37,9 +37,9 @@ describe('dedupeLegendItems', () => {
 
 describe('normalizeLegendImageBaseUrl', () => {
   it('retire la query et force le slash final', () => {
-    expect(normalizeLegendImageBaseUrl('http://127.0.0.1:8000/build/gpu/images/map_legend/?v6')).toBe(
-      'http://127.0.0.1:8000/build/gpu/images/map_legend/',
-    )
+    expect(
+      normalizeLegendImageBaseUrl('http://127.0.0.1:8000/build/gpu/images/map_legend/?v6'),
+    ).toBe('http://127.0.0.1:8000/build/gpu/images/map_legend/')
   })
 })
 
@@ -117,9 +117,7 @@ describe('buildLegendItemsForGpuLayer filter + LEGEND_CONFIG', () => {
       legendReferences: {
         prescription: { '03': { title: 'Type 03' } },
       },
-      legendConfig: [
-        { name: 'prescription_surf', allowedValues: ['03'] },
-      ],
+      legendConfig: [{ name: 'prescription_surf', allowedValues: ['03'] }],
     }
     const items = buildLegendItemsForGpuLayer(parent, optsPresc)
     expect(items.length).toBeGreaterThan(0)

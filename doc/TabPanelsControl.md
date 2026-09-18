@@ -21,30 +21,30 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 
 ## Onglets
 
-| #   | Icône                         | Contenu |
-| --- | ----------------------------- | ------- |
-| 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — fiche structurée (`FicheInfoPanel`) ; données brutes (`raw`) en bas si présentes |
-| 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR *Données* ([CatalogLayerTree](./CatalogLayerTree.md)) et *Fonds de cartes* ([BaseLayerRadioList](./BaseLayerRadioList.md)) |
-| 2   | Remix `ri-stack-line`         | **Couches de données** — pile des couches cochées dans le catalogue : visibilité, opacité, ordre, retrait |
-| 3   | Remix `ri-list-indefinite`    | **Légendes** — légendes des couches visibles de la pile |
+| #   | Icône                         | Contenu                                                                                                                                                      |
+| --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — fiche structurée (`FicheInfoPanel`) ; données brutes (`raw`) en bas si présentes                                           |
+| 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR _Données_ ([CatalogLayerTree](./CatalogLayerTree.md)) et _Fonds de cartes_ ([BaseLayerRadioList](./BaseLayerRadioList.md)) |
+| 2   | Remix `ri-stack-line`         | **Couches de données** — pile des couches cochées dans le catalogue : visibilité, opacité, ordre, retrait                                                    |
+| 3   | Remix `ri-list-indefinite`    | **Légendes** — légendes des couches visibles de la pile                                                                                                      |
 
 Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
 
 ## Props
 
-| Prop             | Type                    | Description                             |
-| ---------------- | ----------------------- | --------------------------------------- |
-| `basePresets`    | `GpuBaseLayerPreset[]`  | Fonds pour le catalogue → Fonds de cartes |
-| `baseModelValue` | `GpuBaseLayerId`        | Fond actif (`v-model:base-model-value`) |
-| `layerNodes`     | `TreeLayerNode[]`       | Catalogue *Données* / pile / légendes   |
-| `layerMapHooks`  | `LayerMapHooks?`        | Callbacks visibilité / opacité → carte (WMS démo) |
+| Prop             | Type                   | Description                                       |
+| ---------------- | ---------------------- | ------------------------------------------------- |
+| `basePresets`    | `GpuBaseLayerPreset[]` | Fonds pour le catalogue → Fonds de cartes         |
+| `baseModelValue` | `GpuBaseLayerId`       | Fond actif (`v-model:base-model-value`)           |
+| `layerNodes`     | `TreeLayerNode[]`      | Catalogue _Données_ / pile / légendes             |
+| `layerMapHooks`  | `LayerMapHooks?`       | Callbacks visibilité / opacité → carte (WMS démo) |
 
 ## Events
 
-| Event            | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `toggle-layer`   | Visibilité carte (`id`, `visible`)               |
-| `update:baseModelValue` | Changement de fond de plan                |
+| Event                   | Description                        |
+| ----------------------- | ---------------------------------- |
+| `toggle-layer`          | Visibilité carte (`id`, `visible`) |
+| `update:baseModelValue` | Changement de fond de plan         |
 
 ## API (`TabPanelsApi`)
 
@@ -58,11 +58,11 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 
 ## Composants panneau
 
-| Composant | Fichier |
-| --------- | ------- |
-| `LayerCataloguePanel` | `src/components/panels/LayerCataloguePanel.vue` |
+| Composant                | Fichier                                                  |
+| ------------------------ | -------------------------------------------------------- |
+| `LayerCataloguePanel`    | `src/components/panels/LayerCataloguePanel.vue`          |
 | `DataLayersManagerPanel` | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md) |
-| `LayerLegendsPanel` | [LayerLegendsPanel.md](./LayerLegendsPanel.md) |
+| `LayerLegendsPanel`      | [LayerLegendsPanel.md](./LayerLegendsPanel.md)           |
 
 ## Intégration localisation
 

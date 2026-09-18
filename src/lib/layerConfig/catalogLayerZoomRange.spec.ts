@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
-import { isCatalogNodeInZoomRange, isZoomInLayerRange } from '@/lib/layerConfig/catalogLayerZoomRange'
+import {
+  isCatalogNodeInZoomRange,
+  isZoomInLayerRange,
+} from '@/lib/layerConfig/catalogLayerZoomRange'
 
 describe('isZoomInLayerRange', () => {
   it('inclut les bornes min et max', () => {

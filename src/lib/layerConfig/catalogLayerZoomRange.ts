@@ -31,7 +31,10 @@ export function isCatalogNodeInZoomRange(node: TreeLayerNode, zoom: number): boo
   const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM
   const children = catalogChildNodes(node)
 
-  if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
+  if (
+    node.gpuMapLayer &&
+    (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)
+  ) {
     return isZoomInLayerRange(zoom, min, max)
   }
 

@@ -34,9 +34,7 @@ export function catalogSwitcherDisplayNodes(nodes: TreeLayerNode[]): TreeLayerNo
       out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)))
       continue
     }
-    const children = node.children?.length
-      ? catalogSwitcherDisplayNodes(node.children)
-      : undefined
+    const children = node.children?.length ? catalogSwitcherDisplayNodes(node.children) : undefined
     out.push({
       ...node,
       children: children?.length ? children : undefined,

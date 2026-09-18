@@ -3730,8 +3730,12 @@ i.ri-draw-line::before {
   margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
 }
 
-.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='top-right'] > .ec-geometry-editor__toolbar,
-.ec-geometry-editor > .ec-geometry-editor__tools-root[data-corner='bottom-right'] > .ec-geometry-editor__toolbar {
+.ec-geometry-editor
+  > .ec-geometry-editor__tools-root[data-corner='top-right']
+  > .ec-geometry-editor__toolbar,
+.ec-geometry-editor
+  > .ec-geometry-editor__tools-root[data-corner='bottom-right']
+  > .ec-geometry-editor__toolbar {
   margin-inline-end: 0;
   margin-inline-start: calc(-1 * var(--ec-geom-tooltip-space));
 }

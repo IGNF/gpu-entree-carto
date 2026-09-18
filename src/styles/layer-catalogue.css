@@ -48,7 +48,9 @@
   color: var(--text-title-grey, #161616);
 }
 
-.ec-tab-panels.ol-control .ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link::before {
+.ec-tab-panels.ol-control
+  .ec-layer-catalogue__nav
+  button.ec-layer-catalogue__tab.fr-nav__link::before {
   display: none;
 }
 

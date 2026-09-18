@@ -72,9 +72,7 @@ function buildTreeLevel(
       ...legendOpts,
       ancestorLayers: [...ancestorLayers],
     }
-    const legend = underHideLayersParent
-      ? []
-      : buildLegendItemsForGpuLayer(layer, legendContext)
+    const legend = underHideLayersParent ? [] : buildLegendItemsForGpuLayer(layer, legendContext)
 
     const node: TreeLayerNode = {
       id,
@@ -116,10 +114,7 @@ function buildTreeLevel(
   return nodes
 }
 
-export function layerConfigToTreeNodes(
-  layers: GpuLayerConfig[],
-  zoomAtInit = 6,
-): TreeLayerNode[] {
+export function layerConfigToTreeNodes(layers: GpuLayerConfig[], zoomAtInit = 6): TreeLayerNode[] {
   const legendOpts = readGpuLegendBuildOptions(zoomAtInit)
   return buildTreeLevel(layers, '', [], legendOpts)
 }

@@ -34,11 +34,11 @@ describe('buildFullOrderAfterActiveReorder', () => {
 describe('aggregate split sort keys', () => {
   it('remplace l’agrégat par les enfants contigus (ordre catalogue)', () => {
     expect(
-      activeTopToBottomReplacingAggregateWithChildren(
-        ['vue', 'agg', 'other'],
-        'agg',
-        ['c1', 'c2', 'c3'],
-      ),
+      activeTopToBottomReplacingAggregateWithChildren(['vue', 'agg', 'other'], 'agg', [
+        'c1',
+        'c2',
+        'c3',
+      ]),
     ).toEqual(['vue', 'c1', 'c2', 'c3', 'other'])
 
     let keys = ensureStackSortKeys({}, ['vue', 'agg', 'other'])

@@ -4,15 +4,15 @@ Liste verticale de **boutons radio** pour les fonds de plan, avec **vignette** e
 
 **Source :** `src/components/layers/BaseLayerRadioList.vue`  
 **Presets :** `src/ol/gpuBaseLayerPresets.ts` (`createGpuBaseLayerEnvironment`)  
-**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → *Fonds de cartes*
+**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → _Fonds de cartes_
 
 ## Props / events
 
-| Prop / event | Type | Description |
-| ------------ | ---- | ----------- |
-| `presets` | `GpuBaseLayerPreset[]` | id, label, `description`, `stack` (pile `mainLayers`), `thumbnailLayers` dérivées |
-| `modelValue` | `GpuBaseLayerId` | Fond actif |
-| `@update:modelValue` | `(id)` | Sélection d’un fond |
+| Prop / event         | Type                   | Description                                                                       |
+| -------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| `presets`            | `GpuBaseLayerPreset[]` | id, label, `description`, `stack` (pile `mainLayers`), `thumbnailLayers` dérivées |
+| `modelValue`         | `GpuBaseLayerId`       | Fond actif                                                                        |
+| `@update:modelValue` | `(id)`                 | Sélection d’un fond                                                               |
 
 ## Comportement
 

@@ -20,10 +20,7 @@ export function normalizeCatalogSearchQuery(raw: string): string {
   return raw.trim().toLocaleLowerCase('fr')
 }
 
-export function catalogNodesMatchingSearch(
-  roots: TreeLayerNode[],
-  query: string,
-): TreeLayerNode[] {
+export function catalogNodesMatchingSearch(roots: TreeLayerNode[], query: string): TreeLayerNode[] {
   const q = normalizeCatalogSearchQuery(query)
   if (!q) return []
   return flattenCatalogSwitcherNodes(roots).filter((node) =>

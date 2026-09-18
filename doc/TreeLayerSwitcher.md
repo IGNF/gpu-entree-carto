@@ -3,16 +3,16 @@
 Sélecteur de **couches métier** en arbre avec **légende intégrée** (équivalent `TreeLayerSwitcherControl` + légendes gpu-client).
 
 **Source :** `src/components/layers/TreeLayerSwitcher.vue`  
-**Utilisé dans :** onglets *Couches de données* / *Légendes* de [TabPanelsControl](./TabPanelsControl.md). Le catalogue *Données* utilise [CatalogLayerTree](./CatalogLayerTree.md).
+**Utilisé dans :** onglets _Couches de données_ / _Légendes_ de [TabPanelsControl](./TabPanelsControl.md). Le catalogue _Données_ utilise [CatalogLayerTree](./CatalogLayerTree.md).
 
 ## Props / events
 
-| Prop / event   | Type              | Description                                              |
-| -------------- | ----------------- | -------------------------------------------------------- |
-| `nodes`        | `TreeLayerNode[]` | Nœuds (`id`, `title`, `visible`, `legend?`, `children?`) |
-| `variant`      | `'full' \| 'catalog'` | `catalog` : checkbox + titre uniquement (pas de légende sous le nœud) |
-| `checkedById`  | `Record<string, boolean>` | État coché en mode catalogue (sinon `node.visible`) |
-| `@toggle`      | `(id, visible)`   | Changement de case                                       |
+| Prop / event  | Type                      | Description                                                           |
+| ------------- | ------------------------- | --------------------------------------------------------------------- |
+| `nodes`       | `TreeLayerNode[]`         | Nœuds (`id`, `title`, `visible`, `legend?`, `children?`)              |
+| `variant`     | `'full' \| 'catalog'`     | `catalog` : checkbox + titre uniquement (pas de légende sous le nœud) |
+| `checkedById` | `Record<string, boolean>` | État coché en mode catalogue (sinon `node.visible`)                   |
+| `@toggle`     | `(id, visible)`           | Changement de case                                                    |
 
 ## Comportement
 

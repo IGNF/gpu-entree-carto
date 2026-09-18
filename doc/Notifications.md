@@ -6,14 +6,14 @@ Toasts **style cartes.gouv.fr** pour retours utilisateur (succès, erreur, avert
 
 ## Stack
 
-| Élément | Fichier |
-| ------- | ------- |
-| Plugin Vue | [notivue](https://docs.notivue.smastrom.io/) `^2.4.x` |
+| Élément           | Fichier                                               |
+| ----------------- | ----------------------------------------------------- |
+| Plugin Vue        | [notivue](https://docs.notivue.smastrom.io/) `^2.4.x` |
 | Conteneur + thème | `src/components/notifications/CartoNotifications.vue` |
-| Thème DSFR | `src/lib/notifications/cartoNotificationsTheme.ts` |
-| API `push.*` | `src/lib/notifications/cartoNotifications.ts` |
-| Surcharges CSS | `src/styles/notifications.css` |
-| Icônes | `src/components/notifications/icons/` |
+| Thème DSFR        | `src/lib/notifications/cartoNotificationsTheme.ts`    |
+| API `push.*`      | `src/lib/notifications/cartoNotifications.ts`         |
+| Surcharges CSS    | `src/styles/notifications.css`                        |
+| Icônes            | `src/components/notifications/icons/`                 |
 
 ## Configuration globale
 

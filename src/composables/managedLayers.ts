@@ -202,10 +202,7 @@ export function useManagedLayers(
     }
   }
 
-  function syncPanelStateFromControlledWms(
-    node: TreeLayerNode,
-    mapVis: Record<string, boolean>,
-  ) {
+  function syncPanelStateFromControlledWms(node: TreeLayerNode, mapVis: Record<string, boolean>) {
     const wmsIds = wmsIdsControlledByDataLayersPanelEntry(node, mapVis)
     if (!wmsIds.length) return
 
@@ -270,11 +267,7 @@ export function useManagedLayers(
     const mapVis = catalogMapVisibility()
     const nodesBottomToTop = [...stackNodesForDisplayOrder()].reverse()
     const panelWms = dataLayersStackToWmsIdsBottomToTop(nodesBottomToTop, mapVis)
-    const ordered = mergeWmsStackOrderWithForceOpacityOnTop(
-      panelWms,
-      treeIndex.roots,
-      mapVis,
-    )
+    const ordered = mergeWmsStackOrderWithForceOpacityOnTop(panelWms, treeIndex.roots, mapVis)
     mapHooks?.onStackOrder?.(ordered)
   }
 
@@ -322,8 +315,14 @@ export function useManagedLayers(
   watch(
     () => nodes.value,
     (roots, prevRoots) => {
-      const prevIds = prevRoots ? flattenCatalogNodes(prevRoots).map((n) => n.id).join('|') : ''
-      const nextIds = flattenCatalogNodes(roots).map((n) => n.id).join('|')
+      const prevIds = prevRoots
+        ? flattenCatalogNodes(prevRoots)
+            .map((n) => n.id)
+            .join('|')
+        : ''
+      const nextIds = flattenCatalogNodes(roots)
+        .map((n) => n.id)
+        .join('|')
       const structureChanged = prevIds !== nextIds
 
       treeIndex = buildCatalogTreeIndex(roots)
@@ -361,18 +360,16 @@ export function useManagedLayers(
       mapVis,
     )
       .filter((node) => !seen.has(node.id))
-      .map(
-        (node): ManagedLayer => ({
-          id: node.id,
-          title: node.title,
-          inStack: false,
-          visible: true,
-          opacity: catalogNodeOpacityPercent(node),
-          grayscale: false,
-          forceOpacity: false,
-          legend: node.legend,
-        }),
-      )
+      .map((node): ManagedLayer => ({
+        id: node.id,
+        title: node.title,
+        inStack: false,
+        visible: true,
+        opacity: catalogNodeOpacityPercent(node),
+        grayscale: false,
+        forceOpacity: false,
+        legend: node.legend,
+      }))
     return [...fromStack, ...onlyLegendRows]
   })
 
@@ -483,8 +480,7 @@ export function useManagedLayers(
     const activeWithChildren = layers.value.map((l) => l.id)
     const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId)
 
-    const saved =
-      aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) }
+    const saved = aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) }
     const directChildren = catalogChildNodes(node).filter((c) => !c.gpuForceOpacity)
     const childStates = directChildren.map((c) => getPanelState(c))
     const merged = aggregatePanelStateAfterRegroup(node, saved, childStates)

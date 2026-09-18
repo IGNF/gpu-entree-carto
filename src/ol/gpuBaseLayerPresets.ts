@@ -206,7 +206,8 @@ const PRESET_INPUTS: GpuBaseLayerPresetInput[] = [
     id: 'blank',
     label: 'Fond blanc',
     subtitle: 'Couche vectorielle vide',
-    description: 'Aucun fond cartographique : met en avant uniquement les couches de données actives.',
+    description:
+      'Aucun fond cartographique : met en avant uniquement les couches de données actives.',
     stack: ['blank'],
   },
 ]
@@ -233,10 +234,7 @@ export function createGpuBaseLayerPresets(): GpuBaseLayerPreset[] {
   return createGpuBaseLayerEnvironment().presets
 }
 
-export function setActiveGpuBaseLayer(
-  env: GpuBaseLayerEnvironment,
-  id: GpuBaseLayerId,
-): void {
+export function setActiveGpuBaseLayer(env: GpuBaseLayerEnvironment, id: GpuBaseLayerId): void {
   for (const layer of env.allLayers) {
     layer.setVisible(false)
   }

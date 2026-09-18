@@ -123,10 +123,7 @@ function readSketchGeoJsonFeature(
 }
 
 /** Lit un objet GeoJSON croquis (FeatureCollection ou géométrie seule). */
-export function readSketchGeoJsonObject(
-  map: Map,
-  data: unknown,
-): OlFeature<OlGeometry>[] {
+export function readSketchGeoJsonObject(map: Map, data: unknown): OlFeature<OlGeometry>[] {
   const mapProjection = mapProjectionCode(map)
   if (!data || typeof data !== 'object') return []
 

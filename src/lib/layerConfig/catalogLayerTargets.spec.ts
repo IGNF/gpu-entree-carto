@@ -6,7 +6,9 @@ import {
   GPU_FORCE_OPACITY_PERCENT,
 } from '@/lib/layerConfig/catalogLayerTargets'
 
-function node(partial: Partial<TreeLayerNode> & Pick<TreeLayerNode, 'id' | 'title'>): TreeLayerNode {
+function node(
+  partial: Partial<TreeLayerNode> & Pick<TreeLayerNode, 'id' | 'title'>,
+): TreeLayerNode {
   return {
     visible: false,
     ...partial,

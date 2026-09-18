@@ -19,8 +19,7 @@ onMounted(() => {
   const demo = getDemoConfig()
   mounted = mountSearchEngine(searchHost.value, {
     mode: 'emit',
-    placeholder:
-      demo.home?.searchPlaceholder ?? 'Rechercher une adresse, une ville, un lieu...',
+    placeholder: demo.home?.searchPlaceholder ?? 'Rechercher une adresse, une ville, un lieu...',
     onSelect: (location: AutocompleteLocation) => {
       prepareLocationHandoff(location)
       void router.push({ name: 'map' })

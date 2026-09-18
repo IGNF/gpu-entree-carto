@@ -1,19 +1,19 @@
 # CatalogLayerSearch
 
-Barre de **recherche** au-dessus de l’arbre catalogue (*Données*).
+Barre de **recherche** au-dessus de l’arbre catalogue (_Données_).
 
 **Source :** `src/components/layers/CatalogLayerSearch.vue`  
-**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → *Données*, au-dessus du bloc **Sélection des données** ([CatalogLayerTree](./CatalogLayerTree.md)).
+**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → _Données_, au-dessus du bloc **Sélection des données** ([CatalogLayerTree](./CatalogLayerTree.md)).
 
 ## Props / events
 
-| Prop / event | Type | Description |
-| ------------ | ---- | ----------- |
-| `roots` | `TreeLayerNode[]` | Racines `LAYER_CONFIG` |
-| `checkedById` | `Record<string, boolean>` | État coché catalogue |
-| `mapZoom` | `number` | Zoom carte (grisage hors plage) |
-| `@toggle` | `(id, checked)` | Même effet que l’arbre (`setCatalogChecked`) |
-| `@focus-node` | `(id)` | Déplie l’arbre, scroll et surbrillance sur la ligne |
+| Prop / event  | Type                      | Description                                         |
+| ------------- | ------------------------- | --------------------------------------------------- |
+| `roots`       | `TreeLayerNode[]`         | Racines `LAYER_CONFIG`                              |
+| `checkedById` | `Record<string, boolean>` | État coché catalogue                                |
+| `mapZoom`     | `number`                  | Zoom carte (grisage hors plage)                     |
+| `@toggle`     | `(id, checked)`           | Même effet que l’arbre (`setCatalogChecked`)        |
+| `@focus-node` | `(id)`                    | Déplie l’arbre, scroll et surbrillance sur la ligne |
 
 ## Comportement
 

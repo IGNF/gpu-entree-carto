@@ -155,7 +155,10 @@ function applyGpuConfigSyncAndDevRewrite(): void {
 }
 
 async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
-  if (typeof config.legendImageDetailDirectory === 'string' && config.legendImageDetailDirectory.length) {
+  if (
+    typeof config.legendImageDetailDirectory === 'string' &&
+    config.legendImageDetailDirectory.length
+  ) {
     return
   }
   try {
@@ -178,7 +181,9 @@ async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
 export function loadGpuClientConfigScript(url: string): Promise<void> {
   const scriptUrl = rewriteLocalGpuSiteUrl(url)
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[data-ec-demo-config="${url}"]`)
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[data-ec-demo-config="${url}"]`,
+    )
     if (existing) {
       applyGpuConfigSyncAndDevRewrite()
       void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
@@ -202,7 +207,9 @@ export function loadGpuClientConfigScript(url: string): Promise<void> {
   })
 }
 
-export async function prepareDemoEnvironment(cfg: DemoConfig = getDemoConfig()): Promise<DemoConfig> {
+export async function prepareDemoEnvironment(
+  cfg: DemoConfig = getDemoConfig(),
+): Promise<DemoConfig> {
   applyGpuConfigOverrides(cfg.gpuConfigOverrides)
   const url = cfg.configScriptUrl?.trim()
   if (url) {

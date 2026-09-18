@@ -8,12 +8,12 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 
 ## Routes
 
-| Route              | Vue                      | Rôle                                                                                                                               |
-| ------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                 |
+| Route              | Vue                      | Rôle                                                                                                                                                                                                                |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                                                                                                  |
 | `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)) |
-| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                              |
-| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                   |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                                                                                                               |
+| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                                                                                                    |
 
 ## Navigation
 
