@@ -39,8 +39,8 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 | `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification                 |
 | `Import`          | Fichier GeoJSON ou KML → features croquis                                                                                                                  |
 | `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                                         |
-| `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ruler-line` (hors pack DSFR) |
-| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Tabler `dimensions` (flèches largeur/hauteur — pas Remix `aspect-ratio-line`)                |
+| `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ri-ruler-line` |
+| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size` |
 
 ## Popup style (`enableFeatureStyleEditor`)
 

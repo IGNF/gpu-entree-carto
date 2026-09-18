@@ -15,6 +15,7 @@ import VectorSource from 'ol/source/Vector'
 import type { StyleLike } from 'ol/style/Style'
 import Draw from 'ol/interaction/Draw'
 import { DrawToolsBar, type DrawBarExtraTool } from './DrawToolsBar'
+import { appendGeometryToolIcon } from './geometryToolIcons'
 import { geometryStyleFunction } from './styles'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
@@ -706,6 +707,7 @@ export class SketchControl extends Control {
           e.stopPropagation()
           this.setToolsMenuOpen(!this.toolsMenuOpen)
         })
+        appendGeometryToolIcon(btn, 'ec-geometry-editor__tool--tools-toggle')
         this.toolsToggleBtn = btn
       }
       this.toolbarHost.id = this.toolbarDomId

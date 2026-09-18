@@ -9,6 +9,8 @@ import { CONTROL_POSITIONS, type GeopfControlPosition } from '@/map/controlPosit
 import { SketchControl, type SketchExtraTool } from '@/geometry-editor/SketchControl'
 import type { GeometryTypeOption } from '@/geometry-editor/types'
 import type { StyleLike } from 'ol/style/Style'
+import 'remixicon/fonts/remixicon.css'
+import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 
 const props = withDefaults(

@@ -11,7 +11,7 @@ Associe une mini-carte à un champ de formulaire ou un élément HTML pour produ
 OpenLayers est **embarqué** dans le bundle (contrairement à ol-geometry-editor historique qui s’appuyait sur `ol.js` du site).
 
 La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** dans le coin choisi ouvre / ferme alors la barre.  
-Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les masques SVG de **geopf-extensions-openlayers** (`Drawing` / `DSFRdrawingStyle.css`) — pas besoin du CSS icônes DSFR pour la toolbar.  
+Les pictos de la toolbar utilisent **[Remix Icon](https://remixicon.com/)** (`remixicon.css`, chargé avec le bundle) ; l’outil **Ligne** conserve le picto geopf via la classe custom `ri-draw-line` (`src/assets/custom-icons/draw-line.svg`). Correspondance des classes : `src/geometry-editor/geometryToolIcons.ts`.  
 Infobulles : même style geopf que zoom / territoire (`aria-label` → `::before` au survol) ; masquées si le bouton est actif.  
 Colonne layout **48px** : la zone transparente à droite des boutons (réserve infobulle) laisse passer pan / zoom / dessin sur la carte (`pointer-events` ciblés + marge négative sur la toolbar).
 

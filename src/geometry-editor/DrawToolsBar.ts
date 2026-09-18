@@ -20,13 +20,14 @@ import {
 } from './geometryTypeUtils'
 import { ModifyTransformController, transformModeFor } from './ModifyTransformController'
 import { isSketchTextFeature } from './sketch/SketchTextPopup'
+import { appendGeometryToolIcon, updateSaveToolBadge } from './geometryToolIcons'
 
 type DrawType = 'Point' | 'LineString' | 'Polygon' | 'Circle'
 
 interface ToolDef {
   id: string
   label: string
-  /** Classe BEM pour le masque SVG (icônes geopf Drawing) */
+  /** Modificateur BEM toolbar → icône Remix (`geometryToolIcons`) */
   iconClass: string
   drawType?: DrawType
   box?: boolean
@@ -399,8 +400,7 @@ export class DrawToolsBar {
     btn.classList.toggle('ec-geometry-editor__tool--save-dirty', state === 'dirty')
     const badge = btn.querySelector('.ec-geometry-editor__tool-badge')
     if (badge instanceof HTMLElement) {
-      badge.hidden = state === 'idle'
-      badge.dataset.state = state
+      updateSaveToolBadge(badge, state)
     }
   }
 
@@ -432,11 +432,12 @@ export class DrawToolsBar {
       btn.setAttribute('aria-label', tool.label)
       btn.setAttribute('aria-pressed', 'false')
       btn.dataset.toolId = tool.id
+      appendGeometryToolIcon(btn, tool.iconClass)
       if (tool.id === 'save') {
         const badge = document.createElement('span')
         badge.className = 'ec-geometry-editor__tool-badge'
         badge.setAttribute('aria-hidden', 'true')
-        badge.hidden = true
+        updateSaveToolBadge(badge, 'idle')
         btn.appendChild(badge)
       }
       btn.addEventListener('click', () => this.activate(tool))

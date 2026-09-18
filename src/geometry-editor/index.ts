@@ -1,4 +1,6 @@
 import 'ol/ol.css'
+import 'remixicon/fonts/remixicon.css'
+import '@/assets/custom-icons/custom-remix-icons.css'
 import './styles/geometry-editor.css'
 import { GeometryEditor } from './GeometryEditor'
 import type { GeometryEditorOptions } from './types'
