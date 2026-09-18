@@ -38,15 +38,15 @@ Node **22** (voir `.nvmrc`, aligné sur la CI). Les versions **25.x** ne sont pa
 
 Autres cibles :
 
-| Commande         | Effet                                       |
-| ---------------- | ------------------------------------------- |
-| `make build`     | Build démo + bibliothèque (`dist/`)         |
-| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS) |
-| `make test`      | Tests Vitest                                |
-| `make preview`   | Prévisualiser le build                      |
-| `make typecheck` | Vérification TypeScript                     |
-| `make verify`    | ESLint + Prettier (check) + typecheck       |
-| `make fix`       | ESLint --fix + Prettier --write             |
+| Commande         | Effet                                                                       |
+| ---------------- | --------------------------------------------------------------------------- |
+| `make build`     | Build démo + bibliothèque (`dist/`)                                         |
+| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS)                                 |
+| `make test`      | Tests Vitest                                                                |
+| `make preview`   | Prévisualiser le build                                                      |
+| `make typecheck` | Vérification TypeScript                                                     |
+| `make verify`    | ESLint (0 avertissement) + Prettier + typecheck — exécuté au **pre-commit** |
+| `make fix`       | ESLint --fix + Prettier --write                                             |
 
 ---
 
