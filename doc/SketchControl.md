@@ -24,6 +24,7 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 - Couche vectorielle dédiée (`zIndex` défaut **500**, propriété `ec-sketch`)
 - Outils : Point, LineString, Polygon, Rectangle, Disc (+ modifier / supprimer)
 - Option `toolsToggle` : bouton menu (picto outils) dans un coin
+- Barre d’outils **scrollable** verticalement si elle dépasse la hauteur carte (molette / touch sur la colonne boutons ou sur la **sous-barre modification** lorsqu’elle est ouverte). La sous-barre reste **visible** en mode modification ; sa **hauteur max.** est limitée au scrollport visible de la barre principale (scroll interne si besoin).
 - Option `clearAll` : bouton « tout supprimer »
 - Option `localStorageKey` : bouton **Enregistrer** → persiste croquis + historique undo/redo (`{clé}` et `{clé}:history`) ; au rechargement, restauration du **dernier enregistrement** uniquement (modifications non enregistrées perdues)
 - Option `history` : **Annuler** / **Rétablir** en session ; piles restaurées après rechargement si un Enregistrer avait été fait
@@ -59,6 +60,12 @@ Les **disques / cercles** (`ol/geom/Circle`) sont sérialisés en GeoJSON avec u
 ### Compatibilité import gpu-client
 
 Les exports GeoJSON de **gpu-client** (`properties.style` + `gpuGeometryType`) sont reconnus automatiquement et convertis en `ec-feature-style` / `ec-sketch-text` (textes inclus). Module : `sketch/gpuClientSketchAdapter.ts`.
+
+Couleurs (popup style) : clic sur la **pastille** → sélecteur natif du navigateur uniquement (pas de second panneau). Sous la pastille : champ **hex `#RRGGBBAA`** et **curseur d’opacité**.
+
+Popup attributs : hauteur max. **265px** (scroll interne) ; ouverture sans **auto-pan** carte ni scroll de la page document. Clic carte : fermeture au **relâchement** du bouton seulement si la souris n’a **pas bougé** (pan carte autorisé, popup suit l’ancre). Clic sur une **feature** (down + drag) : pan possible ; **singleclick** (sans drag) ouvre / repositionne la popup sur la feature. À la **création**, la popup ne s’ouvre qu’à la fin du dessin (disque/cercle : après le 2ᵉ clic fixant le rayon, pas au centre seul).
+
+En **modification**, sous-outils **forme** / **déplacement** : pas de curseur « pointer » sur le corps de la feature ; **forme** → `pointer` près des sommets (ou curseur de redimensionnement rectangle / rayon) ; **déplacement** → curseur de translation dès qu’une feature est survolée (lignes / labels : petite tolérance de sélection). Sous-outil par défaut à l’ouverture de « Modifier » : **modification de forme**. En modes **déplacement**, **rotation** (sauf point et disque) et **style**, ainsi qu’en mode **Supprimer**, la feature survolée (feature du dessus si empilement) est **mise en valeur** (contour renforcé) ; au **mousedown** (modification) le style d’origine est rétabli. **Annuler** ferme la popup d’attributs si la feature éditée a été retirée. Le bouton **Enregistrer localement** n’interrompt pas l’outil de dessin actif.
 
 | Type                          | Champs de base                            | Avancés (aperçu)                                                    |
 | ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |

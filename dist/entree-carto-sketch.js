@@ -805,10 +805,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.target_ = typeof target === "string" ? document.getElementById(target) : target;
     }
   }
-  const ViewHint = {
-    ANIMATING: 0,
-    INTERACTING: 1
-  };
   const Relationship = {
     UNKNOWN: 0,
     INTERSECTING: 1,
@@ -1228,6 +1224,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return remainder;
   }
+  function warn(...args) {
+    console.warn(...args);
+  }
   function clamp$1(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
@@ -1438,181 +1437,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     angle = Math.max(angle, 1e-5);
     const isClockwise = tangentB[0] * orthoA[0] + tangentB[1] * orthoA[1] > 0;
     return !isClockwise ? Math.PI * 2 - angle : angle;
-  }
-  const ua = typeof navigator !== "undefined" && typeof navigator.userAgent !== "undefined" ? navigator.userAgent.toLowerCase() : "";
-  const SAFARI = ua.includes("safari") && !ua.includes("chrom");
-  SAFARI && (ua.includes("version/15.4") || /cpu (os|iphone os) 15_4 like mac os x/.test(ua));
-  const WEBKIT = ua.includes("webkit") && !ua.includes("edge");
-  const MAC = ua.includes("macintosh");
-  const DEVICE_PIXEL_RATIO = typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1;
-  const WORKER_OFFSCREEN_CANVAS = typeof WorkerGlobalScope !== "undefined" && typeof OffscreenCanvas !== "undefined" && self instanceof WorkerGlobalScope;
-  const IMAGE_DECODE = typeof Image !== "undefined" && Image.prototype.decode;
-  const PASSIVE_EVENT_LISTENERS = (function() {
-    let passive = false;
-    try {
-      const options = Object.defineProperty({}, "passive", {
-        get: function() {
-          passive = true;
-        }
-      });
-      window.addEventListener("_", null, options);
-      window.removeEventListener("_", null, options);
-    } catch {
-    }
-    return passive;
-  })();
-  function createCanvasContext2D(width, height, canvasPool2, settings) {
-    let canvas;
-    if (canvasPool2 && canvasPool2.length) {
-      canvas = /** @type {HTMLCanvasElement} */
-      canvasPool2.shift();
-    } else if (WORKER_OFFSCREEN_CANVAS) {
-      canvas = new class extends OffscreenCanvas {
-        constructor() {
-          super(...arguments);
-          __publicField(this, "style", {});
-        }
-      }(width ?? 300, height ?? 150);
-    } else {
-      canvas = document.createElement("canvas");
-    }
-    if (width) {
-      canvas.width = width;
-    }
-    if (height) {
-      canvas.height = height;
-    }
-    return (
-      /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
-      canvas.getContext("2d", settings)
-    );
-  }
-  let sharedCanvasContext;
-  function getSharedCanvasContext2D() {
-    if (!sharedCanvasContext) {
-      sharedCanvasContext = createCanvasContext2D(1, 1);
-    }
-    return sharedCanvasContext;
-  }
-  function releaseCanvas(context) {
-    const canvas = context.canvas;
-    canvas.width = 1;
-    canvas.height = 1;
-    context.clearRect(0, 0, 1, 1);
-  }
-  function outerWidth(element) {
-    let width = element.offsetWidth;
-    const style = getComputedStyle(element);
-    width += parseInt(style.marginLeft, 10) + parseInt(style.marginRight, 10);
-    return width;
-  }
-  function outerHeight(element) {
-    let height = element.offsetHeight;
-    const style = getComputedStyle(element);
-    height += parseInt(style.marginTop, 10) + parseInt(style.marginBottom, 10);
-    return height;
-  }
-  function replaceNode(newNode, oldNode) {
-    const parent = oldNode.parentNode;
-    if (parent) {
-      parent.replaceChild(newNode, oldNode);
-    }
-  }
-  function removeChildren(node) {
-    while (node.lastChild) {
-      node.lastChild.remove();
-    }
-  }
-  function replaceChildren(node, children) {
-    const oldChildren = node.childNodes;
-    for (let i = 0; true; ++i) {
-      const oldChild = oldChildren[i];
-      const newChild = children[i];
-      if (!oldChild && !newChild) {
-        break;
-      }
-      if (oldChild === newChild) {
-        continue;
-      }
-      if (!oldChild) {
-        node.appendChild(newChild);
-        continue;
-      }
-      if (!newChild) {
-        node.removeChild(oldChild);
-        --i;
-        continue;
-      }
-      node.insertBefore(newChild, oldChild);
-    }
-  }
-  function createMockDiv() {
-    const mockedDiv = new Proxy(
-      {
-        /**
-         * @type {Array<HTMLElement>}
-         */
-        childNodes: [],
-        /**
-         * @param {HTMLElement} node html node.
-         * @return {HTMLElement} html node.
-         */
-        appendChild: function(node) {
-          this.childNodes.push(node);
-          return node;
-        },
-        /**
-         * dummy function, as this structure is not supposed to have a parent.
-         */
-        remove: function() {
-        },
-        /**
-         * @param {HTMLElement} node html node.
-         * @return {HTMLElement} html node.
-         */
-        removeChild: function(node) {
-          const index = this.childNodes.indexOf(node);
-          if (index === -1) {
-            throw new Error("Node to remove was not found");
-          }
-          this.childNodes.splice(index, 1);
-          return node;
-        },
-        /**
-         * @param {HTMLElement} newNode new html node.
-         * @param {HTMLElement} referenceNode reference html node.
-         * @return {HTMLElement} new html node.
-         */
-        insertBefore: function(newNode, referenceNode) {
-          const index = this.childNodes.indexOf(referenceNode);
-          if (index === -1) {
-            throw new Error("Reference node not found");
-          }
-          this.childNodes.splice(index, 0, newNode);
-          return newNode;
-        },
-        style: {}
-      },
-      {
-        get(target, prop, receiver) {
-          if (prop === "firstElementChild") {
-            return target.childNodes.length > 0 ? target.childNodes[0] : null;
-          }
-          return Reflect.get(target, prop, receiver);
-        }
-      }
-    );
-    return (
-      /** @type {HTMLDivElement} */
-      /** @type {*} */
-      mockedDiv
-    );
-  }
-  function isCanvas(obj) {
-    return typeof HTMLCanvasElement !== "undefined" && obj instanceof HTMLCanvasElement || typeof OffscreenCanvas !== "undefined" && obj instanceof OffscreenCanvas;
-  }
-  function warn(...args) {
-    console.warn(...args);
   }
   const METERS_PER_UNIT$1 = {
     // use the radius of the Normal sphere
@@ -2468,6 +2292,1136 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   }
   addCommon();
+  function assert(assertion, errorMessage) {
+    if (!assertion) {
+      throw new Error(errorMessage);
+    }
+  }
+  const IDENTITY_TRANSFORM = [1, 0, 0, 1, 0, 0];
+  new Array(6);
+  function create() {
+    return IDENTITY_TRANSFORM.slice(0);
+  }
+  function setFromArray(transform1, transform2) {
+    transform1[0] = transform2[0];
+    transform1[1] = transform2[1];
+    transform1[2] = transform2[2];
+    transform1[3] = transform2[3];
+    transform1[4] = transform2[4];
+    transform1[5] = transform2[5];
+    return transform1;
+  }
+  function apply(transform2, coordinate) {
+    const x = coordinate[0];
+    const y = coordinate[1];
+    coordinate[0] = transform2[0] * x + transform2[2] * y + transform2[4];
+    coordinate[1] = transform2[1] * x + transform2[3] * y + transform2[5];
+    return coordinate;
+  }
+  function compose(transform2, dx1, dy1, sx, sy, angle, dx2, dy2) {
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+    transform2[0] = sx * cos;
+    transform2[1] = sy * sin;
+    transform2[2] = -sx * sin;
+    transform2[3] = sy * cos;
+    transform2[4] = dx2 * sx * cos - dy2 * sx * sin + dx1;
+    transform2[5] = dx2 * sy * sin + dy2 * sy * cos + dy1;
+    return transform2;
+  }
+  function makeInverse(target, source) {
+    const det = determinant(source);
+    assert(det !== 0, "Transformation matrix cannot be inverted");
+    const a = source[0];
+    const b = source[1];
+    const c = source[2];
+    const d = source[3];
+    const e = source[4];
+    const f = source[5];
+    target[0] = d / det;
+    target[1] = -b / det;
+    target[2] = -c / det;
+    target[3] = a / det;
+    target[4] = (c * f - d * e) / det;
+    target[5] = -(a * f - b * e) / det;
+    return target;
+  }
+  function determinant(mat) {
+    return mat[0] * mat[3] - mat[1] * mat[2];
+  }
+  const matrixPrecision = [1e5, 1e5, 1e5, 1e5, 2, 2];
+  function toString$1(mat) {
+    const transformString = "matrix(" + mat.join(", ") + ")";
+    return transformString;
+  }
+  function fromString$1(cssTransform) {
+    const values = cssTransform.substring(7, cssTransform.length - 1).split(",");
+    return values.map(parseFloat);
+  }
+  function equivalent(cssTransform1, cssTransform2) {
+    const mat1 = fromString$1(cssTransform1);
+    const mat2 = fromString$1(cssTransform2);
+    for (let i = 0; i < 6; ++i) {
+      if (Math.round((mat1[i] - mat2[i]) * matrixPrecision[i]) !== 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  function transform2D(flatCoordinates, offset, end, stride, transform2, dest, destinationStride) {
+    dest = dest ? dest : [];
+    destinationStride = destinationStride ? destinationStride : 2;
+    let i = 0;
+    for (let j = offset; j < end; j += stride) {
+      const x = flatCoordinates[j];
+      const y = flatCoordinates[j + 1];
+      dest[i++] = transform2[0] * x + transform2[2] * y + transform2[4];
+      dest[i++] = transform2[1] * x + transform2[3] * y + transform2[5];
+      for (let k = 2; k < destinationStride; k++) {
+        dest[i++] = flatCoordinates[j + k];
+      }
+    }
+    if (dest && dest.length != i) {
+      dest.length = i;
+    }
+    return dest;
+  }
+  function rotate(flatCoordinates, offset, end, stride, angle, anchor, dest) {
+    dest = dest ? dest : [];
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const anchorX = anchor[0];
+    const anchorY = anchor[1];
+    let i = 0;
+    for (let j = offset; j < end; j += stride) {
+      const deltaX = flatCoordinates[j] - anchorX;
+      const deltaY = flatCoordinates[j + 1] - anchorY;
+      dest[i++] = anchorX + deltaX * cos - deltaY * sin;
+      dest[i++] = anchorY + deltaX * sin + deltaY * cos;
+      for (let k = j + 2; k < j + stride; ++k) {
+        dest[i++] = flatCoordinates[k];
+      }
+    }
+    if (dest && dest.length != i) {
+      dest.length = i;
+    }
+    return dest;
+  }
+  function scale$1(flatCoordinates, offset, end, stride, sx, sy, anchor, dest) {
+    dest = dest ? dest : [];
+    const anchorX = anchor[0];
+    const anchorY = anchor[1];
+    let i = 0;
+    for (let j = offset; j < end; j += stride) {
+      const deltaX = flatCoordinates[j] - anchorX;
+      const deltaY = flatCoordinates[j + 1] - anchorY;
+      dest[i++] = anchorX + sx * deltaX;
+      dest[i++] = anchorY + sy * deltaY;
+      for (let k = j + 2; k < j + stride; ++k) {
+        dest[i++] = flatCoordinates[k];
+      }
+    }
+    if (dest && dest.length != i) {
+      dest.length = i;
+    }
+    return dest;
+  }
+  function translate(flatCoordinates, offset, end, stride, deltaX, deltaY, dest) {
+    dest = dest ? dest : [];
+    let i = 0;
+    for (let j = offset; j < end; j += stride) {
+      dest[i++] = flatCoordinates[j] + deltaX;
+      dest[i++] = flatCoordinates[j + 1] + deltaY;
+      for (let k = j + 2; k < j + stride; ++k) {
+        dest[i++] = flatCoordinates[k];
+      }
+    }
+    if (dest && dest.length != i) {
+      dest.length = i;
+    }
+    return dest;
+  }
+  const tmpTransform$1 = create();
+  const tmpPoint = [NaN, NaN];
+  class Geometry extends BaseObject {
+    constructor() {
+      super();
+      this.extent_ = createEmpty();
+      this.extentRevision_ = -1;
+      this.simplifiedGeometryMaxMinSquaredTolerance = 0;
+      this.simplifiedGeometryRevision = 0;
+      this.simplifyTransformedInternal = memoizeOne(
+        (revision, squaredTolerance, transform2) => {
+          if (!transform2) {
+            return this.getSimplifiedGeometry(squaredTolerance);
+          }
+          const clone2 = this.clone();
+          clone2.applyTransform(transform2);
+          return clone2.getSimplifiedGeometry(squaredTolerance);
+        }
+      );
+    }
+    /**
+     * Get a transformed and simplified version of the geometry.
+     * @abstract
+     * @param {number} squaredTolerance Squared tolerance.
+     * @param {import("../proj.js").TransformFunction} [transform] Optional transform function.
+     * @return {Geometry} Simplified geometry.
+     */
+    simplifyTransformed(squaredTolerance, transform2) {
+      return this.simplifyTransformedInternal(
+        this.getRevision(),
+        squaredTolerance,
+        transform2
+      );
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @abstract
+     * @return {!Geometry} Clone.
+     */
+    clone() {
+      return abstract();
+    }
+    /**
+     * @abstract
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      return abstract();
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     */
+    containsXY(x, y) {
+      return this.closestPointXY(x, y, tmpPoint, Number.MIN_VALUE) === 0;
+    }
+    /**
+     * Return the closest point of the geometry to the passed point as
+     * {@link module:ol/coordinate~Coordinate coordinate}.
+     * @param {import("../coordinate.js").Coordinate} point Point.
+     * @param {import("../coordinate.js").Coordinate} [closestPoint] Closest point.
+     * @return {import("../coordinate.js").Coordinate} Closest point.
+     * @api
+     */
+    getClosestPoint(point, closestPoint) {
+      closestPoint = closestPoint ? closestPoint : [NaN, NaN];
+      this.closestPointXY(point[0], point[1], closestPoint, Infinity);
+      return closestPoint;
+    }
+    /**
+     * Returns true if this geometry includes the specified coordinate. If the
+     * coordinate is on the boundary of the geometry, returns false.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @return {boolean} Contains coordinate.
+     * @api
+     */
+    intersectsCoordinate(coordinate) {
+      return this.containsXY(coordinate[0], coordinate[1]);
+    }
+    /**
+     * @abstract
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     */
+    computeExtent(extent) {
+      return abstract();
+    }
+    /**
+     * Get the extent of the geometry.
+     * @param {import("../extent.js").Extent} [extent] Extent.
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @api
+     */
+    getExtent(extent) {
+      if (this.extentRevision_ != this.getRevision()) {
+        const extent2 = this.computeExtent(this.extent_);
+        if (isNaN(extent2[0]) || isNaN(extent2[1])) {
+          createOrUpdateEmpty(extent2);
+        }
+        this.extentRevision_ = this.getRevision();
+      }
+      return returnOrUpdate(this.extent_, extent);
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @abstract
+     * @param {number} angle Rotation angle in radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     */
+    rotate(angle, anchor) {
+      abstract();
+    }
+    /**
+     * Scale the geometry (with an optional origin).  This modifies the geometry
+     * coordinates in place.
+     * @abstract
+     * @param {number} sx The scaling factor in the x-direction.
+     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
+     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
+     *     of the geometry extent).
+     * @api
+     */
+    scale(sx, sy, anchor) {
+      abstract();
+    }
+    /**
+     * Create a simplified version of this geometry.  For linestrings, this uses
+     * the [Douglas Peucker](https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm)
+     * algorithm.  For polygons, a quantization-based
+     * simplification is used to preserve topology.
+     * @param {number} tolerance The tolerance distance for simplification.
+     * @return {Geometry} A new, simplified version of the original geometry.
+     * @api
+     */
+    simplify(tolerance) {
+      return this.getSimplifiedGeometry(tolerance * tolerance);
+    }
+    /**
+     * Create a simplified version of this geometry using the Douglas Peucker
+     * algorithm.
+     * See https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm.
+     * @abstract
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {Geometry} Simplified geometry.
+     */
+    getSimplifiedGeometry(squaredTolerance) {
+      return abstract();
+    }
+    /**
+     * Get the type of this geometry.
+     * @abstract
+     * @return {Type} Geometry type.
+     */
+    getType() {
+      return abstract();
+    }
+    /**
+     * Apply a transform function to the coordinates of the geometry.
+     * The geometry is modified in place.
+     * If you do not want the geometry modified in place, first `clone()` it and
+     * then use this function on the clone.
+     * @abstract
+     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
+     * Called with a flat array of geometry coordinates.
+     */
+    applyTransform(transformFn) {
+      abstract();
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @abstract
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     */
+    intersectsExtent(extent) {
+      return abstract();
+    }
+    /**
+     * Translate the geometry.  This modifies the geometry coordinates in place.  If
+     * instead you want a new geometry, first `clone()` this geometry.
+     * @abstract
+     * @param {number} deltaX Delta X.
+     * @param {number} deltaY Delta Y.
+     * @api
+     */
+    translate(deltaX, deltaY) {
+      abstract();
+    }
+    /**
+     * Transform each coordinate of the geometry from one coordinate reference
+     * system to another. The geometry is modified in place.
+     * For example, a line will be transformed to a line and a circle to a circle.
+     * If you do not want the geometry modified in place, first `clone()` it and
+     * then use this function on the clone.
+     *
+     * @param {import("../proj.js").ProjectionLike} source The current projection.  Can be a
+     *     string identifier or a {@link module:ol/proj/Projection~Projection} object.
+     * @param {import("../proj.js").ProjectionLike} destination The desired projection.  Can be a
+     *     string identifier or a {@link module:ol/proj/Projection~Projection} object.
+     * @return {this} This geometry.  Note that original geometry is
+     *     modified in place.
+     * @api
+     */
+    transform(source, destination) {
+      const sourceProj = get$1(source);
+      const transformFn = sourceProj.getUnits() == "tile-pixels" ? function(inCoordinates, outCoordinates, stride) {
+        const pixelExtent = sourceProj.getExtent();
+        const projectedExtent = sourceProj.getWorldExtent();
+        const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
+        compose(
+          tmpTransform$1,
+          projectedExtent[0],
+          projectedExtent[3],
+          scale2,
+          -scale2,
+          0,
+          0,
+          0
+        );
+        const transformed = transform2D(
+          inCoordinates,
+          0,
+          inCoordinates.length,
+          stride,
+          tmpTransform$1,
+          outCoordinates
+        );
+        const projTransform = getTransform(sourceProj, destination);
+        if (projTransform) {
+          return projTransform(transformed, transformed, stride);
+        }
+        return transformed;
+      } : getTransform(sourceProj, destination);
+      this.applyTransform(transformFn);
+      return this;
+    }
+  }
+  class SimpleGeometry extends Geometry {
+    constructor() {
+      super();
+      this.layout = "XY";
+      this.stride = 2;
+      this.flatCoordinates;
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      return createOrUpdateFromFlatCoordinates(
+        this.flatCoordinates,
+        0,
+        this.flatCoordinates.length,
+        this.stride,
+        extent
+      );
+    }
+    /**
+     * @abstract
+     * @return {Array<*> | null} Coordinates.
+     */
+    getCoordinates() {
+      return abstract();
+    }
+    /**
+     * Return the first coordinate of the geometry.
+     * @return {import("../coordinate.js").Coordinate} First coordinate.
+     * @api
+     */
+    getFirstCoordinate() {
+      return this.flatCoordinates.slice(0, this.stride);
+    }
+    /**
+     * @return {Array<number>} Flat coordinates.
+     */
+    getFlatCoordinates() {
+      return this.flatCoordinates;
+    }
+    /**
+     * Return the last coordinate of the geometry.
+     * @return {import("../coordinate.js").Coordinate} Last point.
+     * @api
+     */
+    getLastCoordinate() {
+      return this.flatCoordinates.slice(
+        this.flatCoordinates.length - this.stride
+      );
+    }
+    /**
+     * Return the {@link import("./Geometry.js").GeometryLayout layout} of the geometry.
+     * @return {import("./Geometry.js").GeometryLayout} Layout.
+     * @api
+     */
+    getLayout() {
+      return this.layout;
+    }
+    /**
+     * Create a simplified version of this geometry using the Douglas Peucker algorithm.
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {SimpleGeometry} Simplified geometry.
+     * @override
+     */
+    getSimplifiedGeometry(squaredTolerance) {
+      if (this.simplifiedGeometryRevision !== this.getRevision()) {
+        this.simplifiedGeometryMaxMinSquaredTolerance = 0;
+        this.simplifiedGeometryRevision = this.getRevision();
+      }
+      if (squaredTolerance < 0 || this.simplifiedGeometryMaxMinSquaredTolerance !== 0 && squaredTolerance <= this.simplifiedGeometryMaxMinSquaredTolerance) {
+        return this;
+      }
+      const simplifiedGeometry = this.getSimplifiedGeometryInternal(squaredTolerance);
+      const simplifiedFlatCoordinates = simplifiedGeometry.getFlatCoordinates();
+      if (simplifiedFlatCoordinates.length < this.flatCoordinates.length) {
+        return simplifiedGeometry;
+      }
+      this.simplifiedGeometryMaxMinSquaredTolerance = squaredTolerance;
+      return this;
+    }
+    /**
+     * @param {number} squaredTolerance Squared tolerance.
+     * @return {SimpleGeometry} Simplified geometry.
+     * @protected
+     */
+    getSimplifiedGeometryInternal(squaredTolerance) {
+      return this;
+    }
+    /**
+     * @return {number} Stride.
+     */
+    getStride() {
+      return this.stride;
+    }
+    /**
+     * @param {import("./Geometry.js").GeometryLayout} layout Layout.
+     * @param {Array<number>} flatCoordinates Flat coordinates.
+     */
+    setFlatCoordinates(layout, flatCoordinates) {
+      this.stride = getStrideForLayout(layout);
+      this.layout = layout;
+      this.flatCoordinates = flatCoordinates;
+    }
+    /**
+     * @abstract
+     * @param {!Array<*>} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    setCoordinates(coordinates2, layout) {
+      abstract();
+    }
+    /**
+     * @param {import("./Geometry.js").GeometryLayout|undefined} layout Layout.
+     * @param {Array<*>} coordinates Coordinates.
+     * @param {number} nesting Nesting.
+     * @protected
+     */
+    setLayout(layout, coordinates2, nesting) {
+      let stride;
+      if (layout) {
+        stride = getStrideForLayout(layout);
+      } else {
+        for (let i = 0; i < nesting; ++i) {
+          if (coordinates2.length === 0) {
+            this.layout = "XY";
+            this.stride = 2;
+            return;
+          }
+          coordinates2 = /** @type {Array<unknown>} */
+          coordinates2[0];
+        }
+        stride = coordinates2.length;
+        layout = getLayoutForStride(stride);
+      }
+      this.layout = layout;
+      this.stride = stride;
+    }
+    /**
+     * Apply a transform function to the coordinates of the geometry.
+     * The geometry is modified in place.
+     * If you do not want the geometry modified in place, first `clone()` it and
+     * then use this function on the clone.
+     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
+     * Called with a flat array of geometry coordinates.
+     * @api
+     * @override
+     */
+    applyTransform(transformFn) {
+      if (this.flatCoordinates) {
+        transformFn(
+          this.flatCoordinates,
+          this.flatCoordinates,
+          this.layout.startsWith("XYZ") ? 3 : 2,
+          this.stride
+        );
+        this.changed();
+      }
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @param {number} angle Rotation angle in counter-clockwise radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     * @override
+     */
+    rotate(angle, anchor) {
+      const flatCoordinates = this.getFlatCoordinates();
+      if (flatCoordinates) {
+        const stride = this.getStride();
+        rotate(
+          flatCoordinates,
+          0,
+          flatCoordinates.length,
+          stride,
+          angle,
+          anchor,
+          flatCoordinates
+        );
+        this.changed();
+      }
+    }
+    /**
+     * Scale the geometry (with an optional origin).  This modifies the geometry
+     * coordinates in place.
+     * @param {number} sx The scaling factor in the x-direction.
+     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
+     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
+     *     of the geometry extent).
+     * @api
+     * @override
+     */
+    scale(sx, sy, anchor) {
+      if (sy === void 0) {
+        sy = sx;
+      }
+      if (!anchor) {
+        anchor = getCenter(this.getExtent());
+      }
+      const flatCoordinates = this.getFlatCoordinates();
+      if (flatCoordinates) {
+        const stride = this.getStride();
+        scale$1(
+          flatCoordinates,
+          0,
+          flatCoordinates.length,
+          stride,
+          sx,
+          sy,
+          anchor,
+          flatCoordinates
+        );
+        this.changed();
+      }
+    }
+    /**
+     * Translate the geometry.  This modifies the geometry coordinates in place.  If
+     * instead you want a new geometry, first `clone()` this geometry.
+     * @param {number} deltaX Delta X.
+     * @param {number} deltaY Delta Y.
+     * @api
+     * @override
+     */
+    translate(deltaX, deltaY) {
+      const flatCoordinates = this.getFlatCoordinates();
+      if (flatCoordinates) {
+        const stride = this.getStride();
+        translate(
+          flatCoordinates,
+          0,
+          flatCoordinates.length,
+          stride,
+          deltaX,
+          deltaY,
+          flatCoordinates
+        );
+        this.changed();
+      }
+    }
+  }
+  function getLayoutForStride(stride) {
+    let layout;
+    if (stride == 2) {
+      layout = "XY";
+    } else if (stride == 3) {
+      layout = "XYZ";
+    } else if (stride == 4) {
+      layout = "XYZM";
+    }
+    return (
+      /** @type {import("./Geometry.js").GeometryLayout} */
+      layout
+    );
+  }
+  function getStrideForLayout(layout) {
+    let stride;
+    if (layout == "XY") {
+      stride = 2;
+    } else if (layout == "XYZ" || layout == "XYM") {
+      stride = 3;
+    } else if (layout == "XYZM") {
+      stride = 4;
+    }
+    return (
+      /** @type {number} */
+      stride
+    );
+  }
+  function transformGeom2D(simpleGeometry, transform2, dest) {
+    const flatCoordinates = simpleGeometry.getFlatCoordinates();
+    if (!flatCoordinates) {
+      return null;
+    }
+    const stride = simpleGeometry.getStride();
+    return transform2D(
+      flatCoordinates,
+      0,
+      flatCoordinates.length,
+      stride,
+      transform2,
+      dest
+    );
+  }
+  function deflateCoordinate(flatCoordinates, offset, coordinate, stride) {
+    for (let i = 0, ii = coordinate.length; i < ii; ++i) {
+      flatCoordinates[offset++] = coordinate[i];
+    }
+    return offset;
+  }
+  function deflateCoordinates(flatCoordinates, offset, coordinates2, stride) {
+    for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
+      const coordinate = coordinates2[i];
+      for (let j = 0; j < stride; ++j) {
+        flatCoordinates[offset++] = coordinate[j];
+      }
+    }
+    return offset;
+  }
+  function deflateCoordinatesArray(flatCoordinates, offset, coordinatess, stride, ends) {
+    ends = ends ? ends : [];
+    let i = 0;
+    for (let j = 0, jj = coordinatess.length; j < jj; ++j) {
+      const end = deflateCoordinates(
+        flatCoordinates,
+        offset,
+        coordinatess[j],
+        stride
+      );
+      ends[i++] = end;
+      offset = end;
+    }
+    ends.length = i;
+    return ends;
+  }
+  function deflateMultiCoordinatesArray(flatCoordinates, offset, coordinatesss, stride, endss) {
+    endss = endss ? endss : [];
+    let i = 0;
+    for (let j = 0, jj = coordinatesss.length; j < jj; ++j) {
+      const ends = deflateCoordinatesArray(
+        flatCoordinates,
+        offset,
+        coordinatesss[j],
+        stride,
+        endss[i]
+      );
+      if (ends.length === 0) {
+        ends[0] = offset;
+      }
+      endss[i++] = ends;
+      offset = ends[ends.length - 1];
+    }
+    endss.length = i;
+    return endss;
+  }
+  class Circle extends SimpleGeometry {
+    /**
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     *     For internal use, flat coordinates in combination with `layout` and no
+     *     `radius` are also accepted.
+     * @param {number} [radius] Radius in units of the projection.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     */
+    constructor(center, radius, layout) {
+      super();
+      if (layout !== void 0 && radius === void 0) {
+        this.setFlatCoordinates(layout, center);
+      } else {
+        radius = radius ? radius : 0;
+        this.setCenterAndRadius(center, radius, layout);
+      }
+    }
+    /**
+     * Make a complete copy of the geometry.
+     * @return {!Circle} Clone.
+     * @api
+     * @override
+     */
+    clone() {
+      const circle = new Circle(
+        this.flatCoordinates.slice(),
+        void 0,
+        this.layout
+      );
+      circle.applyProperties(this);
+      return circle;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
+     * @param {number} minSquaredDistance Minimum squared distance.
+     * @return {number} Minimum squared distance.
+     * @override
+     */
+    closestPointXY(x, y, closestPoint, minSquaredDistance) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      const squaredDistance2 = dx * dx + dy * dy;
+      if (squaredDistance2 < minSquaredDistance) {
+        if (squaredDistance2 === 0) {
+          for (let i = 0; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        } else {
+          const delta = this.getRadius() / Math.sqrt(squaredDistance2);
+          closestPoint[0] = flatCoordinates[0] + delta * dx;
+          closestPoint[1] = flatCoordinates[1] + delta * dy;
+          for (let i = 2; i < this.stride; ++i) {
+            closestPoint[i] = flatCoordinates[i];
+          }
+        }
+        closestPoint.length = this.stride;
+        return squaredDistance2;
+      }
+      return minSquaredDistance;
+    }
+    /**
+     * @param {number} x X.
+     * @param {number} y Y.
+     * @return {boolean} Contains (x, y).
+     * @override
+     */
+    containsXY(x, y) {
+      const flatCoordinates = this.flatCoordinates;
+      const dx = x - flatCoordinates[0];
+      const dy = y - flatCoordinates[1];
+      return dx * dx + dy * dy <= this.getRadiusSquared_();
+    }
+    /**
+     * Return the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @return {import("../coordinate.js").Coordinate} Center.
+     * @api
+     */
+    getCenter() {
+      return this.flatCoordinates.slice(0, this.stride);
+    }
+    /**
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @protected
+     * @return {import("../extent.js").Extent} extent Extent.
+     * @override
+     */
+    computeExtent(extent) {
+      const flatCoordinates = this.flatCoordinates;
+      const radius = flatCoordinates[this.stride] - flatCoordinates[0];
+      return createOrUpdate$2(
+        flatCoordinates[0] - radius,
+        flatCoordinates[1] - radius,
+        flatCoordinates[0] + radius,
+        flatCoordinates[1] + radius,
+        extent
+      );
+    }
+    /**
+     * Return the radius of the circle.
+     * @return {number} Radius.
+     * @api
+     */
+    getRadius() {
+      return Math.sqrt(this.getRadiusSquared_());
+    }
+    /**
+     * @private
+     * @return {number} Radius squared.
+     */
+    getRadiusSquared_() {
+      const dx = this.flatCoordinates[this.stride] - this.flatCoordinates[0];
+      const dy = this.flatCoordinates[this.stride + 1] - this.flatCoordinates[1];
+      return dx * dx + dy * dy;
+    }
+    /**
+     * Get the type of this geometry.
+     * @return {import("./Geometry.js").Type} Geometry type.
+     * @api
+     * @override
+     */
+    getType() {
+      return "Circle";
+    }
+    /**
+     * Test if the geometry and the passed extent intersect.
+     * @param {import("../extent.js").Extent} extent Extent.
+     * @return {boolean} `true` if the geometry and the extent intersect.
+     * @api
+     * @override
+     */
+    intersectsExtent(extent) {
+      const circleExtent = this.getExtent();
+      if (intersects$1(extent, circleExtent)) {
+        const center = this.getCenter();
+        if (extent[0] <= center[0] && extent[2] >= center[0]) {
+          return true;
+        }
+        if (extent[1] <= center[1] && extent[3] >= center[1]) {
+          return true;
+        }
+        return forEachCorner(extent, this.intersectsCoordinate.bind(this));
+      }
+      return false;
+    }
+    /**
+     * Set the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
+     * @param {import("../coordinate.js").Coordinate} center Center.
+     * @api
+     */
+    setCenter(center) {
+      const stride = this.stride;
+      const radius = this.flatCoordinates[stride] - this.flatCoordinates[0];
+      const flatCoordinates = center.slice();
+      flatCoordinates[stride] = flatCoordinates[0] + radius;
+      for (let i = 1; i < stride; ++i) {
+        flatCoordinates[stride + i] = center[i];
+      }
+      this.setFlatCoordinates(this.layout, flatCoordinates);
+      this.changed();
+    }
+    /**
+     * Set the center (as {@link module:ol/coordinate~Coordinate coordinate}) and the radius (as
+     * number) of the circle.
+     * @param {!import("../coordinate.js").Coordinate} center Center.
+     * @param {number} radius Radius.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
+     * @api
+     */
+    setCenterAndRadius(center, radius, layout) {
+      this.setLayout(layout, center, 0);
+      if (!this.flatCoordinates) {
+        this.flatCoordinates = [];
+      }
+      const flatCoordinates = this.flatCoordinates;
+      let offset = deflateCoordinate(flatCoordinates, 0, center, this.stride);
+      flatCoordinates[offset++] = flatCoordinates[0] + radius;
+      for (let i = 1, ii = this.stride; i < ii; ++i) {
+        flatCoordinates[offset++] = flatCoordinates[i];
+      }
+      flatCoordinates.length = offset;
+      this.changed();
+    }
+    /**
+     * @override
+     */
+    getCoordinates() {
+      return null;
+    }
+    /**
+     * @override
+     */
+    setCoordinates(coordinates2, layout) {
+    }
+    /**
+     * Set the radius of the circle. The radius is in the units of the projection.
+     * @param {number} radius Radius.
+     * @api
+     */
+    setRadius(radius) {
+      this.flatCoordinates[this.stride] = this.flatCoordinates[0] + radius;
+      this.changed();
+    }
+    /**
+     * Rotate the geometry around a given coordinate. This modifies the geometry
+     * coordinates in place.
+     * @param {number} angle Rotation angle in counter-clockwise radians.
+     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
+     * @api
+     * @override
+     */
+    rotate(angle, anchor) {
+      const center = this.getCenter();
+      const stride = this.getStride();
+      this.setCenter(
+        rotate(center, 0, center.length, stride, angle, anchor, center)
+      );
+      this.changed();
+    }
+  }
+  Circle.prototype.transform;
+  const ViewHint = {
+    ANIMATING: 0,
+    INTERACTING: 1
+  };
+  const ua = typeof navigator !== "undefined" && typeof navigator.userAgent !== "undefined" ? navigator.userAgent.toLowerCase() : "";
+  const SAFARI = ua.includes("safari") && !ua.includes("chrom");
+  SAFARI && (ua.includes("version/15.4") || /cpu (os|iphone os) 15_4 like mac os x/.test(ua));
+  const WEBKIT = ua.includes("webkit") && !ua.includes("edge");
+  const MAC = ua.includes("macintosh");
+  const DEVICE_PIXEL_RATIO = typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1;
+  const WORKER_OFFSCREEN_CANVAS = typeof WorkerGlobalScope !== "undefined" && typeof OffscreenCanvas !== "undefined" && self instanceof WorkerGlobalScope;
+  const IMAGE_DECODE = typeof Image !== "undefined" && Image.prototype.decode;
+  const PASSIVE_EVENT_LISTENERS = (function() {
+    let passive = false;
+    try {
+      const options = Object.defineProperty({}, "passive", {
+        get: function() {
+          passive = true;
+        }
+      });
+      window.addEventListener("_", null, options);
+      window.removeEventListener("_", null, options);
+    } catch {
+    }
+    return passive;
+  })();
+  function createCanvasContext2D(width, height, canvasPool2, settings) {
+    let canvas;
+    if (canvasPool2 && canvasPool2.length) {
+      canvas = /** @type {HTMLCanvasElement} */
+      canvasPool2.shift();
+    } else if (WORKER_OFFSCREEN_CANVAS) {
+      canvas = new class extends OffscreenCanvas {
+        constructor() {
+          super(...arguments);
+          __publicField(this, "style", {});
+        }
+      }(width ?? 300, height ?? 150);
+    } else {
+      canvas = document.createElement("canvas");
+    }
+    if (width) {
+      canvas.width = width;
+    }
+    if (height) {
+      canvas.height = height;
+    }
+    return (
+      /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+      canvas.getContext("2d", settings)
+    );
+  }
+  let sharedCanvasContext;
+  function getSharedCanvasContext2D() {
+    if (!sharedCanvasContext) {
+      sharedCanvasContext = createCanvasContext2D(1, 1);
+    }
+    return sharedCanvasContext;
+  }
+  function releaseCanvas(context) {
+    const canvas = context.canvas;
+    canvas.width = 1;
+    canvas.height = 1;
+    context.clearRect(0, 0, 1, 1);
+  }
+  function outerWidth(element) {
+    let width = element.offsetWidth;
+    const style = getComputedStyle(element);
+    width += parseInt(style.marginLeft, 10) + parseInt(style.marginRight, 10);
+    return width;
+  }
+  function outerHeight(element) {
+    let height = element.offsetHeight;
+    const style = getComputedStyle(element);
+    height += parseInt(style.marginTop, 10) + parseInt(style.marginBottom, 10);
+    return height;
+  }
+  function replaceNode(newNode, oldNode) {
+    const parent = oldNode.parentNode;
+    if (parent) {
+      parent.replaceChild(newNode, oldNode);
+    }
+  }
+  function removeChildren(node) {
+    while (node.lastChild) {
+      node.lastChild.remove();
+    }
+  }
+  function replaceChildren(node, children) {
+    const oldChildren = node.childNodes;
+    for (let i = 0; true; ++i) {
+      const oldChild = oldChildren[i];
+      const newChild = children[i];
+      if (!oldChild && !newChild) {
+        break;
+      }
+      if (oldChild === newChild) {
+        continue;
+      }
+      if (!oldChild) {
+        node.appendChild(newChild);
+        continue;
+      }
+      if (!newChild) {
+        node.removeChild(oldChild);
+        --i;
+        continue;
+      }
+      node.insertBefore(newChild, oldChild);
+    }
+  }
+  function createMockDiv() {
+    const mockedDiv = new Proxy(
+      {
+        /**
+         * @type {Array<HTMLElement>}
+         */
+        childNodes: [],
+        /**
+         * @param {HTMLElement} node html node.
+         * @return {HTMLElement} html node.
+         */
+        appendChild: function(node) {
+          this.childNodes.push(node);
+          return node;
+        },
+        /**
+         * dummy function, as this structure is not supposed to have a parent.
+         */
+        remove: function() {
+        },
+        /**
+         * @param {HTMLElement} node html node.
+         * @return {HTMLElement} html node.
+         */
+        removeChild: function(node) {
+          const index = this.childNodes.indexOf(node);
+          if (index === -1) {
+            throw new Error("Node to remove was not found");
+          }
+          this.childNodes.splice(index, 1);
+          return node;
+        },
+        /**
+         * @param {HTMLElement} newNode new html node.
+         * @param {HTMLElement} referenceNode reference html node.
+         * @return {HTMLElement} new html node.
+         */
+        insertBefore: function(newNode, referenceNode) {
+          const index = this.childNodes.indexOf(referenceNode);
+          if (index === -1) {
+            throw new Error("Reference node not found");
+          }
+          this.childNodes.splice(index, 0, newNode);
+          return newNode;
+        },
+        style: {}
+      },
+      {
+        get(target, prop, receiver) {
+          if (prop === "firstElementChild") {
+            return target.childNodes.length > 0 ? target.childNodes[0] : null;
+          }
+          return Reflect.get(target, prop, receiver);
+        }
+      }
+    );
+    return (
+      /** @type {HTMLDivElement} */
+      /** @type {*} */
+      mockedDiv
+    );
+  }
+  function isCanvas(obj) {
+    return typeof HTMLCanvasElement !== "undefined" && obj instanceof HTMLCanvasElement || typeof OffscreenCanvas !== "undefined" && obj instanceof OffscreenCanvas;
+  }
   const RenderEventType = {
     /**
      * Triggered before a layer is rendered.
@@ -2591,7 +3545,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (typeof color === "string") {
       return color;
     }
-    return toString$1(color);
+    return toString(color);
   }
   const MAX_CACHE_SIZE = 1024;
   const cache = {};
@@ -2648,7 +3602,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       color[3]
     ];
   }
-  function fromString$1(s) {
+  function fromString(s) {
     if (s === "none") {
       return NO_COLOR;
     }
@@ -2681,9 +3635,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (Array.isArray(color)) {
       return color;
     }
-    return fromString$1(color);
+    return fromString(color);
   }
-  function toString$1(color) {
+  function toString(color) {
     let r = color[0];
     if (r != (r | 0)) {
       r = r + 0.5 | 0;
@@ -3105,7 +4059,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return null;
     }
     if (Array.isArray(color)) {
-      return toString$1(color);
+      return toString(color);
     }
     if (typeof color === "object" && "src" in color) {
       return asCanvasPattern(color);
@@ -5702,155 +6656,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return replay;
     }
   }
-  function transform2D(flatCoordinates, offset, end, stride, transform2, dest, destinationStride) {
-    dest = dest ? dest : [];
-    destinationStride = destinationStride ? destinationStride : 2;
-    let i = 0;
-    for (let j = offset; j < end; j += stride) {
-      const x = flatCoordinates[j];
-      const y = flatCoordinates[j + 1];
-      dest[i++] = transform2[0] * x + transform2[2] * y + transform2[4];
-      dest[i++] = transform2[1] * x + transform2[3] * y + transform2[5];
-      for (let k = 2; k < destinationStride; k++) {
-        dest[i++] = flatCoordinates[j + k];
-      }
-    }
-    if (dest && dest.length != i) {
-      dest.length = i;
-    }
-    return dest;
-  }
-  function rotate(flatCoordinates, offset, end, stride, angle, anchor, dest) {
-    dest = dest ? dest : [];
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const anchorX = anchor[0];
-    const anchorY = anchor[1];
-    let i = 0;
-    for (let j = offset; j < end; j += stride) {
-      const deltaX = flatCoordinates[j] - anchorX;
-      const deltaY = flatCoordinates[j + 1] - anchorY;
-      dest[i++] = anchorX + deltaX * cos - deltaY * sin;
-      dest[i++] = anchorY + deltaX * sin + deltaY * cos;
-      for (let k = j + 2; k < j + stride; ++k) {
-        dest[i++] = flatCoordinates[k];
-      }
-    }
-    if (dest && dest.length != i) {
-      dest.length = i;
-    }
-    return dest;
-  }
-  function scale$1(flatCoordinates, offset, end, stride, sx, sy, anchor, dest) {
-    dest = dest ? dest : [];
-    const anchorX = anchor[0];
-    const anchorY = anchor[1];
-    let i = 0;
-    for (let j = offset; j < end; j += stride) {
-      const deltaX = flatCoordinates[j] - anchorX;
-      const deltaY = flatCoordinates[j + 1] - anchorY;
-      dest[i++] = anchorX + sx * deltaX;
-      dest[i++] = anchorY + sy * deltaY;
-      for (let k = j + 2; k < j + stride; ++k) {
-        dest[i++] = flatCoordinates[k];
-      }
-    }
-    if (dest && dest.length != i) {
-      dest.length = i;
-    }
-    return dest;
-  }
-  function translate(flatCoordinates, offset, end, stride, deltaX, deltaY, dest) {
-    dest = dest ? dest : [];
-    let i = 0;
-    for (let j = offset; j < end; j += stride) {
-      dest[i++] = flatCoordinates[j] + deltaX;
-      dest[i++] = flatCoordinates[j + 1] + deltaY;
-      for (let k = j + 2; k < j + stride; ++k) {
-        dest[i++] = flatCoordinates[k];
-      }
-    }
-    if (dest && dest.length != i) {
-      dest.length = i;
-    }
-    return dest;
-  }
-  function assert(assertion, errorMessage) {
-    if (!assertion) {
-      throw new Error(errorMessage);
-    }
-  }
-  const IDENTITY_TRANSFORM = [1, 0, 0, 1, 0, 0];
-  new Array(6);
-  function create() {
-    return IDENTITY_TRANSFORM.slice(0);
-  }
-  function setFromArray(transform1, transform2) {
-    transform1[0] = transform2[0];
-    transform1[1] = transform2[1];
-    transform1[2] = transform2[2];
-    transform1[3] = transform2[3];
-    transform1[4] = transform2[4];
-    transform1[5] = transform2[5];
-    return transform1;
-  }
-  function apply(transform2, coordinate) {
-    const x = coordinate[0];
-    const y = coordinate[1];
-    coordinate[0] = transform2[0] * x + transform2[2] * y + transform2[4];
-    coordinate[1] = transform2[1] * x + transform2[3] * y + transform2[5];
-    return coordinate;
-  }
-  function compose(transform2, dx1, dy1, sx, sy, angle, dx2, dy2) {
-    const sin = Math.sin(angle);
-    const cos = Math.cos(angle);
-    transform2[0] = sx * cos;
-    transform2[1] = sy * sin;
-    transform2[2] = -sx * sin;
-    transform2[3] = sy * cos;
-    transform2[4] = dx2 * sx * cos - dy2 * sx * sin + dx1;
-    transform2[5] = dx2 * sy * sin + dy2 * sy * cos + dy1;
-    return transform2;
-  }
-  function makeInverse(target, source) {
-    const det = determinant(source);
-    assert(det !== 0, "Transformation matrix cannot be inverted");
-    const a = source[0];
-    const b = source[1];
-    const c = source[2];
-    const d = source[3];
-    const e = source[4];
-    const f = source[5];
-    target[0] = d / det;
-    target[1] = -b / det;
-    target[2] = -c / det;
-    target[3] = a / det;
-    target[4] = (c * f - d * e) / det;
-    target[5] = -(a * f - b * e) / det;
-    return target;
-  }
-  function determinant(mat) {
-    return mat[0] * mat[3] - mat[1] * mat[2];
-  }
-  const matrixPrecision = [1e5, 1e5, 1e5, 1e5, 2, 2];
-  function toString(mat) {
-    const transformString = "matrix(" + mat.join(", ") + ")";
-    return transformString;
-  }
-  function fromString(cssTransform) {
-    const values = cssTransform.substring(7, cssTransform.length - 1).split(",");
-    return values.map(parseFloat);
-  }
-  function equivalent(cssTransform1, cssTransform2) {
-    const mat1 = fromString(cssTransform1);
-    const mat2 = fromString(cssTransform2);
-    for (let i = 0; i < 6; ++i) {
-      if (Math.round((mat1[i] - mat2[i]) * matrixPrecision[i]) !== 0) {
-        return false;
-      }
-    }
-    return true;
-  }
   function lineStringLength(flatCoordinates, offset, end, stride) {
     let x1 = flatCoordinates[offset];
     let y1 = flatCoordinates[offset + 1];
@@ -8325,537 +9130,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.iconImage_.ready();
     }
   }
-  const tmpTransform$1 = create();
-  const tmpPoint = [NaN, NaN];
-  class Geometry extends BaseObject {
-    constructor() {
-      super();
-      this.extent_ = createEmpty();
-      this.extentRevision_ = -1;
-      this.simplifiedGeometryMaxMinSquaredTolerance = 0;
-      this.simplifiedGeometryRevision = 0;
-      this.simplifyTransformedInternal = memoizeOne(
-        (revision, squaredTolerance, transform2) => {
-          if (!transform2) {
-            return this.getSimplifiedGeometry(squaredTolerance);
-          }
-          const clone2 = this.clone();
-          clone2.applyTransform(transform2);
-          return clone2.getSimplifiedGeometry(squaredTolerance);
-        }
-      );
-    }
-    /**
-     * Get a transformed and simplified version of the geometry.
-     * @abstract
-     * @param {number} squaredTolerance Squared tolerance.
-     * @param {import("../proj.js").TransformFunction} [transform] Optional transform function.
-     * @return {Geometry} Simplified geometry.
-     */
-    simplifyTransformed(squaredTolerance, transform2) {
-      return this.simplifyTransformedInternal(
-        this.getRevision(),
-        squaredTolerance,
-        transform2
-      );
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @abstract
-     * @return {!Geometry} Clone.
-     */
-    clone() {
-      return abstract();
-    }
-    /**
-     * @abstract
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      return abstract();
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @return {boolean} Contains (x, y).
-     */
-    containsXY(x, y) {
-      return this.closestPointXY(x, y, tmpPoint, Number.MIN_VALUE) === 0;
-    }
-    /**
-     * Return the closest point of the geometry to the passed point as
-     * {@link module:ol/coordinate~Coordinate coordinate}.
-     * @param {import("../coordinate.js").Coordinate} point Point.
-     * @param {import("../coordinate.js").Coordinate} [closestPoint] Closest point.
-     * @return {import("../coordinate.js").Coordinate} Closest point.
-     * @api
-     */
-    getClosestPoint(point, closestPoint) {
-      closestPoint = closestPoint ? closestPoint : [NaN, NaN];
-      this.closestPointXY(point[0], point[1], closestPoint, Infinity);
-      return closestPoint;
-    }
-    /**
-     * Returns true if this geometry includes the specified coordinate. If the
-     * coordinate is on the boundary of the geometry, returns false.
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @return {boolean} Contains coordinate.
-     * @api
-     */
-    intersectsCoordinate(coordinate) {
-      return this.containsXY(coordinate[0], coordinate[1]);
-    }
-    /**
-     * @abstract
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     */
-    computeExtent(extent) {
-      return abstract();
-    }
-    /**
-     * Get the extent of the geometry.
-     * @param {import("../extent.js").Extent} [extent] Extent.
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @api
-     */
-    getExtent(extent) {
-      if (this.extentRevision_ != this.getRevision()) {
-        const extent2 = this.computeExtent(this.extent_);
-        if (isNaN(extent2[0]) || isNaN(extent2[1])) {
-          createOrUpdateEmpty(extent2);
-        }
-        this.extentRevision_ = this.getRevision();
-      }
-      return returnOrUpdate(this.extent_, extent);
-    }
-    /**
-     * Rotate the geometry around a given coordinate. This modifies the geometry
-     * coordinates in place.
-     * @abstract
-     * @param {number} angle Rotation angle in radians.
-     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
-     * @api
-     */
-    rotate(angle, anchor) {
-      abstract();
-    }
-    /**
-     * Scale the geometry (with an optional origin).  This modifies the geometry
-     * coordinates in place.
-     * @abstract
-     * @param {number} sx The scaling factor in the x-direction.
-     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
-     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
-     *     of the geometry extent).
-     * @api
-     */
-    scale(sx, sy, anchor) {
-      abstract();
-    }
-    /**
-     * Create a simplified version of this geometry.  For linestrings, this uses
-     * the [Douglas Peucker](https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm)
-     * algorithm.  For polygons, a quantization-based
-     * simplification is used to preserve topology.
-     * @param {number} tolerance The tolerance distance for simplification.
-     * @return {Geometry} A new, simplified version of the original geometry.
-     * @api
-     */
-    simplify(tolerance) {
-      return this.getSimplifiedGeometry(tolerance * tolerance);
-    }
-    /**
-     * Create a simplified version of this geometry using the Douglas Peucker
-     * algorithm.
-     * See https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm.
-     * @abstract
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {Geometry} Simplified geometry.
-     */
-    getSimplifiedGeometry(squaredTolerance) {
-      return abstract();
-    }
-    /**
-     * Get the type of this geometry.
-     * @abstract
-     * @return {Type} Geometry type.
-     */
-    getType() {
-      return abstract();
-    }
-    /**
-     * Apply a transform function to the coordinates of the geometry.
-     * The geometry is modified in place.
-     * If you do not want the geometry modified in place, first `clone()` it and
-     * then use this function on the clone.
-     * @abstract
-     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
-     * Called with a flat array of geometry coordinates.
-     */
-    applyTransform(transformFn) {
-      abstract();
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @abstract
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     */
-    intersectsExtent(extent) {
-      return abstract();
-    }
-    /**
-     * Translate the geometry.  This modifies the geometry coordinates in place.  If
-     * instead you want a new geometry, first `clone()` this geometry.
-     * @abstract
-     * @param {number} deltaX Delta X.
-     * @param {number} deltaY Delta Y.
-     * @api
-     */
-    translate(deltaX, deltaY) {
-      abstract();
-    }
-    /**
-     * Transform each coordinate of the geometry from one coordinate reference
-     * system to another. The geometry is modified in place.
-     * For example, a line will be transformed to a line and a circle to a circle.
-     * If you do not want the geometry modified in place, first `clone()` it and
-     * then use this function on the clone.
-     *
-     * @param {import("../proj.js").ProjectionLike} source The current projection.  Can be a
-     *     string identifier or a {@link module:ol/proj/Projection~Projection} object.
-     * @param {import("../proj.js").ProjectionLike} destination The desired projection.  Can be a
-     *     string identifier or a {@link module:ol/proj/Projection~Projection} object.
-     * @return {this} This geometry.  Note that original geometry is
-     *     modified in place.
-     * @api
-     */
-    transform(source, destination) {
-      const sourceProj = get$1(source);
-      const transformFn = sourceProj.getUnits() == "tile-pixels" ? function(inCoordinates, outCoordinates, stride) {
-        const pixelExtent = sourceProj.getExtent();
-        const projectedExtent = sourceProj.getWorldExtent();
-        const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
-        compose(
-          tmpTransform$1,
-          projectedExtent[0],
-          projectedExtent[3],
-          scale2,
-          -scale2,
-          0,
-          0,
-          0
-        );
-        const transformed = transform2D(
-          inCoordinates,
-          0,
-          inCoordinates.length,
-          stride,
-          tmpTransform$1,
-          outCoordinates
-        );
-        const projTransform = getTransform(sourceProj, destination);
-        if (projTransform) {
-          return projTransform(transformed, transformed, stride);
-        }
-        return transformed;
-      } : getTransform(sourceProj, destination);
-      this.applyTransform(transformFn);
-      return this;
-    }
-  }
-  class SimpleGeometry extends Geometry {
-    constructor() {
-      super();
-      this.layout = "XY";
-      this.stride = 2;
-      this.flatCoordinates;
-    }
-    /**
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @override
-     */
-    computeExtent(extent) {
-      return createOrUpdateFromFlatCoordinates(
-        this.flatCoordinates,
-        0,
-        this.flatCoordinates.length,
-        this.stride,
-        extent
-      );
-    }
-    /**
-     * @abstract
-     * @return {Array<*> | null} Coordinates.
-     */
-    getCoordinates() {
-      return abstract();
-    }
-    /**
-     * Return the first coordinate of the geometry.
-     * @return {import("../coordinate.js").Coordinate} First coordinate.
-     * @api
-     */
-    getFirstCoordinate() {
-      return this.flatCoordinates.slice(0, this.stride);
-    }
-    /**
-     * @return {Array<number>} Flat coordinates.
-     */
-    getFlatCoordinates() {
-      return this.flatCoordinates;
-    }
-    /**
-     * Return the last coordinate of the geometry.
-     * @return {import("../coordinate.js").Coordinate} Last point.
-     * @api
-     */
-    getLastCoordinate() {
-      return this.flatCoordinates.slice(
-        this.flatCoordinates.length - this.stride
-      );
-    }
-    /**
-     * Return the {@link import("./Geometry.js").GeometryLayout layout} of the geometry.
-     * @return {import("./Geometry.js").GeometryLayout} Layout.
-     * @api
-     */
-    getLayout() {
-      return this.layout;
-    }
-    /**
-     * Create a simplified version of this geometry using the Douglas Peucker algorithm.
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {SimpleGeometry} Simplified geometry.
-     * @override
-     */
-    getSimplifiedGeometry(squaredTolerance) {
-      if (this.simplifiedGeometryRevision !== this.getRevision()) {
-        this.simplifiedGeometryMaxMinSquaredTolerance = 0;
-        this.simplifiedGeometryRevision = this.getRevision();
-      }
-      if (squaredTolerance < 0 || this.simplifiedGeometryMaxMinSquaredTolerance !== 0 && squaredTolerance <= this.simplifiedGeometryMaxMinSquaredTolerance) {
-        return this;
-      }
-      const simplifiedGeometry = this.getSimplifiedGeometryInternal(squaredTolerance);
-      const simplifiedFlatCoordinates = simplifiedGeometry.getFlatCoordinates();
-      if (simplifiedFlatCoordinates.length < this.flatCoordinates.length) {
-        return simplifiedGeometry;
-      }
-      this.simplifiedGeometryMaxMinSquaredTolerance = squaredTolerance;
-      return this;
-    }
-    /**
-     * @param {number} squaredTolerance Squared tolerance.
-     * @return {SimpleGeometry} Simplified geometry.
-     * @protected
-     */
-    getSimplifiedGeometryInternal(squaredTolerance) {
-      return this;
-    }
-    /**
-     * @return {number} Stride.
-     */
-    getStride() {
-      return this.stride;
-    }
-    /**
-     * @param {import("./Geometry.js").GeometryLayout} layout Layout.
-     * @param {Array<number>} flatCoordinates Flat coordinates.
-     */
-    setFlatCoordinates(layout, flatCoordinates) {
-      this.stride = getStrideForLayout(layout);
-      this.layout = layout;
-      this.flatCoordinates = flatCoordinates;
-    }
-    /**
-     * @abstract
-     * @param {!Array<*>} coordinates Coordinates.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    setCoordinates(coordinates2, layout) {
-      abstract();
-    }
-    /**
-     * @param {import("./Geometry.js").GeometryLayout|undefined} layout Layout.
-     * @param {Array<*>} coordinates Coordinates.
-     * @param {number} nesting Nesting.
-     * @protected
-     */
-    setLayout(layout, coordinates2, nesting) {
-      let stride;
-      if (layout) {
-        stride = getStrideForLayout(layout);
-      } else {
-        for (let i = 0; i < nesting; ++i) {
-          if (coordinates2.length === 0) {
-            this.layout = "XY";
-            this.stride = 2;
-            return;
-          }
-          coordinates2 = /** @type {Array<unknown>} */
-          coordinates2[0];
-        }
-        stride = coordinates2.length;
-        layout = getLayoutForStride(stride);
-      }
-      this.layout = layout;
-      this.stride = stride;
-    }
-    /**
-     * Apply a transform function to the coordinates of the geometry.
-     * The geometry is modified in place.
-     * If you do not want the geometry modified in place, first `clone()` it and
-     * then use this function on the clone.
-     * @param {import("../proj.js").TransformFunction} transformFn Transform function.
-     * Called with a flat array of geometry coordinates.
-     * @api
-     * @override
-     */
-    applyTransform(transformFn) {
-      if (this.flatCoordinates) {
-        transformFn(
-          this.flatCoordinates,
-          this.flatCoordinates,
-          this.layout.startsWith("XYZ") ? 3 : 2,
-          this.stride
-        );
-        this.changed();
-      }
-    }
-    /**
-     * Rotate the geometry around a given coordinate. This modifies the geometry
-     * coordinates in place.
-     * @param {number} angle Rotation angle in counter-clockwise radians.
-     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
-     * @api
-     * @override
-     */
-    rotate(angle, anchor) {
-      const flatCoordinates = this.getFlatCoordinates();
-      if (flatCoordinates) {
-        const stride = this.getStride();
-        rotate(
-          flatCoordinates,
-          0,
-          flatCoordinates.length,
-          stride,
-          angle,
-          anchor,
-          flatCoordinates
-        );
-        this.changed();
-      }
-    }
-    /**
-     * Scale the geometry (with an optional origin).  This modifies the geometry
-     * coordinates in place.
-     * @param {number} sx The scaling factor in the x-direction.
-     * @param {number} [sy] The scaling factor in the y-direction (defaults to sx).
-     * @param {import("../coordinate.js").Coordinate} [anchor] The scale origin (defaults to the center
-     *     of the geometry extent).
-     * @api
-     * @override
-     */
-    scale(sx, sy, anchor) {
-      if (sy === void 0) {
-        sy = sx;
-      }
-      if (!anchor) {
-        anchor = getCenter(this.getExtent());
-      }
-      const flatCoordinates = this.getFlatCoordinates();
-      if (flatCoordinates) {
-        const stride = this.getStride();
-        scale$1(
-          flatCoordinates,
-          0,
-          flatCoordinates.length,
-          stride,
-          sx,
-          sy,
-          anchor,
-          flatCoordinates
-        );
-        this.changed();
-      }
-    }
-    /**
-     * Translate the geometry.  This modifies the geometry coordinates in place.  If
-     * instead you want a new geometry, first `clone()` this geometry.
-     * @param {number} deltaX Delta X.
-     * @param {number} deltaY Delta Y.
-     * @api
-     * @override
-     */
-    translate(deltaX, deltaY) {
-      const flatCoordinates = this.getFlatCoordinates();
-      if (flatCoordinates) {
-        const stride = this.getStride();
-        translate(
-          flatCoordinates,
-          0,
-          flatCoordinates.length,
-          stride,
-          deltaX,
-          deltaY,
-          flatCoordinates
-        );
-        this.changed();
-      }
-    }
-  }
-  function getLayoutForStride(stride) {
-    let layout;
-    if (stride == 2) {
-      layout = "XY";
-    } else if (stride == 3) {
-      layout = "XYZ";
-    } else if (stride == 4) {
-      layout = "XYZM";
-    }
-    return (
-      /** @type {import("./Geometry.js").GeometryLayout} */
-      layout
-    );
-  }
-  function getStrideForLayout(layout) {
-    let stride;
-    if (layout == "XY") {
-      stride = 2;
-    } else if (layout == "XYZ" || layout == "XYM") {
-      stride = 3;
-    } else if (layout == "XYZM") {
-      stride = 4;
-    }
-    return (
-      /** @type {number} */
-      stride
-    );
-  }
-  function transformGeom2D(simpleGeometry, transform2, dest) {
-    const flatCoordinates = simpleGeometry.getFlatCoordinates();
-    if (!flatCoordinates) {
-      return null;
-    }
-    const stride = simpleGeometry.getStride();
-    return transform2D(
-      flatCoordinates,
-      0,
-      flatCoordinates.length,
-      stride,
-      transform2,
-      dest
-    );
-  }
   class CanvasImmediateRenderer extends VectorContext {
     /**
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
@@ -10499,7 +10773,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         -height / 2
       );
       makeInverse(this.inversePixelTransform, this.pixelTransform);
-      const canvasTransform = toString(this.pixelTransform);
+      const canvasTransform = toString$1(this.pixelTransform);
       const backgroundColor = this.getBackground(frameState);
       this.useContainer(target, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
@@ -11724,7 +11998,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       case "string": {
         if (isType(expectedType, ColorType)) {
-          return new LiteralExpression(ColorType, fromString$1(encoded));
+          return new LiteralExpression(ColorType, fromString(encoded));
         }
         if (isType(expectedType, BooleanType)) {
           return new LiteralExpression(BooleanType, !!encoded);
@@ -12414,7 +12688,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function compileExpression(expression, context) {
     if (expression instanceof LiteralExpression) {
       if (expression.type === ColorType && typeof expression.value === "string") {
-        const colorValue = fromString$1(expression.value);
+        const colorValue = fromString(expression.value);
         return function() {
           return colorValue;
         };
@@ -12851,7 +13125,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return (context2) => {
           const value = args[0](context2);
           if (expression.args[0].type === ColorType) {
-            return toString$1(value);
+            return toString(value);
           }
           return value.toString();
         };
@@ -15615,57 +15889,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       offset = ends[ends.length - 1];
     }
     return minSquaredDistance;
-  }
-  function deflateCoordinate(flatCoordinates, offset, coordinate, stride) {
-    for (let i = 0, ii = coordinate.length; i < ii; ++i) {
-      flatCoordinates[offset++] = coordinate[i];
-    }
-    return offset;
-  }
-  function deflateCoordinates(flatCoordinates, offset, coordinates2, stride) {
-    for (let i = 0, ii = coordinates2.length; i < ii; ++i) {
-      const coordinate = coordinates2[i];
-      for (let j = 0; j < stride; ++j) {
-        flatCoordinates[offset++] = coordinate[j];
-      }
-    }
-    return offset;
-  }
-  function deflateCoordinatesArray(flatCoordinates, offset, coordinatess, stride, ends) {
-    ends = ends ? ends : [];
-    let i = 0;
-    for (let j = 0, jj = coordinatess.length; j < jj; ++j) {
-      const end = deflateCoordinates(
-        flatCoordinates,
-        offset,
-        coordinatess[j],
-        stride
-      );
-      ends[i++] = end;
-      offset = end;
-    }
-    ends.length = i;
-    return ends;
-  }
-  function deflateMultiCoordinatesArray(flatCoordinates, offset, coordinatesss, stride, endss) {
-    endss = endss ? endss : [];
-    let i = 0;
-    for (let j = 0, jj = coordinatesss.length; j < jj; ++j) {
-      const ends = deflateCoordinatesArray(
-        flatCoordinates,
-        offset,
-        coordinatesss[j],
-        stride,
-        endss[i]
-      );
-      if (ends.length === 0) {
-        ends[0] = offset;
-      }
-      endss[i++] = ends;
-      offset = ends[ends.length - 1];
-    }
-    endss.length = i;
-    return endss;
   }
   function linearRingContainsExtent(flatCoordinates, offset, end, stride, extent) {
     const outside = forEachCorner(
@@ -22893,229 +23116,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const pointerEvent = mapBrowserEvent.originalEvent;
     return "pointerId" in pointerEvent && pointerEvent.isPrimary && pointerEvent.button === 0;
   };
-  class Circle extends SimpleGeometry {
-    /**
-     * @param {!import("../coordinate.js").Coordinate} center Center.
-     *     For internal use, flat coordinates in combination with `layout` and no
-     *     `radius` are also accepted.
-     * @param {number} [radius] Radius in units of the projection.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     */
-    constructor(center, radius, layout) {
-      super();
-      if (layout !== void 0 && radius === void 0) {
-        this.setFlatCoordinates(layout, center);
-      } else {
-        radius = radius ? radius : 0;
-        this.setCenterAndRadius(center, radius, layout);
-      }
-    }
-    /**
-     * Make a complete copy of the geometry.
-     * @return {!Circle} Clone.
-     * @api
-     * @override
-     */
-    clone() {
-      const circle = new Circle(
-        this.flatCoordinates.slice(),
-        void 0,
-        this.layout
-      );
-      circle.applyProperties(this);
-      return circle;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @param {import("../coordinate.js").Coordinate} closestPoint Closest point.
-     * @param {number} minSquaredDistance Minimum squared distance.
-     * @return {number} Minimum squared distance.
-     * @override
-     */
-    closestPointXY(x, y, closestPoint, minSquaredDistance) {
-      const flatCoordinates = this.flatCoordinates;
-      const dx = x - flatCoordinates[0];
-      const dy = y - flatCoordinates[1];
-      const squaredDistance2 = dx * dx + dy * dy;
-      if (squaredDistance2 < minSquaredDistance) {
-        if (squaredDistance2 === 0) {
-          for (let i = 0; i < this.stride; ++i) {
-            closestPoint[i] = flatCoordinates[i];
-          }
-        } else {
-          const delta = this.getRadius() / Math.sqrt(squaredDistance2);
-          closestPoint[0] = flatCoordinates[0] + delta * dx;
-          closestPoint[1] = flatCoordinates[1] + delta * dy;
-          for (let i = 2; i < this.stride; ++i) {
-            closestPoint[i] = flatCoordinates[i];
-          }
-        }
-        closestPoint.length = this.stride;
-        return squaredDistance2;
-      }
-      return minSquaredDistance;
-    }
-    /**
-     * @param {number} x X.
-     * @param {number} y Y.
-     * @return {boolean} Contains (x, y).
-     * @override
-     */
-    containsXY(x, y) {
-      const flatCoordinates = this.flatCoordinates;
-      const dx = x - flatCoordinates[0];
-      const dy = y - flatCoordinates[1];
-      return dx * dx + dy * dy <= this.getRadiusSquared_();
-    }
-    /**
-     * Return the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
-     * @return {import("../coordinate.js").Coordinate} Center.
-     * @api
-     */
-    getCenter() {
-      return this.flatCoordinates.slice(0, this.stride);
-    }
-    /**
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @protected
-     * @return {import("../extent.js").Extent} extent Extent.
-     * @override
-     */
-    computeExtent(extent) {
-      const flatCoordinates = this.flatCoordinates;
-      const radius = flatCoordinates[this.stride] - flatCoordinates[0];
-      return createOrUpdate$2(
-        flatCoordinates[0] - radius,
-        flatCoordinates[1] - radius,
-        flatCoordinates[0] + radius,
-        flatCoordinates[1] + radius,
-        extent
-      );
-    }
-    /**
-     * Return the radius of the circle.
-     * @return {number} Radius.
-     * @api
-     */
-    getRadius() {
-      return Math.sqrt(this.getRadiusSquared_());
-    }
-    /**
-     * @private
-     * @return {number} Radius squared.
-     */
-    getRadiusSquared_() {
-      const dx = this.flatCoordinates[this.stride] - this.flatCoordinates[0];
-      const dy = this.flatCoordinates[this.stride + 1] - this.flatCoordinates[1];
-      return dx * dx + dy * dy;
-    }
-    /**
-     * Get the type of this geometry.
-     * @return {import("./Geometry.js").Type} Geometry type.
-     * @api
-     * @override
-     */
-    getType() {
-      return "Circle";
-    }
-    /**
-     * Test if the geometry and the passed extent intersect.
-     * @param {import("../extent.js").Extent} extent Extent.
-     * @return {boolean} `true` if the geometry and the extent intersect.
-     * @api
-     * @override
-     */
-    intersectsExtent(extent) {
-      const circleExtent = this.getExtent();
-      if (intersects$1(extent, circleExtent)) {
-        const center = this.getCenter();
-        if (extent[0] <= center[0] && extent[2] >= center[0]) {
-          return true;
-        }
-        if (extent[1] <= center[1] && extent[3] >= center[1]) {
-          return true;
-        }
-        return forEachCorner(extent, this.intersectsCoordinate.bind(this));
-      }
-      return false;
-    }
-    /**
-     * Set the center of the circle as {@link module:ol/coordinate~Coordinate coordinate}.
-     * @param {import("../coordinate.js").Coordinate} center Center.
-     * @api
-     */
-    setCenter(center) {
-      const stride = this.stride;
-      const radius = this.flatCoordinates[stride] - this.flatCoordinates[0];
-      const flatCoordinates = center.slice();
-      flatCoordinates[stride] = flatCoordinates[0] + radius;
-      for (let i = 1; i < stride; ++i) {
-        flatCoordinates[stride + i] = center[i];
-      }
-      this.setFlatCoordinates(this.layout, flatCoordinates);
-      this.changed();
-    }
-    /**
-     * Set the center (as {@link module:ol/coordinate~Coordinate coordinate}) and the radius (as
-     * number) of the circle.
-     * @param {!import("../coordinate.js").Coordinate} center Center.
-     * @param {number} radius Radius.
-     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
-     * @api
-     */
-    setCenterAndRadius(center, radius, layout) {
-      this.setLayout(layout, center, 0);
-      if (!this.flatCoordinates) {
-        this.flatCoordinates = [];
-      }
-      const flatCoordinates = this.flatCoordinates;
-      let offset = deflateCoordinate(flatCoordinates, 0, center, this.stride);
-      flatCoordinates[offset++] = flatCoordinates[0] + radius;
-      for (let i = 1, ii = this.stride; i < ii; ++i) {
-        flatCoordinates[offset++] = flatCoordinates[i];
-      }
-      flatCoordinates.length = offset;
-      this.changed();
-    }
-    /**
-     * @override
-     */
-    getCoordinates() {
-      return null;
-    }
-    /**
-     * @override
-     */
-    setCoordinates(coordinates2, layout) {
-    }
-    /**
-     * Set the radius of the circle. The radius is in the units of the projection.
-     * @param {number} radius Radius.
-     * @api
-     */
-    setRadius(radius) {
-      this.flatCoordinates[this.stride] = this.flatCoordinates[0] + radius;
-      this.changed();
-    }
-    /**
-     * Rotate the geometry around a given coordinate. This modifies the geometry
-     * coordinates in place.
-     * @param {number} angle Rotation angle in counter-clockwise radians.
-     * @param {import("../coordinate.js").Coordinate} anchor The rotation center.
-     * @api
-     * @override
-     */
-    rotate(angle, anchor) {
-      const center = this.getCenter();
-      const stride = this.getStride();
-      this.setCenter(
-        rotate(center, 0, center.length, stride, angle, anchor, center)
-      );
-      this.changed();
-    }
-  }
-  Circle.prototype.transform;
   const InteractionProperty = {
     ACTIVE: "active"
   };
@@ -27534,6 +27534,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     for (const t of types) addFrom(t);
     return [...keys];
   }
+  function modifySubToolsVisibilityFor(geometryType) {
+    const types = parseGeometryTypes(geometryType);
+    const pointOnly = types.length > 0 && types.every((t) => t === "Point" || t === "MultiPoint");
+    if (pointOnly) {
+      return { shape: false, translate: true, rotate: false, style: true };
+    }
+    const noRotate = types.some((t) => t === "Rectangle" || t === "Disc" || t === "MultiDisc");
+    return {
+      shape: true,
+      translate: true,
+      rotate: !noRotate,
+      style: true
+    };
+  }
   const SKETCH_TEXT_PROP = "ec-sketch-text";
   const DEFAULTS$1 = {
     text: "Texte",
@@ -27552,14 +27566,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const halfH = attrs.fontSize * 1.33 * 0.55;
     const halfW = Math.max(attrs.text.length * attrs.fontSize * 0.35, 14);
     return Math.hypot(halfW, halfH) + 6;
-  }
-  function sketchTextRotateAnchor(point, attrs, mapResolution) {
-    const c = point.getCoordinates();
-    const halfHPx = attrs.fontSize * 1.33 * 0.55;
-    const iconClearancePx = 22;
-    const dist = (halfHPx + iconClearancePx) * mapResolution;
-    const rad = attrs.rotation * Math.PI / 180;
-    return [c[0] - Math.sin(rad) * dist, c[1] + Math.cos(rad) * dist];
   }
   function isSketchTextFeature(feature) {
     return Boolean(feature.get(SKETCH_TEXT_PROP)) || Boolean(feature.get("text"));
@@ -27830,6 +27836,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       })
     });
   }
+  function restoreFeatureVisual(feature) {
+    if (feature.get(FEATURE_STYLE_PROP) || isSketchTextFeature(feature)) {
+      feature.setStyle(buildFeatureStyle(getFeatureStyleAttrs(feature)));
+    } else {
+      feature.setStyle(void 0);
+    }
+    feature.changed();
+  }
+  function applyFeatureHoverVisual(feature) {
+    const attrs = getFeatureStyleAttrs(feature);
+    const boosted = {
+      ...attrs,
+      strokeWidth: attrs.strokeWidth + 2,
+      textStrokeWidth: attrs.textStrokeWidth + 1,
+      radius: attrs.kind === "point" ? attrs.radius + 1.5 : attrs.radius,
+      zIndex: (attrs.zIndex || 0) + 500
+    };
+    feature.setStyle(buildFeatureStyle(boosted));
+    feature.changed();
+  }
   function applyFeatureStyle(feature, attrs) {
     const kind = attrs.kind || featureStyleKindOf(feature);
     const normalized = coerceAttrs(kind, {
@@ -27901,67 +27927,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return candidates[0];
     }
   }
+  const BLUE = "#000091";
+  function cursorUrl(svg) {
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12, pointer`;
+  }
+  const TRANSLATE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="${BLUE}" d="M13 5.83V11h5.17l-1.59-1.59L18 8l4 4-4 4-1.41-1.41L18.17 13H13v5.17l1.59-1.59L16 18l-4 4-4-4 1.41-1.41L11 18.17V13H5.83l1.59 1.59L6 16l-4-4 4-4 1.41 1.41L5.83 11H11V5.83L9.41 7.41 8 6l4-4 4 4-1.41 1.41L13 5.83z"/></svg>`;
+  const ROTATE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="${BLUE}" d="M12 5V1L7 6l5 5V7c2.76 0 5 2.24 5 5 0 .65-.13 1.28-.36 1.86l1.53 1.53C18.7 14.34 19 13.2 19 12c0-3.87-3.13-7-7-7zM6 12c0-.65.13-1.28.36-1.86L4.83 8.61C4.3 9.66 4 10.8 4 12c0 3.87 3.13 7 7 7v4l5-5-5-5v4c-2.76 0-5-2.24-5-5z"/></svg>`;
+  const SKETCH_MODIFY_TRANSLATE_CURSOR = cursorUrl(TRANSLATE_SVG);
+  const SKETCH_MODIFY_ROTATE_CURSOR = cursorUrl(ROTATE_SVG);
+  const SKETCH_MODIFY_ROTATE_GRABBING_CURSOR = cursorUrl(ROTATE_SVG).replace(
+    "pointer",
+    "grabbing"
+  );
   const HANDLE_BLUE = "#000091";
   const RESIZE_FILL = "#fff";
-  const HANDLE_ICON_SCALE = 1.4;
-  const LINE_SIDE_OFFSET_PX = 14;
-  const LINE_HANDLE_GAP_PX = 32;
-  const POLYGON_INNER_MARGIN_PX = 14;
-  const LINE_HOVER_KEEP_PX = 28;
+  const LINE_TRANSLATE_HIT_PX = 10;
   const CIRCLE_EDGE_TOL_PX = 12;
-  const CIRCLE_HOVER_KEEP_PX = 28;
-  const TRANSLATE_ICON = "data:image/svg+xml," + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-      <path fill="${HANDLE_BLUE}" d="M13 5.83V11h5.17l-1.59-1.59L18 8l4 4-4 4-1.41-1.41L18.17 13H13v5.17l1.59-1.59L16 18l-4 4-4-4 1.41-1.41L11 18.17V13H5.83l1.59 1.59L6 16l-4-4 4-4 1.41 1.41L5.83 11H11V5.83L9.41 7.41 8 6l4-4 4 4-1.41 1.41L13 5.83z"/>
-    </svg>`
-  );
-  const ROTATE_ICON = "data:image/svg+xml," + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-      <path fill="${HANDLE_BLUE}" d="M12 5V1L7 6l5 5V7c2.76 0 5 2.24 5 5 0 .65-.13 1.28-.36 1.86l1.53 1.53C18.7 14.34 19 13.2 19 12c0-3.87-3.13-7-7-7zM6 12c0-.65.13-1.28.36-1.86L4.83 8.61C4.3 9.66 4 10.8 4 12c0 3.87 3.13 7 7 7v4l5-5-5-5v4c-2.76 0-5-2.24-5-5z"/>
-    </svg>`
-  );
+  const SHAPE_VERTEX_HIT_PX = 10;
   const RESIZE_ICON = "data:image/svg+xml," + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
       <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
     </svg>`
   );
-  const STYLE_EDIT_ICON = "data:image/svg+xml," + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-      <path fill="${HANDLE_BLUE}" d="M12 3a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9 .83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.36-.61-.36-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-    </svg>`
-  );
-  const STYLE_EDIT_GAP_PX = 36;
-  function styleForRole(role) {
-    if (role === "translate") {
-      return new Style({
-        image: new Icon({
-          src: TRANSLATE_ICON,
-          anchor: [0.5, 0.5],
-          scale: HANDLE_ICON_SCALE
-        }),
-        zIndex: 2
-      });
-    }
-    if (role === "rotate") {
-      return new Style({
-        image: new Icon({
-          src: ROTATE_ICON,
-          anchor: [0.5, 0.5],
-          scale: HANDLE_ICON_SCALE
-        }),
-        zIndex: 2
-      });
-    }
-    if (role === "style-edit") {
-      return new Style({
-        image: new Icon({
-          src: STYLE_EDIT_ICON,
-          anchor: [0.5, 0.5],
-          scale: HANDLE_ICON_SCALE
-        }),
-        zIndex: 2
-      });
-    }
+  function resizeHandleStyle() {
     return new Style({
       image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
       zIndex: 1
@@ -27998,89 +27986,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function resolutionOf(map) {
     return map.getView().getResolution() ?? 1;
   }
-  const HANDLE_VIEWPORT_MARGIN_PX = 28;
-  function clampHandleToViewport(map, coord) {
-    const size = map.getSize();
-    if (!size) return coord;
-    const pixel = map.getPixelFromCoordinate(coord);
-    if (!pixel) return coord;
-    const m = HANDLE_VIEWPORT_MARGIN_PX;
-    const x = Math.min(Math.max(m, pixel[0]), Math.max(m, size[0] - m));
-    const y = Math.min(Math.max(m, pixel[1]), Math.max(m, size[1] - m));
-    if (x === pixel[0] && y === pixel[1]) return coord;
-    return map.getCoordinateFromPixel([x, y]);
-  }
   function distPointToSegment(p, a, b) {
     const dx = b[0] - a[0];
     const dy = b[1] - a[1];
     const len2 = dx * dx + dy * dy;
-    if (len2 === 0) {
-      const ex = p[0] - a[0];
-      const ey = p[1] - a[1];
-      return Math.hypot(ex, ey);
-    }
+    if (len2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
     let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2;
     t = Math.max(0, Math.min(1, t));
     return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
   }
-  function isDeepInsidePolygon(poly, coord, margin) {
-    if (!poly.intersectsCoordinate(coord)) return false;
-    const ring = poly.getLinearRing(0);
-    if (!ring) return false;
-    const coords = ring.getCoordinates();
-    for (let i = 0; i < coords.length - 1; i++) {
-      if (distPointToSegment(coord, coords[i], coords[i + 1]) < margin) {
-        return false;
+  function isNearGeometryVertex(feature, coord, res) {
+    const geom = feature.getGeometry();
+    if (!geom) return false;
+    const tol = SHAPE_VERTEX_HIT_PX * res;
+    if (geom instanceof Point) return true;
+    if (geom instanceof LineString) {
+      for (const c of geom.getCoordinates()) {
+        if (distToCenter(c, coord) <= tol) return true;
+      }
+      return false;
+    }
+    if (geom instanceof Polygon) {
+      const ring = geom.getLinearRing(0);
+      if (!ring) return false;
+      for (const c of ring.getCoordinates()) {
+        if (distToCenter(c, coord) <= tol) return true;
       }
     }
-    return true;
-  }
-  function lineSideAnchors(geom, res) {
-    const coords = geom.getCoordinates();
-    if (coords.length < 2) {
-      const c = featureCentroid(geom);
-      const x = c[0] + LINE_SIDE_OFFSET_PX * res;
-      const gap2 = LINE_HANDLE_GAP_PX * res;
-      return {
-        translate: [x, c[1] + gap2 / 2],
-        rotate: [x, c[1] - gap2 / 2]
-      };
-    }
-    let total = 0;
-    const segLens = [];
-    for (let i = 0; i < coords.length - 1; i++) {
-      const len = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1]);
-      segLens.push(len);
-      total += len;
-    }
-    let target = total / 2;
-    let mid = coords[0];
-    let tx = 1;
-    let ty = 0;
-    for (let i = 0; i < segLens.length; i++) {
-      if (target <= segLens[i] || i === segLens.length - 1) {
-        const a = coords[i];
-        const b = coords[i + 1];
-        const t = segLens[i] > 0 ? target / segLens[i] : 0;
-        mid = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-        const dx = b[0] - a[0];
-        const dy = b[1] - a[1];
-        const len = Math.hypot(dx, dy) || 1;
-        tx = dy / len;
-        ty = -dx / len;
-        break;
-      }
-      target -= segLens[i];
-    }
-    const off = LINE_SIDE_OFFSET_PX * res;
-    const base = [mid[0] + tx * off, mid[1] + ty * off];
-    const gap = LINE_HANDLE_GAP_PX * res / 2;
-    const tangentX = -ty;
-    const tangentY = tx;
-    return {
-      translate: [base[0] + tangentX * gap, base[1] + tangentY * gap],
-      rotate: [base[0] - tangentX * gap, base[1] - tangentY * gap]
-    };
+    return false;
   }
   function distToLineString(line, coord) {
     const coords = line.getCoordinates();
@@ -28137,14 +28070,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return [minX, minY, maxX, maxY];
   }
-  function cursorForRole(role) {
+  function cursorForResizeRole(role) {
     switch (role) {
-      case "translate":
-        return "move";
-      case "rotate":
-        return "grab";
-      case "style-edit":
-        return "pointer";
       case "resize-radius":
         return "nesw-resize";
       case "resize-n":
@@ -28166,18 +28093,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function distToCenter(center, coord) {
     return Math.hypot(coord[0] - center[0], coord[1] - center[1]);
   }
-  function isDeepInsideCircle(circle, coord, margin) {
-    return distToCenter(circle.getCenter(), coord) < circle.getRadius() - margin;
-  }
-  function circleSideTranslateAnchor(circle, res) {
-    const c = circle.getCenter();
-    const r = circle.getRadius();
-    const off = LINE_SIDE_OFFSET_PX * res;
-    return [c[0] + r + off, c[1]];
-  }
-  function circleModeFor(feature, mode) {
-    if (mode === "circle" || mode === "disc") return mode;
-    return getCircleKind(feature) === "disc" ? "disc" : "circle";
+  function featureSupportsRotation(feature, mode) {
+    const geom = feature.getGeometry();
+    if (!geom) return false;
+    if (isSketchTextFeature(feature)) return true;
+    if (mode !== "line-polygon") return false;
+    return geom instanceof LineString || geom instanceof Polygon;
   }
   class TransformPointer extends PointerInteraction {
     constructor(ctrl) {
@@ -28196,17 +28117,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "dataLayer");
       __publicField(this, "onChange");
       __publicField(this, "onStyleEdit");
+      __publicField(this, "onStyleDismiss");
       __publicField(this, "styleEditEnabled");
       __publicField(this, "mode");
+      __publicField(this, "editMode", "shape");
       __publicField(this, "active", false);
       __publicField(this, "handleSource", new VectorSource({ wrapX: false }));
       __publicField(this, "handleLayer");
       __publicField(this, "pointer");
       __publicField(this, "hovered", null);
+      __publicField(this, "hoverHighlighted", null);
       __publicField(this, "dragging", null);
       __publicField(this, "onViewChange", () => {
         if (!this.active || this.dragging || !this.hovered) return;
-        this.placeHandles(this.hovered);
+        if (this.mode === "bbox" && this.editMode === "shape") {
+          this.placeBBoxHandles(this.hovered);
+        }
+      });
+      __publicField(this, "styleSingleClickKey", null);
+      __publicField(this, "onStyleSingleClick", (evt) => {
+        var _a, _b;
+        if (!this.active || this.editMode !== "style" || !this.styleEditEnabled) return;
+        const feature = this.findDataFeatureAtPixel(evt.pixel);
+        if (feature) {
+          (_a = this.onStyleEdit) == null ? void 0 : _a.call(this, feature, evt.coordinate);
+          return;
+        }
+        (_b = this.onStyleDismiss) == null ? void 0 : _b.call(this);
       });
       this.map = opts.map;
       this.dataSource = opts.source;
@@ -28214,13 +28151,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.mode = opts.mode;
       this.onChange = opts.onChange;
       this.onStyleEdit = opts.onStyleEdit ?? null;
+      this.onStyleDismiss = opts.onStyleDismiss ?? null;
       this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.handleLayer = new VectorLayer({
         source: this.handleSource,
-        // Au-dessus des couches données / tuiles
         zIndex: 1e4,
         className: "ec-geometry-editor__transform-handles",
-        style: (feature) => styleForRole(feature.get("role")),
+        style: () => resizeHandleStyle(),
         updateWhileAnimating: true,
         updateWhileInteracting: true
       });
@@ -28232,7 +28169,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clearHandles();
       this.hovered = null;
     }
+    setEditMode(mode) {
+      var _a;
+      if (this.editMode === "style" && mode !== "style") {
+        (_a = this.onStyleDismiss) == null ? void 0 : _a.call(this);
+      }
+      this.clearHoverHighlight();
+      this.editMode = mode;
+      this.clearHandles();
+      this.hovered = null;
+      const el = this.map.getTargetElement();
+      if (el) el.style.cursor = "";
+      this.syncStyleSingleClickListener();
+    }
+    getEditMode() {
+      return this.editMode;
+    }
     setActive(active) {
+      var _a;
       if (this.active === active) return;
       this.active = active;
       if (active) {
@@ -28241,15 +28195,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.map.getView().on("change:center", this.onViewChange);
         this.map.getView().on("change:resolution", this.onViewChange);
         this.map.on("change:size", this.onViewChange);
+        this.syncStyleSingleClickListener();
       } else {
+        this.syncStyleSingleClickListener();
         this.map.removeInteraction(this.pointer);
         this.map.removeLayer(this.handleLayer);
         this.map.getView().un("change:center", this.onViewChange);
         this.map.getView().un("change:resolution", this.onViewChange);
         this.map.un("change:size", this.onViewChange);
         this.clearHandles();
+        this.clearHoverHighlight();
         this.hovered = null;
         this.dragging = null;
+        (_a = this.onStyleDismiss) == null ? void 0 : _a.call(this);
         const el = this.map.getTargetElement();
         if (el) el.style.cursor = "";
       }
@@ -28257,11 +28215,46 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     destroy() {
       this.setActive(false);
     }
+    syncStyleSingleClickListener() {
+      if (this.styleSingleClickKey) {
+        unByKey(this.styleSingleClickKey);
+        this.styleSingleClickKey = null;
+      }
+      if (this.active && this.editMode === "style" && this.styleEditEnabled) {
+        this.styleSingleClickKey = this.map.on("singleclick", this.onStyleSingleClick);
+      }
+    }
     usesVertexModify() {
       return this.mode === "line-polygon" || this.mode === "point";
     }
     clearHandles() {
       this.handleSource.clear(true);
+    }
+    usesHoverHighlight() {
+      return this.editMode === "translate" || this.editMode === "rotate" || this.editMode === "style";
+    }
+    clearHoverHighlight() {
+      if (!this.hoverHighlighted) return;
+      restoreFeatureVisual(this.hoverHighlighted);
+      this.hoverHighlighted = null;
+    }
+    shouldHoverHighlightFeature(feature) {
+      if (this.editMode !== "rotate") return true;
+      if (isSketchTextFeature(feature)) return true;
+      const geom = feature.getGeometry();
+      if (geom instanceof Point) return false;
+      if (geom instanceof Circle && getCircleKind(feature) === "disc") return false;
+      return featureSupportsRotation(feature, this.mode);
+    }
+    syncHoverHighlight(feature) {
+      if (!feature || !this.usesHoverHighlight() || !this.shouldHoverHighlightFeature(feature)) {
+        this.clearHoverHighlight();
+        return;
+      }
+      if (this.hoverHighlighted === feature) return;
+      if (this.hoverHighlighted) restoreFeatureVisual(this.hoverHighlighted);
+      this.hoverHighlighted = feature;
+      applyFeatureHoverVisual(feature);
     }
     isHandleFeature(feature) {
       return Boolean(feature.get("role")) && this.handleSource.hasFeature(feature);
@@ -28341,109 +28334,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return null;
     }
-    /**
-     * @param rotateAt — pendant le drag de rotation, position de l’icône (= curseur)
-     */
-    placeHandles(feature, opts) {
+    placeBBoxHandles(feature) {
       this.clearHandles();
       const geom = feature.getGeometry();
-      if (!geom) return;
-      const add2 = (role, coord, free = false) => {
-        const at = free ? coord : clampHandleToViewport(this.map, coord);
-        const f = new Feature({ geometry: new Point(at) });
+      if (!(geom instanceof Polygon) || this.mode !== "bbox") return;
+      const extent = geom.getExtent();
+      const [minX, minY, maxX, maxY] = extent;
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+      const add2 = (role, coord) => {
+        const f = new Feature({ geometry: new Point(coord) });
         f.set("role", role);
         this.handleSource.addFeature(f);
       };
-      const res = resolutionOf(this.map);
-      if (geom instanceof Circle) {
-        const cMode = circleModeFor(feature, this.mode);
-        if (cMode === "circle") {
-          const t = circleSideTranslateAnchor(geom, res);
-          add2("translate", t);
-          if (this.styleEditEnabled) {
-            add2("style-edit", [t[0], t[1] + STYLE_EDIT_GAP_PX * res]);
-          }
-        } else if (this.styleEditEnabled) {
-          const c = geom.getCenter();
-          add2("style-edit", [c[0], c[1] + Math.max(geom.getRadius() * 0.15, 36 * res)]);
-        }
-        return;
-      }
-      if (this.mode === "bbox" && geom instanceof Polygon) {
-        const extent = geom.getExtent();
-        const [minX, minY, maxX, maxY] = extent;
-        const midX = (minX + maxX) / 2;
-        const midY = (minY + maxY) / 2;
-        add2("resize-nw", [minX, maxY]);
-        add2("resize-n", [midX, maxY]);
-        add2("resize-ne", [maxX, maxY]);
-        add2("resize-e", [maxX, midY]);
-        add2("resize-se", [maxX, minY]);
-        add2("resize-s", [midX, minY]);
-        add2("resize-sw", [minX, minY]);
-        add2("resize-w", [minX, midY]);
-        if (this.styleEditEnabled) {
-          add2("style-edit", [midX, maxY + STYLE_EDIT_GAP_PX * res]);
-        }
-        return;
-      }
-      if (this.mode !== "line-polygon" && this.mode !== "point") return;
-      if (geom instanceof Point && isSketchTextFeature(feature)) {
-        const attrs = getSketchTextAttrs(feature);
-        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? sketchTextRotateAnchor(geom, attrs, res);
-        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
-        if (this.styleEditEnabled) {
-          const rad = attrs.rotation * Math.PI / 180;
-          const gap = STYLE_EDIT_GAP_PX * res;
-          add2("style-edit", [
-            rotateAt[0] + Math.cos(rad) * gap,
-            rotateAt[1] + Math.sin(rad) * gap
-          ]);
-        }
-        return;
-      }
-      if (geom instanceof Point && this.styleEditEnabled) {
-        const c = geom.getCoordinates();
-        add2("style-edit", [c[0], c[1] + STYLE_EDIT_GAP_PX * res]);
-        return;
-      }
-      if (this.mode !== "line-polygon") return;
-      if (geom instanceof LineString) {
-        const anchors = lineSideAnchors(geom, res);
-        add2("translate", anchors.translate);
-        add2("rotate", (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate, Boolean(opts == null ? void 0 : opts.rotateAt));
-        if (this.styleEditEnabled) {
-          const r = (opts == null ? void 0 : opts.rotateAt) ?? anchors.rotate;
-          add2("style-edit", [r[0] - STYLE_EDIT_GAP_PX * res, r[1]]);
-        }
-        return;
-      }
-      if (geom instanceof Polygon) {
-        const center = featureCentroid(geom);
-        const extent = geom.getExtent();
-        const span = Math.max(getHeight(extent), getWidth(extent), 1);
-        const defaultOffset = Math.max(span * 0.12, 36 * res);
-        const rotateAt = (opts == null ? void 0 : opts.rotateAt) ?? [center[0], center[1] + defaultOffset];
-        add2("rotate", rotateAt, Boolean(opts == null ? void 0 : opts.rotateAt));
-        if (this.styleEditEnabled) {
-          add2("style-edit", [rotateAt[0] - STYLE_EDIT_GAP_PX * res, rotateAt[1]]);
-        }
-      }
-    }
-    isDeepInsideHoveredPolygon(coord) {
-      var _a;
-      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
-      if (!(geom instanceof Polygon)) return false;
-      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
-      return isDeepInsidePolygon(geom, coord, margin);
-    }
-    isDeepInsideHoveredDisc(coord) {
-      var _a;
-      const geom = (_a = this.hovered) == null ? void 0 : _a.getGeometry();
-      if (!(geom instanceof Circle)) return false;
-      if (circleModeFor(this.hovered, this.mode) !== "disc") return false;
-      const margin = POLYGON_INNER_MARGIN_PX * resolutionOf(this.map);
-      return isDeepInsideCircle(geom, coord, margin);
+      add2("resize-nw", [minX, maxY]);
+      add2("resize-n", [midX, maxY]);
+      add2("resize-ne", [maxX, maxY]);
+      add2("resize-e", [maxX, midY]);
+      add2("resize-se", [maxX, minY]);
+      add2("resize-s", [midX, minY]);
+      add2("resize-sw", [minX, minY]);
+      add2("resize-w", [minX, midY]);
     }
     isNearHoveredCircleEdge(coord) {
       var _a;
@@ -28452,181 +28363,196 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
       return isNearCircleEdge(geom, coord, tol);
     }
+    canTranslateFeatureAt(feature, coord) {
+      const geom = feature.getGeometry();
+      if (!geom || !coord) return false;
+      const res = resolutionOf(this.map);
+      if (geom instanceof Point && isSketchTextFeature(feature)) {
+        return isNearSketchText(feature, coord, res);
+      }
+      if (geom instanceof Point) return true;
+      if (geom instanceof LineString) {
+        return distToLineString(geom, coord) <= LINE_TRANSLATE_HIT_PX * res;
+      }
+      if (geom instanceof Polygon) {
+        return geom.intersectsCoordinate(coord);
+      }
+      if (geom instanceof Circle) {
+        return distToCenter(geom.getCenter(), coord) <= geom.getRadius();
+      }
+      return false;
+    }
+    updateCursor(el, feature, coord) {
+      if (!feature || !coord) {
+        el.style.cursor = "";
+        return;
+      }
+      if (this.editMode === "style") {
+        el.style.cursor = "pointer";
+        return;
+      }
+      if (this.editMode === "rotate") {
+        if (featureSupportsRotation(feature, this.mode)) {
+          el.style.cursor = SKETCH_MODIFY_ROTATE_CURSOR;
+        } else {
+          el.style.cursor = "";
+        }
+        return;
+      }
+      const geom = feature.getGeometry();
+      if (this.editMode === "shape") {
+        if (isSketchTextFeature(feature)) {
+          el.style.cursor = "";
+          return;
+        }
+        if (geom instanceof Circle && this.isNearHoveredCircleEdge(coord)) {
+          el.style.cursor = cursorForResizeRole("resize-radius");
+          return;
+        }
+        const res = resolutionOf(this.map);
+        if (isNearGeometryVertex(feature, coord, res)) {
+          el.style.cursor = "pointer";
+          return;
+        }
+        el.style.cursor = "";
+        return;
+      }
+      if (this.editMode === "translate") {
+        el.style.cursor = SKETCH_MODIFY_TRANSLATE_CURSOR;
+        return;
+      }
+      el.style.cursor = "";
+    }
     handleMove(evt) {
       if (!this.active || this.dragging) return;
-      const handle = this.findHandleAtPixel(evt.pixel);
       const el = this.map.getTargetElement();
-      if (handle) {
-        if (el) el.style.cursor = cursorForRole(handle.get("role"));
+      if (!el) return;
+      if (this.editMode === "idle") {
+        this.hovered = null;
+        this.clearHandles();
+        this.clearHoverHighlight();
+        el.style.cursor = "";
         return;
+      }
+      if (this.editMode === "shape" && this.mode === "bbox") {
+        const handle = this.findHandleAtPixel(evt.pixel);
+        if (handle) {
+          el.style.cursor = cursorForResizeRole(handle.get("role"));
+          return;
+        }
       }
       const feature = this.findDataFeatureAtPixel(evt.pixel);
       if (feature) {
-        if (feature !== this.hovered) {
-          this.hovered = feature;
+        this.hovered = feature;
+        if (this.editMode === "shape" && this.mode === "bbox") {
+          this.placeBBoxHandles(feature);
+        } else {
+          this.clearHandles();
         }
-        this.placeHandles(feature);
-        const coord2 = evt.coordinate;
-        const geom = feature.getGeometry();
-        if (el && coord2 && geom instanceof Point && isSketchTextFeature(feature) && isNearSketchText(feature, coord2, resolutionOf(this.map))) {
-          el.style.cursor = "move";
-        } else if (el && (this.mode === "point" || geom instanceof Point) && !isSketchTextFeature(feature)) {
-          el.style.cursor = "move";
-        } else if (el && coord2 && geom instanceof Circle) {
-          const tol = CIRCLE_EDGE_TOL_PX * resolutionOf(this.map);
-          if (isNearCircleEdge(geom, coord2, tol)) {
-            el.style.cursor = cursorForRole("resize-radius");
-          } else if (this.isDeepInsideHoveredDisc(coord2)) {
-            el.style.cursor = "move";
-          } else {
-            el.style.cursor = "pointer";
-          }
-        } else if (el && coord2 && (this.mode === "line-polygon" || this.mode === "bbox") && this.isDeepInsideHoveredPolygon(coord2)) {
-          el.style.cursor = "move";
-        } else if (el) {
-          el.style.cursor = "pointer";
-        }
+        this.syncHoverHighlight(feature);
+        this.updateCursor(el, feature, evt.coordinate);
         return;
-      }
-      const coord = evt.coordinate;
-      if (this.hovered && coord) {
-        const geom = this.hovered.getGeometry();
-        const res = resolutionOf(this.map);
-        if (geom instanceof Point && isSketchTextFeature(this.hovered)) {
-          const keep = (sketchTextHitRadiusPx(getSketchTextAttrs(this.hovered)) + 24) * res;
-          const c = geom.getCoordinates();
-          if (Math.hypot(coord[0] - c[0], coord[1] - c[1]) <= keep) {
-            this.placeHandles(this.hovered);
-            if (el) {
-              el.style.cursor = isNearSketchText(this.hovered, coord, res) ? "move" : "pointer";
-            }
-            return;
-          }
-        }
-        if (geom instanceof LineString) {
-          const keep = LINE_HOVER_KEEP_PX * res;
-          if (distToLineString(geom, coord) <= keep) {
-            this.placeHandles(this.hovered);
-            if (el) el.style.cursor = "pointer";
-            return;
-          }
-        }
-        if (geom instanceof Circle) {
-          const keep = CIRCLE_HOVER_KEEP_PX * res;
-          const d = Math.abs(distToCenter(geom.getCenter(), coord) - geom.getRadius());
-          const inside = distToCenter(geom.getCenter(), coord) <= geom.getRadius() + keep;
-          if (d <= keep || inside) {
-            this.placeHandles(this.hovered);
-            if (el) {
-              el.style.cursor = isNearCircleEdge(geom, coord, CIRCLE_EDGE_TOL_PX * res) ? cursorForRole("resize-radius") : this.isDeepInsideHoveredDisc(coord) ? "move" : "pointer";
-            }
-            return;
-          }
-        }
       }
       this.hovered = null;
       this.clearHandles();
-      if (el) el.style.cursor = "";
+      this.clearHoverHighlight();
+      el.style.cursor = "";
     }
     handleDown(evt) {
       if (!this.active) return false;
+      if (this.editMode === "idle") return false;
+      this.clearHoverHighlight();
       const coord = evt.coordinate;
       if (!coord) return false;
-      const handle = this.findHandleAtPixel(evt.pixel);
-      if (handle && this.hovered) {
-        const role = handle.get("role");
-        const geom = this.hovered.getGeometry();
-        if (!geom) return false;
-        this.dragging = {
-          role,
-          feature: this.hovered,
-          startCoord: coord.slice(),
-          startGeom: geom.clone(),
-          origin: featureCentroid(geom),
-          startAngle: angleBetween(featureCentroid(geom), coord),
-          startExtent: geom.getExtent().slice(),
-          startTextRotation: isSketchTextFeature(this.hovered) ? getSketchTextAttrs(this.hovered).rotation : 0
-        };
-        const el = this.map.getTargetElement();
-        if (el) {
-          el.style.cursor = role === "rotate" ? "grabbing" : cursorForRole(role);
+      const el = this.map.getTargetElement();
+      if (this.editMode === "style") {
+        return false;
+      }
+      if (this.editMode === "shape" && this.mode === "bbox") {
+        const handle = this.findHandleAtPixel(evt.pixel);
+        if (handle && this.hovered) {
+          const role = handle.get("role");
+          const geom2 = this.hovered.getGeometry();
+          if (!geom2) return false;
+          this.dragging = {
+            role,
+            feature: this.hovered,
+            startCoord: coord.slice(),
+            startGeom: geom2.clone(),
+            origin: featureCentroid(geom2),
+            startAngle: 0,
+            startExtent: geom2.getExtent().slice(),
+            startTextRotation: 0
+          };
+          if (el) el.style.cursor = cursorForResizeRole(role);
+          return true;
         }
+      }
+      const feature = this.findDataFeatureAtPixel(evt.pixel) ?? this.hovered;
+      if (!feature) return false;
+      this.hovered = feature;
+      if (this.editMode === "rotate") {
+        if (!featureSupportsRotation(feature, this.mode)) return false;
+        const geom2 = feature.getGeometry();
+        if (!geom2) return false;
+        this.dragging = {
+          role: "rotate",
+          feature,
+          startCoord: coord.slice(),
+          startGeom: geom2.clone(),
+          origin: featureCentroid(geom2),
+          startAngle: angleBetween(featureCentroid(geom2), coord),
+          startExtent: geom2.getExtent().slice(),
+          startTextRotation: isSketchTextFeature(feature) ? getSketchTextAttrs(feature).rotation : 0
+        };
+        if (el) el.style.cursor = SKETCH_MODIFY_ROTATE_GRABBING_CURSOR;
         return true;
       }
-      if (this.hovered && isSketchTextFeature(this.hovered) && isNearSketchText(this.hovered, coord, resolutionOf(this.map))) {
-        const geom = this.hovered.getGeometry();
-        if (geom instanceof Point) {
-          this.dragging = {
-            role: "translate",
-            feature: this.hovered,
-            startCoord: coord.slice(),
-            startGeom: geom.clone(),
-            origin: geom.getCoordinates().slice(),
-            startAngle: 0,
-            startExtent: geom.getExtent().slice(),
-            startTextRotation: getSketchTextAttrs(this.hovered).rotation
-          };
-          const el = this.map.getTargetElement();
-          if (el) el.style.cursor = "move";
-          return true;
+      if (this.editMode === "shape") {
+        if (this.mode === "point") return false;
+        if (feature && this.isNearHoveredCircleEdge(coord)) {
+          const geom2 = feature.getGeometry();
+          if (geom2 instanceof Circle) {
+            this.dragging = {
+              role: "resize-radius",
+              feature,
+              startCoord: coord.slice(),
+              startGeom: geom2.clone(),
+              origin: geom2.getCenter().slice(),
+              startAngle: 0,
+              startExtent: geom2.getExtent().slice(),
+              startTextRotation: 0
+            };
+            if (el) el.style.cursor = cursorForResizeRole("resize-radius");
+            return true;
+          }
         }
+        return false;
       }
-      if (this.mode === "point") return false;
-      if (this.hovered && this.isNearHoveredCircleEdge(coord)) {
-        const geom = this.hovered.getGeometry();
-        if (geom instanceof Circle) {
-          this.dragging = {
-            role: "resize-radius",
-            feature: this.hovered,
-            startCoord: coord.slice(),
-            startGeom: geom.clone(),
-            origin: geom.getCenter().slice(),
-            startAngle: 0,
-            startExtent: geom.getExtent().slice(),
-            startTextRotation: 0
-          };
-          const el = this.map.getTargetElement();
-          if (el) el.style.cursor = cursorForRole("resize-radius");
-          return true;
-        }
+      if (this.editMode !== "translate") return false;
+      if (!this.canTranslateFeatureAt(feature, coord)) return false;
+      const geom = feature.getGeometry();
+      if (!geom) return false;
+      let origin;
+      if (geom instanceof Point) {
+        origin = geom.getCoordinates().slice();
+      } else if (geom instanceof Circle) {
+        origin = geom.getCenter().slice();
+      } else {
+        origin = featureCentroid(geom);
       }
-      if (this.hovered && this.isDeepInsideHoveredDisc(coord)) {
-        const geom = this.hovered.getGeometry();
-        if (geom instanceof Circle) {
-          this.dragging = {
-            role: "translate",
-            feature: this.hovered,
-            startCoord: coord.slice(),
-            startGeom: geom.clone(),
-            origin: geom.getCenter().slice(),
-            startAngle: 0,
-            startExtent: geom.getExtent().slice(),
-            startTextRotation: 0
-          };
-          const el = this.map.getTargetElement();
-          if (el) el.style.cursor = "move";
-          return true;
-        }
-      }
-      if ((this.mode === "line-polygon" || this.mode === "bbox") && this.hovered && this.isDeepInsideHoveredPolygon(coord)) {
-        const geom = this.hovered.getGeometry();
-        if (geom instanceof Polygon) {
-          this.dragging = {
-            role: "translate",
-            feature: this.hovered,
-            startCoord: coord.slice(),
-            startGeom: geom.clone(),
-            origin: featureCentroid(geom),
-            startAngle: 0,
-            startExtent: geom.getExtent().slice(),
-            startTextRotation: 0
-          };
-          const el = this.map.getTargetElement();
-          if (el) el.style.cursor = "move";
-          return true;
-        }
-      }
-      return false;
+      this.dragging = {
+        role: "translate",
+        feature,
+        startCoord: coord.slice(),
+        startGeom: geom.clone(),
+        origin,
+        startAngle: 0,
+        startExtent: geom.getExtent().slice(),
+        startTextRotation: isSketchTextFeature(feature) ? getSketchTextAttrs(feature).rotation : 0
+      };
+      if (el) el.style.cursor = SKETCH_MODIFY_TRANSLATE_CURSOR;
+      return true;
     }
     handleDrag(evt) {
       if (!this.dragging) return;
@@ -28646,18 +28572,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const next = startGeom.clone();
         next.translate(coord[0] - startCoord[0], coord[1] - startCoord[1]);
         feature.setGeometry(next);
-        this.placeHandles(feature);
-        return;
-      }
-      if (role === "style-edit") {
         return;
       }
       if (role === "resize-radius" && startGeom instanceof Circle) {
         const next = startGeom.clone();
-        const radius = Math.max(distToCenter(origin, coord), 1e-3);
-        next.setRadius(radius);
+        next.setRadius(Math.max(distToCenter(origin, coord), 1e-3));
         feature.setGeometry(next);
-        this.placeHandles(feature);
         return;
       }
       if (role === "rotate" && startGeom instanceof Point && isSketchTextFeature(feature)) {
@@ -28668,7 +28588,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           kind: "text",
           rotation: startTextRotation - deltaDeg
         });
-        this.placeHandles(feature, { rotateAt: coord });
         return;
       }
       if (role === "rotate" && this.mode === "line-polygon") {
@@ -28676,31 +28595,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const next = startGeom.clone();
         rotateGeometry(next, angle, origin);
         feature.setGeometry(next);
-        this.placeHandles(feature, { rotateAt: coord });
         return;
       }
       if (this.mode === "bbox" && role.startsWith("resize-")) {
         feature.setGeometry(bboxPolygonFromExtent(applyBBoxResize(startExtent, role, coord)));
-        this.placeHandles(feature);
+        this.placeBBoxHandles(feature);
       }
     }
     handleUp(_evt) {
-      var _a;
       if (!this.dragging) return false;
-      const { role, feature, startCoord } = this.dragging;
-      const endCoord = _evt.coordinate;
       this.dragging = null;
-      if (role === "style-edit") {
-        const moved = endCoord && Math.hypot(endCoord[0] - startCoord[0], endCoord[1] - startCoord[1]);
-        const res = resolutionOf(this.map);
-        if (!moved || moved < 8 * res) {
-          (_a = this.onStyleEdit) == null ? void 0 : _a.call(this, feature);
-        }
-        this.placeHandles(feature);
-        return false;
-      }
-      this.placeHandles(feature);
       this.onChange();
+      const el = this.map.getTargetElement();
+      if (el && this.hovered) {
+        this.updateCursor(el, this.hovered, _evt.coordinate);
+      }
       return false;
     }
   }
@@ -28729,6 +28638,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "ec-geometry-editor__tool--disc": "ri-circle-line",
     "ec-geometry-editor__tool--text": "ri-text",
     "ec-geometry-editor__tool--modify": "ri-edit-line",
+    "ec-geometry-editor__tool--modify-shape": "ri-shape-line",
+    "ec-geometry-editor__tool--modify-translate": "ri-drag-move-2-line",
+    "ec-geometry-editor__tool--modify-rotate": "ri-restart-line",
+    "ec-geometry-editor__tool--modify-style": "ri-palette-line",
     "ec-geometry-editor__tool--remove": "ri-close-circle-line",
     "ec-geometry-editor__tool--clear-all": "ri-delete-bin-6-fill",
     "ec-geometry-editor__tool--export": "ri-upload-line",
@@ -28761,6 +28674,283 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       icon.setAttribute("aria-hidden", "true");
       badge.appendChild(icon);
     }
+  }
+  const SUB_TOOLS = [
+    {
+      id: "modify-shape",
+      label: "Modification de forme",
+      iconClass: "ec-geometry-editor__tool--modify-shape"
+    },
+    {
+      id: "modify-translate",
+      label: "Déplacement",
+      iconClass: "ec-geometry-editor__tool--modify-translate"
+    },
+    {
+      id: "modify-rotate",
+      label: "Rotation",
+      iconClass: "ec-geometry-editor__tool--modify-rotate"
+    },
+    {
+      id: "modify-style",
+      label: "Modifier le style",
+      iconClass: "ec-geometry-editor__tool--modify-style"
+    }
+  ];
+  const DEFAULT_VISIBILITY = {
+    shape: true,
+    translate: true,
+    rotate: true,
+    style: true
+  };
+  function visibilityKey(id) {
+    switch (id) {
+      case "modify-shape":
+        return "shape";
+      case "modify-translate":
+        return "translate";
+      case "modify-rotate":
+        return "rotate";
+      case "modify-style":
+        return "style";
+    }
+  }
+  class ModifySubToolsBar {
+    constructor(host, layoutToolbar, onSelect, styleEnabled = true, visibility = DEFAULT_VISIBILITY) {
+      __publicField(this, "root");
+      __publicField(this, "layoutToolbar");
+      __publicField(this, "activeId");
+      __publicField(this, "open", false);
+      __publicField(this, "scrollBound", false);
+      __publicField(this, "wheelBound", false);
+      __publicField(this, "visibility");
+      __publicField(this, "onToolbarScroll", () => {
+        this.reposition();
+      });
+      __publicField(this, "onModifyWheel", (evt) => {
+        if (!this.open) return;
+        const toolbar = this.layoutToolbar;
+        const sub = this.root;
+        const subCanScroll = sub.scrollHeight > sub.clientHeight + 1;
+        if (subCanScroll) {
+          const atTop = sub.scrollTop <= 0;
+          const atBottom = sub.scrollTop + sub.clientHeight >= sub.scrollHeight - 1;
+          if (evt.deltaY > 0 && !atBottom || evt.deltaY < 0 && !atTop) {
+            sub.scrollTop += evt.deltaY;
+            evt.preventDefault();
+            evt.stopPropagation();
+            return;
+          }
+        }
+        if (toolbar.scrollHeight <= toolbar.clientHeight) return;
+        toolbar.scrollTop += evt.deltaY;
+        this.reposition();
+        evt.preventDefault();
+        evt.stopPropagation();
+      });
+      this.onSelect = onSelect;
+      this.styleEnabled = styleEnabled;
+      this.root = host;
+      this.layoutToolbar = layoutToolbar;
+      this.visibility = { ...DEFAULT_VISIBILITY, ...visibility };
+      this.activeId = this.getDefaultSubToolId();
+      this.root.hidden = true;
+      for (const tool of SUB_TOOLS) {
+        if (!this.isSubToolVisible(tool.id)) continue;
+        this.root.appendChild(this.createSubToolButton(tool));
+      }
+      this.syncLayout();
+    }
+    createSubToolButton(tool) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `ec-geometry-editor__tool ${tool.iconClass}`;
+      btn.dataset.subToolId = tool.id;
+      btn.setAttribute("aria-label", tool.label);
+      btn.setAttribute("aria-pressed", "false");
+      appendGeometryToolIcon(btn, tool.iconClass);
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const already = this.activeId === tool.id;
+        if (already) {
+          this.setActive(null);
+          this.onSelect(tool.id, false);
+        } else {
+          this.setActive(tool.id);
+          this.onSelect(tool.id, true);
+        }
+      });
+      return btn;
+    }
+    isSubToolVisible(id) {
+      if (id === "modify-style") {
+        return this.styleEnabled && this.visibility.style;
+      }
+      return this.visibility[visibilityKey(id)];
+    }
+    isSubToolAvailable(id) {
+      return this.isSubToolVisible(id);
+    }
+    getDefaultSubToolId() {
+      for (const tool of SUB_TOOLS) {
+        if (this.isSubToolVisible(tool.id)) return tool.id;
+      }
+      return "modify-translate";
+    }
+    setStyleEnabled(enabled) {
+      if (enabled === this.styleEnabled) return;
+      this.styleEnabled = enabled;
+      const styleBtn = this.root.querySelector(
+        ".ec-geometry-editor__tool--modify-style"
+      );
+      if (!enabled) {
+        if (this.activeId === "modify-style") {
+          this.setActive(null);
+          this.onSelect("modify-style", false);
+        }
+        styleBtn == null ? void 0 : styleBtn.remove();
+      } else if (!styleBtn && this.visibility.style) {
+        const tool = SUB_TOOLS.find((t) => t.id === "modify-style");
+        this.root.appendChild(this.createSubToolButton(tool));
+      }
+      if (this.activeId && !this.isSubToolVisible(this.activeId)) {
+        this.setActive(this.getDefaultSubToolId());
+      }
+      this.syncLayout();
+    }
+    setOpen(open) {
+      this.open = open;
+      this.root.hidden = !open;
+      if (open) {
+        this.bindScroll();
+        if (this.activeId) this.setActive(this.activeId);
+        this.reposition();
+      } else {
+        this.unbindScroll();
+        this.clearPosition();
+      }
+    }
+    isOpen() {
+      return this.open;
+    }
+    setActive(id) {
+      if (id !== null && !this.isSubToolVisible(id)) {
+        id = this.getDefaultSubToolId();
+      }
+      this.activeId = id;
+      for (const btn of this.root.querySelectorAll("button[data-sub-tool-id]")) {
+        const on = id !== null && btn.dataset.subToolId === id;
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.classList.toggle("is-active", on);
+      }
+    }
+    getActive() {
+      return this.activeId;
+    }
+    /** Sous-outil par défaut à l’ouverture du panneau « Modifier ». */
+    resetToDefaultSubTool() {
+      this.setActive(this.getDefaultSubToolId());
+    }
+    bindScroll() {
+      if (!this.scrollBound) {
+        this.layoutToolbar.addEventListener("scroll", this.onToolbarScroll, { passive: true });
+        this.scrollBound = true;
+      }
+      if (!this.wheelBound) {
+        this.root.addEventListener("wheel", this.onModifyWheel, { passive: false });
+        this.wheelBound = true;
+      }
+    }
+    unbindScroll() {
+      if (this.scrollBound) {
+        this.layoutToolbar.removeEventListener("scroll", this.onToolbarScroll);
+        this.scrollBound = false;
+      }
+      if (this.wheelBound) {
+        this.root.removeEventListener("wheel", this.onModifyWheel);
+        this.wheelBound = false;
+      }
+    }
+    /** Zone visible (scrollport) de la barre principale, en coordonnées cluster. */
+    toolbarVisibleSpanInCluster(clusterRect) {
+      const toolbarRect = this.layoutToolbar.getBoundingClientRect();
+      return {
+        top: toolbarRect.top - clusterRect.top,
+        bottom: toolbarRect.bottom - clusterRect.top
+      };
+    }
+    clearPosition() {
+      this.root.style.top = "";
+      this.root.style.left = "";
+      this.root.style.right = "";
+      this.root.style.bottom = "";
+      this.root.style.maxHeight = "";
+      this.root.style.maxWidth = "";
+    }
+    /** Aligne la barre sur le bouton « Modifier » (hors flux flex du cluster). */
+    reposition() {
+      var _a;
+      if (!this.open || this.root.hidden) return;
+      const modifyBtn = this.layoutToolbar.querySelector(
+        'button[data-tool-id="modify"]'
+      );
+      const cluster = this.root.parentElement;
+      if (!modifyBtn || !cluster) return;
+      const gap = parseGapPx(cluster);
+      const clusterRect = cluster.getBoundingClientRect();
+      const btnRect = modifyBtn.getBoundingClientRect();
+      const corner = ((_a = cluster.parentElement) == null ? void 0 : _a.dataset.corner) ?? "";
+      const toolbarHorizontal = this.layoutToolbar.dataset.layout === "horizontal";
+      const mirror = corner === "top-right" || corner === "bottom-right";
+      const visible = this.toolbarVisibleSpanInCluster(clusterRect);
+      this.root.style.bottom = "";
+      this.root.style.maxHeight = "";
+      this.root.style.maxWidth = "";
+      if (toolbarHorizontal) {
+        let top2 = btnRect.bottom - clusterRect.top + gap;
+        const left = btnRect.left - clusterRect.left;
+        if (top2 < visible.top) top2 = visible.top;
+        const maxHeight2 = Math.max(0, visible.bottom - top2);
+        this.root.style.top = `${top2}px`;
+        this.root.style.left = `${left}px`;
+        this.root.style.right = "auto";
+        this.root.style.maxHeight = `${maxHeight2}px`;
+        return;
+      }
+      let top = btnRect.top - clusterRect.top;
+      if (top < visible.top) top = visible.top;
+      const maxHeight = Math.max(0, visible.bottom - top);
+      this.root.style.top = `${top}px`;
+      this.root.style.maxHeight = `${maxHeight}px`;
+      if (mirror) {
+        this.root.style.left = "auto";
+        this.root.style.right = `${clusterRect.right - btnRect.left + gap}px`;
+      } else {
+        this.root.style.right = "auto";
+        this.root.style.left = `${btnRect.right - clusterRect.left + gap}px`;
+      }
+    }
+    syncLayout() {
+      const toolbarHorizontal = this.layoutToolbar.dataset.layout === "horizontal";
+      this.root.dataset.orientation = toolbarHorizontal ? "row" : "column";
+      this.root.classList.toggle("ec-geometry-editor__modify-toolbar--row", toolbarHorizontal);
+      this.root.classList.toggle("ec-geometry-editor__modify-toolbar--column", !toolbarHorizontal);
+      const cluster = this.root.parentElement;
+      cluster == null ? void 0 : cluster.classList.toggle("ec-geometry-editor__toolbar-cluster--stack", toolbarHorizontal);
+      this.reposition();
+    }
+    destroy() {
+      this.unbindScroll();
+      this.root.replaceChildren();
+      this.clearPosition();
+      this.root.hidden = true;
+      this.open = false;
+    }
+  }
+  function parseGapPx(el) {
+    const raw = getComputedStyle(el).gap || getComputedStyle(el).columnGap;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 4;
   }
   const modifyTool = {
     id: "modify",
@@ -28833,18 +29023,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return [...drawTools, modifyTool, removeTool];
   }
-  class DrawToolsBar {
+  const _DrawToolsBar = class _DrawToolsBar {
     constructor(opts) {
       __publicField(this, "map");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "target");
+      __publicField(this, "modifySubToolsTarget");
       __publicField(this, "onChange");
       __publicField(this, "onClearAll");
       __publicField(this, "showClearAll");
       __publicField(this, "extraTools");
       __publicField(this, "onExtraTool");
       __publicField(this, "onFeatureCreated");
+      __publicField(this, "onStyleDismiss");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -28853,6 +29045,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "modify", null);
       __publicField(this, "snap", null);
       __publicField(this, "transform");
+      __publicField(this, "modifySubTools", null);
+      /** Centre du disque/cercle en cours (1er clic) — fin de dessin seulement si rayon minimal. */
+      __publicField(this, "circleDrawCenter", null);
+      __publicField(this, "removeHoverHighlighted", null);
+      __publicField(this, "styleEditEnabled");
       __publicField(this, "removeEdgeTolPx", 12);
       /** Masque le croquis Draw tant que le pointeur est hors de la carte. */
       __publicField(this, "pointerOnMap", true);
@@ -28867,22 +29064,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       __publicField(this, "onRemoveClick", (evt) => {
         if (evt.dragging) return;
-        const res = this.map.getView().getResolution() ?? 1;
-        const edgeTol = this.removeEdgeTolPx * res;
-        const hits = this.map.getFeaturesAtPixel(evt.pixel, {
-          layerFilter: (layer) => layer === this.layer,
-          hitTolerance: this.removeEdgeTolPx
-        });
-        for (const feature of hits) {
-          if (!this.source.hasFeature(feature)) continue;
-          const geom = feature.getGeometry();
-          if (geom instanceof Circle && getCircleKind(feature) === "circle") {
-            if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue;
-          }
-          this.source.removeFeature(feature);
-          this.onChange();
-          return;
-        }
+        const feature = this.findRemovableFeatureAt(evt);
+        if (!feature) return;
+        this.clearRemoveHoverHighlight();
+        this.source.removeFeature(feature);
+        this.onChange();
       });
       __publicField(this, "onFeaturePointerMove", (evt) => {
         if (evt.dragging) return;
@@ -28890,21 +29076,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const target = this.map.getTargetElement();
         if (!target) return;
         if (this.activeId === "remove") {
-          const res = this.map.getView().getResolution() ?? 1;
-          const edgeTol = this.removeEdgeTolPx * res;
-          const hits = this.map.getFeaturesAtPixel(evt.pixel, {
-            layerFilter: (layer) => layer === this.layer,
-            hitTolerance: this.removeEdgeTolPx
-          });
-          const canRemove = hits.some((feature) => {
-            if (!this.source.hasFeature(feature)) return false;
-            const geom = feature.getGeometry();
-            if (geom instanceof Circle && getCircleKind(feature) === "circle") {
-              return isNearCircleEdge(geom, evt.coordinate, edgeTol);
-            }
-            return true;
-          });
-          target.style.cursor = canRemove ? "pointer" : "";
+          const removable = this.findRemovableFeatureAt(evt);
+          this.syncRemoveHoverHighlight(removable);
+          target.style.cursor = removable ? "pointer" : "";
           return;
         }
         const hit = this.map.hasFeatureAtPixel(evt.pixel, {
@@ -28918,13 +29092,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.layer = opts.layer;
       this.geometryType = opts.geometryType;
       this.target = opts.target;
+      this.modifySubToolsTarget = opts.modifySubToolsTarget;
       this.onChange = opts.onChange;
       this.showClearAll = Boolean(opts.clearAll);
       this.onClearAll = opts.onClearAll ?? null;
       this.extraTools = opts.extraTools ?? [];
       this.onExtraTool = opts.onExtraTool ?? null;
       this.onFeatureCreated = opts.onFeatureCreated ?? null;
+      this.onStyleDismiss = opts.onStyleDismiss ?? null;
       this.customStyle = opts.style;
+      this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
       this.modify = new Modify({
         source: this.source,
@@ -28942,9 +29119,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         layer: this.layer,
         mode: transformModeFor(this.geometryType),
         onChange: () => this.onChange(),
-        onStyleEdit: opts.onStyleEdit
+        onStyleEdit: opts.onStyleEdit,
+        onStyleDismiss: opts.onStyleDismiss
       });
       this.render();
+      this.initModifySubTools();
+    }
+    circleMinRadiusMapUnits() {
+      const res = this.map.getView().getResolution() ?? 1;
+      return _DrawToolsBar.CIRCLE_MIN_RADIUS_PX * res;
+    }
+    isCircleDrawRadiusValid(geom) {
+      if (!(geom instanceof Circle)) return true;
+      return geom.getRadius() >= this.circleMinRadiusMapUnits();
+    }
+    circleFinishCondition(evt) {
+      if (!this.circleDrawCenter) return true;
+      const dx = evt.coordinate[0] - this.circleDrawCenter[0];
+      const dy = evt.coordinate[1] - this.circleDrawCenter[1];
+      const min = this.circleMinRadiusMapUnits();
+      return dx * dx + dy * dy >= min * min;
     }
     bindMapHover() {
       if (this.mapHoverBound) return;
@@ -28971,6 +29165,82 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return base;
       };
     }
+    findRemovableFeatureAt(evt) {
+      const res = this.map.getView().getResolution() ?? 1;
+      const edgeTol = this.removeEdgeTolPx * res;
+      const hits = this.map.getFeaturesAtPixel(evt.pixel, {
+        layerFilter: (layer) => layer === this.layer,
+        hitTolerance: this.removeEdgeTolPx
+      });
+      for (const feature of hits) {
+        if (!this.source.hasFeature(feature)) continue;
+        const geom = feature.getGeometry();
+        if (geom instanceof Circle && getCircleKind(feature) === "circle") {
+          if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue;
+        }
+        return feature;
+      }
+      return null;
+    }
+    clearRemoveHoverHighlight() {
+      if (!this.removeHoverHighlighted) return;
+      restoreFeatureVisual(this.removeHoverHighlighted);
+      this.removeHoverHighlighted = null;
+    }
+    syncRemoveHoverHighlight(feature) {
+      if (!feature) {
+        this.clearRemoveHoverHighlight();
+        return;
+      }
+      if (this.removeHoverHighlighted === feature) return;
+      if (this.removeHoverHighlighted) restoreFeatureVisual(this.removeHoverHighlighted);
+      this.removeHoverHighlighted = feature;
+      applyFeatureHoverVisual(feature);
+    }
+    initModifySubTools() {
+      var _a;
+      (_a = this.modifySubTools) == null ? void 0 : _a.destroy();
+      this.modifySubTools = null;
+      if (!this.target.querySelector('button[data-tool-id="modify"]')) return;
+      const grouped = this.target.querySelector(".ec-geometry-editor__modify-group");
+      if (grouped instanceof HTMLElement) {
+        const modifyBtn = grouped.querySelector('button[data-tool-id="modify"]');
+        if (modifyBtn) grouped.replaceWith(modifyBtn);
+      }
+      this.modifySubTools = new ModifySubToolsBar(
+        this.modifySubToolsTarget,
+        this.target,
+        (id, active) => this.applyModifySubTool(id, active),
+        this.styleEditEnabled,
+        modifySubToolsVisibilityFor(this.geometryType)
+      );
+    }
+    subToolToEditMode(id) {
+      switch (id) {
+        case "modify-shape":
+          return "shape";
+        case "modify-translate":
+          return "translate";
+        case "modify-rotate":
+          return "rotate";
+        case "modify-style":
+          return "style";
+      }
+    }
+    applyModifySubTool(id, active) {
+      var _a, _b, _c;
+      if (this.activeId !== "modify") return;
+      if (!((_a = this.modifySubTools) == null ? void 0 : _a.isSubToolAvailable(id))) return;
+      if (id === "modify-style" && !this.styleEditEnabled) return;
+      if (!active) {
+        this.transform.setEditMode("idle");
+        (_b = this.modify) == null ? void 0 : _b.setActive(false);
+        return;
+      }
+      const mode = this.subToolToEditMode(id);
+      this.transform.setEditMode(mode);
+      (_c = this.modify) == null ? void 0 : _c.setActive(mode === "shape" && this.transform.usesVertexModify());
+    }
     /** Met à jour le type de géométrie (recrée les boutons). */
     setGeometryType(geometryType) {
       if (this.geometryType === geometryType) return;
@@ -28981,6 +29251,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.drawStyle = drawStyleFor(parseGeometryTypes(geometryType));
       }
       this.render();
+      this.initModifySubTools();
     }
     /** Met à jour le style du croquis en cours. */
     setStyle(style) {
@@ -28994,6 +29265,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         label: t.label,
         iconClass: t.iconClass,
         action: t.mode === "action",
+        actionPreservesTool: t.preserveActiveTool,
         extraToggle: t.mode === "toggle"
       });
       const extrasById = new globalThis.Map(this.extraTools.map((t) => [t.id, toDef(t)]));
@@ -29093,32 +29365,35 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     clearFeatureCursor() {
       this.map.un("pointermove", this.onFeaturePointerMove);
+      this.clearRemoveHoverHighlight();
       const target = this.map.getTargetElement();
       if (target) target.style.cursor = "";
     }
     clearTransient() {
-      var _a, _b;
+      var _a, _b, _c;
       const prev = this.activeId;
+      this.circleDrawCenter = null;
       this.clearFeatureCursor();
       this.unbindMapHover();
       this.transform.setActive(false);
+      (_a = this.modifySubTools) == null ? void 0 : _a.setOpen(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
         this.draw = null;
       }
       this.map.un("singleclick", this.onRemoveClick);
       this.activeId = null;
-      (_a = this.modify) == null ? void 0 : _a.setActive(false);
+      (_b = this.modify) == null ? void 0 : _b.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
       if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
-        (_b = this.onExtraTool) == null ? void 0 : _b.call(this, prev, false);
+        (_c = this.onExtraTool) == null ? void 0 : _c.call(this, prev, false);
       }
     }
     activate(tool) {
-      var _a, _b, _c;
+      var _a, _b, _c, _d, _e, _f;
       if (tool.clearAll) {
         this.clearTransient();
         if (this.onClearAll) {
@@ -29130,6 +29405,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (tool.action) {
+        if (!tool.actionPreservesTool) this.clearTransient();
         (_a = this.onExtraTool) == null ? void 0 : _a.call(this, tool.id, true);
         return;
       }
@@ -29145,12 +29421,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (tool.modify) {
+        (_c = this.onStyleDismiss) == null ? void 0 : _c.call(this);
         this.transform.setMode(transformModeFor(this.geometryType));
+        (_d = this.modifySubTools) == null ? void 0 : _d.setOpen(true);
+        (_e = this.modifySubTools) == null ? void 0 : _e.resetToDefaultSubTool();
+        const defaultSub = ((_f = this.modifySubTools) == null ? void 0 : _f.getDefaultSubToolId()) ?? "modify-shape";
+        this.applyModifySubTool(defaultSub, true);
         this.transform.setActive(true);
-        if (this.transform.usesVertexModify()) {
-          (_c = this.modify) == null ? void 0 : _c.setActive(true);
-        }
-        this.map.on("pointermove", this.onFeaturePointerMove);
         return;
       }
       if (tool.remove) {
@@ -29167,15 +29444,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         source: this.source,
         type: tool.drawType,
         style: drawStyle,
-        geometryFunction: tool.box ? createBox() : void 0
+        geometryFunction: tool.box ? createBox() : void 0,
+        finishCondition: tool.circleKind ? (evt) => this.circleFinishCondition(evt) : void 0
       });
-      this.draw.on("drawstart", () => {
+      this.draw.on("drawstart", (evt) => {
         if (replaceOnDraw) this.source.clear(true);
+        this.circleDrawCenter = null;
+        if (tool.circleKind) {
+          const g = evt.feature.getGeometry();
+          if (g instanceof Circle) {
+            this.circleDrawCenter = g.getCenter().slice();
+          }
+        }
       });
       this.draw.on("drawend", (evt) => {
         if (tool.circleKind) {
           setCircleKind(evt.feature, tool.circleKind);
         }
+        const geom = evt.feature.getGeometry();
+        if (tool.circleKind && geom instanceof Circle && !this.isCircleDrawRadiusValid(geom)) {
+          this.source.removeFeature(evt.feature);
+          return;
+        }
+        this.circleDrawCenter = null;
         queueMicrotask(() => {
           var _a2;
           (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
@@ -29186,13 +29477,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.bindMapHover();
     }
     destroy() {
+      var _a;
       this.clearTransient();
+      (_a = this.modifySubTools) == null ? void 0 : _a.destroy();
       this.transform.destroy();
       if (this.modify) this.map.removeInteraction(this.modify);
       if (this.snap) this.map.removeInteraction(this.snap);
       this.target.replaceChildren();
     }
-  }
+  };
+  __publicField(_DrawToolsBar, "CIRCLE_MIN_RADIUS_PX", 3);
+  let DrawToolsBar = _DrawToolsBar;
   class FeatureFormat {
     constructor() {
       this.dataProjection = void 0;
@@ -34115,90 +34410,65 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
     return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
   }
+  function toHexRgba(c) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+    const a = Math.round(clamp01(c.a) * 255);
+    return `#${h(c.r)}${h(c.g)}${h(c.b)}${h(a)}`;
+  }
   class SketchColorPicker {
     constructor(label, initial = "rgba(0, 0, 145, 1)") {
       __publicField(this, "root");
       __publicField(this, "swatch");
-      __publicField(this, "panel");
-      __publicField(this, "hexInput");
       __publicField(this, "hueInput");
+      __publicField(this, "hexInput");
       __publicField(this, "alphaInput");
-      __publicField(this, "alphaValue");
       __publicField(this, "color");
-      __publicField(this, "open", false);
       __publicField(this, "onChange", null);
-      __publicField(this, "onDocDown", (evt) => {
-        if (!this.open) return;
-        const t = evt.target;
-        if (this.root.contains(t) || this.panel.contains(t)) return;
-        this.closePanel();
-      });
       this.color = parseColor(initial);
       this.root = document.createElement("div");
       this.root.className = "ec-sketch-color";
       this.root.innerHTML = `
       <span class="ec-sketch-color__label">${label}</span>
-      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}" aria-haspopup="dialog" aria-expanded="false"></button>
-    `;
-      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
-      this.swatch.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.open) this.closePanel();
-        else this.openPanel();
-      });
-      this.panel = document.createElement("div");
-      this.panel.className = "ec-sketch-color__panel";
-      this.panel.hidden = true;
-      this.panel.setAttribute("role", "dialog");
-      this.panel.setAttribute("aria-label", label);
-      this.panel.innerHTML = `
-      <p class="ec-sketch-color__panel-title">${label}</p>
-      <label class="ec-sketch-color__hue-field">
-        <span>Couleur</span>
-        <input type="color" class="ec-sketch-color__hue" />
-      </label>
+      <button type="button" class="ec-sketch-color__swatch" aria-label="${label}"></button>
+      <input type="color" class="ec-sketch-color__hue-native" tabindex="-1" aria-hidden="true" />
       <label class="ec-sketch-color__hex-field">
-        <span>Hexadécimal</span>
-        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" />
+        <span class="fr-sr-only">Code hexadécimal ${label}</span>
+        <input type="text" class="ec-sketch-color__hex fr-input" maxlength="9" spellcheck="false" inputmode="text" autocomplete="off" />
       </label>
       <label class="ec-sketch-color__alpha-field">
-        <span>Opacité (<output class="ec-sketch-color__alpha-value">100</output>%)</span>
+        <span class="fr-sr-only">Opacité ${label}</span>
         <input type="range" min="0" max="100" step="1" class="ec-sketch-color__alpha" />
       </label>
     `;
-      this.hueInput = this.panel.querySelector(".ec-sketch-color__hue");
-      this.hexInput = this.panel.querySelector(".ec-sketch-color__hex");
-      this.alphaInput = this.panel.querySelector(".ec-sketch-color__alpha");
-      this.alphaValue = this.panel.querySelector(".ec-sketch-color__alpha-value");
+      this.swatch = this.root.querySelector(".ec-sketch-color__swatch");
+      this.hueInput = this.root.querySelector(".ec-sketch-color__hue-native");
+      this.hexInput = this.root.querySelector(".ec-sketch-color__hex");
+      this.alphaInput = this.root.querySelector(".ec-sketch-color__alpha");
+      this.swatch.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openNativePicker();
+      });
       this.hueInput.addEventListener("input", () => {
         const c = parseColor(this.hueInput.value);
         this.color = { ...c, a: this.color.a };
-        this.syncUi(false);
+        this.syncUi({ syncHue: false });
         this.emit();
       });
       this.hexInput.addEventListener("input", () => {
-        const next = parseColor(this.hexInput.value, this.color);
         const raw = this.hexInput.value.trim();
-        if (raw === "transparent" || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw) || /^rgba?\(/i.test(raw)) {
-          this.color = next;
-          this.syncUi(true);
-          this.emit();
-        }
+        if (!this.isCompleteColorInput(raw)) return;
+        this.applyParsedColor(parseColor(raw, this.color), { updateHexField: false });
       });
-      this.hexInput.addEventListener("change", () => {
-        this.color = parseColor(this.hexInput.value, this.color);
-        this.syncUi(true);
-        this.emit();
-      });
+      this.hexInput.addEventListener("change", () => this.commitHexField());
+      this.hexInput.addEventListener("blur", () => this.commitHexField());
       this.alphaInput.addEventListener("input", () => {
         this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
-        this.alphaValue.textContent = this.alphaInput.value;
+        this.syncHexFromColorUnlessEditing();
         this.paintSwatch();
         this.emit();
       });
-      document.body.appendChild(this.panel);
-      this.syncUi(true);
+      this.syncUi({ forceHex: true });
     }
     setOnChange(cb) {
       this.onChange = cb;
@@ -34208,76 +34478,69 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     setValue(value) {
       this.color = parseColor(value);
-      this.syncUi(true);
+      this.syncUi({ forceHex: true });
     }
     close() {
-      this.closePanel();
     }
     destroy() {
-      this.closePanel();
-      this.panel.remove();
       this.root.remove();
     }
-    /** Inclure le panneau dans les tests « clic intérieur ». */
     containsNode(node) {
       if (!node) return false;
-      return this.root.contains(node) || this.panel.contains(node);
+      return this.root.contains(node);
     }
     emit() {
       var _a;
       (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
     }
-    syncUi(syncHue) {
+    /** Valeur hex entièrement saisie (pas de reformat pendant la frappe). */
+    isCompleteColorInput(raw) {
+      if (!raw || raw === "transparent") return raw === "transparent";
+      if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) return true;
+      return /^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\)$/i.test(raw);
+    }
+    commitHexField() {
+      this.color = parseColor(this.hexInput.value, this.color);
+      this.syncUi({ forceHex: true });
+      this.emit();
+    }
+    applyParsedColor(next, opts) {
+      this.color = next;
+      this.hueInput.value = toHexRgb(this.color);
+      this.alphaInput.value = String(Math.round(this.color.a * 100));
+      if (opts.updateHexField) {
+        this.hexInput.value = toHexRgba(this.color);
+      }
+      this.paintSwatch();
+      this.emit();
+    }
+    syncHexFromColorUnlessEditing() {
+      if (document.activeElement === this.hexInput) return;
+      this.hexInput.value = toHexRgba(this.color);
+    }
+    syncUi(opts = {}) {
+      const syncHue = opts.syncHue !== false;
       if (syncHue) this.hueInput.value = toHexRgb(this.color);
-      this.hexInput.value = toHexRgb(this.color);
-      const pct = Math.round(this.color.a * 100);
-      this.alphaInput.value = String(pct);
-      this.alphaValue.textContent = String(pct);
+      if (opts.forceHex || document.activeElement !== this.hexInput) {
+        this.hexInput.value = toHexRgba(this.color);
+      }
+      this.alphaInput.value = String(Math.round(this.color.a * 100));
       this.paintSwatch();
     }
     paintSwatch() {
       this.swatch.style.backgroundColor = toRgbaString(this.color);
       this.swatch.classList.toggle("is-transparent", this.color.a <= 1e-3);
     }
-    openPanel() {
-      this.open = true;
-      this.swatch.setAttribute("aria-expanded", "true");
-      this.panel.hidden = false;
-      const rect = this.swatch.getBoundingClientRect();
-      this.panel.style.position = "fixed";
-      this.panel.style.zIndex = "10050";
-      let left = rect.left;
-      let top = rect.bottom + 4;
-      this.panel.style.left = `${left}px`;
-      this.panel.style.top = `${top}px`;
-      requestAnimationFrame(() => {
-        const pr = this.panel.getBoundingClientRect();
-        if (pr.right > window.innerWidth - 8) {
-          left = Math.max(8, window.innerWidth - pr.width - 8);
+    openNativePicker() {
+      try {
+        if (typeof this.hueInput.showPicker === "function") {
+          this.hueInput.showPicker();
+        } else {
+          this.hueInput.click();
         }
-        if (pr.bottom > window.innerHeight - 8) {
-          top = Math.max(8, rect.top - pr.height - 4);
-        }
-        this.panel.style.left = `${left}px`;
-        this.panel.style.top = `${top}px`;
-        try {
-          if (typeof this.hueInput.showPicker === "function") {
-            this.hueInput.showPicker();
-          } else {
-            this.hueInput.focus();
-            this.hueInput.click();
-          }
-        } catch {
-          this.hueInput.focus();
-        }
-      });
-      document.addEventListener("pointerdown", this.onDocDown, true);
-    }
-    closePanel() {
-      this.open = false;
-      this.swatch.setAttribute("aria-expanded", "false");
-      this.panel.hidden = true;
-      document.removeEventListener("pointerdown", this.onDocDown, true);
+      } catch {
+        this.hueInput.click();
+      }
     }
   }
   const BASIC_BY_KIND = {
@@ -34296,10 +34559,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     circle: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"],
     disc: ["lineDash", "lineCap", "lineJoin", "lineDashOffset", "miterLimit", "zIndex"]
   };
-  class SketchFeatureStylePopup {
+  const _SketchFeatureStylePopup = class _SketchFeatureStylePopup {
     constructor(map) {
       __publicField(this, "root");
       __publicField(this, "overlay");
+      /** Ancrage explicite (clic carte) ; sinon emprise feature. */
+      __publicField(this, "clickAnchor", null);
       __publicField(this, "basicFields");
       __publicField(this, "advancedFields");
       __publicField(this, "advancedToggle");
@@ -34310,9 +34575,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onCommit", null);
       __publicField(this, "openFlag", false);
       __publicField(this, "advancedOpen", false);
-      __publicField(this, "outsideDown", false);
       __publicField(this, "mapDragged", false);
+      /** Évite de fermer au pointerup du même clic qui ouvre / repositionne sur une feature. */
+      __publicField(this, "skipNextOutsideUp", false);
+      /** Clic extérieur en cours (fermeture au pointerup si pas de drag). */
+      __publicField(this, "outsideGesture", null);
       __publicField(this, "geomChangeKey", null);
+      __publicField(this, "mapSingleClickKey", null);
       __publicField(this, "onMapPointerDrag", () => {
         this.mapDragged = true;
       });
@@ -34320,21 +34589,49 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (!this.openFlag) return;
         const t = evt.target;
         if (this.containsUi(t)) return;
-        this.outsideDown = true;
+        if (this.isSketchFeaturePointer(evt)) return;
+        this.outsideGesture = {
+          pointerId: evt.pointerId,
+          startX: evt.clientX,
+          startY: evt.clientY,
+          moved: false
+        };
         this.mapDragged = false;
       });
-      __publicField(this, "onDocPointerUp", () => {
-        if (!this.outsideDown) return;
-        this.outsideDown = false;
-        if (this.mapDragged) {
-          this.mapDragged = false;
+      __publicField(this, "onDocPointerMove", (evt) => {
+        const g = this.outsideGesture;
+        if (!g || evt.pointerId !== g.pointerId || g.moved) return;
+        const dx = evt.clientX - g.startX;
+        const dy = evt.clientY - g.startY;
+        const tol = _SketchFeatureStylePopup.OUTSIDE_MOVE_TOLERANCE_PX;
+        if (dx * dx + dy * dy > tol * tol) g.moved = true;
+      });
+      __publicField(this, "onDocPointerUp", (evt) => {
+        if (this.skipNextOutsideUp) {
+          this.skipNextOutsideUp = false;
+          this.outsideGesture = null;
           return;
         }
+        const g = this.outsideGesture;
+        if (!g || evt.pointerId !== g.pointerId) return;
+        this.outsideGesture = null;
+        const dragged = g.moved || this.mapDragged;
+        this.mapDragged = false;
+        if (dragged) return;
+        const t = evt.target;
+        if (this.containsUi(t)) return;
         this.hide();
       });
       __publicField(this, "onViewChange", () => {
         if (!this.openFlag) return;
         this.reposition();
+      });
+      __publicField(this, "onMapSingleClick", (evt) => {
+        if (!this.openFlag) return;
+        const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 });
+        const feature = hits[0];
+        if (!feature) return;
+        this.open(feature, this.onCommit ?? void 0, evt.coordinate);
       });
       this.map = map;
       this.root = document.createElement("div");
@@ -34519,13 +34816,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         element: this.root,
         positioning: "bottom-center",
         offset: [0, -8],
-        stopEvent: true
+        stopEvent: true,
+        autoPan: false
       });
       this.map.addOverlay(this.overlay);
     }
-    open(feature, onCommit) {
+    open(feature, onCommit, anchor) {
       this.unbindOutside();
       this.feature = feature;
+      this.clickAnchor = anchor ?? null;
       this.onCommit = onCommit ?? null;
       this.kind = featureStyleKindOf(feature);
       this.setAdvancedOpen(false);
@@ -34536,12 +34835,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       applyFeatureStyle(feature, attrs);
       this.root.hidden = false;
       this.openFlag = true;
+      this.skipNextOutsideUp = true;
       this.reposition();
       this.bindOutside();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
-        this.els.text.focus();
-        this.els.text.select();
+        this.focusTextInputWithoutPageScroll();
       }
+    }
+    /** Ferme la popup si la feature éditée n’est plus dans la source (ex. annuler). */
+    closeIfFeatureMissing(source) {
+      if (!this.openFlag || !this.feature) return;
+      if (!source.hasFeature(this.feature)) this.hide();
     }
     hide() {
       this.unbindOutside();
@@ -34550,9 +34854,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.overlay.setPosition(void 0);
       this.openFlag = false;
       this.feature = null;
+      this.clickAnchor = null;
       this.onCommit = null;
-      this.outsideDown = false;
+      this.outsideGesture = null;
       this.mapDragged = false;
+      this.skipNextOutsideUp = false;
       for (const p of Object.values(this.colorPickers)) p.close();
     }
     destroy() {
@@ -34572,13 +34878,35 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.root.contains(node)) return true;
       return Object.values(this.colorPickers).some((p) => p.containsNode(node));
     }
+    /** Clic sur une géométrie croquis — ne pas fermer au pointerup (pan / singleclick OL). */
+    isSketchFeaturePointer(evt) {
+      const target = evt.target;
+      if (!(target instanceof Node)) return false;
+      const mapEl = this.map.getTargetElement();
+      if (!(mapEl == null ? void 0 : mapEl.contains(target))) return false;
+      const pixel = this.map.getEventPixel(evt);
+      return this.map.getFeaturesAtPixel(pixel, { hitTolerance: 14 }).length > 0;
+    }
+    /** Focus texte sans faire défiler la page (scroll document). */
+    focusTextInputWithoutPageScroll() {
+      const input = this.els.text;
+      try {
+        input.focus({ preventScroll: true });
+      } catch {
+        input.focus();
+      }
+      input.select();
+    }
     bindOutside() {
       var _a;
       this.map.on("pointerdrag", this.onMapPointerDrag);
       this.map.getView().on("change:center", this.onViewChange);
       this.map.getView().on("change:resolution", this.onViewChange);
       document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      document.addEventListener("pointermove", this.onDocPointerMove, true);
       document.addEventListener("pointerup", this.onDocPointerUp, true);
+      document.addEventListener("pointercancel", this.onDocPointerUp, true);
+      this.mapSingleClickKey = this.map.on("singleclick", this.onMapSingleClick);
       const geom = (_a = this.feature) == null ? void 0 : _a.getGeometry();
       if (geom) {
         this.geomChangeKey = geom.on("change", this.onViewChange);
@@ -34589,7 +34917,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.map.getView().un("change:center", this.onViewChange);
       this.map.getView().un("change:resolution", this.onViewChange);
       document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+      document.removeEventListener("pointermove", this.onDocPointerMove, true);
       document.removeEventListener("pointerup", this.onDocPointerUp, true);
+      document.removeEventListener("pointercancel", this.onDocPointerUp, true);
+      if (this.mapSingleClickKey) {
+        unByKey(this.mapSingleClickKey);
+        this.mapSingleClickKey = null;
+      }
       if (this.geomChangeKey) {
         unByKey(this.geomChangeKey);
         this.geomChangeKey = null;
@@ -34598,7 +34932,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const anchor = featureStylePopupAnchor(this.feature);
+      const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature);
       if (anchor) this.overlay.setPosition(anchor);
     }
     syncFieldsVisibility() {
@@ -34700,7 +35034,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       };
       applyFeatureStyle(this.feature, attrs);
     }
-  }
+  };
+  __publicField(_SketchFeatureStylePopup, "OUTSIDE_MOVE_TOLERANCE_PX", 5);
+  let SketchFeatureStylePopup = _SketchFeatureStylePopup;
   function clamp(n, min, max, fallback) {
     if (!Number.isFinite(n)) return fallback;
     return Math.min(max, Math.max(min, n));
@@ -35019,7 +35355,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
       __publicField(this, "toolsRoot");
+      __publicField(this, "toolbarCluster");
       __publicField(this, "toolbarHost");
+      __publicField(this, "modifySubToolsHost");
       __publicField(this, "toolsToggleBtn", null);
       __publicField(this, "toolsMenuOpen", false);
       __publicField(this, "toolbarDomId", `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`);
@@ -35075,6 +35413,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.toolbarHost.className = "ec-geometry-editor__toolbar";
       this.toolbarHost.setAttribute("role", "toolbar");
       this.toolbarHost.setAttribute("aria-label", "Outils de dessin");
+      this.modifySubToolsHost = document.createElement("div");
+      this.modifySubToolsHost.className = "ec-geometry-editor__modify-toolbar";
+      this.modifySubToolsHost.setAttribute("role", "toolbar");
+      this.modifySubToolsHost.setAttribute("aria-label", "Outils de modification");
+      this.modifySubToolsHost.hidden = true;
+      this.toolbarCluster = document.createElement("div");
+      this.toolbarCluster.className = "ec-geometry-editor__toolbar-cluster";
+      this.toolbarCluster.append(this.toolbarHost, this.modifySubToolsHost);
       this.applyToolsChrome();
     }
     setMap(map) {
@@ -35163,11 +35509,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     setToolsToggle(corner) {
       this.toolsToggle = corner;
+      if (corner) this.toolsMenuOpen = false;
       this.applyToolsChrome();
-      const map = this.getMap();
-      if (map && this.drawBar) {
-        this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
-      }
+      this.syncToolbarClusterVisibility();
     }
     buildExtraTools() {
       const list = [];
@@ -35192,7 +35536,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           id: "save",
           label: "Enregistrer localement",
           iconClass: "ec-geometry-editor__tool--save",
-          mode: "action"
+          mode: "action",
+          preserveActiveTool: true
         });
       }
       for (const key of this.extraTools) {
@@ -35251,37 +35596,52 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         layer: this.layer,
         geometryType: this.geometryType,
         target: this.toolbarHost,
+        modifySubToolsTarget: this.modifySubToolsHost,
         style: this.style,
         clearAll: this.clearAll,
         extraTools: this.buildExtraTools(),
         onChange: () => {
-          var _a2;
-          (_a2 = this.history) == null ? void 0 : _a2.push();
+          var _a2, _b2;
+          (_a2 = this.stylePopup) == null ? void 0 : _a2.closeIfFeatureMissing(this.source);
+          (_b2 = this.history) == null ? void 0 : _b2.push();
           this.notifyChange();
         },
         onClearAll: () => this.clearFeatures(),
         onExtraTool: (id, active) => this.handleExtraTool(id, active),
         onFeatureCreated: (feature) => this.openStylePopup(feature),
-        onStyleEdit: this.enableFeatureStyleEditor ? (feature) => this.openStylePopup(feature) : void 0
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor) : void 0,
+        onStyleDismiss: this.enableFeatureStyleEditor ? () => {
+          var _a2;
+          return (_a2 = this.stylePopup) == null ? void 0 : _a2.hide();
+        } : void 0
       });
-      this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen;
+      this.syncToolbarClusterVisibility();
       this.syncHistoryButtons();
     }
-    openStylePopup(feature) {
+    openStylePopup(feature, anchor) {
       if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
-      this.stylePopup.open(feature, () => this.notifyChange());
+      const geom = feature.getGeometry();
+      if (geom instanceof Circle) {
+        const map = this.getMap();
+        const res = (map == null ? void 0 : map.getView().getResolution()) ?? 1;
+        if (geom.getRadius() < 3 * res) return;
+      }
+      this.stylePopup.open(feature, () => this.notifyChange(), anchor);
     }
     handleExtraTool(id, active) {
-      var _a, _b, _c, _d, _e, _f;
+      var _a, _b, _c, _d, _e, _f, _g;
       const map = this.getMap();
       if (!map) return;
       if (id === "undo") {
-        if ((_a = this.history) == null ? void 0 : _a.undo()) this.notifyChange();
+        if ((_a = this.history) == null ? void 0 : _a.undo()) {
+          (_b = this.stylePopup) == null ? void 0 : _b.closeIfFeatureMissing(this.source);
+          this.notifyChange();
+        }
         this.syncHistoryButtons();
         return;
       }
       if (id === "redo") {
-        if ((_b = this.history) == null ? void 0 : _b.redo()) this.notifyChange();
+        if ((_c = this.history) == null ? void 0 : _c.redo()) this.notifyChange();
         this.syncHistoryButtons();
         return;
       }
@@ -35299,21 +35659,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (!active) {
         this.stopTextDraw();
-        (_c = this.measure) == null ? void 0 : _c.deactivateDraw();
+        (_d = this.measure) == null ? void 0 : _d.deactivateDraw();
         return;
       }
       this.stopTextDraw();
-      (_d = this.measure) == null ? void 0 : _d.deactivateDraw();
+      (_e = this.measure) == null ? void 0 : _e.deactivateDraw();
       if (id === "text") {
         this.startTextDraw();
         return;
       }
       if (id === "measure-distance") {
-        (_e = this.measure) == null ? void 0 : _e.activate("distance");
+        (_f = this.measure) == null ? void 0 : _f.activate("distance");
         return;
       }
       if (id === "measure-area") {
-        (_f = this.measure) == null ? void 0 : _f.activate("area");
+        (_g = this.measure) == null ? void 0 : _g.activate("area");
       }
     }
     startTextDraw() {
@@ -35511,16 +35871,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     setToolsMenuOpen(open) {
+      var _a;
       this.toolsMenuOpen = open;
       if (this.toolsToggleBtn) {
         this.toolsToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
         this.toolsToggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
         this.toolsToggleBtn.classList.toggle("is-active", open);
       }
-      if (this.toolsToggle) {
-        this.toolbarHost.hidden = !open;
-      }
       this.toolsRoot.classList.toggle("is-open", open);
+      this.syncToolbarClusterVisibility();
+      if (this.toolsToggle && !open) {
+        (_a = this.drawBar) == null ? void 0 : _a.clearActiveTool();
+      }
+    }
+    /** Visibilité barre dessin lorsque `toolsToggle` est actif (menu burger). */
+    syncToolbarClusterVisibility() {
+      if (!this.toolsToggle) {
+        this.toolbarCluster.hidden = false;
+        return;
+      }
+      this.toolbarCluster.hidden = !this.toolsMenuOpen;
     }
     applyToolsChrome() {
       const corner = this.toolsToggle;
@@ -35540,16 +35910,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           appendGeometryToolIcon(btn, "ec-geometry-editor__tool--tools-toggle");
           this.toolsToggleBtn = btn;
         }
-        this.toolbarHost.id = this.toolbarDomId;
-        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost);
+        this.toolbarCluster.id = this.toolbarDomId;
+        this.toolbarHost.removeAttribute("id");
+        this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarCluster);
         this.toolsRoot.dataset.corner = corner;
         this.setToolsMenuOpen(this.toolsMenuOpen);
       } else {
         this.toolsMenuOpen = false;
         this.toolsToggleBtn = null;
+        this.toolbarCluster.removeAttribute("id");
         this.toolbarHost.removeAttribute("id");
-        this.toolbarHost.hidden = false;
-        this.toolsRoot.replaceChildren(this.toolbarHost);
+        this.syncToolbarClusterVisibility();
+        this.toolsRoot.replaceChildren(this.toolbarCluster);
         delete this.toolsRoot.dataset.corner;
         this.toolsRoot.classList.remove("is-open");
       }
@@ -38313,7 +38685,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (transform2) {
           mapContext.transform(
             .../** @type {[number, number, number, number, number, number]} */
-            fromString(transform2)
+            fromString$1(transform2)
           );
         } else {
           const w = parseFloat(canvas.style.width) / canvas.width;

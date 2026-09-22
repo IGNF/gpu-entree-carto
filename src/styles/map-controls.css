@@ -237,7 +237,19 @@
  * margin-inline-end négatif → n’élargit pas la colonne geopf ; overflow-x:hidden
  * garde les bulles dans la zone padding (sinon clip avec overflow-y:auto).
  */
-.position-container-bottom-left > .ec-sketch-control--geopf-slot > .ec-geometry-editor__toolbar {
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot
+  > .ec-geometry-editor__toolbar-cluster {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
+}
+
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot
+  > .ec-geometry-editor__toolbar-cluster
+  > .ec-geometry-editor__toolbar {
   --ec-geom-tooltip-space: 12.5rem;
   flex: 1 1 auto;
   box-sizing: border-box;
@@ -246,7 +258,6 @@
   min-height: 0;
   max-height: 100%;
   padding-inline-end: var(--ec-geom-tooltip-space);
-  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -257,7 +268,7 @@
 
 .position-container-bottom-left
   > .ec-sketch-control--geopf-slot[data-corner]
-  > .ec-geometry-editor__toolbar {
+  > .ec-geometry-editor__toolbar-cluster {
   /* Place pour le bouton menu toolsToggle */
   max-height: calc(100% - var(--ec-widget-btn-size) - var(--ec-widget-gap));
 }

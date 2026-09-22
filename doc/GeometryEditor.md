@@ -88,15 +88,17 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
-- **Modification** : activer l’outil crayon (icône geopf edit).
-  - **Ligne** : au survol, poignées **bleues** (croix + flèche courbe) **collées sur le côté** de la ligne ; translation / rotation via ces poignées.
-  - **Polygone** et **Rectangle (bbox)** : **translation** en glissant l’**intérieur** (marge depuis les bords) — pas d’icône de translation.
-  - **Polygone** : poignée **rotation** (bleue) au survol.
-  - Pendant le drag de rotation, l’icône **suit le curseur**.
-  - **Rectangle (bbox)** : carrés coins / arêtes pour redimensionner (axis-aligné, **sans rotation**).
-  - **Cercle** (legacy contour) : **translation** via poignée latérale ; **rayon** en glissant le contour ; **pas de rotation**.
-  - **Disque** (outil de dessin) : rempli ; **translation** en glissant l’intérieur ; **rayon** en glissant le contour ; **pas de rotation**.
-  - **Point** : déplacement du sommet.
+- **Modification** : activer l’outil crayon (icône edit) affiche une **barre d’outils séparée**, juxtaposée au bouton « Modifier » (vers l’intérieur carte), avec **modification de forme** (défaut lorsqu’il est proposé), **déplacement**, **rotation**, **style** (palette, si éditeur de style activé). Les sous-outils visibles dépendent du **`geometryType`** :
+  - **Point** / **MultiPoint** : **déplacement** uniquement ;
+  - **Rectangle** : forme + déplacement (+ style si activé), **sans rotation** ;
+  - **Disc** / **MultiDisc** : forme + déplacement (+ style si activé), **sans rotation** ;
+  - autres types : sous-ensemble complet (rotation pour lignes, polygones, texte, etc.).
+    Recliquer sur un sous-outil déjà actif le **désactive** (aucune action carte tant qu’un sous-outil n’est pas sélectionné). Recliquer sur « Modifier » referme le mode et masque cette barre. L’activation de « Modifier » **ferme** la popup d’attributs si elle était ouverte. La molette sur la sous-barre **fait défiler** d’abord la sous-barre si elle déborde, sinon la barre d’outils principale ; hauteur max. de la sous-barre = zone visible scrollée de la barre principale.
+  - **Déplacement** : glisser l’intérieur d’un polygone / rectangle / disque, une ligne (zone « corps »), un cercle rempli, un point ou le label texte — sans éditer les sommets ni le rayon.
+  - **Modification de forme** : sommets OpenLayers (ligne, polygone, point), redimensionnement d’un **rectangle** aux poignées, rayon d’un cercle / disque sur le contour.
+  - **Rotation** : clic + drag sur la feature (ligne, polygone, texte) ; curseur rotation au survol.
+  - **Style** : clic sur la feature → popup attributs (couleur, épaisseur, etc.) **ancrée au point de clic**.
+  - **Rectangle (bbox)** : pas de rotation ; poignées de redimensionnement en **modification de forme** uniquement.
 - **Suppression** : activer l’outil poubelle puis cliquer une géométrie. Pour un **cercle** legacy (`ecKind` contour), cliquer uniquement sur le **contour** (un clic dans l’intérieur ne supprime pas). Un **disque** se supprime aussi en cliquant dans l’aire.
 - Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
 - Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche ; boutons **48×48** avec pictos +/− (masques geopf `DSFRzoomStyle`), même look que le zoom de la carte principale.

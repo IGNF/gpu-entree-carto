@@ -9,6 +9,7 @@ import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type { Feature as OlFeature } from 'ol'
+import Circle from 'ol/geom/Circle'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
@@ -138,7 +139,9 @@ export class SketchControl extends Control {
   private ownsLayer: boolean
 
   private toolsRoot: HTMLElement
+  private toolbarCluster: HTMLElement
   private toolbarHost: HTMLElement
+  private modifySubToolsHost: HTMLElement
   private toolsToggleBtn: HTMLButtonElement | null = null
   private toolsMenuOpen = false
   private readonly toolbarDomId = `ec-sketch-toolbar-${Math.random().toString(36).slice(2, 9)}`
@@ -207,6 +210,16 @@ export class SketchControl extends Control {
     this.toolbarHost.className = 'ec-geometry-editor__toolbar'
     this.toolbarHost.setAttribute('role', 'toolbar')
     this.toolbarHost.setAttribute('aria-label', 'Outils de dessin')
+
+    this.modifySubToolsHost = document.createElement('div')
+    this.modifySubToolsHost.className = 'ec-geometry-editor__modify-toolbar'
+    this.modifySubToolsHost.setAttribute('role', 'toolbar')
+    this.modifySubToolsHost.setAttribute('aria-label', 'Outils de modification')
+    this.modifySubToolsHost.hidden = true
+
+    this.toolbarCluster = document.createElement('div')
+    this.toolbarCluster.className = 'ec-geometry-editor__toolbar-cluster'
+    this.toolbarCluster.append(this.toolbarHost, this.modifySubToolsHost)
 
     this.applyToolsChrome()
   }
@@ -312,11 +325,9 @@ export class SketchControl extends Control {
 
   setToolsToggle(corner: ToolsToggleCorner | null): void {
     this.toolsToggle = corner
+    if (corner) this.toolsMenuOpen = false
     this.applyToolsChrome()
-    const map = this.getMap()
-    if (map && this.drawBar) {
-      this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen
-    }
+    this.syncToolbarClusterVisibility()
   }
 
   private buildExtraTools(): DrawBarExtraTool[] {
@@ -343,6 +354,7 @@ export class SketchControl extends Control {
         label: 'Enregistrer localement',
         iconClass: 'ec-geometry-editor__tool--save',
         mode: 'action',
+        preserveActiveTool: true,
       })
     }
     for (const key of this.extraTools) {
@@ -403,10 +415,12 @@ export class SketchControl extends Control {
       layer: this.layer,
       geometryType: this.geometryType,
       target: this.toolbarHost,
+      modifySubToolsTarget: this.modifySubToolsHost,
       style: this.style,
       clearAll: this.clearAll,
       extraTools: this.buildExtraTools(),
       onChange: () => {
+        this.stylePopup?.closeIfFeatureMissing(this.source)
         this.history?.push()
         this.notifyChange()
       },
@@ -414,16 +428,26 @@ export class SketchControl extends Control {
       onExtraTool: (id, active) => this.handleExtraTool(id, active),
       onFeatureCreated: (feature) => this.openStylePopup(feature),
       onStyleEdit: this.enableFeatureStyleEditor
-        ? (feature) => this.openStylePopup(feature)
+        ? (feature, anchor) => this.openStylePopup(feature, anchor)
         : undefined,
+      onStyleDismiss: this.enableFeatureStyleEditor ? () => this.stylePopup?.hide() : undefined,
     })
-    this.toolbarHost.hidden = Boolean(this.toolsToggle) && !this.toolsMenuOpen
+    this.syncToolbarClusterVisibility()
     this.syncHistoryButtons()
   }
 
-  private openStylePopup(feature: OlFeature<OlGeometry>): void {
+  private openStylePopup(
+    feature: OlFeature<OlGeometry>,
+    anchor?: import('ol/coordinate').Coordinate,
+  ): void {
     if (!this.enableFeatureStyleEditor || !this.stylePopup) return
-    this.stylePopup.open(feature, () => this.notifyChange())
+    const geom = feature.getGeometry()
+    if (geom instanceof Circle) {
+      const map = this.getMap()
+      const res = map?.getView().getResolution() ?? 1
+      if (geom.getRadius() < 3 * res) return
+    }
+    this.stylePopup.open(feature, () => this.notifyChange(), anchor)
   }
 
   private handleExtraTool(id: string, active: boolean): void {
@@ -431,7 +455,10 @@ export class SketchControl extends Control {
     if (!map) return
 
     if (id === 'undo') {
-      if (this.history?.undo()) this.notifyChange()
+      if (this.history?.undo()) {
+        this.stylePopup?.closeIfFeatureMissing(this.source)
+        this.notifyChange()
+      }
       this.syncHistoryButtons()
       return
     }
@@ -683,10 +710,20 @@ export class SketchControl extends Control {
       this.toolsToggleBtn.setAttribute('aria-pressed', open ? 'true' : 'false')
       this.toolsToggleBtn.classList.toggle('is-active', open)
     }
-    if (this.toolsToggle) {
-      this.toolbarHost.hidden = !open
-    }
     this.toolsRoot.classList.toggle('is-open', open)
+    this.syncToolbarClusterVisibility()
+    if (this.toolsToggle && !open) {
+      this.drawBar?.clearActiveTool()
+    }
+  }
+
+  /** Visibilité barre dessin lorsque `toolsToggle` est actif (menu burger). */
+  private syncToolbarClusterVisibility(): void {
+    if (!this.toolsToggle) {
+      this.toolbarCluster.hidden = false
+      return
+    }
+    this.toolbarCluster.hidden = !this.toolsMenuOpen
   }
 
   private applyToolsChrome(): void {
@@ -708,16 +745,18 @@ export class SketchControl extends Control {
         appendGeometryToolIcon(btn, 'ec-geometry-editor__tool--tools-toggle')
         this.toolsToggleBtn = btn
       }
-      this.toolbarHost.id = this.toolbarDomId
-      this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarHost)
+      this.toolbarCluster.id = this.toolbarDomId
+      this.toolbarHost.removeAttribute('id')
+      this.toolsRoot.replaceChildren(this.toolsToggleBtn, this.toolbarCluster)
       this.toolsRoot.dataset.corner = corner
       this.setToolsMenuOpen(this.toolsMenuOpen)
     } else {
       this.toolsMenuOpen = false
       this.toolsToggleBtn = null
+      this.toolbarCluster.removeAttribute('id')
       this.toolbarHost.removeAttribute('id')
-      this.toolbarHost.hidden = false
-      this.toolsRoot.replaceChildren(this.toolbarHost)
+      this.syncToolbarClusterVisibility()
+      this.toolsRoot.replaceChildren(this.toolbarCluster)
       delete this.toolsRoot.dataset.corner
       this.toolsRoot.classList.remove('is-open')
     }

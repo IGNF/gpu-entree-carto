@@ -5,7 +5,10 @@
 import Overlay from 'ol/Overlay'
 import { unByKey } from 'ol/Observable'
 import type Map from 'ol/Map'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
+import type { EventsKey } from 'ol/events'
 import type { Feature as OlFeature } from 'ol'
+import type { Coordinate } from 'ol/coordinate'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import {
   applyFeatureStyle,
@@ -70,6 +73,8 @@ const ADVANCED_BY_KIND: Record<FeatureStyleKind, AdvancedField[]> = {
 export class SketchFeatureStylePopup {
   private readonly root: HTMLElement
   private readonly overlay: Overlay
+  /** Ancrage explicite (clic carte) ; sinon emprise feature. */
+  private clickAnchor: Coordinate | null = null
   private readonly basicFields: HTMLElement
   private readonly advancedFields: HTMLElement
   private readonly advancedToggle: HTMLButtonElement
@@ -112,9 +117,20 @@ export class SketchFeatureStylePopup {
   private onCommit: (() => void) | null = null
   private openFlag = false
   private advancedOpen = false
-  private outsideDown = false
   private mapDragged = false
-  private geomChangeKey: import('ol/events').EventsKey | null = null
+  /** Évite de fermer au pointerup du même clic qui ouvre / repositionne sur une feature. */
+  private skipNextOutsideUp = false
+  /** Clic extérieur en cours (fermeture au pointerup si pas de drag). */
+  private outsideGesture: {
+    pointerId: number
+    startX: number
+    startY: number
+    moved: boolean
+  } | null = null
+
+  private static readonly OUTSIDE_MOVE_TOLERANCE_PX = 5
+  private geomChangeKey: EventsKey | null = null
+  private mapSingleClickKey: EventsKey | null = null
 
   private readonly onMapPointerDrag = (): void => {
     this.mapDragged = true
@@ -124,23 +140,53 @@ export class SketchFeatureStylePopup {
     if (!this.openFlag) return
     const t = evt.target as Node | null
     if (this.containsUi(t)) return
-    this.outsideDown = true
+    if (this.isSketchFeaturePointer(evt)) return
+    this.outsideGesture = {
+      pointerId: evt.pointerId,
+      startX: evt.clientX,
+      startY: evt.clientY,
+      moved: false,
+    }
     this.mapDragged = false
   }
 
-  private readonly onDocPointerUp = (): void => {
-    if (!this.outsideDown) return
-    this.outsideDown = false
-    if (this.mapDragged) {
-      this.mapDragged = false
+  private readonly onDocPointerMove = (evt: PointerEvent): void => {
+    const g = this.outsideGesture
+    if (!g || evt.pointerId !== g.pointerId || g.moved) return
+    const dx = evt.clientX - g.startX
+    const dy = evt.clientY - g.startY
+    const tol = SketchFeatureStylePopup.OUTSIDE_MOVE_TOLERANCE_PX
+    if (dx * dx + dy * dy > tol * tol) g.moved = true
+  }
+
+  private readonly onDocPointerUp = (evt: PointerEvent): void => {
+    if (this.skipNextOutsideUp) {
+      this.skipNextOutsideUp = false
+      this.outsideGesture = null
       return
     }
+    const g = this.outsideGesture
+    if (!g || evt.pointerId !== g.pointerId) return
+    this.outsideGesture = null
+    const dragged = g.moved || this.mapDragged
+    this.mapDragged = false
+    if (dragged) return
+    const t = evt.target as Node | null
+    if (this.containsUi(t)) return
     this.hide()
   }
 
   private readonly onViewChange = (): void => {
     if (!this.openFlag) return
     this.reposition()
+  }
+
+  private readonly onMapSingleClick = (evt: MapBrowserEvent): void => {
+    if (!this.openFlag) return
+    const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 }) as OlFeature[]
+    const feature = hits[0]
+    if (!feature) return
+    this.open(feature, this.onCommit ?? undefined, evt.coordinate)
   }
 
   constructor(private readonly map: Map) {
@@ -337,13 +383,15 @@ export class SketchFeatureStylePopup {
       positioning: 'bottom-center',
       offset: [0, -8],
       stopEvent: true,
+      autoPan: false,
     })
     this.map.addOverlay(this.overlay)
   }
 
-  open(feature: OlFeature<OlGeometry>, onCommit?: () => void): void {
+  open(feature: OlFeature<OlGeometry>, onCommit?: () => void, anchor?: Coordinate): void {
     this.unbindOutside()
     this.feature = feature
+    this.clickAnchor = anchor ?? null
     this.onCommit = onCommit ?? null
     this.kind = featureStyleKindOf(feature)
     this.setAdvancedOpen(false)
@@ -354,12 +402,18 @@ export class SketchFeatureStylePopup {
     applyFeatureStyle(feature, attrs)
     this.root.hidden = false
     this.openFlag = true
+    this.skipNextOutsideUp = true
     this.reposition()
     this.bindOutside()
     if (this.kind === 'text' && !this.els.text.closest('[hidden]')) {
-      this.els.text.focus()
-      this.els.text.select()
+      this.focusTextInputWithoutPageScroll()
     }
+  }
+
+  /** Ferme la popup si la feature éditée n’est plus dans la source (ex. annuler). */
+  closeIfFeatureMissing(source: { hasFeature(feature: OlFeature<OlGeometry>): boolean }): void {
+    if (!this.openFlag || !this.feature) return
+    if (!source.hasFeature(this.feature)) this.hide()
   }
 
   hide(): void {
@@ -369,9 +423,11 @@ export class SketchFeatureStylePopup {
     this.overlay.setPosition(undefined)
     this.openFlag = false
     this.feature = null
+    this.clickAnchor = null
     this.onCommit = null
-    this.outsideDown = false
+    this.outsideGesture = null
     this.mapDragged = false
+    this.skipNextOutsideUp = false
     for (const p of Object.values(this.colorPickers)) p.close()
   }
 
@@ -395,12 +451,36 @@ export class SketchFeatureStylePopup {
     return Object.values(this.colorPickers).some((p) => p.containsNode(node))
   }
 
+  /** Clic sur une géométrie croquis — ne pas fermer au pointerup (pan / singleclick OL). */
+  private isSketchFeaturePointer(evt: PointerEvent): boolean {
+    const target = evt.target
+    if (!(target instanceof Node)) return false
+    const mapEl = this.map.getTargetElement()
+    if (!mapEl?.contains(target)) return false
+    const pixel = this.map.getEventPixel(evt)
+    return this.map.getFeaturesAtPixel(pixel, { hitTolerance: 14 }).length > 0
+  }
+
+  /** Focus texte sans faire défiler la page (scroll document). */
+  private focusTextInputWithoutPageScroll(): void {
+    const input = this.els.text
+    try {
+      input.focus({ preventScroll: true })
+    } catch {
+      input.focus()
+    }
+    input.select()
+  }
+
   private bindOutside(): void {
     this.map.on('pointerdrag', this.onMapPointerDrag)
     this.map.getView().on('change:center', this.onViewChange)
     this.map.getView().on('change:resolution', this.onViewChange)
     document.addEventListener('pointerdown', this.onDocPointerDown, true)
+    document.addEventListener('pointermove', this.onDocPointerMove, true)
     document.addEventListener('pointerup', this.onDocPointerUp, true)
+    document.addEventListener('pointercancel', this.onDocPointerUp, true)
+    this.mapSingleClickKey = this.map.on('singleclick', this.onMapSingleClick)
     const geom = this.feature?.getGeometry()
     if (geom) {
       this.geomChangeKey = geom.on('change', this.onViewChange)
@@ -412,7 +492,13 @@ export class SketchFeatureStylePopup {
     this.map.getView().un('change:center', this.onViewChange)
     this.map.getView().un('change:resolution', this.onViewChange)
     document.removeEventListener('pointerdown', this.onDocPointerDown, true)
+    document.removeEventListener('pointermove', this.onDocPointerMove, true)
     document.removeEventListener('pointerup', this.onDocPointerUp, true)
+    document.removeEventListener('pointercancel', this.onDocPointerUp, true)
+    if (this.mapSingleClickKey) {
+      unByKey(this.mapSingleClickKey)
+      this.mapSingleClickKey = null
+    }
     if (this.geomChangeKey) {
       unByKey(this.geomChangeKey)
       this.geomChangeKey = null
@@ -422,7 +508,7 @@ export class SketchFeatureStylePopup {
   /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
-    const anchor = featureStylePopupAnchor(this.feature)
+    const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature)
     if (anchor) this.overlay.setPosition(anchor)
   }
 

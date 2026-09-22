@@ -49,16 +49,35 @@
   gap: 0;
   margin: 0;
   padding: 0;
-  pointer-events: none;
+  /*
+   * OpenLayers Control : pointer-events inline auto sur l’élément —
+   * !important pour que la zone transparente laisse passer clics / pan carte.
+   */
+  pointer-events: none !important;
+  overflow: visible;
+  width: var(--ec-geom-btn-size);
+  max-width: var(--ec-geom-btn-size);
   /* Limite à la hauteur carte → scroll de la barre outils si besoin */
   max-height: calc(100% - 2 * var(--ec-geom-btn-gap));
+  min-height: 0;
 }
 
 .ec-geometry-editor__tools-root > .ec-geometry-editor__tool--tools-toggle {
   pointer-events: auto;
+  flex-shrink: 0;
 }
 
 /* Seuls les boutons capturent les clics (pas la zone infobulle transparente) */
+.ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar-cluster {
+  pointer-events: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  /* visible : barre modification en position absolue à côté du bouton Modifier */
+  overflow: visible;
+}
+
 .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
   pointer-events: none;
 }
@@ -68,25 +87,19 @@
 }
 
 /*
- * GeometryEditor standalone : colonne layout 48px (comme slot geopf).
- * Infobulles en overflow via marge négative — la boîte de hit ne couvre pas la carte.
+ * Infobulles / barre modification en overflow — marge négative :
+ * la boîte layout du croquis reste la colonne 48px.
  */
-.ec-geometry-editor > .ec-geometry-editor__tools-root {
-  overflow: visible;
-  width: var(--ec-geom-btn-size);
-  max-width: var(--ec-geom-btn-size);
-}
-
-.ec-geometry-editor > .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar {
+.ec-geometry-editor > .ec-geometry-editor__tools-root > .ec-geometry-editor__toolbar-cluster {
   margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
 }
 
 .ec-geometry-editor
   > .ec-geometry-editor__tools-root[data-corner='top-right']
-  > .ec-geometry-editor__toolbar,
+  > .ec-geometry-editor__toolbar-cluster,
 .ec-geometry-editor
   > .ec-geometry-editor__tools-root[data-corner='bottom-right']
-  > .ec-geometry-editor__toolbar {
+  > .ec-geometry-editor__toolbar-cluster {
   margin-inline-end: 0;
   margin-inline-start: calc(-1 * var(--ec-geom-tooltip-space));
 }
@@ -153,9 +166,13 @@
   box-shadow: none;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
   /* Scroll si la barre dépasse la carte (pas le bouton toolsToggle) */
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -180,12 +197,115 @@
   align-items: flex-end;
 }
 
-.ec-geometry-editor__tools-root[data-corner] .ec-geometry-editor__toolbar {
+.ec-geometry-editor__tools-root[data-corner] .ec-geometry-editor__toolbar-cluster {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: calc(100% - var(--ec-geom-btn-size) - var(--ec-geom-btn-gap));
+}
+
+.ec-geometry-editor__tools-root[data-corner] .ec-geometry-editor__toolbar {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .ec-geometry-editor__toolbar[hidden] {
   display: none !important;
+}
+
+.ec-geometry-editor__toolbar-cluster[hidden] {
+  display: none !important;
+}
+
+/* toolsToggle : barre dessin masquée tant que le bouton menu n’a pas ouvert le panneau */
+.ec-geometry-editor__tools-root[data-corner]:not(.is-open) > .ec-geometry-editor__toolbar-cluster {
+  display: none !important;
+}
+
+/* Barre dessin + barre modification (côte à côte, vers l’intérieur carte) */
+.ec-geometry-editor__toolbar-cluster {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow: visible;
+}
+
+.ec-geometry-editor__tools-root[data-corner='top-right'] .ec-geometry-editor__toolbar-cluster,
+.ec-geometry-editor__tools-root[data-corner='bottom-right'] .ec-geometry-editor__toolbar-cluster {
+  flex-direction: row-reverse;
+}
+
+.ec-geometry-editor__toolbar-cluster--stack {
+  flex-direction: column;
+}
+
+.ec-geometry-editor__tools-root[data-corner='top-right']
+  .ec-geometry-editor__toolbar-cluster--stack,
+.ec-geometry-editor__tools-root[data-corner='bottom-right']
+  .ec-geometry-editor__toolbar-cluster--stack {
+  flex-direction: column-reverse;
+}
+
+.ec-geometry-editor__modify-toolbar[hidden] {
+  display: none !important;
+}
+
+.ec-geometry-editor__modify-toolbar {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-shrink: 0;
+  gap: 0;
+  pointer-events: auto;
+  background: var(--background-default-grey, #fff);
+  border-radius: var(--ec-geom-btn-radius);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-geometry-editor__modify-toolbar > .ec-geometry-editor__tool {
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.ec-geometry-editor__modify-toolbar--row {
+  flex-direction: row;
+}
+
+.ec-geometry-editor__modify-toolbar--column {
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.ec-geometry-editor__modify-toolbar .ec-geometry-editor__tool {
+  border-radius: 0;
+}
+
+.ec-geometry-editor__modify-toolbar .ec-geometry-editor__tool[hidden] {
+  display: none !important;
+}
+
+.ec-geometry-editor__modify-toolbar--row .ec-geometry-editor__tool:first-child {
+  border-radius: var(--ec-geom-btn-radius) 0 0 var(--ec-geom-btn-radius);
+}
+
+.ec-geometry-editor__modify-toolbar--row .ec-geometry-editor__tool:last-child {
+  border-radius: 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius) 0;
+}
+
+.ec-geometry-editor__modify-toolbar--column .ec-geometry-editor__tool:first-child {
+  border-radius: var(--ec-geom-btn-radius) var(--ec-geom-btn-radius) 0 0;
+}
+
+.ec-geometry-editor__modify-toolbar--column .ec-geometry-editor__tool:last-child {
+  border-radius: 0 0 var(--ec-geom-btn-radius) var(--ec-geom-btn-radius);
 }
 
 .ec-geometry-editor__tool--tools-toggle {
@@ -339,7 +459,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: min(70vh, 28rem);
+  max-height: 265px;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -415,51 +535,31 @@
   outline-offset: 1px;
 }
 
-.ec-sketch-color__panel {
-  box-sizing: border-box;
-  width: 15rem;
-  padding: 0.75rem;
-  background: var(--background-default-grey, #fff);
-  border: 1px solid var(--border-default-grey, #ddd);
-  box-shadow: var(--raised-shadow, 0 2px 8px rgba(0, 0, 18, 0.16));
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.ec-sketch-color__hue-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
 }
 
-.ec-sketch-color__panel[hidden] {
-  display: none !important;
-}
-
-.ec-sketch-color__panel-title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.ec-sketch-color__hue-field,
 .ec-sketch-color__hex-field,
 .ec-sketch-color__alpha-field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--text-mention-grey, #666);
-}
-
-.ec-sketch-color__hue {
-  box-sizing: border-box;
-  width: 100%;
-  height: 2.5rem;
-  padding: 0;
-  border: 1px solid var(--border-default-grey, #ddd);
-  border-radius: 0.25rem;
-  cursor: pointer;
-  background: none;
+  margin: 0;
 }
 
 .ec-sketch-color__hex {
   width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
 }
 
 .ec-sketch-color__alpha {
@@ -760,7 +860,8 @@
 
 .ec-geometry-editor__tools-root:has(
   > .ec-geometry-editor__tool[aria-label]:hover,
-  > .ec-geometry-editor__toolbar > .ec-geometry-editor__tool[aria-label]:hover
+  > .ec-geometry-editor__toolbar > .ec-geometry-editor__tool[aria-label]:hover,
+  > .ec-geometry-editor__toolbar-cluster .ec-geometry-editor__tool[aria-label]:hover
 ) {
   z-index: 3;
 }
@@ -993,4 +1094,11 @@
 /* Poignées transform au-dessus du reste de la carte */
 .ec-geometry-editor__transform-handles {
   z-index: 5;
+}
+
+/* mountSketch (démo croquis) : % max-height outils = hauteur viewport carte */
+.ec-sketch-mount .ol-viewport,
+.ec-sketch-mount .ol-overlaycontainer,
+.ec-sketch-mount .ol-overlaycontainer-stopevent {
+  height: 100%;
 }

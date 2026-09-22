@@ -57,6 +57,16 @@ export function toHexRgb(c: RgbaColor): string {
   return `#${h(c.r)}${h(c.g)}${h(c.b)}`
 }
 
+/** `#RRGGBBAA` (alpha sur 00–ff). */
+export function toHexRgba(c: RgbaColor): string {
+  const h = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0')
+  const a = Math.round(clamp01(c.a) * 255)
+  return `#${h(c.r)}${h(c.g)}${h(c.b)}${h(a)}`
+}
+
 export function isTransparent(value: string): boolean {
   return parseColor(value).a <= 0.001
 }
