@@ -28,7 +28,9 @@ import {
   aggregatePanelStateAfterRegroup,
   aggregateRegroupForStackNode,
   mapVisibilityOptionsFromSplitIds,
+  patchAggregateSubtreePanelOpacity,
   pruneSplitAggregateIds,
+  recheckAggregateCatalogSubtree,
   syncDirectChildrenPanelStateFromAggregate,
 } from '@/lib/layerConfig/catalogAggregateDetail'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
@@ -477,6 +479,9 @@ export function useManagedLayers(
     if (!node || !isCatalogAggregate(node)) return
     if (!splitAggregateIds.value.has(aggregateId)) return
 
+    recheckAggregateCatalogSubtree(catalogChecked.value, node)
+    catalogChecked.value = { ...catalogChecked.value }
+
     const activeWithChildren = layers.value.map((l) => l.id)
     const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId)
 
@@ -486,13 +491,9 @@ export function useManagedLayers(
     const merged = aggregatePanelStateAfterRegroup(node, saved, childStates)
     patchPanelState(aggregateId, merged)
 
-    for (const child of directChildren) {
-      patchPanelState(child.id, {
-        opacity: merged.opacity,
-        visible: getPanelState(child).visible,
-        grayscale: getPanelState(child).grayscale,
-      })
-    }
+    patchAggregateSubtreePanelOpacity(node, merged.opacity, (id, partial) => {
+      patchPanelState(id, partial)
+    })
 
     stackSortKeyById.value = reassignSortKeysAfterAggregateRegroup(
       stackSortKeyById.value,

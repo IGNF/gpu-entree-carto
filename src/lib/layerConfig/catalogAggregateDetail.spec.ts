@@ -63,14 +63,29 @@ describe('catalog aggregate detail (split)', () => {
 
     const opacityMixed = { presc: 70, 'presc-a': 50, 'presc-b': 70 }
     expect(pruneSplitAggregateIds(split, checked, index)).toEqual(new Set(['presc']))
-    expect(
-      computeMapVisibilityById(
-        checked,
-        index,
-        opacityMixed,
-        mapVisibilityOptionsFromSplitIds(split),
-      ).presc,
-    ).toBe(false)
+    const splitVis = computeMapVisibilityById(
+      checked,
+      index,
+      opacityMixed,
+      mapVisibilityOptionsFromSplitIds(split),
+    )
+    expect(splitVis.presc).toBe(false)
+    expect(splitVis['presc-a']).toBe(true)
+    expect(splitVis['presc-b']).toBe(true)
+  })
+
+  it('en mode détaillé, opacités égales n’affichent pas l’agrégat à la place des enfants', () => {
+    const split = new Set(['presc'])
+    const opacity = { presc: 70, 'presc-a': 70, 'presc-b': 70 }
+    const splitVis = computeMapVisibilityById(
+      checked,
+      index,
+      opacity,
+      mapVisibilityOptionsFromSplitIds(split),
+    )
+    expect(splitVis.presc).toBe(false)
+    expect(splitVis['presc-a']).toBe(true)
+    expect(splitVis['presc-b']).toBe(true)
   })
 
   it('boutons détailler / regrouper', () => {

@@ -1,6 +1,7 @@
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import {
   isCatalogAggregate,
+  propagateCheckedToDescendants,
   type MapVisibilityComputeOptions,
 } from '@/lib/layerConfig/catalogCheckboxLogic'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
@@ -35,6 +36,30 @@ export function mapVisibilityOptionsFromSplitIds(
   splitIds: ReadonlySet<string>,
 ): MapVisibilityComputeOptions | undefined {
   return splitIds.size ? { splitAggregateIds: splitIds } : undefined
+}
+
+/** Opacité agrégat mémorisée sur tout le sous-arbre (regroupement). */
+export function patchAggregateSubtreePanelOpacity(
+  aggregate: TreeLayerNode,
+  opacity: number,
+  patch: (id: string, partial: Partial<PanelLayerState>) => void,
+): void {
+  function walk(n: TreeLayerNode) {
+    for (const child of catalogChildNodes(n)) {
+      if (!child.gpuForceOpacity) patch(child.id, { opacity })
+      walk(child)
+    }
+  }
+  walk(aggregate)
+}
+
+/** Recoche tout le sous-arbre catalogue lors d’un regroupement (ex. couche retirée du panneau). */
+export function recheckAggregateCatalogSubtree(
+  checked: Record<string, boolean>,
+  aggregate: TreeLayerNode,
+): void {
+  if (!checked[aggregate.id]) return
+  propagateCheckedToDescendants(checked, aggregate, true)
 }
 
 /** Bouton « Détailler » sur l’agrégat tant qu’il n’est pas en mode détaillé. */
