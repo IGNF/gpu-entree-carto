@@ -35,6 +35,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Échec SARIF « default setup is enabled » → Settings → Code scanning → Switch to advanced
+      # (voir .github/codeql/README.md)
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:

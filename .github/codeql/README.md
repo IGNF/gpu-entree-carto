@@ -1,20 +1,32 @@
 # CodeQL (CI GitHub)
 
-Ce dépôt utilise une **configuration avancée** : workflow [`.github/workflows/codeql.yml`](../workflows/codeql.yml) + [`codeql-config.yml`](./codeql-config.yml) (analyse limitée à `src/`).
+Configuration **avancée** : [`.github/workflows/codeql.yml`](../workflows/codeql.yml) + [`codeql-config.yml`](./codeql-config.yml) + [`.codeqlignore`](../../.codeqlignore) (uniquement **`src/`**, pas `dist/`).
 
-## Erreur après push : « default setup is enabled »
+## 1. Erreur SARIF : « default setup is enabled »
 
-GitHub n’accepte **pas** les deux modes en parallèle (setup par défaut + workflow avancé / upload SARIF).
+Tant que le **setup CodeQL par défaut** GitHub est actif, l’upload du workflow avancé **échoue toujours** (même en `codeql-action@v4`).
 
-1. Ouvrir **Settings** du dépôt sur GitHub.
-2. **Advanced Security** (ou **Code security and analysis**).
-3. Section **Code scanning** → ligne **CodeQL analysis**.
-4. Choisir **Switch to advanced** (ou **Disable CodeQL** sur le setup par défaut, puis laisser uniquement ce workflow).
+**À faire une fois** (droits admin sur le dépôt) :
 
-Relancer le workflow **CodeQL** (onglet Actions).
+1. GitHub → dépôt **gpu-entree-carto** → **Settings**
+2. **Advanced Security** (ou **Code security and analysis**)
+3. Section **Code scanning** → ligne **CodeQL analysis**
+4. Menu **⋯** ou **Set up** → **Switch to advanced**  
+   (ou **Disable CodeQL** sur le setup par défaut, puis ne garder que le workflow du dépôt)
+5. **Actions** → workflow **CodeQL** → **Re-run all jobs**
 
-Référence : [Troubleshoot SARIF uploads – default setup enabled](https://docs.github.com/en/code-security/code-scanning/troubleshooting-code-scanning/sarif-uploads#upload-was-rejected-because-codeql-default-setup-is-enabled-for-code-scanning).
+Doc GitHub : [Upload rejected – default setup enabled](https://docs.github.com/en/code-security/code-scanning/troubleshooting-code-scanning/sarif-uploads#upload-was-rejected-because-codeql-default-setup-is-enabled-for-code-scanning)
+
+> Tant que le setup par défaut tourne en parallèle, vous pouvez voir **deux** analyses CodeQL et des alertes incohérentes.
+
+## 2. Alerte « Bad HTML filtering regexp » dans `dist/*.js`
+
+Souvent due au **setup par défaut**, qui analyse les bundles commités (`dist/entree-carto-sketch.js`, etc.) où **DOMPurify** est inclus par Vite.
+
+Ce n’est **pas** un bug de `SanitizedHtml.vue` (`src/components/common/SanitizedHtml.vue` utilise `DOMPurify.sanitize`).
+
+Après **Switch to advanced**, seul le workflow du dépôt s’exécute avec `paths: src` et `.codeqlignore` (sans `dist/`). L’alerte sur `dist/` doit disparaître.
 
 ## Analyse locale
 
-Voir le README racine : `npm run codeql:install`, puis `npm run verify:codeql` (périmètre `./src`).
+`npm run codeql:install` puis `npm run verify:codeql` (périmètre `./src`).

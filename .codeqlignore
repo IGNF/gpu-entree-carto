@@ -1,0 +1,9 @@
+# Artefacts build (DOMPurify bundlé, etc.) — ne pas analyser
+dist/
+**/*.min.js
+
+node_modules/
+coverage/
+.codeql-cli/
+.codeql-db/
+.codeql-db-test/

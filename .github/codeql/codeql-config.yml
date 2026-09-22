@@ -6,5 +6,8 @@ paths:
 
 paths-ignore:
   - dist
+  - 'dist/**'
   - node_modules
+  - 'node_modules/**'
   - coverage
+  - '**/*.min.js'
