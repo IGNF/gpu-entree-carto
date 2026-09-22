@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertSafeKmlXmlText, looksLikeKmlDocument, parseUserKmlDocument } from './safeKmlParse'
+import { assertSafeKmlXmlText, looksLikeKmlDocument, readUserKmlFeatures } from './safeKmlParse'
 import { parseRawToFeatures } from './parseGeometry'
 
 const MINIMAL_KML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -14,15 +14,15 @@ const MINIMAL_KML = `<?xml version="1.0" encoding="UTF-8"?>
 describe('safeKmlParse', () => {
   it('accepte un KML minimal valide', () => {
     expect(looksLikeKmlDocument(MINIMAL_KML)).toBe(true)
-    const doc = parseUserKmlDocument(MINIMAL_KML)
-    expect(doc.documentElement.localName.toLowerCase()).toBe('kml')
+    const features = readUserKmlFeatures(MINIMAL_KML)
+    expect(features.length).toBe(1)
   })
 
   it('rejette script et handlers', () => {
     const evil = `<kml><script>alert(1)</script></kml>`
     expect(looksLikeKmlDocument(evil)).toBe(false)
     expect(() => assertSafeKmlXmlText(evil)).toThrow()
-    expect(() => parseUserKmlDocument(evil)).toThrow()
+    expect(() => readUserKmlFeatures(evil)).toThrow()
   })
 
   it('parseRawToFeatures ignore un KML dangereux', () => {

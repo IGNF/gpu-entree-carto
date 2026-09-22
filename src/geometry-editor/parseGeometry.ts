@@ -1,6 +1,5 @@
 import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
-import KML from 'ol/format/KML'
 import {
   MultiLineString,
   MultiPoint,
@@ -15,10 +14,9 @@ import {
   looksLikeCircleOrDisc,
   looksLikeMultiCircleOrDisc,
 } from './circleHelpers'
-import { looksLikeKmlDocument, parseUserKmlDocument } from './safeKmlParse'
+import { looksLikeKmlDocument, readUserKmlFeatures } from './safeKmlParse'
 
 const geoJsonFormat = new GeoJSON()
-const kmlFormat = new KML({ extractStyles: false })
 
 /** @deprecated Préférer {@link looksLikeKmlDocument} (détection stricte). */
 export function looksLikeKml(raw: string): boolean {
@@ -91,11 +89,10 @@ export function parseRawToFeatures(
 
   if (looksLikeKmlDocument(text)) {
     try {
-      const doc = parseUserKmlDocument(text)
-      features = kmlFormat.readFeatures(doc, {
+      features = readUserKmlFeatures(text, {
         dataProjection: 'EPSG:4326',
         featureProjection: mapProjection,
-      }) as OlFeature<OlGeometry>[]
+      })
     } catch {
       console.error('[entree-carto-geometry-editor] KML rejected or invalid')
       return []

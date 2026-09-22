@@ -32,6 +32,7 @@ typecheck:
 
 verify:
 	npm run verify
+	npm run verify:codeql
 
 fix:
 	npm run fix

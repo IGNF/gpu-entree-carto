@@ -6,7 +6,15 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'public/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'public/**',
+      'coverage/**',
+      '.codeql-cli/**',
+      '.codeql-db/**',
+      '.codeql-db-test/**',
+    ],
   },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],

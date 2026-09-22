@@ -3,3 +3,7 @@ node_modules
 public
 coverage
 package-lock.json
+.codeql-cli
+.codeql-db
+.codeql-db-test
+.codeql-results.sarif

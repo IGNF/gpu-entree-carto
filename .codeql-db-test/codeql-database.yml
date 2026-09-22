@@ -1,0 +1,46 @@
+---
+sourceLocationPrefix: /home/AHorde/SITES/entree-carto/src
+baselineLinesOfCode: 15644
+unicodeNewlines: true
+columnKind: utf16
+primaryLanguage: javascript
+inProgress:
+  primaryLanguage: javascript
+  installedExtractors:
+    go:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/go
+    python:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/python
+    rust:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/rust
+    cpp:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/cpp
+    xml:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/xml
+    properties:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/properties
+    html:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/html
+    yaml:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/yaml
+    actions:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/actions
+    java:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/java
+    csharp:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/csharp
+    csv:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/csv
+    swift:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/swift
+    ruby:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/ruby
+    javascript:
+      - /home/AHorde/SITES/entree-carto/.codeql-cli/codeql/javascript
+creationMetadata:
+  cliVersion: 2.27.0
+  creationTime: 2026-09-22T14:06:40.725131716Z
+buildMode: none
+overlayBaseDatabase: false
+overlayDatabase: false
+finalised: false

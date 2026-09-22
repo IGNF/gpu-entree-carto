@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-09-22T16:06:41.443561737+02:00",
+  "source": { "id": "cli/database/create", "name": "CodeQL CLI: database create" },
+  "plaintextMessage": "A fatal error occurred: Exit status 1 from command: [/home/AHorde/SITES/entree-carto/.codeql-cli/codeql/javascript/tools/autobuild.sh]",
+  "severity": "error",
+  "visibility": { "telemetry": false },
+  "attributes": { "exitCode": 2 }
+}
