@@ -49,6 +49,8 @@ Autres cibles :
 | `npm run verify` | ESLint + Prettier + typecheck seulement — exécuté au **pre-commit** (Husky)                                   |
 | `make fix`       | ESLint --fix + Prettier --write                                                                               |
 
+CI CodeQL : configuration **avancée** (workflow dédié). Si GitHub refuse le SARIF (« default setup is enabled »), voir [`.github/codeql/README.md`](.github/codeql/README.md).
+
 ---
 
 ## Stack technique
