@@ -5,6 +5,17 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # Migrations majeures à planifier (PR Dependabot à fermer ou traiter à part)
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: vitest
+        update-types: [version-update:semver-major]
+      - dependency-name: vue-router
+        update-types: [version-update:semver-major]
+      # CodeQL : is-unsafe bundlé depuis fxp 5.9+
+      - dependency-name: fast-xml-parser
+        versions: ['>=5.9.0']
   - package-ecosystem: github-actions
     directory: /
     schedule:
