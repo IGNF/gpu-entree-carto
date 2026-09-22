@@ -264,6 +264,30 @@ export function buildFeatureStyle(attrs: FeatureStyleAttrs): Style {
   })
 }
 
+/** Réapplique le rendu OL depuis les properties (sans les modifier). */
+export function restoreFeatureVisual(feature: OlFeature<OlGeometry>): void {
+  if (feature.get(FEATURE_STYLE_PROP) || isSketchTextFeature(feature)) {
+    feature.setStyle(buildFeatureStyle(getFeatureStyleAttrs(feature)))
+  } else {
+    feature.setStyle(undefined)
+  }
+  feature.changed()
+}
+
+/** Surbrillance au survol (modify : translation / rotation / style) — ne pas écrire dans les properties. */
+export function applyFeatureHoverVisual(feature: OlFeature<OlGeometry>): void {
+  const attrs = getFeatureStyleAttrs(feature)
+  const boosted: FeatureStyleAttrs = {
+    ...attrs,
+    strokeWidth: attrs.strokeWidth + 2,
+    textStrokeWidth: attrs.textStrokeWidth + 1,
+    radius: attrs.kind === 'point' ? attrs.radius + 1.5 : attrs.radius,
+    zIndex: (attrs.zIndex || 0) + 500,
+  }
+  feature.setStyle(buildFeatureStyle(boosted))
+  feature.changed()
+}
+
 /** Persiste le style dans les properties + applique le Style OL. */
 export function applyFeatureStyle(feature: OlFeature<OlGeometry>, attrs: FeatureStyleAttrs): void {
   const kind = attrs.kind || featureStyleKindOf(feature)

@@ -2,14 +2,18 @@
 
 Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours accueil → carte.
 
+## Configuration (`demo-config.js`)
+
+Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) pour URL `gpu-client-config`, document, bbox, surcharges API, couches catalogue, etc. — sans rebuild. Voir [DemoConfig.md](./DemoConfig.md).
+
 ## Routes
 
-| Route              | Vue                      | Rôle                                                                                                                               |
-| ------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                 |
-| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire |
-| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                              |
-| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                   |
+| Route              | Vue                      | Rôle                                                                                                                                                                                                                |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                                                                                                  |
+| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)) |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                                                                                                               |
+| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                                                                                                    |
 
 ## Navigation
 

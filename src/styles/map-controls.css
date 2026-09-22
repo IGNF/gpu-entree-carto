@@ -9,11 +9,21 @@
   --ec-widget-btn-size: 48px;
   --ec-widget-btn-padding: 4px;
   --ec-widget-btn-radius: 4px;
+  /** Colonne outils croquis (largeur layout, infobulles en overflow) */
+  --ec-sketch-column-width: var(--ec-widget-btn-size);
+  /** Décalage horizontal recherche lieu (évite chevauchement colonne croquis) */
+  --ec-search-left-inset: 0px;
   --ec-widget-panel-x: calc(var(--ec-widget-btn-size) + var(--ec-widget-gap) * 2);
   /* Largeur panneau TabPanels (1,5 × ~408px Figma) ; inset = panneau seul
      (les onglets sont en haut : pas de reserve en bas à côté du panneau) */
-  --ec-tab-panels-width: min(38.25rem, 92vw);
+  --ec-tab-panels-width: min(30.6rem, 92vw);
   --ec-tab-panels-inset: var(--ec-tab-panels-width);
+  --ec-attribution-logo-width: 52px;
+  --ec-attribution-logo-height: 56px;
+  /** Hauteur utile du bandeau attributions (logos + padding images). */
+  --ec-attribution-block-height: calc(var(--ec-attribution-logo-height) + 8px);
+  /** Marge entre bandeau attributions et barre d’échelle (empilés). */
+  --ec-scale-attribution-stack-gap: 6px;
 }
 
 .position {
@@ -93,19 +103,19 @@
   left: var(--ec-widget-gap);
 }
 
+/* Infobulles croquis : ne pas clipper la colonne (padding toolbar en overflow) */
+.position-container-bottom-left:has(> .ec-sketch-control--geopf-slot) {
+  overflow: visible;
+}
+
 .position-container-bottom-right {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--ec-widget-gap);
   bottom: var(--ec-widget-gap);
-  right: var(--ec-widget-gap);
+  right: var(--ec-bottom-right-inset);
   z-index: 0;
-}
-
-/* Panneau TabPanels ouvert : même écart (gap) qu’avec le bord de carte quand fermé */
-.ec-map-shell--tab-panels-open .position-container-bottom-right {
-  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
 }
 
 /* Annule les offsets geopf (top/bottom: 0.5em) qui décalent les boutons dans la colonne */
@@ -203,35 +213,62 @@
   bottom: auto !important;
   left: auto !important;
   margin: 0;
-  /* Laisse dépasser les infobulles hors de la colonne 48px */
+  align-self: flex-start;
+  flex: 0 1 auto;
+  /* Colonne 48px ; infobulles croquis en overflow visible */
   overflow: visible;
-  width: max-content;
-  max-width: min(100%, calc(var(--ec-widget-btn-size) + 12.5rem));
+  width: var(--ec-sketch-column-width);
+  max-width: var(--ec-sketch-column-width);
   /*
-   * Hauteur bornée à la carte (cqb) : en slot geopf, parent .position n’a pas de
-   * hauteur fixe → max-height:100% ne contraint pas → barre dépasse / pas de scroll.
-   * On réserve la place de la minimap (~2 boutons) + gap sous le croquis.
+   * Hauteur bornée à la carte (cqb) : réserve minimap (~2 boutons) + gaps.
    */
   max-height: calc(
     100cqb - 2 * var(--ec-widget-gap) - (var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap) * 2)
   );
   min-height: 0;
   display: flex;
+  flex-direction: column;
   align-items: stretch;
+  gap: var(--ec-widget-gap);
 }
 
-/* Toolbar scrollable dans la hauteur allouée au slot */
-.position-container-bottom-left > .ec-sketch-control--geopf-slot > .ec-geometry-editor__toolbar {
+/*
+ * Toolbar : colonne layout 48px, zone infobulle à droite (comme geometry-editor.css).
+ * margin-inline-end négatif → n’élargit pas la colonne geopf ; overflow-x:hidden
+ * garde les bulles dans la zone padding (sinon clip avec overflow-y:auto).
+ */
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot
+  > .ec-geometry-editor__toolbar-cluster {
   flex: 1 1 auto;
   min-height: 0;
   max-height: 100%;
+  margin-inline-end: calc(-1 * var(--ec-geom-tooltip-space));
+}
+
+.position-container-bottom-left
+  > .ec-sketch-control--geopf-slot
+  > .ec-geometry-editor__toolbar-cluster
+  > .ec-geometry-editor__toolbar {
+  --ec-geom-tooltip-space: 12.5rem;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: calc(var(--ec-sketch-column-width) + var(--ec-geom-tooltip-space));
+  max-width: none;
+  min-height: 0;
+  max-height: 100%;
+  padding-inline-end: var(--ec-geom-tooltip-space);
   overflow-x: hidden;
   overflow-y: auto;
 }
 
+.position-container-bottom-left > .ec-sketch-control--geopf-slot .ec-geometry-editor__tool {
+  overflow: visible;
+}
+
 .position-container-bottom-left
   > .ec-sketch-control--geopf-slot[data-corner]
-  > .ec-geometry-editor__toolbar {
+  > .ec-geometry-editor__toolbar-cluster {
   /* Place pour le bouton menu toolsToggle */
   max-height: calc(100% - var(--ec-widget-btn-size) - var(--ec-widget-gap));
 }
@@ -257,13 +294,18 @@
   background-color: var(--background-default-grey, #fff);
 }
 
+/* Croquis présent → réserve la colonne gauche pour la barre outils */
+.ec-map-shell:has(.ec-sketch-control--geopf-slot) {
+  --ec-search-left-inset: calc(var(--ec-sketch-column-width) + var(--ec-widget-gap));
+}
+
 /* SearchEngine — haut-gauche (cartes.gouv SearchEngine.vue) */
 .gpf-widget[id^='GPsearchEngine-Advanced'] {
   top: var(--ec-widget-gap);
-  left: calc(var(--ec-widget-gap) - 5px);
+  left: calc(var(--ec-widget-gap) - 5px + var(--ec-search-left-inset));
   z-index: 1;
   box-shadow: none;
-  max-width: min(420px, calc(100% - 12px));
+  max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
 }
 
 /*
@@ -427,23 +469,102 @@ dialog[id^='GPterritoriesPanel-'] {
   max-height: initial;
 }
 
-/* ScaleLine — bas-droite, à gauche de zoom/fullscreen */
+/*
+ * Bas-droite : colonne widgets (.position-container-bottom-right),
+ * attributions en bas (ancrage horizontal de l’ancienne échelle),
+ * barre d’échelle juste au-dessus avec une petite marge.
+ */
+.ec-map-shell {
+  --ec-bottom-right-inset: var(--ec-widget-gap);
+  --ec-scale-line-right: calc(
+    var(--ec-bottom-right-inset) + var(--ec-widget-btn-size) + var(--ec-widget-gap)
+  );
+}
+
+.ec-map-shell--tab-panels-open {
+  --ec-bottom-right-inset: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
+}
+
+#gpu-map .ol-control.ol-attribution {
+  left: auto;
+  right: var(--ec-scale-line-right);
+  bottom: var(--ec-widget-gap);
+  background-color: transparent;
+  max-width: none;
+}
+
+#gpu-map .ol-attribution.ol-uncollapsible {
+  bottom: var(--ec-widget-gap);
+}
+
 .ol-scale-line {
   z-index: auto;
   left: auto;
-  right: var(--ec-widget-panel-x);
-  bottom: var(--ec-widget-gap);
+  right: var(--ec-scale-line-right);
+  bottom: calc(
+    var(--ec-widget-gap) + var(--ec-attribution-block-height) +
+      var(--ec-scale-attribution-stack-gap)
+  );
   background: var(--background-default-grey, #fff);
 }
 
-.position-container-bottom-right:empty ~ .ol-scale-line {
-  right: var(--ec-widget-gap);
+#gpu-map .ol-attribution ul {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.ec-map-shell--tab-panels-open .ol-scale-line {
-  right: calc(var(--ec-widget-panel-x) + var(--ec-tab-panels-inset));
+#gpu-map .ol-attribution li {
+  display: inline-flex;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0;
 }
 
-.ec-map-shell--tab-panels-open .position-container-bottom-right:empty ~ .ol-scale-line {
-  right: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
+#gpu-map .ol-attribution li:not(:last-child)::after {
+  content: none;
+}
+
+#gpu-map .ol-attribution img.map-logo-ign-svg,
+#gpu-map .ol-attribution img.map-logo-ministere-svg {
+  display: block;
+  width: var(--ec-attribution-logo-width);
+  height: var(--ec-attribution-logo-height);
+  object-fit: contain;
+  box-sizing: border-box;
+  margin: 0;
+  max-height: none;
+  background-color: white !important;
+  padding: 4px;
+}
+
+/* Pas d’icône « lien externe » DSFR sur les logos */
+#gpu-map .ol-attribution a:has(img)[target='_blank']::after {
+  content: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  background: none !important;
+}
+
+#gpu-map .ol-attribution a.legal-attribution {
+  display: inline-flex;
+  align-items: flex-end;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.15;
+  margin-right: 6px;
+  padding-bottom: 2px;
+  color: black;
+  font-weight: bold;
+}
+
+#gpu-map .ol-attribution a.legal-attribution:hover,
+#gpu-map .ol-attribution a.legal-attribution:focus {
+  text-decoration: none;
 }

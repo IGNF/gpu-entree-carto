@@ -2,6 +2,8 @@
  * Normalisation de `geometryType` : un seul type, ou plusieurs séparés par des virgules
  * (ex. `"Point,Disc"` → outils filtrés, comme Geometry).
  */
+import type { GeometryTypeOption } from './types'
+
 export const GEOMETRY_TYPE_NAMES = [
   'Point',
   'LineString',
@@ -111,4 +113,29 @@ export function drawToolKeys(
 
   for (const t of types) addFrom(t)
   return [...keys]
+}
+
+/** Sous-outils « Modifier » affichés selon le `geometryType` (GeometryEditor / croquis). */
+export interface ModifySubToolsVisibility {
+  shape: boolean
+  translate: boolean
+  rotate: boolean
+  style: boolean
+}
+
+export function modifySubToolsVisibilityFor(
+  geometryType: GeometryTypeOption,
+): ModifySubToolsVisibility {
+  const types = parseGeometryTypes(geometryType)
+  const pointOnly = types.length > 0 && types.every((t) => t === 'Point' || t === 'MultiPoint')
+  if (pointOnly) {
+    return { shape: false, translate: true, rotate: false, style: true }
+  }
+  const noRotate = types.some((t) => t === 'Rectangle' || t === 'Disc' || t === 'MultiDisc')
+  return {
+    shape: true,
+    translate: true,
+    rotate: !noRotate,
+    style: true,
+  }
 }

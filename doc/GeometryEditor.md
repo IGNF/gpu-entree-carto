@@ -11,8 +11,9 @@ Associe une mini-carte à un champ de formulaire ou un élément HTML pour produ
 OpenLayers est **embarqué** dans le bundle (contrairement à ol-geometry-editor historique qui s’appuyait sur `ol.js` du site).
 
 La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** dans le coin choisi ouvre / ferme alors la barre.  
-Les pictos (point, ligne, polygone, **modifier**, suppression) reprennent les masques SVG de **geopf-extensions-openlayers** (`Drawing` / `DSFRdrawingStyle.css`) — pas besoin du CSS icônes DSFR pour la toolbar.  
-Infobulles : même style geopf que zoom / territoire (`aria-label` → `::before` au survol) ; masquées si le bouton est actif.
+Les pictos de la toolbar utilisent **[Remix Icon](https://remixicon.com/)** (`remixicon.css`, chargé avec le bundle) ; l’outil **Ligne** conserve le picto geopf via la classe custom `ri-draw-line` (`src/assets/custom-icons/draw-line.svg`). Correspondance des classes : `src/geometry-editor/geometryToolIcons.ts`.  
+Infobulles : même style geopf que zoom / territoire (`aria-label` → `::before` au survol) ; masquées si le bouton est actif.  
+Colonne layout **48px** : la zone transparente à droite des boutons (réserve infobulle) laisse passer pan / zoom / dessin sur la carte (`pointer-events` ciblés + marge négative sur la toolbar).
 
 ## Usage
 
@@ -82,19 +83,22 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 ## Comportement
 
 - Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque / multi** `{ type: "Circle"|"Disc"|"MultiCircle"|"MultiDisc", … }` → géométries dessinées sur la carte.
+- **KML entrant** (champ formulaire ou import croquis) : détection stricte (`looksLikeKmlDocument`), rejet des balises / attributs actifs (`safeKmlParse.ts`), validation XML puis lecture **sans `DOMParser`** (fast-xml-parser → géométries OpenLayers ; pas d’interprétation HTML).
 - Écoute `input` / `change` sur l’élément → met à jour la carte (écoute native **et** pont jQuery : `$el.trigger('change')` est pris en charge).
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
-- **Modification** : activer l’outil crayon (icône geopf edit).
-  - **Ligne** : au survol, poignées **bleues** (croix + flèche courbe) **collées sur le côté** de la ligne ; translation / rotation via ces poignées.
-  - **Polygone** et **Rectangle (bbox)** : **translation** en glissant l’**intérieur** (marge depuis les bords) — pas d’icône de translation.
-  - **Polygone** : poignée **rotation** (bleue) au survol.
-  - Pendant le drag de rotation, l’icône **suit le curseur**.
-  - **Rectangle (bbox)** : carrés coins / arêtes pour redimensionner (axis-aligné, **sans rotation**).
-  - **Cercle** (legacy contour) : **translation** via poignée latérale ; **rayon** en glissant le contour ; **pas de rotation**.
-  - **Disque** (outil de dessin) : rempli ; **translation** en glissant l’intérieur ; **rayon** en glissant le contour ; **pas de rotation**.
-  - **Point** : déplacement du sommet.
+- **Modification** : activer l’outil crayon (icône edit) affiche une **barre d’outils séparée**, juxtaposée au bouton « Modifier » (vers l’intérieur carte), avec **modification de forme** (défaut lorsqu’il est proposé), **déplacement**, **rotation**, **style** (palette, si éditeur de style activé). Les sous-outils visibles dépendent du **`geometryType`** :
+  - **Point** / **MultiPoint** : **déplacement** uniquement ;
+  - **Rectangle** : forme + déplacement (+ style si activé), **sans rotation** ;
+  - **Disc** / **MultiDisc** : forme + déplacement (+ style si activé), **sans rotation** ;
+  - autres types : sous-ensemble complet (rotation pour lignes, polygones, texte, etc.).
+    Recliquer sur un sous-outil déjà actif le **désactive** (aucune action carte tant qu’un sous-outil n’est pas sélectionné). Recliquer sur « Modifier » referme le mode et masque cette barre. L’activation de « Modifier » **ferme** la popup d’attributs si elle était ouverte. La molette sur la sous-barre **fait défiler** d’abord la sous-barre si elle déborde, sinon la barre d’outils principale ; hauteur max. de la sous-barre = zone visible scrollée de la barre principale.
+  - **Déplacement** : glisser l’intérieur d’un polygone / rectangle / disque, une ligne (zone « corps »), un cercle rempli, un point ou le label texte — sans éditer les sommets ni le rayon.
+  - **Modification de forme** : sommets OpenLayers (ligne, polygone, point), redimensionnement d’un **rectangle** aux poignées, rayon d’un cercle / disque sur le contour.
+  - **Rotation** : clic + drag sur la feature (ligne, polygone, texte) ; curseur rotation au survol.
+  - **Style** : clic sur la feature → popup attributs (couleur, épaisseur, etc.) **ancrée au point de clic**.
+  - **Rectangle (bbox)** : pas de rotation ; poignées de redimensionnement en **modification de forme** uniquement.
 - **Suppression** : activer l’outil poubelle puis cliquer une géométrie. Pour un **cercle** legacy (`ecKind` contour), cliquer uniquement sur le **contour** (un clic dans l’intérieur ne supprime pas). Un **disque** se supprime aussi en cliquant dans l’aire.
 - Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
 - Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche ; boutons **48×48** avec pictos +/− (masques geopf `DSFRzoomStyle`), même look que le zoom de la carte principale.

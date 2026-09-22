@@ -10,6 +10,7 @@ import type {
   ToolsToggleCorner,
 } from './types'
 import { DEFAULT_GEOMETRY_EDITOR_OPTIONS, GEOMETRY_TYPE_NAMES } from './types'
+import { appendGeometryToolIcon } from './geometryToolIcons'
 
 const OUTPUT_FORMATS: GeometryOutputFormat[] = ['geojson', 'kml']
 
@@ -76,6 +77,7 @@ export class SettingsPanel {
     this.button.setAttribute('aria-expanded', 'false')
     this.button.setAttribute('aria-haspopup', 'dialog')
     this.button.addEventListener('click', () => this.toggle())
+    appendGeometryToolIcon(this.button, 'ec-geometry-editor__tool--settings')
     this.root.appendChild(this.button)
 
     this.mapHost.appendChild(this.root)

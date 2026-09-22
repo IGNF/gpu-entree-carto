@@ -1,6 +1,5 @@
 import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
-import KML from 'ol/format/KML'
 import {
   MultiLineString,
   MultiPoint,
@@ -15,13 +14,13 @@ import {
   looksLikeCircleOrDisc,
   looksLikeMultiCircleOrDisc,
 } from './circleHelpers'
+import { looksLikeKmlDocument, readUserKmlFeatures } from './safeKmlParse'
 
 const geoJsonFormat = new GeoJSON()
-const kmlFormat = new KML({ extractStyles: false })
 
+/** @deprecated Préférer {@link looksLikeKmlDocument} (détection stricte). */
 export function looksLikeKml(raw: string): boolean {
-  const t = raw.trim()
-  return t.startsWith('<') && /<\/?kml[\s>]/i.test(t)
+  return looksLikeKmlDocument(raw)
 }
 
 export function looksLikeBbox(raw: string): boolean {
@@ -88,11 +87,16 @@ export function parseRawToFeatures(
 
   let features: OlFeature<OlGeometry>[]
 
-  if (looksLikeKml(text)) {
-    features = kmlFormat.readFeatures(text, {
-      dataProjection: 'EPSG:4326',
-      featureProjection: mapProjection,
-    }) as OlFeature<OlGeometry>[]
+  if (looksLikeKmlDocument(text)) {
+    try {
+      features = readUserKmlFeatures(text, {
+        dataProjection: 'EPSG:4326',
+        featureProjection: mapProjection,
+      })
+    } catch {
+      console.error('[entree-carto-geometry-editor] KML rejected or invalid')
+      return []
+    }
   } else if (looksLikeBbox(text)) {
     const bbox = JSON.parse(text) as number[]
     const poly = bboxToPolygon(bbox)

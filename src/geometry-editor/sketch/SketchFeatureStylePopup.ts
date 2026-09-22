@@ -1,9 +1,14 @@
 /**
  * Popup d’édition de style à la création (et reclic / icône modify).
- * Positionnée en `fixed` (peut dépasser le cadre carte) ; color pickers avec opacité.
+ * Positionnée via Overlay OL (`bottom-center`), comme les popups mesure.
  */
+import Overlay from 'ol/Overlay'
+import { unByKey } from 'ol/Observable'
 import type Map from 'ol/Map'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
+import type { EventsKey } from 'ol/events'
 import type { Feature as OlFeature } from 'ol'
+import type { Coordinate } from 'ol/coordinate'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import {
   applyFeatureStyle,
@@ -67,6 +72,9 @@ const ADVANCED_BY_KIND: Record<FeatureStyleKind, AdvancedField[]> = {
  */
 export class SketchFeatureStylePopup {
   private readonly root: HTMLElement
+  private readonly overlay: Overlay
+  /** Ancrage explicite (clic carte) ; sinon emprise feature. */
+  private clickAnchor: Coordinate | null = null
   private readonly basicFields: HTMLElement
   private readonly advancedFields: HTMLElement
   private readonly advancedToggle: HTMLButtonElement
@@ -109,72 +117,76 @@ export class SketchFeatureStylePopup {
   private onCommit: (() => void) | null = null
   private openFlag = false
   private advancedOpen = false
-  private outsideDown = false
   private mapDragged = false
-  private repositionBound = false
-  private scrollGuardBound = false
-  private mapResizeObserver: ResizeObserver | null = null
-  private repositionRaf = 0
+  /** Évite de fermer au pointerup du même clic qui ouvre / repositionne sur une feature. */
+  private skipNextOutsideUp = false
+  /** Clic extérieur en cours (fermeture au pointerup si pas de drag). */
+  private outsideGesture: {
+    pointerId: number
+    startX: number
+    startY: number
+    moved: boolean
+  } | null = null
+
+  private static readonly OUTSIDE_MOVE_TOLERANCE_PX = 5
+  private geomChangeKey: EventsKey | null = null
+  private mapSingleClickKey: EventsKey | null = null
 
   private readonly onMapPointerDrag = (): void => {
     this.mapDragged = true
-  }
-
-  private readonly onPopupWheel = (evt: WheelEvent): void => {
-    // Empêche zoom carte / scroll page ; laisse scroller le panneau interne
-    evt.stopPropagation()
-    const scroll = this.root.querySelector('.ec-sketch-style-popup__scroll') as HTMLElement | null
-    if (!scroll) {
-      evt.preventDefault()
-      return
-    }
-    const canScroll = scroll.scrollHeight > scroll.clientHeight + 1
-    if (!canScroll) {
-      evt.preventDefault()
-      return
-    }
-    const delta = evt.deltaY
-    const atTop = scroll.scrollTop <= 0 && delta < 0
-    const atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1 && delta > 0
-    if (atTop || atBottom) evt.preventDefault()
   }
 
   private readonly onDocPointerDown = (evt: PointerEvent): void => {
     if (!this.openFlag) return
     const t = evt.target as Node | null
     if (this.containsUi(t)) return
-    this.outsideDown = true
+    if (this.isSketchFeaturePointer(evt)) return
+    this.outsideGesture = {
+      pointerId: evt.pointerId,
+      startX: evt.clientX,
+      startY: evt.clientY,
+      moved: false,
+    }
     this.mapDragged = false
   }
 
-  private readonly onDocPointerUp = (): void => {
-    if (!this.outsideDown) return
-    this.outsideDown = false
-    if (this.mapDragged) {
-      this.mapDragged = false
+  private readonly onDocPointerMove = (evt: PointerEvent): void => {
+    const g = this.outsideGesture
+    if (!g || evt.pointerId !== g.pointerId || g.moved) return
+    const dx = evt.clientX - g.startX
+    const dy = evt.clientY - g.startY
+    const tol = SketchFeatureStylePopup.OUTSIDE_MOVE_TOLERANCE_PX
+    if (dx * dx + dy * dy > tol * tol) g.moved = true
+  }
+
+  private readonly onDocPointerUp = (evt: PointerEvent): void => {
+    if (this.skipNextOutsideUp) {
+      this.skipNextOutsideUp = false
+      this.outsideGesture = null
       return
     }
+    const g = this.outsideGesture
+    if (!g || evt.pointerId !== g.pointerId) return
+    this.outsideGesture = null
+    const dragged = g.moved || this.mapDragged
+    this.mapDragged = false
+    if (dragged) return
+    const t = evt.target as Node | null
+    if (this.containsUi(t)) return
     this.hide()
   }
 
   private readonly onViewChange = (): void => {
     if (!this.openFlag) return
-    this.scheduleReposition(false)
+    this.reposition()
   }
 
-  private readonly onWindowResize = (): void => {
+  private readonly onMapSingleClick = (evt: MapBrowserEvent): void => {
     if (!this.openFlag) return
-    // La taille OL peut être obsolète juste après un resize navigateur
-    this.scheduleReposition(true)
-  }
-
-  private scheduleReposition(updateMapSize: boolean): void {
-    if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf)
-    this.repositionRaf = requestAnimationFrame(() => {
-      this.repositionRaf = 0
-      if (updateMapSize) this.map.updateSize()
-      this.reposition()
-    })
+    const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 }) as OlFeature[]
+    const feature = hits[0]
+    if (!feature) return
+    this.open(feature, this.onCommit ?? undefined, evt.coordinate)
   }
 
   constructor(private readonly map: Map) {
@@ -355,7 +367,6 @@ export class SketchFeatureStylePopup {
 
     this.advancedToggle.addEventListener('click', () => {
       this.setAdvancedOpen(!this.advancedOpen)
-      this.reposition()
     })
 
     this.root.querySelector('.ec-sketch-style-popup__ok')!.addEventListener('click', () => {
@@ -367,12 +378,20 @@ export class SketchFeatureStylePopup {
       .querySelector('.ec-sketch-style-popup__cancel')!
       .addEventListener('click', () => this.hide())
 
-    document.body.appendChild(this.root)
+    this.overlay = new Overlay({
+      element: this.root,
+      positioning: 'bottom-center',
+      offset: [0, -8],
+      stopEvent: true,
+      autoPan: false,
+    })
+    this.map.addOverlay(this.overlay)
   }
 
-  open(feature: OlFeature<OlGeometry>, onCommit?: () => void): void {
+  open(feature: OlFeature<OlGeometry>, onCommit?: () => void, anchor?: Coordinate): void {
     this.unbindOutside()
     this.feature = feature
+    this.clickAnchor = anchor ?? null
     this.onCommit = onCommit ?? null
     this.kind = featureStyleKindOf(feature)
     this.setAdvancedOpen(false)
@@ -383,31 +402,39 @@ export class SketchFeatureStylePopup {
     applyFeatureStyle(feature, attrs)
     this.root.hidden = false
     this.openFlag = true
+    this.skipNextOutsideUp = true
     this.reposition()
     this.bindOutside()
-    this.bindScrollGuard()
     if (this.kind === 'text' && !this.els.text.closest('[hidden]')) {
-      this.els.text.focus()
-      this.els.text.select()
+      this.focusTextInputWithoutPageScroll()
     }
+  }
+
+  /** Ferme la popup si la feature éditée n’est plus dans la source (ex. annuler). */
+  closeIfFeatureMissing(source: { hasFeature(feature: OlFeature<OlGeometry>): boolean }): void {
+    if (!this.openFlag || !this.feature) return
+    if (!source.hasFeature(this.feature)) this.hide()
   }
 
   hide(): void {
     this.unbindOutside()
-    this.unbindScrollGuard()
     this.setAdvancedOpen(false)
     this.root.hidden = true
+    this.overlay.setPosition(undefined)
     this.openFlag = false
     this.feature = null
+    this.clickAnchor = null
     this.onCommit = null
-    this.outsideDown = false
+    this.outsideGesture = null
     this.mapDragged = false
+    this.skipNextOutsideUp = false
     for (const p of Object.values(this.colorPickers)) p.close()
   }
 
   destroy(): void {
     this.hide()
     for (const p of Object.values(this.colorPickers)) p.destroy()
+    this.map.removeOverlay(this.overlay)
     this.root.remove()
   }
 
@@ -424,122 +451,65 @@ export class SketchFeatureStylePopup {
     return Object.values(this.colorPickers).some((p) => p.containsNode(node))
   }
 
+  /** Clic sur une géométrie croquis — ne pas fermer au pointerup (pan / singleclick OL). */
+  private isSketchFeaturePointer(evt: PointerEvent): boolean {
+    const target = evt.target
+    if (!(target instanceof Node)) return false
+    const mapEl = this.map.getTargetElement()
+    if (!mapEl?.contains(target)) return false
+    const pixel = this.map.getEventPixel(evt)
+    return this.map.getFeaturesAtPixel(pixel, { hitTolerance: 14 }).length > 0
+  }
+
+  /** Focus texte sans faire défiler la page (scroll document). */
+  private focusTextInputWithoutPageScroll(): void {
+    const input = this.els.text
+    try {
+      input.focus({ preventScroll: true })
+    } catch {
+      input.focus()
+    }
+    input.select()
+  }
+
   private bindOutside(): void {
     this.map.on('pointerdrag', this.onMapPointerDrag)
     this.map.getView().on('change:center', this.onViewChange)
     this.map.getView().on('change:resolution', this.onViewChange)
-    this.map.on('change:size', this.onViewChange)
-    window.addEventListener('resize', this.onWindowResize)
-    window.visualViewport?.addEventListener('resize', this.onWindowResize)
-    // capture : le scroll ne bubble pas — suit la carte dans la page
-    window.addEventListener('scroll', this.onViewChange, true)
     document.addEventListener('pointerdown', this.onDocPointerDown, true)
+    document.addEventListener('pointermove', this.onDocPointerMove, true)
     document.addEventListener('pointerup', this.onDocPointerUp, true)
-    const mapEl = this.map.getTargetElement()
-    if (mapEl && typeof ResizeObserver !== 'undefined') {
-      this.mapResizeObserver?.disconnect()
-      this.mapResizeObserver = new ResizeObserver(() => this.onWindowResize())
-      this.mapResizeObserver.observe(mapEl)
+    document.addEventListener('pointercancel', this.onDocPointerUp, true)
+    this.mapSingleClickKey = this.map.on('singleclick', this.onMapSingleClick)
+    const geom = this.feature?.getGeometry()
+    if (geom) {
+      this.geomChangeKey = geom.on('change', this.onViewChange)
     }
-    this.repositionBound = true
   }
 
   private unbindOutside(): void {
     this.map.un('pointerdrag', this.onMapPointerDrag)
-    if (this.repositionBound) {
-      this.map.getView().un('change:center', this.onViewChange)
-      this.map.getView().un('change:resolution', this.onViewChange)
-      this.map.un('change:size', this.onViewChange)
-      window.removeEventListener('resize', this.onWindowResize)
-      window.visualViewport?.removeEventListener('resize', this.onWindowResize)
-      window.removeEventListener('scroll', this.onViewChange, true)
-      this.mapResizeObserver?.disconnect()
-      this.mapResizeObserver = null
-    }
+    this.map.getView().un('change:center', this.onViewChange)
+    this.map.getView().un('change:resolution', this.onViewChange)
     document.removeEventListener('pointerdown', this.onDocPointerDown, true)
+    document.removeEventListener('pointermove', this.onDocPointerMove, true)
     document.removeEventListener('pointerup', this.onDocPointerUp, true)
-    if (this.repositionRaf) {
-      cancelAnimationFrame(this.repositionRaf)
-      this.repositionRaf = 0
+    document.removeEventListener('pointercancel', this.onDocPointerUp, true)
+    if (this.mapSingleClickKey) {
+      unByKey(this.mapSingleClickKey)
+      this.mapSingleClickKey = null
     }
-    this.repositionBound = false
+    if (this.geomChangeKey) {
+      unByKey(this.geomChangeKey)
+      this.geomChangeKey = null
+    }
   }
 
-  private bindScrollGuard(): void {
-    if (this.scrollGuardBound) return
-    this.root.addEventListener('wheel', this.onPopupWheel, {
-      passive: false,
-      capture: true,
-    })
-    this.scrollGuardBound = true
-  }
-
-  private unbindScrollGuard(): void {
-    if (!this.scrollGuardBound) return
-    this.root.removeEventListener('wheel', this.onPopupWheel, true)
-    this.scrollGuardBound = false
-  }
-
-  /** Place la popup près de la feature ; appendice aligné sur un point de la feature. */
+  /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
-    const mapSize = this.map.getSize()
-    const anchor = featureStylePopupAnchor(this.feature, mapSize, (c) =>
-      this.map.getPixelFromCoordinate(c),
-    )
-    if (!anchor) return
-    const pixel = this.map.getPixelFromCoordinate(anchor)
-    if (!pixel) return
-    const mapEl = this.map.getTargetElement()
-    if (!mapEl) return
-    const mapRect = mapEl.getBoundingClientRect()
-    const tipX = mapRect.left + pixel[0]
-    const tipY = mapRect.top + pixel[1]
-
-    this.root.style.position = 'fixed'
-    this.root.style.zIndex = '10040'
-    this.root.style.left = '0'
-    this.root.style.top = '0'
-    this.root.style.visibility = 'hidden'
-    this.root.hidden = false
-
-    requestAnimationFrame(() => {
-      const pr = this.root.getBoundingClientRect()
-      const gap = 20
-      const tipPad = 18
-      let below = false
-      let top = tipY - pr.height - gap
-      if (top < 8) {
-        top = tipY + gap
-        below = true
-      }
-      // Garder l’appendice sur tipX : left = tipX - tipLocalX
-      let tipLocalX = pr.width / 2
-      let left = tipX - tipLocalX
-      const minLeft = 8
-      const maxLeft = window.innerWidth - pr.width - 8
-      if (left < minLeft) {
-        left = minLeft
-        tipLocalX = tipX - left
-      } else if (left > maxLeft) {
-        left = maxLeft
-        tipLocalX = tipX - left
-      }
-      tipLocalX = Math.min(Math.max(tipPad, tipLocalX), pr.width - tipPad)
-      // Recaler left pour que le tip reste sur tipX après clamp du tipLocalX
-      left = tipX - tipLocalX
-      left = Math.min(Math.max(minLeft, left), maxLeft)
-      tipLocalX = tipX - left
-
-      top = Math.min(Math.max(8, top), window.innerHeight - pr.height - 8)
-      if (!below && top + 4 > tipY) below = true
-
-      this.root.style.left = `${left}px`
-      this.root.style.top = `${top}px`
-      this.root.style.setProperty('--ec-tip-x', `${tipLocalX}px`)
-      this.root.style.visibility = 'visible'
-      this.root.classList.toggle('ec-sketch-style-popup--below', below)
-    })
+    const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature)
+    if (anchor) this.overlay.setPosition(anchor)
   }
 
   private syncFieldsVisibility(): void {

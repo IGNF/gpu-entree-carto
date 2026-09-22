@@ -12,3 +12,9 @@ npm-debug.log*
 .DS_Store
 *.tsbuildinfo
 coverage/
+
+# CodeQL (analyse locale)
+.codeql-cli/
+.codeql-db/
+.codeql-db-test/
+.codeql-results.sarif

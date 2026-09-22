@@ -1,0 +1,13 @@
+name: entree-carto
+
+# CI GitHub (racine du dépôt). En local, verify:codeql utilise --source-root=./src.
+paths:
+  - src
+
+paths-ignore:
+  - dist
+  - 'dist/**'
+  - node_modules
+  - 'node_modules/**'
+  - coverage
+  - '**/*.min.js'

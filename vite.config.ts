@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import { demoManualChunks } from './vite.manualChunks'
+import { patchGeopfSearchEval } from './vite.geopfPlugins'
 
 /**
  * Sous-chemin GitHub Pages (ex. `/entree-carto/`).
@@ -15,7 +17,7 @@ function pagesBase(): string {
 
 export default defineConfig({
   base: pagesBase(),
-  plugins: [vue()],
+  plugins: [patchGeopfSearchEval(), vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -28,5 +30,20 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    proxy: {
+      /** gpu-site local (légendes, script config, APIs) — évite ORB en dev. */
+      '/__gpu_dev_proxy__': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/__gpu_dev_proxy__/, ''),
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: demoManualChunks,
+      },
+    },
   },
 })

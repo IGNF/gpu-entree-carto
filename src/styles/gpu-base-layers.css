@@ -1,0 +1,4 @@
+/** Plan IGN NB — même tuile, rendu gris (équivalent gpu-client `grayscale: true`). */
+.ec-gpu-layer-grayscale {
+  filter: grayscale(100%);
+}
