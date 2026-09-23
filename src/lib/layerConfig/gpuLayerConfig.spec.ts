@@ -4,6 +4,7 @@ import {
   layerConfigToCatalogEntries,
   pathToCatalogId,
   resolveGpuLayerVisible,
+  resolveLayerConfig,
 } from '@/lib/layerConfig/gpuLayerConfig'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { flattenCatalogNodes } from '@/lib/layerConfig/catalogTreeIndex'
@@ -104,5 +105,20 @@ describe('gpuLayerConfig paths', () => {
         (e) => e.config.name === 'dev-prescription' || e.config.name === 'dev-prescription_psmv',
       ).length,
     ).toBe(2)
+  })
+})
+
+describe('resolveLayerConfig', () => {
+  it('prefere le param createStandardViewer au global window', () => {
+    const fromParams = [{ title: 'Param', name: 'a' }]
+    ;(globalThis as { LAYER_CONFIG?: unknown }).LAYER_CONFIG = [{ title: 'Window', name: 'b' }]
+    expect(resolveLayerConfig(fromParams)?.[0]?.name).toBe('a')
+    delete (globalThis as { LAYER_CONFIG?: unknown }).LAYER_CONFIG
+  })
+
+  it('retombe sur window.LAYER_CONFIG', () => {
+    ;(globalThis as { LAYER_CONFIG?: unknown }).LAYER_CONFIG = [{ title: 'Window', name: 'b' }]
+    expect(resolveLayerConfig()?.[0]?.name).toBe('b')
+    delete (globalThis as { LAYER_CONFIG?: unknown }).LAYER_CONFIG
   })
 })
