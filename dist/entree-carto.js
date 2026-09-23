@@ -81407,6 +81407,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const GEOJSON = new GeoJSON();
   const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
   const SKETCH_PRECISION = 7;
+  const SKETCH_IMPORT_FILE_ACCEPT = ".kml,.json,.geojson";
   const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
   function projectionOf(map2) {
     return map2.getView().getProjection();
@@ -81573,7 +81574,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     a.click();
     URL.revokeObjectURL(url);
   }
-  function pickSketchFile(accept, onFile) {
+  function pickSketchFile(onFile, accept = SKETCH_IMPORT_FILE_ACCEPT) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = accept;
@@ -81593,7 +81594,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     input.click();
   }
   function formatFromFilename(name2) {
-    return /\.kml$/i.test(name2) ? "kml" : "geojson";
+    if (/\.kml$/i.test(name2)) return "kml";
+    if (/\.(geojson|json)$/i.test(name2)) return "geojson";
+    return "geojson";
   }
   const MAX = 50;
   function sketchHistoryStorageKey(baseKey) {
@@ -83070,21 +83073,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     runImport() {
       const map2 = this.getMap();
       if (!map2) return;
-      pickSketchFile(
-        ".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml",
-        (text2, name2) => {
-          var _a;
-          try {
-            const format = formatFromFilename(name2);
-            const features = readSketchFile(map2, text2, format);
-            this.source.addFeatures(features);
-            (_a = this.history) == null ? void 0 : _a.push();
-            this.notifyChange();
-          } catch (err) {
-            console.warn("[SketchControl] import failed", err);
-          }
+      pickSketchFile((text2, name2) => {
+        var _a;
+        try {
+          const format = formatFromFilename(name2);
+          const features = readSketchFile(map2, text2, format);
+          this.source.addFeatures(features);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        } catch (err) {
+          console.warn("[SketchControl] import failed", err);
         }
-      );
+      });
     }
     async runExport() {
       const map2 = this.getMap();
@@ -83455,6 +83455,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return true;
   }
+  function splitAggregateAncestorId(nodeId, index2, splitIds) {
+    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
+    let current = index2.nodesById.get(nodeId);
+    while (current) {
+      const parent = index2.parentById.get(current.id);
+      if (!parent) return null;
+      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
+      current = parent;
+    }
+    return null;
+  }
   function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
     const split = options == null ? void 0 : options.splitAggregateIds;
     const parent = index2.parentById.get(node.id);
@@ -83479,8 +83490,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!node.gpuMapLayer || node.gpuVirtual) return false;
     if (!checked[node.id]) return false;
     const split = options == null ? void 0 : options.splitAggregateIds;
-    if ((split == null ? void 0 : split.has(node.id)) && isCatalogAggregate(node) && isSameAsDescendants(checked, node, index2, opacityById)) {
+    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
       return false;
+    }
+    if (splitAggregateAncestorId(node.id, index2, split)) {
+      return true;
     }
     const parent = index2.parentById.get(node.id);
     if (!parent) {
@@ -83693,6 +83707,19 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function mapVisibilityOptionsFromSplitIds(splitIds) {
     return splitIds.size ? { splitAggregateIds: splitIds } : void 0;
+  }
+  function patchAggregateSubtreePanelOpacity(aggregate, opacity, patch) {
+    function walk(n) {
+      for (const child of catalogChildNodes(n)) {
+        if (!child.gpuForceOpacity) patch(child.id, { opacity });
+        walk(child);
+      }
+    }
+    walk(aggregate);
+  }
+  function recheckAggregateCatalogSubtree(checked, aggregate) {
+    if (!checked[aggregate.id]) return;
+    propagateCheckedToDescendants(checked, aggregate, true);
   }
   function aggregateDetailToggleForStackNode(node, splitIds) {
     if (isCatalogAggregate(node) && !splitIds.has(node.id)) {
@@ -84219,6 +84246,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       const node = treeIndex.nodesById.get(aggregateId);
       if (!node || !isCatalogAggregate(node)) return;
       if (!splitAggregateIds.value.has(aggregateId)) return;
+      recheckAggregateCatalogSubtree(catalogChecked.value, node);
+      catalogChecked.value = { ...catalogChecked.value };
       const activeWithChildren = layers.value.map((l) => l.id);
       const childIdsOrdered = directChildStackIdsInCatalogOrder(aggregateId);
       const saved = aggregatePanelSnapshot.value[aggregateId] ?? { ...getPanelState(node) };
@@ -84226,13 +84255,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const childStates = directChildren.map((c) => getPanelState(c));
       const merged = aggregatePanelStateAfterRegroup(node, saved, childStates);
       patchPanelState(aggregateId, merged);
-      for (const child of directChildren) {
-        patchPanelState(child.id, {
-          opacity: merged.opacity,
-          visible: getPanelState(child).visible,
-          grayscale: getPanelState(child).grayscale
-        });
-      }
+      patchAggregateSubtreePanelOpacity(node, merged.opacity, (id, partial) => {
+        patchPanelState(id, partial);
+      });
       stackSortKeyById.value = reassignSortKeysAfterAggregateRegroup(
         stackSortKeyById.value,
         activeWithChildren,
@@ -85780,6 +85805,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   const RES_DEPT_MAX = 1222.99245256282;
   const MAP_PROJECTION = "EPSG:3857";
   const DATA_PROJECTION = "EPSG:4326";
+  function limitGeoJsonUrl(fileName) {
+    return `${"/"}json-data/${fileName}`;
+  }
   const limitStyle = new Style({
     stroke: new Stroke({ width: 2, color: "#000000" })
   });
@@ -85797,7 +85825,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function loadRegions() {
     if (regionsFeatures) return regionsFeatures;
     if (!regionsLoad) {
-      regionsLoad = fetch("/json-data/region-fr-geojson.json").then(async (res) => {
+      regionsLoad = fetch(limitGeoJsonUrl("region-fr-geojson.json")).then(async (res) => {
         if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`);
         regionsFeatures = readGeoJsonFeatures(await res.json());
         return regionsFeatures;
@@ -85811,7 +85839,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function loadDepartments() {
     if (departmentsFeatures) return departmentsFeatures;
     if (!departmentsLoad) {
-      departmentsLoad = fetch("/json-data/department-fr-geojson.json").then(async (res) => {
+      departmentsLoad = fetch(limitGeoJsonUrl("department-fr-geojson.json")).then(async (res) => {
         if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`);
         departmentsFeatures = readGeoJsonFeatures(await res.json());
         return departmentsFeatures;

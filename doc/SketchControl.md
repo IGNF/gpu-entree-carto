@@ -38,7 +38,7 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 | Id                | Comportement                                                                                                                                 |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification   |
-| `Import`          | Fichier GeoJSON ou KML → features croquis                                                                                                    |
+| `Import`          | Fichier `*.kml`, `*.json` ou `*.geojson` (filtre du sélecteur) → features croquis ; KML via parseur sécurisé, JSON/GeoJSON via `readSketchGeoJsonObject` |
 | `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                           |
 | `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ri-ruler-line` |
 | `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size`                                                         |

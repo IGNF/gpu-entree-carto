@@ -49,6 +49,23 @@ export type MapVisibilityComputeOptions = {
   splitAggregateIds?: ReadonlySet<string>
 }
 
+/** Agrégat en mode détaillé dont `nodeId` est un descendant (pas l’agrégat lui-même). */
+export function splitAggregateAncestorId(
+  nodeId: string,
+  index: CatalogTreeIndex,
+  splitIds: ReadonlySet<string> | undefined,
+): string | null {
+  if (!splitIds?.size) return null
+  let current = index.nodesById.get(nodeId)
+  while (current) {
+    const parent = index.parentById.get(current.id)
+    if (!parent) return null
+    if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id
+    current = parent
+  }
+  return null
+}
+
 export function isAscendentParentAggregateActive(
   checked: Record<string, boolean>,
   node: TreeLayerNode,
@@ -91,12 +108,11 @@ export function shouldShowMapLayerForNode(
   if (!checked[node.id]) return false
 
   const split = options?.splitAggregateIds
-  if (
-    split?.has(node.id) &&
-    isCatalogAggregate(node) &&
-    isSameAsDescendants(checked, node, index, opacityById)
-  ) {
+  if (isCatalogAggregate(node) && split?.has(node.id)) {
     return false
+  }
+  if (splitAggregateAncestorId(node.id, index, split)) {
+    return true
   }
 
   const parent = index.parentById.get(node.id)

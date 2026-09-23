@@ -27,6 +27,9 @@ const SKETCH_PRECISION = 7
 
 export type SketchIoFormat = 'geojson' | 'kml'
 
+/** Filtre du sélecteur natif import croquis (`*.kml`, `*.json`, `*.geojson`). */
+export const SKETCH_IMPORT_FILE_ACCEPT = '.kml,.json,.geojson'
+
 const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP] as const
 
 function projectionOf(map: Map) {
@@ -240,7 +243,10 @@ export function downloadBlob(filename: string, content: string, mime: string): v
   URL.revokeObjectURL(url)
 }
 
-export function pickSketchFile(accept: string, onFile: (text: string, name: string) => void): void {
+export function pickSketchFile(
+  onFile: (text: string, name: string) => void,
+  accept: string = SKETCH_IMPORT_FILE_ACCEPT,
+): void {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = accept
@@ -260,5 +266,7 @@ export function pickSketchFile(accept: string, onFile: (text: string, name: stri
 }
 
 export function formatFromFilename(name: string): SketchIoFormat {
-  return /\.kml$/i.test(name) ? 'kml' : 'geojson'
+  if (/\.kml$/i.test(name)) return 'kml'
+  if (/\.(geojson|json)$/i.test(name)) return 'geojson'
+  return 'geojson'
 }

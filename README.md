@@ -43,7 +43,7 @@ Autres cibles :
 | `make build`     | Build démo + bibliothèque (`dist/`)                                                                           |
 | `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS)                                                                   |
 | `make test`      | Tests Vitest                                                                                                  |
-| `make preview`   | Prévisualiser le build                                                                                        |
+| `make preview`   | Prévisualiser le build (`npm run preview` — **pas** `file://` sur `dist/index.html`)                          |
 | `make typecheck` | Vérification TypeScript                                                                                       |
 | `make verify`    | ESLint + Prettier + typecheck + **CodeQL** (`npm run codeql:install` une fois ; `SKIP_CODEQL=1` pour ignorer) |
 | `npm run verify` | ESLint + Prettier + typecheck seulement — exécuté au **pre-commit** (Husky)                                   |

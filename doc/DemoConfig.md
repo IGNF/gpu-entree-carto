@@ -15,6 +15,7 @@ Modifier l’environnement ou le jeu de test **sans recompiler** ni toucher au c
 | Clé                      | Description                                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | `configScriptUrl`        | URL optionnelle de `/map/gpu-client-config.js` (prod, dev, local). Charge les globals `LAYER_CONFIG`, `LEGEND_CONFIG`, … |
+| _(GitHub Pages)_         | Build `npm run build:demo:pages` : `dist/js/demo-config.js` pointe automatiquement vers `https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js` (fichier source `public/js/demo-config.js` reste en local `127.0.0.1:8000` pour le dev). |
 | `document`               | Document GPU `{ id, type, status, name, bbox? }` — ouvre la fiche info au chargement de `/map`                           |
 | `bbox`                   | `[minLon, minLat, maxLon, maxLat]` (EPSG:4326) si pas de handoff recherche depuis `/`                                    |
 | `gpuConfigOverrides`     | Objet fusionné dans `gpu.config` / `config` entree-carto                                                                 |

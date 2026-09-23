@@ -1,4 +1,4 @@
-.PHONY: install dev build build-lib build-demo build-geometry-editor build-sketch test preview typecheck verify fix
+.PHONY: install dev build build-lib build-demo build-geometry-editor build-sketch test preview preview-pages typecheck verify fix
 
 install:
 	npm install
@@ -8,6 +8,7 @@ dev:
 
 build:
 	npm run build
+	@echo "→ Prévisualiser : make preview (ne pas ouvrir dist/index.html en file://)"
 
 build-lib:
 	npm run build:lib
@@ -26,6 +27,9 @@ test:
 
 preview:
 	npm run preview
+
+preview-pages:
+	npm run serve:pages
 
 typecheck:
 	npm run typecheck
