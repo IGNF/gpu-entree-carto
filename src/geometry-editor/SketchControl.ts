@@ -560,20 +560,17 @@ export class SketchControl extends Control {
   private runImport(): void {
     const map = this.getMap()
     if (!map) return
-    pickSketchFile(
-      '.geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml',
-      (text, name) => {
-        try {
-          const format = formatFromFilename(name)
-          const features = readSketchFile(map, text, format)
-          this.source.addFeatures(features)
-          this.history?.push()
-          this.notifyChange()
-        } catch (err) {
-          console.warn('[SketchControl] import failed', err)
-        }
-      },
-    )
+    pickSketchFile((text, name) => {
+      try {
+        const format = formatFromFilename(name)
+        const features = readSketchFile(map, text, format)
+        this.source.addFeatures(features)
+        this.history?.push()
+        this.notifyChange()
+      } catch (err) {
+        console.warn('[SketchControl] import failed', err)
+      }
+    })
   }
 
   private async runExport(): Promise<void> {

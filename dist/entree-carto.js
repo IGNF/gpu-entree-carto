@@ -81407,6 +81407,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const GEOJSON = new GeoJSON();
   const KML_FMT = new KML({ extractStyles: true, writeStyles: true });
   const SKETCH_PRECISION = 7;
+  const SKETCH_IMPORT_FILE_ACCEPT = ".kml,.json,.geojson";
   const STYLE_PROP_KEYS = [FEATURE_STYLE_PROP, SKETCH_TEXT_PROP];
   function projectionOf(map2) {
     return map2.getView().getProjection();
@@ -81573,7 +81574,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     a.click();
     URL.revokeObjectURL(url);
   }
-  function pickSketchFile(accept, onFile) {
+  function pickSketchFile(onFile, accept = SKETCH_IMPORT_FILE_ACCEPT) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = accept;
@@ -81593,7 +81594,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     input.click();
   }
   function formatFromFilename(name2) {
-    return /\.kml$/i.test(name2) ? "kml" : "geojson";
+    if (/\.kml$/i.test(name2)) return "kml";
+    if (/\.(geojson|json)$/i.test(name2)) return "geojson";
+    return "geojson";
   }
   const MAX = 50;
   function sketchHistoryStorageKey(baseKey) {
@@ -83070,21 +83073,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     runImport() {
       const map2 = this.getMap();
       if (!map2) return;
-      pickSketchFile(
-        ".geojson,.json,.kml,application/geo+json,application/vnd.google-earth.kml+xml",
-        (text2, name2) => {
-          var _a;
-          try {
-            const format = formatFromFilename(name2);
-            const features = readSketchFile(map2, text2, format);
-            this.source.addFeatures(features);
-            (_a = this.history) == null ? void 0 : _a.push();
-            this.notifyChange();
-          } catch (err) {
-            console.warn("[SketchControl] import failed", err);
-          }
+      pickSketchFile((text2, name2) => {
+        var _a;
+        try {
+          const format = formatFromFilename(name2);
+          const features = readSketchFile(map2, text2, format);
+          this.source.addFeatures(features);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        } catch (err) {
+          console.warn("[SketchControl] import failed", err);
         }
-      );
+      });
     }
     async runExport() {
       const map2 = this.getMap();
