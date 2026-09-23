@@ -14,6 +14,11 @@ const RES_DEPT_MAX = 1222.99245256282
 const MAP_PROJECTION = 'EPSG:3857'
 const DATA_PROJECTION = 'EPSG:4326'
 
+/** `BASE_URL` : `./` (build local) ou `/nom-du-repo/` (GitHub Pages). */
+function limitGeoJsonUrl(fileName: string): string {
+  return `${import.meta.env.BASE_URL}json-data/${fileName}`
+}
+
 const limitStyle = new Style({
   stroke: new Stroke({ width: 2, color: '#000000' }),
 })
@@ -35,7 +40,7 @@ function readGeoJsonFeatures(data: object): Feature<Geometry>[] {
 async function loadRegions(): Promise<Feature<Geometry>[]> {
   if (regionsFeatures) return regionsFeatures
   if (!regionsLoad) {
-    regionsLoad = fetch('/json-data/region-fr-geojson.json')
+    regionsLoad = fetch(limitGeoJsonUrl('region-fr-geojson.json'))
       .then(async (res) => {
         if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`)
         regionsFeatures = readGeoJsonFeatures(await res.json())
@@ -52,7 +57,7 @@ async function loadRegions(): Promise<Feature<Geometry>[]> {
 async function loadDepartments(): Promise<Feature<Geometry>[]> {
   if (departmentsFeatures) return departmentsFeatures
   if (!departmentsLoad) {
-    departmentsLoad = fetch('/json-data/department-fr-geojson.json')
+    departmentsLoad = fetch(limitGeoJsonUrl('department-fr-geojson.json'))
       .then(async (res) => {
         if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`)
         departmentsFeatures = readGeoJsonFeatures(await res.json())

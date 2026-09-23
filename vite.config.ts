@@ -2,22 +2,23 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { demoManualChunks } from './vite.manualChunks'
+import { patchDemoConfigForPages } from './vite.demoPlugins'
 import { patchGeopfSearchEval } from './vite.geopfPlugins'
 
 /**
- * Sous-chemin GitHub Pages (ex. `/entree-carto/`).
- * En local / hors CI → `/`.
+ * GitHub Pages (CI) : `/nom-du-repo/`.
+ * Build local (`make build`) : `base: './'` pour `vite preview` (pas d’ouverture `file://` sur dist).
  */
 function pagesBase(): string {
   const ghRepo = process.env.GITHUB_REPOSITORY
-  if (!ghRepo) return '/'
+  if (!ghRepo) return './'
   const repoName = ghRepo.split('/')[1]
-  return repoName ? `/${repoName}/` : '/'
+  return repoName ? `/${repoName}/` : './'
 }
 
 export default defineConfig({
   base: pagesBase(),
-  plugins: [patchGeopfSearchEval(), vue()],
+  plugins: [patchGeopfSearchEval(), patchDemoConfigForPages(), vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

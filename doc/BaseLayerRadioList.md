@@ -25,4 +25,4 @@ Liste verticale de **boutons radio** pour les fonds de plan, avec **vignette** e
 
 Le parent crée un `GpuBaseLayerEnvironment` (`createGpuBaseLayerEnvironment`), appelle `setActiveGpuBaseLayer(env, id)` et passe `env.allLayers` à `MapShell` (voir `DemoView.vue`). Une seule instance OpenLayers par couche WMTS / limite (pool `mainLayers`, comme gpu-client).
 
-Piles de couches par fond : alignées sur gpu-client `createStandardViewer` / `TileLayerSwitcher` (`cadastreLow`/`cadastreHigh`, limites région/département GeoJSON dans `public/json-data/`, mixte sans plan IGN). Définition : `src/ol/gpuBaseLayerPresets.ts`, `src/ol/gpuLimitOverlayLayers.ts`.
+Piles de couches par fond : alignées sur gpu-client `createStandardViewer` / `TileLayerSwitcher` (`cadastreLow`/`cadastreHigh`, limites région/département GeoJSON dans `public/json-data/` (URL via `import.meta.env.BASE_URL` pour GitHub Pages), mixte sans plan IGN). Définition : `src/ol/gpuBaseLayerPresets.ts`, `src/ol/gpuLimitOverlayLayers.ts`.
