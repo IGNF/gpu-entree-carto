@@ -1,6 +1,6 @@
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
-import { readLayerConfigFromWindow } from '@/lib/layerConfig/gpuLayerConfig'
+import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
 import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
@@ -224,7 +224,7 @@ export async function prepareDemoEnvironment(
 }
 
 export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
-  const fromGpu = readLayerConfigFromWindow()
+  const fromGpu = resolveLayerConfig()
   if (fromGpu?.length) {
     const zoom = cfg.map?.zoom ?? 6
     return layerConfigToTreeNodes(fromGpu, zoom)

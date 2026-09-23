@@ -21,9 +21,5 @@ export function createStandardViewer(params: StandardViewerParams = {}): Mounted
     console.info(`${LOG_PREFIX} recherche initiale`, params.search)
   }
 
-  console.warn(
-    `${LOG_PREFIX} createStandardViewer : version initiale — couches métier, fiche info, outils et aide non disponibles.`,
-  )
-
   return mountMapViewer(container, params)
 }

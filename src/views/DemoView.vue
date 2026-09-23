@@ -24,7 +24,7 @@ import {
 } from '@/lib/demo/demoConfig'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
-import { readLayerConfigFromWindow } from '@/lib/layerConfig/gpuLayerConfig'
+import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import {
   createGpuBaseLayerEnvironment,
   setActiveGpuBaseLayer,
@@ -67,7 +67,7 @@ onMounted(async () => {
   const cfg = await prepareDemoEnvironment(getDemoConfig())
   gpuDocument.value = cfg.document ?? null
   layerNodes.value = resolveDemoLayerNodes(cfg)
-  const layerConfig = readLayerConfigFromWindow()
+  const layerConfig = resolveLayerConfig()
   if (layerConfig?.length) {
     gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, gpuDocument.value)
     const map = mapShellRef.value?.map ?? null
@@ -82,7 +82,7 @@ onUnmounted(() => {
 watch(
   () => mapShellRef.value?.map ?? null,
   (map) => {
-    if (map && readLayerConfigFromWindow()?.length) {
+    if (map && resolveLayerConfig()?.length) {
       gpuWmsLayerRegistry.attachMap(map)
     }
   },

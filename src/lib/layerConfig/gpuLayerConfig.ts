@@ -117,3 +117,11 @@ export function readLayerConfigFromWindow(): GpuLayerConfig[] | null {
   if (!Array.isArray(raw) || !raw.length) return null
   return raw as GpuLayerConfig[]
 }
+
+/** Paramètres createStandardViewer ou global injecté par gpu-client-config.js. */
+export function resolveLayerConfig(paramsLayerConfig?: unknown): GpuLayerConfig[] | null {
+  if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
+    return paramsLayerConfig as GpuLayerConfig[]
+  }
+  return readLayerConfigFromWindow()
+}

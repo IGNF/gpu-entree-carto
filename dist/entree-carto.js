@@ -10334,6 +10334,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const factor = Math.pow(10, decimals);
     return Math.round(n * factor) / factor;
   }
+  function round(n, decimals) {
+    return Math.round(toFixed(n, decimals));
+  }
   function floor(n, decimals) {
     return Math.floor(toFixed(n, decimals));
   }
@@ -10853,6 +10856,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       remainder = next;
     }
     return remainder;
+  }
+  function compareVersions(v1, v2) {
+    const s1 = ("" + v1).split(".");
+    const s2 = ("" + v2).split(".");
+    for (let i = 0; i < Math.max(s1.length, s2.length); i++) {
+      const n1 = parseInt(s1[i] || "0", 10);
+      const n2 = parseInt(s2[i] || "0", 10);
+      if (n1 > n2) {
+        return 1;
+      }
+      if (n2 > n1) {
+        return -1;
+      }
+    }
+    return 0;
   }
   function add$3(coordinate, delta) {
     coordinate[0] += +delta[0];
@@ -62147,7 +62165,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   };
   const tmpTileCoord = [0, 0, 0];
-  const DECIMALS = 5;
+  const DECIMALS$1 = 5;
   class TileGrid {
     /**
      * @param {Options} options Tile grid options.
@@ -62511,11 +62529,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       let tileCoordX = scale2 * (x - origin[0]) / resolution / tileSize[0];
       let tileCoordY = scale2 * (origin[1] - y) / resolution / tileSize[1];
       if (reverseIntersectionPolicy) {
-        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
-        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
+        tileCoordX = ceil(tileCoordX, DECIMALS$1) - 1;
+        tileCoordY = ceil(tileCoordY, DECIMALS$1) - 1;
       } else {
-        tileCoordX = floor(tileCoordX, DECIMALS);
-        tileCoordY = floor(tileCoordY, DECIMALS);
+        tileCoordX = floor(tileCoordX, DECIMALS$1);
+        tileCoordY = floor(tileCoordY, DECIMALS$1);
       }
       return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
     }
@@ -62541,11 +62559,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       let tileCoordX = (x - origin[0]) / resolution / tileSize[0];
       let tileCoordY = (origin[1] - y) / resolution / tileSize[1];
       if (reverseIntersectionPolicy) {
-        tileCoordX = ceil(tileCoordX, DECIMALS) - 1;
-        tileCoordY = ceil(tileCoordY, DECIMALS) - 1;
+        tileCoordX = ceil(tileCoordX, DECIMALS$1) - 1;
+        tileCoordY = ceil(tileCoordY, DECIMALS$1) - 1;
       } else {
-        tileCoordX = floor(tileCoordX, DECIMALS);
-        tileCoordY = floor(tileCoordY, DECIMALS);
+        tileCoordX = floor(tileCoordX, DECIMALS$1);
+        tileCoordY = floor(tileCoordY, DECIMALS$1);
       }
       return createOrUpdate(z, tileCoordX, tileCoordY, opt_tileCoord);
     }
@@ -72578,10 +72596,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!(geom instanceof Circle)) return null;
     const [lon, lat] = toLonLat(geom.getCenter(), mapProjection);
     const f = 10 ** precision;
-    const round = (n) => Math.round(n * f) / f;
+    const round2 = (n) => Math.round(n * f) / f;
     return {
-      center: [round(lon), round(lat)],
-      radius: round(geom.getRadius())
+      center: [round2(lon), round2(lat)],
+      radius: round2(geom.getRadius())
     };
   }
   function serializeCircleFeature(feature, precision, mapProjection = "EPSG:3857") {
@@ -83401,6 +83419,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     return out;
   }
   const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
+  const GEOMETRY_TYPES = ["pct", "lin", "surf"];
+  function normalizeLayerNameForLegend(layerName) {
+    return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
+  }
+  function readScaleDependantThreshold(layer) {
+    const raw = layer.scaleDependantTreshold;
+    if (raw === void 0 || raw === null) return void 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : void 0;
+  }
+  function isLayerScaleDependant(layer, ancestors) {
+    if (layer.scaleDependant) return true;
+    for (const a of ancestors) {
+      if (a.scaleDependant) return true;
+    }
+    return false;
+  }
+  function getScaleDependantThreshold(layer, ancestors) {
+    const chain = [layer, ...ancestors];
+    for (const item of chain) {
+      const t = readScaleDependantThreshold(item);
+      if (t !== void 0 && !Number.isNaN(t)) return t;
+    }
+    return DEFAULT_SCALE_DEPENDANT_THRESHOLD;
+  }
   function isHighScaleZoom(zoom, threshold) {
     return zoom >= threshold;
   }
@@ -83416,6 +83459,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     if ((_a = item.legendImageNames) == null ? void 0 : _a.length) return item.legendImageNames;
     if (item.legendImageName) return [item.legendImageName];
     return [];
+  }
+  function sortLegendImageNamesByGeometry(names2) {
+    function rank(name2) {
+      const match2 = name2.match(/_(pct|lin|surf)(?:\/|$|-)/);
+      if (!match2) return GEOMETRY_TYPES.length;
+      const idx = GEOMETRY_TYPES.indexOf(match2[1]);
+      return idx >= 0 ? idx : GEOMETRY_TYPES.length;
+    }
+    return [...names2].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   }
   function resolveLegendItemImageUrls(item, zoom) {
     const path = item.legendImagePath;
@@ -83465,6 +83517,280 @@ Expected function or array of functions, received type ${typeof value2}.`
       out.push({ ...layer, legend });
     }
     return out;
+  }
+  function resolveLegendImageDetailDirectory() {
+    var _a;
+    const fromMerged = typeof config.legendImageDetailDirectory === "string" ? config.legendImageDetailDirectory : "";
+    if (fromMerged) return normalizeLegendImageBaseUrl(fromMerged);
+    const w = typeof window !== "undefined" ? window : void 0;
+    const gpuCfg = (_a = w == null ? void 0 : w.gpu) == null ? void 0 : _a.config;
+    const fromGpu = typeof (gpuCfg == null ? void 0 : gpuCfg.legendImageDetailDirectory) === "string" ? gpuCfg.legendImageDetailDirectory : "";
+    return normalizeLegendImageBaseUrl(fromGpu);
+  }
+  function normalizeLegendImageBaseUrl(raw) {
+    const withoutQuery = raw.replace(/\?.*$/i, "");
+    if (!withoutQuery.length) return "";
+    return withoutQuery.endsWith("/") ? withoutQuery : `${withoutQuery}/`;
+  }
+  function readLegendConfigArray(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") return Object.values(raw);
+    return [];
+  }
+  function hasFilterIn(layer) {
+    var _a;
+    return Boolean(layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length));
+  }
+  function isPsmvLayerName(layerName) {
+    return layerName.slice(-5) === "_psmv";
+  }
+  function hasLegendReferences(layerName, refs) {
+    return layerName in refs;
+  }
+  function getLegendReferenceRuleKey(layerName, rule, refs) {
+    const bucket = refs[layerName];
+    if (!bucket) return rule;
+    if (bucket[rule]) return rule;
+    if ((layerName === "info" || layerName === "prescription") && /^\d{2}$/.test(rule)) {
+      const defaultKey = `${rule}-00`;
+      if (bucket[defaultKey]) return defaultKey;
+      const prefix = `${rule}-`;
+      const matching = Object.keys(bucket).filter((k) => k.startsWith(prefix)).sort();
+      if (matching.length) return matching[0];
+    }
+    return rule;
+  }
+  function getLegendReference(layerName, rule, refs) {
+    const bucket = refs[layerName];
+    if (!bucket) return void 0;
+    return bucket[getLegendReferenceRuleKey(layerName, rule, refs)];
+  }
+  function getImageNameByGpuLayer(layer, rule, subRule, geometryType) {
+    const base = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    let imageName = `${base}_${geometryType}/${rule}`;
+    if (subRule) imageName += `-${subRule}`;
+    return imageName;
+  }
+  function getImageNameByLegendReferences(layerName, ruleName, type) {
+    if (type) return `${type}/${ruleName}`;
+    return `${normalizeLayerNameForLegend(layerName)}/${ruleName}`;
+  }
+  function getGeometryTypesForLegendWithFilter(layerName, rule, legendConfig) {
+    var _a;
+    const geometryTypes = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
+      if ((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule)) {
+        geometryTypes.push(childLayerName.split(`${layerName}_`)[1]);
+      }
+    }
+    return geometryTypes;
+  }
+  function getGeometryTypesForLegendWithFilterAndSubFilter(layerName, rule, subRule, legendConfig) {
+    var _a, _b, _c;
+    const geometryTypes = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      const suffix = childLayerName.split(`${layerName}_`)[1];
+      if (!suffix || !GEOMETRY_TYPES.includes(suffix)) continue;
+      if (!((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule))) continue;
+      if ((_c = (_b = entry.hasfilter2) == null ? void 0 : _b[rule]) == null ? void 0 : _c.includes(subRule)) {
+        geometryTypes.push(suffix);
+      }
+    }
+    return geometryTypes;
+  }
+  function getSubRules(layerName, rule, legendConfig) {
+    var _a;
+    const subRules = [];
+    for (const entry of legendConfig) {
+      const entryName = normalizeLayerNameForLegend(entry.name);
+      for (const geometryType of GEOMETRY_TYPES) {
+        if (entryName !== `${layerName}_${geometryType}`) continue;
+        const list = (_a = entry.hasfilter2) == null ? void 0 : _a[rule];
+        if (!(list == null ? void 0 : list.length)) continue;
+        for (const subRule of list) {
+          if (!subRules.includes(subRule)) subRules.push(subRule);
+        }
+      }
+    }
+    return subRules;
+  }
+  function getOtherLegendImageNamesByFilterValues(layerName, rules, legendConfig) {
+    var _a;
+    const imageNames = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
+      if (entry.other !== true) continue;
+      const matchesRule = (_a = entry.allowedValues) == null ? void 0 : _a.some((v) => rules.includes(v));
+      if (!matchesRule) continue;
+      imageNames.push(`${childLayerName}/other`);
+    }
+    return imageNames;
+  }
+  function pushLegendItemsFromNames(items, names2, title, opts, scaleDependant, threshold, idPrefix) {
+    if (!names2.length) return;
+    const sorted = sortLegendImageNamesByGeometry(names2);
+    const item = {
+      id: `${idPrefix}-${sorted.join("|")}`,
+      title,
+      legendImagePath: opts.imagePath,
+      legendScaleDependant: scaleDependant,
+      legendScaleThreshold: threshold
+    };
+    if (sorted.length === 1) {
+      item.legendImageName = sorted[0];
+      if (opts.imagePath) {
+        item.imageUrl = legendImageUrl(
+          opts.imagePath,
+          sorted[0],
+          scaleDependant,
+          threshold,
+          opts.zoomAtInit
+        );
+      }
+    } else {
+      item.legendImageNames = sorted;
+    }
+    items.push(item);
+  }
+  function buildNoFilterLegends(layer, opts) {
+    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
+    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
+    const items = [];
+    const bucket = opts.legendReferences[layerName];
+    for (const ruleName of Object.keys(bucket)) {
+      const ref2 = bucket[ruleName];
+      if (ref2.hide) continue;
+      const names2 = [];
+      if (Array.isArray(ref2.type)) {
+        for (const t of ref2.type) {
+          names2.push(getImageNameByLegendReferences(layerName, ruleName, t));
+        }
+      } else {
+        names2.push(getImageNameByLegendReferences(layerName, ruleName, ref2.type));
+      }
+      if (ref2.combine) {
+        for (const subRuleName of Object.keys(ref2.combine)) {
+          for (const st of ref2.combine[subRuleName].type) {
+            names2.push(getImageNameByLegendReferences(layerName, subRuleName, st));
+          }
+        }
+      }
+      pushLegendItemsFromNames(
+        items,
+        names2,
+        ref2.title,
+        opts,
+        scaleDependant,
+        threshold,
+        layerName + ruleName
+      );
+    }
+    return items;
+  }
+  function buildFilterLegends(layer, opts) {
+    var _a;
+    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
+    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
+    const items = [];
+    for (const rule of layer.filterValue ?? []) {
+      const subRules = getSubRules(layerName, rule, opts.legendConfig);
+      if (subRules.length === 0) {
+        const geometryTypes = getGeometryTypesForLegendWithFilter(layerName, rule, opts.legendConfig);
+        if (!geometryTypes.length) continue;
+        const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, null, g));
+        const ref2 = getLegendReference(layerName, rule, opts.legendReferences);
+        if (!ref2 || ref2.hide) continue;
+        pushLegendItemsFromNames(
+          items,
+          names2,
+          ref2.title,
+          opts,
+          scaleDependant,
+          threshold,
+          `${layerName}${rule}`
+        );
+      } else {
+        for (const subRule of subRules) {
+          const geometryTypes = getGeometryTypesForLegendWithFilterAndSubFilter(
+            layerName,
+            rule,
+            subRule,
+            opts.legendConfig
+          );
+          if (!geometryTypes.length) continue;
+          const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, subRule, g));
+          const subLegendRef = (_a = opts.legendReferences[layerName]) == null ? void 0 : _a[`${rule}-${subRule}`];
+          if (!subLegendRef || subLegendRef.hide) continue;
+          pushLegendItemsFromNames(
+            items,
+            names2,
+            subLegendRef.title,
+            opts,
+            scaleDependant,
+            threshold,
+            `${layerName}${rule}-${subRule}`
+          );
+        }
+      }
+    }
+    const otherNames = getOtherLegendImageNamesByFilterValues(
+      layerName,
+      layer.filterValue ?? [],
+      opts.legendConfig
+    );
+    if (otherNames.length) {
+      let title = `Autres ${(layer.title ?? layer.name ?? "").toLowerCase()}`;
+      if (layerName === "prescription") title = "Autres prescriptions";
+      pushLegendItemsFromNames(items, otherNames, title, opts, false, threshold, `${layerName}-other`);
+    }
+    return items;
+  }
+  function buildLegendItemsForLeafGpuLayer(layer, opts) {
+    if (!layer.name) return [];
+    const layerName = normalizeLayerNameForLegend(layer.name.split(",")[0]);
+    if (isPsmvLayerName(layerName)) return [];
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    if (hasFilterIn(layer)) return buildFilterLegends(layer, opts);
+    return buildNoFilterLegends(layer, opts);
+  }
+  function buildHideLayersAggregatedLegendItems(layer, opts) {
+    const items = [];
+    for (const child of layer.layers ?? []) {
+      const childName = normalizeLayerNameForLegend((child.name ?? "").split(",")[0] ?? "");
+      if (childName === "prescription_psmv") continue;
+      items.push(...buildLegendItemsForLeafGpuLayer(child, opts));
+    }
+    return items;
+  }
+  function buildLegendItemsForGpuLayer(layer, opts) {
+    var _a;
+    if (!layer.name) return [];
+    if ((_a = layer.layers) == null ? void 0 : _a.length) {
+      if (!layer.hideLayers) return [];
+      if (hasFilterIn(layer)) return buildLegendItemsForLeafGpuLayer(layer, opts);
+      return buildHideLayersAggregatedLegendItems(layer, opts);
+    }
+    return buildLegendItemsForLeafGpuLayer(layer, opts);
+  }
+  function readGpuLegendBuildOptions(zoomAtInit = 6) {
+    const w = typeof window !== "undefined" ? window : void 0;
+    const legendConfig = readLegendConfigArray(w == null ? void 0 : w.LEGEND_CONFIG);
+    const legendReferences = (w == null ? void 0 : w.LEGEND_REFERENCES) && typeof w.LEGEND_REFERENCES === "object" ? w.LEGEND_REFERENCES : {};
+    return {
+      legendConfig,
+      legendReferences,
+      imagePath: resolveLegendImageDetailDirectory(),
+      zoomAtInit,
+      ancestorLayers: []
+    };
   }
   function isCatalogAggregate(node) {
     return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
@@ -83845,6 +84171,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   const DEFAULT_GPU_MAX_ZOOM = 22;
   function isZoomInLayerRange(zoom, minZoom, maxZoom) {
     return zoom >= minZoom && zoom <= maxZoom;
+  }
+  function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
+    return {
+      min: layer.minZoomLevel ?? inheritedMin,
+      max: layer.maxZoomLevel ?? inheritedMax
+    };
   }
   function isCatalogNodeInZoomRange(node, zoom) {
     const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
@@ -86081,6 +86413,691 @@ Expected function or array of functions, received type ${typeof value2}.`
       env.mainLayers[key2].setVisible(true);
     }
   }
+  function resolveGpuLayerVisible(layer, parentVisible) {
+    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
+      return Boolean(layer.visible);
+    }
+    return parentVisible;
+  }
+  function pathToCatalogId(path) {
+    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
+    if (!normalized) return "root";
+    return normalized.split("/").map(
+      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    ).join("--");
+  }
+  function pathSegment(layer) {
+    var _a, _b;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
+      return parts[parts.length - 1] ?? "couche";
+    }
+    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
+    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
+      for (const value2 of layer.filterValue) {
+        uniqueName += value2;
+      }
+    }
+    if (layer.filterAttribute && layer.filterValueLike) {
+      uniqueName += `_${layer.filterValueLike}`;
+    }
+    return uniqueName.toLowerCase();
+  }
+  function buildLayerPath(layer, parentPath) {
+    var _a;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      return layer.path.replace(/\/+/g, "/");
+    }
+    const segment = pathSegment(layer);
+    if (!parentPath) return `/${segment}`;
+    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+    return `${base}/${segment}`.replace(/\/+/g, "/");
+  }
+  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
+    var _a, _b;
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a = layer.layers) == null ? void 0 : _a.length) {
+          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
+        }
+        continue;
+      }
+      const path = buildLayerPath(layer, parentPath || "");
+      const id = pathToCatalogId(path);
+      registry.push({ id, path, config: layer });
+      if ((_b = layer.layers) == null ? void 0 : _b.length) {
+        layerConfigToCatalogEntries(layer.layers, path, registry);
+      }
+    }
+    return registry;
+  }
+  function readLayerConfigFromWindow() {
+    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
+    if (!Array.isArray(raw) || !raw.length) return null;
+    return raw;
+  }
+  function resolveLayerConfig(paramsLayerConfig) {
+    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
+      return paramsLayerConfig;
+    }
+    return readLayerConfigFromWindow();
+  }
+  function defaultOpacityPercent(layer) {
+    if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT;
+    if (typeof layer.opacity === "number" && Number.isFinite(layer.opacity)) {
+      return Math.round(layer.opacity * 100);
+    }
+    return 70;
+  }
+  function isGpuMapLayerConfig(layer) {
+    var _a;
+    return !layer.virtual && Boolean((_a = layer.name) == null ? void 0 : _a.trim());
+  }
+  function buildTreeLevel(layers, parentPath, ancestorLayers, legendOpts, parentVisible = false, underHideLayersParent = false, inheritedMinZoom = DEFAULT_GPU_MIN_ZOOM, inheritedMaxZoom = DEFAULT_GPU_MAX_ZOOM) {
+    var _a, _b, _c;
+    const nodes = [];
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a = layer.layers) == null ? void 0 : _a.length) {
+          nodes.push(
+            ...buildTreeLevel(
+              layer.layers,
+              parentPath,
+              ancestorLayers,
+              legendOpts,
+              parentVisible,
+              underHideLayersParent,
+              inheritedMinZoom,
+              inheritedMaxZoom
+            )
+          );
+        }
+        continue;
+      }
+      const zoomLevels = effectiveZoomLevelsFromConfig(layer, inheritedMinZoom, inheritedMaxZoom);
+      const visible = resolveGpuLayerVisible(layer, parentVisible);
+      const path = buildLayerPath(layer, parentPath || "");
+      const id = pathToCatalogId(path);
+      const legendContext = {
+        ...legendOpts,
+        ancestorLayers: [...ancestorLayers]
+      };
+      const legend = underHideLayersParent ? [] : buildLegendItemsForGpuLayer(layer, legendContext);
+      const node = {
+        id,
+        title: ((_b = layer.title) == null ? void 0 : _b.trim()) || layer.name || id,
+        visible,
+        defaultCollapsed: Boolean(layer.hideLayers),
+        gpuHideLayers: Boolean(layer.hideLayers),
+        gpuVirtual: Boolean(layer.virtual),
+        gpuMapLayer: isGpuMapLayerConfig(layer),
+        gpuOnlyLegend: Boolean(layer.onlyLegend),
+        gpuForceOpacity: Boolean(layer.forceOpacity),
+        gpuDefaultOpacity: defaultOpacityPercent(layer),
+        gpuMinZoomLevel: zoomLevels.min,
+        gpuMaxZoomLevel: zoomLevels.max,
+        legend: legend.length ? legend : void 0
+      };
+      if ((_c = layer.layers) == null ? void 0 : _c.length) {
+        const childNodes = buildTreeLevel(
+          layer.layers,
+          path,
+          [...ancestorLayers, layer],
+          legendOpts,
+          visible,
+          underHideLayersParent || Boolean(layer.hideLayers),
+          zoomLevels.min,
+          zoomLevels.max
+        );
+        if (layer.hideLayers) {
+          node.hiddenCatalogChildren = childNodes;
+        } else {
+          node.children = childNodes;
+        }
+      }
+      nodes.push(node);
+    }
+    return nodes;
+  }
+  function layerConfigToTreeNodes(layers, zoomAtInit = 6) {
+    const legendOpts = readGpuLegendBuildOptions(zoomAtInit);
+    return buildTreeLevel(layers, "", [], legendOpts);
+  }
+  function ensureGpuClientStub() {
+    const w = window;
+    if (typeof w.gpu !== "object" || w.gpu === null) {
+      w.gpu = { config: {} };
+      return;
+    }
+    const gpu2 = w.gpu;
+    if (typeof gpu2.config !== "object" || gpu2.config === null) {
+      gpu2.config = {};
+    }
+  }
+  function syncEntreeConfigFromGpuScript() {
+    var _a;
+    ensureGpuClientStub();
+    const w = window;
+    if ((_a = w.gpu) == null ? void 0 : _a.config) {
+      Object.assign(config, w.gpu.config);
+    }
+  }
+  const DECIMALS = 4;
+  const DEFAULT_VERSION = "1.3.0";
+  function getRequestUrl(baseUrl, extent, size, projection, params2) {
+    params2["WIDTH"] = size[0];
+    params2["HEIGHT"] = size[1];
+    const axisOrientation = projection.getAxisOrientation();
+    const v13 = compareVersions(params2["VERSION"], "1.3") >= 0;
+    params2[v13 ? "CRS" : "SRS"] = projection.getCode();
+    const bbox = v13 && axisOrientation.startsWith("ne") ? [extent[1], extent[0], extent[3], extent[2]] : extent;
+    params2["BBOX"] = bbox.join(",");
+    return appendParams(baseUrl, params2);
+  }
+  function getImageSrc(extent, resolution, pixelRatio, projection, url, params2, serverType) {
+    params2 = Object.assign({ REQUEST: "GetMap" }, params2);
+    const imageResolution = resolution / pixelRatio;
+    const imageSize = [
+      round(getWidth(extent) / imageResolution, DECIMALS),
+      round(getHeight(extent) / imageResolution, DECIMALS)
+    ];
+    if (pixelRatio != 1) {
+      switch (serverType) {
+        case "geoserver":
+          const dpi = 90 * pixelRatio + 0.5 | 0;
+          if ("FORMAT_OPTIONS" in params2) {
+            params2["FORMAT_OPTIONS"] += ";dpi:" + dpi;
+          } else {
+            params2["FORMAT_OPTIONS"] = "dpi:" + dpi;
+          }
+          break;
+        case "mapserver":
+          params2["MAP_RESOLUTION"] = 90 * pixelRatio;
+          break;
+        case "carmentaserver":
+        case "qgis":
+          params2["DPI"] = 90 * pixelRatio;
+          break;
+        default:
+          throw new Error("Unknown `serverType` configured");
+      }
+    }
+    const src = getRequestUrl(url, extent, imageSize, projection, params2);
+    return src;
+  }
+  function getRequestParams(params2, request) {
+    return Object.assign(
+      {
+        "REQUEST": request,
+        "SERVICE": "WMS",
+        "VERSION": DEFAULT_VERSION,
+        "FORMAT": "image/png",
+        "STYLES": "",
+        "TRANSPARENT": "TRUE"
+      },
+      params2
+    );
+  }
+  class TileWMS extends TileImage {
+    /**
+     * @param {Options} [options] Tile WMS options.
+     */
+    constructor(options) {
+      options = options ? options : (
+        /** @type {Options} */
+        {}
+      );
+      const params2 = Object.assign({}, options.params);
+      super({
+        attributions: options.attributions,
+        attributionsCollapsible: options.attributionsCollapsible,
+        cacheSize: options.cacheSize,
+        crossOrigin: options.crossOrigin,
+        interpolate: options.interpolate,
+        projection: options.projection,
+        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+        tileClass: options.tileClass,
+        tileGrid: options.tileGrid,
+        tileLoadFunction: options.tileLoadFunction,
+        url: options.url,
+        urls: options.urls,
+        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
+        transition: options.transition,
+        zDirection: options.zDirection
+      });
+      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
+      this.params_ = params2;
+      this.v13_ = true;
+      this.serverType_ = options.serverType;
+      this.hidpi_ = options.hidpi !== void 0 ? options.hidpi : true;
+      this.tmpExtent_ = createEmpty();
+      this.updateV13_();
+      this.setKey(this.getKeyForParams_());
+    }
+    /**
+     * Return the GetFeatureInfo URL for the passed coordinate, resolution, and
+     * projection. Return `undefined` if the GetFeatureInfo URL cannot be
+     * constructed.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {number} resolution Resolution.
+     * @param {import("../proj.js").ProjectionLike} projection Projection.
+     * @param {!Object} params GetFeatureInfo params. `INFO_FORMAT` at least should
+     *     be provided. If `QUERY_LAYERS` is not provided then the layers specified
+     *     in the `LAYERS` parameter will be used. `VERSION` should not be
+     *     specified here.
+     * @return {string|undefined} GetFeatureInfo URL.
+     * @api
+     */
+    getFeatureInfoUrl(coordinate, resolution, projection, params2) {
+      const projectionObj = get$2(projection);
+      const sourceProjectionObj = this.getProjection() || projectionObj;
+      let tileGrid = this.getTileGrid();
+      if (!tileGrid) {
+        tileGrid = this.getTileGridForProjection(sourceProjectionObj);
+      }
+      const sourceProjCoord = transform$1(
+        coordinate,
+        projectionObj,
+        sourceProjectionObj
+      );
+      const sourceResolution = calculateSourceResolution(
+        sourceProjectionObj,
+        projectionObj,
+        coordinate,
+        resolution
+      );
+      const z = tileGrid.getZForResolution(sourceResolution, this.zDirection);
+      const tileResolution = tileGrid.getResolution(z);
+      const tileCoord = tileGrid.getTileCoordForCoordAndZ(sourceProjCoord, z);
+      if (tileGrid.getResolutions().length <= tileCoord[0]) {
+        return void 0;
+      }
+      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
+      const gutter = this.gutter_;
+      if (gutter !== 0) {
+        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
+      }
+      const baseParams = {
+        "QUERY_LAYERS": this.params_["LAYERS"]
+      };
+      Object.assign(
+        baseParams,
+        getRequestParams(this.params_, "GetFeatureInfo"),
+        params2
+      );
+      const x = Math.floor((sourceProjCoord[0] - tileExtent[0]) / tileResolution);
+      const y = Math.floor((tileExtent[3] - sourceProjCoord[1]) / tileResolution);
+      baseParams[this.v13_ ? "I" : "X"] = x;
+      baseParams[this.v13_ ? "J" : "Y"] = y;
+      return this.getRequestUrl_(
+        tileCoord,
+        tileExtent,
+        1,
+        sourceProjectionObj || projectionObj,
+        baseParams
+      );
+    }
+    /**
+     * Return the GetLegendGraphic URL, optionally optimized for the passed
+     * resolution and possibly including any passed specific parameters. Returns
+     * `undefined` if the GetLegendGraphic URL cannot be constructed.
+     *
+     * @param {number} [resolution] Resolution. If set to undefined, `SCALE`
+     *     will not be calculated and included in URL.
+     * @param {Object} [params] GetLegendGraphic params. If `LAYER` is set, the
+     *     request is generated for this wms layer, else it will try to use the
+     *     configured wms layer. Default `FORMAT` is `image/png`.
+     *     `VERSION` should not be specified here.
+     * @return {string|undefined} GetLegendGraphic URL.
+     * @api
+     */
+    getLegendUrl(resolution, params2) {
+      if (this.urls[0] === void 0) {
+        return void 0;
+      }
+      const baseParams = {
+        "SERVICE": "WMS",
+        "VERSION": DEFAULT_VERSION,
+        "REQUEST": "GetLegendGraphic",
+        "FORMAT": "image/png"
+      };
+      if (params2 === void 0 || params2["LAYER"] === void 0) {
+        const layers = this.params_.LAYERS;
+        const isSingleLayer = !Array.isArray(layers) || layers.length === 1;
+        if (!isSingleLayer) {
+          return void 0;
+        }
+        baseParams["LAYER"] = layers;
+      }
+      if (resolution !== void 0) {
+        const mpu = this.getProjection() ? this.getProjection().getMetersPerUnit() : 1;
+        const pixelSize = 28e-5;
+        baseParams["SCALE"] = resolution * mpu / pixelSize;
+      }
+      Object.assign(baseParams, params2);
+      return appendParams(
+        /** @type {string} */
+        this.urls[0],
+        baseParams
+      );
+    }
+    /**
+     * @return {number} Gutter.
+     * @override
+     */
+    getGutter() {
+      return this.gutter_;
+    }
+    /**
+     * Get the user-provided params, i.e. those passed to the constructor through
+     * the "params" option, and possibly updated using the updateParams method.
+     * @return {Object} Params.
+     * @api
+     */
+    getParams() {
+      return this.params_;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("../extent.js").Extent} tileExtent Tile extent.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @param {Object} params Params.
+     * @return {string|undefined} Request URL.
+     * @private
+     */
+    getRequestUrl_(tileCoord, tileExtent, pixelRatio, projection, params2) {
+      const urls = this.urls;
+      if (!urls) {
+        return void 0;
+      }
+      let url;
+      if (urls.length == 1) {
+        url = urls[0];
+      } else {
+        const index2 = modulo(hash(tileCoord), urls.length);
+        url = urls[index2];
+      }
+      return getImageSrc(
+        tileExtent,
+        (this.tileGrid || this.getTileGridForProjection(projection)).getResolution(tileCoord[0]),
+        pixelRatio,
+        projection,
+        url,
+        params2,
+        this.serverType_
+      );
+    }
+    /**
+     * Get the tile pixel ratio for this source.
+     * @param {number} pixelRatio Pixel ratio.
+     * @return {number} Tile pixel ratio.
+     * @override
+     */
+    getTilePixelRatio(pixelRatio) {
+      return !this.hidpi_ || this.serverType_ === void 0 ? 1 : pixelRatio;
+    }
+    /**
+     * @private
+     * @return {string} The key for the current params.
+     */
+    getKeyForParams_() {
+      let i = 0;
+      const res = [];
+      for (const key2 in this.params_) {
+        res[i++] = key2 + "-" + this.params_[key2];
+      }
+      return res.join("/");
+    }
+    /**
+     * @param {Object} params New URL paremeters.
+     * @private
+     */
+    setParams_(params2) {
+      this.params_ = params2;
+      this.updateV13_();
+      this.setKey(this.getKeyForParams_());
+    }
+    /**
+     * Set the URL parameters passed to the WMS source.
+     * @param {Object} params New URL paremeters.
+     * @api
+     */
+    setParams(params2) {
+      this.setParams_(Object.assign({}, params2));
+    }
+    /**
+     * Update the URL parameters. This method can be used to update a subset of the WMS
+     * parameters. Call `setParams` to set all of the parameters.
+     * @param {Object} params Updated URL parameters.
+     * @api
+     */
+    updateParams(params2) {
+      this.setParams_(Object.assign(this.params_, params2));
+    }
+    /**
+     * @private
+     */
+    updateV13_() {
+      const version2 = this.params_["VERSION"] || DEFAULT_VERSION;
+      this.v13_ = compareVersions(version2, "1.3") >= 0;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord The tile coordinate
+     * @param {number} pixelRatio The pixel ratio
+     * @param {import("../proj/Projection.js").default} projection The projection
+     * @return {string|undefined} The tile URL
+     * @override
+     */
+    tileUrlFunction(tileCoord, pixelRatio, projection) {
+      let tileGrid = this.getTileGrid();
+      if (!tileGrid) {
+        tileGrid = this.getTileGridForProjection(projection);
+      }
+      if (tileGrid.getResolutions().length <= tileCoord[0]) {
+        return void 0;
+      }
+      if (pixelRatio != 1 && (!this.hidpi_ || this.serverType_ === void 0)) {
+        pixelRatio = 1;
+      }
+      const tileResolution = tileGrid.getResolution(tileCoord[0]);
+      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
+      const gutter = this.gutter_;
+      if (gutter !== 0) {
+        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
+      }
+      const baseParams = Object.assign(
+        {},
+        getRequestParams(this.params_, "GetMap")
+      );
+      return this.getRequestUrl_(
+        tileCoord,
+        tileExtent,
+        pixelRatio,
+        projection,
+        baseParams
+      );
+    }
+  }
+  function wmsUrl() {
+    const url = config.wmsExterneUrl;
+    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
+  }
+  function buildCqlFilter(layer, document2) {
+    var _a;
+    const parts = [];
+    const configuredName = layer.name ?? "";
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
+      parts.push(`(partition like '${document2.name}')`);
+    }
+    if (layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length)) {
+      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
+    } else if (layer.filterAttribute && layer.filterValueLike) {
+      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
+    }
+    return parts.join(" AND ");
+  }
+  function zoomToResolution(zoom) {
+    return 156543.03392804097 / Math.pow(2, zoom);
+  }
+  function createWmsTileLayer(entry, document2) {
+    const layer = entry.config;
+    if (layer.virtual || !layer.name) return null;
+    let layerName = layer.name;
+    let url = wmsUrl();
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
+      const validation = config.wmsValidationUrl;
+      if (typeof validation === "string" && validation.length) {
+        url = validation;
+      }
+      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
+    }
+    const cql = buildCqlFilter(layer, document2);
+    const params2 = {
+      LAYERS: layerName,
+      TRANSPARENT: true,
+      VERSION: "1.1.1",
+      FORMAT: "image/png",
+      TILED: true
+    };
+    if (cql) {
+      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
+    }
+    const minZoom = layer.minZoomLevel ?? 0;
+    const maxZoom = layer.maxZoomLevel ?? 22;
+    return new TileLayer({
+      source: new TileWMS({
+        url,
+        params: params2,
+        crossOrigin: "anonymous",
+        serverType: "geoserver",
+        tileGrid: createXYZ({ tileSize: 512 })
+      }),
+      visible: false,
+      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
+      minResolution: zoomToResolution(maxZoom + 0.5),
+      maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
+      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
+      properties: {
+        ecGpuCatalogId: entry.id,
+        ecGpuLayerName: layerName
+      }
+    });
+  }
+  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
+  function applyWmsLayerGrayscale(layer, grayscale) {
+    const internal = layer;
+    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
+    layer.set("grayscale", grayscale);
+    layer.changed();
+  }
+  class GpuWmsLayerRegistry {
+    constructor() {
+      __publicField(this, "entries", /* @__PURE__ */ new Map());
+      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
+      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
+      __publicField(this, "map", null);
+      __publicField(this, "document", null);
+    }
+    loadFromLayerConfig(layers, document2) {
+      var _a;
+      this.document = document2;
+      for (const layer of this.olLayers.values()) {
+        (_a = this.map) == null ? void 0 : _a.removeLayer(layer);
+      }
+      this.entries.clear();
+      this.olLayers.clear();
+      this.grayscaleById.clear();
+      for (const entry of layerConfigToCatalogEntries(layers)) {
+        this.entries.set(entry.id, entry);
+      }
+    }
+    attachMap(map2) {
+      this.map = map2;
+      for (const layer of this.olLayers.values()) {
+        if (!map2.getLayers().getArray().includes(layer)) {
+          map2.addLayer(layer);
+        }
+      }
+    }
+    detachMap() {
+      if (!this.map) return;
+      for (const layer of this.olLayers.values()) {
+        this.map.removeLayer(layer);
+      }
+      this.map = null;
+    }
+    ensureLayer(catalogId) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) return layer;
+      const entry = this.entries.get(catalogId);
+      if (!entry) return void 0;
+      const created = createWmsTileLayer(entry, this.document);
+      if (!created) return void 0;
+      this.olLayers.set(catalogId, created);
+      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
+      if (this.map && !this.map.getLayers().getArray().includes(created)) {
+        this.map.addLayer(created);
+      }
+      return created;
+    }
+    setVisible(catalogId, visible) {
+      if (visible) {
+        const layer2 = this.ensureLayer(catalogId);
+        if (layer2) layer2.setVisible(true);
+        return;
+      }
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setVisible(false);
+    }
+    setOpacity(catalogId, opacityPercent) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
+    }
+    setGrayscale(catalogId, grayscale) {
+      this.grayscaleById.set(catalogId, grayscale);
+      const layer = this.olLayers.get(catalogId);
+      if (layer) applyWmsLayerGrayscale(layer, grayscale);
+    }
+    hasWmsLayer(catalogId) {
+      return this.entries.has(catalogId);
+    }
+    /**
+     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
+     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
+     */
+    applyStackOrder(catalogIdsBottomToTop) {
+      var _a;
+      const normal = [];
+      const forceInList = [];
+      for (const id of catalogIdsBottomToTop) {
+        if ((_a = this.entries.get(id)) == null ? void 0 : _a.config.forceOpacity) forceInList.push(id);
+        else normal.push(id);
+      }
+      const forcePinned = [...forceInList];
+      for (const [id, entry] of this.entries) {
+        if (!entry.config.forceOpacity) continue;
+        const layer = this.olLayers.get(id);
+        if (!(layer == null ? void 0 : layer.getVisible())) continue;
+        if (!forcePinned.includes(id)) forcePinned.push(id);
+      }
+      const ordered = [...normal, ...forcePinned];
+      const baseZ = 200;
+      ordered.forEach((id, index2) => {
+        const layer = this.olLayers.get(id);
+        if (layer) layer.setZIndex(baseZ + index2);
+      });
+      if (!this.map) return;
+      for (const id of ordered) {
+        const layer = this.olLayers.get(id);
+        if (!layer) continue;
+        this.map.removeLayer(layer);
+        this.map.addLayer(layer);
+      }
+    }
+  }
+  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
   const _hoisted_1$1 = {
     class: "ec-embed-viewer gpu-client",
     "data-testid": "embed-map-viewer"
@@ -86101,18 +87118,86 @@ Expected function or array of functions, received type ${typeof value2}.`
         var _a;
         return ((_a = props.params) == null ? void 0 : _a.search) ?? null;
       });
+      const mapShellRef = /* @__PURE__ */ ref(null);
       const layerNodes = /* @__PURE__ */ ref([]);
+      const layerMapHooks = {
+        onVisible: (id, visible) => gpuWmsLayerRegistry.setVisible(id, visible),
+        onOpacity: (id, opacity) => gpuWmsLayerRegistry.setOpacity(id, opacity),
+        onGrayscale: (id, grayscale) => gpuWmsLayerRegistry.setGrayscale(id, grayscale),
+        onStackOrder: (ids) => gpuWmsLayerRegistry.applyStackOrder(ids)
+      };
+      function currentMapZoom() {
+        var _a, _b;
+        const z = (_b = (_a = mapShellRef.value) == null ? void 0 : _a.map) == null ? void 0 : _b.getView().getZoom();
+        return typeof z === "number" && Number.isFinite(z) ? Math.round(z) : 6;
+      }
+      function initLayerStack() {
+        var _a, _b, _c;
+        syncEntreeConfigFromGpuScript();
+        const layerConfig = resolveLayerConfig((_a = props.params) == null ? void 0 : _a.layerConfig);
+        if (!(layerConfig == null ? void 0 : layerConfig.length)) {
+          layerNodes.value = [];
+          gpuWmsLayerRegistry.detachMap();
+          return;
+        }
+        layerNodes.value = layerConfigToTreeNodes(layerConfig, currentMapZoom());
+        gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, ((_b = props.params) == null ? void 0 : _b.document) ?? null);
+        const map2 = ((_c = mapShellRef.value) == null ? void 0 : _c.map) ?? null;
+        if (map2) {
+          gpuWmsLayerRegistry.attachMap(map2);
+        }
+      }
+      onMounted(() => {
+        initLayerStack();
+      });
+      onUnmounted(() => {
+        gpuWmsLayerRegistry.detachMap();
+      });
+      watch(
+        () => {
+          var _a;
+          return ((_a = mapShellRef.value) == null ? void 0 : _a.map) ?? null;
+        },
+        (map2) => {
+          var _a, _b;
+          if (map2 && ((_b = resolveLayerConfig((_a = props.params) == null ? void 0 : _a.layerConfig)) == null ? void 0 : _b.length)) {
+            gpuWmsLayerRegistry.attachMap(map2);
+          }
+        }
+      );
+      watch(
+        () => {
+          var _a;
+          return (_a = props.params) == null ? void 0 : _a.document;
+        },
+        () => {
+          initLayerStack();
+        }
+      );
       function onUpdateBase(id) {
         activeBase.value = id;
         setActiveGpuBaseLayer(gpuBaseEnv, id);
       }
+      function findLayerNode(nodes, id) {
+        var _a;
+        for (const n of nodes) {
+          if (n.id === id) return n;
+          if ((_a = n.children) == null ? void 0 : _a.length) {
+            const hit = findLayerNode(n.children, id);
+            if (hit) return hit;
+          }
+        }
+        return void 0;
+      }
       function onToggleLayer(id, visible) {
-        const node = layerNodes.value.find((n) => n.id === id);
+        const node = findLayerNode(layerNodes.value, id);
         if (node) node.visible = visible;
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
           createVNode(_sfc_main$j, {
+            ref_key: "mapShellRef",
+            ref: mapShellRef,
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
@@ -86125,6 +87210,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ],
                 "base-presets": unref(presets),
                 "layer-nodes": layerNodes.value,
+                "layer-map-hooks": layerMapHooks,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
               createVNode(_sfc_main$f, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
@@ -86141,7 +87227,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-f006e734"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-76c2b2e3"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -86173,9 +87259,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if ((_a = params2.search) == null ? void 0 : _a.fullText) {
       console.info(`${LOG_PREFIX$2} recherche initiale`, params2.search);
     }
-    console.warn(
-      `${LOG_PREFIX$2} createStandardViewer : version initiale — couches métier, fiche info, outils et aide non disponibles.`
-    );
     return mountMapViewer(container, params2);
   }
   const LOG_PREFIX$1 = "[entree-carto]";
