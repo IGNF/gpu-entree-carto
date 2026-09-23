@@ -1,9 +1,9 @@
 {
   "name": "entree-carto",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "engines": {
-    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+    "node": "^24.15.0 || >=26.0.0"
   },
   "type": "module",
   "description": "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)",
@@ -37,19 +37,23 @@
   },
   "dependencies": {
     "@gouvfr/dsfr": "^1.15.3",
-    "@gouvminint/vue-dsfr": "8.8.2",
-    "@iconify/vue": "^4.3.0",
+    "@gouvminint/vue-dsfr": "8.20.0",
+    "@iconify/vue": "^5.0.0",
     "dompurify": "^3.4.15",
     "fast-xml-parser": "5.8.0",
     "geopf-extensions-openlayers": "^1.0.0-beta.14",
     "notivue": "^2.4.5",
     "ol": "^10.9.0",
     "remixicon": "^4.9.1",
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue": "^3.5.27",
+    "vue-router": "5.0.3"
   },
   "overrides": {
-    "maplibre-gl": "^6.10.0"
+    "maplibre-gl": "^6.10.0",
+    "vue-router": "5.0.3",
+    "@gouvminint/vue-dsfr": {
+      "vue-router": "$vue-router"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

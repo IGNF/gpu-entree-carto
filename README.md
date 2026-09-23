@@ -9,7 +9,7 @@
 [![OpenLayers](https://img.shields.io/badge/OpenLayers-10-1F6B75)](https://openlayers.org/)
 [![DSFR](https://img.shields.io/badge/DSFR-VueDSFR-000091)](https://vue-ds.fr/)
 [![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Node](https://img.shields.io/badge/node-22-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
 **entree-carto** est la refonte de l’entrée cartographique GPU (gpu-client), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
 
@@ -34,7 +34,7 @@ make install   # npm install
 make dev       # serveur de développement (Vite)
 ```
 
-Node **22** (voir `.nvmrc`, aligné sur la CI). Les versions **25.x** ne sont pas supportées par `jsdom` / Vitest : `nvm use` ou `fnm use` avant `npm install` pour éviter les avertissements `EBADENGINE`.
+Node **24 LTS** (≥ 24.15, voir `.nvmrc`, aligné CI + `@gouvminint/vue-dsfr`). Les branches impaires (**23**, **25**, …) ne figurent pas dans les `engines` des dépendances : `nvm use` / `fnm use` avant `npm install` pour éviter les avertissements `EBADENGINE`.
 
 Autres cibles :
 
