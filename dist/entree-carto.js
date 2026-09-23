@@ -30,7 +30,7 @@ this.gpu = (function() {
     config.scriptDir = path.split("/").slice(0, -1).join("/");
   }
   /**
-  * @vue/shared v3.5.42
+  * @vue/shared v3.5.43
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -149,10 +149,10 @@ this.gpu = (function() {
   }
   const listDelimiterRE = /;(?![^(]*\))/g;
   const propertyDelimiterRE = /:([^]+)/;
-  const styleCommentRE = /\/\*[^]*?\*\//g;
+  const styleCommentRE = /"(?:[^"\\]|\\[^])*"|'(?:[^'\\]|\\[^])*'|\\[^]|\/\*[^]*?\*\//g;
   function parseStringStyle(cssText) {
     const ret = {};
-    cssText.replace(styleCommentRE, "").split(listDelimiterRE).forEach((item) => {
+    cssText.replace(styleCommentRE, (match2) => match2.startsWith("/*") ? "" : match2).split(listDelimiterRE).forEach((item) => {
       if (item) {
         const tmp = item.split(propertyDelimiterRE);
         tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim());
@@ -191,22 +191,22 @@ this.gpu = (function() {
   function includeBooleanAttr(value2) {
     return !!value2 || value2 === "";
   }
-  function looseCompareArrays(a, b) {
+  function looseCompareArrays(a, b, seen) {
     if (a.length !== b.length) return false;
     let equal = true;
     for (let i = 0; equal && i < a.length; i++) {
-      equal = looseEqual(a[i], b[i]);
+      equal = looseEqual(a[i], b[i], seen);
     }
     return equal;
   }
-  function looseCompareCollections(a, b) {
+  function looseCompareCollections(a, b, seen) {
     if (a.size !== b.size) return false;
     const candidates = Array.from(b);
     const matched = new Uint8Array(candidates.length);
     for (const item of a) {
       let index2 = -1;
       for (let i = 0; i < candidates.length; i++) {
-        if (!matched[i] && looseEqual(item, candidates[i])) {
+        if (!matched[i] && looseEqual(item, candidates[i], seen)) {
           index2 = i;
           break;
         }
@@ -216,7 +216,47 @@ this.gpu = (function() {
     }
     return true;
   }
-  function looseEqual(a, b) {
+  function looseCompareObjects(a, b, seen) {
+    let aValidType = isMap(a);
+    let bValidType = isMap(b);
+    if (aValidType || bValidType) {
+      return aValidType && bValidType ? looseCompareCollections(a, b, seen) : false;
+    }
+    aValidType = isSet(a);
+    bValidType = isSet(b);
+    if (aValidType || bValidType) {
+      return aValidType && bValidType ? looseCompareCollections(a, b, seen) : false;
+    }
+    const aKeysCount = Object.keys(a).length;
+    const bKeysCount = Object.keys(b).length;
+    if (aKeysCount !== bKeysCount) {
+      return false;
+    }
+    for (const key2 in a) {
+      const aHasKey = a.hasOwnProperty(key2);
+      const bHasKey = b.hasOwnProperty(key2);
+      if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a[key2], b[key2], seen)) {
+        return false;
+      }
+    }
+    return String(a) === String(b);
+  }
+  function looseCompareNested(a, b, seen, compare) {
+    if (!seen) {
+      seen = [/* @__PURE__ */ new Map(), /* @__PURE__ */ new Map()];
+    }
+    const [seenA, seenB] = seen;
+    if (seenA.has(a) || seenB.has(b)) {
+      return seenA.get(a) === b && seenB.get(b) === a;
+    }
+    seenA.set(a, b);
+    seenB.set(b, a);
+    const equal = compare(a, b, seen);
+    seenA.delete(a);
+    seenB.delete(b);
+    return equal;
+  }
+  function looseEqual(a, b, seen) {
     if (a === b) return true;
     let aValidType = isDate(a);
     let bValidType = isDate(b);
@@ -231,7 +271,7 @@ this.gpu = (function() {
     aValidType = isArray(a);
     bValidType = isArray(b);
     if (aValidType || bValidType) {
-      return aValidType && bValidType ? looseCompareArrays(a, b) : false;
+      return aValidType && bValidType ? looseCompareNested(a, b, seen, looseCompareArrays) : false;
     }
     aValidType = isObject(a);
     bValidType = isObject(b);
@@ -239,28 +279,7 @@ this.gpu = (function() {
       if (!aValidType || !bValidType) {
         return false;
       }
-      aValidType = isMap(a);
-      bValidType = isMap(b);
-      if (aValidType || bValidType) {
-        return aValidType && bValidType ? looseCompareCollections(a, b) : false;
-      }
-      aValidType = isSet(a);
-      bValidType = isSet(b);
-      if (aValidType || bValidType) {
-        return aValidType && bValidType ? looseCompareCollections(a, b) : false;
-      }
-      const aKeysCount = Object.keys(a).length;
-      const bKeysCount = Object.keys(b).length;
-      if (aKeysCount !== bKeysCount) {
-        return false;
-      }
-      for (const key2 in a) {
-        const aHasKey = a.hasOwnProperty(key2);
-        const bHasKey = b.hasOwnProperty(key2);
-        if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a[key2], b[key2])) {
-          return false;
-        }
-      }
+      return looseCompareNested(a, b, seen, looseCompareObjects);
     }
     return String(a) === String(b);
   }
@@ -303,7 +322,7 @@ this.gpu = (function() {
     );
   };
   /**
-  * @vue/reactivity v3.5.42
+  * @vue/reactivity v3.5.43
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -964,7 +983,9 @@ this.gpu = (function() {
     const raw = /* @__PURE__ */ toRaw(array);
     if (raw === array) return raw;
     track(raw, "iterate", ARRAY_ITERATE_KEY);
-    return /* @__PURE__ */ isShallow(array) ? raw : raw.map(toReactive);
+    if (/* @__PURE__ */ isShallow(array)) return raw;
+    if (!/* @__PURE__ */ isReadonly(array)) return raw.map(toReactive);
+    return /* @__PURE__ */ isReactive(array) ? raw.map((item) => toReadonly(toReactive(item))) : raw.map(toReadonly);
   }
   function shallowReadArray(arr) {
     track(arr = /* @__PURE__ */ toRaw(arr), "iterate", ARRAY_ITERATE_KEY);
@@ -2082,7 +2103,7 @@ this.gpu = (function() {
     return value2;
   }
   /**
-  * @vue/runtime-core v3.5.42
+  * @vue/runtime-core v3.5.43
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -5351,6 +5372,12 @@ For more details, see https://link.vuejs.org/feature-flags.`
         optimized = false;
         n2.dynamicChildren = null;
       }
+      if (n2.dynamicChildren && n1 && n1.dynamicChildren && n1.dynamicChildren.hasOnce) {
+        if (n2.dynamicChildren === EMPTY_ARR) {
+          n2.dynamicChildren = [];
+        }
+        n2.dynamicChildren.hasOnce = true;
+      }
       const { type, ref: ref3, shapeFlag } = n2;
       switch (type) {
         case Text$1:
@@ -5958,6 +5985,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
           {
             pushWarningContext(n2);
           }
+          n2.el = n1.el;
           updateComponentPreRender(instance, n2, optimized);
           {
             popWarningContext();
@@ -6517,7 +6545,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
         cacheIndex,
         memo
       } = vnode;
-      if (patchFlag === -2) {
+      if (patchFlag === -2 || dynamicChildren && dynamicChildren.hasOnce) {
         optimized = false;
       }
       if (ref3 != null) {
@@ -6525,7 +6553,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
         setRef(ref3, null, parentSuspense, vnode, true);
         resetTracking();
       }
-      if (cacheIndex != null) {
+      if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
         parentComponent.renderCache[cacheIndex] = void 0;
       }
       if (shapeFlag & 256) {
@@ -6606,6 +6634,9 @@ For more details, see https://link.vuejs.org/feature-flags.`
       }
       if (type === Static) {
         removeStaticNode(vnode);
+        if (transition && !transition.persisted && transition.afterLeave) {
+          transition.afterLeave();
+        }
         return;
       }
       const performRemove = () => {
@@ -6648,6 +6679,9 @@ For more details, see https://link.vuejs.org/feature-flags.`
       scope.stop();
       if (job) {
         job.flags |= 8;
+        unmount(subTree, instance, parentSuspense, doRemove);
+      } else if (instance.vnode.el && subTree) {
+        subTree.transition = instance.vnode.transition;
         unmount(subTree, instance, parentSuspense, doRemove);
       }
       if (um) {
@@ -7109,7 +7143,8 @@ Component that was made reactive: `,
       el: vnode.el,
       anchor: vnode.anchor,
       ctx: vnode.ctx,
-      ce: vnode.ce
+      ce: vnode.ce,
+      cacheIndex: vnode.cacheIndex
     };
     if (transition && cloneTransition) {
       setTransitionHooks(
@@ -7816,10 +7851,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version$4 = "3.5.42";
+  const version$4 = "3.5.43";
   const warn$2 = warn$1;
   /**
-  * @vue/runtime-dom v3.5.42
+  * @vue/runtime-dom v3.5.43
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -8518,7 +8553,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return container;
   }
   /**
-  * vue v3.5.42
+  * vue v3.5.43
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -86734,7 +86769,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   const name = "entree-carto";
-  const version = "0.2.0";
+  const version = "0.3.0";
   const description = "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)";
   const packageJson = {
     name,
