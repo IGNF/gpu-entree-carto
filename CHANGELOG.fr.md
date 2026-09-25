@@ -12,14 +12,13 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
-- Fichiers de gouvernance open source (MARS) : README, CONTRIBUTING, CODING, CODE_OF_CONDUCT, CHANGELOG, ROADMAP.
+- Fichiers de gouvernance open source : README, CONTRIBUTING, CODING, CODE_OF_CONDUCT, CHANGELOG, ROADMAP.
 - Prise en charge de `useMinimified` sur toutes les routes démo (accueil, carte, geometry-editor, sketch) avec chargement des bundles `dist/`.
+- Documentation bilingue : anglais `*.md` et français `*.fr.md` à la racine et dans `doc/`.
 
 ### Modifié
 
-- README restructuré selon le [guide MARS README](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-readme/) ; présentation française dans `README.fr.md`.
-- Paires françaises (`*.fr.md`) pour tous les fichiers de gouvernance à la racine ; règle Cursor `mars-bilingual-docs`.
-- Documentation `doc/` bilingue : anglais `*.md`, français `*.fr.md` (27 pages + index).
+- README restructuré (anglais de référence + aperçu `README.fr.md`).
 
 ## [0.3.0] - 2026-09-25
 

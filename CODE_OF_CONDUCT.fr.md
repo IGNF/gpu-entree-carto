@@ -39,7 +39,7 @@ Cette charte s’applique dans tous les espaces de la communauté et lorsqu’un
 
 ## Application
 
-Les cas de comportement abusif, harcelant ou autrement inacceptable peuvent être signalés aux mainteneurs listés dans [CONTRIBUTORS.fr.md](CONTRIBUTORS.fr.md) en ouvrant une [issue GitHub](https://github.com/IGNF/gpu-entree-carto/issues) (confidentielle si votre offre GitHub le permet, ou via les canaux IGN).
+Les cas de comportement abusif, harcelant ou autrement inacceptable peuvent être signalés en ouvrant une [issue GitHub](https://github.com/IGNF/gpu-entree-carto/issues) (confidentielle si votre offre GitHub le permet).
 
 Toutes les plaintes seront examinées et investiguées de manière prompte et équitable. Les mainteneurs respectent la confidentialité et la sécurité de la personne qui signale.
 

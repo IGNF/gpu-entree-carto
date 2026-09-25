@@ -6,8 +6,6 @@
 Documentation développeur : conventions, tests, documentation, releases.  
 Pour installer et compiler : **[COMPILE.fr.md](COMPILE.fr.md)**.
 
-Structure dépôt IGN : [MARS — structure des dépôts](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-depot/).
-
 ## Stack
 
 - **Vue 3** (Composition API, `<script setup>`)
@@ -78,7 +76,7 @@ Contenu minimum : description, options/props/API, placement, dépendances, compo
 
 - Intégration : `doc/INTEGRATION.md`, `doc/LibCssBundles.md` (+ paires `.fr.md`)
 - Démo : `doc/Demo.md`, `doc/DemoConfig.md` (+ paires `.fr.md`)
-- Gouvernance à la racine **et** **`doc/`** : **paires EN/FR** (`*.md` / `*.fr.md`) selon [MARS](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-readme/) — **maintenir les deux langues synchronisées** (règle Cursor `mars-bilingual-docs`).
+- Gouvernance à la racine **et** **`doc/`** : **paires EN/FR** (`*.md` / `*.fr.md`) — **maintenir les deux langues synchronisées**.
 
 ## Qualité
 

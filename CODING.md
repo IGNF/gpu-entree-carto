@@ -6,8 +6,6 @@
 Developer documentation: conventions, tests, documentation, and releases.  
 For installing and building the project, see **[COMPILE.md](COMPILE.md)**.
 
-IGN repository structure: [MARS — repository layout](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-depot/).
-
 ## Stack
 
 - **Vue 3** (Composition API, `<script setup>` in views and components)
@@ -78,7 +76,7 @@ Minimum content: description, options/props/API, placement, dependencies, behavi
 
 - Integration: `doc/INTEGRATION.md`, `doc/LibCssBundles.md` (+ `.fr.md` pairs)
 - Demo: `doc/Demo.md`, `doc/DemoConfig.md` (+ `.fr.md` pairs)
-- Root governance and **`doc/`** both use **EN/FR pairs** (`*.md` / `*.fr.md`) per [MARS](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-readme/) — keep both languages in sync when editing (Cursor rule `mars-bilingual-docs`).
+- Root governance and **`doc/`** both use **EN/FR pairs** (`*.md` / `*.fr.md`) — keep both languages in sync when editing.
 
 ## Quality gates
 
