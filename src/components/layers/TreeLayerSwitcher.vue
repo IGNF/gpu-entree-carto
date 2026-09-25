@@ -82,7 +82,7 @@ function onChange(node: TreeLayerNode, checked: boolean) {
 
     <ul class="ec-tree-layers__list">
       <li v-for="node in nodes" :key="node.id" class="ec-tree-layers__item">
-        <div class="fr-checkbox-group">
+        <div class="fr-checkbox-group" :class="{ 'fr-checkbox-group--sm': variant === 'catalog' }">
           <input
             :id="`tls-${node.id}`"
             type="checkbox"

@@ -58,7 +58,7 @@ function rowInZoomRange(node: TreeLayerNode): boolean {
           class="ec-catalog-search__result-row"
           :class="{ 'ec-not-in-zoom-range': !rowInZoomRange(node) }"
         >
-          <div class="fr-checkbox-group ec-catalog-search__check">
+          <div class="fr-checkbox-group fr-checkbox-group--sm ec-catalog-search__check">
             <input
               :id="`ec-cat-search-${node.id}`"
               type="checkbox"

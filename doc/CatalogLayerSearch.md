@@ -19,7 +19,7 @@ Barre de **recherche** au-dessus de l’arbre catalogue (_Données_).
 
 - Champ DSFR `fr-input-group` / `fr-input` (styles globaux `dsfr.min.css`), filtrage à la saisie sans bouton « Rechercher ».
 - Filtre **insensible à la casse** sur le **titre** des entrées visibles du sélecteur (`catalogSwitcherDisplayNodes`, sans `onlyLegend`).
-- Résultats : même ligne DSFR que l’arbre (`fr-checkbox-group` + `fr-label`) ; clic sur le libellé → focus dans [CatalogLayerTree](./CatalogLayerTree.md) (`pinnedExpandIds`, animation `ec-catalog-tree__row--highlight`) en plus du comportement natif case à cocher.
+- Résultats : même ligne DSFR que l’arbre (`fr-checkbox-group fr-checkbox-group--sm` + `fr-label`) ; clic sur le libellé → focus dans [CatalogLayerTree](./CatalogLayerTree.md) (`pinnedExpandIds`, animation `ec-catalog-tree__row--highlight`) en plus du comportement natif case à cocher.
 - Entrées hors plage zoom : classe `ec-not-in-zoom-range`.
 
 ## Dépendances

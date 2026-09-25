@@ -84821,7 +84821,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-catalog-tree__fold-placeholder",
     "aria-hidden": "true"
   };
-  const _hoisted_4$7 = { class: "fr-checkbox-group ec-catalog-tree__check" };
+  const _hoisted_4$7 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-tree__check" };
   const _hoisted_5$7 = ["id", "checked", "onChange"];
   const _hoisted_6$6 = ["for"];
   const _sfc_main$8 = /* @__PURE__ */ defineComponent({
@@ -84964,7 +84964,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-13c46eb0"]]);
+  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-7d64c043"]]);
   const _hoisted_1$7 = {
     class: "ec-catalog-search",
     role: "search"
@@ -84974,7 +84974,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 0,
     class: "ec-catalog-search__results"
   };
-  const _hoisted_4$6 = { class: "fr-checkbox-group ec-catalog-search__check" };
+  const _hoisted_4$6 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-search__check" };
   const _hoisted_5$6 = ["id", "checked", "onChange"];
   const _hoisted_6$5 = ["for", "onClick"];
   const _hoisted_7$5 = {
@@ -85059,7 +85059,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-98af09f7"]]);
+  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-6e9ebd1a"]]);
   const GPU_TILE_LAYER_SWITCHER_TILE_COORD = [9, 253, -177];
   const GPU_PREVIEW_TILE_RESOLUTION = 156543.03392804097 / 2 ** GPU_TILE_LAYER_SWITCHER_TILE_COORD[0];
   function wmtsPreviewTileRow(storedRow) {
