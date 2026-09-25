@@ -35,10 +35,21 @@ function patchTerritoriesPanel(control: Control): void {
   const root = (control as Control & { element: HTMLElement }).element
   if (!root) return
 
+  const panel = root.querySelector<HTMLDialogElement>('dialog[id^="GPterritoriesPanel"]')
+
   const title = root.querySelector<HTMLElement>(
     '.gpf-panel__header .GPpanelTitle, .gpf-panel__header .gpf-panel__title',
   )
-  if (title) title.textContent = PANEL_TITLE
+  if (title) {
+    title.textContent = PANEL_TITLE
+    if (panel) {
+      const titleId = `${panel.id}-title`
+      title.id = titleId
+      panel.setAttribute('aria-labelledby', titleId)
+    }
+  } else if (panel) {
+    panel.setAttribute('aria-label', PANEL_TITLE)
+  }
 
   const btn = root.querySelector<HTMLButtonElement>(
     '.gpf-panel__header button.GPpanelClose, .GPpanelHeader button.GPpanelClose',

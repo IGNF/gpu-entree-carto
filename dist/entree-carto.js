@@ -68611,10 +68611,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       function patchTerritoriesPanel(control) {
         const root = control.element;
         if (!root) return;
+        const panel = root.querySelector('dialog[id^="GPterritoriesPanel"]');
         const title = root.querySelector(
           ".gpf-panel__header .GPpanelTitle, .gpf-panel__header .gpf-panel__title"
         );
-        if (title) title.textContent = PANEL_TITLE;
+        if (title) {
+          title.textContent = PANEL_TITLE;
+          if (panel) {
+            const titleId = `${panel.id}-title`;
+            title.id = titleId;
+            panel.setAttribute("aria-labelledby", titleId);
+          }
+        } else if (panel) {
+          panel.setAttribute("aria-label", PANEL_TITLE);
+        }
         const btn = root.querySelector(
           ".gpf-panel__header button.GPpanelClose, .GPpanelHeader button.GPpanelClose"
         );

@@ -24,6 +24,7 @@ Géoplateforme territory selector (`Territories`) — metropolitan France, overs
 - `view: { active, title: 'Modifier les territoires', description: 'Modifier la vue' }`
 - DOM patch after creation:
   - header title (geopf still hardcodes “Sélecteur de territoires”);
+  - DSFR `<dialog>` accessible name (`aria-labelledby` → header title `#…-title`, else `aria-label`);
   - close button `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, flush right in header.
 
 ## Placement
