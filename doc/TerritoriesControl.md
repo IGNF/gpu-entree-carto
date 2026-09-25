@@ -1,44 +1,47 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](TerritoriesControl.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](TerritoriesControl.fr.md)
+
 # TerritoriesControl
 
-Sélecteur de territoire Géoplateforme (`Territories`) — France métropolitaine, DOM-TOM, etc.
+Géoplateforme territory selector (`Territories`) — metropolitan France, overseas departments, etc.
 
-**Source :** `src/components/map/TerritoriesControl.vue`  
-**Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `territoriesOptions` (`bottom-left`, `view.active`)  
-**Dépendance :** `geopf-extensions-openlayers`
+**Source:** `src/components/map/TerritoriesControl.vue`  
+**Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `territoriesOptions` (`bottom-left`, `view.active`)  
+**Dependency:** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop         | Type                   | Défaut          | Description                                |
-| ------------ | ---------------------- | --------------- | ------------------------------------------ |
-| `position`   | `GeopfControlPosition` | `'bottom-left'` | Position geopf                             |
-| `collapsed`  | `boolean`              | `true`          | Panneau replié au chargement               |
-| `auto`       | `boolean`              | `true`          | Charge la liste par défaut des territoires |
-| `viewActive` | `boolean`              | `true`          | Affiche « Modifier les territoires »       |
+| Prop         | Type                   | Default         | Description                              |
+| ------------ | ---------------------- | --------------- | ---------------------------------------- |
+| `position`   | `GeopfControlPosition` | `'bottom-left'` | geopf position                           |
+| `collapsed`  | `boolean`              | `true`          | Panel collapsed on load                  |
+| `auto`       | `boolean`              | `true`          | Load default territory list              |
+| `viewActive` | `boolean`              | `true`          | Show “Modify territories”                |
 
-## Options geopf passées
+## geopf options passed
 
 - `panel: true`, `title: 'Sélectionner un territoire'`
 - `view: { active, title: 'Modifier les territoires', description: 'Modifier la vue' }`
-- Patch DOM après création :
-  - titre header (geopf hardcode encore « Sélecteur de territoires ») ;
-  - bouton fermer `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, collé à droite du header.
+- DOM patch after creation:
+  - header title (geopf still hardcodes “Sélecteur de territoires”);
+  - close button `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, flush right in header.
 
 ## Placement
 
-Bas-gauche, **sous** la minimap.
+Bottom-left, **below** the overview map.
 
 ## Styles
 
-- État actif du bouton : fond bleu (`map-controls.css`), pas la barre `::after` geopf
-- Infobulle : appendice aligné sur le bord du bouton
-- Titres longs dans `.gpf-tile` : police réduite + clamp 3 lignes
-- Bouton fermer `#GPterritoriesPanelClose` : `position: absolute; right` dans le header
-- Dialog `#gpf-territories-views-container-id` : collé à droite du panneau Territories (`left: 100%`), bas alignés (`bottom: 0`)
-- Panneau Territories bas-gauche : `bottom: 0`, `max-height: 100cqb` (reste dans `.ec-map-shell`), liste de tuiles scrollable
-- Widget en containing block (évite le `top: 0` geopf sur toute la hauteur de la carte)
+- Button active state: blue background (`map-controls.css`), not geopf `::after` bar
+- Tooltip: append aligned on button edge
+- Long titles in `.gpf-tile`: reduced font + 3-line clamp
+- Close button `#GPterritoriesPanelClose`: `position: absolute; right` in header
+- Dialog `#gpf-territories-views-container-id`: flush right of Territories panel (`left: 100%`), bottoms aligned (`bottom: 0`)
+- Bottom-left Territories panel: `bottom: 0`, `max-height: 100cqb` (stays inside `.ec-map-shell`), scrollable tile list
+- Widget as containing block (avoids geopf `top: 0` over full map height)
 
-## Dépendances
+## Dependencies
 
-- Enfant de `MapShell`
-- CSS icônes DSFR (`utility/icons/icons.min.css`) pour les pictos `fr-icon-*`
-- Réseau pour vignettes / icônes territoires (URLs Géoplateforme)
+- Child of `MapShell`
+- DSFR icon CSS (`utility/icons/icons.min.css`) for `fr-icon-*` pictograms
+- Network for territory thumbnails / icons (Géoplateforme URLs)

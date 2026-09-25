@@ -1,32 +1,35 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](LayerLegendsPanel.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](LayerLegendsPanel.fr.md)
+
 # LayerLegendsPanel
 
-Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dans la pile « Couches de données ».
+Side panel **Legends** tab: symbols for layers **visible** in the “Data layers” stack.
 
-**Source :** `src/components/panels/LayerLegendsPanel.vue`  
-**Utilisé dans :** [TabPanelsControl](./TabPanelsControl.md) (onglet 3)
+**Source:** `src/components/panels/LayerLegendsPanel.vue`  
+**Used in:** [TabPanelsControl](./TabPanelsControl.md) (tab 3)
 
 ## Props
 
 | Prop     | Type             | Description                                                                                                                                |
 | -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `layers` | `ManagedLayer[]` | Pile **Couches de données** (`visible` + légende) + couches **`onlyLegend`** actives sur la carte (`legendLayers` dans `useManagedLayers`) |
+| `layers` | `ManagedLayer[]` | **Data layers** stack (`visible` + legend) + **`onlyLegend`** layers active on map (`legendLayers` in `useManagedLayers`)                  |
 
-## Comportement
+## Behaviour
 
-- Titre avec icône Remix `ri-list-indefinite` (aligné sur le bouton d’onglet).
-- **Une section DSFR `fr-accordion` par couche**, regroupées dans un conteneur `fr-accordions-group` (démo [Accordéon DSFR](https://www.systeme-de-design.gouv.fr/version-courante/fr/composants/accordeon/demonstration-de-l-accordeon)) : styles `@gouvfr/dsfr/dist/component/accordion/accordion.min.css` + bouton `fr-accordion__btn` (chevron natif). Surcharges limitées à `layer-legends.css` pour neutraliser `.ol-control button` (OpenLayers).
-- **Par défaut** : toutes les sections sont repliées (titres seuls).
-- Bouton **Légendes** dans [DataLayersManagerPanel](./DataLayersManagerPanel.md) → `openLegendForLayer(id)` : ouvre l’onglet, **déplie** la couche concernée et **scroll** pour placer son titre en haut du panneau.
-- Contenu déplié : liste d’entrées `LegendItem` (`title`, une ou plusieurs images **pct / lin / surf** sur la même ligne, ordre gpu-client).
-- **`onlyLegend: true`** : absent du sélecteur catalogue ; ligne dans **Couches de données** si active ; légende ici (sans doublon si déjà dans la pile).
-- **Dédoublonnage** : une entrée déjà affichée (même libellé + mêmes symboles) n’est pas répétée ; un second accordéon au même **titre** et à la **même légende** est masqué (`dedupeLegendLayersForPanel`).
-- **Hors plage de zoom** LAYER_CONFIG : accordéon grisé (`ec-not-in-zoom-range`, même règle que le catalogue).
-- Pas de réglage d’opacité ici (réservé à [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
-- URLs d’images : **`legendImageDetailDirectory`** (injecté dans `gpu.config` par `gpu-client-config.js`, aussi fusionné dans `@/lib/config`) + chemin relatif de l’image + `.png`, comme gpu-client `LegendImages#getUrl`.
-- Symboles dérivés de `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligné gpu-client `CreateTreeLayerSwitcherItems`) : chemins filtrés `info_surf/05`, sous-filtres `hasfilter2`, blocs « other », etc.
-- **`scaleDependant`** : suffixe `-lowscale` / `-highscale` recalculé à partir du **zoom courant** de la carte (écoute `change:resolution` sur la vue OL).
+- Title with Remix icon `ri-list-indefinite` (aligned with tab button).
+- **One DSFR `fr-accordion` section per layer**, grouped in `fr-accordions-group` ([DSFR accordion demo](https://www.systeme-de-design.gouv.fr/version-courante/fr/composants/accordeon/demonstration-de-l-accordeon)): styles `@gouvfr/dsfr/dist/component/accordion/accordion.min.css` + `fr-accordion__btn` button (native chevron). Limited overrides in `layer-legends.css` to neutralise `.ol-control button` (OpenLayers).
+- **By default**: all sections collapsed (titles only).
+- **Legends** button in [DataLayersManagerPanel](./DataLayersManagerPanel.md) → `openLegendForLayer(id)`: opens tab, **expands** layer and **scrolls** to place its title at top of panel.
+- Expanded content: list of `LegendItem` entries (`title`, one or more **pct / lin / surf** images on same line, gpu-client order).
+- **`onlyLegend: true`**: absent from catalogue selector; row in **Data layers** if active; legend here (no duplicate if already in stack).
+- **Deduplication**: entry already shown (same label + same symbols) not repeated; second accordion with same **title** and **legend** hidden (`dedupeLegendLayersForPanel`).
+- **Out of zoom range** LAYER_CONFIG: greyed accordion (`ec-not-in-zoom-range`, same rule as catalogue).
+- No opacity control here (reserved for [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
+- Image URLs: **`legendImageDetailDirectory`** (injected in `gpu.config` by `gpu-client-config.js`, also merged in `@/lib/config`) + relative image path + `.png`, as gpu-client `LegendImages#getUrl`.
+- Symbols from `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligned gpu-client `CreateTreeLayerSwitcherItems`): filtered paths `info_surf/05`, sub-filters `hasfilter2`, “other” blocks, etc.
+- **`scaleDependant`**: `-lowscale` / `-highscale` suffix recalculated from map **current zoom** (listen `change:resolution` on OL view).
 
-## Dépendances
+## Dependencies
 
-- Types : `@/types/stubs` (`LegendItem`), `@/composables/managedLayers`
-- Config : `legendImageDetailDirectory` dans `gpu.config` après chargement du script GPU
+- Types: `@/types/stubs` (`LegendItem`), `@/composables/managedLayers`
+- Config: `legendImageDetailDirectory` in `gpu.config` after GPU script load

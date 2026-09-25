@@ -1,33 +1,36 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](BaseLayerSwitcher.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](BaseLayerSwitcher.fr.md)
+
 # BaseLayerSwitcher
 
-Sélecteur de fond de plan (radio DSFR). Bascule la visibilité des presets créés par `createBaseLayerPresets()`.
+Base map selector (DSFR radio). Toggles visibility of presets created by `createBaseLayerPresets()`.
 
-**Source :** `src/components/map/BaseLayerSwitcher.vue`  
-**Helpers :** `src/ol/baseLayers.ts`
+**Source:** `src/components/map/BaseLayerSwitcher.vue`  
+**Helpers:** `src/ol/baseLayers.ts`
 
 ## Props
 
-| Prop         | Type                | Description                                 |
-| ------------ | ------------------- | ------------------------------------------- |
-| `presets`    | `BaseLayerPreset[]` | Liste des fonds (`id`, `label`, `layer`)    |
-| `modelValue` | `BaseLayerId`       | Fond actif : `'plan' \| 'ortho' \| 'blank'` |
+| Prop         | Type                | Description                              |
+| ------------ | ------------------- | ---------------------------------------- |
+| `presets`    | `BaseLayerPreset[]` | Base list (`id`, `label`, `layer`)       |
+| `modelValue` | `BaseLayerId`       | Active base: `'plan' \| 'ortho' \| 'blank'` |
 
-## Événements
+## Events
 
-| Événement           | Payload       | Description                          |
-| ------------------- | ------------- | ------------------------------------ |
-| `update:modelValue` | `BaseLayerId` | Émis au changement de fond (v-model) |
+| Event               | Payload       | Description                    |
+| ------------------- | ------------- | ------------------------------ |
+| `update:modelValue` | `BaseLayerId` | Emitted on base change (v-model) |
 
-## Fonds disponibles (démo)
+## Available bases (demo)
 
-| Id      | Libellé  | Source                        |
+| Id      | Label    | Source                        |
 | ------- | -------- | ----------------------------- |
 | `plan`  | Plan IGN | WMTS Géoplateforme PLANIGNV2  |
 | `ortho` | Ortho    | WMTS ORTHOIMAGERY.ORTHOPHOTOS |
-| `blank` | Blanc    | Couche vectorielle fond blanc |
+| `blank` | Blank    | White background vector layer |
 
 ## Notes
 
-- Ancien sélecteur radio du panneau aside démo.
-- **Préférer** [TileLayerSwitcher](./TileLayerSwitcher.md) dans l’onglet couches du [TabPanelsControl](./TabPanelsControl.md).
-- À terme : enrichir via extensions Géoplateforme (6 fonds gpu-client).
+- Former demo aside panel radio selector.
+- **Prefer** [TileLayerSwitcher](./TileLayerSwitcher.md) in the layers tab of [TabPanelsControl](./TabPanelsControl.md).
+- Eventually: extend via Géoplateforme extensions (6 gpu-client bases).

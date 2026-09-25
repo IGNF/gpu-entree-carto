@@ -1,29 +1,32 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](FullScreenControl.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](FullScreenControl.fr.md)
+
 # FullScreenControl
 
-Contrôle plein écran Géoplateforme (`GeoportalFullScreen`).
+Géoplateforme full-screen control (`GeoportalFullScreen`).
 
-**Source :** `src/components/map/FullScreenControl.vue`  
-**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `fullscreenOptions: 'bottom-right'`  
-**Dépendance :** `geopf-extensions-openlayers`
+**Source:** `src/components/map/FullScreenControl.vue`  
+**Placement reference:** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `fullscreenOptions: 'bottom-right'`  
+**Dependency:** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop       | Type                   | Défaut           | Description    |
+| Prop       | Type                   | Default          | Description    |
 | ---------- | ---------------------- | ---------------- | -------------- |
-| `position` | `GeopfControlPosition` | `'bottom-right'` | Position geopf |
+| `position` | `GeopfControlPosition` | `'bottom-right'` | geopf position |
 
 ## Placement
 
-Bas-droite, au-dessus du zoom (geopf `prepend` en `bottom-*`).  
-Offset geopf `bottom: 0.5em` annulé en colonne bas-droite (`map-controls.css`) pour l’aligner avec l’échelle.
+Bottom-right, above zoom (geopf `prepend` in `bottom-*`).  
+geopf `bottom: 0.5em` offset cancelled in the bottom-right column (`map-controls.css`) to align with the scale bar.
 
-## Dépendances
+## Dependencies
 
-- Enfant de `MapShell`.
-- CSS geopf DSFR chargé dans la démo / l’embed.
+- Child of `MapShell`.
+- geopf DSFR CSS loaded in demo / embed.
 
-## Comportement / CSS
+## Behaviour / CSS
 
-- Picto via `::after` (mask geopf), pas de sprite Classic ni label OpenLayers.
-- `map-controls.css` force `background-image: none` et masque le `<span>` interne pour éviter un doublon sous un hôte qui charge aussi le DSFR complet (gpu-site).
-- Le bouton a `font-size: 0` (cacher le label OL) : l’infobulle `::before` force `font-size: 0.75rem` pour rester à la même taille que zoom / territoire.
+- Icon via `::after` (geopf mask), no Classic sprite or OpenLayers label.
+- `map-controls.css` forces `background-image: none` and hides the inner `<span>` to avoid duplication when the host also loads full DSFR (gpu-site).
+- Button uses `font-size: 0` (hide OL label): tooltip `::before` forces `font-size: 0.75rem` to match zoom / territory controls.

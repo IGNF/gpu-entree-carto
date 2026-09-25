@@ -1,45 +1,48 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](CatalogLayerTree.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](CatalogLayerTree.fr.md)
+
 # CatalogLayerTree
 
-Arbre **checkbox** du catalogue _Données_ (équivalent gpu-client `TreeLayerSwitcherControl` / `CreateTreeLayerSwitcherItems`).
+**Checkbox** tree for _Data_ catalogue (gpu-client `TreeLayerSwitcherControl` / `CreateTreeLayerSwitcherItems` equivalent).
 
-**Source :** `src/components/layers/CatalogLayerTree.vue`  
-**Construction de l’arbre :** `src/lib/layerConfig/layerConfigToTree.ts` ← `window.LAYER_CONFIG`  
-**Identifiants catalogue :** chemin TLS gpu-client (`name` + valeurs de filtre, pas le seul `title`) — voir `gpu.model.Layer#getOrCreatePath`.  
-**Utilisé dans :** [LayerCataloguePanel](./TabPanelsControl.md#composants-panneau) → onglet Catalogue → _Données_, sous le titre **Sélection des données** (après [CatalogLayerSearch](./CatalogLayerSearch.md)).
+**Source:** `src/components/layers/CatalogLayerTree.vue`  
+**Tree build:** `src/lib/layerConfig/layerConfigToTree.ts` ← `window.LAYER_CONFIG`  
+**Catalogue IDs:** gpu-client TLS path (`name` + filter values, not title alone) — see `gpu.model.Layer#getOrCreatePath`.  
+**Used in:** [LayerCataloguePanel](./TabPanelsControl.md#panel-components) → Catalogue tab → _Data_, under **Data selection** title (after [CatalogLayerSearch](./CatalogLayerSearch.md)).
 
 ## Props / events
 
 | Prop / event         | Type                      | Description                                                                 |
 | -------------------- | ------------------------- | --------------------------------------------------------------------------- |
-| `nodes`              | `TreeLayerNode[]`         | Racine de l’arbre (`children`, `defaultCollapsed`, `gpuVirtual`, …)         |
-| `checkedById`        | `Record<string, boolean>` | État coché sur **chaque** entrée (propagation gpu-client)                   |
-| `catalogRoots`       | `TreeLayerNode[]`         | Racines complètes (optionnel, défaut `nodes`) — calcul des replis           |
-| `pinnedExpandIds`    | `ReadonlySet<string>`     | Branches dépliées (recherche [CatalogLayerSearch](./CatalogLayerSearch.md)) |
-| `highlightedNodeIds` | `ReadonlySet<string>`     | Surbrillance temporaire des lignes                                          |
-| `focusCatalogNodeId` | `string \| null`          | Scroll vers la ligne (racine du composant)                                  |
-| `@toggle`            | `(id, checked)`           | → `setCatalogChecked` (checkboxes + visibilité WMS)                         |
-| `@unpin-expand`      | `(id)`                    | Retrait du dépliage forcé (repli manuel)                                    |
+| `nodes`              | `TreeLayerNode[]`         | Tree root (`children`, `defaultCollapsed`, `gpuVirtual`, …)                 |
+| `checkedById`        | `Record<string, boolean>` | Checked state on **each** entry (gpu-client propagation)                      |
+| `catalogRoots`       | `TreeLayerNode[]`         | Full roots (optional, default `nodes`) — collapse calculation               |
+| `pinnedExpandIds`    | `ReadonlySet<string>`     | Expanded branches ([CatalogLayerSearch](./CatalogLayerSearch.md) search)    |
+| `highlightedNodeIds` | `ReadonlySet<string>`     | Temporary row highlight                                                     |
+| `focusCatalogNodeId` | `string \| null`          | Scroll to row (component root)                                              |
+| `@toggle`            | `(id, checked)`           | → `setCatalogChecked` (checkboxes + WMS visibility)                         |
+| `@unpin-expand`      | `(id)`                    | Remove forced expand (manual collapse)                                      |
 
-## Comportement
+## Behaviour
 
-- **Repli par défaut** : seuls les nœuds racine sont visibles ; chaque branche est repliée (`undeployed`, gpu-client).
-- **Dépliage auto** (`catalogAncestorIdsToExpand`) : dépliage **uniquement** si le sous-arbre est **mixte** (au moins une case cochée et une décochée). Tout coché → replié ; tout décoché (ex. racine SUP sans `visible`) → replié ; sélection partielle sous « Prescriptions » → dépliage jusqu’au niveau concerné.
-- Repli / dépli manuel via le chevron ; l’état manuel est conservé tant que la structure de l’arbre ne change pas.
-- Cases à cocher DSFR **taille SM** (`fr-checkbox-group--sm`).
-- Pas de légende sous le nœud (légendes → onglet **Légendes**).
-- **Propagation checkboxes** (comme `TreeLayerSwitcherItem`) : coche parent → tous les descendants ; coche enfant → parents remontés (OR, hors `onlyLegend`) ; `onlyLegend` suit le parent.
-- **Virtual** : pas de tuile WMS agrégée sur le nœud ; les feuilles en dessous portent la carte.
-- **Agrégat** (parent non virtual avec WMS + enfants) : si tout le sous-arbre est coché avec la même opacité → une seule requête WMS sur le parent, feuilles masquées sur la carte (perf gpu-client).
-- **`hideLayers: true`** : les entrées enfants ne sont pas affichées dans le sélecteur (`hiddenCatalogChildren`) ; le parent virtual les pilote toujours. Dans **Couches de données**, une seule ligne parent ; légende agrégée sur le parent (gpu-client `createLegendImages`, sauf doublon `prescription_psmv`).
-- Feuilles WMS : `gpuMapLayer` (y compris **`onlyLegend`** avec `name` — tuile WMS comme gpu-client, sans ligne dans le sélecteur).
-- **`onlyLegend`** : masqué dans le sélecteur (`catalogSwitcherDisplayNodes`) ; **Couches de données** + **Légendes** lorsque la tuile est active (coche catalogue / parent).
-- **`visible`** : comme gpu-client `Layer`, absent sur un enfant → hérite du parent ; explicite (`true` / `false`) prime. État initial des checkboxes sans écraser les `visible: false` explicites.
-- Paramètres LAYER_CONFIG pris en compte à l’arbre : `opacity`, **`forceOpacity`** (100 % sur la carte, **absent** de l’onglet Couches de données), `virtual`, `onlyLegend`, filtres CQL, **`minZoomLevel` / `maxZoomLevel`** (hérités comme gpu-client), légendes (`LEGEND_*`).
-- **Hors plage de zoom** : ligne grisée (`ec-not-in-zoom-range`, équivalent gpu-client `notInZoomRange`) — mise à jour au zoom carte ; dossier non tuile grisé si aucun descendant n’est dans la plage.
-- **Couches de données** : une ligne par entrée cochée **dont la tuile WMS est active** sur la carte (agrégat actif → pas les feuilles cochées) — voir [DataLayersManagerPanel](./DataLayersManagerPanel.md).
-- Synchronisation carte via `layerMapHooks` → `GpuWmsLayerRegistry` (démo `/map`).
+- **Collapsed by default**: only root nodes visible; each branch collapsed (`undeployed`, gpu-client).
+- **Auto expand** (`catalogAncestorIdsToExpand`): expand **only** if subtree is **mixed** (at least one checked and one unchecked). All checked → collapsed; all unchecked (e.g. SUP root without `visible`) → collapsed; partial selection under “Prescriptions” → expand to concerned level.
+- Manual expand/collapse via chevron; manual state kept until tree structure changes.
+- DSFR checkboxes **SM** size (`fr-checkbox-group--sm`).
+- No legend under node (legends → **Legends** tab).
+- **Checkbox propagation** (as `TreeLayerSwitcherItem`): parent check → all descendants; child check → parents bubble (OR, except `onlyLegend`); `onlyLegend` follows parent.
+- **Virtual**: no aggregate WMS tile on node; leaves below carry the map.
+- **Aggregate** (non-virtual parent with WMS + children): if whole subtree checked with same opacity → single WMS request on parent, leaves hidden on map (gpu-client perf).
+- **`hideLayers: true`**: child entries not shown in selector (`hiddenCatalogChildren`); virtual parent still drives them. In **Data layers**, single parent row; aggregate legend on parent (gpu-client `createLegendImages`, except `prescription_psmv` duplicate).
+- WMS leaves: `gpuMapLayer` (including **`onlyLegend`** with `name` — WMS tile as gpu-client, no selector row).
+- **`onlyLegend`**: hidden in selector (`catalogSwitcherDisplayNodes`); **Data layers** + **Legends** when tile active (catalogue check / parent).
+- **`visible`**: as gpu-client `Layer`, absent on child → inherit parent; explicit (`true` / `false`) wins. Initial checkbox state without overwriting explicit `visible: false`.
+- LAYER_CONFIG params at tree: `opacity`, **`forceOpacity`** (100% on map, **absent** from Data layers tab), `virtual`, `onlyLegend`, CQL filters, **`minZoomLevel` / `maxZoomLevel`** (inherited as gpu-client), legends (`LEGEND_*`).
+- **Out of zoom range**: greyed row (`ec-not-in-zoom-range`, gpu-client `notInZoomRange` equivalent) — updates on map zoom; non-tile folder greyed if no descendant in range.
+- **Data layers**: one row per checked entry **whose WMS tile is active** on map (active aggregate → not checked leaves) — see [DataLayersManagerPanel](./DataLayersManagerPanel.md).
+- Map sync via `layerMapHooks` → `GpuWmsLayerRegistry` (demo `/map`).
 
-## Dépendances
+## Dependencies
 
-- Types `TreeLayerNode` : `TreeLayerSwitcher.vue`
-- Config distante : `configScriptUrl` dans [DemoConfig.md](./DemoConfig.md)
+- Types `TreeLayerNode`: `TreeLayerSwitcher.vue`
+- Remote config: `configScriptUrl` in [DemoConfig.md](./DemoConfig.md)

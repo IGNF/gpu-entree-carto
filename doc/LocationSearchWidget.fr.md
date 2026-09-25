@@ -1,0 +1,32 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](LocationSearchWidget.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](LocationSearchWidget.fr.md)
+
+# LocationSearchWidget
+
+Widget de **recherche de lieu hors carte** (autocomplete seul) — **fallback** léger.
+
+Pour l’accueil gpu-site avec la **même UX que la carte**, préférer [`gpu.mountSearchEngine`](./mountSearchEngine.fr.md).
+
+**Source :** `src/components/search/LocationSearchWidget.vue`  
+**Montage lib :** `gpu.mountLocationSearch(container, options)` — `src/lib/mountLocationSearch.ts`  
+**Bundle dédié :** `entree-carto-location-search.js` + `css/entree-carto-location-search.min.css` ([LibCssBundles.md](./LibCssBundles.fr.md))
+
+## Props / options
+
+| Option             | Type                   | Défaut                      | Description                               |
+| ------------------ | ---------------------- | --------------------------- | ----------------------------------------- |
+| `label`            | `string`               | `'Rechercher par lieu:'`    | Label accessible                          |
+| `placeholder`      | `string`               | `'Rechercher une adresse…'` | Placeholder champ                         |
+| `mode`             | `'redirect' \| 'emit'` | `'redirect'`                | Redirection carte ou callback seul        |
+| `mapUrl`           | `string`               | `'/map/'`                   | URL cible (route `gpu_map`)               |
+| `method`           | `'GET' \| 'POST'`      | `'POST'`                    | Méthode de navigation (gpu-site = POST)   |
+| `maximumResponses` | `number`               | `10`                        | Max suggestions                           |
+| `initialQuery`     | `string`               | `''`                        | Texte initial                             |
+| `onSelect`         | `(loc) => void`        | —                           | Callback à la sélection (toujours appelé) |
+
+## Comportement
+
+- Autocomplétion via `gpu.services.Geocode` (Gp si chargé, sinon API Géoplateforme)
+- Filtrage / libellés via `LocateControl`
+- À la sélection en mode `redirect` : `municipality`, `position_x`, `position_y`, `type` vers `mapUrl`
+- Pas de panneau Avancée / géoloc geopf (voir `mountSearchEngine`)

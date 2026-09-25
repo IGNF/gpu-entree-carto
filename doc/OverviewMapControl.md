@@ -1,27 +1,30 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](OverviewMapControl.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](OverviewMapControl.fr.md)
+
 # OverviewMapControl
 
-Mini-carte Géoplateforme (`GeoportalOverviewMap`).
+Géoplateforme overview map (`GeoportalOverviewMap`).
 
-**Source :** `src/components/map/OverviewMapControl.vue`  
-**Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `overviewMapOptions: 'bottom-left'`  
-**Dépendance :** `geopf-extensions-openlayers`
+**Source:** `src/components/map/OverviewMapControl.vue`  
+**Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `overviewMapOptions: 'bottom-left'`  
+**Dependency:** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop        | Type                   | Défaut          | Description                      |
-| ----------- | ---------------------- | --------------- | -------------------------------- |
-| `position`  | `GeopfControlPosition` | `'bottom-left'` | Position geopf                   |
-| `collapsed` | `boolean`              | `true`          | Mini-carte repliée au chargement |
+| Prop        | Type                   | Default         | Description                    |
+| ----------- | ---------------------- | --------------- | ------------------------------ |
+| `position`  | `GeopfControlPosition` | `'bottom-left'` | geopf position                 |
+| `collapsed` | `boolean`              | `true`          | Overview collapsed on load     |
 
 ## Placement
 
-Bas-gauche, **au-dessus** du sélecteur de territoire (`order: -1` dans `map-controls.css`).
+Bottom-left, **above** the territory selector (`order: -1` in `map-controls.css`).
 
 ## Styles
 
-- État actif / infobulle : mêmes règles que Territories (`map-controls.css`, alignement appendice sur le bord du bouton).
+- Active state / tooltip: same rules as Territories (`map-controls.css`, append aligned on button edge).
 
-## Dépendances
+## Dependencies
 
-- Enfant de `MapShell`
-- CSS geopf DSFR + icônes DSFR (`utility/icons`)
+- Child of `MapShell`
+- geopf DSFR CSS + DSFR icons (`utility/icons`)

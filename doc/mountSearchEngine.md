@@ -1,34 +1,37 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](mountSearchEngine.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](mountSearchEngine.fr.md)
+
 # mountSearchEngine
 
-Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShell` (accueil gpu-site).
+Mounts the **same** control as on the map (`SearchEngineAdvanced`) outside `MapShell` (gpu-site home page).
 
-**Source :** `src/lib/mountSearchEngine.ts`  
-**Factory partagée :** `src/lib/search/createSearchEngineAdvanced.ts` (aussi utilisée par `SearchEngineControl.vue`)  
-**API :** `gpu.mountSearchEngine(container, options)`  
-**CSS :** chargé via le bundle `entree-carto-search-engine` (`css/entree-carto-search-engine.min.css`), plus dans le chemin JS du bundle carte principal — voir [LibCssBundles.md](./LibCssBundles.md).
+**Source:** `src/lib/mountSearchEngine.ts`  
+**Shared factory:** `src/lib/search/createSearchEngineAdvanced.ts` (also used by `SearchEngineControl.vue`)  
+**API:** `gpu.mountSearchEngine(container, options)`  
+**CSS:** loaded via `entree-carto-search-engine` bundle (`css/entree-carto-search-engine.min.css`), no longer on the main map bundle JS path — see [LibCssBundles.md](./LibCssBundles.md).
 
 ## Options
 
-| Option           | Type                   | Défaut                  | Description                                           |
+| Option           | Type                   | Default                 | Description                                           |
 | ---------------- | ---------------------- | ----------------------- | ----------------------------------------------------- |
-| `mode`           | `'redirect' \| 'emit'` | `'redirect'`            | Formulaire HTML vers la carte, ou callback seul (SPA) |
-| `mapUrl`         | `string`               | `'/map/'`               | URL cible (`redirect`)                                |
-| `method`         | `'GET' \| 'POST'`      | `'POST'`                | Méthode formulaire (`redirect`, gpu-site = POST)      |
-| `placeholder`    | `string`               | adresse / ville / lieu… | Placeholder barre                                     |
-| `serviceBaseUrl` | `string`               | `https://data.geopf.fr` | Base services                                         |
-| `onSelect`       | `(loc) => void`        | —                       | Callback à la validation                              |
+| `mode`           | `'redirect' \| 'emit'` | `'redirect'`            | HTML form to map page, or callback only (SPA)         |
+| `mapUrl`         | `string`               | `'/map/'`               | Target URL (`redirect`)                               |
+| `method`         | `'GET' \| 'POST'`      | `'POST'`                | Form method (`redirect`, gpu-site = POST)             |
+| `placeholder`    | `string`               | address / city / place… | Bar placeholder                                       |
+| `serviceBaseUrl` | `string`               | `https://data.geopf.fr` | Service base                                          |
+| `onSelect`       | `(loc) => void`        | —                       | Callback on validation                              |
 
-## Comportement
+## Behaviour
 
-- UX identique à la carte : autocomplete, **Avancée** (INSEE, lieux, coords, parcelles), **Me géolocaliser**
-- Carte OL minimale invisible (requis par geopf pour coords / géoloc / marqueurs)
-- **`redirect`** : formulaire `municipality` / `position_x` / `position_y` / `type` (compat gpu-site)
-- **`emit`** (démo SPA) : `onSelect` + `prepareLocationHandoff` / `router.push` — objet `StandardViewerSearch` en mémoire, sans query ni POST
-- **Me géolocaliser** → `type: 'geolocate'`, coords EPSG:4326 ; sur la carte, [SearchEngineControl](./SearchEngineControl.md) repose le marker + ouvre la fiche (sans re-géocoder le libellé)
-- Écoute : `select`, `search`, `searchengineadvanced:geolocation:click` + `search` des forms avancés
-- Suggestions en `position: fixed` ; panneau **Avancée** en `position: absolute` (100 % du widget) — `attachStandalonePopoverSync`, visibles malgré `overflow` des bannières gpu-site
+- Same UX as the map: autocomplete, **Advanced** (INSEE, places, coords, parcels), **Locate me**
+- Minimal invisible OL map (required by geopf for coords / geoloc / markers)
+- **`redirect`**: form fields `municipality` / `position_x` / `position_y` / `type` (gpu-site compatible)
+- **`emit`** (SPA demo): `onSelect` + `prepareLocationHandoff` / `router.push` — `StandardViewerSearch` object in memory, no query or POST
+- **Locate me** → `type: 'geolocate'`, EPSG:4326 coords; on the map, [SearchEngineControl](./SearchEngineControl.md) replaces the marker + opens the info tab (without re-geocoding the label)
+- Listens: `select`, `search`, `searchengineadvanced:geolocation:click` + advanced forms `search`
+- Suggestions use `position: fixed`; **Advanced** panel uses `position: absolute` (100% of widget) — `attachStandalonePopoverSync`, visible despite gpu-site banner `overflow`
 
-## Exemple démo SPA
+## SPA demo example
 
 ```js
 import { prepareLocationHandoff } from '…/locationSearch'
@@ -40,10 +43,10 @@ gpu.mountSearchEngine(el, {
     router.push({ name: 'map' })
   },
 })
-// Sur /map : takeLocationHandoff() → SearchEngineControl initialSearch
+// On /map: takeLocationHandoff() → SearchEngineControl initialSearch
 ```
 
-## Exemple gpu-site
+## gpu-site example
 
 ```js
 gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
@@ -56,4 +59,4 @@ gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
 
 ## Fallback
 
-[LocationSearchWidget](./LocationSearchWidget.md) / `mountLocationSearch` : autocomplete seul, plus léger.
+[LocationSearchWidget](./LocationSearchWidget.md) / `mountLocationSearch`: autocomplete only, lighter weight.

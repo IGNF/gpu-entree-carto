@@ -1,46 +1,49 @@
-# Configuration démo (`demo-config.js`)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](DemoConfig.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](DemoConfig.fr.md)
 
-Fichier JS **hors bundle**, sur le modèle de gpu-client [`exemple-config.js`](https://github.com/IGNF/gpu-client/blob/master/public/js/exemple-config.js).
+# Demo configuration (`demo-config.js`)
 
-**Fichier :** `public/js/demo-config.js`  
-**Chargement :** `index.html` (avant l’app Vue) → `window.DEMO_CONFIG`  
-**Consommation :** `src/lib/demo/demoConfig.ts` — pages `/`, `/map`
+JS file **outside the bundle**, modelled on gpu-client [`exemple-config.js`](https://github.com/IGNF/gpu-client/blob/master/public/js/exemple-config.js).
 
-## Objectif
+**File:** `public/js/demo-config.js`  
+**Load:** `index.html` (before Vue app) → `window.DEMO_CONFIG`  
+**Consumption:** `src/lib/demo/demoConfig.ts` — pages `/`, `/map`
 
-Modifier l’environnement ou le jeu de test **sans recompiler** ni toucher au code Vue : URL `gpu-client-config`, document, bbox, surcharges `gpu.config`, couches catalogue, recherche initiale, etc.
+## Purpose
 
-## Structure `window.DEMO_CONFIG`
+Change environment or test data **without rebuilding** or editing Vue code: `gpu-client-config` URL, document, bbox, `gpu.config` overrides, catalogue layers, initial search, etc.
 
-| Clé                      | Description                                                                                                              |
+## `window.DEMO_CONFIG` structure
+
+| Key                      | Description                                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `useMinimified`          | `false` (défaut) : démos via sources Vite (imports ES). `true` : charge les bundles `dist/` (suffixe `.min` si minifiés) — accueil (`search-engine` / `location-search`), carte (`entree-carto` + `createStandardViewer`), `/geometry-editor`, `/sketch`. Prérequis : `npm run build` (ou cibles `build:*` concernées). En dev / preview, Vite sert `/dist/` via middleware. |
-| `configScriptUrl`        | URL optionnelle de `/map/gpu-client-config.js` (prod, dev, local). Charge les globals `LAYER_CONFIG`, `LEGEND_CONFIG`, … |
-| _(GitHub Pages)_         | Build `npm run build:demo:pages` : `dist/js/demo-config.js` pointe automatiquement vers `https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js` (fichier source `public/js/demo-config.js` reste en local `127.0.0.1:8000` pour le dev). |
-| `document`               | Document GPU `{ id, type, status, name, bbox? }` — ouvre la fiche info au chargement de `/map`                           |
-| `bbox`                   | `[minLon, minLat, maxLon, maxLat]` (EPSG:4326) si pas de handoff recherche depuis `/`                                    |
-| `gpuConfigOverrides`     | Objet fusionné dans `gpu.config` / `config` entree-carto                                                                 |
-| `map.baseLayerId`        | `carte` \| `carte-nb` \| `photo` \| `mixte` \| `cadastre` \| `blank` (presets gpu)                                       |
-| `map.zoom`               | Zoom initial (défaut 6)                                                                                                  |
-| `map.layerNodes`         | Catalogue onglet panneau latéral (id, title, visible, legend?)                                                           |
-| `map.search`             | Recherche initiale (ignorée si handoff accueil → carte)                                                                  |
-| `home.searchPlaceholder` | Placeholder recherche sur `/`                                                                                            |
-| `home.searchWidget`      | `'search-engine'` (défaut, visuel gpu-site avec Avancée) \| `'location'` (autocomplete léger, sans geopf)                 |
+| `useMinimified`          | `false` (default): demos via Vite sources (ES imports). `true`: loads `dist/` bundles (`.min` suffix if minified) — home (`search-engine` / `location-search`), map (`entree-carto` + `createStandardViewer`), `/geometry-editor`, `/sketch`. Prerequisite: `npm run build` (or relevant `build:*` targets). In dev / preview, Vite serves `/dist/` via middleware. |
+| `configScriptUrl`        | Optional URL for `/map/gpu-client-config.js` (prod, dev, local). Loads globals `LAYER_CONFIG`, `LEGEND_CONFIG`, …        |
+| _(GitHub Pages)_         | Build `npm run build:demo:pages`: `dist/js/demo-config.js` automatically points to `https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js` (source `public/js/demo-config.js` stays on local `127.0.0.1:8000` for dev). |
+| `document`               | GPU document `{ id, type, status, name, bbox? }` — opens info tab on `/map` load                                       |
+| `bbox`                   | `[minLon, minLat, maxLon, maxLat]` (EPSG:4326) if no search handoff from `/`                                             |
+| `gpuConfigOverrides`     | Object merged into `gpu.config` / entree-carto `config`                                                                   |
+| `map.baseLayerId`        | `carte` \| `carte-nb` \| `photo` \| `mixte` \| `cadastre` \| `blank` (gpu presets)                                         |
+| `map.zoom`               | Initial zoom (default 6)                                                                                                 |
+| `map.layerNodes`         | Side panel catalogue tab (id, title, visible, legend?)                                                                   |
+| `map.search`             | Initial search (ignored if home → map handoff)                                                                           |
+| `home.searchPlaceholder` | Search placeholder on `/`                                                                                                |
+| `home.searchWidget`      | `'search-engine'` (default, gpu-site look with Advanced) \| `'location'` (light autocomplete, no geopf)                  |
 
-## Exemples
+## Examples
 
-Voir les blocs commentés en bas de `public/js/demo-config.js` (environnements gpu-site, jeux DU / SUP / SCOT).
+See commented blocks at the bottom of `public/js/demo-config.js` (gpu-site environments, DU / SUP / SCOT datasets).
 
-## Priorités au chargement `/map`
+## `/map` load priorities
 
-1. Handoff recherche depuis l’accueil (SPA)
-2. Sinon `map.search` ou `bbox` / `document` du fichier JS
-3. **Catalogue _Données_** : si le script `configScriptUrl` a défini `window.LAYER_CONFIG`, arbre via `layerConfigToTreeNodes` ; sinon `map.layerNodes` du fichier JS
-4. Après chargement du script gpu, fusion de `window.gpu.config` dans le module `config` entree-carto (URLs WMS, etc.)
+1. Search handoff from home (SPA)
+2. Otherwise `map.search` or JS file `bbox` / `document`
+3. **_Data_ catalogue**: if `configScriptUrl` defined `window.LAYER_CONFIG`, tree via `layerConfigToTreeNodes`; otherwise JS file `map.layerNodes`
+4. After gpu script load, merge `window.gpu.config` into entree-carto `config` module (WMS URLs, etc.)
 
-## Limites
+## Limits
 
-- WMS simplifié (`GpuWmsLayerRegistry`) : noms GetMap **identiques** à `LAYER_CONFIG.name` (ex. `dev-document`, préfixe `config.prefix` conservé) ; filtres CQL `filterAttribute` / `filterValue` / `filterValueLike` ; pas de hub zoom gpu-client.
-- Avant chargement de `gpu-client-config.js`, un stub `window.gpu.config` est créé pour recevoir `legendImageDetailDirectory` et les URLs WMS.
-- **Dev Vite** : les URLs `http://127.0.0.1:8000/…` (ou `localhost:8000`) sont réécrites vers le proxy same-origin `/__gpu_dev_proxy__/…` (`vite.config.ts`) pour éviter _OpaqueResponseBlocking_ sur les légendes et les `fetch` config.
-- `LEGEND_CONFIG` : pas encore mappé automatiquement sur l’onglet Légendes.
+- Simplified WMS (`GpuWmsLayerRegistry`): GetMap names **identical** to `LAYER_CONFIG.name` (e.g. `dev-document`, `config.prefix` kept); CQL filters `filterAttribute` / `filterValue` / `filterValueLike`; no gpu-client zoom hub.
+- Before `gpu-client-config.js` loads, stub `window.gpu.config` is created for `legendImageDetailDirectory` and WMS URLs.
+- **Vite dev**: URLs `http://127.0.0.1:8000/…` (or `localhost:8000`) rewritten to same-origin proxy `/__gpu_dev_proxy__/…` (`vite.config.ts`) to avoid _OpaqueResponseBlocking_ on legends and config `fetch`.
+- `LEGEND_CONFIG`: not yet mapped automatically to Legends tab.

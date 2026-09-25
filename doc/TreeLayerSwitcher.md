@@ -1,26 +1,29 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](TreeLayerSwitcher.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](TreeLayerSwitcher.fr.md)
+
 # TreeLayerSwitcher
 
-Sélecteur de **couches métier** en arbre avec **légende intégrée** (équivalent `TreeLayerSwitcherControl` + légendes gpu-client).
+**Business layer** tree selector with **integrated legend** (gpu-client `TreeLayerSwitcherControl` + legends equivalent).
 
-**Source :** `src/components/layers/TreeLayerSwitcher.vue`  
-**Utilisé dans :** onglets _Couches de données_ / _Légendes_ de [TabPanelsControl](./TabPanelsControl.md). Le catalogue _Données_ utilise [CatalogLayerTree](./CatalogLayerTree.md).
+**Source:** `src/components/layers/TreeLayerSwitcher.vue`  
+**Used in:** _Data layers_ / _Legends_ tabs of [TabPanelsControl](./TabPanelsControl.md). Catalogue _Data_ uses [CatalogLayerTree](./CatalogLayerTree.md).
 
 ## Props / events
 
 | Prop / event  | Type                      | Description                                                           |
 | ------------- | ------------------------- | --------------------------------------------------------------------- |
-| `nodes`       | `TreeLayerNode[]`         | Nœuds (`id`, `title`, `visible`, `legend?`, `children?`)              |
-| `variant`     | `'full' \| 'catalog'`     | `catalog` : checkbox + titre uniquement (pas de légende sous le nœud) |
-| `checkedById` | `Record<string, boolean>` | État coché en mode catalogue (sinon `node.visible`)                   |
-| `@toggle`     | `(id, visible)`           | Changement de case                                                    |
+| `nodes`       | `TreeLayerNode[]`         | Nodes (`id`, `title`, `visible`, `legend?`, `children?`)              |
+| `variant`     | `'full' \| 'catalog'`     | `catalog`: checkbox + title only (no legend under node)               |
+| `checkedById` | `Record<string, boolean>` | Checked state in catalogue mode (otherwise `node.visible`)            |
+| `@toggle`     | `(id, visible)`           | Checkbox change                                                       |
 
-## Comportement
+## Behaviour
 
-- Cases à cocher par couche.
-- **`full`** : si la couche est visible et a une `legend`, affichage des entrées sous le nœud.
-- **`catalog`** : liste minimale type gpu-client TreeLayerSwitcher (sans légende intégrée), cases à cocher **SM** (`fr-checkbox-group--sm`).
+- Checkbox per layer.
+- **`full`**: if layer is visible and has `legend`, show entries under the node.
+- **`catalog`**: minimal gpu-client TreeLayerSwitcher list (no integrated legend), **SM** checkboxes (`fr-checkbox-group--sm`).
 
-## Limites actuelles
+## Current limits
 
-- Parsing `LAYER_CONFIG` → arbre : voir `layerConfigToTree.ts` et [CatalogLayerTree](./CatalogLayerTree.md).
-- Pas d’opacité ni de zoom-range dans l’arbre catalogue (à porter depuis gpu-client).
+- `LAYER_CONFIG` → tree parsing: see `layerConfigToTree.ts` and [CatalogLayerTree](./CatalogLayerTree.md).
+- No opacity or zoom range in catalogue tree (to port from gpu-client).
