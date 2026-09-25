@@ -13,18 +13,25 @@ entree-carto fournit le même point d’entrée global **`window.gpu`** et un do
 
 ## Contenu de `dist/` (bibliothèque)
 
-Après `make build-lib`, `make build-geometry-editor` et `make build-sketch` :
+Après `make build-lib`, `make build-location-search`, `make build-search-engine`, `make build-geometry-editor` et `make build-sketch` :
 
 ```
 dist/
   entree-carto.js / .min.js
+  entree-carto-location-search.js / .min.js   # accueil léger (mountLocationSearch)
+  entree-carto-search-engine.js / .min.js     # accueil SearchEngine geopf (mountSearchEngine)
   entree-carto-geometry-editor.js / .min.js   # mini-carte formulaires (remplace ol-geometry-editor)
   entree-carto-sketch.js / .min.js            # croquis standalone (mountSketch / SketchControl)
+  assets/                                     # polices Remix (woff2), …
   css/
     entree-carto.css / .min.css
+    entree-carto-location-search.css / .min.css
+    entree-carto-search-engine.css / .min.css
     entree-carto-geometry-editor.css / .min.css
     entree-carto-sketch.css / .min.css
 ```
+
+Détail des CSS par page : [LibCssBundles.md](./LibCssBundles.md) (chunks, SVGO webpack, accueil minimal).
 
 Vue 3, OpenLayers ≥ 9 et les styles carte sont **inclus dans le bundle** (plus besoin d’OpenLayers v4 côté site pour la carte).  
 Le geometry-editor et le sketch embarquent aussi OpenLayers (bundles autonomes).
@@ -116,10 +123,21 @@ Même remplacement CSS/JS que ci-dessus.
 
 ### 5. Page d’accueil (`templates/default/index.html.twig` + banner)
 
+**SearchEngine geopf** (recommandé, même UX que `/map/`) :
+
 ```twig
-<link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto.min.css') }}" />
-<script src="{{ asset('build/vendor/entree-carto/entree-carto.min.js') }}"></script>
+<link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-search-engine.min.css') }}" />
+<script src="{{ asset('build/vendor/entree-carto/entree-carto-search-engine.min.js') }}"></script>
 ```
+
+**Fallback autocomplete seul** ([LocationSearchWidget](./LocationSearchWidget.md)) — CSS ≈ 1 Ko :
+
+```twig
+<link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-location-search.min.css') }}" />
+<script src="{{ asset('build/vendor/entree-carto/entree-carto-location-search.min.js') }}"></script>
+```
+
+(DSFR site déjà chargé ; pas besoin de `entree-carto.min.css` sur l’accueil seul.)
 
 **Remplacer** le formulaire gazetteer (`#searchForm` / `callGazetteerService.js`) par le **même** SearchEngine que sur la carte :
 
@@ -157,6 +175,10 @@ Renommage optionnel ultérieur en `map_config.js.twig`.
 Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-client (`.ol-control`, panneaux, etc.).
 
 **Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Le bundle entree-carto inclut aussi geopf DSFR + `icons.min.css`. Les boutons geopf avec `fr-icon-*` (fermer, supprimer…) peignaient l’icône deux fois (`::before` DSFR + `::after` geopf à 100 % du bouton). Corrigé dans `map-controls.css` (neutralisation de `::after` si `fr-icon-*` est présent).
+
+### Webpack — ne pas re-minifier le CSS vendeur
+
+Les `*.min.css` entree-carto sont déjà minifiés par Vite. Exclure `vendor/entree-carto/css/` du `CssMinimizerPlugin` évite des avertissements **postcss-svgo** (`Parsed entity count exceeds max entity count` sur d’anciennes polices Remix SVG). Voir [LibCssBundles.md](./LibCssBundles.md).
 
 ---
 

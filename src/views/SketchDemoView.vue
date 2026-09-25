@@ -3,10 +3,15 @@
  * Démo standalone — entree-carto-sketch
  * Carte + SketchControl, encart utilisation / options.
  */
-import { onMounted, onUnmounted, ref } from 'vue'
-import { mountSketch, type MountSketchHandle } from '@/sketch/mountSketch'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import type { MountSketchHandle } from '@/sketch/mountSketch'
+import { getDemoConfig } from '@/lib/demo/demoConfig'
+import {
+  demoUsesMinifiedAssets,
+  getMountSketchFromBundle,
+  loadLibBundle,
+} from '@/lib/demo/demoLibAssets'
 import 'ol/ol.css'
-import '@/geometry-editor/styles/geometry-editor.css'
 
 /** Index ouvert dans DsfrAccordionsGroup (-1 = fermé). */
 const docsAccordionOpen = ref(-1)
@@ -128,29 +133,43 @@ const attachSnippet = [
 
 const mapHost = ref<HTMLElement | null>(null)
 const geoJsonOut = ref('')
+const useMinified = computed(() => demoUsesMinifiedAssets(getDemoConfig()))
 let handle: MountSketchHandle | null = null
 
+const sketchMountOptions = {
+  height: 720,
+  toolsToggle: 'top-left' as const,
+  clearAll: true,
+  localStorageKey: 'entree-carto-sketch-demo',
+  geometryType: 'Geometry' as const,
+  enableFeatureStyleEditor: true,
+  onChange: () => {
+    geoJsonOut.value =
+      handle?.sketch.serialize({
+        outputFormat: 'geojson',
+        precision: 7,
+      }) ?? ''
+  },
+}
+
 onMounted(() => {
+  void mountSketchDemo()
+})
+
+async function mountSketchDemo() {
   if (!mapHost.value) return
-  handle = mountSketch(mapHost.value, {
-    height: 720,
-    toolsToggle: 'top-left',
-    clearAll: true,
-    localStorageKey: 'entree-carto-sketch-demo',
-    geometryType: 'Geometry',
-    enableFeatureStyleEditor: true,
-    onChange: () => {
-      geoJsonOut.value =
-        handle?.sketch.serialize({
-          outputFormat: 'geojson',
-          precision: 7,
-        }) ?? ''
-    },
-  })
+  if (useMinified.value) {
+    await loadLibBundle('entree-carto-sketch')
+    handle = getMountSketchFromBundle()(mapHost.value, sketchMountOptions)
+  } else {
+    await import('@/geometry-editor/styles/geometry-editor.css')
+    const { mountSketch } = await import('@/sketch/mountSketch')
+    handle = mountSketch(mapHost.value, sketchMountOptions)
+  }
   geoJsonOut.value =
     handle.sketch.serialize({ outputFormat: 'geojson', precision: 7 }) ||
     '(aucun croquis — dessinez sur la carte)'
-})
+}
 
 onUnmounted(() => {
   handle?.destroy()

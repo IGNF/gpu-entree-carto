@@ -18,8 +18,15 @@ export interface DemoMapConfig {
   search?: StandardViewerSearch | null
 }
 
+export type DemoHomeSearchWidget = 'location' | 'search-engine'
+
 export interface DemoHomeConfig {
   searchPlaceholder?: string
+  /**
+   * Accueil démo : `location` = widget léger (`LocationSearchWidget`, gpu-site fallback),
+   * `search-engine` = SearchEngine geopf complet (`mountSearchEngine`).
+   */
+  searchWidget?: DemoHomeSearchWidget
 }
 
 export interface DemoConfig {
@@ -29,6 +36,11 @@ export interface DemoConfig {
   gpuConfigOverrides?: Record<string, unknown>
   map?: DemoMapConfig
   home?: DemoHomeConfig
+  /**
+   * Si true, charge les bundles `dist/` non minifiés ou `.min.js` / `.css` selon la valeur
+   * (défaut false = sources Vite / imports ES modules).
+   */
+  useMinimified?: boolean
 }
 
 const DEFAULT_LAYER_NODES: TreeLayerNode[] = [
@@ -50,6 +62,7 @@ const DEFAULT_DEMO_CONFIG: DemoConfig = {
   configScriptUrl: null,
   document: null,
   bbox: null,
+  useMinimified: false,
   gpuConfigOverrides: {},
   map: {
     baseLayerId: 'carte',
@@ -59,6 +72,7 @@ const DEFAULT_DEMO_CONFIG: DemoConfig = {
   },
   home: {
     searchPlaceholder: 'Rechercher une adresse, une ville, un lieu...',
+    searchWidget: 'search-engine',
   },
 }
 

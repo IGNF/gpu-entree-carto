@@ -8,7 +8,13 @@ import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
 import KML from 'ol/format/KML'
 import { Polygon } from 'ol/geom'
-import { mountGeometryEditor, type MountGeometryEditorHandle } from '@/geometry-editor'
+import type { MountGeometryEditorHandle } from '@/geometry-editor'
+import { getDemoConfig } from '@/lib/demo/demoConfig'
+import {
+  demoUsesMinifiedAssets,
+  getMountGeometryEditorFromBundle,
+  loadLibBundle,
+} from '@/lib/demo/demoLibAssets'
 import type { GeometryOutputFormat, GeometryTypeOption } from '@/geometry-editor/types'
 import { looksLikeBbox } from '@/geometry-editor/parseGeometry'
 import {
@@ -19,7 +25,6 @@ import {
   looksLikeMultiCircleOrDisc,
 } from '@/geometry-editor/circleHelpers'
 import 'ol/ol.css'
-import '@/geometry-editor/styles/geometry-editor.css'
 
 /** Index ouvert dans DsfrAccordionsGroup (-1 = fermé). */
 const docsAccordionOpen = ref(-1)
@@ -452,6 +457,22 @@ function syncAllPairHeights(): void {
 }
 
 onMounted(() => {
+  void initGeometryEditorDemo()
+})
+
+async function resolveMountGeometryEditor() {
+  if (demoUsesMinifiedAssets(getDemoConfig())) {
+    await loadLibBundle('entree-carto-geometry-editor')
+    return getMountGeometryEditorFromBundle()
+  }
+  await import('@/geometry-editor/styles/geometry-editor.css')
+  const mod = await import('@/geometry-editor')
+  return mod.mountGeometryEditor
+}
+
+async function initGeometryEditorDemo() {
+  const mountGeometryEditor = await resolveMountGeometryEditor()
+
   for (const section of sections) {
     for (const { key: format } of formats) {
       const el = fieldEls.get(fieldKey(section.type, format))
@@ -476,7 +497,6 @@ onMounted(() => {
     }
   }
 
-  // Après peinture (contenu + cartes injectées) pour un alignement propre au chargement
   requestAnimationFrame(() => {
     syncAllPairHeights()
     requestAnimationFrame(syncAllPairHeights)
@@ -509,7 +529,7 @@ onMounted(() => {
       showZoom: true,
     })
   }
-})
+}
 
 onUnmounted(() => {
   for (const cleanup of pairSyncCleanups) cleanup()

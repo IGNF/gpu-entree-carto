@@ -4,7 +4,8 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 
 **Source :** `src/lib/mountSearchEngine.ts`  
 **Factory partagée :** `src/lib/search/createSearchEngineAdvanced.ts` (aussi utilisée par `SearchEngineControl.vue`)  
-**API :** `gpu.mountSearchEngine(container, options)`
+**API :** `gpu.mountSearchEngine(container, options)`  
+**CSS :** chargé via le bundle `entree-carto-search-engine` (`css/entree-carto-search-engine.min.css`), plus dans le chemin JS du bundle carte principal — voir [LibCssBundles.md](./LibCssBundles.md).
 
 ## Options
 
@@ -25,7 +26,7 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 - **`emit`** (démo SPA) : `onSelect` + `prepareLocationHandoff` / `router.push` — objet `StandardViewerSearch` en mémoire, sans query ni POST
 - **Me géolocaliser** → `type: 'geolocate'`, coords EPSG:4326 ; sur la carte, [SearchEngineControl](./SearchEngineControl.md) repose le marker + ouvre la fiche (sans re-géocoder le libellé)
 - Écoute : `select`, `search`, `searchengineadvanced:geolocation:click` + `search` des forms avancés
-- Suggestions / panneau **Avancée** en `position: fixed`, ancrés à la barre (`attachStandalonePopoverSync`) — visibles malgré `overflow` des bannières gpu-site, suivent scroll / resize
+- Suggestions en `position: fixed` ; panneau **Avancée** en `position: absolute` (100 % du widget) — `attachStandalonePopoverSync`, visibles malgré `overflow` des bannières gpu-site
 
 ## Exemple démo SPA
 

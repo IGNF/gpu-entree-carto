@@ -6,6 +6,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 ## Intégration site tiers
 
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
+- [CSS bundles lib](./LibCssBundles.md) — chunks CSS (accueil léger, SVGO webpack)
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
 - [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
 - [Configuration démo](./DemoConfig.md) — `public/js/demo-config.js` (équivalent gpu-client `exemple-config.js`)

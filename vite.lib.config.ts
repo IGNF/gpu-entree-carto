@@ -1,13 +1,16 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
+import { remixiconExternal } from './vite/remixiconExternal'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 import { patchGeopfSearchEval } from './vite.geopfPlugins'
 
 const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
-  plugins: [patchGeopfSearchEval(), vue()],
+  plugins: [patchGeopfSearchEval(), remixiconExternal(), vue()],
+  esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -30,12 +33,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.css')) {
-            return minify ? 'css/entree-carto.min.css' : 'css/entree-carto.css'
-          }
-          return 'assets/[name][extname]'
-        },
+        assetFileNames: libCssAssetFileName('entree-carto', minify),
         extend: true,
       },
     },

@@ -1,0 +1,131 @@
+/**
+ * Bandeau d’accueil type gpu-site — aligné sur `gpu-dsfr.css` (gpu-site v6.3+).
+ */
+
+.gpu-banner-container {
+  position: relative;
+  margin-bottom: 13rem;
+}
+
+.gpu-banner-container--dark {
+  background-color: #00008c;
+  color: #fff;
+}
+
+.gpu-banner-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gpu-banner-decor-item {
+  position: absolute;
+  opacity: 0.9;
+  line-height: 0;
+}
+
+.gpu-banner-decor-item .fr-artwork-decorative,
+.gpu-banner-decor-item .fr-artwork-major {
+  fill: #fff;
+}
+
+.gpu-banner-decor-item .fr-artwork-minor {
+  fill: var(--orange-terre-battue-main-645, #e4794a);
+}
+
+@media (max-width: 67.49em) {
+  .gpu-banner-decor {
+    display: none;
+  }
+}
+
+.gpu-banner-decor-item--top-left {
+  left: 8rem;
+  top: 2rem;
+}
+
+.gpu-banner-decor-item--top-right {
+  right: 8rem;
+  top: 2rem;
+}
+
+.gpu-banner-decor-item--bottom-left {
+  left: 2rem;
+  top: 8rem;
+}
+
+.gpu-banner-decor-item--bottom-right {
+  right: 2rem;
+  top: 8rem;
+}
+
+.gpu-banner-inner {
+  position: relative;
+  overflow: visible !important;
+  padding: 1rem 2rem 9rem;
+}
+
+.gpu-banner-title {
+  margin: 2rem 0 1rem;
+  text-align: center;
+  color: #fff;
+}
+
+.gpu-banner-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: -9rem auto 0;
+  max-width: 1200px;
+  background-color: var(--background-raised-grey, #fff);
+  border: 4px solid var(--border-action-high-blue-france, #00008c);
+  color: var(--text-default-grey, #3a3a3a);
+  overflow: visible;
+}
+
+.gpu-banner-search-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.gpu-banner-search-engine {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  width: 100%;
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+}
+
+.gpu-banner-search-engine .ec-search-engine-standalone,
+.gpu-banner-search-engine .ec-search-engine-standalone__widget {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.gpu-banner-content #gpu-location-search,
+.gpu-banner-content #gpu-location-search *,
+.gpu-banner-content .ec-demo-location-search,
+.gpu-banner-content .ec-demo-location-search * {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+  min-width: 0;
+}
+
+.gpu-banner-search-engine [id^='GPsearchEngine-']:not([id*='AdvancedContainer']) {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+}
+
+.ec-home--gpu-banner .ec-home__below-banner {
+  position: relative;
+  z-index: 1;
+}

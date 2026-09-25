@@ -13,10 +13,12 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:demo && npm run build:lib && npm run build:geometry-editor && npm run build:sketch",
+    "build": "npm run build:demo && npm run build:lib && npm run build:location-search && npm run build:search-engine && npm run build:geometry-editor && npm run build:sketch",
     "build:demo": "vue-tsc --noEmit && vite build",
     "build:demo:pages": "ENTREE_CARTO_DEMO_PAGES=1 GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run build:demo",
     "build:lib": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.lib.config.ts && LIB_MINIFY=1 vite build --config vite.lib.config.ts",
+    "build:location-search": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.location-search.config.ts && LIB_MINIFY=1 vite build --config vite.location-search.config.ts",
+    "build:search-engine": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.search-engine.config.ts && LIB_MINIFY=1 vite build --config vite.search-engine.config.ts",
     "build:geometry-editor": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.geometry-editor.config.ts && LIB_MINIFY=1 vite build --config vite.geometry-editor.config.ts",
     "build:sketch": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.sketch.config.ts && LIB_MINIFY=1 vite build --config vite.sketch.config.ts",
     "preview": "vite preview",

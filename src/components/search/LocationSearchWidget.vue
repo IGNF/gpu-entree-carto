@@ -172,8 +172,13 @@ defineExpose({
 
 <template>
   <form class="ec-location-search" role="search" @submit="onSubmit">
-    <label v-if="label" class="fr-label" :for="inputId">{{ label }}</label>
-    <div class="fr-search-bar" role="search">
+    <label v-if="label" class="fr-label ec-location-search__label" :for="inputId">{{
+      label
+    }}</label>
+    <div class="fr-search-bar fr-search-bar--lg ec-location-search__bar">
+      <label class="fr-label fr-sr-only" :for="inputId">
+        {{ label || placeholder }}
+      </label>
       <input
         :id="inputId"
         class="fr-input"
@@ -195,7 +200,7 @@ defineExpose({
         @blur="onBlur"
         @focus="suggestions.length && (open = true)"
       />
-      <button class="fr-btn" type="submit" title="Rechercher" :disabled="loading">
+      <button class="fr-btn fr-btn--primary" type="submit" title="Rechercher" :disabled="loading">
         <span class="fr-sr-only">Rechercher</span>
       </button>
     </div>
@@ -228,9 +233,13 @@ defineExpose({
   width: 100%;
 }
 
+.ec-location-search__label {
+  margin-bottom: 0.5rem;
+}
+
 .ec-location-search__suggestions {
   position: absolute;
-  z-index: 10;
+  z-index: 1000;
   left: 0;
   right: 0;
   margin: 0;

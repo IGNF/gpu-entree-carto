@@ -87227,7 +87227,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-76c2b2e3"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-a4bc90f6"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -87450,10 +87450,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     document.body.appendChild(form);
     form.submit();
   }
-  const _hoisted_1 = {
-    class: "fr-search-bar",
-    role: "search"
-  };
+  const _hoisted_1 = { class: "fr-search-bar fr-search-bar--lg ec-location-search__bar" };
   const _hoisted_2 = ["placeholder", "title", "value", "aria-controls", "aria-expanded", "aria-activedescendant"];
   const _hoisted_3 = ["disabled"];
   const _hoisted_4 = ["id", "aria-label"];
@@ -87594,10 +87591,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, [
           __props.label ? (openBlock(), createElementBlock("label", {
             key: 0,
-            class: "fr-label",
+            class: "fr-label ec-location-search__label",
             for: inputId
           }, toDisplayString(__props.label), 1)) : createCommentVNode("", true),
           createBaseVNode("div", _hoisted_1, [
+            createBaseVNode("label", {
+              class: "fr-label fr-sr-only",
+              for: inputId
+            }, toDisplayString(__props.label || __props.placeholder), 1),
             createBaseVNode("input", {
               id: inputId,
               class: "fr-input",
@@ -87620,7 +87621,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               onFocus: _cache[0] || (_cache[0] = ($event) => suggestions.value.length && (open.value = true))
             }, null, 40, _hoisted_2),
             createBaseVNode("button", {
-              class: "fr-btn",
+              class: "fr-btn fr-btn--primary",
               type: "submit",
               title: "Rechercher",
               disabled: loading.value
@@ -87651,7 +87652,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LocationSearchWidget = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-acdebc4c"]]);
+  const LocationSearchWidget = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-ce2263c7"]]);
   function mountLocationSearch(container, options = {}) {
     container.innerHTML = "";
     const app = createApp(LocationSearchWidget, {
@@ -87676,11 +87677,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     };
   }
+  function isAdvancedPanel(panel) {
+    return panel.classList.contains("GPAdvancedContainer");
+  }
   function isPanelVisible(panel) {
     if (panel.classList.contains("gpf-hidden") || panel.classList.contains("GPelementHidden")) {
       return false;
     }
-    if (panel.classList.contains("GPAdvancedContainer")) {
+    if (isAdvancedPanel(panel)) {
       const widget = panel.closest('.gpf-widget[id^="GPsearchEngine-Advanced"]');
       const btn = widget == null ? void 0 : widget.querySelector(".GPSearchEngine-advanced-btn");
       if (btn && btn.getAttribute("aria-expanded") !== "true") return false;
@@ -87697,7 +87701,56 @@ Expected function or array of functions, received type ${typeof value2}.`
     ];
   }
   function queryAnchor(root) {
-    return root.querySelector(".GPSearchBar") || root.querySelector('.gpf-widget[id^="GPsearchEngine-Advanced"]') || root;
+    return root.querySelector(
+      '.gpf-widget[id^="GPsearchEngine-Advanced"] form.GPSearchBar[id^="GPsearchInput-Base-"]'
+    ) || root.querySelector(".GPSearchBar") || root.querySelector('.gpf-widget[id^="GPsearchEngine-Advanced"]') || root;
+  }
+  function clearPanelStyles(panel) {
+    panel.style.removeProperty("position");
+    panel.style.removeProperty("top");
+    panel.style.removeProperty("bottom");
+    panel.style.removeProperty("left");
+    panel.style.removeProperty("right");
+    panel.style.removeProperty("width");
+    panel.style.removeProperty("max-height");
+  }
+  function placeAdvancedPanel(panel, anchor, gap) {
+    const widget = panel.closest('.gpf-widget[id^="GPsearchEngine-Advanced"]');
+    if (!widget) return;
+    const barRect = anchor.getBoundingClientRect();
+    const widgetRect = widget.getBoundingClientRect();
+    const topOffset = barRect.bottom - widgetRect.top + gap;
+    const spaceBelow = window.innerHeight - barRect.bottom - gap;
+    panel.style.position = "absolute";
+    panel.style.left = "0";
+    panel.style.right = "0";
+    panel.style.width = "100%";
+    panel.style.maxWidth = "100%";
+    panel.style.top = `${topOffset}px`;
+    panel.style.bottom = "auto";
+    panel.style.maxHeight = `${Math.max(120, Math.min(spaceBelow - 4, window.innerHeight * 0.55))}px`;
+  }
+  function placeAutocompletePanel(panel, anchor, gap, rootRect) {
+    const anchorRect = anchor.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - anchorRect.bottom - gap;
+    const spaceAbove = anchorRect.top - gap;
+    const maxRight = rootRect.right;
+    const panelLeft = Math.max(rootRect.left, anchorRect.left);
+    const panelWidth = Math.max(120, Math.min(anchorRect.width, maxRight - panelLeft));
+    const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
+    const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
+    panel.style.position = "fixed";
+    panel.style.left = `${panelLeft}px`;
+    panel.style.width = `${panelWidth}px`;
+    panel.style.right = "auto";
+    panel.style.maxHeight = `${Math.max(80, maxH)}px`;
+    if (preferAbove) {
+      panel.style.top = "auto";
+      panel.style.bottom = `${window.innerHeight - anchorRect.top + gap}px`;
+    } else {
+      panel.style.bottom = "auto";
+      panel.style.top = `${anchorRect.bottom + gap}px`;
+    }
   }
   function attachStandalonePopoverSync(root) {
     let raf = 0;
@@ -87705,30 +87758,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       raf = 0;
       const anchor = queryAnchor(root);
       if (!anchor) return;
-      const rect = anchor.getBoundingClientRect();
+      const rootRect = root.getBoundingClientRect();
       const gap = 2;
-      const spaceBelow = window.innerHeight - rect.bottom - gap;
-      const spaceAbove = rect.top - gap;
       for (const panel of queryPanels(root)) {
         if (!isPanelVisible(panel)) {
-          panel.style.removeProperty("top");
-          panel.style.removeProperty("bottom");
-          panel.style.removeProperty("left");
-          panel.style.removeProperty("width");
-          panel.style.removeProperty("max-height");
+          clearPanelStyles(panel);
           continue;
         }
-        const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
-        const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
-        panel.style.left = `${Math.max(0, rect.left)}px`;
-        panel.style.width = `${Math.max(120, rect.width)}px`;
-        panel.style.maxHeight = `${Math.max(80, maxH)}px`;
-        if (preferAbove) {
-          panel.style.top = "auto";
-          panel.style.bottom = `${window.innerHeight - rect.top + gap}px`;
+        if (isAdvancedPanel(panel)) {
+          placeAdvancedPanel(panel, anchor, gap);
         } else {
-          panel.style.bottom = "auto";
-          panel.style.top = `${rect.bottom + gap}px`;
+          placeAutocompletePanel(panel, anchor, gap, rootRect);
         }
       }
     };
@@ -87753,11 +87793,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       window.removeEventListener("scroll", onScrollOrResize, true);
       mo.disconnect();
       for (const panel of queryPanels(root)) {
-        panel.style.removeProperty("top");
-        panel.style.removeProperty("bottom");
-        panel.style.removeProperty("left");
-        panel.style.removeProperty("width");
-        panel.style.removeProperty("max-height");
+        clearPanelStyles(panel);
       }
     };
   }
