@@ -1,5 +1,5 @@
 ---
-description: Documenter chaque contrôle / composant carte dans /doc
+description: Documenter chaque contrôle / composant carte dans /doc (paires EN/FR)
 alwaysApply: true
 ---
 
@@ -7,12 +7,15 @@ alwaysApply: true
 
 La carte expose des **composants / contrôles**. À chaque **création** ou **modification** d’un contrôle (ou composant cartographique associé) :
 
-1. Mettre à jour (ou créer) la doc Markdown dans **`/doc`**.
+1. Mettre à jour (ou créer) la doc Markdown dans **`/doc`** en **paire bilingue** :
+   - **`doc/NomComposant.md`** — anglais (référence MARS) ;
+   - **`doc/NomComposant.fr.md`** — français ;
+   - en-tête badges langue sur **chaque** fichier (voir règle `mars-bilingual-docs`).
 2. Y indiquer au minimum :
    - **description** du composant / contrôle ;
    - **options** / props / API ;
    - tout élément pertinent (placement UI, dépendance OpenLayers, lien Figma, comportement, exemples).
 3. Une page par contrôle, nom aligné sur le composant (ex. `ScaleLineControl.md` pour `ScaleLineControl.vue`).
-4. Tenir à jour l’index `doc/README.md` (liste des contrôles documentés).
+4. Tenir à jour les index **`doc/README.md`** (anglais, liens `.md`) et **`doc/README.fr.md`** (français, liens `.fr.md`), **même structure**.
 
-Ne pas livrer un contrôle nouveau ou modifié sans doc `/doc` à jour.
+Ne pas livrer un contrôle nouveau ou modifié sans doc `/doc` à jour (EN + FR).

@@ -1,83 +1,86 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](TabPanelsControl.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](TabPanelsControl.fr.md)
+
 # TabPanelsControl
 
-Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
+**4-tab** side panel (OpenLayers control), on the right of the map.
 
-**Source :** `src/components/map/TabPanelsControl.vue`  
-**Styles :** `src/styles/tab-panels.css`  
-**API :** `src/composables/tabPanels.ts`  
-**État couches :** `src/composables/managedLayers.ts`  
-**Référence :** gpu-client `TabsPanelsControl` + cartes.gouv.fr (TODO panneau latéral)
+**Source:** `src/components/map/TabPanelsControl.vue`  
+**Styles:** `src/styles/tab-panels.css`  
+**API:** `src/composables/tabPanels.ts`  
+**Layer state:** `src/composables/managedLayers.ts`  
+**Reference:** gpu-client `TabsPanelsControl` + cartes.gouv.fr (side panel TODO)
 
-## Comportement
+## Behaviour
 
-- **Fermé par défaut** : pile verticale de 4 boutons-onglets **collés** (48×48, ombre sur le groupe, comme zoom +/- sans gutter). Les styles battent `.ol-control button` d’OpenLayers (`1.375em`).
-- Pas de bordure / inset blanc sur l’état actif (fond bleu plein).
-- **Ouvert** : panneau (~490 px, `--ec-tab-panels-width`: `30.6rem`) à droite ; les boutons sont **collés** au bord gauche du panneau (pas d’écart).
-- Clic sur un onglet : active cet onglet et ouvre le panneau ; clic sur l’onglet déjà actif : ferme.
-- Un seul onglet actif à la fois.
-- À l’ouverture, `.ec-map-shell--tab-panels-open` décale zoom, plein écran et échelle de `--ec-tab-panels-inset` (= largeur panneau) + le même `--ec-widget-gap` qu’au bord de carte lorsque le panneau est fermé.
-- Conteneur pleine hauteur avec `pointer-events: none !important` (OpenLayers pose `pointer-events: auto` en inline) ; seuls les enfants (onglets / panneau) reçoivent les clics — sinon zoom / plein écran bas-droite sont masqués.
-- Infobulles style geopf au survol (`aria-label` → `::after`, à gauche des boutons) ; masquées si l’onglet est actif.
+- **Closed by default**: vertical stack of 4 tab buttons **flush** (48×48, group shadow, like zoom +/- without gutter). Styles override OpenLayers `.ol-control button` (`1.375em`).
+- No border / white inset on active state (solid blue background).
+- **Open**: panel (~490 px, `--ec-tab-panels-width`: `30.6rem`) on the right; buttons **flush** to the panel left edge (no gap).
+- Tab click: activates tab and opens panel; click on already active tab: closes.
+- One active tab at a time.
+- On open, `.ec-map-shell--tab-panels-open` shifts zoom, full screen and scale by `--ec-tab-panels-inset` (= panel width) + same `--ec-widget-gap` as map edge when panel closed.
+- Full-height container with `pointer-events: none !important` (OpenLayers sets `pointer-events: auto` inline); only children (tabs / panel) receive clicks — otherwise bottom-right zoom / full screen are blocked.
+- geopf-style tooltips on hover (`aria-label` → `::after`, left of buttons); hidden when tab is active.
 
-## Onglets
+## Tabs
 
-| #   | Icône                         | Contenu                                                                                                                                                      |
+| #   | Icon                          | Content                                                                                                                                                      |
 | --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — fiche structurée (`FicheInfoPanel`) ; données brutes (`raw`) en bas si présentes                                           |
-| 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR _Données_ ([CatalogLayerTree](./CatalogLayerTree.md)) et _Fonds de cartes_ ([BaseLayerRadioList](./BaseLayerRadioList.md)) |
-| 2   | Remix `ri-stack-line`         | **Couches de données** — pile des couches cochées dans le catalogue : visibilité, opacité, ordre, retrait                                                    |
-| 3   | Remix `ri-list-indefinite`    | **Légendes** — légendes des couches visibles de la pile                                                                                                      |
+| 0   | DSFR `fr-icon-map-pin-2-line` | **Info / location** — structured sheet (`FicheInfoPanel`); raw data (`raw`) at bottom if present                                                             |
+| 1   | Remix `ri-map-2-line`         | **Catalogue** — DSFR sub-tabs _Data_ ([CatalogLayerTree](./CatalogLayerTree.md)) and _Base maps_ ([BaseLayerRadioList](./BaseLayerRadioList.md))           |
+| 2   | Remix `ri-stack-line`         | **Data layers** — stack of layers checked in catalogue: visibility, opacity, order, remove                                                                    |
+| 3   | Remix `ri-list-indefinite`    | **Legends** — legends for visible layers in the stack                                                                                                        |
 
-Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
+Remix icons: `remixicon` package (global CSS in `main.ts`).
 
 ## Props
 
 | Prop             | Type                   | Description                                       |
 | ---------------- | ---------------------- | ------------------------------------------------- |
-| `basePresets`    | `GpuBaseLayerPreset[]` | Fonds pour le catalogue → Fonds de cartes         |
-| `baseModelValue` | `GpuBaseLayerId`       | Fond actif (`v-model:base-model-value`)           |
-| `layerNodes`     | `TreeLayerNode[]`      | Catalogue _Données_ / pile / légendes             |
-| `layerMapHooks`  | `LayerMapHooks?`       | Callbacks visibilité / opacité → carte (WMS démo) |
+| `basePresets`    | `GpuBaseLayerPreset[]` | Bases for catalogue → Base maps                   |
+| `baseModelValue` | `GpuBaseLayerId`       | Active base (`v-model:base-model-value`)          |
+| `layerNodes`     | `TreeLayerNode[]`      | _Data_ catalogue / stack / legends                |
+| `layerMapHooks`  | `LayerMapHooks?`       | Visibility / opacity callbacks → map (demo WMS)   |
 
 ## Events
 
 | Event                   | Description                        |
 | ----------------------- | ---------------------------------- |
-| `toggle-layer`          | Visibilité carte (`id`, `visible`) |
-| `update:baseModelValue` | Changement de fond de plan         |
+| `toggle-layer`          | Map visibility (`id`, `visible`)   |
+| `update:baseModelValue` | Base map change                    |
 
 ## API (`TabPanelsApi`)
 
-Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex. SearchEngine) :
+Exposed via `provide`, `defineExpose`, and `tabPanelsApiRef` (sibling access, e.g. SearchEngine):
 
 - `openTab(index)` / `closePanels()`
-- `openLegendForLayer(layerId)` — onglet Légendes, déplie la couche et scroll (voir [LayerLegendsPanel](./LayerLegendsPanel.md))
-- `showSelection({ title, bodyHtml?, raw? })` — remplit la fiche info, ouvre l’onglet 0
+- `openLegendForLayer(layerId)` — Legends tab, expands layer and scrolls (see [LayerLegendsPanel](./LayerLegendsPanel.md))
+- `showSelection({ title, bodyHtml?, raw? })` — fills info tab, opens tab 0
 - `clearSelection()`
-- refs : `isOpen`, `activeTab`, `selection`
+- refs: `isOpen`, `activeTab`, `selection`
 
-## Composants panneau
+## Panel components
 
-| Composant                | Fichier                                                  |
+| Component                | File                                                     |
 | ------------------------ | -------------------------------------------------------- |
 | `LayerCataloguePanel`    | `src/components/panels/LayerCataloguePanel.vue`          |
 | `DataLayersManagerPanel` | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md) |
 | `LayerLegendsPanel`      | [LayerLegendsPanel.md](./LayerLegendsPanel.md)           |
 
-## Intégration localisation
+## Location integration
 
-`SearchEngineControl` appelle `showSelection` **avant** de poser le marker (`initialSearch` / accueil → carte), puis recentre hors de la zone couverte par le panneau pour garder la popup geopf visible. GetFeatureInfo branchera plus tard sur la même API.
+`SearchEngineControl` calls `showSelection` **before** placing the marker (`initialSearch` / home → map), then recentres outside the panel-covered area to keep geopf popup visible. GetFeatureInfo will later use the same API.
 
-## Limites actuelles
+## Current limits
 
-- Fiche structurée selon sélection : contenu riche à brancher plus tard.
-- Opacité / ordre : pile onglet 3 branchée sur hooks ; pas encore grisage zoom gpu-client.
-- Légendes `scaleDependant` : URL figée au zoom initial (pas d’écoute zoom OL pour l’instant).
-- Pas de permalink couches (hors scope).
+- Structured sheet by selection: rich content to wire later.
+- Opacity / order: tab 3 stack wired to hooks; no gpu-client zoom greying yet.
+- `scaleDependant` legends: URL fixed at initial zoom (no OL zoom listener yet).
+- No layer permalink (out of scope).
 
-## Dépendances
+## Dependencies
 
-- Enfant de `MapShell` (injection `olMap`)
-- Icônes DSFR + Remix Icon
-- Composants : `FicheInfoPanel`, `LayerCataloguePanel` (+ `CatalogLayerTree`, `BaseLayerRadioList`), `DataLayersManagerPanel`, `LayerLegendsPanel`, `TreeLayerSwitcher` (pile / légendes)
-- Styles catalogue : `src/styles/layer-catalogue.css` (onglets DSFR pleine largeur)
+- Child of `MapShell` (`olMap` injection)
+- DSFR + Remix Icon icons
+- Components: `FicheInfoPanel`, `LayerCataloguePanel` (+ `CatalogLayerTree`, `BaseLayerRadioList`), `DataLayersManagerPanel`, `LayerLegendsPanel`, `TreeLayerSwitcher` (stack / legends)
+- Catalogue styles: `src/styles/layer-catalogue.css` (full-width DSFR tabs)

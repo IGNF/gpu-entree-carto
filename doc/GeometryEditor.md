@@ -1,19 +1,22 @@
+[![en](https://img.shields.io/badge/lang-en-red.svg)](GeometryEditor.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](GeometryEditor.fr.md)
+
 # entree-carto-geometry-editor
 
-Outil **standalone** d’édition de géométries (remplacement DSFR d’[ol-geometry-editor](https://github.com/IGNF/ol-geometry-editor)).  
-Associe une mini-carte à un champ de formulaire ou un élément HTML pour produire / consommer du **GeoJSON** ou du **KML**.
+**Standalone** geometry editing tool (DSFR replacement for [ol-geometry-editor](https://github.com/IGNF/ol-geometry-editor)).  
+Combines a mini-map with a form field or HTML element to produce / consume **GeoJSON** or **KML**.
 
-**Sources :** `src/geometry-editor/`  
-**Bundle :** `dist/entree-carto-geometry-editor[.min].js` + `dist/css/entree-carto-geometry-editor[.min].css`  
-**API globale :** `window.EntreeCartoGeometryEditor`  
-**Démo :** `/geometry-editor`
+**Sources:** `src/geometry-editor/`  
+**Bundle:** `dist/entree-carto-geometry-editor[.min].js` + `dist/css/entree-carto-geometry-editor[.min].css`  
+**Global API:** `window.EntreeCartoGeometryEditor`  
+**Demo:** `/geometry-editor`
 
-OpenLayers est **embarqué** dans le bundle (contrairement à ol-geometry-editor historique qui s’appuyait sur `ol.js` du site).
+OpenLayers is **embedded** in the bundle (unlike historical ol-geometry-editor that relied on site `ol.js`).
 
-La barre d’outils est un **overlay vertical à gauche dans la carte** (pas sous la carte), boutons 48×48 style cartes.gouv / contrôles geopf — sauf si `toolsToggle` est défini : un **bouton outils** dans le coin choisi ouvre / ferme alors la barre.  
-Les pictos de la toolbar utilisent **[Remix Icon](https://remixicon.com/)** (`remixicon.css`, chargé avec le bundle) ; l’outil **Ligne** conserve le picto geopf via la classe custom `ri-draw-line` (`src/assets/custom-icons/draw-line.svg`). Correspondance des classes : `src/geometry-editor/geometryToolIcons.ts`.  
-Infobulles : même style geopf que zoom / territoire (`aria-label` → `::before` au survol) ; masquées si le bouton est actif.  
-Colonne layout **48px** : la zone transparente à droite des boutons (réserve infobulle) laisse passer pan / zoom / dessin sur la carte (`pointer-events` ciblés + marge négative sur la toolbar).
+Toolbar is a **vertical overlay on the left inside the map** (not below the map), 48×48 buttons cartes.gouv / geopf control style — unless `toolsToggle` is set: a **tools button** in the chosen corner then opens / closes the bar.  
+Toolbar pictograms use **[Remix Icon](https://remixicon.com/)** (`remixicon.css`, loaded with bundle); **Line** tool keeps geopf picto via custom class `ri-draw-line` (`src/assets/custom-icons/draw-line.svg`). Class mapping: `src/geometry-editor/geometryToolIcons.ts`.  
+Tooltips: same geopf style as zoom / territory (`aria-label` → `::before` on hover); hidden when button active.  
+**48px** layout column: transparent area right of buttons (tooltip reserve) passes pan / zoom / draw on map (`targeted pointer-events` + negative margin on toolbar).
 
 ## Usage
 
@@ -34,7 +37,7 @@ Colonne layout **48px** : la zone transparente à droite des boutons (réserve i
 </script>
 ```
 
-Équivalent classe :
+Class equivalent:
 
 ```js
 const editor = new EntreeCartoGeometryEditor.GeometryEditor(document.getElementById('extent'), {
@@ -45,69 +48,69 @@ editor.setOptions({ editable: false, blockView: true })
 
 ## Options
 
-Alignées sur ol-geometry-editor (principales) :
+Aligned with ol-geometry-editor (main ones):
 
-| Option                 | Défaut         | Description                                                                                                                                                                                                                                                                                                                                                                             |
+| Option                 | Default        | Description                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `geometryType`         | `'Geometry'`   | Un type (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, `Geometry`) **ou plusieurs séparés par des virgules** (`Point,Disc`) : mêmes outils que `Geometry`, mais filtrés. `Circle` / `MultiCircle` restent acceptés (compat) et exposent l’outil **Disc**.                                                                                               |
-| `hide`                 | `true`         | Masque l’élément source (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, car DSFR `.fr-input` écrase sinon l’attribut `hidden`)                                                                                                                                                                                                      |
-| `editable`             | `true`         | Affiche la barre d’outils à gauche dans la carte (sinon viewer seul)                                                                                                                                                                                                                                                                                                                    |
-| `tileLayers`           | Plan IGN WMTS  | Fonds XYZ `{ url, attribution?, title?, maxZoom? }`                                                                                                                                                                                                                                                                                                                                     |
-| `width` / `height`     | `100%` / `400` | Taille du conteneur carte                                                                                                                                                                                                                                                                                                                                                               |
-| `lon` / `lat` / `zoom` | France         | Vue initiale                                                                                                                                                                                                                                                                                                                                                                            |
-| `minZoom` / `maxZoom`  | `4` / `19`     | Limites                                                                                                                                                                                                                                                                                                                                                                                 |
-| `centerOnResults`      | `true`         | Recadre après chargement / édition                                                                                                                                                                                                                                                                                                                                                      |
-| `precision`            | `7`            | Décimales GeoJSON / bbox                                                                                                                                                                                                                                                                                                                                                                |
-| `outputFormat`         | `'geojson'`    | `'geojson'` \| `'kml'` (écriture)                                                                                                                                                                                                                                                                                                                                                       |
-| `className`            | —              | Classe CSS additionnelle sur le conteneur                                                                                                                                                                                                                                                                                                                                               |
-| `blockView`            | `false`        | Bloque pan / zoom manuels (molette, drag, double-clic, pinch, clavier, boutons +/-). Le `fit` programmatique reste possible.                                                                                                                                                                                                                                                            |
-| `showZoom`             | `true`         | Affiche les boutons +/- de zoom (ignoré si `blockView` est `true`)                                                                                                                                                                                                                                                                                                                      |
-| `showSettings`         | `false`        | Bouton roue crantée (haut droite) : formulaire pour modifier les options à chaud ; décale le zoom en dessous. Longitude / latitude / zoom **courants** sont tronqués (7 / 1 décimales) pour la validation HTML, et se mettent à jour en direct quand la vue change (sauf champ en focus). Bouton **Réinitialiser** : remet les options du chargement initial (`editor.resetOptions()`). |
-| `showAttributions`     | `false`        | Affiche le contrôle d’attributions des couches de fond                                                                                                                                                                                                                                                                                                                                  |
-| `toolsToggle`          | `null`         | `null` : barre d’outils toujours visible à gauche. Sinon coin du **bouton menu** (`top-left` \| `top-right` \| `bottom-left` \| `bottom-right`) : un clic ouvre / ferme les outils (sous le bouton si `top-*`, au-dessus si `bottom-*`).                                                                                                                                                |
-| `customStyle`          | `null`         | Style OL (`Style` / `Style[]` / `StyleFunction`) des features et du croquis ; défaut bleu France                                                                                                                                                                                                                                                                                        |
+| `geometryType`         | `'Geometry'`   | Single type (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, `Geometry`) **or comma-separated** (`Point,Disc`): same tools as `Geometry`, filtered. `Circle` / `MultiCircle` still accepted (compat) and expose **Disc** tool.                                                                                               |
+| `hide`                 | `true`         | Hide source element (`hidden` + classes `ec-geometry-editor-source--hidden` / `fr-hidden` — `display: none !important`, as DSFR `.fr-input` otherwise overrides `hidden`)                                                                                                                                                                                                      |
+| `editable`             | `true`         | Show toolbar on left in map (otherwise viewer only)                                                                                                                                                                                                                                                                                                                    |
+| `tileLayers`           | Plan IGN WMTS  | XYZ bases `{ url, attribution?, title?, maxZoom? }`                                                                                                                                                                                                                                                                                                                                     |
+| `width` / `height`     | `100%` / `400` | Map container size                                                                                                                                                                                                                                                                                                                                                               |
+| `lon` / `lat` / `zoom` | France         | Initial view                                                                                                                                                                                                                                                                                                                                                                            |
+| `minZoom` / `maxZoom`  | `4` / `19`     | Limits                                                                                                                                                                                                                                                                                                                                                                                 |
+| `centerOnResults`      | `true`         | Reframe after load / edit                                                                                                                                                                                                                                                                                                                                                      |
+| `precision`            | `7`            | GeoJSON / bbox decimals                                                                                                                                                                                                                                                                                                                                                                |
+| `outputFormat`         | `'geojson'`    | `'geojson'` \| `'kml'` (write)                                                                                                                                                                                                                                                                                                                                                       |
+| `className`            | —              | Additional CSS class on container                                                                                                                                                                                                                                                                                                                                               |
+| `blockView`            | `false`        | Block manual pan / zoom (wheel, drag, double-click, pinch, keyboard, +/- buttons). Programmatic `fit` still allowed.                                                                                                                                                                                                                                                            |
+| `showZoom`             | `true`         | Show +/- zoom buttons (ignored if `blockView` is `true`)                                                                                                                                                                                                                                                                                                                      |
+| `showSettings`         | `false`        | Cog button (top right): form to change options live; shifts zoom below. Current longitude / latitude / zoom **truncated** (7 / 1 decimals) for HTML validation, updated live when view changes (except focused field). **Reset** button: restores options from initial mount (`editor.resetOptions()`). |
+| `showAttributions`     | `false`        | Show base layer attribution control                                                                                                                                                                                                                                                                                                                                  |
+| `toolsToggle`          | `null`         | `null`: toolbar always visible on left. Else **menu button** corner (`top-left` \| `top-right` \| `bottom-left` \| `bottom-right`): click toggles tools (below button if `top-*`, above if `bottom-*`).                                                                                                                                                |
+| `customStyle`          | `null`         | OL style (`Style` / `Style[]` / `StyleFunction`) for features and sketch; default France blue                                                                                                                                                                                                                                                                                        |
 
-## Mise à jour à chaud
+## Live updates
 
-Après création, `editor.setOptions(patch)` (ou `handle.setOptions(patch)`) applique un sous-ensemble d’options sans recréer la carte :
+After creation, `editor.setOptions(patch)` (or `handle.setOptions(patch)`) applies a subset of options without recreating the map:
 
 - `blockView`, `showZoom`, `showSettings`, `showAttributions`, `editable`, `customStyle`, `geometryType`, `toolsToggle`
 - `tileLayers`, `width` / `height`, `className`, `hide`
 - `lon` / `lat` / `zoom` / `minZoom` / `maxZoom`
 - `outputFormat`, `precision`, `centerOnResults`
 
-Seules les clés présentes dans `patch` sont modifiées. Un changement de `geometryType` / `outputFormat` / `precision` réécrit l’élément source.
+Only keys present in `patch` are changed. Changing `geometryType` / `outputFormat` / `precision` rewrites the source element.
 
-`editor.resetOptions()` (ou `handle.resetOptions()`, ou le bouton **Réinitialiser** du panneau) restaure l’ensemble des options telles qu’au montage de l’éditeur.
+`editor.resetOptions()` (or `handle.resetOptions()`, or **Reset** in panel) restores all options as at editor mount.
 
-## Comportement
+## Behaviour
 
-- Si l’élément contient du GeoJSON (geometry / Feature / FeatureCollection), du **KML**, une **bbox** `[minX,minY,maxX,maxY]`, ou un **cercle / disque / multi** `{ type: "Circle"|"Disc"|"MultiCircle"|"MultiDisc", … }` → géométries dessinées sur la carte.
-- **KML entrant** (champ formulaire ou import croquis) : détection stricte (`looksLikeKmlDocument`), rejet des balises / attributs actifs (`safeKmlParse.ts`), validation XML puis lecture **sans `DOMParser`** (fast-xml-parser → géométries OpenLayers ; pas d’interprétation HTML).
-- Écoute `input` / `change` sur l’élément → met à jour la carte (écoute native **et** pont jQuery : `$el.trigger('change')` est pris en charge).
-- Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
-- Événement carte `change:geometry` avec `{ geometry: string }` (compat).
-- **Aucun outil actif** : navigation seule (pas de modification au clic).
-- **Modification** : activer l’outil crayon (icône edit) affiche une **barre d’outils séparée**, juxtaposée au bouton « Modifier » (vers l’intérieur carte), avec **modification de forme** (défaut lorsqu’il est proposé), **déplacement**, **rotation**, **style** (palette, si éditeur de style activé). Les sous-outils visibles dépendent du **`geometryType`** :
-  - **Point** / **MultiPoint** : **déplacement** uniquement ;
-  - **Rectangle** : forme + déplacement (+ style si activé), **sans rotation** ;
-  - **Disc** / **MultiDisc** : forme + déplacement (+ style si activé), **sans rotation** ;
-  - autres types : sous-ensemble complet (rotation pour lignes, polygones, texte, etc.).
-    Recliquer sur un sous-outil déjà actif le **désactive** (aucune action carte tant qu’un sous-outil n’est pas sélectionné). Recliquer sur « Modifier » referme le mode et masque cette barre. L’activation de « Modifier » **ferme** la popup d’attributs si elle était ouverte. La molette sur la sous-barre **fait défiler** d’abord la sous-barre si elle déborde, sinon la barre d’outils principale ; hauteur max. de la sous-barre = zone visible scrollée de la barre principale.
-  - **Déplacement** : glisser l’intérieur d’un polygone / rectangle / disque, une ligne (zone « corps »), un cercle rempli, un point ou le label texte — sans éditer les sommets ni le rayon.
-  - **Modification de forme** : sommets OpenLayers (ligne, polygone, point), redimensionnement d’un **rectangle** aux poignées, rayon d’un cercle / disque sur le contour.
-  - **Rotation** : clic + drag sur la feature (ligne, polygone, texte) ; curseur rotation au survol.
-  - **Style** : clic sur la feature → popup attributs (couleur, épaisseur, etc.) **ancrée au point de clic**.
-  - **Rectangle (bbox)** : pas de rotation ; poignées de redimensionnement en **modification de forme** uniquement.
-- **Suppression** : activer l’outil poubelle puis cliquer une géométrie. Pour un **cercle** legacy (`ecKind` contour), cliquer uniquement sur le **contour** (un clic dans l’intérieur ne supprime pas). Un **disque** se supprime aussi en cliquant dans l’aire.
-- Les `Multi*` sont **éclatés** en géométries simples à l’édition, et **recombinés** en Multi* à l’écriture.
-- Zoom OL placé en haut à droite pour laisser la colonne d’outils à gauche ; boutons **48×48** avec pictos +/− (masques geopf `DSFRzoomStyle`), même look que le zoom de la carte principale.
+- If element contains GeoJSON (geometry / Feature / FeatureCollection), **KML**, **bbox** `[minX,minY,maxX,maxY]`, or **circle / disc / multi** `{ type: "Circle"|"Disc"|"MultiCircle"|"MultiDisc", … }` → geometries drawn on map.
+- **Incoming KML** (form field or sketch import): strict detection (`looksLikeKmlDocument`), reject active tags / attributes (`safeKmlParse.ts`), XML validation then read **without `DOMParser`** (fast-xml-parser → OpenLayers geometries; no HTML interpretation).
+- Listen `input` / `change` on element → update map (native listen **and** jQuery bridge: `$el.trigger('change')` supported).
+- Draw / modify / delete → rewrite element (GeoJSON geometry, FeatureCollection if several, bbox if `Rectangle`, Circle/Disc format, or KML).
+- Map event `change:geometry` with `{ geometry: string }` (compat).
+- **No active tool**: navigation only (no modify on click).
+- **Modify**: enable pencil tool (edit icon) shows **separate toolbar**, adjacent to Modify button (toward map interior), with **shape edit** (default when offered), **move**, **rotation**, **style** (palette, if style editor enabled). Visible sub-tools depend on **`geometryType`**:
+  - **Point** / **MultiPoint**: **move** only;
+  - **Rectangle**: shape + move (+ style if enabled), **no rotation**;
+  - **Disc** / **MultiDisc**: shape + move (+ style if enabled), **no rotation**;
+  - other types: full subset (rotation for lines, polygons, text, etc.).
+    Click active sub-tool again **deactivates** it (no map action until sub-tool selected). Click Modify again closes mode and hides sub-bar. Enabling Modify **closes** attributes popup if open. Wheel on sub-bar **scrolls** sub-bar first if overflow, else main toolbar; sub-bar max height = main bar scrolled visible zone.
+  - **Move**: drag interior of polygon / rectangle / disc, line (“body” zone), filled circle, point or text label — without editing vertices or radius.
+  - **Shape edit**: OpenLayers vertices (line, polygon, point), **rectangle** resize at handles, circle / disc radius on contour.
+  - **Rotation**: click + drag on feature (line, polygon, text); rotation cursor on hover.
+  - **Style**: click feature → attributes popup (colour, width, etc.) **anchored at click point**.
+  - **Rectangle (bbox)**: no rotation; resize handles in **shape edit** only.
+- **Delete**: enable trash then click geometry. For legacy **circle** (`ecKind` outline), click **outline** only (interior click does not delete). **Disc** also deletes on area click.
+- `Multi*` **split** into simple geometries for edit, **recombined** to Multi* on write.
+- OL zoom top-right to leave tool column on left; **48×48** buttons with +/- pictos (geopf masks `DSFRzoomStyle`), same look as main map zoom.
 
-## Démo
+## Demo
 
-Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, CSV, `Geometry`), avec **deux cartes côte à côte** (GeoJSON et KML) et un champ HTML associé à chacune.
+Page `/geometry-editor`: one example per `geometryType` (`Point`, `LineString`, `Polygon`, `Multi*`, `Rectangle`, `Disc`, `MultiDisc`, CSV, `Geometry`), with **two side-by-side maps** (GeoJSON and KML) and associated HTML field each.
 
-### Format Disc / MultiDisc (et Circle legacy)
+### Disc / MultiDisc format (and legacy Circle)
 
 ```json
 { "type": "Disc", "center": [2.4, 48.87], "radius": 3500 }
@@ -120,30 +123,30 @@ Page `/geometry-editor` : un exemple par `geometryType` (`Point`, `LineString`, 
 }
 ```
 
-- `center` : longitude / latitude (EPSG:4326)
-- `radius` : mètres dans la projection carte (EPSG:3857)
-- En **KML**, le disque est exporté comme polygone approximant (64 côtés)
-- Les formats `Circle` / `MultiCircle` restent **lus** (compat) ; le dessin n’expose plus que l’outil **Disc** (picto cercle).
+- `center`: longitude / latitude (EPSG:4326)
+- `radius`: metres in map projection (EPSG:3857)
+- **KML** export: disc as approximating polygon (64 sides)
+- `Circle` / `MultiCircle` formats still **read** (compat); draw exposes **Disc** tool only (circle picto).
 
-### `geometryType` multi-valeurs
+### Multi-value `geometryType`
 
 ```js
 mountGeometryEditor('#field', { geometryType: 'Point,Disc' })
 ```
 
-Affiche uniquement les outils listés (+ modifier / supprimer), comme `Geometry` mais de façon explicite. `MultiPoint` / `MultiDisc` / etc. dans la liste exposent l’outil de dessin correspondant (sans remplacer la géométrie précédente).
+Shows only listed tools (+ modify / delete), like `Geometry` but explicit. `MultiPoint` / `MultiDisc` / etc. in list expose corresponding draw tool (without replacing previous geometry).
 
 ## Build
 
 ```sh
 make build-geometry-editor
-# ou
+# or
 npm run build:geometry-editor
 ```
 
-## Intégration gpu-site
+## gpu-site integration
 
-Les pages qui utilisaient `ol-geometry-editor` appellent directement l’API globale (pas de pont jQuery).
+Pages that used `ol-geometry-editor` call the global API directly (no jQuery bridge).
 
 ```html
 <link rel="stylesheet" href="…/vendor/entree-carto/css/entree-carto-geometry-editor.min.css" />
@@ -162,25 +165,25 @@ Les pages qui utilisaient `ol-geometry-editor` appellent directement l’API glo
 </script>
 ```
 
-Helpers du même OpenLayers que la carte (pour overlays type `ShowGridOnMinimap`) :
+Same OpenLayers helpers as map (for overlays like `ShowGridOnMinimap`):
 
 - `EntreeCartoGeometryEditor.featureFromWkt(wkt)`
 - `EntreeCartoGeometryEditor.bboxStringFromWkt(wkt)`
 - `EntreeCartoGeometryEditor.createSimpleStyle({ fill, stroke, strokeWidth })`
 
-Pages : métadonnées (`/metadata/`), fiche document, territoire, admin grille.
+Pages: metadata (`/metadata/`), document sheet, territory, admin grid.
 
-## Limites actuelles
+## Current limits
 
-- Pas encore de `tileLayerSwitcher` / `allowCapture` (prévus si besoin).
-- Outils croquis avancés (texte, import/export, mesures, popup style) : roadmap `_local/TODO_LIST.txt` ; types réservés `FUTURE_GEOMETRY_TOOL_NAMES`.
+- No `tileLayerSwitcher` / `allowCapture` yet (if needed).
+- Advanced sketch tools (text, import/export, measures, style popup): roadmap `_local/TODO_LIST.txt`; reserved types `FUTURE_GEOMETRY_TOOL_NAMES`.
 
-## Carte principale (map-attached)
+## Main map (map-attached)
 
-Le moteur de croquis est **`SketchControl`** (contrôle OL) — voir [SketchControl.md](./SketchControl.md).
+Sketch engine is **`SketchControl`** (OL control) — see [SketchControl.md](./SketchControl.md).
 
-`GeometryEditor` l’instancie en interne (sans localStorage / clearAll / extraTools).  
-Sur une Map existante :
+`GeometryEditor` instantiates it internally (without localStorage / clearAll / extraTools).  
+On existing Map:
 
 ```js
 const tools = EntreeCartoGeometryEditor.attachGeometryTools(map, {
@@ -196,6 +199,6 @@ const tools = EntreeCartoGeometryEditor.attachGeometryTools(map, {
 // tools.sketch / tools.serialize() / tools.load(raw) / tools.destroy()
 ```
 
-Équivalent direct : `new EntreeCartoGeometryEditor.SketchControl({…})` puis `map.addControl(…)`.
+Direct equivalent: `new EntreeCartoGeometryEditor.SketchControl({…})` then `map.addControl(…)`.
 
-`GeometryEditor` (formulaire) reste la façade gpu-site ; la carte principale utilise le wrapper Vue `SketchControl.vue`.
+`GeometryEditor` (form) remains gpu-site façade; main map uses Vue wrapper `SketchControl.vue`.

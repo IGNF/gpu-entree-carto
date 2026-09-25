@@ -1,164 +1,167 @@
-# gpu-client ↔ composants IGNF
+[![en](https://img.shields.io/badge/lang-en-red.svg)](GPU_CLIENT_EQUIVALENTS.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](GPU_CLIENT_EQUIVALENTS.fr.md)
 
-Inventaire des fonctionnalités de gpu-client et recherche d’équivalents dans l’écosystème cartes.gouv.fr.
+# gpu-client ↔ IGNF components
 
-## Conclusion importante
+Inventory of gpu-client features and search for equivalents in the cartes.gouv.fr ecosystem.
 
-**[cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) ne contient aucun contrôle cartographique.**  
-Ce sont des composants de **chrome UI** (header, footer, modales, éditeur SQL) basés sur VueDSFR.
+## Important conclusion
 
-Les équivalents carte se trouvent ailleurs :
+**[cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) contains no map controls.**  
+These are **UI chrome** components (header, footer, modals, SQL editor) based on VueDSFR.
 
-| Dépôt                                                                                  | Rôle                                                                  |
+Map equivalents live elsewhere:
+
+| Repository                                                                             | Role                                                                  |
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)     | **Widgets OpenLayers** Géoplateforme (source de vérité des contrôles) |
-| [cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto)     | **Wrappers Vue** autour de geopf (`src/components/carte/control/*`)   |
-| [cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Chrome site uniquement (`CgfrHeader`, `CgfrFooter`, modales…)         |
+| [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)     | Géoplateforme **OpenLayers widgets** (source of truth for controls)   |
+| [cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto)     | **Vue wrappers** around geopf (`src/components/carte/control/*`)        |
+| [cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Site chrome only (`CgfrHeader`, `CgfrFooter`, modals…)                |
 
 ---
 
-## Légende de la colonne « Équivalent »
+## “Equivalent” column legend
 
-| Symbole     | Signification                                |
+| Symbol      | Meaning                                      |
 | ----------- | -------------------------------------------- |
-| **Oui**     | Équivalent direct utilisable                 |
-| **Partiel** | Proche, mais API / UX / métier GPU différent |
-| **Non**     | À réécrire (métier GPU)                      |
-| **Chrome**  | Uniquement dans vue-components (hors carte)  |
+| **Yes**     | Direct usable equivalent                     |
+| **Partial** | Close, but API / UX / GPU business differs   |
+| **No**      | Rewrite required (GPU business)              |
+| **Chrome**  | vue-components only (not map)                |
 
 ---
 
-## Matrice par fonctionnalité
+## Feature matrix
 
-### Coque carte / contrôles de base
+### Map shell / basic controls
 
-| gpu-client                  | Rôle                        | vue-components | geopf-extensions               | cartes.gouv entree-carto (Vue) |
+| gpu-client                  | Role                        | vue-components | geopf-extensions               | cartes.gouv entree-carto (Vue) |
 | --------------------------- | --------------------------- | -------------- | ------------------------------ | ------------------------------ |
-| `Viewer`                    | Shell `ol.Map` (`#gpu-map`) | Non            | Map OL + couches GeoPF         | `Map.vue` / `Carto.vue`        |
-| `ol.control.Zoom`           | Zoom +/-                    | Non            | `GeoportalZoom` **Oui**        | `Zoom.vue` **Oui**             |
-| `ol.control.ScaleLine`      | Barre d’échelle             | Non            | — (OL natif)                   | `ScaleLine.vue` **Oui**        |
-| `ol.control.Attribution`    | Crédits                     | Non            | `GeoportalAttribution` **Oui** | `Attributions.vue` **Oui**     |
-| Rotate nord                 | Remettre le nord            | Non            | —                              | — **Non**                      |
-| `FullScreenSwitcherControl` | Plein écran                 | Non            | `GeoportalFullScreen` **Oui**  | `FullScreen.vue` **Oui**       |
-| `BarControl`                | Barre d’outils groupée      | Non            | `ControlList` **Partiel**      | `ControlList.vue` **Partiel**  |
+| `Viewer`                    | Shell `ol.Map` (`#gpu-map`) | No             | OL Map + GeoPF layers          | `Map.vue` / `Carto.vue`        |
+| `ol.control.Zoom`           | Zoom +/-                    | No             | `GeoportalZoom` **Yes**        | `Zoom.vue` **Yes**             |
+| `ol.control.ScaleLine`      | Scale bar                   | No             | — (native OL)                  | `ScaleLine.vue` **Yes**        |
+| `ol.control.Attribution`    | Credits                     | No             | `GeoportalAttribution` **Yes** | `Attributions.vue` **Yes**     |
+| North reset                 | Reset north                 | No             | —                              | — **No**                       |
+| `FullScreenSwitcherControl` | Full screen                 | No             | `GeoportalFullScreen` **Yes**  | `FullScreen.vue` **Yes**       |
+| `BarControl`                | Grouped toolbar             | No             | `ControlList` **Partial**      | `ControlList.vue` **Partial**  |
 
-### Fonds de plan / couches
+### Base maps / layers
 
-| gpu-client                        | Rôle                             | vue-components | geopf-extensions                        | cartes.gouv entree-carto                                               |
+| gpu-client                        | Role                             | vue-components | geopf-extensions                        | cartes.gouv entree-carto                                               |
 | --------------------------------- | -------------------------------- | -------------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| `TileLayerSwitcherControl`        | 6 fonds (Plan, Ortho, Cadastre…) | Non            | `LayerSwitcher` **Partiel**             | [TileLayerSwitcher](./TileLayerSwitcher.md) **Partiel** (3 fonds démo) |
-| `TreeLayerSwitcherControl`        | Arbre couches métier GPU         | Non            | `LayerSwitcher` + `Catalog` **Partiel** | [TreeLayerSwitcher](./TreeLayerSwitcher.md) **Partiel** (stubs)        |
-| Couches cadastre / régions / dép. | Couches admin                    | Non            | `LayerWMTS/WMS` **Partiel**             | couches Vue **Partiel**                                                |
-| `createGeoportalLayer` / WMTS     | Helpers fonds IGN                | Non            | Sources GeoPF **Oui**                   | via geopf **Oui**                                                      |
+| `TileLayerSwitcherControl`        | 6 bases (Plan, Ortho, Cadastre…) | No             | `LayerSwitcher` **Partial**             | [TileLayerSwitcher](./TileLayerSwitcher.md) **Partial** (3 demo bases) |
+| `TreeLayerSwitcherControl`        | GPU business layer tree          | No             | `LayerSwitcher` + `Catalog` **Partial** | [TreeLayerSwitcher](./TreeLayerSwitcher.md) **Partial** (stubs)        |
+| Cadastre / region / dept layers   | Admin layers                     | No             | `LayerWMTS/WMS` **Partial**             | Vue layers **Partial**                                                 |
+| `createGeoportalLayer` / WMTS     | IGN base helpers                 | No             | GeoPF sources **Yes**                   | via geopf **Yes**                                                      |
 
-### Légende
+### Legend
 
-| gpu-client                    | Rôle                  | vue-components | geopf-extensions  | cartes.gouv entree-carto |
+| gpu-client                    | Role                  | vue-components | geopf-extensions  | cartes.gouv entree-carto |
 | ----------------------------- | --------------------- | -------------- | ----------------- | ------------------------ |
-| `LegendItem` / `LegendImages` | Légendes dans l’arbre | Non            | `Legends` **Oui** | `Legends.vue` **Oui**    |
-| `ParcelLegend`                | Légende vue parcelle  | Non            | — **Non**         | — **Non**                |
+| `LegendItem` / `LegendImages` | Legends in tree       | No             | `Legends` **Yes** | `Legends.vue` **Yes**    |
+| `ParcelLegend`                | Parcel view legend    | No             | — **No**          | — **No**                 |
 
-### Localisation / géocodage
+### Location / geocoding
 
-| gpu-client                    | Rôle                       | vue-components | geopf-extensions                   | cartes.gouv entree-carto                       |
+| gpu-client                    | Role                       | vue-components | geopf-extensions                   | cartes.gouv entree-carto                       |
 | ----------------------------- | -------------------------- | -------------- | ---------------------------------- | ---------------------------------------------- |
-| `LocateControl`               | Lieu / adresse / parcelle  | Non            | `SearchEngine` **Oui**             | `SearchEngineControl` (geopf Advanced) **Oui** |
-| `services.Geocode`            | Autocomplete Gp + cadastre | Non            | SearchEngine / géocode IGN **Oui** | via geopf **Oui**                              |
-| `DistrictService`             | Arrondissements INSEE      | Non            | — **Non**                          | — **Non**                                      |
-| `ReverseGeocode` (absent gpu) | Adresse au clic            | Non            | `ReverseGeocode` **Oui**           | `ReverseGeocode.vue` **Oui**                   |
+| `LocateControl`               | Place / address / parcel   | No             | `SearchEngine` **Yes**             | `SearchEngineControl` (geopf Advanced) **Yes** |
+| `services.Geocode`            | Gp autocomplete + cadastre | No             | SearchEngine / IGN geocode **Yes** | via geopf **Yes**                              |
+| `DistrictService`             | INSEE districts            | No             | — **No**                           | — **No**                                       |
+| `ReverseGeocode` (absent gpu) | Address on click           | No             | `ReverseGeocode` **Yes**           | `ReverseGeocode.vue` **Yes**                   |
 
-### Fiche info / clic carte
+### Info sheet / map click
 
-| gpu-client                          | Rôle                    | vue-components | geopf-extensions             | cartes.gouv entree-carto                                          |
+| gpu-client                          | Role                    | vue-components | geopf-extensions             | cartes.gouv entree-carto                                          |
 | ----------------------------------- | ----------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------- |
-| `ClickInfoControl`                  | Mode clic → fiche       | Non            | `GetFeatureInfo` **Partiel** | `GetFeatureInfo.vue` **Partiel**                                  |
-| `FicheInfo*` (DU/SUP/SCOT/parcelle) | Fiche métier GPU        | Non            | — **Non**                    | — **Non** (métier GPU)                                            |
-| `GpuApiClient`                      | API Symfony GPU         | Non            | — **Non**                    | — **Non**                                                         |
-| `MarkerControl`                     | Marqueur + coords       | Non            | markers util **Partiel**     | **Partiel**                                                       |
-| `TabsPanelsControl`                 | Onglets fiche / couches | Non            | — **Non**                    | [TabPanelsControl](./TabPanelsControl.md) **Partiel** (4 onglets) |
-| `FeaturePopupControl`               | Style feature croquis   | Non            | Drawing styles **Partiel**   | `Drawing.vue` **Partiel**                                         |
+| `ClickInfoControl`                  | Click mode → sheet      | No             | `GetFeatureInfo` **Partial** | `GetFeatureInfo.vue` **Partial**                                  |
+| `FicheInfo*` (DU/SUP/SCOT/parcel)   | GPU business sheet      | No             | — **No**                     | — **No** (GPU business)                                           |
+| `GpuApiClient`                      | GPU Symfony API         | No             | — **No**                     | — **No**                                                          |
+| `MarkerControl`                     | Marker + coords         | No             | markers util **Partial**     | **Partial**                                                       |
+| `TabsPanelsControl`                 | Sheet / layer tabs      | No             | — **No**                     | [TabPanelsControl](./TabPanelsControl.md) **Partial** (4 tabs)      |
+| `FeaturePopupControl`               | Sketch feature style    | No             | Drawing styles **Partial**   | `Drawing.vue` **Partial**                                         |
 
-### Parcelle
+### Parcel
 
-| gpu-client        | Rôle                  | vue-components | geopf-extensions | cartes.gouv entree-carto        |
+| gpu-client        | Role                  | vue-components | geopf-extensions | cartes.gouv entree-carto        |
 | ----------------- | --------------------- | -------------- | ---------------- | ------------------------------- |
-| `ParcelViewer`    | Page fiche parcelle   | Non            | — **Non**        | — **Non**                       |
-| `ParcelMap`       | Carte dédiée parcelle | Non            | — **Non**        | — **Non**                       |
-| `SetScaleControl` | Choix d’échelle       | Non            | — **Non**        | ScaleLine seulement **Partiel** |
+| `ParcelViewer`    | Parcel sheet page     | No             | — **No**         | — **No**                        |
+| `ParcelMap`       | Dedicated parcel map  | No             | — **No**         | — **No**                        |
+| `SetScaleControl` | Scale choice          | No             | — **No**         | ScaleLine only **Partial**      |
 
-### Mesure / dessin / impression
+### Measure / draw / print
 
-| gpu-client                          | Rôle                   | vue-components | geopf-extensions                          | cartes.gouv entree-carto             |
+| gpu-client                          | Role                   | vue-components | geopf-extensions                          | cartes.gouv entree-carto             |
 | ----------------------------------- | ---------------------- | -------------- | ----------------------------------------- | ------------------------------------ |
-| `MeasureControl`                    | Distance / surface     | Non            | `MeasureLength/Area` **Oui**              | `Measure*.vue` **Oui**               |
-| `DrawBarControl` + draw/edit/select | Croquis                | Non            | `Drawing` **Oui**                         | `Drawing.vue` **Oui**                |
-| `Import/ExportGeoJsonControl`       | Import/export croquis  | Non            | `LayerImport`, `ButtonExport` **Partiel** | `LayerImport.vue` **Partiel**        |
-| `PrintControl`                      | Capture html2canvas    | Non            | — **Non**                                 | `PrintModal.vue` (jspdf) **Partiel** |
-| `LinkControl`                       | Lien légende print     | Non            | — **Non**                                 | — **Non**                            |
-| `ToolsBarControl`                   | Barre outils verticale | Non            | `ControlList` **Partiel**                 | **Partiel**                          |
+| `MeasureControl`                    | Distance / area        | No             | `MeasureLength/Area` **Yes**              | `Measure*.vue` **Yes**               |
+| `DrawBarControl` + draw/edit/select | Sketch                 | No             | `Drawing` **Yes**                         | `Drawing.vue` **Yes**                |
+| `Import/ExportGeoJsonControl`       | Sketch import/export   | No             | `LayerImport`, `ButtonExport` **Partial** | `LayerImport.vue` **Partial**        |
+| `PrintControl`                      | html2canvas capture    | No             | — **No**                                  | `PrintModal.vue` (jspdf) **Partial** |
+| `LinkControl`                       | Print legend link      | No             | — **No**                                  | — **No**                             |
+| `ToolsBarControl`                   | Vertical tools bar     | No             | `ControlList` **Partial**                 | **Partial**                          |
 
-### Permalink / partage / aide / layout
+### Permalink / share / help / layout
 
-| gpu-client         | Rôle          | vue-components | geopf-extensions               | cartes.gouv entree-carto           |
+| gpu-client         | Role          | vue-components | geopf-extensions               | cartes.gouv entree-carto           |
 | ------------------ | ------------- | -------------- | ------------------------------ | ---------------------------------- |
-| `PermalinkControl` | Hash URL GPU  | Non            | — **Non**                      | `Share` / `ShareModal` **Partiel** |
-| `MiniMapControl`   | Mini-carte    | Non            | `GeoportalOverviewMap` **Oui** | `OverviewMap.vue` **Oui**          |
-| `HelpLayerControl` | Bulles d’aide | Non            | — **Non**                      | — **Non**                          |
+| `PermalinkControl` | GPU URL hash  | No             | — **No**                       | `Share` / `ShareModal` **Partial** |
+| `MiniMapControl`   | Overview map  | No             | `GeoportalOverviewMap` **Yes** | `OverviewMap.vue` **Yes**          |
+| `HelpLayerControl` | Help bubbles  | No             | — **No**                       | — **No**                           |
 
-### Chrome site (hors carte)
+### Site chrome (not map)
 
-| Besoin                      | vue-components                                             |
+| Need                        | vue-components                                             |
 | --------------------------- | ---------------------------------------------------------- |
-| En-tête / pied de page DSFR | `CgfrHeader`, `CgfrFooter` **Chrome**                      |
-| Modales thème / cookies     | `CgfrModal*` **Chrome**                                    |
-| Autres                      | `CgfrSqlEditor`, `CgfrFollow`, `CgfrSelectList` **Chrome** |
+| DSFR header / footer        | `CgfrHeader`, `CgfrFooter` **Chrome**                      |
+| Theme / cookie modals       | `CgfrModal*` **Chrome**                                    |
+| Other                       | `CgfrSqlEditor`, `CgfrFollow`, `CgfrSelectList` **Chrome** |
 
 ---
 
-## Synthèse pour entree-carto
+## Summary for entree-carto
 
-### Réutilisables (priorité geopf + wrappers Vue IGNF)
+### Reusable (priority geopf + IGNF Vue wrappers)
 
-- Zoom, plein écran, attributions, overview
-- Légendes génériques
-- Search / géocode Géoplateforme
-- Drawing, mesures
-- LayerSwitcher / Catalog (à adapter au modèle couches GPU)
+- Zoom, full screen, attributions, overview
+- Generic legends
+- Search / Géoplateforme geocode
+- Drawing, measures
+- LayerSwitcher / Catalog (adapt to GPU layer model)
 
-### À conserver / réécrire (métier GPU, pas dans IGNF)
+### Keep / rewrite (GPU business, not in IGNF)
 
-- Fiche info DU / SUP / SCOT / parcelle (`FicheInfo*`, `GpuApiClient`)
-- `ParcelViewer` / légende parcelle
-- Arbre de couches + légendes scale-dépendantes GPU
-- Permalien URL spécifique gpu-site
-- Aide cartographique, print métier, `DistrictService`
-- Switcher de fonds « 6 tuiles » GPU (proche mais pas 1:1)
+- DU / SUP / SCOT / parcel info sheets (`FicheInfo*`, `GpuApiClient`)
+- `ParcelViewer` / parcel legend
+- Layer tree + scale-dependent GPU legends
+- gpu-site specific URL permalink
+- Map help, business print, `DistrictService`
+- GPU “6 tile” base switcher (close but not 1:1)
 
 ### vue-components
 
-Utile uniquement si on aligne le **chrome** (header/footer) — **pas** pour la carte.
+Useful only to align **chrome** (header/footer) — **not** for the map.
 
 ---
 
-## Inventaire condensé gpu-client (exporté)
+## Condensed gpu-client inventory (exported)
 
 | Export                                                                                       | Type                         |
 | -------------------------------------------------------------------------------------------- | ---------------------------- |
-| `gpu.createStandardViewer`                                                                   | Assemblage carte complète    |
-| `gpu.Viewer`                                                                                 | Shell OL                     |
-| `gpu.ParcelViewer`                                                                           | Vue parcelle                 |
-| `gpu.config`                                                                                 | Config hôte                  |
-| `gpu.control.*`                                                                              | ~24 contrôles (voir matrice) |
+| `gpu.createStandardViewer`                                                                   | Full map assembly            |
+| `gpu.Viewer`                                                                                 | OL shell                     |
+| `gpu.ParcelViewer`                                                                           | Parcel view                  |
+| `gpu.config`                                                                                 | Host config                  |
+| `gpu.control.*`                                                                              | ~24 controls (see matrix)    |
 | `gpu.services.Geocode`, `FeaturesShower`, `HighlightFeature`, `DrawStyle`, `DistrictService` | Services                     |
 | `gpu.helper.createWMTSSource`, `createGeoportalLayer`, `stringHelper`                        | Helpers                      |
 
-Référence code : `/home/AHorde/SITES/gpu-client/src/gpu/`.
+Code reference: `/home/AHorde/SITES/gpu-client/src/gpu/`.
 
 ---
 
-## Suite recommandée
+## Recommended next steps
 
-1. Brancher **geopf-extensions-openlayers** pour les contrôles génériques (zoom, measure, draw, search…).
-2. S’inspirer des wrappers Vue de **cartes.gouv.fr-entree-carto** pour le pattern `MapShell` + contrôles.
-3. Porter le **métier GPU** (fiche, parcelle, arbre couches) depuis gpu-client — pas d’équivalent IGNF.
-4. Ne pas attendre de composants carte de **vue-components**.
+1. Wire **geopf-extensions-openlayers** for generic controls (zoom, measure, draw, search…).
+2. Follow Vue wrappers from **cartes.gouv.fr-entree-carto** for `MapShell` + controls pattern.
+3. Port **GPU business** (sheet, parcel, layer tree) from gpu-client — no IGNF equivalent.
+4. Do not expect map components from **vue-components**.

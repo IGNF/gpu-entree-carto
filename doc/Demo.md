@@ -1,64 +1,67 @@
-# Démonstration (Vite)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](Demo.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](Demo.fr.md)
 
-Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours accueil → carte.
+# Demo (Vite)
+
+Local demo pages (`npm run dev`) to validate controls and the home → map journey.
 
 ## Configuration (`demo-config.js`)
 
-Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) pour URL `gpu-client-config`, document, bbox, surcharges API, couches catalogue, etc. — sans rebuild. Voir [DemoConfig.md](./DemoConfig.md).
+Like gpu-client `exemple-config.js`: edit **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) for `gpu-client-config` URL, document, bbox, API overrides, catalogue layers, etc. — no rebuild. See [DemoConfig.md](./DemoConfig.md).
 
 ## Routes
 
-| Route              | Vue                      | Rôle                                                                                                                                                                                                                |
+| Route              | View                     | Role                                                                                                                                                                                                                |
 | ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | `HomeView.vue`           | Accueil type gpu-site (`GpuHomeBanner` : titre, badge CONSULTER, décor DSFR) ; widget localisation ou `mountSearchEngine` selon `home.searchWidget` → `/map` (handoff SPA). Si `useMinimified: true` : bundles `dist/` au lieu des imports Vite. |
-| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)). Si `useMinimified: true` : `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
-| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone (`EntreeCartoGeometryEditor` si `useMinimified`)                                                                                                                                                               |
-| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` si `useMinimified` (encart options + carte)                                                                                                                    |
+| `/`                | `HomeView.vue`           | gpu-site-style home (`GpuHomeBanner`: title, CONSULTER badge, DSFR decor); location widget or `mountSearchEngine` per `home.searchWidget` → `/map` (SPA handoff). If `useMinimified: true`: `dist/` bundles instead of Vite imports. |
+| `/map`             | `DemoView.vue`           | Full-frame map + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md); centre via in-memory handoff; temporary **Notif test** button ([Notivue](./Notifications.md)). If `useMinimified: true`: `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
+| `/geometry-editor` | `GeometryEditorView.vue` | Standalone [GeometryEditor](./GeometryEditor.md) demo (`EntreeCartoGeometryEditor` if `useMinimified`)                                                                                                                                                               |
+| `/sketch`          | `SketchDemoView.vue`     | [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` demo if `useMinimified` (options panel + map)                                                                                                                    |
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**.
+`DemoHeader.vue` (DSFR): **Home**, **Map**, **Geometries**, **Sketch** links.
 
-## Flux localisation
+## Location flow
 
-1. Recherche validée sur `/` (`LocationSearchWidget` ou `mountSearchEngine` selon `demo-config`)
-2. `prepareLocationHandoff` (objet `StandardViewerSearch` en mémoire) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
-3. `DemoView` lit `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
+1. Validated search on `/` (`LocationSearchWidget` or `mountSearchEngine` per `demo-config`)
+2. `prepareLocationHandoff` (`StandardViewerSearch` object in memory) + `router.push({ name: 'map' })` — **no** query, POST, or `sessionStorage`
+3. `DemoView` reads `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
 
-Sur **gpu-site** (pages distinctes) : `mode: 'redirect'` + formulaire POST (`municipality`, `position_x`, …) puis injection serveur de `params.search`.
+On **gpu-site** (separate pages): `mode: 'redirect'` + POST form (`municipality`, `position_x`, …) then server injection of `params.search`.
 
 ## GitHub Pages
 
-La démo est publiée par le workflow `pages.yml` (branche par défaut) :
+Demo published by workflow `pages.yml` (default branch):
 
-1. `npm run build:demo:pages` (`base` dérivé de `GITHUB_REPOSITORY`, `configScriptUrl` → prod GPU)
-2. Artefact `public/` (+ `404.html` = `index.html` pour le routage SPA)
+1. `npm run build:demo:pages` (`base` from `GITHUB_REPOSITORY`, `configScriptUrl` → prod GPU)
+2. Artifact `public/` (+ `404.html` = `index.html` for SPA routing)
 
-Après le workflow vert : **Settings → Pages** (source _GitHub Actions_), URL typiquement du type
-`https://ignf.github.io/entree-carto/`. Les GeoJSON limites admin sont servis sous
-`{BASE_URL}json-data/` (pas à la racine du domaine `ignf.github.io/json-data/…`).
+After green workflow: **Settings → Pages** (source _GitHub Actions_), URL typically
+`https://ignf.github.io/entree-carto/`. Admin boundary GeoJSON served under
+`{BASE_URL}json-data/` (not at domain root `ignf.github.io/json-data/…`).
 
-En local, simuler GitHub Pages (même `base` au **build** et au **preview**) :
+Locally, simulate GitHub Pages (same `base` at **build** and **preview**):
 
 ```bash
 npm run serve:pages
 ```
 
-Puis ouvrir l’URL affichée par Vite (ex. `http://localhost:4173/gpu-entree-carto/`), pas la racine `http://localhost:4173/`.
+Then open the URL shown by Vite (e.g. `http://localhost:4173/gpu-entree-carto/`), not root `http://localhost:4173/`.
 
-Équivalent manuel (adapter `GITHUB_REPOSITORY` au dépôt) :
+Manual equivalent (adapt `GITHUB_REPOSITORY` to repo):
 
 ```bash
 GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run build:demo
 GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run preview
 ```
 
-Si le build Pages a été fait avec `GITHUB_REPOSITORY` mais `npm run preview` sans, les assets renvoient du HTML → erreurs MIME en console.
+If Pages build used `GITHUB_REPOSITORY` but `npm run preview` runs without it, assets return HTML → MIME errors in console.
 
-### Build local (`make build`)
+### Local build (`make build`)
 
-`vite` utilise `base: './'` (chemins relatifs) pour servir la démo via **`npm run preview`**.
+`vite` uses `base: './'` (relative paths) to serve demo via **`npm run preview`**.
 
-**Ne pas** ouvrir `dist/index.html` en `file://` : Firefox et Chrome **bloquent les modules ES** (`type="module"`) en local fichier — erreurs CORS / « URI non autorisée », même avec des chemins `./assets/` corrects. Une page d’aide s’affiche si vous essayez quand même.
+**Do not** open `dist/index.html` as `file://`: Firefox and Chrome **block ES modules** (`type="module"`) on local files — CORS / “disallowed URI” errors even with correct `./assets/` paths. A help page shows if you try anyway.
 
-Après `make build` : **`npm run preview`** puis `http://localhost:4173/`.
+After `make build`: **`npm run preview`** then `http://localhost:4173/`.

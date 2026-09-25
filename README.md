@@ -1,112 +1,120 @@
 # entree-carto
 
-[![CI](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml/badge.svg)](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml)
-[![Démo en ligne](https://img.shields.io/badge/démo-GitHub%20Pages-blue)](https://ignf.github.io/gpu-entree-carto/)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](README.fr.md)
 
+[![CI](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml/badge.svg)](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://ignf.github.io/gpu-entree-carto/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![OpenLayers](https://img.shields.io/badge/OpenLayers-10-1F6B75)](https://openlayers.org/)
 [![DSFR](https://img.shields.io/badge/DSFR-VueDSFR-000091)](https://vue-ds.fr/)
-[![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
-**entree-carto** est la refonte de l’entrée cartographique GPU (gpu-client), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
+**entree-carto** is the GPU (Géoportail de l’urbanisme) cartographic entry point: a Vue 3 + OpenLayers library and demo SPA, aligned with the [French State design system (DSFR)](https://www.systeme-de-design.gouv.fr/) and the new GPU UX/UI mockups. It replaces the legacy **gpu-client** stack for embedding an urban planning map (documents, layers, legend, search, sketch tools) in **gpu-site** and related portals.
 
-Objectif : proposer une carte interactive d’urbanisme (documents, couches, légende, outils…) avec une interface cohérente avec les autres projets de l’écosystème, en Vue 3 + OpenLayers.
+**Live demo:** https://ignf.github.io/gpu-entree-carto/
 
-**➡️ [Voir la démo en ligne](https://ignf.github.io/gpu-entree-carto/)**
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Installation steps](#installation-steps)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Features](#features)
+- [Documentation and support](#documentation-and-support)
+- [Contributing](#contributing)
+- [License](#license)
 
----
+## Installation
 
-## En bref
+### Requirements
 
-Nouvelle entrée cartographique GPU, compatible DSFR, qui remplace **gpu-client** (jQuery / stack historique). Stack : **Vue 3**, **OpenLayers** (≥ 9.2.4), **VueDSFR** / DSFR.
+- **Node.js** 24 LTS (≥ 24.15) or ≥ 26 — see `.nvmrc` and `package.json` → `engines`
+- **npm** (bundled with Node)
+- **Git**
 
-En local : `make dev` puis ouvrir l’URL Vite. En ligne : [ignf.github.io/gpu-entree-carto](https://ignf.github.io/gpu-entree-carto/) (workflow `pages.yml`, branche par défaut) — voir [doc/Demo.md](./doc/Demo.md).
+Optional: [gpu-site](http://127.0.0.1:8000/) locally for `gpu-client-config.js`, legends, and proxy-backed dev (see [doc/DemoConfig.md](doc/DemoConfig.md)).
 
----
+### Installation steps
 
-## Démarrage rapide
-
-```sh
+```bash
+git clone https://github.com/IGNF/gpu-entree-carto.git
+cd gpu-entree-carto
 make install   # npm install
-make dev       # serveur de développement (Vite)
+make dev       # Vite dev server → http://localhost:5173/
 ```
 
-Node **24 LTS** (≥ 24.15, voir `.nvmrc`, aligné CI + `@gouvminint/vue-dsfr`). Les branches impaires (**23**, **25**, …) ne figurent pas dans les `engines` des dépendances : `nvm use` / `fnm use` avant `npm install` pour éviter les avertissements `EBADENGINE`.
+Production-like preview after a full build:
 
-Autres cibles :
-
-| Commande         | Effet                                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| `make build`     | Build démo + bibliothèque (`dist/`)                                                                           |
-| `make build-lib` | Bibliothèque seule (`entree-carto.js`, CSS)                                                                   |
-| `make test`      | Tests Vitest                                                                                                  |
-| `make preview`   | Prévisualiser le build (`npm run preview` — **pas** `file://` sur `dist/index.html`)                          |
-| `make typecheck` | Vérification TypeScript                                                                                       |
-| `make verify`    | ESLint + Prettier + typecheck + **CodeQL** (`npm run codeql:install` une fois ; `SKIP_CODEQL=1` pour ignorer) |
-| `npm run verify` | ESLint + Prettier + typecheck seulement — exécuté au **pre-commit** (Husky)                                   |
-| `make fix`       | ESLint --fix + Prettier --write                                                                               |
-
-CodeQL **GitHub** : setup par défaut org (pas de workflow dédié dans le dépôt). Analyse locale : `make verify` / voir [`.github/codeql/README.md`](.github/codeql/README.md).
-
----
-
-## Stack technique
-
-| Composant        | Choix                                                                                                                                                           |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework UI     | [Vue.js](https://vuejs.org/guide/introduction.html) 3                                                                                                           |
-| Design system    | [DSFR](https://www.systeme-de-design.gouv.fr/version-courante/fr) + [VueDSFR](https://vue-ds.fr/) ([@gouvminint/vue-dsfr](https://github.com/dnum-mi/vue-dsfr)) |
-| Carte            | [OpenLayers](https://github.com/openlayers/openlayers) ≥ 10 (geopf)                                                                                             |
-| Extensions carte | [geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)                                                                              |
-| Build / tests    | Vite, Vitest, TypeScript                                                                                                                                        |
-
----
-
-## Structure
-
-```
-src/
-  components/
-    map/          # MapShell, Zoom, ScaleLine, fonds de plan
-    legend/       # Légende (stub)
-    layers/       # Arbre de couches (stub)
-  composables/    # useOlMap
-  ol/             # Factories de couches
-  views/          # Démonstration
+```bash
+make build
+make preview   # http://localhost:4173/ — do not open dist/index.html via file://
 ```
 
-Composants de base inspirés de `gpu-client` (`Viewer`, contrôles zoom/échelle, switcher de fonds, légende / couches en stub).
+Build and toolchain details: [COMPILE.md](COMPILE.md).
 
-**Intégration gpu-site :** voir [doc/INTEGRATION.md](./doc/INTEGRATION.md) — build bibliothèque `dist/`, API `window.gpu`, limites actuelles.
+## Configuration
 
----
+**Demo SPA (no rebuild):** edit `public/js/demo-config.js` → `window.DEMO_CONFIG` (GPU config script URL, document, bbox, map layers, home search widget, `useMinimified`, …). See [doc/DemoConfig.md](doc/DemoConfig.md).
 
-## Contexte
+**Embedded library:** runtime options via `gpu.createStandardViewer(params)` and `window.gpu.config` (same model as gpu-client). See [doc/INTEGRATION.md](doc/INTEGRATION.md).
 
-Le dépôt historique **gpu-client** affiche une carte interactive pour les sites d’urbanisme (GPU). Cette refonte reprend ses responsabilités fonctionnelles tout en :
+## Usage
 
-- passant l’interface au **DSFR** ;
-- modernisant la stack (**Vue.js**, OpenLayers récent) ;
-- s’alignant sur les pratiques des projets IGN / cartes.gouv.fr.
+### Demo application
 
-Maquette : [Figma — GPU UX/UI](https://www.figma.com/design/ARSe9rthrHEp6UFJOh5rdn/GPU---UX-UI?node-id=310-7048&p=f&t=8oFaUS97xpJPgep7-0)
+| Route | Purpose |
+| ----- | ------- |
+| `/` | Home banner + location / SearchEngine widget |
+| `/map` | Full map + side panel + controls |
+| `/geometry-editor` | Standalone geometry editor bundle demo |
+| `/sketch` | Standalone sketch bundle demo |
 
----
+See [doc/Demo.md](doc/Demo.md).
 
-## Références
+### Library bundles (`dist/`)
 
-| Dépôt                                                                                       | Rôle                                    |
-| ------------------------------------------------------------------------------------------- | --------------------------------------- |
-| [IGNF/cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto)     | Entrée cartographique de cartes.gouv.fr |
-| [IGNF/cartes.gouv.fr-vue-components](https://github.com/IGNF/cartes.gouv.fr-vue-components) | Composants Vue 3 (VueDSFR)              |
-| [IGNF/geopf-extensions-openlayers](https://github.com/IGNF/geopf-extensions-openlayers)     | Extensions Géoplateforme OpenLayers     |
-| gpu-client                                                                                  | Comportement métier à reprendre         |
+After `make build`, publish or copy artifacts described in [doc/INTEGRATION.md](doc/INTEGRATION.md):
 
----
+- `entree-carto[.min].js` — `window.gpu` (`createStandardViewer`, `mountSearchEngine`, …)
+- `entree-carto-search-engine[.min].js`, `entree-carto-location-search[.min].js`
+- `entree-carto-geometry-editor[.min].js`, `entree-carto-sketch[.min].js`
+- Matching CSS under `dist/css/`
 
-## Licence
+## Features
 
-À définir (alignement attendu avec les projets GPU / IGN associés).
+- DSFR / VueDSFR UI, GPU UX alignment
+- OpenLayers map with geopf extensions (SearchEngine, territories, overview, sketch, …)
+- Side panel (catalog, legend, info, base layers)
+- IIFE bundles for gpu-site integration (`window.gpu`)
+- Standalone geometry editor and sketch entry points
+- Vitest unit tests, ESLint, Prettier, optional CodeQL locally
+
+Planned work: [ROADMAP.md](ROADMAP.md). Release history: [CHANGELOG.md](CHANGELOG.md).
+
+## Documentation and support
+
+| Topic | Location |
+| ----- | -------- |
+| Integration in gpu-site | [doc/INTEGRATION.md](doc/INTEGRATION.md) |
+| Map controls & components | [doc/README.md](doc/README.md) · [doc/README.fr.md](doc/README.fr.md) |
+| Demo & GitHub Pages | [doc/Demo.md](doc/Demo.md) |
+| Build & dependencies | [COMPILE.md](COMPILE.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
+| Developer conventions | [CODING.md](CODING.md) |
+| Changelog & roadmap | [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md) |
+
+French translations of root governance files: `*.fr.md` (e.g. [README.fr.md](README.fr.md), [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md)). Keep EN/FR pairs in sync ([MARS](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-readme/)).
+
+- **Issues:** https://github.com/IGNF/gpu-entree-carto/issues
+- **IGN open source framework:** [MARS governance](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/)
+
+## Contributing
+
+Contributions (code, documentation, bug reports) are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODING.md](CODING.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## License
+
+**entree-carto** is released under the [CeCILL-B licence](LICENCE.md).
+
+Third-party licences: [LICENCE.md](LICENCE.md), [DEPENDENCIES.md](DEPENDENCIES.md).
+
+Contributors: [CONTRIBUTORS.md](CONTRIBUTORS.md).

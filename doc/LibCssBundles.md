@@ -1,64 +1,67 @@
-# CSS des bundles bibliothèque (`dist/css/`)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](LibCssBundles.md)
+[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](LibCssBundles.fr.md)
 
-Les builds **lib** (intégration gpu-site) produisent un fichier CSS par bundle JS, sur le même modèle que les scripts.
+# Library bundle CSS (`dist/css/`)
 
-## Fichiers
+**Lib** builds (gpu-site integration) produce one CSS file per JS bundle, same pattern as scripts.
 
-| CSS | JS associé | Usage gpu-site |
+## Files
+
+| CSS | Associated JS | gpu-site usage |
 | --- | --- | --- |
-| `entree-carto.css` / `.min.css` | `entree-carto.js` | Cartographie `/map/`, embed `createStandardViewer` |
-| `entree-carto-location-search.css` / `.min.css` | `entree-carto-location-search.js` | Accueil **léger** — `gpu.mountLocationSearch` ([LocationSearchWidget](./LocationSearchWidget.md)) |
-| `entree-carto-search-engine.css` / `.min.css` | `entree-carto-search-engine.js` | Accueil **SearchEngine geopf** — `gpu.mountSearchEngine` ([mountSearchEngine](./mountSearchEngine.md)) |
-| `entree-carto-geometry-editor.css` / `.min.css` | `entree-carto-geometry-editor.js` | Formulaires géométrie |
-| `entree-carto-sketch.css` / `.min.css` | `entree-carto-sketch.js` | Croquis standalone |
+| `entree-carto.css` / `.min.css` | `entree-carto.js` | Mapping `/map/`, embed `createStandardViewer` |
+| `entree-carto-location-search.css` / `.min.css` | `entree-carto-location-search.js` | **Light** home — `gpu.mountLocationSearch` ([LocationSearchWidget](./LocationSearchWidget.md)) |
+| `entree-carto-search-engine.css` / `.min.css` | `entree-carto-search-engine.js` | Home **geopf SearchEngine** — `gpu.mountSearchEngine` ([mountSearchEngine](./mountSearchEngine.md)) |
+| `entree-carto-geometry-editor.css` / `.min.css` | `entree-carto-geometry-editor.js` | Geometry forms |
+| `entree-carto-sketch.css` / `.min.css` | `entree-carto-sketch.js` | Standalone sketch |
 
-Build : `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (voir [INTEGRATION.md](./INTEGRATION.md)).
+Build: `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (see [INTEGRATION.md](./INTEGRATION.md)).
 
-## Accueil — CSS minimal
+## Home — minimal CSS
 
-**Autocomplete seul** (pas de SearchEngine geopf) :
+**Autocomplete only** (no geopf SearchEngine):
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-location-search.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-location-search.min.js') }}"></script>
 ```
 
-Le site doit déjà charger le **DSFR** (`dsfr.min.css`) : le widget réutilise `fr-search-bar`, `fr-input`, `fr-label`.
+Site must already load **DSFR** (`dsfr.min.css`): widget reuses `fr-search-bar`, `fr-input`, `fr-label`.
 
-**SearchEngine complet** (bandeau accueil = même UX que la carte) :
+**Full SearchEngine** (home banner = same UX as map):
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-search-engine.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-search-engine.min.js') }}"></script>
 ```
 
-Ou conserver `entree-carto.min.js` (API globale) + **uniquement** `entree-carto-search-engine.min.css` (styles retirés du chemin `mountSearchEngine` dans le bundle principal).
+Or keep `entree-carto.min.js` (global API) + **only** `entree-carto-search-engine.min.css` (styles removed from `mountSearchEngine` path in main bundle).
 
-## Carte
+## Map
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto.min.js') }}"></script>
 ```
 
-Polices **Remix Icon** : référencées en `url(../assets/remixicon-*.woff2)` depuis `css/` — copier tout `dist/` (dossiers `css/` et `assets/`) dans `vendor/entree-carto/`.
+**Remix Icon** fonts: referenced as `url(../assets/remixicon-*.woff2)` from `css/` — copy full `dist/` (`css/` and `assets/` folders) to `vendor/entree-carto/`.
 
-## Erreurs SVGO (webpack gpu-site)
+## SVGO errors (gpu-site webpack)
 
-Symptôme lors de `npm run build` gpu-site :
+Symptom on gpu-site `npm run build`:
 
 ```text
 postcss-svgo: … Parsed entity count exceeds max entity count
 … unicode='&#xEC03;' … remixicon …
 ```
 
-**Cause :** les anciennes builds entree-carto intégraient la **police SVG** Remix en data-URI dans le CSS (des milliers de glyphes). Le **CssMinimizerPlugin** de webpack relançait SVGO sur ce CSS **déjà minifié** par Vite.
+**Cause:** older entree-carto builds embedded Remix **SVG font** as data-URI in CSS (thousands of glyphs). webpack **CssMinimizerPlugin** re-ran SVGO on CSS **already minified** by Vite.
 
-**Côté entree-carto (corrigé) :** plugin `vite/remixiconExternal.ts` — pas de police SVG inline, woff2 externe sous `dist/assets/`.
+**entree-carto side (fixed):** plugin `vite/remixiconExternal.ts` — no inline SVG font, external woff2 under `dist/assets/`.
 
-**Côté gpu-site (recommandé) :**
+**gpu-site side (recommended):**
 
-1. Utiliser les fichiers **`*.min.css`** livrés dans `vendor/entree-carto/css/` **sans** les repasser dans `CssMinimizerPlugin`, par ex. :
+1. Use delivered **`*.min.css`** in `vendor/entree-carto/css/` **without** passing them through `CssMinimizerPlugin`, e.g.:
 
 ```js
 new CssMinimizerPlugin({
@@ -66,7 +69,7 @@ new CssMinimizerPlugin({
 })
 ```
 
-2. Ou désactiver SVGO pour ces fichiers :
+2. Or disable SVGO for those files:
 
 ```js
 new CssMinimizerPlugin({
@@ -77,10 +80,10 @@ new CssMinimizerPlugin({
 })
 ```
 
-3. Mettre à jour le vendeur entree-carto après `make build` dans le dépôt (CSS ≈ 3 Mo carte, ≈ 1,6 Mo geometry-editor/sketch, ≈ 1 Ko location-search).
+3. Update entree-carto vendor after `make build` in repo (CSS ≈ 3 MB map, ≈ 1.6 MB geometry-editor/sketch, ≈ 1 KB location-search).
 
-## Dépendances
+## Dependencies
 
-- [INTEGRATION.md](./INTEGRATION.md) — copie webpack, ordre des scripts
+- [INTEGRATION.md](./INTEGRATION.md) — webpack copy, script order
 - [LocationSearchWidget.md](./LocationSearchWidget.md)
 - [mountSearchEngine.md](./mountSearchEngine.md)
