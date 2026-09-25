@@ -23,15 +23,21 @@
   overflow: visible !important;
 }
 
-/* Widget en flux : barre seule ; overlays en fixed (JS) */
+/* Annule le positionnement « coin carte » (map-controls.css) */
 .ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] {
   position: relative !important;
   top: auto !important;
   left: auto !important;
-  max-width: 100%;
-  width: 100%;
+  right: auto !important;
+  bottom: auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
   max-height: none !important;
   overflow: visible !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-sizing: border-box;
 }
 
 .ec-search-engine-standalone
@@ -39,20 +45,115 @@
   > .gpf-widget[id^='GPsearchEngine-'] {
   position: relative !important;
   overflow: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
-.ec-search-engine-standalone .GPSearchBar {
-  width: 100%;
-  position: relative;
+@media (min-width: 36em) {
+  .ec-search-engine-standalone div[id^='GPsearchEngine-Advanced'] {
+    width: 100% !important;
+  }
+}
+
+/* Barre horizontale type gpu-site (input | Avancée | loupe) */
+.ec-search-engine-standalone form.GPSearchBar,
+.ec-search-engine-standalone [id^='GPsearchEngine-'] form[id^='GPsearchInput-Base-'].GPSearchBar {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  background: var(--background-contrast-grey, #eee);
+  box-shadow: inset 0 -2px 0 0 var(--border-active-blue-france, #000091);
+  overflow: visible !important;
 }
 
 /*
- * Panneaux hors flux + hors overflow des bannières (gpu-site).
- * top / left / width / max-height : posés en JS (attachStandalonePopoverSync).
+ * geopf pose fr-input sur le conteneur GPInputGroup : sans reset, le DSFR
+ * affiche un bloc gris au-dessus du vrai input (visuel « cassé »).
  */
-.ec-search-engine-standalone .GPautoCompleteContainer,
-.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer,
-.ec-search-engine-standalone .GPAdvancedContainer {
+.ec-search-engine-standalone form.GPSearchBar > .GPInputGroup,
+.ec-search-engine-standalone form.GPSearchBar > .GPInputGroup.fr-input {
+  display: flex !important;
+  flex-direction: row !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  align-items: stretch !important;
+  order: 1;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar .GPsearchInputText,
+.ec-search-engine-standalone form.GPSearchBar .GPInputGroup > input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: 3rem !important;
+  min-height: 3rem !important;
+  max-height: 3rem !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar .GPMessagesGroup {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar .GPOptionsContainer {
+  display: flex !important;
+  flex-direction: row !important;
+  flex: 0 0 auto !important;
+  align-items: stretch !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar .GPOptionsContainer button {
+  margin: 0 !important;
+  align-self: stretch !important;
+  min-height: 3rem !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar > .GPsearchInputSubmit,
+.ec-search-engine-standalone form.GPSearchBar > button[id^='GPshowSearchEnginePicto-'].fr-btn {
+  order: 2;
+  flex: 0 0 3rem !important;
+  width: 3rem !important;
+  min-width: 3rem !important;
+  height: 3rem !important;
+  min-height: 3rem !important;
+  max-height: 3rem !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.ec-search-engine-standalone form.GPSearchBar > .GPInputGroup,
+.ec-search-engine-standalone form.GPSearchBar > .GPInputGroup > input {
+  box-shadow: none !important;
+}
+
+/*
+ * Autocomplétion : fixed + géométrie en JS (attachStandalonePopoverSync).
+ * Avancée : absolute dans le widget (largeur = barre de recherche).
+ */
+.ec-search-engine-standalone .GPautoCompleteContainer {
   position: fixed !important;
   z-index: 10000;
   margin: 0 !important;
@@ -63,7 +164,21 @@
   box-sizing: border-box;
 }
 
-/* Conteneur visible (geopf retire gpf-hidden au focus / résultats) */
+.ec-search-engine-standalone .gpf-widget[id^='GPsearchEngine-Advanced'] > .GPAdvancedContainer {
+  position: absolute !important;
+  z-index: 10000;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  background: var(--background-default-grey, #fff);
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 18, 0.16);
+  overflow: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
 .ec-search-engine-standalone .GPautoCompleteContainer.gpf-visible,
 .ec-search-engine-standalone .GPautoCompleteContainer.GPelementVisible {
   display: block !important;

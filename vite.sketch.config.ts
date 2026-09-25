@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
+import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
+import { remixiconExternal } from './vite/remixiconExternal'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 
 const minify = process.env.LIB_MINIFY === '1'
@@ -9,6 +11,8 @@ const minify = process.env.LIB_MINIFY === '1'
  * OpenLayers inclus.
  */
 export default defineConfig({
+  plugins: [remixiconExternal()],
+  esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -32,12 +36,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         exports: 'named',
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.css')) {
-            return minify ? 'css/entree-carto-sketch.min.css' : 'css/entree-carto-sketch.css'
-          }
-          return 'assets/[name][extname]'
-        },
+        assetFileNames: libCssAssetFileName('entree-carto-sketch', minify),
       },
     },
   },

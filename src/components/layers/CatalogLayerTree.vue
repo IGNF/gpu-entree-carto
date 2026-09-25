@@ -127,7 +127,7 @@ function rowInZoomRange(node: TreeLayerNode): boolean {
         </button>
         <span v-else class="ec-catalog-tree__fold-placeholder" aria-hidden="true" />
 
-        <div class="fr-checkbox-group ec-catalog-tree__check">
+        <div class="fr-checkbox-group fr-checkbox-group--sm ec-catalog-tree__check">
           <input
             :id="`ec-cat-${node.id}`"
             type="checkbox"

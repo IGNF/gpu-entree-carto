@@ -5,7 +5,8 @@ Widget de **recherche de lieu hors carte** (autocomplete seul) — **fallback** 
 Pour l’accueil gpu-site avec la **même UX que la carte**, préférer [`gpu.mountSearchEngine`](./mountSearchEngine.md).
 
 **Source :** `src/components/search/LocationSearchWidget.vue`  
-**Montage lib :** `gpu.mountLocationSearch(container, options)` — `src/lib/mountLocationSearch.ts`
+**Montage lib :** `gpu.mountLocationSearch(container, options)` — `src/lib/mountLocationSearch.ts`  
+**Bundle dédié :** `entree-carto-location-search.js` + `css/entree-carto-location-search.min.css` ([LibCssBundles.md](./LibCssBundles.md))
 
 ## Props / options
 

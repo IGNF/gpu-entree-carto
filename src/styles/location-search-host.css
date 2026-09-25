@@ -1,0 +1,49 @@
+/**
+ * Styles widget accueil (hors carte) — complète le DSFR déjà chargé par gpu-site.
+ * Pas de remixicon / OpenLayers.
+ */
+
+.ec-location-search {
+  position: relative;
+  width: 100%;
+}
+
+.ec-location-search .fr-search-bar,
+.ec-location-search .ec-location-search__bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--background-contrast-grey, #eee);
+  box-shadow: inset 0 -2px 0 0 var(--border-active-blue-france, #000091);
+}
+
+.ec-location-search .fr-search-bar .fr-input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  max-height: 3rem;
+  min-height: 3rem;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+.ec-location-search .fr-search-bar .fr-btn {
+  flex-shrink: 0;
+  max-width: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Une seule loupe : fournie par .fr-search-bar .fr-btn::before (DSFR) */
+.ec-location-search .fr-search-bar .fr-btn::before {
+  margin: 0;
+}

@@ -5,6 +5,12 @@
  */
 window.DEMO_CONFIG = {
   /**
+   * Bundles lib `dist/` : true → `*.min.js` / `css/*.min.css` (comme gpu-site),
+   * false → versions non minifiées. Nécessite `npm run build` (bundles dist/) pour toutes les routes démo.
+   */
+  useMinimified: false,
+
+  /**
    * URL du script gpu-client-config (prod / dev / local), optionnel.
    * S’il est défini, le script est chargé au démarrage de `/map` (globals LAYER_CONFIG, …).
    */

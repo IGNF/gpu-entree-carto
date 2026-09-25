@@ -25,6 +25,7 @@ Arbre **checkbox** du catalogue _Données_ (équivalent gpu-client `TreeLayerSwi
 - **Repli par défaut** : seuls les nœuds racine sont visibles ; chaque branche est repliée (`undeployed`, gpu-client).
 - **Dépliage auto** (`catalogAncestorIdsToExpand`) : dépliage **uniquement** si le sous-arbre est **mixte** (au moins une case cochée et une décochée). Tout coché → replié ; tout décoché (ex. racine SUP sans `visible`) → replié ; sélection partielle sous « Prescriptions » → dépliage jusqu’au niveau concerné.
 - Repli / dépli manuel via le chevron ; l’état manuel est conservé tant que la structure de l’arbre ne change pas.
+- Cases à cocher DSFR **taille SM** (`fr-checkbox-group--sm`).
 - Pas de légende sous le nœud (légendes → onglet **Légendes**).
 - **Propagation checkboxes** (comme `TreeLayerSwitcherItem`) : coche parent → tous les descendants ; coche enfant → parents remontés (OR, hors `onlyLegend`) ; `onlyLegend` suit le parent.
 - **Virtual** : pas de tuile WMS agrégée sur le nœud ; les feuilles en dessous portent la carte.

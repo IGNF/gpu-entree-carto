@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { demoManualChunks } from './vite.manualChunks'
-import { patchDemoConfigForPages } from './vite.demoPlugins'
+import { patchDemoConfigForPages, serveDistLibAssets } from './vite.demoPlugins'
 import { patchGeopfSearchEval } from './vite.geopfPlugins'
 
 /**
@@ -18,7 +18,7 @@ function pagesBase(): string {
 
 export default defineConfig({
   base: pagesBase(),
-  plugins: [patchGeopfSearchEval(), patchDemoConfigForPages(), vue()],
+  plugins: [patchGeopfSearchEval(), serveDistLibAssets(), patchDemoConfigForPages(), vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

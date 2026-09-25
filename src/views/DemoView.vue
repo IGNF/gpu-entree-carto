@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { MountedViewer } from '@/lib/mount'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
@@ -22,6 +23,11 @@ import {
   resolveDemoBaseLayerId,
   resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
+import {
+  demoUsesMinifiedAssets,
+  getCreateStandardViewerFromBundle,
+  loadLibBundle,
+} from '@/lib/demo/demoLibAssets'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
@@ -36,6 +42,8 @@ import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 
 const demoCfg = getDemoConfig()
+const useMinified = computed(() => demoUsesMinifiedAssets(demoCfg))
+let bundleViewer: MountedViewer | null = null
 const gpuBaseEnv = createGpuBaseLayerEnvironment()
 const gpuBasePresets = gpuBaseEnv.presets
 const activeBase = ref<GpuBaseLayerId>(resolveDemoBaseLayerId(demoCfg))
@@ -66,6 +74,17 @@ const layerMapHooks = {
 onMounted(async () => {
   const cfg = await prepareDemoEnvironment(getDemoConfig())
   gpuDocument.value = cfg.document ?? null
+
+  if (useMinified.value) {
+    await loadLibBundle('entree-carto')
+    bundleViewer = getCreateStandardViewerFromBundle()({
+      document: cfg.document ?? null,
+      bbox: !handoff && isValidBbox(cfg.bbox) ? cfg.bbox : null,
+      search: initialSearch.value,
+    })
+    return
+  }
+
   layerNodes.value = resolveDemoLayerNodes(cfg)
   const layerConfig = resolveLayerConfig()
   if (layerConfig?.length) {
@@ -76,6 +95,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  bundleViewer?.destroy()
+  bundleViewer = null
   gpuWmsLayerRegistry.detachMap()
 })
 
@@ -140,7 +161,12 @@ function onToggleLayer(id: string, visible: boolean) {
     >
       Notif test
     </button>
-    <main class="ec-layout ec-layout--map-only">
+    <div
+      v-if="useMinified"
+      id="gpu-map-container"
+      class="ec-layout ec-layout--map-only ec-layout__map ec-demo-map__bundle-host"
+    />
+    <main v-else class="ec-layout ec-layout--map-only">
       <div class="ec-layout__map">
         <MapShell ref="mapShellRef" :layers="mapLayers" :zoom="mapZoom">
           <TabPanelsControl
@@ -184,5 +210,11 @@ function onToggleLayer(id: string, visible: boolean) {
   left: 0.75rem;
   z-index: 10000;
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-demo-map__bundle-host {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 </style>

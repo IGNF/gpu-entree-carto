@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
+import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
+import { remixiconExternal } from './vite/remixiconExternal'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 
 const minify = process.env.LIB_MINIFY === '1'
@@ -9,6 +11,8 @@ const minify = process.env.LIB_MINIFY === '1'
  * OpenLayers inclus (contrairement à ol-geometry-editor historique).
  */
 export default defineConfig({
+  plugins: [remixiconExternal()],
+  esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -33,14 +37,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         exports: 'named',
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.css')) {
-            return minify
-              ? 'css/entree-carto-geometry-editor.min.css'
-              : 'css/entree-carto-geometry-editor.css'
-          }
-          return 'assets/[name][extname]'
-        },
+        assetFileNames: libCssAssetFileName('entree-carto-geometry-editor', minify),
       },
     },
   },

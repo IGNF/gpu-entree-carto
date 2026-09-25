@@ -10,10 +10,10 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 
 | Route              | Vue                      | Rôle                                                                                                                                                                                                                |
 | ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | `HomeView.vue`           | Accueil type gpu-site : `mountSearchEngine` → `/map` (handoff SPA)                                                                                                                                                  |
-| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)) |
-| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone                                                                                                                                                               |
-| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / bundle `entree-carto-sketch` (encart options + carte)                                                                                                                    |
+| `/`                | `HomeView.vue`           | Accueil type gpu-site (`GpuHomeBanner` : titre, badge CONSULTER, décor DSFR) ; widget localisation ou `mountSearchEngine` selon `home.searchWidget` → `/map` (handoff SPA). Si `useMinimified: true` : bundles `dist/` au lieu des imports Vite. |
+| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)). Si `useMinimified: true` : `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone (`EntreeCartoGeometryEditor` si `useMinimified`)                                                                                                                                                               |
+| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` si `useMinimified` (encart options + carte)                                                                                                                    |
 
 ## Navigation
 
@@ -21,7 +21,7 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 
 ## Flux localisation
 
-1. Recherche validée sur `/` (`mountSearchEngine` en mode `emit`)
+1. Recherche validée sur `/` (`LocationSearchWidget` ou `mountSearchEngine` selon `demo-config`)
 2. `prepareLocationHandoff` (objet `StandardViewerSearch` en mémoire) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
 3. `DemoView` lit `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
 

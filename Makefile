@@ -1,4 +1,4 @@
-.PHONY: install dev build build-lib build-demo build-geometry-editor build-sketch test preview preview-pages typecheck verify fix
+.PHONY: install dev build build-lib build-location-search build-search-engine build-demo build-geometry-editor build-sketch test preview preview-pages typecheck verify fix
 
 install:
 	npm install
@@ -12,6 +12,12 @@ build:
 
 build-lib:
 	npm run build:lib
+
+build-location-search:
+	npm run build:location-search
+
+build-search-engine:
+	npm run build:search-engine
 
 build-demo:
 	npm run build:demo

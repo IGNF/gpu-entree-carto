@@ -18,7 +18,7 @@ Sélecteur de **couches métier** en arbre avec **légende intégrée** (équiva
 
 - Cases à cocher par couche.
 - **`full`** : si la couche est visible et a une `legend`, affichage des entrées sous le nœud.
-- **`catalog`** : liste minimale type gpu-client TreeLayerSwitcher (sans légende intégrée).
+- **`catalog`** : liste minimale type gpu-client TreeLayerSwitcher (sans légende intégrée), cases à cocher **SM** (`fr-checkbox-group--sm`).
 
 ## Limites actuelles
 
