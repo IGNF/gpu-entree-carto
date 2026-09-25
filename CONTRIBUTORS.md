@@ -1,14 +1,8 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](CONTRIBUTORS.md)
 [![fr](https://img.shields.io/badge/lang-fr-blue.svg)](CONTRIBUTORS.fr.md)
 
-[CONTRIBUTING.md](CONTRIBUTING.md) defines how to contribute to **entree-carto**. The following people have contributed to this project:
+[CONTRIBUTING.md](CONTRIBUTING.md) explains how to contribute to **entree-carto**.
 
-# Development team
+Contributors are credited in the [GitHub contributors graph](https://github.com/IGNF/gpu-entree-carto/graphs/contributors) and in git history.
 
-  * GPU (Géoportail de l'Urbanisme) Developpement team (IGN)
-
-# Other contributors
-
-  * dependabot[bot] (dependency updates)
-
-> On your first significant contribution, add yourself to the appropriate section (development team or other contributors), optionally with a link to your GitHub profile.
+> On your first significant contribution, add yourself to [CONTRIBUTORS.md](CONTRIBUTORS.md) and [CONTRIBUTORS.fr.md](CONTRIBUTORS.fr.md) (name and optional GitHub profile link).

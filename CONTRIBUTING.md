@@ -7,8 +7,6 @@ Thank you for your interest in contributing to **entree-carto**! Contributions a
 
 Please read the [README](README.md) to understand the project, and our [Code of Conduct](CODE_OF_CONDUCT.md) before continuing.
 
-IGN open source framework: [MARS governance](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/) — [CONTRIBUTING structure guide](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-contributing/).
-
 ## Reporting a bug
 
 1. Search existing [issues](https://github.com/IGNF/gpu-entree-carto/issues). If one matches, add details there.

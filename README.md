@@ -102,10 +102,9 @@ Planned work: [ROADMAP.md](ROADMAP.md). Release history: [CHANGELOG.md](CHANGELO
 | Developer conventions | [CODING.md](CODING.md) |
 | Changelog & roadmap | [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md) |
 
-French translations of root governance files: `*.fr.md` (e.g. [README.fr.md](README.fr.md), [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md)). Keep EN/FR pairs in sync ([MARS](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/structure-readme/)).
+French translations of root governance files: `*.fr.md` (e.g. [README.fr.md](README.fr.md), [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md)). Keep EN/FR pairs in sync when editing.
 
 - **Issues:** https://github.com/IGNF/gpu-entree-carto/issues
-- **IGN open source framework:** [MARS governance](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/)
 
 ## Contributing
 

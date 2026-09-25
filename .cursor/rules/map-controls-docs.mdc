@@ -8,9 +8,9 @@ alwaysApply: true
 La carte expose des **composants / contrôles**. À chaque **création** ou **modification** d’un contrôle (ou composant cartographique associé) :
 
 1. Mettre à jour (ou créer) la doc Markdown dans **`/doc`** en **paire bilingue** :
-   - **`doc/NomComposant.md`** — anglais (référence MARS) ;
+   - **`doc/NomComposant.md`** — anglais (référence) ;
    - **`doc/NomComposant.fr.md`** — français ;
-   - en-tête badges langue sur **chaque** fichier (voir règle `mars-bilingual-docs`).
+   - en-tête badges langue sur **chaque** fichier (voir règle `bilingual-docs`).
 2. Y indiquer au minimum :
    - **description** du composant / contrôle ;
    - **options** / props / API ;

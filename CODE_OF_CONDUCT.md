@@ -62,10 +62,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers listed in [CONTRIBUTORS.md](CONTRIBUTORS.md)
-by opening a [GitHub issue](https://github.com/IGNF/gpu-entree-carto/issues)
-(mark it confidential if your GitHub plan allows, or contact maintainers through
-IGN channels).
+reported by opening a [GitHub issue](https://github.com/IGNF/gpu-entree-carto/issues)
+(mark it confidential if your GitHub plan allows).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

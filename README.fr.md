@@ -53,8 +53,6 @@ Refonte de **gpu-client** (jQuery / stack historique) vers DSFR et stack moderne
 | Charte | [CODE_OF_CONDUCT.fr.md](CODE_OF_CONDUCT.fr.md) | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
 | Contributeurs | [CONTRIBUTORS.fr.md](CONTRIBUTORS.fr.md) | [CONTRIBUTORS.md](CONTRIBUTORS.md) |
 
-Cadre IGN : [gouvernance MARS](https://mars.gitlab-pages.ign.fr/cadre-technique/gouvernance/opensource/).
-
 ## Licence
 
 Logiciel sous licence **CeCILL-B** : [LICENCE.fr.md](LICENCE.fr.md) · [LICENCE.md](LICENCE.md).
