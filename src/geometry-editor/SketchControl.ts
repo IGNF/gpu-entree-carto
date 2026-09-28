@@ -426,7 +426,7 @@ export class SketchControl extends Control {
       },
       onClearAll: () => this.clearFeatures(),
       onExtraTool: (id, active) => this.handleExtraTool(id, active),
-      onFeatureCreated: (feature) => this.openStylePopup(feature),
+      onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor),
       onStyleEdit: this.enableFeatureStyleEditor
         ? (feature, anchor) => this.openStylePopup(feature, anchor)
         : undefined,

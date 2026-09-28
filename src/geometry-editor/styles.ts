@@ -4,10 +4,13 @@ import type { FeatureLike } from 'ol/Feature'
 import { getCircleKind } from './circleHelpers'
 
 const blue = '#000091'
-const fillBlue = 'rgba(0, 0, 145, 0.2)'
+/** Remplissage polygone / disque (feature terminée). */
+export const SKETCH_AREA_FILL = 'rgba(0, 0, 145, 0.2)'
+/** Remplissage pendant le croquis (Draw). */
+export const SKETCH_AREA_DRAW_FILL = 'rgba(0, 0, 145, 0.15)'
 
 export const geometryFeatureStyle = new Style({
-  fill: new Fill({ color: fillBlue }),
+  fill: new Fill({ color: SKETCH_AREA_FILL }),
   stroke: new Stroke({ color: blue, width: 2 }),
   image: new CircleStyle({
     radius: 6,
@@ -22,14 +25,14 @@ export const circleOutlineStyle = new Style({
   stroke: new Stroke({ color: blue, width: 2 }),
 })
 
-/** Disque : contour + remplissage. */
+/** Disque : même remplissage que polygone. */
 export const discFillStyle = new Style({
-  fill: new Fill({ color: fillBlue }),
+  fill: new Fill({ color: SKETCH_AREA_FILL }),
   stroke: new Stroke({ color: blue, width: 2 }),
 })
 
 export const geometryDrawStyle = new Style({
-  fill: new Fill({ color: 'rgba(0, 0, 145, 0.15)' }),
+  fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
   stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
   image: new CircleStyle({
     radius: 5,
@@ -47,9 +50,9 @@ export const circleDrawStyle = new Style({
   }),
 })
 
-/** Croquis disque + point sous le curseur (centre). */
+/** Croquis disque + point sous le curseur (centre) — même remplissage que polygone en cours. */
 export const discDrawStyle = new Style({
-  fill: new Fill({ color: 'rgba(0, 0, 145, 0.15)' }),
+  fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
   stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
   image: new CircleStyle({
     radius: 5,

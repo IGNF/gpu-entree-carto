@@ -11,7 +11,7 @@ import type { Feature as OlFeature } from 'ol'
 import type { Coordinate } from 'ol/coordinate'
 import type { Geometry as OlGeometry } from 'ol/geom'
 import type { GeometryTypeOption } from './types'
-import { discDrawStyle, geometryDrawStyle } from './styles'
+import { circleDrawStyle, discDrawStyle, geometryDrawStyle } from './styles'
 import { getCircleKind, isNearCircleEdge, setCircleKind, type CircleKind } from './circleHelpers'
 import {
   drawToolKeys,
@@ -26,7 +26,11 @@ import {
   type ModifyEditMode,
 } from './ModifyTransformController'
 import { ModifySubToolsBar, type ModifySubToolId } from './ModifySubToolsBar'
-import { applyFeatureHoverVisual, restoreFeatureVisual } from './sketch/featureStyle'
+import {
+  applyFeatureHoverVisual,
+  resolveStylePopupAnchor,
+  restoreFeatureVisual,
+} from './sketch/featureStyle'
 import { isSketchTextFeature } from './sketch/SketchTextPopup'
 import { appendGeometryToolIcon, updateSaveToolBadge } from './geometryToolIcons'
 
@@ -152,7 +156,8 @@ export class DrawToolsBar {
   private readonly showClearAll: boolean
   private readonly extraTools: DrawBarExtraTool[]
   private readonly onExtraTool: ((id: string, active: boolean) => void) | null
-  private readonly onFeatureCreated: ((feature: OlFeature<OlGeometry>) => void) | null
+  private readonly onFeatureCreated:
+    ((feature: OlFeature<OlGeometry>, anchor?: Coordinate) => void) | null
   private readonly onStyleDismiss: (() => void) | null
   private geometryType: GeometryTypeOption
   private drawStyle: StyleLike
@@ -180,7 +185,8 @@ export class DrawToolsBar {
   }
 
   private circleFinishCondition(evt: MapBrowserEvent): boolean {
-    if (!this.circleDrawCenter) return true
+    // Ne pas finir tant que drawstart n’a pas enregistré le centre (1er clic = centre seul).
+    if (!this.circleDrawCenter) return false
     const dx = evt.coordinate[0] - this.circleDrawCenter[0]
     const dy = evt.coordinate[1] - this.circleDrawCenter[1]
     const min = this.circleMinRadiusMapUnits()
@@ -313,7 +319,7 @@ export class DrawToolsBar {
     /** Callback extras : `active` true à l’activation toggle, false à la désactivation. */
     onExtraTool?: (id: string, active: boolean) => void
     /** Après drawend d’un outil de dessin classique. */
-    onFeatureCreated?: (feature: OlFeature<OlGeometry>) => void
+    onFeatureCreated?: (feature: OlFeature<OlGeometry>, anchor?: Coordinate) => void
     /** Clic icône palette en mode modification. */
     onStyleEdit?: (
       feature: OlFeature<OlGeometry>,
@@ -561,6 +567,7 @@ export class DrawToolsBar {
 
   private clearTransient(): void {
     const prev = this.activeId
+    this.onStyleDismiss?.()
     this.circleDrawCenter = null
     this.clearFeatureCursor()
     this.unbindMapHover()
@@ -637,7 +644,11 @@ export class DrawToolsBar {
     const replaceOnDraw = shouldReplaceOnDraw(types)
 
     const sketchStyle =
-      tool.circleKind === 'disc' || tool.circleKind === 'circle' ? discDrawStyle : this.drawStyle
+      tool.circleKind === 'disc'
+        ? discDrawStyle
+        : tool.circleKind === 'circle'
+          ? circleDrawStyle
+          : this.drawStyle
 
     const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle)
 
@@ -649,6 +660,7 @@ export class DrawToolsBar {
       finishCondition: tool.circleKind ? (evt) => this.circleFinishCondition(evt) : undefined,
     })
     this.draw.on('drawstart', (evt) => {
+      this.onStyleDismiss?.()
       if (replaceOnDraw) this.source.clear(true)
       this.circleDrawCenter = null
       if (tool.circleKind) {
@@ -669,7 +681,9 @@ export class DrawToolsBar {
       }
       this.circleDrawCenter = null
       queueMicrotask(() => {
-        this.onFeatureCreated?.(evt.feature as OlFeature<OlGeometry>)
+        const feature = evt.feature as OlFeature<OlGeometry>
+        const anchor = resolveStylePopupAnchor(feature) ?? undefined
+        this.onFeatureCreated?.(feature, anchor)
         this.onChange()
       })
     })

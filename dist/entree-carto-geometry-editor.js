@@ -43213,9 +43213,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return null;
   }
   const blue = "#000091";
-  const fillBlue = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_FILL = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_DRAW_FILL = "rgba(0, 0, 145, 0.15)";
   const geometryFeatureStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 }),
     image: new CircleStyle({
       radius: 6,
@@ -43228,18 +43229,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const discFillStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const geometryDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
       fill: new Fill({ color: blue })
     })
   });
-  new Style({
+  const circleDrawStyle = new Style({
     fill: new Fill({ color: "rgba(0,0,0,0)" }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
@@ -43248,7 +43249,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     })
   });
   const discDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
@@ -43370,7 +43371,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     kind: "polygon",
     strokeColor: "#000091",
     strokeWidth: 2,
-    fillColor: "rgba(0, 0, 145, 0.2)",
+    fillColor: SKETCH_AREA_FILL,
     radius: 6,
     text: "Texte",
     fontSize: 14,
@@ -43392,6 +43393,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   };
   function defaultFeatureStyleAttrs(kind) {
     const base = { ...DEFAULTS, kind };
+    if (kind === "disc") {
+      return { ...defaultFeatureStyleAttrs("polygon"), kind: "disc" };
+    }
     if (kind === "circle") {
       return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
     }
@@ -43636,11 +43640,52 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return [[(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]];
   }
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle) {
+      return geom.getCenter();
+    }
+    if (geom instanceof LineString) {
+      const coords = geom.getCoordinates();
+      return coords.length ? coords[coords.length - 1] : null;
+    }
+    if (geom instanceof MultiLineString) {
+      const lines = geom.getCoordinates();
+      const lastLine = lines[lines.length - 1];
+      return (lastLine == null ? void 0 : lastLine.length) ? lastLine[lastLine.length - 1] : null;
+    }
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    {
+    if (!mapSize || !getPixel) {
       return candidates[0];
     }
+    const scored = candidates.map((c, index) => {
+      const p = getPixel(c);
+      const onScreen = Boolean(
+        p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1]
+      );
+      return {
+        c,
+        p,
+        onScreen,
+        index,
+        // Plus haut à l’écran = meilleur pour une popup au-dessus
+        topRank: p ? p[1] : Number.POSITIVE_INFINITY
+      };
+    });
+    const pool = scored.filter((s) => s.onScreen);
+    const use = pool.length ? pool : scored;
+    const interior = use.find((s) => s.index === 0);
+    if (interior && interior.onScreen) return interior.c;
+    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
+    return use[0].c;
+  }
+  function resolveStylePopupAnchor(feature, options) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle && getCircleKind(feature) === "disc") {
+      return geom.getCenter().slice();
+    }
+    if (options == null ? void 0 : options.clickAnchor) return options.clickAnchor;
+    return featureStylePopupAnchor(feature, options == null ? void 0 : options.mapSize, options == null ? void 0 : options.getPixel);
   }
   const BLUE = "#000091";
   function cursorUrl(svg) {
@@ -44849,7 +44894,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return geom.getRadius() >= this.circleMinRadiusMapUnits();
     }
     circleFinishCondition(evt) {
-      if (!this.circleDrawCenter) return true;
+      if (!this.circleDrawCenter) return false;
       const dx = evt.coordinate[0] - this.circleDrawCenter[0];
       const dy = evt.coordinate[1] - this.circleDrawCenter[1];
       const min = this.circleMinRadiusMapUnits();
@@ -45085,26 +45130,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (target) target.style.cursor = "";
     }
     clearTransient() {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       const prev = this.activeId;
+      (_a = this.onStyleDismiss) == null ? void 0 : _a.call(this);
       this.circleDrawCenter = null;
       this.clearFeatureCursor();
       this.unbindMapHover();
       this.transform.setActive(false);
-      (_a = this.modifySubTools) == null ? void 0 : _a.setOpen(false);
+      (_b = this.modifySubTools) == null ? void 0 : _b.setOpen(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
         this.draw = null;
       }
       this.map.un("singleclick", this.onRemoveClick);
       this.activeId = null;
-      (_b = this.modify) == null ? void 0 : _b.setActive(false);
+      (_c = this.modify) == null ? void 0 : _c.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
       if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
-        (_c = this.onExtraTool) == null ? void 0 : _c.call(this, prev, false);
+        (_d = this.onExtraTool) == null ? void 0 : _d.call(this, prev, false);
       }
     }
     activate(tool) {
@@ -45153,7 +45199,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!tool.drawType) return;
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
-      const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      const sketchStyle = tool.circleKind === "disc" ? discDrawStyle : tool.circleKind === "circle" ? circleDrawStyle : this.drawStyle;
       const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle);
       this.draw = new Draw({
         source: this.source,
@@ -45163,6 +45209,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         finishCondition: tool.circleKind ? (evt) => this.circleFinishCondition(evt) : void 0
       });
       this.draw.on("drawstart", (evt) => {
+        var _a2;
+        (_a2 = this.onStyleDismiss) == null ? void 0 : _a2.call(this);
         if (replaceOnDraw) this.source.clear(true);
         this.circleDrawCenter = null;
         if (tool.circleKind) {
@@ -45184,7 +45232,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.circleDrawCenter = null;
         queueMicrotask(() => {
           var _a2;
-          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
+          const feature = evt.feature;
+          const anchor = resolveStylePopupAnchor(feature) ?? void 0;
+          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, feature, anchor);
           this.onChange();
         });
       });
@@ -46064,9 +46114,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     open(feature, onCommit, anchor) {
       this.unbindOutside();
       this.feature = feature;
-      this.clickAnchor = anchor ?? null;
       this.onCommit = onCommit ?? null;
       this.kind = featureStyleKindOf(feature);
+      this.clickAnchor = anchor ?? null;
       this.setAdvancedOpen(false);
       const attrs = getFeatureStyleAttrs(feature);
       this.syncFieldsVisibility();
@@ -46076,6 +46126,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.root.hidden = false;
       this.openFlag = true;
       this.skipNextOutsideUp = true;
+      this.syncPopupAnchorFromFeature();
       this.reposition();
       this.bindOutside();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
@@ -46169,11 +46220,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.geomChangeKey = null;
       }
     }
+    /** Disque : centre géométrique ; sinon clic ou heuristique par type. */
+    syncPopupAnchorFromFeature() {
+      if (!this.feature) return;
+      const resolved = resolveStylePopupAnchor(this.feature, {
+        clickAnchor: this.clickAnchor,
+        mapSize: this.map.getSize(),
+        getPixel: (c) => this.map.getPixelFromCoordinate(c)
+      });
+      if (resolved) this.clickAnchor = resolved;
+    }
     /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature);
-      if (anchor) this.overlay.setPosition(anchor);
+      this.syncPopupAnchorFromFeature();
+      if (this.clickAnchor) this.overlay.setPosition(this.clickAnchor);
     }
     syncFieldsVisibility() {
       const basic = new Set(BASIC_BY_KIND[this.kind]);
@@ -46848,7 +46909,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         },
         onClearAll: () => this.clearFeatures(),
         onExtraTool: (id, active) => this.handleExtraTool(id, active),
-        onFeatureCreated: (feature) => this.openStylePopup(feature),
+        onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor),
         onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor) : void 0,
         onStyleDismiss: this.enableFeatureStyleEditor ? () => {
           var _a2;

@@ -14,8 +14,8 @@ import {
   applyFeatureStyle,
   defaultFeatureStyleAttrs,
   featureStyleKindOf,
-  featureStylePopupAnchor,
   getFeatureStyleAttrs,
+  resolveStylePopupAnchor,
   type FeatureStyleAttrs,
   type FeatureStyleKind,
   type PointShape,
@@ -391,9 +391,9 @@ export class SketchFeatureStylePopup {
   open(feature: OlFeature<OlGeometry>, onCommit?: () => void, anchor?: Coordinate): void {
     this.unbindOutside()
     this.feature = feature
-    this.clickAnchor = anchor ?? null
     this.onCommit = onCommit ?? null
     this.kind = featureStyleKindOf(feature)
+    this.clickAnchor = anchor ?? null
     this.setAdvancedOpen(false)
     const attrs = getFeatureStyleAttrs(feature)
     this.syncFieldsVisibility()
@@ -403,6 +403,7 @@ export class SketchFeatureStylePopup {
     this.root.hidden = false
     this.openFlag = true
     this.skipNextOutsideUp = true
+    this.syncPopupAnchorFromFeature()
     this.reposition()
     this.bindOutside()
     if (this.kind === 'text' && !this.els.text.closest('[hidden]')) {
@@ -505,11 +506,22 @@ export class SketchFeatureStylePopup {
     }
   }
 
+  /** Disque : centre géométrique ; sinon clic ou heuristique par type. */
+  private syncPopupAnchorFromFeature(): void {
+    if (!this.feature) return
+    const resolved = resolveStylePopupAnchor(this.feature, {
+      clickAnchor: this.clickAnchor,
+      mapSize: this.map.getSize(),
+      getPixel: (c) => this.map.getPixelFromCoordinate(c),
+    })
+    if (resolved) this.clickAnchor = resolved
+  }
+
   /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
-    const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature)
-    if (anchor) this.overlay.setPosition(anchor)
+    this.syncPopupAnchorFromFeature()
+    if (this.clickAnchor) this.overlay.setPosition(this.clickAnchor)
   }
 
   private syncFieldsVisibility(): void {
