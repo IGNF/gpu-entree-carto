@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MapModeSelector** — parcel / territory radio switch (top-right), `mode=1|2` permalink sync via `provideMapMode()`.
+- **ClickInfoControl** — always-on map click (disabled during sketch tools) fills fiche tab via `ficheInfoService` (API or APICarto); composite info cursor CSS.
+- **Fiche from search** — `SearchEngineControl` loads parcel/document fiche after geopf search using the current map mode.
 - Open source governance files (README, CONTRIBUTING, CODING, CODE_OF_CONDUCT, CHANGELOG, ROADMAP).
 - `useMinimified` support across demo routes (home, map, geometry-editor, sketch) loading `dist/` bundles.
 - Bilingual documentation: English `*.md` and French `*.fr.md` at repository root and under `doc/`.

@@ -28,6 +28,8 @@ When adding or changing a control: **update the associated page** (description, 
 | LocationSearchWidget        | `src/components/search/LocationSearchWidget.vue`             | [LocationSearchWidget.md](./LocationSearchWidget.md)               |
 | OverviewMapControl          | `src/components/map/OverviewMapControl.vue`                  | [OverviewMapControl.md](./OverviewMapControl.md)                   |
 | TerritoriesControl          | `src/components/map/TerritoriesControl.vue`                  | [TerritoriesControl.md](./TerritoriesControl.md)                   |
+| MapModeSelector             | `src/components/map/MapModeSelector.vue`                     | [MapModeSelector.md](./MapModeSelector.md)                         |
+| ClickInfoControl            | `src/components/map/ClickInfoControl.vue`                    | [ClickInfoControl.md](./ClickInfoControl.md)                       |
 | TabPanelsControl            | `src/components/map/TabPanelsControl.vue`                    | [TabPanelsControl.md](./TabPanelsControl.md)                       |
 | LayerCataloguePanel         | `src/components/panels/LayerCataloguePanel.vue`              | [TabPanelsControl.md](./TabPanelsControl.md#panel-components)      |
 | DataLayersManagerPanel      | `src/components/panels/DataLayersManagerPanel.vue`           | [DataLayersManagerPanel.md](./DataLayersManagerPanel.md)           |

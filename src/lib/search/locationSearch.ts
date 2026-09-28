@@ -1,5 +1,7 @@
 import { fromLonLat, toLonLat } from 'ol/proj'
 import type Map from 'ol/Map'
+import { LOCATION_SEARCH_ANIMATION_MS } from '@/lib/map/animateViewFit'
+import { easeOut } from 'ol/easing'
 import type Feature from 'ol/Feature'
 import type { StandardViewerSearch } from '@/lib/types'
 
@@ -26,7 +28,12 @@ export function applySearchToMap(map: Map, search: StandardViewerSearch): boolea
 
   const center = fromLonLat([x, y], map.getView().getProjection())
   const zoom = zoomForLocationSearch(search)
-  map.getView().animate({ center, zoom, duration: 300 })
+  map.getView().animate({
+    center,
+    zoom,
+    duration: LOCATION_SEARCH_ANIMATION_MS,
+    easing: easeOut,
+  })
   return true
 }
 

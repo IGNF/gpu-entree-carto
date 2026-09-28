@@ -876,12 +876,23 @@
 }
 
 /* SearchEngine — haut-gauche (cartes.gouv SearchEngine.vue) */
+.ec-map-shell {
+  --ec-search-engine-max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
+}
+
 .gpf-widget[id^='GPsearchEngine-Advanced'] {
   top: var(--ec-widget-gap);
   left: calc(var(--ec-widget-gap) - 5px + var(--ec-search-left-inset));
   z-index: 1;
   box-shadow: none;
-  max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
+  max-width: var(--ec-search-engine-max-width);
+}
+
+/* Pas de bulle geopf sur la carte (fiche dans le panneau) — mesures croquis conservées. */
+.ec-map-shell .GPSearchPopup:not(.ec-sketch-measure-popup) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /*

@@ -29082,6 +29082,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onExtraTool");
       __publicField(this, "onFeatureCreated");
       __publicField(this, "onStyleDismiss");
+      __publicField(this, "onToolStateChange");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -29145,6 +29146,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.onExtraTool = opts.onExtraTool ?? null;
       this.onFeatureCreated = opts.onFeatureCreated ?? null;
       this.onStyleDismiss = opts.onStyleDismiss ?? null;
+      this.onToolStateChange = opts.onToolStateChange ?? null;
       this.customStyle = opts.style;
       this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
@@ -29437,6 +29439,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
         (_d = this.onExtraTool) == null ? void 0 : _d.call(this, prev, false);
       }
+      this.notifyToolState();
+    }
+    notifyToolState() {
+      var _a;
+      (_a = this.onToolStateChange) == null ? void 0 : _a.call(this);
     }
     activate(tool) {
       var _a, _b, _c, _d, _e, _f;
@@ -29525,6 +29532,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       this.map.addInteraction(this.draw);
       this.bindMapHover();
+      this.notifyToolState();
     }
     destroy() {
       var _a;
@@ -38842,6 +38850,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "historyEnabled");
       __publicField(this, "extraTools");
       __publicField(this, "enableFeatureStyleEditor");
+      __publicField(this, "onSketchEngagementChange");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
@@ -38896,6 +38905,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.historyEnabled = Boolean(options.history);
       this.extraTools = options.extraTools ?? [];
       this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor);
+      this.onSketchEngagementChange = options.onSketchEngagementChange ?? null;
       this.source = options.source ?? new VectorSource({ wrapX: false });
       this.layer = options.layer ?? null;
       this.ownsLayer = !options.layer;
@@ -38944,6 +38954,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     getDrawBar() {
       return this.drawBar;
+    }
+    /** Dessin, modification, suppression, mesure ou texte en cours. */
+    isSketchToolEngaged() {
+      var _a, _b;
+      if (this.textDraw) return true;
+      if ((_a = this.measure) == null ? void 0 : _a.isActive()) return true;
+      return ((_b = this.drawBar) == null ? void 0 : _b.getActiveId()) != null;
+    }
+    emitSketchEngagement() {
+      var _a;
+      (_a = this.onSketchEngagementChange) == null ? void 0 : _a.call(this, this.isSketchToolEngaged());
     }
     getFeatures() {
       return this.source.getFeatures();
@@ -39104,8 +39125,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         onStyleDismiss: this.enableFeatureStyleEditor ? () => {
           var _a2;
           return (_a2 = this.stylePopup) == null ? void 0 : _a2.hide();
-        } : void 0
+        } : void 0,
+        onToolStateChange: () => this.emitSketchEngagement()
       });
+      this.emitSketchEngagement();
       this.syncToolbarClusterVisibility();
       this.syncHistoryButtons();
     }
@@ -39166,6 +39189,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (id === "measure-area") {
         (_g = this.measure) == null ? void 0 : _g.activate("area");
       }
+      this.emitSketchEngagement();
     }
     startTextDraw() {
       const map = this.getMap();
@@ -39204,6 +39228,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.enableFeatureStyleEditor) {
         map.on("singleclick", this.onTextSelectClick);
       }
+      this.emitSketchEngagement();
     }
     stopTextDraw() {
       var _a;
@@ -39221,6 +39246,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       map == null ? void 0 : map.un("singleclick", this.onTextSelectClick);
       (_a = this.stylePopup) == null ? void 0 : _a.hide();
+      this.emitSketchEngagement();
     }
     runImport() {
       const map = this.getMap();

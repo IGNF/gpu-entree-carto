@@ -159,6 +159,7 @@ export class DrawToolsBar {
   private readonly onFeatureCreated:
     ((feature: OlFeature<OlGeometry>, anchor?: Coordinate) => void) | null
   private readonly onStyleDismiss: (() => void) | null
+  private readonly onToolStateChange: (() => void) | null
   private geometryType: GeometryTypeOption
   private drawStyle: StyleLike
   private customStyle: StyleLike | null | undefined
@@ -326,6 +327,8 @@ export class DrawToolsBar {
       anchor: import('ol/coordinate').Coordinate,
     ) => void
     onStyleDismiss?: () => void
+    /** Changement d’outil actif (dessin / modify / remove…). */
+    onToolStateChange?: () => void
   }) {
     this.map = opts.map
     this.source = opts.source
@@ -340,6 +343,7 @@ export class DrawToolsBar {
     this.onExtraTool = opts.onExtraTool ?? null
     this.onFeatureCreated = opts.onFeatureCreated ?? null
     this.onStyleDismiss = opts.onStyleDismiss ?? null
+    this.onToolStateChange = opts.onToolStateChange ?? null
     this.customStyle = opts.style
     this.styleEditEnabled = Boolean(opts.onStyleEdit)
     this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType))
@@ -587,6 +591,11 @@ export class DrawToolsBar {
     if (prev && this.extraTools.some((t) => t.id === prev && t.mode === 'toggle')) {
       this.onExtraTool?.(prev, false)
     }
+    this.notifyToolState()
+  }
+
+  private notifyToolState(): void {
+    this.onToolStateChange?.()
   }
 
   private activate(tool: ToolDef): void {
@@ -689,6 +698,7 @@ export class DrawToolsBar {
     })
     this.map.addInteraction(this.draw)
     this.bindMapHover()
+    this.notifyToolState()
   }
 
   destroy(): void {

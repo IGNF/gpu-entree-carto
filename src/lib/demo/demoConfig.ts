@@ -4,6 +4,7 @@ import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
 import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import type { MapModeId } from '@/lib/map/mapMode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import type Map from 'ol/Map'
 import { transformExtent } from 'ol/proj'
@@ -16,6 +17,8 @@ export interface DemoMapConfig {
   zoom?: number
   layerNodes?: TreeLayerNode[]
   search?: StandardViewerSearch | null
+  /** Mode fiche / clic info (`1` parcelle, `2` territoire). */
+  mode?: MapModeId
 }
 
 export type DemoHomeSearchWidget = 'location' | 'search-engine'

@@ -1,0 +1,38 @@
+/** Mode fiche / clic info — aligné gpu-client (`mode=1` parcelle, `mode=2` territoire). */
+export type MapModeId = 1 | 2
+
+export const MAP_MODE_PARCEL: MapModeId = 1
+export const MAP_MODE_TERRITORY: MapModeId = 2
+export const DEFAULT_MAP_MODE: MapModeId = MAP_MODE_TERRITORY
+
+export function normalizeMapMode(raw: unknown): MapModeId | null {
+  if (raw === 1 || raw === 2) return raw
+  if (raw === '1' || raw === '2') return Number(raw) as MapModeId
+  if (typeof raw === 'string') {
+    const n = parseInt(raw, 10)
+    if (n === 1 || n === 2) return n as MapModeId
+  }
+  return null
+}
+
+export function readMapModeFromSearchParams(search = ''): MapModeId | null {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  return normalizeMapMode(params.get('mode'))
+}
+
+export function readMapModeFromLocation(
+  loc: Pick<Location, 'search'> = window.location,
+): MapModeId {
+  return readMapModeFromSearchParams(loc.search) ?? DEFAULT_MAP_MODE
+}
+
+/** Met à jour `mode` dans l’URL (replaceState, sans rechargement). */
+export function writeMapModeToLocation(
+  mode: MapModeId,
+  loc: Pick<Location, 'href' | 'search'> & { pathname: string } = window.location,
+): void {
+  if (typeof window === 'undefined') return
+  const url = new URL(loc.href)
+  url.searchParams.set('mode', String(mode))
+  window.history.replaceState(window.history.state, '', url.toString())
+}

@@ -1,0 +1,11 @@
+/**
+ * Clic info carte — curseur composite (pointeur + i), actif hors outils croquis.
+ */
+
+.ec-map-shell--click-info .ec-map-shell__map,
+.ec-map-shell--click-info .ec-map-shell__map .ol-viewport {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000091' stroke='%23fff' stroke-width='1.2' d='M6 4v20l5-4 4 9 3-1-4-9h9z'/%3E%3Ccircle cx='24' cy='8' r='7' fill='%23000091'/%3E%3Ctext x='24' y='11.5' text-anchor='middle' fill='%23fff' font-size='9' font-family='Marianne,sans-serif' font-weight='700'%3Ei%3C/text%3E%3C/svg%3E")
+      6 4,
+    auto;
+}

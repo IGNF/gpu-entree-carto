@@ -7,6 +7,7 @@
 import { useOlControl } from '@/composables/useOlControl'
 import { CONTROL_POSITIONS, type GeopfControlPosition } from '@/map/controlPositions'
 import { SketchControl, type SketchExtraTool } from '@/geometry-editor/SketchControl'
+import { setSketchToolEngaged } from '@/composables/sketchToolEngaged'
 import type { GeometryTypeOption } from '@/geometry-editor/types'
 import type { StyleLike } from 'ol/style/Style'
 import 'remixicon/fonts/remixicon.css'
@@ -56,7 +57,12 @@ useOlControl(
       style: props.style,
       extraTools: props.extraTools,
       enableFeatureStyleEditor: props.enableFeatureStyleEditor,
+      onSketchEngagementChange: setSketchToolEngaged,
     }),
+  {
+    afterCreate: (control) =>
+      setSketchToolEngaged((control as SketchControl).isSketchToolEngaged()),
+  },
 )
 </script>
 

@@ -18,6 +18,8 @@ export interface StandardViewerParams {
   bbox?: number[] | null
   document?: StandardViewerDocument | null
   search?: StandardViewerSearch | null
+  /** `1` parcelle, `2` territoire (défaut). Permalink : `mode=`. */
+  mode?: 1 | 2
   layerConfig?: unknown
   legendConfig?: unknown
   legendReferences?: unknown

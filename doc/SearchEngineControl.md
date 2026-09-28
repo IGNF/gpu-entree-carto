@@ -31,6 +31,11 @@ At build time, Vite plugin `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) repla
 - `initialSearch`: prefills the field and calls `baseSearchEngine.search({ location })` → cherry marker, extent, popup (no custom red marker)
 - `initialSearch` with `type: 'geolocate'` (home **Locate me** → `/map`): `createMarker` + TabPanels info tab **without** text geocode (otherwise the service fails on “Ma localisation” and geopf clears the layer → no marker)
 - When [TabPanelsControl](./TabPanelsControl.md) is mounted: opens the info tab **before** the marker, then recentres the view with **right padding** (= panel width) so marker + geopf popup stay visible (otherwise `view.fit` centres under the opaque panel); reattaches the pin if the layer was cleared and enforces a visible pin style
+- Fiche tab content after each geopf `search` event (and `initialSearch`): `loadFicheForSearch` via [MapModeSelector](./MapModeSelector.md) mode — parcel or document at result coordinates (`ficheInfoService`, API or APICarto)
+- **Animated** fly-to to the full result **extent** (cherry + `trueGeometry` dashed polygon), `maxZoom: 15` like geopf — instant geopf `fit` disabled via `SearchEngineAdvancedAnimated`; extra right padding when the fiche panel is open
+- Fiche load from search (`loadFicheForSearch`) skips `createMarker` (`skipLocationMarker`) so cherry and extent stay visible while APICarto loads
+- **No geopf map popup** (`SearchEngineAdvancedAnimated._setPopupInfo` + CSS) — details only in the fiche tab
+- When no `trueGeometry` extent exists, **municipality** dashed boundary from APICarto only if the result is not already precise (e.g. `StreetAddress`) — **no second animated refit** onto the commune
 - Geoloc popup: geopf content format (`<strong>…</strong><br/>…`, no `<p>`) + CSS fix for append (line between bubble and pointer)
 - Off-map home: [mountSearchEngine](./mountSearchEngine.md)
 - Lightweight autocomplete fallback: [LocationSearchWidget](./LocationSearchWidget.md)

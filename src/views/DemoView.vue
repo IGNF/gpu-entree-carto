@@ -10,6 +10,10 @@ import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
 import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
+import MapModeSelector from '@/components/map/MapModeSelector.vue'
+import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
+import { provideMapMode } from '@/composables/mapMode'
+import { normalizeMapMode } from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
@@ -40,6 +44,12 @@ import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
+import '@/styles/map-mode-selector.css'
+import '@/styles/click-info.css'
+
+provideMapMode({
+  initial: normalizeMapMode(getDemoConfig().map?.mode) ?? undefined,
+})
 
 const demoCfg = getDemoConfig()
 const useMinified = computed(() => demoUsesMinifiedAssets(demoCfg))
@@ -178,6 +188,8 @@ function onToggleLayer(id: string, visible: boolean) {
             @toggle-layer="onToggleLayer"
           />
           <SearchEngineControl :initial-search="initialSearch" />
+          <ClickInfoControl />
+          <MapModeSelector />
           <OverviewMapControl />
           <SketchControl />
           <TerritoriesControl />

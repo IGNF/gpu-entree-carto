@@ -28,6 +28,8 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | LocationSearchWidget        | `src/components/search/LocationSearchWidget.vue`             | [LocationSearchWidget.md](./LocationSearchWidget.fr.md)            |
 | OverviewMapControl          | `src/components/map/OverviewMapControl.vue`                  | [OverviewMapControl.md](./OverviewMapControl.fr.md)                |
 | TerritoriesControl          | `src/components/map/TerritoriesControl.vue`                  | [TerritoriesControl.md](./TerritoriesControl.fr.md)                |
+| MapModeSelector             | `src/components/map/MapModeSelector.vue`                     | [MapModeSelector.fr.md](./MapModeSelector.fr.md)                   |
+| ClickInfoControl            | `src/components/map/ClickInfoControl.vue`                    | [ClickInfoControl.fr.md](./ClickInfoControl.fr.md)                 |
 | TabPanelsControl            | `src/components/map/TabPanelsControl.vue`                    | [TabPanelsControl.md](./TabPanelsControl.fr.md)                    |
 | LayerCataloguePanel         | `src/components/panels/LayerCataloguePanel.vue`              | [TabPanelsControl.fr.md](./TabPanelsControl.fr.md#composants-panneau) |
 | DataLayersManagerPanel      | `src/components/panels/DataLayersManagerPanel.vue`           | [DataLayersManagerPanel.md](./DataLayersManagerPanel.fr.md)        |

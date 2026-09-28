@@ -12,6 +12,9 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **MapModeSelector** — commutateur radio Parcelle / Territoire (haut-droite), sync permalink `mode=1|2` via `provideMapMode()`.
+- **ClickInfoControl** — clic carte permanent (inactif pendant les outils croquis) remplit l’onglet fiche via `ficheInfoService` (API ou APICarto) ; curseur composite « info ».
+- **Fiche depuis la recherche** — `SearchEngineControl` charge la fiche parcelle/document après une recherche geopf selon le mode carte.
 - Fichiers de gouvernance open source : README, CONTRIBUTING, CODING, CODE_OF_CONDUCT, CHANGELOG, ROADMAP.
 - Prise en charge de `useMinimified` sur toutes les routes démo (accueil, carte, geometry-editor, sketch) avec chargement des bundles `dist/`.
 - Documentation bilingue : anglais `*.md` et français `*.fr.md` à la racine et dans `doc/`.
