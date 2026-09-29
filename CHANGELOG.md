@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **MapModeSelector** — parcel / territory radio switch (top-right), `mode=1|2` permalink sync via `provideMapMode()`.
+- **Map permalink** — gpu-client-style URL hash (`lon`, `lat`, `z`, `tile`, `mlon`, `mlat`, layer keys) via `MapPermalinkSync` + `TabPanelsControl` bridge.
 - **ClickInfoControl** — always-on map click (disabled during sketch tools) fills fiche tab via `ficheInfoService` (API or APICarto); composite info cursor CSS.
 - **Fiche from search** — `SearchEngineControl` loads parcel/document fiche after geopf search using the current map mode.
 - Open source governance files (README, CONTRIBUTING, CODING, CODE_OF_CONDUCT, CHANGELOG, ROADMAP).
@@ -21,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Fiche info (empty state)** — static bulleted Parcelle / Territoire help when no marker; with a marker, switching map mode swaps the sheet from cache or one fetch per mode at the same point.
+- **Mode emprise** — APICarto parcel/commune (and geo.api parent commune) cached per marker point and mode; no repeat fetch when toggling modes at the same location.
+- **Map permalink** — `lon`, `lat`, `mlon`, and `mlat` are written with at most 8 decimal places in the URL hash.
+- **Map permalink** — catalog, data-layer, and base-map changes update the hash; `mode` is stored in `#…` (not `?mode=`).
+- **Map permalink** — percent-encode layer keys/values; normalize legacy gpu-client hashes on load (Vue Router decode warning).
+- **Map permalink layers** — gpu-client `v:w:x:y:z` (catalog, opacity, stack, grayscale, panel visibility); legacy 4-part values still read.
+- **SearchEngineControl** — advanced search forms (places, INSEE, coordinates, parcels) use the same blue pin, animated view, and fiche flow as the main autocomplete.
+- **Mode emprise** — red dashed commune (Territoire) or parcel (Parcelle) from APICarto on map click and after place search; geopf place extent kept for search zoom only.
+- **Mode emprise** — no zoom gate; Territoire in Paris/Lyon/Marseille: orange arrondissement (APICarto) + red city commune (geo.api.gouv.fr).
+- **Layer catalogue** — no default demo layers; loading spinner while `gpu-client-config` / `LAYER_CONFIG` is fetched.
+- **Sketch style popup** — two action rows: local Undo/Redo (tertiary) for in-popup style history, then Delete / Close; live edits also recorded in sketch undo/redo.
 - README restructured (English reference + `README.fr.md` overview).
 
 ## [0.3.0] - 2026-09-25

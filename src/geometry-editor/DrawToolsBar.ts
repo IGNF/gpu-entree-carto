@@ -638,12 +638,14 @@ export class DrawToolsBar {
       const defaultSub = this.modifySubTools?.getDefaultSubToolId() ?? 'modify-shape'
       this.applyModifySubTool(defaultSub, true)
       this.transform.setActive(true)
+      this.notifyToolState()
       return
     }
 
     if (tool.remove) {
       this.map.on('pointermove', this.onFeaturePointerMove)
       this.map.on('singleclick', this.onRemoveClick)
+      this.notifyToolState()
       return
     }
 

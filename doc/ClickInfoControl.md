@@ -13,14 +13,14 @@ Always-on map click that fills the **fiche** tab (first lateral panel tab) with 
 ## Behaviour
 
 - Listens to OpenLayers `singleclick` on the injected map (`olMap`).
-- **Disabled** while a sketch tool is active (draw, measure, text, etc.).
+- **Disabled** while a sketch tool is active (draw, modify, remove, measure, text, etc.).
 - Ignores clicks on UI (tab panels, search widget, mode selector, sketch bar, form controls) and hits on sketch/measure vector layers.
 - Calls `loadFicheForMapPoint({ lon, lat, mode, zoom })`:
   - tries `config.apiFicheInfoUrl` (`/api/fiche-info`) when available;
   - otherwise APICarto fallback (`cadastre/parcelle` or `gpu/document`).
 - Opens the fiche tab via `tabPanelsApiRef.showSelection`.
 - Places the geopf **cherry** on `singleclick` (no map popup — fiche in the side panel), then loads the fiche **asynchronously**; **no map recentering**.
-- When no geopf dashed extent exists, fetches the **municipality** boundary (APICarto `cadastre/commune`) as dashed lines on the SearchEngine layer (`searchResultGraphics`).
+- Draws a **mode emprise** on the SearchEngine layer (`searchResultGraphics`): **parcel** (red, APICarto) in **Parcelle** mode; **municipality** (red) in **Territoire** mode, plus **municipal arrondissement** (orange) and **city-wide municipality** (red, geo.api.gouv.fr contour) in Paris, Lyon, and Marseille; at all zoom levels; no geopf place extent on click.
 
 ## Cursor
 

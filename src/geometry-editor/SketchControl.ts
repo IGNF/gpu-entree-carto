@@ -180,7 +180,7 @@ export class SketchControl extends Control {
     }) as OlFeature[]
     const feature = hits.find((f) => isSketchTextFeature(f))
     if (feature && this.stylePopup) {
-      this.stylePopup.open(feature, () => this.notifyChange())
+      this.stylePopup.open(feature, this.buildStylePopupOptions('edit'))
     }
   }
 
@@ -441,9 +441,9 @@ export class SketchControl extends Control {
       },
       onClearAll: () => this.clearFeatures(),
       onExtraTool: (id, active) => this.handleExtraTool(id, active),
-      onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor),
+      onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor, 'create'),
       onStyleEdit: this.enableFeatureStyleEditor
-        ? (feature, anchor) => this.openStylePopup(feature, anchor)
+        ? (feature, anchor) => this.openStylePopup(feature, anchor, 'edit')
         : undefined,
       onStyleDismiss: this.enableFeatureStyleEditor ? () => this.stylePopup?.hide() : undefined,
       onToolStateChange: () => this.emitSketchEngagement(),
@@ -453,9 +453,26 @@ export class SketchControl extends Control {
     this.syncHistoryButtons()
   }
 
+  private buildStylePopupOptions(mode: 'create' | 'edit') {
+    return {
+      mode,
+      onCommit: () => this.notifyChange(),
+      onHistoryPush: () => {
+        this.history?.push()
+        this.notifyChange()
+      },
+      onDelete: (f: OlFeature<OlGeometry>) => {
+        this.source.removeFeature(f)
+        this.history?.push()
+        this.notifyChange()
+      },
+    }
+  }
+
   private openStylePopup(
     feature: OlFeature<OlGeometry>,
     anchor?: import('ol/coordinate').Coordinate,
+    mode: 'create' | 'edit' = 'edit',
   ): void {
     if (!this.enableFeatureStyleEditor || !this.stylePopup) return
     const geom = feature.getGeometry()
@@ -464,7 +481,7 @@ export class SketchControl extends Control {
       const res = map?.getView().getResolution() ?? 1
       if (geom.getRadius() < 3 * res) return
     }
-    this.stylePopup.open(feature, () => this.notifyChange(), anchor)
+    this.stylePopup.open(feature, this.buildStylePopupOptions(mode), anchor)
   }
 
   private handleExtraTool(id: string, active: boolean): void {

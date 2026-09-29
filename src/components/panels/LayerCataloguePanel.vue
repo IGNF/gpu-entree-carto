@@ -18,6 +18,8 @@ const props = defineProps<{
   mapZoom: number
   basePresets: GpuBaseLayerPreset[]
   baseModelValue: GpuBaseLayerId
+  /** Chargement gpu-client-config / LAYER_CONFIG en cours (catalogue vide). */
+  catalogLayersLoading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -129,7 +131,16 @@ function onUnpinExpand(nodeId: string) {
           @unpin-expand="onUnpinExpand"
         />
       </div>
-      <p v-else class="ec-layer-catalogue__hint">Aucune couche dans LAYER_CONFIG.</p>
+      <div
+        v-else-if="catalogLayersLoading"
+        class="ec-layer-catalogue__waiting"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="ri-loader-4-line ec-layer-catalogue__spinner" aria-hidden="true" />
+        <span>En attente de la récupération des couches…</span>
+      </div>
+      <p v-else class="ec-layer-catalogue__hint">Aucune couche disponible.</p>
     </div>
 
     <div
@@ -183,5 +194,27 @@ function onUnpinExpand(nodeId: string) {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
+}
+
+.ec-layer-catalogue__waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-layer-catalogue__spinner {
+  flex: 0 0 auto;
+  font-size: 1.125rem;
+  color: var(--text-action-high-blue-france, #000091);
+  animation: ec-layer-catalogue-spin 0.9s linear infinite;
+}
+
+@keyframes ec-layer-catalogue-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

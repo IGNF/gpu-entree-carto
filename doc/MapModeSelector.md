@@ -27,7 +27,7 @@ Without `modelValue`, uses `provideMapMode()` context on the map view.
 
 - `mode=1` — parcel mode  
 - `mode=2` — territory mode (default if parameter missing)  
-- Changing the selector updates the query string via `history.replaceState` (no reload).
+- Changing the selector updates the URL **hash** (`#mode=…`) via `history.replaceState` (no reload). Legacy `?mode=` is migrated into the hash on load.
 
 ## Integration
 

@@ -4403,11 +4403,35 @@ i.ri-draw-line::before {
   font: inherit;
 }
 
-.ec-sketch-text-popup__actions,
-.ec-sketch-style-popup__actions {
+.ec-sketch-text-popup__actions {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.ec-sketch-style-popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn i {
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .ec-sketch-style-popup__fields {
@@ -4880,7 +4904,7 @@ i.ri-draw-line::before {
   height: 100%;
 }
 
-.ec-fiche-info__raw[data-v-16a786f1] {
+.ec-fiche-info__raw[data-v-df9a587a] {
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-default-grey, #ddd);
@@ -5378,7 +5402,7 @@ i.ri-draw-line::before {
   display: none !important;
 }
 
-.ec-layer-catalogue__title[data-v-e00379c6] {
+.ec-layer-catalogue__title[data-v-617a4a8d] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -5386,26 +5410,45 @@ i.ri-draw-line::before {
   font-size: 1.125rem;
   font-weight: 700;
 }
-.ec-layer-catalogue__title-icon[data-v-e00379c6] {
+.ec-layer-catalogue__title-icon[data-v-617a4a8d] {
   flex: 0 0 auto;
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
 }
-.ec-layer-catalogue__selection[data-v-e00379c6] {
+.ec-layer-catalogue__selection[data-v-617a4a8d] {
   margin-top: 1.5rem;
 }
-.ec-layer-catalogue__section-title[data-v-e00379c6] {
+.ec-layer-catalogue__section-title[data-v-617a4a8d] {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
-.ec-layer-catalogue__hint[data-v-e00379c6] {
+.ec-layer-catalogue__hint[data-v-617a4a8d] {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
+}
+.ec-layer-catalogue__waiting[data-v-617a4a8d] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+}
+.ec-layer-catalogue__spinner[data-v-617a4a8d] {
+  flex: 0 0 auto;
+  font-size: 1.125rem;
+  color: var(--text-action-high-blue-france, #000091);
+  animation: ec-layer-catalogue-spin-617a4a8d 0.9s linear infinite;
+}
+@keyframes ec-layer-catalogue-spin-617a4a8d {
+to {
+    transform: rotate(360deg);
+}
 }
 /**
  * Onglet panneau latéral « Couches de données » (Figma GPU UX/UI).
@@ -6227,6 +6270,19 @@ i.ri-draw-line::before {
 }
 
 .ec-fiche-info__body p:last-child {
+  margin-bottom: 0;
+}
+
+.ec-fiche-info__body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.ec-fiche-info__body li {
+  margin-bottom: 0.25rem;
+}
+
+.ec-fiche-info__body li:last-child {
   margin-bottom: 0;
 }
 
@@ -7788,13 +7844,13 @@ dialog[id^='GPterritoriesPanel-'] {
   width: 100% !important;
 }
 
-.ec-embed-viewer[data-v-10a11215] {
+.ec-embed-viewer[data-v-5ad1b89a] {
   position: relative;
   width: 100%;
   height: 100%;
   min-height: 500px;
 }
-.ec-embed-viewer__map[data-v-10a11215] {
+.ec-embed-viewer__map[data-v-5ad1b89a] {
   width: 100%;
   height: 100%;
 }

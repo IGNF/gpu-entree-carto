@@ -13,14 +13,14 @@ Clic carte **permanent** qui remplit l’onglet **fiche** (premier onglet du pan
 ## Comportement
 
 - Écoute `singleclick` OpenLayers sur la carte injectée (`olMap`).
-- **Désactivé** tant qu’un outil croquis est actif (dessin, mesure, texte, etc.).
+- **Désactivé** tant qu’un outil croquis est actif (dessin, modification, suppression, mesure, texte, etc.).
 - Ignore les clics sur l’UI (panneaux, recherche, sélecteur de mode, barre croquis, champs de formulaire) et les pixels touchant les couches vectorielles croquis / mesure.
 - Appelle `loadFicheForMapPoint({ lon, lat, mode, zoom })` :
   - tente d’abord `config.apiFicheInfoUrl` (`/api/fiche-info`) si disponible ;
   - sinon repli APICarto (`cadastre/parcelle` ou `gpu/document`).
 - Ouvre l’onglet fiche via `tabPanelsApiRef.showSelection`.
 - Pose la **cerise** geopf dès le `singleclick` (sans bulle popup — fiche dans le panneau), puis charge la fiche en **asynchrone** ; **sans recentrer** la vue.
-- Si aucune emprise geopf n’est présente, charge l’emprise **communale** (APICarto `cadastre/commune`) en pointillés sur la couche SearchEngine (`searchResultGraphics`).
+- Affiche une **emprise mode** sur la couche SearchEngine (`searchResultGraphics`) : **parcelle** (rouge, APICarto) en mode **Parcelle** ; **commune** (rouge) en mode **Territoire**, et **arrondissement** (orange) + **commune ville** (rouge, contour geo.api.gouv.fr) à Paris, Lyon et Marseille ; indépendant du niveau de zoom ; pas d’emprise « lieu » geopf au clic.
 
 ## Curseur
 

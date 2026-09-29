@@ -45196,11 +45196,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const defaultSub = ((_f = this.modifySubTools) == null ? void 0 : _f.getDefaultSubToolId()) ?? "modify-shape";
         this.applyModifySubTool(defaultSub, true);
         this.transform.setActive(true);
+        this.notifyToolState();
         return;
       }
       if (tool.remove) {
         this.map.on("pointermove", this.onFeaturePointerMove);
         this.map.on("singleclick", this.onRemoveClick);
+        this.notifyToolState();
         return;
       }
       if (!tool.drawType) return;
@@ -45722,6 +45724,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "alphaInput");
       __publicField(this, "color");
       __publicField(this, "onChange", null);
+      __publicField(this, "onFinalize", null);
       this.color = parseColor(initial);
       this.root = document.createElement("div");
       this.root.className = "ec-sketch-color";
@@ -45751,8 +45754,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const c = parseColor(this.hueInput.value);
         this.color = { ...c, a: this.color.a };
         this.syncUi({ syncHue: false });
-        this.emit();
+        this.emitPreview();
       });
+      this.hueInput.addEventListener("change", () => this.emitFinalize());
       this.hexInput.addEventListener("input", () => {
         const raw = this.hexInput.value.trim();
         if (!this.isCompleteColorInput(raw)) return;
@@ -45764,12 +45768,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
         this.syncHexFromColorUnlessEditing();
         this.paintSwatch();
-        this.emit();
+        this.emitPreview();
       });
+      this.alphaInput.addEventListener("pointerup", () => this.emitFinalize());
+      this.alphaInput.addEventListener("change", () => this.emitFinalize());
       this.syncUi({ forceHex: true });
     }
     setOnChange(cb) {
       this.onChange = cb;
+    }
+    /** Appelé à la fin d’un glissement (slider opacité) ou validation couleur native / hex. */
+    setOnFinalize(cb) {
+      this.onFinalize = cb;
     }
     getValue() {
       return toRgbaString(this.color);
@@ -45787,8 +45797,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!node) return false;
       return this.root.contains(node);
     }
-    emit() {
+    emitPreview() {
       var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    emitFinalize() {
+      var _a;
+      if (this.onFinalize) {
+        this.onFinalize(this.getValue());
+        return;
+      }
       (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
     }
     /** Valeur hex entièrement saisie (pas de reformat pendant la frappe). */
@@ -45800,7 +45818,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     commitHexField() {
       this.color = parseColor(this.hexInput.value, this.color);
       this.syncUi({ forceHex: true });
-      this.emit();
+      this.emitFinalize();
     }
     applyParsedColor(next, opts) {
       this.color = next;
@@ -45810,7 +45828,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.hexInput.value = toHexRgba(this.color);
       }
       this.paintSwatch();
-      this.emit();
+      this.emitPreview();
     }
     syncHexFromColorUnlessEditing() {
       if (document.activeElement === this.hexInput) return;
@@ -45871,6 +45889,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "feature", null);
       __publicField(this, "kind", "polygon");
       __publicField(this, "onCommit", null);
+      __publicField(this, "onHistoryPush", null);
+      __publicField(this, "onDelete", null);
+      /** Historique local du style pendant la session popup (Annuler / Rétablir). */
+      __publicField(this, "featureStyleHistory", []);
+      __publicField(this, "featureStyleHistoryIndex", 0);
+      __publicField(this, "suppressFeatureStyleHistory", false);
+      __publicField(this, "btnUndo");
+      __publicField(this, "btnRedo");
+      __publicField(this, "btnDelete");
+      __publicField(this, "btnClose");
       __publicField(this, "openFlag", false);
       __publicField(this, "advancedOpen", false);
       __publicField(this, "mapDragged", false);
@@ -45929,7 +45957,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 });
         const feature = hits[0];
         if (!feature) return;
-        this.open(feature, this.onCommit ?? void 0, evt.coordinate);
+        this.open(
+          feature,
+          {
+            mode: "edit",
+            onCommit: this.onCommit ?? void 0,
+            onHistoryPush: this.onHistoryPush ?? void 0,
+            onDelete: this.onDelete ?? void 0
+          },
+          evt.coordinate
+        );
       });
       this.map = map;
       this.root = document.createElement("div");
@@ -45943,14 +45980,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         </button>
         <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
         <div class="ec-sketch-style-popup__actions">
-          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
-          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--history">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__undo" disabled>
+              <i class="ri-corner-up-left-line" aria-hidden="true"></i>
+              Annuler
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__redo" disabled>
+              <i class="ri-corner-up-right-line" aria-hidden="true"></i>
+              Rétablir
+            </button>
+          </div>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--main">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__delete">
+              <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+              Supprimer
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--primary ec-sketch-style-popup__close">Fermer</button>
+          </div>
         </div>
       </div>
     `;
       this.basicFields = this.root.querySelector('[data-section="basic"]');
       this.advancedFields = this.root.querySelector('[data-section="advanced"]');
       this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
+      this.btnUndo = this.root.querySelector(".ec-sketch-style-popup__undo");
+      this.btnRedo = this.root.querySelector(".ec-sketch-style-popup__redo");
+      this.btnDelete = this.root.querySelector(".ec-sketch-style-popup__delete");
+      this.btnClose = this.root.querySelector(".ec-sketch-style-popup__close");
       this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
         <span>Texte</span>
@@ -46049,7 +46105,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       for (const [key, picker] of Object.entries(this.colorPickers)) {
         const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`);
         slot == null ? void 0 : slot.appendChild(picker.root);
-        picker.setOnChange(() => this.applyFromForm());
+        picker.setOnChange(() => this.previewStyleFromForm());
+        picker.setOnFinalize(() => this.recordStyleFromForm());
       }
       this.els = {
         text: this.root.querySelector('[data-input="text"]'),
@@ -46090,26 +46147,49 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
         this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       };
-      const live = () => {
+      const liveCommit = () => {
         syncOutputs();
         this.syncDependentFields();
-        this.applyFromForm();
+        this.recordStyleFromForm();
+      };
+      const livePreview = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.previewStyleFromForm();
+      };
+      const commitRangeSlider = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.recordStyleFromForm();
       };
       for (const input of Object.values(this.els)) {
         if (input instanceof HTMLOutputElement) continue;
-        input.addEventListener("input", live);
-        input.addEventListener("change", live);
+        if (input instanceof HTMLInputElement && input.type === "range") {
+          input.addEventListener("input", livePreview);
+          input.addEventListener("pointerup", commitRangeSlider);
+          input.addEventListener("change", commitRangeSlider);
+          continue;
+        }
+        input.addEventListener("input", liveCommit);
+        input.addEventListener("change", liveCommit);
       }
       this.advancedToggle.addEventListener("click", () => {
         this.setAdvancedOpen(!this.advancedOpen);
       });
-      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+      this.btnDelete.addEventListener("click", () => {
         var _a;
-        this.applyFromForm();
+        const feature = this.feature;
+        if (!feature) return;
+        (_a = this.onDelete) == null ? void 0 : _a.call(this, feature);
+        this.hide();
+      });
+      this.btnUndo.addEventListener("click", () => this.stepFeatureStyleHistory(-1));
+      this.btnRedo.addEventListener("click", () => this.stepFeatureStyleHistory(1));
+      this.btnClose.addEventListener("click", () => {
+        var _a;
         (_a = this.onCommit) == null ? void 0 : _a.call(this);
         this.hide();
       });
-      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
       this.overlay = new Overlay({
         element: this.root,
         positioning: "bottom-center",
@@ -46119,14 +46199,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       this.map.addOverlay(this.overlay);
     }
-    open(feature, onCommit, anchor) {
+    open(feature, options, anchor) {
+      const opts = typeof options === "function" ? { onCommit: options } : options ?? {};
       this.unbindOutside();
       this.feature = feature;
-      this.onCommit = onCommit ?? null;
+      this.onCommit = opts.onCommit ?? null;
+      this.onHistoryPush = opts.onHistoryPush ?? null;
+      this.onDelete = opts.onDelete ?? null;
       this.kind = featureStyleKindOf(feature);
       this.clickAnchor = anchor ?? null;
       this.setAdvancedOpen(false);
       const attrs = getFeatureStyleAttrs(feature);
+      this.resetFeatureStyleHistory(attrs);
       this.syncFieldsVisibility();
       this.fillForm(attrs);
       this.syncDependentFields();
@@ -46155,6 +46239,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.feature = null;
       this.clickAnchor = null;
       this.onCommit = null;
+      this.onHistoryPush = null;
+      this.onDelete = null;
+      this.featureStyleHistory = [];
+      this.featureStyleHistoryIndex = 0;
       this.outsideGesture = null;
       this.mapDragged = false;
       this.skipNextOutsideUp = false;
@@ -46311,14 +46399,60 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       this.els.zIndex.value = String(attrs.zIndex);
     }
-    applyFromForm() {
-      if (!this.feature) return;
+    /** Applique le formulaire sur la feature sans entrée d’historique (glissement slider). */
+    previewStyleFromForm() {
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      applyFeatureStyle(this.feature, this.readAttrsFromForm());
+    }
+    resetFeatureStyleHistory(attrs) {
+      this.featureStyleHistory = [cloneFeatureStyleAttrs(attrs)];
+      this.featureStyleHistoryIndex = 0;
+      this.syncFeatureStyleHistoryButtons();
+    }
+    syncFeatureStyleHistoryButtons() {
+      this.btnUndo.disabled = this.featureStyleHistoryIndex <= 0;
+      this.btnRedo.disabled = this.featureStyleHistoryIndex >= this.featureStyleHistory.length - 1;
+    }
+    recordStyleFromForm() {
+      var _a;
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      const attrs = this.readAttrsFromForm();
+      const current = this.featureStyleHistory[this.featureStyleHistoryIndex];
+      if (current && featureStyleAttrsEqual(current, attrs)) return;
+      this.featureStyleHistory = this.featureStyleHistory.slice(0, this.featureStyleHistoryIndex + 1);
+      this.featureStyleHistory.push(cloneFeatureStyleAttrs(attrs));
+      this.featureStyleHistoryIndex = this.featureStyleHistory.length - 1;
+      applyFeatureStyle(this.feature, attrs);
+      (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+      this.syncFeatureStyleHistoryButtons();
+    }
+    stepFeatureStyleHistory(delta) {
+      var _a;
+      const nextIndex = this.featureStyleHistoryIndex + delta;
+      if (nextIndex < 0 || nextIndex >= this.featureStyleHistory.length) return;
+      const feature = this.feature;
+      if (!feature) return;
+      this.suppressFeatureStyleHistory = true;
+      try {
+        this.featureStyleHistoryIndex = nextIndex;
+        const attrs = this.featureStyleHistory[this.featureStyleHistoryIndex];
+        applyFeatureStyle(feature, attrs);
+        this.fillForm(attrs);
+        this.syncDependentFields();
+        (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+        this.syncFeatureStyleHistoryButtons();
+      } finally {
+        this.suppressFeatureStyleHistory = false;
+      }
+    }
+    readAttrsFromForm() {
       const base = defaultFeatureStyleAttrs(this.kind);
       const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
       const shape = this.els.pointShape.value || base.pointShape;
       const join = this.els.lineJoin.value || base.lineJoin;
-      const attrs = {
+      return {
         ...base,
+        kind: this.kind,
         text: this.els.text.value.trim() || base.text,
         fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
         fontColor: this.colorPickers.fontColor.getValue(),
@@ -46341,11 +46475,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
         zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
       };
-      applyFeatureStyle(this.feature, attrs);
     }
   };
   __publicField(_SketchFeatureStylePopup, "OUTSIDE_MOVE_TOLERANCE_PX", 5);
   let SketchFeatureStylePopup = _SketchFeatureStylePopup;
+  function cloneFeatureStyleAttrs(attrs) {
+    return { ...attrs };
+  }
+  function featureStyleAttrsEqual(a, b) {
+    return a.kind === b.kind && a.strokeColor === b.strokeColor && a.strokeWidth === b.strokeWidth && a.fillColor === b.fillColor && a.radius === b.radius && a.text === b.text && a.fontSize === b.fontSize && a.fontColor === b.fontColor && a.textStrokeColor === b.textStrokeColor && a.textStrokeWidth === b.textStrokeWidth && a.rotation === b.rotation && a.lineDash === b.lineDash && a.lineCap === b.lineCap && a.lineJoin === b.lineJoin && a.lineDashOffset === b.lineDashOffset && a.miterLimit === b.miterLimit && a.fontFamily === b.fontFamily && a.fontBold === b.fontBold && a.fontItalic === b.fontItalic && a.pointShape === b.pointShape && a.pointRotation === b.pointRotation && a.zIndex === b.zIndex;
+  }
   function clamp(n, min, max, fallback) {
     if (!Number.isFinite(n)) return fallback;
     return Math.min(max, Math.max(min, n));
@@ -46701,7 +46840,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         });
         const feature = hits.find((f) => isSketchTextFeature(f));
         if (feature && this.stylePopup) {
-          this.stylePopup.open(feature, () => this.notifyChange());
+          this.stylePopup.open(feature, this.buildStylePopupOptions("edit"));
         }
       });
       this.geometryType = options.geometryType ?? "Geometry";
@@ -46930,8 +47069,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         },
         onClearAll: () => this.clearFeatures(),
         onExtraTool: (id, active) => this.handleExtraTool(id, active),
-        onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor),
-        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor) : void 0,
+        onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor, "create"),
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor, "edit") : void 0,
         onStyleDismiss: this.enableFeatureStyleEditor ? () => {
           var _a2;
           return (_a2 = this.stylePopup) == null ? void 0 : _a2.hide();
@@ -46942,7 +47081,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.syncToolbarClusterVisibility();
       this.syncHistoryButtons();
     }
-    openStylePopup(feature, anchor) {
+    buildStylePopupOptions(mode) {
+      return {
+        mode,
+        onCommit: () => this.notifyChange(),
+        onHistoryPush: () => {
+          var _a;
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        },
+        onDelete: (f) => {
+          var _a;
+          this.source.removeFeature(f);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        }
+      };
+    }
+    openStylePopup(feature, anchor, mode = "edit") {
       if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
       const geom = feature.getGeometry();
       if (geom instanceof Circle) {
@@ -46950,7 +47106,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const res = (map == null ? void 0 : map.getView().getResolution()) ?? 1;
         if (geom.getRadius() < 3 * res) return;
       }
-      this.stylePopup.open(feature, () => this.notifyChange(), anchor);
+      this.stylePopup.open(feature, this.buildStylePopupOptions(mode), anchor);
     }
     handleExtraTool(id, active) {
       var _a, _b, _c, _d, _e, _f, _g;

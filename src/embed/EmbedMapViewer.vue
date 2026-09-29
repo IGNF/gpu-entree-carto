@@ -11,6 +11,8 @@ import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
 import MapModeSelector from '@/components/map/MapModeSelector.vue'
 import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
+import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
+import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
 import { provideMapMode } from '@/composables/mapMode'
 import { normalizeMapMode } from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
@@ -44,6 +46,16 @@ const gpuBaseEnv = createGpuBaseLayerEnvironment()
 const presets = gpuBaseEnv.presets
 const activeBase = ref<GpuBaseLayerId>('carte')
 setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value)
+
+provideMapPermalinkUi({
+  presets,
+  getActiveBaseId: () => activeBase.value,
+  setActiveBaseId: (id) => {
+    activeBase.value = id
+    setActiveGpuBaseLayer(gpuBaseEnv, id)
+  },
+  activeBaseIdRef: activeBase,
+})
 const baseLayers = computed(() => gpuBaseEnv.allLayers)
 const initialSearch = computed(() => props.params?.search ?? null)
 
@@ -137,6 +149,7 @@ function onToggleLayer(id: string, visible: boolean) {
       />
       <SearchEngineControl :initial-search="initialSearch" />
       <ClickInfoControl />
+      <MapPermalinkSync :skip-marker-restore="Boolean(initialSearch)" />
       <MapModeSelector />
       <OverviewMapControl />
       <SketchControl />

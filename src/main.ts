@@ -18,6 +18,14 @@ import SketchDemoView from './views/SketchDemoView.vue'
 import './styles/main.css'
 import './styles/location-search-host.css'
 import './styles/notifications.css'
+import {
+  bootstrapMapPermalinkFromLocation,
+  locationHashLooksLikeMapPermalink,
+} from '@/lib/map/mapPermalink'
+
+if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
+  bootstrapMapPermalinkFromLocation()
+}
 
 const notivue = createNotivue({
   position: 'bottom-center',
@@ -47,6 +55,12 @@ const router = createRouter({
       component: SketchDemoView,
     },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.name === 'map' && locationHashLooksLikeMapPermalink()) {
+    bootstrapMapPermalinkFromLocation()
+  }
 })
 
 const app = createApp(App)

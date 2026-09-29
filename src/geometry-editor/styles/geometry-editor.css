@@ -626,11 +626,35 @@
   font: inherit;
 }
 
-.ec-sketch-text-popup__actions,
-.ec-sketch-style-popup__actions {
+.ec-sketch-text-popup__actions {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.ec-sketch-style-popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn i {
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .ec-sketch-style-popup__fields {

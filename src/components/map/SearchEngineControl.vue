@@ -29,10 +29,15 @@ import { setMapLocationMarker, type MapLocationMarkerFn } from '@/composables/ma
 import {
   dismissSearchEnginePopup,
   empriseTargetKeyForPoint,
-  ensureCommuneEmpriseOnSearchLayer,
+  ensureModeEmpriseOnSearchLayer,
+  MODE_EMPRISE_PROP,
   searchEngineLayerHostRef,
-  shouldDrawCommuneEmpriseFallback,
 } from '@/lib/map/searchResultGraphics'
+import { DEFAULT_MAP_MODE, normalizeMapMode, type MapModeId } from '@/lib/map/mapMode'
+import { setMapPermalinkMarker } from '@/lib/map/mapPermalink'
+
+/** Bleu France — cerise localisation (gpu-client / cartes.gouv.fr). */
+const GPU_PIN_BLUE = '#000091'
 
 const props = withDefaults(
   defineProps<{
@@ -81,6 +86,10 @@ type SearchEngineAdvancedLike = Control & {
       clear: () => void
       push: (feature: Feature) => void
     }
+    setStyle?: (style: Style | Style[]) => void
+    setActive?: (active: boolean) => void
+    on?: (type: string, listener: () => void) => void
+    un?: (type: string, listener: () => void) => void
   }
   _setPopupInfo?: (feature: Feature) => void
   baseSearchEngine: {
@@ -105,10 +114,32 @@ function openFicheFromSearch(search: StandardViewerSearch): void {
   void loadFicheForSearch(search, mode, zoom)
 }
 
-function searchFromGeopfResult(control: SearchEngineAdvancedLike): StandardViewerSearch | null {
+function searchLabelFromFeature(feature: Feature | undefined): string {
+  if (!feature) return ''
+  const toponyme = feature.get('toponyme')
+  if (typeof toponyme === 'string' && toponyme.trim()) return toponyme.trim()
+  const infoPopup = feature.get('infoPopup')
+  if (typeof infoPopup === 'string' && infoPopup.trim()) {
+    const plain = infoPopup
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (plain) return plain
+  }
+  return ''
+}
+
+function searchFromGeopfResult(
+  control: SearchEngineAdvancedLike,
+  searchEvent?: { result?: Feature; extent?: Feature },
+): StandardViewerSearch | null {
   const label = control.baseSearchEngine.input.value.trim()
-  const feature = control.popup?.get('feature') as Feature | undefined
-  if (!label && !feature) return null
+  let feature = control.popup?.get('feature') as Feature | undefined
+  if (!feature && searchEvent?.result) {
+    feature = searchEvent.result
+  }
+  const resolvedLabel = label || searchLabelFromFeature(feature)
+  if (!resolvedLabel && !feature) return null
 
   let x: number | undefined
   let y: number | undefined
@@ -131,7 +162,7 @@ function searchFromGeopfResult(control: SearchEngineAdvancedLike): StandardViewe
   const origin = feature?.get('origin')
   const featureType = feature?.get('type')
   return {
-    fullText: label || String(feature?.get('infoPopup') ?? 'Résultat'),
+    fullText: resolvedLabel || 'Résultat',
     type:
       (typeof featureType === 'string' && featureType) ||
       (typeof origin === 'string' ? origin : undefined),
@@ -147,7 +178,7 @@ function tabPanelsRightInset(): number {
   return Math.ceil(el.getBoundingClientRect().width) + 24
 }
 
-/** Pin geopf (bleu + halo blanc) — visible même si Select a désélectionné la feature. */
+/** Pin geopf (bleu #000091 + halo blanc). */
 function pinMarkerStyle(): Style[] {
   const make = (color: string | number[]) =>
     new Style({
@@ -159,7 +190,40 @@ function pinMarkerStyle(): Style[] {
       stroke: new Stroke({ color, width: 2 }),
       fill: new Fill({ color: 'rgba(0, 0, 0, 0.1)' }),
     })
-  return [make([255, 255, 255, 1]), make([0, 0, 145, 1])]
+  return [make('#ffffff'), make(GPU_PIN_BLUE)]
+}
+
+/**
+ * geopf Select applique du rouge ([145,0,0]) au clic sur la cerise — style bleu,
+ * pas de sélection au clic (fiche via ClickInfoControl / recherche).
+ */
+function configureSearchPinInteraction(control: SearchEngineAdvancedLike): void {
+  const select = control.selectInteraction
+  if (!select) return
+  select.setStyle?.(pinMarkerStyle())
+  select.setActive?.(false)
+}
+
+function bindSearchPinSelectGuard(control: SearchEngineAdvancedLike): () => void {
+  const select = control.selectInteraction
+  if (!select?.on) return () => {}
+  const onSelect = () => {
+    requestAnimationFrame(() => enforceSearchLayerPinStyles(control))
+  }
+  select.on('select', onSelect)
+  return () => select.un?.('select', onSelect)
+}
+
+function enforceSearchLayerPinStyles(control: SearchEngineAdvancedLike): void {
+  const source = control.layer?.getSource()
+  if (source) {
+    for (const feature of source.getFeatures()) {
+      if (feature.getGeometry()?.getType() === 'Point') {
+        feature.setStyle(pinMarkerStyle())
+      }
+    }
+  }
+  control.selectInteraction?.getFeatures()?.clear()
 }
 
 function searchResultFeature(control: SearchEngineAdvancedLike): Feature | null {
@@ -181,6 +245,7 @@ function searchResultViewExtent(control: SearchEngineAdvancedLike): Extent | nul
   const emprise = createEmpty()
   let hasEmprise = false
   for (const f of features) {
+    if (f.get(MODE_EMPRISE_PROP)) continue
     const geometry = f.getGeometry()
     if (!geometry || geometry.getType() === 'Point') continue
     extend(emprise, geometry.getExtent())
@@ -210,14 +275,7 @@ function prepareSearchResultOnMap(control: SearchEngineAdvancedLike): Feature | 
     source.addFeature(feature)
   }
 
-  if (geometry.getType() === 'Point') {
-    feature.setStyle(pinMarkerStyle())
-  }
-
-  const selected = control.selectInteraction?.getFeatures()
-  if (selected && !selected.getArray().includes(feature)) {
-    selected.push(feature)
-  }
+  enforceSearchLayerPinStyles(control)
 
   dismissSearchEnginePopup(control)
   return feature
@@ -237,19 +295,35 @@ function animateViewToSearchResult(control: SearchEngineAdvancedLike): void {
   })
 }
 
+function resolveMapModeForEmprise(): MapModeId {
+  const raw = tryUseMapMode()?.mode.value ?? DEFAULT_MAP_MODE
+  return normalizeMapMode(raw) ?? DEFAULT_MAP_MODE
+}
+
+function syncModeEmpriseAfterSearch(
+  control: SearchEngineAdvancedLike,
+  lon: number,
+  lat: number,
+  empriseKey: string,
+): void {
+  const mode = resolveMapModeForEmprise()
+  void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode, empriseKey)
+  const map = control.getMap()
+  map?.once('moveend', () => {
+    void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode, empriseKey)
+  })
+}
+
 function onLocationSearchResult(
   control: SearchEngineAdvancedLike,
   empriseKey: string,
   lon: number,
   lat: number,
-  search: StandardViewerSearch | null,
-  searchEvent?: { extent?: Feature },
 ): void {
+  setMapPermalinkMarker(lon, lat)
   prepareSearchResultOnMap(control)
   animateViewToSearchResult(control)
-  if (shouldDrawCommuneEmpriseFallback(search, control, searchEvent)) {
-    void ensureCommuneEmpriseOnSearchLayer(control, lon, lat, empriseKey)
-  }
+  syncModeEmpriseAfterSearch(control, lon, lat, empriseKey)
 }
 
 /**
@@ -284,6 +358,8 @@ function applyInitialSearch(control: SearchEngineAdvancedLike, search: StandardV
     // → trait parasite entre bulle et appendice).
     control.createMarker([x, y], '', isGeolocate ? 'geolocate' : 'searchAtInit', true)
     dismissSearchEnginePopup(control)
+    enforceSearchLayerPinStyles(control)
+    setMapPermalinkMarker(x, y)
   }
 
   // Géoloc : coords déjà connues ; un géocode du libellé effacerait le marker.
@@ -317,6 +393,8 @@ function bindMapLocationMarker(control: SearchEngineAdvancedLike): MapLocationMa
     const origin = options?.origin ?? 'ficheInfo'
     control.createMarker([lon, lat], '', origin, options?.center ?? false)
     dismissSearchEnginePopup(control)
+    enforceSearchLayerPinStyles(control)
+    setMapPermalinkMarker(lon, lat)
   }
 }
 
@@ -329,26 +407,48 @@ watch(
       return
     }
     const advanced = control as SearchEngineAdvancedLike
+    configureSearchPinInteraction(advanced)
+    const unbindPinSelectGuard = bindSearchPinSelectGuard(advanced)
     searchEngineLayerHostRef.value = advanced
     setMapLocationMarker(bindMapLocationMarker(advanced))
     onCleanup(() => {
+      unbindPinSelectGuard()
       setMapLocationMarker(null)
       searchEngineLayerHostRef.value = null
     })
     const onSearch = (e?: { result?: Feature; extent?: Feature; center?: boolean }) => {
-      const fromFicheInfo = e?.result?.get?.('origin') === 'ficheInfo'
+      const origin = e?.result?.get?.('origin')
+      const fromFicheInfo = origin === 'ficheInfo'
+      const fromPermalinkRestore = origin === 'permalink'
       requestAnimationFrame(() => {
-        // Cerise clic info / GetFeatureInfo : pas de recentrage ni rechargement fiche.
-        if (fromFicheInfo) return
-        const search = searchFromGeopfResult(advanced)
+        if (fromFicheInfo || fromPermalinkRestore) {
+          enforceSearchLayerPinStyles(advanced)
+          return
+        }
+        const search = searchFromGeopfResult(advanced, e)
         const lon = Number(search?.position?.x)
         const lat = Number(search?.position?.y)
         if (Number.isFinite(lon) && Number.isFinite(lat)) {
           const empriseKey = empriseTargetKeyForPoint(lon, lat)
-          onLocationSearchResult(advanced, empriseKey, lon, lat, search, e)
+          onLocationSearchResult(advanced, empriseKey, lon, lat)
         } else {
           prepareSearchResultOnMap(advanced)
           animateViewToSearchResult(advanced)
+          const feature = searchResultFeature(advanced)
+          const geometry = feature?.getGeometry()
+          if (geometry) {
+            let coord: number[] | undefined
+            if (geometry.getType() === 'Point') {
+              coord = (geometry as Point).getCoordinates()
+            } else {
+              coord = getCenter(geometry.getExtent())
+            }
+            if (coord) {
+              const [fallbackLon, fallbackLat] = toLonLat(coord)
+              const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat)
+              syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey)
+            }
+          }
         }
         if (search?.fullText) openFicheFromSearch(search)
       })

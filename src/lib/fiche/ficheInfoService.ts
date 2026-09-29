@@ -6,12 +6,68 @@ import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { escapeHtml, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
+import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
 const APICARTO_GPU = 'https://apicarto.ign.fr/api/gpu/document'
 const APICARTO_PARCEL = 'https://apicarto.ign.fr/api/cadastre/parcelle'
 
 /** Ignore les réponses APICarto / API arrivées après un clic plus récent. */
 let mapPointRequestSeq = 0
+
+const FICHE_POINT_EPS = 1e-7
+
+type FichePointCache = {
+  lon: number
+  lat: number
+  byMode: Partial<Record<MapModeId, FicheInfoSelection>>
+}
+
+/** Fiches déjà chargées au point cerise (une entrée par mode). */
+let fichePointCache: FichePointCache | null = null
+
+function sameMapPoint(a: { lon: number; lat: number }, b: { lon: number; lat: number }): boolean {
+  return Math.abs(a.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a.lat - b.lat) <= FICHE_POINT_EPS
+}
+
+function syncFichePointCache(lon: number, lat: number): void {
+  if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
+    fichePointCache = { lon, lat, byMode: {} }
+  }
+}
+
+function storeFicheInCache(
+  mode: MapModeId,
+  lon: number,
+  lat: number,
+  selection: FicheInfoSelection,
+): void {
+  syncFichePointCache(lon, lat)
+  fichePointCache!.byMode[mode] = selection
+}
+
+function cachedFicheForMode(mode: MapModeId, lon: number, lat: number): FicheInfoSelection | null {
+  if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null
+  return fichePointCache.byMode[mode] ?? null
+}
+
+/** Bascule la fiche au changement de mode si une cerise est présente (sans refetch si en cache). */
+export function refreshFicheForMapModeChange(mode: MapModeId, zoom: number): void {
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (!marker) return
+  const cached = cachedFicheForMode(mode, marker.lon, marker.lat)
+  if (cached) {
+    showFiche(cached)
+    return
+  }
+  void loadFicheForMapPoint({
+    lon: marker.lon,
+    lat: marker.lat,
+    mode,
+    zoom,
+    markerPlacedAtClick: true,
+    skipLocationMarker: true,
+  })
+}
 
 function pointGeomParam(lon: number, lat: number): string {
   return encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [lon, lat] }))
@@ -41,11 +97,13 @@ function applyMapPointResult(
   requestId: number,
   lon: number,
   lat: number,
+  mode: MapModeId,
   selection: FicheInfoSelection,
   markerPlacedAtClick: boolean,
   skipLocationMarker: boolean,
 ): FicheInfoSelection | null {
   if (requestId !== mapPointRequestSeq) return null
+  storeFicheInCache(mode, lon, lat, selection)
   showFiche(selection)
   if (!skipLocationMarker && !markerPlacedAtClick) {
     syncFicheLocationMarker(lon, lat)
@@ -144,17 +202,8 @@ async function ficheFromApicarto(
   lon: number,
   lat: number,
   mode: MapModeId,
-  zoom: number,
 ): Promise<FicheInfoSelection> {
   if (mode === MAP_MODE_PARCEL) {
-    const minZoom = Number(config.minZoomLevelForParcel ?? 12)
-    if (zoom < minZoom) {
-      return {
-        title: 'Parcelle',
-        bodyHtml: `<p>Zoomez au niveau ${minZoom} ou au-delà pour interroger une parcelle au clic.</p>`,
-        raw: { lon, lat, zoom, mode },
-      }
-    }
     const geo = await fetchGeoJson(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`)
     const feature = geo.features?.[0]
     if (!feature?.properties) {
@@ -193,6 +242,7 @@ export async function loadFicheForMapPoint(params: {
   const requestId = ++mapPointRequestSeq
   const markerPlacedAtClick = params.markerPlacedAtClick === true
   const skipLocationMarker = params.skipLocationMarker === true
+  syncFichePointCache(params.lon, params.lat)
   const loadingTitle =
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
   showLoading(loadingTitle)
@@ -203,17 +253,19 @@ export async function loadFicheForMapPoint(params: {
       requestId,
       params.lon,
       params.lat,
+      params.mode,
       fromSite,
       markerPlacedAtClick,
       skipLocationMarker,
     )
   }
   try {
-    const selection = await ficheFromApicarto(params.lon, params.lat, params.mode, params.zoom)
+    const selection = await ficheFromApicarto(params.lon, params.lat, params.mode)
     return applyMapPointResult(
       requestId,
       params.lon,
       params.lat,
+      params.mode,
       selection,
       markerPlacedAtClick,
       skipLocationMarker,
@@ -228,6 +280,7 @@ export async function loadFicheForMapPoint(params: {
       requestId,
       params.lon,
       params.lat,
+      params.mode,
       fallback,
       markerPlacedAtClick,
       skipLocationMarker,

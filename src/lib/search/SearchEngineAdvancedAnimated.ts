@@ -1,10 +1,12 @@
 import SearchEngineAdvanced from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/SearchEngineAdvanced.js'
-import type Feature from 'ol/Feature'
+import Feature from 'ol/Feature'
 
 type SearchResultEvent = {
   center?: boolean
   result?: unknown
   extent?: unknown
+  /** Carte déjà mise à jour (recherche avancée) — évite un second `addResultToMap`. */
+  entreeMapAlreadyUpdated?: boolean
 }
 
 type SearchEngineAdvancedProto = SearchEngineAdvanced & {
@@ -26,12 +28,35 @@ type SearchEngineAdvancedProto = SearchEngineAdvanced & {
  */
 export default class SearchEngineAdvancedAnimated extends SearchEngineAdvanced {
   addResultToMap(e: SearchResultEvent) {
+    if (e.entreeMapAlreadyUpdated) {
+      return
+    }
     const proto = SearchEngineAdvanced.prototype as SearchEngineAdvancedProto
     if (e.center !== false) {
       proto.addResultToMap.call(this, { ...e, center: false })
       return
     }
     proto.addResultToMap.call(this, e)
+  }
+
+  /**
+   * geopf n’émet pas `search` pour les formulaires avancés — aligner sur `createMarker`
+   * (addResultToMap puis dispatch) pour cerise bleue + vol animé côté SearchEngineControl.
+   */
+  onAdvancedSearchResult(e: SearchResultEvent) {
+    const parent = SearchEngineAdvanced.prototype as SearchEngineAdvanced & {
+      onAdvancedSearchResult: (evt: SearchResultEvent) => void
+    }
+    parent.onAdvancedSearchResult.call(this, e)
+    const result = e.result
+    if (result instanceof Feature) {
+      this.dispatchEvent({
+        ...e,
+        type: 'search',
+        center: false,
+        entreeMapAlreadyUpdated: true,
+      } as unknown as Parameters<SearchEngineAdvanced['dispatchEvent']>[0])
+    }
   }
 
   _setPopupInfo(feature?: Feature) {

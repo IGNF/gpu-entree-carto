@@ -1,7 +1,8 @@
 import { inject, provide, ref, watch, type Ref } from 'vue'
 import {
   DEFAULT_MAP_MODE,
-  readMapModeFromLocation,
+  readMapModeFromPermalinkHash,
+  readMapModeFromSearchParams,
   writeMapModeToLocation,
   type MapModeId,
 } from '@/lib/map/mapMode'
@@ -13,15 +14,22 @@ export interface MapModeContext {
   setMode: (next: MapModeId) => void
 }
 
+function resolveInitialMapMode(fallback?: MapModeId): MapModeId {
+  if (typeof window === 'undefined') return fallback ?? DEFAULT_MAP_MODE
+  return (
+    readMapModeFromPermalinkHash(window.location.hash) ??
+    readMapModeFromSearchParams(window.location.search) ??
+    fallback ??
+    DEFAULT_MAP_MODE
+  )
+}
+
 export function provideMapMode(options?: {
   initial?: MapModeId
   syncUrl?: boolean
 }): MapModeContext {
   const syncUrl = options?.syncUrl !== false
-  const mode = ref<MapModeId>(
-    options?.initial ??
-      (typeof window !== 'undefined' ? readMapModeFromLocation() : DEFAULT_MAP_MODE),
-  )
+  const mode = ref<MapModeId>(resolveInitialMapMode(options?.initial))
 
   const setMode = (next: MapModeId): void => {
     if (mode.value === next) return
@@ -34,7 +42,7 @@ export function provideMapMode(options?: {
       (value) => {
         writeMapModeToLocation(value)
       },
-      { flush: 'post' },
+      { flush: 'post', immediate: true },
     )
   }
 

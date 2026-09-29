@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Clic info permanent (désactivé pendant l’usage des outils croquis).
+ * Clic info permanent (désactivé pendant l’usage des outils croquis : dessin, modification, suppression, mesure, texte…).
  * Remplit l’onglet fiche selon le mode Parcelle / Territoire.
  */
 import { inject, onUnmounted, shallowRef, watch, type ShallowRef } from 'vue'
@@ -16,7 +16,7 @@ import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { loadFicheForMapPoint } from '@/lib/fiche/ficheInfoService'
 import {
   empriseTargetKeyForPoint,
-  ensureCommuneEmpriseForMapPoint,
+  ensureModeEmpriseForMapPoint,
 } from '@/lib/map/searchResultGraphics'
 
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
@@ -69,7 +69,7 @@ function onMapClick(evt: MapBrowserEvent): void {
     origin: 'ficheInfo',
     center: false,
   })
-  ensureCommuneEmpriseForMapPoint(lon, lat, empriseKey)
+  ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey)
   void loadFicheForMapPoint({
     lon,
     lat,

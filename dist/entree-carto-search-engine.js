@@ -39458,12 +39458,32 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   class SearchEngineAdvancedAnimated extends SearchEngineAdvanced {
     addResultToMap(e) {
+      if (e.entreeMapAlreadyUpdated) {
+        return;
+      }
       const proto = SearchEngineAdvanced.prototype;
       if (e.center !== false) {
         proto.addResultToMap.call(this, { ...e, center: false });
         return;
       }
       proto.addResultToMap.call(this, e);
+    }
+    /**
+     * geopf n’émet pas `search` pour les formulaires avancés — aligner sur `createMarker`
+     * (addResultToMap puis dispatch) pour cerise bleue + vol animé côté SearchEngineControl.
+     */
+    onAdvancedSearchResult(e) {
+      const parent = SearchEngineAdvanced.prototype;
+      parent.onAdvancedSearchResult.call(this, e);
+      const result = e.result;
+      if (result instanceof Feature) {
+        this.dispatchEvent({
+          ...e,
+          type: "search",
+          center: false,
+          entreeMapAlreadyUpdated: true
+        });
+      }
     }
     _setPopupInfo(feature) {
       const self2 = this;

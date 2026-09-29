@@ -40,6 +40,7 @@ Remix icons: `remixicon` package (global CSS in `main.ts`).
 | `basePresets`    | `GpuBaseLayerPreset[]` | Bases for catalogue → Base maps                   |
 | `baseModelValue` | `GpuBaseLayerId`       | Active base (`v-model:base-model-value`)          |
 | `layerNodes`     | `TreeLayerNode[]`      | _Data_ catalogue / stack / legends                |
+| `catalogLayersLoading` | `boolean`        | `true` while `LAYER_CONFIG` is not ready (spinner in catalogue) |
 | `layerMapHooks`  | `LayerMapHooks?`       | Visibility / opacity callbacks → map (demo WMS)   |
 
 ## Events
@@ -76,7 +77,7 @@ Exposed via `provide`, `defineExpose`, and `tabPanelsApiRef` (sibling access, e.
 - Structured sheet by selection: rich content to wire later.
 - Opacity / order: tab 3 stack wired to hooks; no gpu-client zoom greying yet.
 - `scaleDependant` legends: URL fixed at initial zoom (no OL zoom listener yet).
-- No layer permalink (out of scope).
+- Layer permalink: see [MapPermalink.md](./MapPermalink.md) (catalog + data layers stack).
 
 ## Dependencies
 

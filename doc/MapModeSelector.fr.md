@@ -27,7 +27,7 @@ Sans `modelValue`, utilise le contexte `provideMapMode()` de la vue carte.
 
 - `mode=1` — mode parcelle  
 - `mode=2` — mode territoire (défaut si paramètre absent)  
-- Changer le sélecteur met à jour la query (`history.replaceState`, sans rechargement).
+- Changer le sélecteur met à jour le **fragment** (`#mode=…`, `history.replaceState`, sans rechargement). L’ancien `?mode=` est migré dans le hash au chargement.
 
 ## Intégration
 

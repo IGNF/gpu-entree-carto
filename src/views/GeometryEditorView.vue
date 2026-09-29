@@ -465,7 +465,6 @@ async function resolveMountGeometryEditor() {
     await loadLibBundle('entree-carto-geometry-editor')
     return getMountGeometryEditorFromBundle()
   }
-  await import('@/geometry-editor/styles/geometry-editor.css')
   const mod = await import('@/geometry-editor')
   return mod.mountGeometryEditor
 }

@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const title = computed(() => props.selection?.title ?? DEFAULT_FICHE_EMPTY.title)
-const bodyHtml = computed(() => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml)
+const bodyHtml = computed(() => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? '')
 </script>
 
 <template>

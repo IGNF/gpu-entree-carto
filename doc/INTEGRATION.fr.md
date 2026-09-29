@@ -97,6 +97,8 @@ par :
 { from: "node_modules/entree-carto/dist", to: "vendor/entree-carto" },
 ```
 
+Les GeoJSON limites région/département des fonds de plan (`department-fr-geojson.json`, `region-fr-geojson.json`) restent à la racine web gpu-site dans `public/json-data/` (requêtes `/json-data/…`), et non dans le bundle vendor entree-carto.
+
 ### 3. Templates Twig — cartographie (`templates/map/index.html.twig`)
 
 **Retirer** (OpenLayers v4 — bundlé dans entree-carto) :
