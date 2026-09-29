@@ -162,7 +162,6 @@ async function mountSketchDemo() {
     await loadLibBundle('entree-carto-sketch')
     handle = getMountSketchFromBundle()(mapHost.value, sketchMountOptions)
   } else {
-    await import('@/geometry-editor/styles/geometry-editor.css')
     const { mountSketch } = await import('@/sketch/mountSketch')
     handle = mountSketch(mapHost.value, sketchMountOptions)
   }

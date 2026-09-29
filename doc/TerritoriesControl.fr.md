@@ -24,6 +24,7 @@ Sélecteur de territoire Géoplateforme (`Territories`) — France métropolitai
 - `view: { active, title: 'Modifier les territoires', description: 'Modifier la vue' }`
 - Patch DOM après création :
   - titre header (geopf hardcode encore « Sélecteur de territoires ») ;
+  - nom accessible du `<dialog>` DSFR (`aria-labelledby` → `#…-title` sur le titre du header, sinon `aria-label`) ;
   - bouton fermer `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, collé à droite du header.
 
 ## Placement

@@ -10,6 +10,12 @@ import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
 import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
+import MapModeSelector from '@/components/map/MapModeSelector.vue'
+import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
+import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
+import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
+import { provideMapMode } from '@/composables/mapMode'
+import { normalizeMapMode } from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
@@ -40,6 +46,20 @@ import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
+import '@/styles/map-mode-selector.css'
+import '@/styles/click-info.css'
+import {
+  bootstrapMapPermalinkFromLocation,
+  locationHashLooksLikeMapPermalink,
+} from '@/lib/map/mapPermalink'
+
+if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
+  bootstrapMapPermalinkFromLocation()
+}
+
+provideMapMode({
+  initial: normalizeMapMode(getDemoConfig().map?.mode) ?? undefined,
+})
 
 const demoCfg = getDemoConfig()
 const useMinified = computed(() => demoUsesMinifiedAssets(demoCfg))
@@ -47,12 +67,17 @@ let bundleViewer: MountedViewer | null = null
 const gpuBaseEnv = createGpuBaseLayerEnvironment()
 const gpuBasePresets = gpuBaseEnv.presets
 const activeBase = ref<GpuBaseLayerId>(resolveDemoBaseLayerId(demoCfg))
+
 const mapZoom = ref(demoCfg.map?.zoom ?? 6)
 const mapLayers = computed(() => gpuBaseEnv.allLayers)
 
 const handoff = takeLocationHandoff()
 const initialSearch = ref<StandardViewerSearch | null>(handoff ?? demoCfg.map?.search ?? null)
-const layerNodes = ref<TreeLayerNode[]>(resolveDemoLayerNodes(demoCfg))
+const expectsRemoteLayerConfig = Boolean(demoCfg.configScriptUrl?.trim())
+const layerNodes = ref<TreeLayerNode[]>(
+  expectsRemoteLayerConfig ? [] : resolveDemoLayerNodes(demoCfg),
+)
+const catalogLayersLoading = ref(expectsRemoteLayerConfig)
 const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const pendingBbox = ref<number[] | null>(
   !handoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
@@ -85,7 +110,8 @@ onMounted(async () => {
     return
   }
 
-  layerNodes.value = resolveDemoLayerNodes(cfg)
+  catalogLayersLoading.value = false
+  layerNodes.value = resolveDemoLayerNodes(getDemoConfig())
   const layerConfig = resolveLayerConfig()
   if (layerConfig?.length) {
     gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, gpuDocument.value)
@@ -135,6 +161,13 @@ function onUpdateBase(id: GpuBaseLayerId) {
   setActiveGpuBaseLayer(gpuBaseEnv, id)
 }
 
+provideMapPermalinkUi({
+  presets: gpuBasePresets,
+  getActiveBaseId: () => activeBase.value,
+  setActiveBaseId: onUpdateBase,
+  activeBaseIdRef: activeBase,
+})
+
 function onToggleLayer(id: string, visible: boolean) {
   const flat = (nodes: TreeLayerNode[]): TreeLayerNode | undefined => {
     for (const n of nodes) {
@@ -173,11 +206,15 @@ function onToggleLayer(id: string, visible: boolean) {
             :base-model-value="activeBase"
             :base-presets="gpuBasePresets"
             :layer-nodes="layerNodes"
+            :catalog-layers-loading="catalogLayersLoading"
             :layer-map-hooks="layerMapHooks"
             @update:base-model-value="onUpdateBase"
             @toggle-layer="onToggleLayer"
           />
           <SearchEngineControl :initial-search="initialSearch" />
+          <ClickInfoControl />
+          <MapPermalinkSync :skip-marker-restore="Boolean(initialSearch?.fullText)" />
+          <MapModeSelector />
           <OverviewMapControl />
           <SketchControl />
           <TerritoriesControl />

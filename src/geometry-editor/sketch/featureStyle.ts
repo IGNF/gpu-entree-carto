@@ -14,6 +14,7 @@ import CircleStyle from 'ol/style/Circle'
 import RegularShape from 'ol/style/RegularShape'
 import Text from 'ol/style/Text'
 import { getCircleKind } from '../circleHelpers'
+import { SKETCH_AREA_FILL } from '../styles'
 import {
   SKETCH_TEXT_PROP,
   isSketchTextFeature,
@@ -61,7 +62,7 @@ const DEFAULTS: FeatureStyleAttrs = {
   kind: 'polygon',
   strokeColor: '#000091',
   strokeWidth: 2,
-  fillColor: 'rgba(0, 0, 145, 0.2)',
+  fillColor: SKETCH_AREA_FILL,
   radius: 6,
   text: 'Texte',
   fontSize: 14,
@@ -84,6 +85,9 @@ const DEFAULTS: FeatureStyleAttrs = {
 
 export function defaultFeatureStyleAttrs(kind: FeatureStyleKind): FeatureStyleAttrs {
   const base = { ...DEFAULTS, kind }
+  if (kind === 'disc') {
+    return { ...defaultFeatureStyleAttrs('polygon'), kind: 'disc' }
+  }
   if (kind === 'circle') {
     return { ...base, fillColor: 'rgba(0, 0, 0, 0)' }
   }
@@ -364,14 +368,27 @@ export function featureStylePopupAnchorCandidates(feature: OlFeature<OlGeometry>
 
 /**
  * Ancre popup : un point réellement sur la feature.
- * Préfère un point visible ; pour les polygones, le point intérieur s’il est à l’écran,
- * sinon le sommet le plus haut (proche de l’appendice quand la popup est au-dessus).
+ * Disque / cercle : centre. Ligne : dernier sommet. Polygones : point intérieur ou sommet le plus haut à l’écran.
  */
 export function featureStylePopupAnchor(
   feature: OlFeature<OlGeometry>,
   mapSize?: number[] | null,
   getPixel?: ((coord: Coordinate) => number[] | null) | null,
 ): Coordinate | null {
+  const geom = feature.getGeometry()
+  if (geom instanceof Circle) {
+    return geom.getCenter()
+  }
+  if (geom instanceof LineString) {
+    const coords = geom.getCoordinates()
+    return coords.length ? coords[coords.length - 1] : null
+  }
+  if (geom instanceof MultiLineString) {
+    const lines = geom.getCoordinates()
+    const lastLine = lines[lines.length - 1]
+    return lastLine?.length ? lastLine[lastLine.length - 1] : null
+  }
+
   const candidates = featureStylePopupAnchorCandidates(feature)
   if (!candidates.length) return null
   if (!mapSize || !getPixel) {
@@ -400,4 +417,21 @@ export function featureStylePopupAnchor(
   if (interior && interior.onScreen) return interior.c
   use.sort((a, b) => a.topRank - b.topRank || a.index - b.index)
   return use[0].c
+}
+
+/** Ancre effective popup (disque : toujours le centre, ignore le clic sur le bord). */
+export function resolveStylePopupAnchor(
+  feature: OlFeature<OlGeometry>,
+  options?: {
+    clickAnchor?: Coordinate | null
+    mapSize?: number[] | null
+    getPixel?: ((coord: Coordinate) => number[] | null) | null
+  },
+): Coordinate | null {
+  const geom = feature.getGeometry()
+  if (geom instanceof Circle && getCircleKind(feature) === 'disc') {
+    return geom.getCenter().slice() as Coordinate
+  }
+  if (options?.clickAnchor) return options.clickAnchor
+  return featureStylePopupAnchor(feature, options?.mapSize, options?.getPixel)
 }

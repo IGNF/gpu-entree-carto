@@ -27422,9 +27422,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     });
   }
   const blue = "#000091";
-  const fillBlue = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_FILL = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_DRAW_FILL = "rgba(0, 0, 145, 0.15)";
   const geometryFeatureStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 }),
     image: new CircleStyle({
       radius: 6,
@@ -27437,18 +27438,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const discFillStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const geometryDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
       fill: new Fill({ color: blue })
     })
   });
-  new Style({
+  const circleDrawStyle = new Style({
     fill: new Fill({ color: "rgba(0,0,0,0)" }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
@@ -27457,7 +27458,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     })
   });
   const discDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
@@ -27655,7 +27656,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     kind: "polygon",
     strokeColor: "#000091",
     strokeWidth: 2,
-    fillColor: "rgba(0, 0, 145, 0.2)",
+    fillColor: SKETCH_AREA_FILL,
     radius: 6,
     text: "Texte",
     fontSize: 14,
@@ -27677,6 +27678,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   };
   function defaultFeatureStyleAttrs(kind) {
     const base = { ...DEFAULTS, kind };
+    if (kind === "disc") {
+      return { ...defaultFeatureStyleAttrs("polygon"), kind: "disc" };
+    }
     if (kind === "circle") {
       return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
     }
@@ -27921,11 +27925,52 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return [[(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]];
   }
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle) {
+      return geom.getCenter();
+    }
+    if (geom instanceof LineString) {
+      const coords = geom.getCoordinates();
+      return coords.length ? coords[coords.length - 1] : null;
+    }
+    if (geom instanceof MultiLineString) {
+      const lines = geom.getCoordinates();
+      const lastLine = lines[lines.length - 1];
+      return (lastLine == null ? void 0 : lastLine.length) ? lastLine[lastLine.length - 1] : null;
+    }
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    {
+    if (!mapSize || !getPixel) {
       return candidates[0];
     }
+    const scored = candidates.map((c, index) => {
+      const p = getPixel(c);
+      const onScreen = Boolean(
+        p && p[0] >= 0 && p[1] >= 0 && p[0] <= mapSize[0] && p[1] <= mapSize[1]
+      );
+      return {
+        c,
+        p,
+        onScreen,
+        index,
+        // Plus haut à l’écran = meilleur pour une popup au-dessus
+        topRank: p ? p[1] : Number.POSITIVE_INFINITY
+      };
+    });
+    const pool = scored.filter((s) => s.onScreen);
+    const use = pool.length ? pool : scored;
+    const interior = use.find((s) => s.index === 0);
+    if (interior && interior.onScreen) return interior.c;
+    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
+    return use[0].c;
+  }
+  function resolveStylePopupAnchor(feature, options) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle && getCircleKind(feature) === "disc") {
+      return geom.getCenter().slice();
+    }
+    if (options == null ? void 0 : options.clickAnchor) return options.clickAnchor;
+    return featureStylePopupAnchor(feature, options == null ? void 0 : options.mapSize, options == null ? void 0 : options.getPixel);
   }
   const BLUE = "#000091";
   function cursorUrl(svg) {
@@ -29037,6 +29082,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "onExtraTool");
       __publicField(this, "onFeatureCreated");
       __publicField(this, "onStyleDismiss");
+      __publicField(this, "onToolStateChange");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -29100,6 +29146,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.onExtraTool = opts.onExtraTool ?? null;
       this.onFeatureCreated = opts.onFeatureCreated ?? null;
       this.onStyleDismiss = opts.onStyleDismiss ?? null;
+      this.onToolStateChange = opts.onToolStateChange ?? null;
       this.customStyle = opts.style;
       this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
@@ -29134,7 +29181,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return geom.getRadius() >= this.circleMinRadiusMapUnits();
     }
     circleFinishCondition(evt) {
-      if (!this.circleDrawCenter) return true;
+      if (!this.circleDrawCenter) return false;
       const dx = evt.coordinate[0] - this.circleDrawCenter[0];
       const dy = evt.coordinate[1] - this.circleDrawCenter[1];
       const min = this.circleMinRadiusMapUnits();
@@ -29370,27 +29417,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (target) target.style.cursor = "";
     }
     clearTransient() {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       const prev = this.activeId;
+      (_a = this.onStyleDismiss) == null ? void 0 : _a.call(this);
       this.circleDrawCenter = null;
       this.clearFeatureCursor();
       this.unbindMapHover();
       this.transform.setActive(false);
-      (_a = this.modifySubTools) == null ? void 0 : _a.setOpen(false);
+      (_b = this.modifySubTools) == null ? void 0 : _b.setOpen(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
         this.draw = null;
       }
       this.map.un("singleclick", this.onRemoveClick);
       this.activeId = null;
-      (_b = this.modify) == null ? void 0 : _b.setActive(false);
+      (_c = this.modify) == null ? void 0 : _c.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
       if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
-        (_c = this.onExtraTool) == null ? void 0 : _c.call(this, prev, false);
+        (_d = this.onExtraTool) == null ? void 0 : _d.call(this, prev, false);
       }
+      this.notifyToolState();
+    }
+    notifyToolState() {
+      var _a;
+      (_a = this.onToolStateChange) == null ? void 0 : _a.call(this);
     }
     activate(tool) {
       var _a, _b, _c, _d, _e, _f;
@@ -29428,17 +29481,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const defaultSub = ((_f = this.modifySubTools) == null ? void 0 : _f.getDefaultSubToolId()) ?? "modify-shape";
         this.applyModifySubTool(defaultSub, true);
         this.transform.setActive(true);
+        this.notifyToolState();
         return;
       }
       if (tool.remove) {
         this.map.on("pointermove", this.onFeaturePointerMove);
         this.map.on("singleclick", this.onRemoveClick);
+        this.notifyToolState();
         return;
       }
       if (!tool.drawType) return;
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
-      const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      const sketchStyle = tool.circleKind === "disc" ? discDrawStyle : tool.circleKind === "circle" ? circleDrawStyle : this.drawStyle;
       const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle);
       this.draw = new Draw({
         source: this.source,
@@ -29448,6 +29503,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         finishCondition: tool.circleKind ? (evt) => this.circleFinishCondition(evt) : void 0
       });
       this.draw.on("drawstart", (evt) => {
+        var _a2;
+        (_a2 = this.onStyleDismiss) == null ? void 0 : _a2.call(this);
         if (replaceOnDraw) this.source.clear(true);
         this.circleDrawCenter = null;
         if (tool.circleKind) {
@@ -29469,12 +29526,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.circleDrawCenter = null;
         queueMicrotask(() => {
           var _a2;
-          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
+          const feature = evt.feature;
+          const anchor = resolveStylePopupAnchor(feature) ?? void 0;
+          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, feature, anchor);
           this.onChange();
         });
       });
       this.map.addInteraction(this.draw);
       this.bindMapHover();
+      this.notifyToolState();
     }
     destroy() {
       var _a;
@@ -37854,6 +37914,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "alphaInput");
       __publicField(this, "color");
       __publicField(this, "onChange", null);
+      __publicField(this, "onFinalize", null);
       this.color = parseColor(initial);
       this.root = document.createElement("div");
       this.root.className = "ec-sketch-color";
@@ -37883,8 +37944,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const c = parseColor(this.hueInput.value);
         this.color = { ...c, a: this.color.a };
         this.syncUi({ syncHue: false });
-        this.emit();
+        this.emitPreview();
       });
+      this.hueInput.addEventListener("change", () => this.emitFinalize());
       this.hexInput.addEventListener("input", () => {
         const raw = this.hexInput.value.trim();
         if (!this.isCompleteColorInput(raw)) return;
@@ -37896,12 +37958,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
         this.syncHexFromColorUnlessEditing();
         this.paintSwatch();
-        this.emit();
+        this.emitPreview();
       });
+      this.alphaInput.addEventListener("pointerup", () => this.emitFinalize());
+      this.alphaInput.addEventListener("change", () => this.emitFinalize());
       this.syncUi({ forceHex: true });
     }
     setOnChange(cb) {
       this.onChange = cb;
+    }
+    /** Appelé à la fin d’un glissement (slider opacité) ou validation couleur native / hex. */
+    setOnFinalize(cb) {
+      this.onFinalize = cb;
     }
     getValue() {
       return toRgbaString(this.color);
@@ -37919,8 +37987,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!node) return false;
       return this.root.contains(node);
     }
-    emit() {
+    emitPreview() {
       var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    emitFinalize() {
+      var _a;
+      if (this.onFinalize) {
+        this.onFinalize(this.getValue());
+        return;
+      }
       (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
     }
     /** Valeur hex entièrement saisie (pas de reformat pendant la frappe). */
@@ -37932,7 +38008,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     commitHexField() {
       this.color = parseColor(this.hexInput.value, this.color);
       this.syncUi({ forceHex: true });
-      this.emit();
+      this.emitFinalize();
     }
     applyParsedColor(next, opts) {
       this.color = next;
@@ -37942,7 +38018,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.hexInput.value = toHexRgba(this.color);
       }
       this.paintSwatch();
-      this.emit();
+      this.emitPreview();
     }
     syncHexFromColorUnlessEditing() {
       if (document.activeElement === this.hexInput) return;
@@ -38003,6 +38079,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "feature", null);
       __publicField(this, "kind", "polygon");
       __publicField(this, "onCommit", null);
+      __publicField(this, "onHistoryPush", null);
+      __publicField(this, "onDelete", null);
+      /** Historique local du style pendant la session popup (Annuler / Rétablir). */
+      __publicField(this, "featureStyleHistory", []);
+      __publicField(this, "featureStyleHistoryIndex", 0);
+      __publicField(this, "suppressFeatureStyleHistory", false);
+      __publicField(this, "btnUndo");
+      __publicField(this, "btnRedo");
+      __publicField(this, "btnDelete");
+      __publicField(this, "btnClose");
       __publicField(this, "openFlag", false);
       __publicField(this, "advancedOpen", false);
       __publicField(this, "mapDragged", false);
@@ -38061,7 +38147,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 });
         const feature = hits[0];
         if (!feature) return;
-        this.open(feature, this.onCommit ?? void 0, evt.coordinate);
+        this.open(
+          feature,
+          {
+            mode: "edit",
+            onCommit: this.onCommit ?? void 0,
+            onHistoryPush: this.onHistoryPush ?? void 0,
+            onDelete: this.onDelete ?? void 0
+          },
+          evt.coordinate
+        );
       });
       this.map = map;
       this.root = document.createElement("div");
@@ -38075,14 +38170,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         </button>
         <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
         <div class="ec-sketch-style-popup__actions">
-          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
-          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--history">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__undo" disabled>
+              <i class="ri-corner-up-left-line" aria-hidden="true"></i>
+              Annuler
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__redo" disabled>
+              <i class="ri-corner-up-right-line" aria-hidden="true"></i>
+              Rétablir
+            </button>
+          </div>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--main">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__delete">
+              <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+              Supprimer
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--primary ec-sketch-style-popup__close">Fermer</button>
+          </div>
         </div>
       </div>
     `;
       this.basicFields = this.root.querySelector('[data-section="basic"]');
       this.advancedFields = this.root.querySelector('[data-section="advanced"]');
       this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
+      this.btnUndo = this.root.querySelector(".ec-sketch-style-popup__undo");
+      this.btnRedo = this.root.querySelector(".ec-sketch-style-popup__redo");
+      this.btnDelete = this.root.querySelector(".ec-sketch-style-popup__delete");
+      this.btnClose = this.root.querySelector(".ec-sketch-style-popup__close");
       this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
         <span>Texte</span>
@@ -38181,7 +38295,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       for (const [key, picker] of Object.entries(this.colorPickers)) {
         const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`);
         slot == null ? void 0 : slot.appendChild(picker.root);
-        picker.setOnChange(() => this.applyFromForm());
+        picker.setOnChange(() => this.previewStyleFromForm());
+        picker.setOnFinalize(() => this.recordStyleFromForm());
       }
       this.els = {
         text: this.root.querySelector('[data-input="text"]'),
@@ -38222,26 +38337,49 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
         this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       };
-      const live = () => {
+      const liveCommit = () => {
         syncOutputs();
         this.syncDependentFields();
-        this.applyFromForm();
+        this.recordStyleFromForm();
+      };
+      const livePreview = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.previewStyleFromForm();
+      };
+      const commitRangeSlider = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.recordStyleFromForm();
       };
       for (const input of Object.values(this.els)) {
         if (input instanceof HTMLOutputElement) continue;
-        input.addEventListener("input", live);
-        input.addEventListener("change", live);
+        if (input instanceof HTMLInputElement && input.type === "range") {
+          input.addEventListener("input", livePreview);
+          input.addEventListener("pointerup", commitRangeSlider);
+          input.addEventListener("change", commitRangeSlider);
+          continue;
+        }
+        input.addEventListener("input", liveCommit);
+        input.addEventListener("change", liveCommit);
       }
       this.advancedToggle.addEventListener("click", () => {
         this.setAdvancedOpen(!this.advancedOpen);
       });
-      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+      this.btnDelete.addEventListener("click", () => {
         var _a;
-        this.applyFromForm();
+        const feature = this.feature;
+        if (!feature) return;
+        (_a = this.onDelete) == null ? void 0 : _a.call(this, feature);
+        this.hide();
+      });
+      this.btnUndo.addEventListener("click", () => this.stepFeatureStyleHistory(-1));
+      this.btnRedo.addEventListener("click", () => this.stepFeatureStyleHistory(1));
+      this.btnClose.addEventListener("click", () => {
+        var _a;
         (_a = this.onCommit) == null ? void 0 : _a.call(this);
         this.hide();
       });
-      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
       this.overlay = new Overlay({
         element: this.root,
         positioning: "bottom-center",
@@ -38251,14 +38389,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       this.map.addOverlay(this.overlay);
     }
-    open(feature, onCommit, anchor) {
+    open(feature, options, anchor) {
+      const opts = typeof options === "function" ? { onCommit: options } : options ?? {};
       this.unbindOutside();
       this.feature = feature;
-      this.clickAnchor = anchor ?? null;
-      this.onCommit = onCommit ?? null;
+      this.onCommit = opts.onCommit ?? null;
+      this.onHistoryPush = opts.onHistoryPush ?? null;
+      this.onDelete = opts.onDelete ?? null;
       this.kind = featureStyleKindOf(feature);
+      this.clickAnchor = anchor ?? null;
       this.setAdvancedOpen(false);
       const attrs = getFeatureStyleAttrs(feature);
+      this.resetFeatureStyleHistory(attrs);
       this.syncFieldsVisibility();
       this.fillForm(attrs);
       this.syncDependentFields();
@@ -38266,6 +38408,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.root.hidden = false;
       this.openFlag = true;
       this.skipNextOutsideUp = true;
+      this.syncPopupAnchorFromFeature();
       this.reposition();
       this.bindOutside();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
@@ -38286,6 +38429,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.feature = null;
       this.clickAnchor = null;
       this.onCommit = null;
+      this.onHistoryPush = null;
+      this.onDelete = null;
+      this.featureStyleHistory = [];
+      this.featureStyleHistoryIndex = 0;
       this.outsideGesture = null;
       this.mapDragged = false;
       this.skipNextOutsideUp = false;
@@ -38359,11 +38506,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.geomChangeKey = null;
       }
     }
+    /** Disque : centre géométrique ; sinon clic ou heuristique par type. */
+    syncPopupAnchorFromFeature() {
+      if (!this.feature) return;
+      const resolved = resolveStylePopupAnchor(this.feature, {
+        clickAnchor: this.clickAnchor,
+        mapSize: this.map.getSize(),
+        getPixel: (c) => this.map.getPixelFromCoordinate(c)
+      });
+      if (resolved) this.clickAnchor = resolved;
+    }
     /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature);
-      if (anchor) this.overlay.setPosition(anchor);
+      this.syncPopupAnchorFromFeature();
+      if (this.clickAnchor) this.overlay.setPosition(this.clickAnchor);
     }
     syncFieldsVisibility() {
       const basic = new Set(BASIC_BY_KIND[this.kind]);
@@ -38432,14 +38589,60 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       this.els.zIndex.value = String(attrs.zIndex);
     }
-    applyFromForm() {
-      if (!this.feature) return;
+    /** Applique le formulaire sur la feature sans entrée d’historique (glissement slider). */
+    previewStyleFromForm() {
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      applyFeatureStyle(this.feature, this.readAttrsFromForm());
+    }
+    resetFeatureStyleHistory(attrs) {
+      this.featureStyleHistory = [cloneFeatureStyleAttrs(attrs)];
+      this.featureStyleHistoryIndex = 0;
+      this.syncFeatureStyleHistoryButtons();
+    }
+    syncFeatureStyleHistoryButtons() {
+      this.btnUndo.disabled = this.featureStyleHistoryIndex <= 0;
+      this.btnRedo.disabled = this.featureStyleHistoryIndex >= this.featureStyleHistory.length - 1;
+    }
+    recordStyleFromForm() {
+      var _a;
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      const attrs = this.readAttrsFromForm();
+      const current = this.featureStyleHistory[this.featureStyleHistoryIndex];
+      if (current && featureStyleAttrsEqual(current, attrs)) return;
+      this.featureStyleHistory = this.featureStyleHistory.slice(0, this.featureStyleHistoryIndex + 1);
+      this.featureStyleHistory.push(cloneFeatureStyleAttrs(attrs));
+      this.featureStyleHistoryIndex = this.featureStyleHistory.length - 1;
+      applyFeatureStyle(this.feature, attrs);
+      (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+      this.syncFeatureStyleHistoryButtons();
+    }
+    stepFeatureStyleHistory(delta) {
+      var _a;
+      const nextIndex = this.featureStyleHistoryIndex + delta;
+      if (nextIndex < 0 || nextIndex >= this.featureStyleHistory.length) return;
+      const feature = this.feature;
+      if (!feature) return;
+      this.suppressFeatureStyleHistory = true;
+      try {
+        this.featureStyleHistoryIndex = nextIndex;
+        const attrs = this.featureStyleHistory[this.featureStyleHistoryIndex];
+        applyFeatureStyle(feature, attrs);
+        this.fillForm(attrs);
+        this.syncDependentFields();
+        (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+        this.syncFeatureStyleHistoryButtons();
+      } finally {
+        this.suppressFeatureStyleHistory = false;
+      }
+    }
+    readAttrsFromForm() {
       const base = defaultFeatureStyleAttrs(this.kind);
       const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
       const shape = this.els.pointShape.value || base.pointShape;
       const join = this.els.lineJoin.value || base.lineJoin;
-      const attrs = {
+      return {
         ...base,
+        kind: this.kind,
         text: this.els.text.value.trim() || base.text,
         fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
         fontColor: this.colorPickers.fontColor.getValue(),
@@ -38462,11 +38665,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
         zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
       };
-      applyFeatureStyle(this.feature, attrs);
     }
   };
   __publicField(_SketchFeatureStylePopup, "OUTSIDE_MOVE_TOLERANCE_PX", 5);
   let SketchFeatureStylePopup = _SketchFeatureStylePopup;
+  function cloneFeatureStyleAttrs(attrs) {
+    return { ...attrs };
+  }
+  function featureStyleAttrsEqual(a, b) {
+    return a.kind === b.kind && a.strokeColor === b.strokeColor && a.strokeWidth === b.strokeWidth && a.fillColor === b.fillColor && a.radius === b.radius && a.text === b.text && a.fontSize === b.fontSize && a.fontColor === b.fontColor && a.textStrokeColor === b.textStrokeColor && a.textStrokeWidth === b.textStrokeWidth && a.rotation === b.rotation && a.lineDash === b.lineDash && a.lineCap === b.lineCap && a.lineJoin === b.lineJoin && a.lineDashOffset === b.lineDashOffset && a.miterLimit === b.miterLimit && a.fontFamily === b.fontFamily && a.fontBold === b.fontBold && a.fontItalic === b.fontItalic && a.pointShape === b.pointShape && a.pointRotation === b.pointRotation && a.zIndex === b.zIndex;
+  }
   function clamp(n, min, max, fallback) {
     if (!Number.isFinite(n)) return fallback;
     return Math.min(max, Math.max(min, n));
@@ -38781,6 +38989,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "historyEnabled");
       __publicField(this, "extraTools");
       __publicField(this, "enableFeatureStyleEditor");
+      __publicField(this, "onSketchEngagementChange");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
@@ -38821,7 +39030,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         });
         const feature = hits.find((f) => isSketchTextFeature(f));
         if (feature && this.stylePopup) {
-          this.stylePopup.open(feature, () => this.notifyChange());
+          this.stylePopup.open(feature, this.buildStylePopupOptions("edit"));
         }
       });
       this.geometryType = options.geometryType ?? "Geometry";
@@ -38835,6 +39044,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.historyEnabled = Boolean(options.history);
       this.extraTools = options.extraTools ?? [];
       this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor);
+      this.onSketchEngagementChange = options.onSketchEngagementChange ?? null;
       this.source = options.source ?? new VectorSource({ wrapX: false });
       this.layer = options.layer ?? null;
       this.ownsLayer = !options.layer;
@@ -38883,6 +39093,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     getDrawBar() {
       return this.drawBar;
+    }
+    /** Dessin, modification, suppression, mesure ou texte en cours. */
+    isSketchToolEngaged() {
+      var _a, _b;
+      if (this.textDraw) return true;
+      if ((_a = this.measure) == null ? void 0 : _a.isActive()) return true;
+      return ((_b = this.drawBar) == null ? void 0 : _b.getActiveId()) != null;
+    }
+    emitSketchEngagement() {
+      var _a;
+      (_a = this.onSketchEngagementChange) == null ? void 0 : _a.call(this, this.isSketchToolEngaged());
     }
     getFeatures() {
       return this.source.getFeatures();
@@ -39038,17 +39259,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         },
         onClearAll: () => this.clearFeatures(),
         onExtraTool: (id, active) => this.handleExtraTool(id, active),
-        onFeatureCreated: (feature) => this.openStylePopup(feature),
-        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor) : void 0,
+        onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor, "create"),
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor, "edit") : void 0,
         onStyleDismiss: this.enableFeatureStyleEditor ? () => {
           var _a2;
           return (_a2 = this.stylePopup) == null ? void 0 : _a2.hide();
-        } : void 0
+        } : void 0,
+        onToolStateChange: () => this.emitSketchEngagement()
       });
+      this.emitSketchEngagement();
       this.syncToolbarClusterVisibility();
       this.syncHistoryButtons();
     }
-    openStylePopup(feature, anchor) {
+    buildStylePopupOptions(mode) {
+      return {
+        mode,
+        onCommit: () => this.notifyChange(),
+        onHistoryPush: () => {
+          var _a;
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        },
+        onDelete: (f) => {
+          var _a;
+          this.source.removeFeature(f);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        }
+      };
+    }
+    openStylePopup(feature, anchor, mode = "edit") {
       if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
       const geom = feature.getGeometry();
       if (geom instanceof Circle) {
@@ -39056,7 +39296,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const res = (map == null ? void 0 : map.getView().getResolution()) ?? 1;
         if (geom.getRadius() < 3 * res) return;
       }
-      this.stylePopup.open(feature, () => this.notifyChange(), anchor);
+      this.stylePopup.open(feature, this.buildStylePopupOptions(mode), anchor);
     }
     handleExtraTool(id, active) {
       var _a, _b, _c, _d, _e, _f, _g;
@@ -39105,6 +39345,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (id === "measure-area") {
         (_g = this.measure) == null ? void 0 : _g.activate("area");
       }
+      this.emitSketchEngagement();
     }
     startTextDraw() {
       const map = this.getMap();
@@ -39143,6 +39384,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.enableFeatureStyleEditor) {
         map.on("singleclick", this.onTextSelectClick);
       }
+      this.emitSketchEngagement();
     }
     stopTextDraw() {
       var _a;
@@ -39160,6 +39402,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       map == null ? void 0 : map.un("singleclick", this.onTextSelectClick);
       (_a = this.stylePopup) == null ? void 0 : _a.hide();
+      this.emitSketchEngagement();
     }
     runImport() {
       const map = this.getMap();

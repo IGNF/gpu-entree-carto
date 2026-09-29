@@ -39,7 +39,7 @@ Demo published by workflow `pages.yml` (default branch):
 
 After green workflow: **Settings → Pages** (source _GitHub Actions_), URL typically
 `https://ignf.github.io/entree-carto/`. Admin boundary GeoJSON served under
-`{BASE_URL}json-data/` (not at domain root `ignf.github.io/json-data/…`).
+`{BASE_URL}json-data/` (not at domain root `ignf.github.io/json-data/…` on GitHub Pages; gpu-site serves the same paths from `public/json-data/`).
 
 Locally, simulate GitHub Pages (same `base` at **build** and **preview**):
 

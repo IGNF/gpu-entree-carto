@@ -97,6 +97,8 @@ with:
 { from: "node_modules/entree-carto/dist", to: "vendor/entree-carto" },
 ```
 
+Region/department limit GeoJSON for base maps (`department-fr-geojson.json`, `region-fr-geojson.json`) stay on the gpu-site web root at `public/json-data/` (requested as `/json-data/…`), not inside the entree-carto vendor bundle.
+
 ### 3. Twig templates — mapping (`templates/map/index.html.twig`)
 
 **Remove** (OpenLayers v4 — bundled in entree-carto):

@@ -4403,11 +4403,35 @@ i.ri-draw-line::before {
   font: inherit;
 }
 
-.ec-sketch-text-popup__actions,
-.ec-sketch-style-popup__actions {
+.ec-sketch-text-popup__actions {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.ec-sketch-style-popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ec-sketch-style-popup__actions .fr-btn i {
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .ec-sketch-style-popup__fields {
@@ -4880,7 +4904,7 @@ i.ri-draw-line::before {
   height: 100%;
 }
 
-.ec-fiche-info__raw[data-v-16a786f1] {
+.ec-fiche-info__raw[data-v-df9a587a] {
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-default-grey, #ddd);
@@ -5378,7 +5402,7 @@ i.ri-draw-line::before {
   display: none !important;
 }
 
-.ec-layer-catalogue__title[data-v-e00379c6] {
+.ec-layer-catalogue__title[data-v-617a4a8d] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -5386,26 +5410,45 @@ i.ri-draw-line::before {
   font-size: 1.125rem;
   font-weight: 700;
 }
-.ec-layer-catalogue__title-icon[data-v-e00379c6] {
+.ec-layer-catalogue__title-icon[data-v-617a4a8d] {
   flex: 0 0 auto;
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
 }
-.ec-layer-catalogue__selection[data-v-e00379c6] {
+.ec-layer-catalogue__selection[data-v-617a4a8d] {
   margin-top: 1.5rem;
 }
-.ec-layer-catalogue__section-title[data-v-e00379c6] {
+.ec-layer-catalogue__section-title[data-v-617a4a8d] {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
-.ec-layer-catalogue__hint[data-v-e00379c6] {
+.ec-layer-catalogue__hint[data-v-617a4a8d] {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
+}
+.ec-layer-catalogue__waiting[data-v-617a4a8d] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+}
+.ec-layer-catalogue__spinner[data-v-617a4a8d] {
+  flex: 0 0 auto;
+  font-size: 1.125rem;
+  color: var(--text-action-high-blue-france, #000091);
+  animation: ec-layer-catalogue-spin-617a4a8d 0.9s linear infinite;
+}
+@keyframes ec-layer-catalogue-spin-617a4a8d {
+to {
+    transform: rotate(360deg);
+}
 }
 /**
  * Onglet panneau latéral « Couches de données » (Figma GPU UX/UI).
@@ -6227,6 +6270,19 @@ i.ri-draw-line::before {
 }
 
 .ec-fiche-info__body p:last-child {
+  margin-bottom: 0;
+}
+
+.ec-fiche-info__body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.ec-fiche-info__body li {
+  margin-bottom: 0.25rem;
+}
+
+.ec-fiche-info__body li:last-child {
   margin-bottom: 0;
 }
 
@@ -7159,12 +7215,23 @@ i.ri-draw-line::before {
 }
 
 /* SearchEngine — haut-gauche (cartes.gouv SearchEngine.vue) */
+.ec-map-shell {
+  --ec-search-engine-max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
+}
+
 .gpf-widget[id^='GPsearchEngine-Advanced'] {
   top: var(--ec-widget-gap);
   left: calc(var(--ec-widget-gap) - 5px + var(--ec-search-left-inset));
   z-index: 1;
   box-shadow: none;
-  max-width: min(420px, calc(100% - 12px - var(--ec-search-left-inset)));
+  max-width: var(--ec-search-engine-max-width);
+}
+
+/* Pas de bulle geopf sur la carte (fiche dans le panneau) — mesures croquis conservées. */
+.ec-map-shell .GPSearchPopup:not(.ec-sketch-measure-popup) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /*
@@ -7427,6 +7494,162 @@ dialog[id^='GPterritoriesPanel-'] {
 #gpu-map .ol-attribution a.legal-attribution:focus {
   text-decoration: none;
 }
+/**
+ * Sélecteur mode Parcelle / Territoire — à droite de la barre SearchEngine.
+ */
+
+.ec-map-mode-selector {
+  position: absolute;
+  top: var(--ec-widget-gap);
+  left: calc(
+    var(--ec-widget-gap) - 5px + var(--ec-search-left-inset) + var(--ec-search-engine-max-width) +
+      var(--ec-widget-gap)
+  );
+  right: auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  border-radius: 0;
+  background: rgba(70, 70, 70, 0.92);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  pointer-events: auto;
+  max-width: calc(100% - var(--ec-widget-gap) * 2);
+}
+
+.ec-map-mode-selector__heading {
+  flex: 0 0 auto;
+  font-family: Marianne, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.ec-map-mode-selector__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.ec-map-mode-selector__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: var(--background-open-blue-france, #f5f5fe);
+  color: var(--text-title-grey, #161616);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+}
+
+.ec-map-mode-selector__option:hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 145, 0.12);
+}
+
+.ec-map-mode-selector__option.is-selected {
+  border-color: var(--border-active-blue-france, #000091);
+  box-shadow: 0 0 0 1px rgba(0, 0, 145, 0.08);
+}
+
+.ec-map-mode-selector__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ec-map-mode-selector__input:focus-visible + .ec-map-mode-selector__radio {
+  outline: 2px solid var(--border-active-blue-france, #000091);
+  outline-offset: 2px;
+}
+
+.ec-map-mode-selector__radio {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--border-active-blue-france, #000091);
+  border-radius: 50%;
+  background: #fff;
+  position: relative;
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.ec-map-mode-selector__option:not(.is-selected) .ec-map-mode-selector__radio {
+  opacity: 0.2;
+}
+
+.ec-map-mode-selector__option.is-selected .ec-map-mode-selector__radio::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--background-action-high-blue-france, #000091);
+}
+
+.ec-map-mode-selector__icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.ec-map-mode-selector__icon path {
+  fill: var(--light-options-primary-color-sun-113-blue-france-sun-113, #000091);
+}
+
+.ec-map-mode-selector__text {
+  font-family: Marianne, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 64rem) {
+  .ec-map-mode-selector {
+    top: calc(var(--ec-widget-gap) + 3.25rem);
+    left: calc(var(--ec-widget-gap) + var(--ec-search-left-inset));
+    max-width: min(420px, calc(100% - var(--ec-widget-gap) * 2 - var(--ec-search-left-inset)));
+  }
+}
+
+@media (max-width: 36rem) {
+  .ec-map-mode-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ec-map-mode-selector__options {
+    flex-direction: column;
+  }
+}
+/**
+ * Clic info carte — curseur composite (pointeur + i), actif hors outils croquis.
+ */
+
+.ec-map-shell--click-info .ec-map-shell__map,
+.ec-map-shell--click-info .ec-map-shell__map .ol-viewport {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000091' stroke='%23fff' stroke-width='1.2' d='M6 4v20l5-4 4 9 3-1-4-9h9z'/%3E%3Ccircle cx='24' cy='8' r='7' fill='%23000091'/%3E%3Ctext x='24' y='11.5' text-anchor='middle' fill='%23fff' font-size='9' font-family='Marianne,sans-serif' font-weight='700'%3Ei%3C/text%3E%3C/svg%3E")
+      6 4,
+    auto;
+}
 /* SearchEngineAdvanced monté hors carte (accueil gpu-site / démo). */
 
 .ec-search-engine-standalone {
@@ -7621,13 +7844,13 @@ dialog[id^='GPterritoriesPanel-'] {
   width: 100% !important;
 }
 
-.ec-embed-viewer[data-v-a4bc90f6] {
+.ec-embed-viewer[data-v-5ad1b89a] {
   position: relative;
   width: 100%;
   height: 100%;
   min-height: 500px;
 }
-.ec-embed-viewer__map[data-v-a4bc90f6] {
+.ec-embed-viewer__map[data-v-5ad1b89a] {
   width: 100%;
   height: 100%;
 }

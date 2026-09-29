@@ -5,7 +5,6 @@ import Style from 'ol/style/Style'
 import Stroke from 'ol/style/Stroke'
 import type Feature from 'ol/Feature'
 import type { Geometry } from 'ol/geom'
-
 /** Seuils gpu-client `Region` / `Department`. */
 const RES_REGION_MIN = 1222.99245256282
 const RES_REGION_MAX = 2445.98490512564
@@ -14,7 +13,7 @@ const RES_DEPT_MAX = 1222.99245256282
 const MAP_PROJECTION = 'EPSG:3857'
 const DATA_PROJECTION = 'EPSG:4326'
 
-/** `BASE_URL` : `./` (build local) ou `/nom-du-repo/` (GitHub Pages). */
+/** `{BASE_URL}json-data/` — démo Vite ; gpu-site : `public/json-data/` à la racine web (`/json-data/…`). */
 function limitGeoJsonUrl(fileName: string): string {
   return `${import.meta.env.BASE_URL}json-data/${fileName}`
 }

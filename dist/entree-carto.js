@@ -12,7 +12,6 @@ this.gpu = (function() {
   var _PositionFactory_instances, existContainer_fn, createContainer_fn, setAnchor_fn;
   const config = {
     scriptDir: "/",
-    minZoomLevelForParcel: 12,
     yearOfIgnCopyright: 2019,
     showMapHelpAtLoad: false,
     prefix: "",
@@ -8435,6 +8434,24 @@ Expected function or array of functions, received type ${typeof value2}.`
       el.value = newValue;
     }
   };
+  const vModelRadio = {
+    created(el, { value: value2 }, vnode) {
+      el.checked = looseEqual(value2, vnode.props.value);
+      el[assignKey] = getModelAssigner(vnode);
+      addEventListener(el, "change", () => {
+        el[assignKey](getValue(el));
+      });
+    },
+    beforeUpdate(el, { value: value2, oldValue }, vnode) {
+      el[assignKey] = getModelAssigner(vnode);
+      if (value2 !== oldValue) {
+        el.checked = looseEqual(value2, vnode.props.value);
+      }
+    }
+  };
+  function getValue(el) {
+    return "_value" in el ? el._value : el.value;
+  }
   const systemModifiers = ["ctrl", "shift", "alt", "meta"];
   const modifierGuards = {
     stop: (e) => e.stopPropagation(),
@@ -27852,11 +27869,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$j = {
+  const _hoisted_1$m = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$j = /* @__PURE__ */ defineComponent({
+  const _sfc_main$m = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27881,7 +27898,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$j, [
+        return openBlock(), createElementBlock("div", _hoisted_1$m, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -28431,12 +28448,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$i = {
+  const _hoisted_1$l = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$i = /* @__PURE__ */ defineComponent({
+  const _sfc_main$l = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -28451,7 +28468,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$i);
+        return openBlock(), createElementBlock("span", _hoisted_1$l);
       };
     }
   });
@@ -28571,12 +28588,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$h = {
+  const _hoisted_1$k = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+  const _sfc_main$k = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -28590,16 +28607,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$h);
+        return openBlock(), createElementBlock("span", _hoisted_1$k);
       };
     }
   });
-  const _hoisted_1$g = {
+  const _hoisted_1$j = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$g = /* @__PURE__ */ defineComponent({
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -28609,7 +28626,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$g);
+        return openBlock(), createElementBlock("span", _hoisted_1$j);
       };
     }
   });
@@ -52336,6 +52353,49 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineAdvanced = SearchEngineAdvanced;
   }
+  class SearchEngineAdvancedAnimated extends SearchEngineAdvanced {
+    addResultToMap(e) {
+      if (e.entreeMapAlreadyUpdated) {
+        return;
+      }
+      const proto = SearchEngineAdvanced.prototype;
+      if (e.center !== false) {
+        proto.addResultToMap.call(this, { ...e, center: false });
+        return;
+      }
+      proto.addResultToMap.call(this, e);
+    }
+    /**
+     * geopf n’émet pas `search` pour les formulaires avancés — aligner sur `createMarker`
+     * (addResultToMap puis dispatch) pour cerise bleue + vol animé côté SearchEngineControl.
+     */
+    onAdvancedSearchResult(e) {
+      const parent = SearchEngineAdvanced.prototype;
+      parent.onAdvancedSearchResult.call(this, e);
+      const result = e.result;
+      if (result instanceof Feature) {
+        this.dispatchEvent({
+          ...e,
+          type: "search",
+          center: false,
+          entreeMapAlreadyUpdated: true
+        });
+      }
+    }
+    _setPopupInfo(feature) {
+      const self2 = this;
+      const layer = this.getLayer();
+      if (feature) {
+        self2.popup.set("feature", feature);
+        self2.popup.set("layer", layer);
+      } else {
+        self2.popup.unset("feature");
+        self2.popup.unset("layer");
+      }
+      self2.setPopupContent("");
+      self2.popup.setPosition(void 0);
+    }
+  }
   LoggerByDefault$1.getLogger("searchengine");
   class InseeSearchService extends AbstractSearchService {
     /**
@@ -61921,7 +61981,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       geocodeGetCapabilitiesUrl: `${base}/geocodage/getCapabilities`
     };
     const advancedSearchOptions = { searchOptions };
-    return new SearchEngineAdvanced({
+    return new SearchEngineAdvancedAnimated({
       collapsed: options.collapsed ?? false,
       collapsible: options.collapsible ?? false,
       returnTrueGeometry: true,
@@ -61973,14 +62033,711 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const DEFAULT_FICHE_EMPTY = {
     title: "Aucune sélection en cours",
-    bodyHtml: "<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>"
+    bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
+<ul>
+<li>choisissez le mode Parcelle</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Pour sélectionner une commune&nbsp;:</p>
+<ul>
+<li>choisissez le mode Territoire</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`
   };
-  const _hoisted_1$f = {
+  const MAP_PERMALINK_RESERVED_KEYS = /* @__PURE__ */ new Set([
+    "lon",
+    "lat",
+    "z",
+    "zoom",
+    "tile",
+    "mlon",
+    "mlat",
+    "mode"
+  ]);
+  const MAP_PERMALINK_COORD_DECIMALS = 8;
+  const MAP_PERMALINK_COORD_KEYS = /* @__PURE__ */ new Set(["lon", "lat", "mlon", "mlat"]);
+  function formatMapPermalinkCoord(value2) {
+    return value2.toFixed(MAP_PERMALINK_COORD_DECIMALS);
+  }
+  function formatMapPermalinkParamValue(key2, value2) {
+    if (MAP_PERMALINK_COORD_KEYS.has(key2)) {
+      const n = typeof value2 === "number" ? value2 : Number(value2);
+      if (Number.isFinite(n)) return formatMapPermalinkCoord(n);
+    }
+    return String(value2);
+  }
+  function normalizeCoordParamsInPlace(params2) {
+    for (const key2 of MAP_PERMALINK_COORD_KEYS) {
+      const raw = params2[key2];
+      if (raw == null || raw === "") continue;
+      const n = Number(raw);
+      if (Number.isFinite(n)) params2[key2] = formatMapPermalinkCoord(n);
+    }
+  }
+  const HASH_DEBOUNCE_MS = 300;
+  let cachedParams = {};
+  let hashDebounce = null;
+  function pathToPermalinkId(path) {
+    const parts = path.split("/").filter(Boolean);
+    return parts[parts.length - 1] ?? "";
+  }
+  function decodeMapPermalinkComponent(part) {
+    try {
+      return decodeURIComponent(part);
+    } catch {
+      return part;
+    }
+  }
+  function parseMapPermalinkHash(hash2) {
+    const raw = hash2.replace(/^#/, "").trim();
+    if (!raw) return {};
+    const out = {};
+    for (const part of raw.split("&")) {
+      if (!part) continue;
+      const eq = part.indexOf("=");
+      if (eq <= 0) continue;
+      const key2 = decodeMapPermalinkComponent(part.slice(0, eq));
+      const value2 = decodeMapPermalinkComponent(part.slice(eq + 1));
+      out[key2] = value2;
+    }
+    return out;
+  }
+  function buildMapPermalinkHash(params2) {
+    return Object.entries(params2).filter(([, v]) => v !== "" && v != null).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+  }
+  function readMapPermalinkFromLocation(loc = typeof window !== "undefined" ? window.location : { hash: "" }) {
+    return parseMapPermalinkHash(loc.hash);
+  }
+  function writeMapPermalinkToLocation(params2, loc = window.location) {
+    if (typeof window === "undefined") return;
+    const encoded = buildMapPermalinkHash(params2);
+    const url = new URL(loc.href);
+    const href = encoded ? `${url.pathname}${url.search}#${encoded}` : `${url.pathname}${url.search}`;
+    window.history.replaceState(window.history.state, "", href);
+  }
+  function initMapPermalinkFromLocation() {
+    cachedParams = readMapPermalinkFromLocation();
+    normalizeCoordParamsInPlace(cachedParams);
+    return { ...cachedParams };
+  }
+  function mapPermalinkFragmentNeedsEncoding(raw, params2) {
+    const trimmed = raw.replace(/^#/, "").trim();
+    if (!trimmed) return false;
+    try {
+      decodeURIComponent(trimmed);
+    } catch {
+      return true;
+    }
+    return buildMapPermalinkHash(params2) !== trimmed;
+  }
+  function normalizeMapPermalinkHashEncoding(loc = typeof window !== "undefined" ? window.location : { href: "", hash: "" }) {
+    if (typeof window === "undefined") return;
+    const raw = loc.hash.replace(/^#/, "").trim();
+    if (!raw) return;
+    if (!mapPermalinkFragmentNeedsEncoding(raw, cachedParams)) return;
+    writeMapPermalinkToLocation(cachedParams, loc);
+  }
+  function bootstrapMapPermalinkFromLocation(loc = typeof window !== "undefined" ? window.location : { href: "", hash: "" }) {
+    initMapPermalinkFromLocation();
+    normalizeMapPermalinkHashEncoding(loc);
+    return { ...cachedParams };
+  }
+  function locationHashLooksLikeMapPermalink(loc = typeof window !== "undefined" ? window.location : { hash: "" }) {
+    const raw = loc.hash.replace(/^#/, "").trim();
+    if (!raw) return false;
+    return /(?:^|&)lon=/.test(raw) || /(?:^|&)lat=/.test(raw) || /(?:^|&)tile=/.test(raw);
+  }
+  function getMapPermalinkParams() {
+    return { ...cachedParams };
+  }
+  function updateMapPermalinkParam(key2, value2) {
+    if (value2 === null || value2 === void 0 || value2 === "") {
+      delete cachedParams[key2];
+    } else {
+      cachedParams[key2] = formatMapPermalinkParamValue(key2, value2);
+    }
+    scheduleMapPermalinkHashWrite();
+  }
+  function replaceLayerPermalinkParams(layerParams) {
+    for (const key2 of Object.keys(cachedParams)) {
+      if (!MAP_PERMALINK_RESERVED_KEYS.has(key2)) delete cachedParams[key2];
+    }
+    Object.assign(cachedParams, layerParams);
+    scheduleMapPermalinkHashWrite();
+  }
+  function setMapPermalinkMarker(lon, lat) {
+    updateMapPermalinkParam("mlon", lon);
+    updateMapPermalinkParam("mlat", lat);
+    flushMapPermalinkHashNow();
+  }
+  function flushMapPermalinkHashNow() {
+    if (hashDebounce) {
+      clearTimeout(hashDebounce);
+      hashDebounce = null;
+    }
+    writeMapPermalinkToLocation(cachedParams);
+  }
+  function scheduleMapPermalinkHashWrite() {
+    if (typeof window === "undefined") return;
+    if (hashDebounce) clearTimeout(hashDebounce);
+    hashDebounce = setTimeout(() => {
+      hashDebounce = null;
+      writeMapPermalinkToLocation(cachedParams);
+    }, HASH_DEBOUNCE_MS);
+  }
+  function readMapPermalinkZoom(params2) {
+    const raw = params2.z ?? params2.zoom;
+    if (raw == null || raw === "") return null;
+    const z = Number(raw);
+    return Number.isFinite(z) ? z : null;
+  }
+  function readMapPermalinkCenter(params2) {
+    const lon = Number(params2.lon);
+    const lat = Number(params2.lat);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    return { lon, lat };
+  }
+  function readMapPermalinkMarker(params2) {
+    const lon = Number(params2.mlon);
+    const lat = Number(params2.mlat);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    return { lon, lat };
+  }
+  function readMapPermalinkTileIndex(params2) {
+    const n = Number(params2.tile);
+    if (!Number.isFinite(n) || n < 1) return null;
+    return Math.floor(n);
+  }
+  function layerPermalinkEntriesFromParams(params2) {
+    const out = [];
+    for (const [key2, value2] of Object.entries(params2)) {
+      if (MAP_PERMALINK_RESERVED_KEYS.has(key2)) continue;
+      if (!value2) continue;
+      out.push({ permalinkId: key2, value: value2 });
+    }
+    return out;
+  }
+  const MAP_MODE_PARCEL = 1;
+  const MAP_MODE_TERRITORY = 2;
+  const DEFAULT_MAP_MODE = MAP_MODE_TERRITORY;
+  function normalizeMapMode(raw) {
+    if (raw === 1 || raw === 2) return raw;
+    if (raw === "1" || raw === "2") return Number(raw);
+    if (typeof raw === "string") {
+      const n = parseInt(raw, 10);
+      if (n === 1 || n === 2) return n;
+    }
+    return null;
+  }
+  function readMapModeFromPermalinkParams(params2) {
+    return normalizeMapMode(params2.mode);
+  }
+  function readMapModeFromSearchParams(search = "") {
+    const params2 = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+    return normalizeMapMode(params2.get("mode"));
+  }
+  function readMapModeFromPermalinkHash(hash2) {
+    return readMapModeFromPermalinkParams(parseMapPermalinkHash(hash2));
+  }
+  function stripMapModeFromSearchParams(loc = window.location) {
+    if (typeof window === "undefined") return;
+    const url = new URL(loc.href);
+    if (!url.searchParams.has("mode")) return;
+    url.searchParams.delete("mode");
+    const qs = url.searchParams.toString();
+    const search = qs ? `?${qs}` : "";
+    const hash2 = url.hash;
+    window.history.replaceState(window.history.state, "", `${url.pathname}${search}${hash2}`);
+  }
+  function writeMapModeToLocation(mode2, loc = window.location) {
+    if (typeof window === "undefined") return;
+    updateMapPermalinkParam("mode", mode2);
+    stripMapModeFromSearchParams(loc);
+  }
+  const MAP_MODE_KEY = Symbol("mapMode");
+  function resolveInitialMapMode(fallback) {
+    if (typeof window === "undefined") return fallback ?? DEFAULT_MAP_MODE;
+    return readMapModeFromPermalinkHash(window.location.hash) ?? readMapModeFromSearchParams(window.location.search) ?? fallback ?? DEFAULT_MAP_MODE;
+  }
+  function provideMapMode(options) {
+    const syncUrl = (options == null ? void 0 : options.syncUrl) !== false;
+    const mode2 = /* @__PURE__ */ ref(resolveInitialMapMode(options == null ? void 0 : options.initial));
+    const setMode = (next) => {
+      if (mode2.value === next) return;
+      mode2.value = next;
+    };
+    if (syncUrl && typeof window !== "undefined") {
+      watch(
+        mode2,
+        (value2) => {
+          writeMapModeToLocation(value2);
+        },
+        { flush: "post", immediate: true }
+      );
+    }
+    const ctx = { mode: mode2, setMode };
+    provide(MAP_MODE_KEY, ctx);
+    return ctx;
+  }
+  function tryUseMapMode() {
+    return inject(MAP_MODE_KEY) ?? null;
+  }
+  const mapLocationMarkerRef = /* @__PURE__ */ shallowRef(null);
+  function setMapLocationMarker(fn) {
+    mapLocationMarkerRef.value = fn;
+  }
+  function showMapLocationMarker(lon, lat, options) {
+    var _a;
+    (_a = mapLocationMarkerRef.value) == null ? void 0 : _a.call(mapLocationMarkerRef, lon, lat, options);
+  }
+  function escapeHtml(value2) {
+    return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function htmlParagraph(label, value2) {
+    if (value2 == null || value2 === "") return "";
+    return `<p><strong>${escapeHtml(label)}</strong> : ${escapeHtml(String(value2))}</p>`;
+  }
+  const APICARTO_GPU = "https://apicarto.ign.fr/api/gpu/document";
+  const APICARTO_PARCEL$1 = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  let mapPointRequestSeq = 0;
+  const FICHE_POINT_EPS = 1e-7;
+  let fichePointCache = null;
+  function sameMapPoint(a, b) {
+    return Math.abs(a.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a.lat - b.lat) <= FICHE_POINT_EPS;
+  }
+  function syncFichePointCache(lon, lat) {
+    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
+      fichePointCache = { lon, lat, byMode: {} };
+    }
+  }
+  function storeFicheInCache(mode2, lon, lat, selection) {
+    syncFichePointCache(lon, lat);
+    fichePointCache.byMode[mode2] = selection;
+  }
+  function cachedFicheForMode(mode2, lon, lat) {
+    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null;
+    return fichePointCache.byMode[mode2] ?? null;
+  }
+  function refreshFicheForMapModeChange(mode2, zoom) {
+    const marker = readMapPermalinkMarker(getMapPermalinkParams());
+    if (!marker) return;
+    const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
+    if (cached) {
+      showFiche(cached);
+      return;
+    }
+    void loadFicheForMapPoint({
+      lon: marker.lon,
+      lat: marker.lat,
+      mode: mode2,
+      zoom,
+      markerPlacedAtClick: true,
+      skipLocationMarker: true
+    });
+  }
+  function pointGeomParam$1(lon, lat) {
+    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
+  }
+  function showLoading(title) {
+    var _a;
+    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection({
+      title,
+      bodyHtml: "<p>Chargement des informations…</p>"
+    });
+  }
+  function showFiche(selection) {
+    var _a;
+    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection(selection);
+  }
+  function syncFicheLocationMarker(lon, lat) {
+    showMapLocationMarker(lon, lat, {
+      label: "",
+      origin: "ficheInfo",
+      center: false
+    });
+  }
+  function applyMapPointResult(requestId, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker) {
+    if (requestId !== mapPointRequestSeq) return null;
+    storeFicheInCache(mode2, lon, lat, selection);
+    showFiche(selection);
+    if (!skipLocationMarker && !markerPlacedAtClick) {
+      syncFicheLocationMarker(lon, lat);
+    }
+    return selection;
+  }
+  async function fetchGeoJson(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+  async function tryGpuSiteFiche(params2) {
+    if (typeof window === "undefined") return null;
+    const base = String(config.apiFicheInfoUrl ?? "/api/fiche-info");
+    const url = new URL(base, window.location.origin);
+    url.searchParams.set("lon", String(params2.lon));
+    url.searchParams.set("lat", String(params2.lat));
+    url.searchParams.set("mode", String(params2.mode));
+    url.searchParams.set("zoom", String(Math.round(params2.zoom)));
+    try {
+      const res = await fetch(url.toString(), { credentials: "same-origin" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const title = String(data.title ?? data.name ?? "Informations");
+      const bodyHtml = String(
+        data.bodyHtml ?? data.html ?? data.content ?? data.body ?? "<p>Informations disponibles.</p>"
+      );
+      const raw = data.raw && typeof data.raw === "object" ? data.raw : data;
+      return { title, bodyHtml, raw };
+    } catch {
+      return null;
+    }
+  }
+  function parcelFromApicarto(lon, lat, props) {
+    const section = String(props.section ?? "");
+    const numero = String(props.numero ?? "");
+    const idu = String(props.idu ?? "");
+    const title = idu ? `Parcelle ${idu}` : section && numero ? `Parcelle ${section} ${numero}` : "Parcelle cadastrale";
+    const parts = [
+      htmlParagraph("Commune", String(props.nom_com ?? "")),
+      htmlParagraph("Section", section),
+      htmlParagraph("Numéro", numero),
+      htmlParagraph("Contenance", props.contenance != null ? `${props.contenance} m²` : ""),
+      htmlParagraph("Code INSEE", String(props.code_insee ?? "")),
+      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
+    ].filter(Boolean);
+    return {
+      title,
+      bodyHtml: parts.join("") || "<p>Parcelle identifiée.</p>",
+      raw: { ...props, lon, lat, source: "apicarto-cadastre" }
+    };
+  }
+  function documentFromApicarto(lon, lat, props) {
+    const duType = String(props.du_type ?? props.type ?? "Document");
+    const gridTitle = String(props.grid_title ?? props.grid_name ?? "");
+    const name2 = String(props.name ?? props.partition ?? "Document d’urbanisme");
+    const title = gridTitle ? `${duType} — ${gridTitle}` : name2;
+    const parts = [
+      htmlParagraph("Document", name2),
+      htmlParagraph("Type", duType),
+      htmlParagraph("Commune", gridTitle),
+      htmlParagraph("Statut GPU", String(props.gpu_status ?? "")),
+      htmlParagraph("Identifiant", String(props.gpu_doc_id ?? props.id ?? "")),
+      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
+    ].filter(Boolean);
+    return {
+      title,
+      bodyHtml: parts.join("") || "<p>Document d’urbanisme identifié.</p>",
+      raw: { ...props, lon, lat, source: "apicarto-gpu-document" }
+    };
+  }
+  async function ficheFromApicarto(lon, lat, mode2) {
+    var _a, _b;
+    if (mode2 === MAP_MODE_PARCEL) {
+      const geo2 = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
+      const feature2 = (_a = geo2.features) == null ? void 0 : _a[0];
+      if (!(feature2 == null ? void 0 : feature2.properties)) {
+        return {
+          title: "Parcelle",
+          bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
+          raw: { lon, lat, mode: mode2 }
+        };
+      }
+      return parcelFromApicarto(lon, lat, feature2.properties);
+    }
+    const geo = await fetchGeoJson(`${APICARTO_GPU}?geom=${pointGeomParam$1(lon, lat)}`);
+    const feature = (_b = geo.features) == null ? void 0 : _b[0];
+    if (!(feature == null ? void 0 : feature.properties)) {
+      return {
+        title: "Document d’urbanisme",
+        bodyHtml: "<p>Aucun document d’urbanisme connu à cet emplacement.</p>",
+        raw: { lon, lat, mode: mode2 }
+      };
+    }
+    return documentFromApicarto(lon, lat, feature.properties);
+  }
+  async function loadFicheForMapPoint(params2) {
+    const requestId = ++mapPointRequestSeq;
+    const markerPlacedAtClick = params2.markerPlacedAtClick === true;
+    const skipLocationMarker = params2.skipLocationMarker === true;
+    syncFichePointCache(params2.lon, params2.lat);
+    const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
+    showLoading(loadingTitle);
+    const fromSite = await tryGpuSiteFiche(params2);
+    if (fromSite) {
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        fromSite,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    }
+    try {
+      const selection = await ficheFromApicarto(params2.lon, params2.lat, params2.mode);
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        selection,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    } catch {
+      const fallback = {
+        title: loadingTitle,
+        bodyHtml: `<p>Impossible de charger les informations (${escapeHtml(String(params2.lon))}, ${escapeHtml(String(params2.lat))}).</p>`,
+        raw: { lon: params2.lon, lat: params2.lat, mode: params2.mode }
+      };
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        fallback,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    }
+  }
+  async function loadFicheForSearch(search, mode2, zoom = 6) {
+    var _a, _b, _c;
+    const label = (_a = search.fullText) == null ? void 0 : _a.trim();
+    if (!label) return;
+    const x = Number((_b = search.position) == null ? void 0 : _b.x);
+    const y = Number((_c = search.position) == null ? void 0 : _c.y);
+    const hasCoords = Number.isFinite(x) && Number.isFinite(y);
+    if (hasCoords) {
+      await loadFicheForMapPoint({
+        lon: x,
+        lat: y,
+        mode: mode2,
+        zoom,
+        loadingTitle: label,
+        skipLocationMarker: true
+      });
+      return;
+    }
+    if (mode2 === MAP_MODE_TERRITORY) {
+      const parts = [`<p><strong>${escapeHtml(label)}</strong></p>`];
+      if (search.type) parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
+      showFiche({
+        title: label,
+        bodyHtml: parts.join(""),
+        raw: {
+          fullText: label,
+          type: search.type ?? null,
+          kind: search.kind ?? null,
+          poiType: search.poiType ?? [],
+          mode: mode2
+        }
+      });
+      return;
+    }
+    showFiche({
+      title: label,
+      bodyHtml: `<p><strong>${escapeHtml(label)}</strong></p><p>Coordonnées absentes — zoomez et cliquez sur la parcelle.</p>`,
+      raw: { fullText: label, mode: mode2 }
+    });
+  }
+  const LOCATION_SEARCH_ANIMATION_MS = 650;
+  function animateViewFit(map2, extent, options = {}) {
+    const { duration, ...fitOptions } = options;
+    map2.getView().fit(extent, {
+      ...fitOptions,
+      duration: duration ?? LOCATION_SEARCH_ANIMATION_MS,
+      easing: easeOut
+    });
+  }
+  function parentCommuneInseeForArrondissement(codeInsee) {
+    if (!/^\d{5}$/.test(codeInsee)) return null;
+    if (codeInsee.startsWith("751") && codeInsee !== "75056") return "75056";
+    const codeNum = Number(codeInsee);
+    if (codeNum >= 13201 && codeNum <= 13216) return "13055";
+    if (codeNum >= 69381 && codeNum <= 69389) return "69123";
+    return null;
+  }
+  const APICARTO_COMMUNE = "https://apicarto.ign.fr/api/cadastre/commune";
+  const APICARTO_PARCEL = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  const GEO_API_COMMUNE = "https://geo.api.gouv.fr/communes";
+  const MODE_EMPRISE_PROP = "ec-mode-emprise";
+  const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
+  let empriseTargetKey = null;
+  const EMPRISE_POINT_EPS = 1e-7;
+  let emprisePointCache = null;
+  const geoJson$1 = new GeoJSON();
+  function sameEmprisePoint(a, b) {
+    return Math.abs(a.lon - b.lon) <= EMPRISE_POINT_EPS && Math.abs(a.lat - b.lat) <= EMPRISE_POINT_EPS;
+  }
+  function syncEmprisePointCache(lon, lat) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) {
+      emprisePointCache = { lon, lat, byMode: {} };
+    }
+  }
+  function cloneEmpriseFeature(feature) {
+    const clone2 = feature.clone();
+    const kind = feature.get(MODE_EMPRISE_PROP);
+    if (kind) {
+      clone2.set(MODE_EMPRISE_PROP, kind);
+      clone2.setStyle(styleForKind(kind));
+    }
+    return clone2;
+  }
+  function storeEmpriseInCache(lon, lat, mode2, features) {
+    syncEmprisePointCache(lon, lat);
+    emprisePointCache.byMode[mode2] = features.map(cloneEmpriseFeature);
+  }
+  function cachedEmpriseForMode(lon, lat, mode2) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) return null;
+    if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
+    const stored = emprisePointCache.byMode[mode2] ?? [];
+    return stored.map(cloneEmpriseFeature);
+  }
+  function pointGeomParam(lon, lat) {
+    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
+  }
+  function modeEmpriseStyle(stroke, fill) {
+    return new Style({
+      stroke: new Stroke({
+        color: stroke,
+        width: 2,
+        lineDash: [8, 8]
+      }),
+      fill: new Fill({ color: fill })
+    });
+  }
+  function communeOrParcelEmpriseStyle() {
+    return modeEmpriseStyle("rgba(200, 16, 46, 0.95)", "rgba(200, 16, 46, 0.12)");
+  }
+  function arrondissementEmpriseStyle() {
+    return modeEmpriseStyle("rgba(230, 126, 34, 0.95)", "rgba(230, 126, 34, 0.14)");
+  }
+  function styleForKind(kind) {
+    return kind === "arrondissement" ? arrondissementEmpriseStyle() : communeOrParcelEmpriseStyle();
+  }
+  function dismissSearchEnginePopup(host) {
+    var _a;
+    (_a = host.popup) == null ? void 0 : _a.setPosition(void 0);
+  }
+  function removeModeEmpriseFeatures(host) {
+    var _a;
+    const source = (_a = host.layer) == null ? void 0 : _a.getSource();
+    if (!source) return;
+    for (const feature of [...source.getFeatures()]) {
+      if (!feature.get(MODE_EMPRISE_PROP)) continue;
+      if (typeof source.removeFeature === "function") {
+        source.removeFeature(feature);
+      }
+    }
+  }
+  function readGeoJsonFeature(raw, kind) {
+    var _a;
+    if (!(raw == null ? void 0 : raw.geometry)) return null;
+    const map2 = (_a = searchEngineLayerHostRef.value) == null ? void 0 : _a.getMap();
+    const projection = map2 == null ? void 0 : map2.getView().getProjection();
+    if (!projection) return null;
+    const feature = geoJson$1.readFeature(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: projection
+    });
+    feature.set(MODE_EMPRISE_PROP, kind);
+    feature.setStyle(styleForKind(kind));
+    return feature;
+  }
+  async function fetchCadastreCommuneAtPoint(lon, lat) {
+    var _a;
+    const res = await fetch(`${APICARTO_COMMUNE}?geom=${pointGeomParam(lon, lat)}`);
+    if (!res.ok) return null;
+    const geo = await res.json();
+    return ((_a = geo.features) == null ? void 0 : _a[0]) ?? null;
+  }
+  async function fetchCommuneContourFromGeoApi(codeInsee) {
+    const res = await fetch(
+      `${GEO_API_COMMUNE}/${encodeURIComponent(codeInsee)}?format=geojson&geometry=contour`
+    );
+    if (!res.ok) return null;
+    const raw = await res.json();
+    return (raw == null ? void 0 : raw.geometry) ? raw : null;
+  }
+  async function fetchParcelFeature(lon, lat) {
+    var _a;
+    const res = await fetch(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`);
+    if (!res.ok) return null;
+    const geo = await res.json();
+    const raw = (_a = geo.features) == null ? void 0 : _a[0];
+    if (!(raw == null ? void 0 : raw.geometry) || !raw.properties) return null;
+    return readGeoJsonFeature(raw, "parcel");
+  }
+  async function fetchTerritoryEmpriseFeatures(lon, lat) {
+    var _a;
+    const atPoint = await fetchCadastreCommuneAtPoint(lon, lat);
+    if (!(atPoint == null ? void 0 : atPoint.geometry)) return [];
+    const codeInsee = String(((_a = atPoint.properties) == null ? void 0 : _a.code_insee) ?? "");
+    const parentInsee = parentCommuneInseeForArrondissement(codeInsee);
+    const features = [];
+    if (parentInsee) {
+      const parentRaw = await fetchCommuneContourFromGeoApi(parentInsee);
+      const commune2 = parentRaw ? readGeoJsonFeature(parentRaw, "commune") : null;
+      if (commune2) features.push(commune2);
+      const arrondissement = readGeoJsonFeature(atPoint, "arrondissement");
+      if (arrondissement) features.push(arrondissement);
+      return features;
+    }
+    const commune = readGeoJsonFeature(atPoint, "commune");
+    return commune ? [commune] : [];
+  }
+  async function fetchModeEmpriseFeatures(lon, lat, mode2) {
+    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
+    if (resolvedMode === MAP_MODE_PARCEL) {
+      const parcel = await fetchParcelFeature(lon, lat);
+      return parcel ? [parcel] : [];
+    }
+    if (resolvedMode === MAP_MODE_TERRITORY) {
+      return fetchTerritoryEmpriseFeatures(lon, lat);
+    }
+    return [];
+  }
+  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey) {
+    var _a, _b;
+    empriseTargetKey = targetKey;
+    removeModeEmpriseFeatures(host);
+    const fromCache = cachedEmpriseForMode(lon, lat, mode2);
+    if (fromCache) {
+      if (empriseTargetKey !== targetKey) return;
+      const source2 = (_a = host.layer) == null ? void 0 : _a.getSource();
+      if (!source2) return;
+      for (const feature of fromCache) {
+        source2.addFeature(feature);
+      }
+      return;
+    }
+    const features = await fetchModeEmpriseFeatures(lon, lat, mode2);
+    if (empriseTargetKey !== targetKey) return;
+    storeEmpriseInCache(lon, lat, mode2, features);
+    const source = (_b = host.layer) == null ? void 0 : _b.getSource();
+    if (!source) return;
+    for (const feature of features) {
+      source.addFeature(feature);
+    }
+  }
+  function empriseTargetKeyForPoint(lon, lat) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`;
+  }
+  function ensureModeEmpriseForMapPoint(lon, lat, mode2, targetKey) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return;
+    void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
+  }
+  const _hoisted_1$i = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$f = /* @__PURE__ */ defineComponent({
+  const GPU_PIN_BLUE = "#000091";
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -62001,31 +62758,54 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       function openFicheFromSearch(search) {
         var _a, _b, _c;
-        const label = (_a = search.fullText) == null ? void 0 : _a.trim();
-        const tabPanels = tabPanelsApiRef.value;
-        if (!label || !tabPanels) return;
-        const parts = [`<p><strong>${escapeHtml(label)}</strong></p>`];
-        if (search.type) {
-          parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
-        }
-        if (search.position) {
-          parts.push(`<p>Coordonnées : ${search.position.x}, ${search.position.y}</p>`);
-        }
-        tabPanels.showSelection({
-          title: label,
-          bodyHtml: parts.join(""),
-          raw: {
-            fullText: label,
-            type: search.type ?? null,
-            kind: search.kind ?? null,
-            position_x: ((_b = search.position) == null ? void 0 : _b.x) ?? null,
-            position_y: ((_c = search.position) == null ? void 0 : _c.y) ?? null,
-            poiType: search.poiType ?? []
-          }
-        });
+        const map2 = ((_b = (_a = controlRef.value) == null ? void 0 : _a.getMap) == null ? void 0 : _b.call(_a)) ?? null;
+        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+        const mode2 = ((_c = tryUseMapMode()) == null ? void 0 : _c.mode.value) ?? 2;
+        void loadFicheForSearch(search, mode2, zoom);
       }
-      function escapeHtml(value2) {
-        return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      function searchLabelFromFeature(feature) {
+        if (!feature) return "";
+        const toponyme = feature.get("toponyme");
+        if (typeof toponyme === "string" && toponyme.trim()) return toponyme.trim();
+        const infoPopup = feature.get("infoPopup");
+        if (typeof infoPopup === "string" && infoPopup.trim()) {
+          const plain = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          if (plain) return plain;
+        }
+        return "";
+      }
+      function searchFromGeopfResult(control, searchEvent) {
+        var _a, _b;
+        const label = control.baseSearchEngine.input.value.trim();
+        let feature = (_a = control.popup) == null ? void 0 : _a.get("feature");
+        if (!feature && (searchEvent == null ? void 0 : searchEvent.result)) {
+          feature = searchEvent.result;
+        }
+        const resolvedLabel = label || searchLabelFromFeature(feature);
+        if (!resolvedLabel && !feature) return null;
+        let x;
+        let y;
+        const geometry = feature == null ? void 0 : feature.getGeometry();
+        if (geometry) {
+          let coord;
+          if (geometry.getType() === "Point") {
+            coord = geometry.getCoordinates();
+          } else {
+            const interior = (_b = geometry.getInteriorPoint) == null ? void 0 : _b.call(geometry);
+            coord = (interior == null ? void 0 : interior.getCoordinates()) ?? getCenter(geometry.getExtent());
+          }
+          if (coord) {
+            [x, y] = toLonLat(coord);
+          }
+        }
+        const origin = feature == null ? void 0 : feature.get("origin");
+        const featureType = feature == null ? void 0 : feature.get("type");
+        return {
+          fullText: resolvedLabel || "Résultat",
+          type: typeof featureType === "string" && featureType || (typeof origin === "string" ? origin : void 0),
+          kind: typeof (feature == null ? void 0 : feature.get("kind")) === "string" ? feature.get("kind") : void 0,
+          ...Number.isFinite(x) && Number.isFinite(y) ? { position: { x, y } } : {}
+        };
       }
       function tabPanelsRightInset() {
         const el = document.querySelector(".ec-tab-panels.is-open");
@@ -62042,34 +62822,117 @@ Expected function or array of functions, received type ${typeof value2}.`
           stroke: new Stroke({ color, width: 2 }),
           fill: new Fill({ color: "rgba(0, 0, 0, 0.1)" })
         });
-        return [make([255, 255, 255, 1]), make([0, 0, 145, 1])];
+        return [make("#ffffff"), make(GPU_PIN_BLUE)];
       }
-      function refitPopupForOpenPanels(control) {
-        var _a, _b, _c, _d, _e;
-        if (!((_a = tabPanelsApiRef.value) == null ? void 0 : _a.isOpen.value)) return;
-        const map2 = control.getMap();
-        if (!map2) return;
-        const source = ((_b = control.layer) == null ? void 0 : _b.getSource()) ?? null;
-        let feature = (_c = control.popup) == null ? void 0 : _c.get("feature");
+      function configureSearchPinInteraction(control) {
+        var _a, _b;
+        const select = control.selectInteraction;
+        if (!select) return;
+        (_a = select.setStyle) == null ? void 0 : _a.call(select, pinMarkerStyle());
+        (_b = select.setActive) == null ? void 0 : _b.call(select, false);
+      }
+      function bindSearchPinSelectGuard(control) {
+        const select = control.selectInteraction;
+        if (!(select == null ? void 0 : select.on)) return () => {
+        };
+        const onSelect = () => {
+          requestAnimationFrame(() => enforceSearchLayerPinStyles(control));
+        };
+        select.on("select", onSelect);
+        return () => {
+          var _a;
+          return (_a = select.un) == null ? void 0 : _a.call(select, "select", onSelect);
+        };
+      }
+      function enforceSearchLayerPinStyles(control) {
+        var _a, _b, _c, _d;
+        const source = (_a = control.layer) == null ? void 0 : _a.getSource();
+        if (source) {
+          for (const feature of source.getFeatures()) {
+            if (((_b = feature.getGeometry()) == null ? void 0 : _b.getType()) === "Point") {
+              feature.setStyle(pinMarkerStyle());
+            }
+          }
+        }
+        (_d = (_c = control.selectInteraction) == null ? void 0 : _c.getFeatures()) == null ? void 0 : _d.clear();
+      }
+      function searchResultFeature(control) {
+        var _a, _b;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        let feature = (_b = control.popup) == null ? void 0 : _b.get("feature");
         if (!feature) {
           feature = source == null ? void 0 : source.getFeatures()[0];
         }
+        return feature ?? null;
+      }
+      function searchResultViewExtent(control) {
+        var _a;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        if (!source) return null;
+        const features = source.getFeatures();
+        if (!features.length) return null;
+        const emprise = createEmpty();
+        let hasEmprise = false;
+        for (const f of features) {
+          if (f.get(MODE_EMPRISE_PROP)) continue;
+          const geometry = f.getGeometry();
+          if (!geometry || geometry.getType() === "Point") continue;
+          extend$3(emprise, geometry.getExtent());
+          hasEmprise = true;
+        }
+        if (hasEmprise && !isEmpty(emprise)) return emprise;
+        const combined = createEmpty();
+        for (const f of features) {
+          const geometry = f.getGeometry();
+          if (geometry) extend$3(combined, geometry.getExtent());
+        }
+        return isEmpty(combined) ? null : combined;
+      }
+      function prepareSearchResultOnMap(control) {
+        var _a;
+        const map2 = control.getMap();
+        if (!map2) return null;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        const feature = searchResultFeature(control);
         const geometry = feature == null ? void 0 : feature.getGeometry();
-        if (!feature || !geometry) return;
+        if (!feature || !geometry) return null;
         if (source && !source.getFeatures().includes(feature)) {
-          source.clear();
           source.addFeature(feature);
         }
-        feature.setStyle(pinMarkerStyle());
-        const selected = (_d = control.selectInteraction) == null ? void 0 : _d.getFeatures();
-        if (selected && !selected.getArray().includes(feature)) {
-          selected.push(feature);
-        }
-        map2.getView().fit(geometry.getExtent(), {
-          padding: [72, tabPanelsRightInset(), 72, 72],
+        enforceSearchLayerPinStyles(control);
+        dismissSearchEnginePopup(control);
+        return feature;
+      }
+      function animateViewToSearchResult(control) {
+        var _a;
+        const map2 = control.getMap();
+        if (!map2) return;
+        const extent = searchResultViewExtent(control);
+        if (!extent) return;
+        const rightPad = ((_a = tabPanelsApiRef.value) == null ? void 0 : _a.isOpen.value) ? tabPanelsRightInset() : 72;
+        animateViewFit(map2, extent, {
+          padding: [72, rightPad, 72, 72],
           maxZoom: 15
         });
-        (_e = control._setPopupInfo) == null ? void 0 : _e.call(control, feature);
+      }
+      function resolveMapModeForEmprise() {
+        var _a;
+        const raw = ((_a = tryUseMapMode()) == null ? void 0 : _a.mode.value) ?? DEFAULT_MAP_MODE;
+        return normalizeMapMode(raw) ?? DEFAULT_MAP_MODE;
+      }
+      function syncModeEmpriseAfterSearch(control, lon, lat, empriseKey) {
+        const mode2 = resolveMapModeForEmprise();
+        void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode2, empriseKey);
+        const map2 = control.getMap();
+        map2 == null ? void 0 : map2.once("moveend", () => {
+          void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode2, empriseKey);
+        });
+      }
+      function onLocationSearchResult(control, empriseKey, lon, lat) {
+        setMapPermalinkMarker(lon, lat);
+        prepareSearchResultOnMap(control);
+        animateViewToSearchResult(control);
+        syncModeEmpriseAfterSearch(control, lon, lat, empriseKey);
       }
       function applyInitialSearch(control, search) {
         var _a, _b;
@@ -62082,11 +62945,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         const y = Number((_b = search.position) == null ? void 0 : _b.y);
         const hasCoords = Number.isFinite(x) && Number.isFinite(y);
         const isGeolocate = search.type === "geolocate";
-        openFicheFromSearch(search);
+        const willGeocode = Boolean(label && !isGeolocate);
+        if (!willGeocode) {
+          openFicheFromSearch(search);
+        }
         if (hasCoords) {
-          const popupHtml = isGeolocate ? `<strong>${escapeHtml(label)}</strong><br/>${x}, ${y}` : label;
-          control.createMarker([x, y], popupHtml, isGeolocate ? "geolocate" : "searchAtInit", true);
-          requestAnimationFrame(() => refitPopupForOpenPanels(control));
+          control.createMarker([x, y], "", isGeolocate ? "geolocate" : "searchAtInit", true);
+          dismissSearchEnginePopup(control);
+          enforceSearchLayerPinStyles(control);
+          setMapPermalinkMarker(x, y);
         }
         if (!label || isGeolocate) return;
         const poiType = Array.isArray(search.poiType) ? search.poiType : [];
@@ -62108,13 +62975,72 @@ Expected function or array of functions, received type ${typeof value2}.`
           serviceBaseUrl: props.serviceBaseUrl
         })
       );
+      function bindMapLocationMarker(control) {
+        return (lon, lat, options) => {
+          if (!control.getMap()) return;
+          const origin = (options == null ? void 0 : options.origin) ?? "ficheInfo";
+          control.createMarker([lon, lat], "", origin, (options == null ? void 0 : options.center) ?? false);
+          dismissSearchEnginePopup(control);
+          enforceSearchLayerPinStyles(control);
+          setMapPermalinkMarker(lon, lat);
+        };
+      }
       watch(
         controlRef,
         (control, _prev, onCleanup) => {
-          if (!control) return;
+          if (!control) {
+            setMapLocationMarker(null);
+            searchEngineLayerHostRef.value = null;
+            return;
+          }
           const advanced = control;
-          const onSearch = () => {
-            requestAnimationFrame(() => refitPopupForOpenPanels(advanced));
+          configureSearchPinInteraction(advanced);
+          const unbindPinSelectGuard = bindSearchPinSelectGuard(advanced);
+          searchEngineLayerHostRef.value = advanced;
+          setMapLocationMarker(bindMapLocationMarker(advanced));
+          onCleanup(() => {
+            unbindPinSelectGuard();
+            setMapLocationMarker(null);
+            searchEngineLayerHostRef.value = null;
+          });
+          const onSearch = (e) => {
+            var _a, _b;
+            const origin = (_b = (_a = e == null ? void 0 : e.result) == null ? void 0 : _a.get) == null ? void 0 : _b.call(_a, "origin");
+            const fromFicheInfo = origin === "ficheInfo";
+            const fromPermalinkRestore = origin === "permalink";
+            requestAnimationFrame(() => {
+              var _a2, _b2;
+              if (fromFicheInfo || fromPermalinkRestore) {
+                enforceSearchLayerPinStyles(advanced);
+                return;
+              }
+              const search = searchFromGeopfResult(advanced, e);
+              const lon = Number((_a2 = search == null ? void 0 : search.position) == null ? void 0 : _a2.x);
+              const lat = Number((_b2 = search == null ? void 0 : search.position) == null ? void 0 : _b2.y);
+              if (Number.isFinite(lon) && Number.isFinite(lat)) {
+                const empriseKey = empriseTargetKeyForPoint(lon, lat);
+                onLocationSearchResult(advanced, empriseKey, lon, lat);
+              } else {
+                prepareSearchResultOnMap(advanced);
+                animateViewToSearchResult(advanced);
+                const feature = searchResultFeature(advanced);
+                const geometry = feature == null ? void 0 : feature.getGeometry();
+                if (geometry) {
+                  let coord;
+                  if (geometry.getType() === "Point") {
+                    coord = geometry.getCoordinates();
+                  } else {
+                    coord = getCenter(geometry.getExtent());
+                  }
+                  if (coord) {
+                    const [fallbackLon, fallbackLat] = toLonLat(coord);
+                    const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat);
+                    syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey);
+                  }
+                }
+              }
+              if (search == null ? void 0 : search.fullText) openFicheFromSearch(search);
+            });
           };
           advanced.on("search", onSearch);
           onCleanup(() => {
@@ -62135,7 +63061,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$f);
+        return openBlock(), createElementBlock("span", _hoisted_1$i);
       };
     }
   });
@@ -64747,12 +65673,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$e = {
+  const _hoisted_1$h = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$e = /* @__PURE__ */ defineComponent({
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -64768,7 +65694,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$e);
+        return openBlock(), createElementBlock("span", _hoisted_1$h);
       };
     }
   });
@@ -68592,13 +69518,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$d = {
+  const _hoisted_1$g = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
+  const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -68611,10 +69537,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       function patchTerritoriesPanel(control) {
         const root = control.element;
         if (!root) return;
+        const panel = root.querySelector('dialog[id^="GPterritoriesPanel"]');
         const title = root.querySelector(
           ".gpf-panel__header .GPpanelTitle, .gpf-panel__header .gpf-panel__title"
         );
-        if (title) title.textContent = PANEL_TITLE;
+        if (title) {
+          title.textContent = PANEL_TITLE;
+          if (panel) {
+            const titleId = `${panel.id}-title`;
+            title.id = titleId;
+            panel.setAttribute("aria-labelledby", titleId);
+          }
+        } else if (panel) {
+          panel.setAttribute("aria-label", PANEL_TITLE);
+        }
         const btn = root.querySelector(
           ".gpf-panel__header button.GPpanelClose, .GPpanelHeader button.GPpanelClose"
         );
@@ -68648,7 +69584,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$d);
+        return openBlock(), createElementBlock("span", _hoisted_1$g);
       };
     }
   });
@@ -72668,9 +73604,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
   }
   const blue = "#000091";
-  const fillBlue = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_FILL = "rgba(0, 0, 145, 0.2)";
+  const SKETCH_AREA_DRAW_FILL = "rgba(0, 0, 145, 0.15)";
   const geometryFeatureStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 }),
     image: new CircleStyle({
       radius: 6,
@@ -72683,18 +73620,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const discFillStyle = new Style({
-    fill: new Fill({ color: fillBlue }),
+    fill: new Fill({ color: SKETCH_AREA_FILL }),
     stroke: new Stroke({ color: blue, width: 2 })
   });
   const geometryDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
       fill: new Fill({ color: blue })
     })
   });
-  new Style({
+  const circleDrawStyle = new Style({
     fill: new Fill({ color: "rgba(0,0,0,0)" }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
@@ -72703,7 +73640,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     })
   });
   const discDrawStyle = new Style({
-    fill: new Fill({ color: "rgba(0, 0, 145, 0.15)" }),
+    fill: new Fill({ color: SKETCH_AREA_DRAW_FILL }),
     stroke: new Stroke({ color: blue, width: 2, lineDash: [6, 4] }),
     image: new CircleStyle({
       radius: 5,
@@ -72901,7 +73838,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     kind: "polygon",
     strokeColor: "#000091",
     strokeWidth: 2,
-    fillColor: "rgba(0, 0, 145, 0.2)",
+    fillColor: SKETCH_AREA_FILL,
     radius: 6,
     text: "Texte",
     fontSize: 14,
@@ -72923,6 +73860,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   function defaultFeatureStyleAttrs(kind) {
     const base = { ...DEFAULTS, kind };
+    if (kind === "disc") {
+      return { ...defaultFeatureStyleAttrs("polygon"), kind: "disc" };
+    }
     if (kind === "circle") {
       return { ...base, fillColor: "rgba(0, 0, 0, 0)" };
     }
@@ -73167,11 +74107,52 @@ Expected function or array of functions, received type ${typeof value2}.`
     return [[(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2]];
   }
   function featureStylePopupAnchor(feature, mapSize, getPixel) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle) {
+      return geom.getCenter();
+    }
+    if (geom instanceof LineString) {
+      const coords = geom.getCoordinates();
+      return coords.length ? coords[coords.length - 1] : null;
+    }
+    if (geom instanceof MultiLineString) {
+      const lines = geom.getCoordinates();
+      const lastLine = lines[lines.length - 1];
+      return (lastLine == null ? void 0 : lastLine.length) ? lastLine[lastLine.length - 1] : null;
+    }
     const candidates = featureStylePopupAnchorCandidates(feature);
     if (!candidates.length) return null;
-    {
+    if (!mapSize || !getPixel) {
       return candidates[0];
     }
+    const scored = candidates.map((c, index2) => {
+      const p5 = getPixel(c);
+      const onScreen = Boolean(
+        p5 && p5[0] >= 0 && p5[1] >= 0 && p5[0] <= mapSize[0] && p5[1] <= mapSize[1]
+      );
+      return {
+        c,
+        p: p5,
+        onScreen,
+        index: index2,
+        // Plus haut à l’écran = meilleur pour une popup au-dessus
+        topRank: p5 ? p5[1] : Number.POSITIVE_INFINITY
+      };
+    });
+    const pool = scored.filter((s) => s.onScreen);
+    const use = pool.length ? pool : scored;
+    const interior = use.find((s) => s.index === 0);
+    if (interior && interior.onScreen) return interior.c;
+    use.sort((a, b) => a.topRank - b.topRank || a.index - b.index);
+    return use[0].c;
+  }
+  function resolveStylePopupAnchor(feature, options) {
+    const geom = feature.getGeometry();
+    if (geom instanceof Circle && getCircleKind(feature) === "disc") {
+      return geom.getCenter().slice();
+    }
+    if (options == null ? void 0 : options.clickAnchor) return options.clickAnchor;
+    return featureStylePopupAnchor(feature, options == null ? void 0 : options.mapSize, options == null ? void 0 : options.getPixel);
   }
   const BLUE = "#000091";
   function cursorUrl(svg2) {
@@ -74283,6 +75264,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "onExtraTool");
       __publicField(this, "onFeatureCreated");
       __publicField(this, "onStyleDismiss");
+      __publicField(this, "onToolStateChange");
       __publicField(this, "geometryType");
       __publicField(this, "drawStyle");
       __publicField(this, "customStyle");
@@ -74346,6 +75328,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.onExtraTool = opts.onExtraTool ?? null;
       this.onFeatureCreated = opts.onFeatureCreated ?? null;
       this.onStyleDismiss = opts.onStyleDismiss ?? null;
+      this.onToolStateChange = opts.onToolStateChange ?? null;
       this.customStyle = opts.style;
       this.styleEditEnabled = Boolean(opts.onStyleEdit);
       this.drawStyle = opts.style ?? drawStyleFor(parseGeometryTypes(opts.geometryType));
@@ -74380,7 +75363,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return geom.getRadius() >= this.circleMinRadiusMapUnits();
     }
     circleFinishCondition(evt) {
-      if (!this.circleDrawCenter) return true;
+      if (!this.circleDrawCenter) return false;
       const dx = evt.coordinate[0] - this.circleDrawCenter[0];
       const dy = evt.coordinate[1] - this.circleDrawCenter[1];
       const min = this.circleMinRadiusMapUnits();
@@ -74616,27 +75599,33 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (target2) target2.style.cursor = "";
     }
     clearTransient() {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       const prev = this.activeId;
+      (_a = this.onStyleDismiss) == null ? void 0 : _a.call(this);
       this.circleDrawCenter = null;
       this.clearFeatureCursor();
       this.unbindMapHover();
       this.transform.setActive(false);
-      (_a = this.modifySubTools) == null ? void 0 : _a.setOpen(false);
+      (_b = this.modifySubTools) == null ? void 0 : _b.setOpen(false);
       if (this.draw) {
         this.map.removeInteraction(this.draw);
         this.draw = null;
       }
       this.map.un("singleclick", this.onRemoveClick);
       this.activeId = null;
-      (_b = this.modify) == null ? void 0 : _b.setActive(false);
+      (_c = this.modify) == null ? void 0 : _c.setActive(false);
       for (const btn of this.target.querySelectorAll("button")) {
         btn.setAttribute("aria-pressed", "false");
         btn.classList.remove("is-active");
       }
       if (prev && this.extraTools.some((t) => t.id === prev && t.mode === "toggle")) {
-        (_c = this.onExtraTool) == null ? void 0 : _c.call(this, prev, false);
+        (_d = this.onExtraTool) == null ? void 0 : _d.call(this, prev, false);
       }
+      this.notifyToolState();
+    }
+    notifyToolState() {
+      var _a;
+      (_a = this.onToolStateChange) == null ? void 0 : _a.call(this);
     }
     activate(tool) {
       var _a, _b, _c, _d, _e, _f;
@@ -74674,17 +75663,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         const defaultSub = ((_f = this.modifySubTools) == null ? void 0 : _f.getDefaultSubToolId()) ?? "modify-shape";
         this.applyModifySubTool(defaultSub, true);
         this.transform.setActive(true);
+        this.notifyToolState();
         return;
       }
       if (tool.remove) {
         this.map.on("pointermove", this.onFeaturePointerMove);
         this.map.on("singleclick", this.onRemoveClick);
+        this.notifyToolState();
         return;
       }
       if (!tool.drawType) return;
       const types = parseGeometryTypes(this.geometryType);
       const replaceOnDraw = shouldReplaceOnDraw(types);
-      const sketchStyle = tool.circleKind === "disc" || tool.circleKind === "circle" ? discDrawStyle : this.drawStyle;
+      const sketchStyle = tool.circleKind === "disc" ? discDrawStyle : tool.circleKind === "circle" ? circleDrawStyle : this.drawStyle;
       const drawStyle = this.wrapDrawStyle(this.customStyle ?? sketchStyle);
       this.draw = new Draw({
         source: this.source,
@@ -74694,6 +75685,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         finishCondition: tool.circleKind ? (evt) => this.circleFinishCondition(evt) : void 0
       });
       this.draw.on("drawstart", (evt) => {
+        var _a2;
+        (_a2 = this.onStyleDismiss) == null ? void 0 : _a2.call(this);
         if (replaceOnDraw) this.source.clear(true);
         this.circleDrawCenter = null;
         if (tool.circleKind) {
@@ -74715,12 +75708,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.circleDrawCenter = null;
         queueMicrotask(() => {
           var _a2;
-          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, evt.feature);
+          const feature = evt.feature;
+          const anchor = resolveStylePopupAnchor(feature) ?? void 0;
+          (_a2 = this.onFeatureCreated) == null ? void 0 : _a2.call(this, feature, anchor);
           this.onChange();
         });
       });
       this.map.addInteraction(this.draw);
       this.bindMapHover();
+      this.notifyToolState();
     }
     destroy() {
       var _a;
@@ -81816,6 +82812,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "alphaInput");
       __publicField(this, "color");
       __publicField(this, "onChange", null);
+      __publicField(this, "onFinalize", null);
       this.color = parseColor(initial);
       this.root = document.createElement("div");
       this.root.className = "ec-sketch-color";
@@ -81845,8 +82842,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         const c = parseColor(this.hueInput.value);
         this.color = { ...c, a: this.color.a };
         this.syncUi({ syncHue: false });
-        this.emit();
+        this.emitPreview();
       });
+      this.hueInput.addEventListener("change", () => this.emitFinalize());
       this.hexInput.addEventListener("input", () => {
         const raw = this.hexInput.value.trim();
         if (!this.isCompleteColorInput(raw)) return;
@@ -81858,12 +82856,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 };
         this.syncHexFromColorUnlessEditing();
         this.paintSwatch();
-        this.emit();
+        this.emitPreview();
       });
+      this.alphaInput.addEventListener("pointerup", () => this.emitFinalize());
+      this.alphaInput.addEventListener("change", () => this.emitFinalize());
       this.syncUi({ forceHex: true });
     }
     setOnChange(cb) {
       this.onChange = cb;
+    }
+    /** Appelé à la fin d’un glissement (slider opacité) ou validation couleur native / hex. */
+    setOnFinalize(cb) {
+      this.onFinalize = cb;
     }
     getValue() {
       return toRgbaString(this.color);
@@ -81881,8 +82885,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!node) return false;
       return this.root.contains(node);
     }
-    emit() {
+    emitPreview() {
       var _a;
+      (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
+    }
+    emitFinalize() {
+      var _a;
+      if (this.onFinalize) {
+        this.onFinalize(this.getValue());
+        return;
+      }
       (_a = this.onChange) == null ? void 0 : _a.call(this, this.getValue());
     }
     /** Valeur hex entièrement saisie (pas de reformat pendant la frappe). */
@@ -81894,7 +82906,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     commitHexField() {
       this.color = parseColor(this.hexInput.value, this.color);
       this.syncUi({ forceHex: true });
-      this.emit();
+      this.emitFinalize();
     }
     applyParsedColor(next, opts) {
       this.color = next;
@@ -81904,7 +82916,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.hexInput.value = toHexRgba(this.color);
       }
       this.paintSwatch();
-      this.emit();
+      this.emitPreview();
     }
     syncHexFromColorUnlessEditing() {
       if (document.activeElement === this.hexInput) return;
@@ -81965,6 +82977,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "feature", null);
       __publicField(this, "kind", "polygon");
       __publicField(this, "onCommit", null);
+      __publicField(this, "onHistoryPush", null);
+      __publicField(this, "onDelete", null);
+      /** Historique local du style pendant la session popup (Annuler / Rétablir). */
+      __publicField(this, "featureStyleHistory", []);
+      __publicField(this, "featureStyleHistoryIndex", 0);
+      __publicField(this, "suppressFeatureStyleHistory", false);
+      __publicField(this, "btnUndo");
+      __publicField(this, "btnRedo");
+      __publicField(this, "btnDelete");
+      __publicField(this, "btnClose");
       __publicField(this, "openFlag", false);
       __publicField(this, "advancedOpen", false);
       __publicField(this, "mapDragged", false);
@@ -82023,7 +83045,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 });
         const feature = hits[0];
         if (!feature) return;
-        this.open(feature, this.onCommit ?? void 0, evt.coordinate);
+        this.open(
+          feature,
+          {
+            mode: "edit",
+            onCommit: this.onCommit ?? void 0,
+            onHistoryPush: this.onHistoryPush ?? void 0,
+            onDelete: this.onDelete ?? void 0
+          },
+          evt.coordinate
+        );
       });
       this.map = map2;
       this.root = document.createElement("div");
@@ -82037,14 +83068,33 @@ Expected function or array of functions, received type ${typeof value2}.`
         </button>
         <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
         <div class="ec-sketch-style-popup__actions">
-          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
-          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--history">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__undo" disabled>
+              <i class="ri-corner-up-left-line" aria-hidden="true"></i>
+              Annuler
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__redo" disabled>
+              <i class="ri-corner-up-right-line" aria-hidden="true"></i>
+              Rétablir
+            </button>
+          </div>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--main">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__delete">
+              <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+              Supprimer
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--primary ec-sketch-style-popup__close">Fermer</button>
+          </div>
         </div>
       </div>
     `;
       this.basicFields = this.root.querySelector('[data-section="basic"]');
       this.advancedFields = this.root.querySelector('[data-section="advanced"]');
       this.advancedToggle = this.root.querySelector(".ec-sketch-style-popup__advanced-toggle");
+      this.btnUndo = this.root.querySelector(".ec-sketch-style-popup__undo");
+      this.btnRedo = this.root.querySelector(".ec-sketch-style-popup__redo");
+      this.btnDelete = this.root.querySelector(".ec-sketch-style-popup__delete");
+      this.btnClose = this.root.querySelector(".ec-sketch-style-popup__close");
       this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
         <span>Texte</span>
@@ -82143,7 +83193,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       for (const [key2, picker] of Object.entries(this.colorPickers)) {
         const slot = this.basicFields.querySelector(`[data-color-slot="${key2}"]`);
         slot == null ? void 0 : slot.appendChild(picker.root);
-        picker.setOnChange(() => this.applyFromForm());
+        picker.setOnChange(() => this.previewStyleFromForm());
+        picker.setOnFinalize(() => this.recordStyleFromForm());
       }
       this.els = {
         text: this.root.querySelector('[data-input="text"]'),
@@ -82184,26 +83235,49 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.els.textStrokeWidthValue.textContent = this.els.textStrokeWidth.value;
         this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       };
-      const live = () => {
+      const liveCommit = () => {
         syncOutputs();
         this.syncDependentFields();
-        this.applyFromForm();
+        this.recordStyleFromForm();
+      };
+      const livePreview = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.previewStyleFromForm();
+      };
+      const commitRangeSlider = () => {
+        syncOutputs();
+        this.syncDependentFields();
+        this.recordStyleFromForm();
       };
       for (const input of Object.values(this.els)) {
         if (input instanceof HTMLOutputElement) continue;
-        input.addEventListener("input", live);
-        input.addEventListener("change", live);
+        if (input instanceof HTMLInputElement && input.type === "range") {
+          input.addEventListener("input", livePreview);
+          input.addEventListener("pointerup", commitRangeSlider);
+          input.addEventListener("change", commitRangeSlider);
+          continue;
+        }
+        input.addEventListener("input", liveCommit);
+        input.addEventListener("change", liveCommit);
       }
       this.advancedToggle.addEventListener("click", () => {
         this.setAdvancedOpen(!this.advancedOpen);
       });
-      this.root.querySelector(".ec-sketch-style-popup__ok").addEventListener("click", () => {
+      this.btnDelete.addEventListener("click", () => {
         var _a;
-        this.applyFromForm();
+        const feature = this.feature;
+        if (!feature) return;
+        (_a = this.onDelete) == null ? void 0 : _a.call(this, feature);
+        this.hide();
+      });
+      this.btnUndo.addEventListener("click", () => this.stepFeatureStyleHistory(-1));
+      this.btnRedo.addEventListener("click", () => this.stepFeatureStyleHistory(1));
+      this.btnClose.addEventListener("click", () => {
+        var _a;
         (_a = this.onCommit) == null ? void 0 : _a.call(this);
         this.hide();
       });
-      this.root.querySelector(".ec-sketch-style-popup__cancel").addEventListener("click", () => this.hide());
       this.overlay = new Overlay({
         element: this.root,
         positioning: "bottom-center",
@@ -82213,14 +83287,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       this.map.addOverlay(this.overlay);
     }
-    open(feature, onCommit, anchor) {
+    open(feature, options, anchor) {
+      const opts = typeof options === "function" ? { onCommit: options } : options ?? {};
       this.unbindOutside();
       this.feature = feature;
-      this.clickAnchor = anchor ?? null;
-      this.onCommit = onCommit ?? null;
+      this.onCommit = opts.onCommit ?? null;
+      this.onHistoryPush = opts.onHistoryPush ?? null;
+      this.onDelete = opts.onDelete ?? null;
       this.kind = featureStyleKindOf(feature);
+      this.clickAnchor = anchor ?? null;
       this.setAdvancedOpen(false);
       const attrs = getFeatureStyleAttrs(feature);
+      this.resetFeatureStyleHistory(attrs);
       this.syncFieldsVisibility();
       this.fillForm(attrs);
       this.syncDependentFields();
@@ -82228,6 +83306,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.root.hidden = false;
       this.openFlag = true;
       this.skipNextOutsideUp = true;
+      this.syncPopupAnchorFromFeature();
       this.reposition();
       this.bindOutside();
       if (this.kind === "text" && !this.els.text.closest("[hidden]")) {
@@ -82248,6 +83327,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.feature = null;
       this.clickAnchor = null;
       this.onCommit = null;
+      this.onHistoryPush = null;
+      this.onDelete = null;
+      this.featureStyleHistory = [];
+      this.featureStyleHistoryIndex = 0;
       this.outsideGesture = null;
       this.mapDragged = false;
       this.skipNextOutsideUp = false;
@@ -82321,11 +83404,21 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.geomChangeKey = null;
       }
     }
+    /** Disque : centre géométrique ; sinon clic ou heuristique par type. */
+    syncPopupAnchorFromFeature() {
+      if (!this.feature) return;
+      const resolved = resolveStylePopupAnchor(this.feature, {
+        clickAnchor: this.clickAnchor,
+        mapSize: this.map.getSize(),
+        getPixel: (c) => this.map.getPixelFromCoordinate(c)
+      });
+      if (resolved) this.clickAnchor = resolved;
+    }
     /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
     reposition() {
       if (!this.feature || this.root.hidden) return;
-      const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature);
-      if (anchor) this.overlay.setPosition(anchor);
+      this.syncPopupAnchorFromFeature();
+      if (this.clickAnchor) this.overlay.setPosition(this.clickAnchor);
     }
     syncFieldsVisibility() {
       const basic = new Set(BASIC_BY_KIND[this.kind]);
@@ -82394,14 +83487,60 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.els.pointRotationValue.textContent = this.els.pointRotation.value;
       this.els.zIndex.value = String(attrs.zIndex);
     }
-    applyFromForm() {
-      if (!this.feature) return;
+    /** Applique le formulaire sur la feature sans entrée d’historique (glissement slider). */
+    previewStyleFromForm() {
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      applyFeatureStyle(this.feature, this.readAttrsFromForm());
+    }
+    resetFeatureStyleHistory(attrs) {
+      this.featureStyleHistory = [cloneFeatureStyleAttrs(attrs)];
+      this.featureStyleHistoryIndex = 0;
+      this.syncFeatureStyleHistoryButtons();
+    }
+    syncFeatureStyleHistoryButtons() {
+      this.btnUndo.disabled = this.featureStyleHistoryIndex <= 0;
+      this.btnRedo.disabled = this.featureStyleHistoryIndex >= this.featureStyleHistory.length - 1;
+    }
+    recordStyleFromForm() {
+      var _a;
+      if (!this.feature || this.suppressFeatureStyleHistory) return;
+      const attrs = this.readAttrsFromForm();
+      const current = this.featureStyleHistory[this.featureStyleHistoryIndex];
+      if (current && featureStyleAttrsEqual(current, attrs)) return;
+      this.featureStyleHistory = this.featureStyleHistory.slice(0, this.featureStyleHistoryIndex + 1);
+      this.featureStyleHistory.push(cloneFeatureStyleAttrs(attrs));
+      this.featureStyleHistoryIndex = this.featureStyleHistory.length - 1;
+      applyFeatureStyle(this.feature, attrs);
+      (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+      this.syncFeatureStyleHistoryButtons();
+    }
+    stepFeatureStyleHistory(delta) {
+      var _a;
+      const nextIndex = this.featureStyleHistoryIndex + delta;
+      if (nextIndex < 0 || nextIndex >= this.featureStyleHistory.length) return;
+      const feature = this.feature;
+      if (!feature) return;
+      this.suppressFeatureStyleHistory = true;
+      try {
+        this.featureStyleHistoryIndex = nextIndex;
+        const attrs = this.featureStyleHistory[this.featureStyleHistoryIndex];
+        applyFeatureStyle(feature, attrs);
+        this.fillForm(attrs);
+        this.syncDependentFields();
+        (_a = this.onHistoryPush) == null ? void 0 : _a.call(this);
+        this.syncFeatureStyleHistoryButtons();
+      } finally {
+        this.suppressFeatureStyleHistory = false;
+      }
+    }
+    readAttrsFromForm() {
       const base = defaultFeatureStyleAttrs(this.kind);
       const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash);
       const shape = this.els.pointShape.value || base.pointShape;
       const join = this.els.lineJoin.value || base.lineJoin;
-      const attrs = {
+      return {
         ...base,
+        kind: this.kind,
         text: this.els.text.value.trim() || base.text,
         fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
         fontColor: this.colorPickers.fontColor.getValue(),
@@ -82424,11 +83563,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         pointRotation: shape === "circle" ? 0 : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
         zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex)
       };
-      applyFeatureStyle(this.feature, attrs);
     }
   };
   __publicField(_SketchFeatureStylePopup, "OUTSIDE_MOVE_TOLERANCE_PX", 5);
   let SketchFeatureStylePopup = _SketchFeatureStylePopup;
+  function cloneFeatureStyleAttrs(attrs) {
+    return { ...attrs };
+  }
+  function featureStyleAttrsEqual(a, b) {
+    return a.kind === b.kind && a.strokeColor === b.strokeColor && a.strokeWidth === b.strokeWidth && a.fillColor === b.fillColor && a.radius === b.radius && a.text === b.text && a.fontSize === b.fontSize && a.fontColor === b.fontColor && a.textStrokeColor === b.textStrokeColor && a.textStrokeWidth === b.textStrokeWidth && a.rotation === b.rotation && a.lineDash === b.lineDash && a.lineCap === b.lineCap && a.lineJoin === b.lineJoin && a.lineDashOffset === b.lineDashOffset && a.miterLimit === b.miterLimit && a.fontFamily === b.fontFamily && a.fontBold === b.fontBold && a.fontItalic === b.fontItalic && a.pointShape === b.pointShape && a.pointRotation === b.pointRotation && a.zIndex === b.zIndex;
+  }
   function clamp(n, min, max, fallback) {
     if (!Number.isFinite(n)) return fallback;
     return Math.min(max, Math.max(min, n));
@@ -82743,6 +83887,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       __publicField(this, "historyEnabled");
       __publicField(this, "extraTools");
       __publicField(this, "enableFeatureStyleEditor");
+      __publicField(this, "onSketchEngagementChange");
       __publicField(this, "source");
       __publicField(this, "layer");
       __publicField(this, "ownsLayer");
@@ -82783,7 +83928,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
         const feature = hits.find((f) => isSketchTextFeature(f));
         if (feature && this.stylePopup) {
-          this.stylePopup.open(feature, () => this.notifyChange());
+          this.stylePopup.open(feature, this.buildStylePopupOptions("edit"));
         }
       });
       this.geometryType = options.geometryType ?? "Geometry";
@@ -82797,6 +83942,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.historyEnabled = Boolean(options.history);
       this.extraTools = options.extraTools ?? [];
       this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor);
+      this.onSketchEngagementChange = options.onSketchEngagementChange ?? null;
       this.source = options.source ?? new VectorSource({ wrapX: false });
       this.layer = options.layer ?? null;
       this.ownsLayer = !options.layer;
@@ -82845,6 +83991,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     getDrawBar() {
       return this.drawBar;
+    }
+    /** Dessin, modification, suppression, mesure ou texte en cours. */
+    isSketchToolEngaged() {
+      var _a, _b;
+      if (this.textDraw) return true;
+      if ((_a = this.measure) == null ? void 0 : _a.isActive()) return true;
+      return ((_b = this.drawBar) == null ? void 0 : _b.getActiveId()) != null;
+    }
+    emitSketchEngagement() {
+      var _a;
+      (_a = this.onSketchEngagementChange) == null ? void 0 : _a.call(this, this.isSketchToolEngaged());
     }
     getFeatures() {
       return this.source.getFeatures();
@@ -83000,17 +84157,36 @@ Expected function or array of functions, received type ${typeof value2}.`
         },
         onClearAll: () => this.clearFeatures(),
         onExtraTool: (id, active) => this.handleExtraTool(id, active),
-        onFeatureCreated: (feature) => this.openStylePopup(feature),
-        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor) : void 0,
+        onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor, "create"),
+        onStyleEdit: this.enableFeatureStyleEditor ? (feature, anchor) => this.openStylePopup(feature, anchor, "edit") : void 0,
         onStyleDismiss: this.enableFeatureStyleEditor ? () => {
           var _a2;
           return (_a2 = this.stylePopup) == null ? void 0 : _a2.hide();
-        } : void 0
+        } : void 0,
+        onToolStateChange: () => this.emitSketchEngagement()
       });
+      this.emitSketchEngagement();
       this.syncToolbarClusterVisibility();
       this.syncHistoryButtons();
     }
-    openStylePopup(feature, anchor) {
+    buildStylePopupOptions(mode2) {
+      return {
+        mode: mode2,
+        onCommit: () => this.notifyChange(),
+        onHistoryPush: () => {
+          var _a;
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        },
+        onDelete: (f) => {
+          var _a;
+          this.source.removeFeature(f);
+          (_a = this.history) == null ? void 0 : _a.push();
+          this.notifyChange();
+        }
+      };
+    }
+    openStylePopup(feature, anchor, mode2 = "edit") {
       if (!this.enableFeatureStyleEditor || !this.stylePopup) return;
       const geom = feature.getGeometry();
       if (geom instanceof Circle) {
@@ -83018,7 +84194,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const res = (map2 == null ? void 0 : map2.getView().getResolution()) ?? 1;
         if (geom.getRadius() < 3 * res) return;
       }
-      this.stylePopup.open(feature, () => this.notifyChange(), anchor);
+      this.stylePopup.open(feature, this.buildStylePopupOptions(mode2), anchor);
     }
     handleExtraTool(id, active) {
       var _a, _b, _c, _d, _e, _f, _g;
@@ -83067,6 +84243,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (id === "measure-area") {
         (_g = this.measure) == null ? void 0 : _g.activate("area");
       }
+      this.emitSketchEngagement();
     }
     startTextDraw() {
       const map2 = this.getMap();
@@ -83105,6 +84282,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (this.enableFeatureStyleEditor) {
         map2.on("singleclick", this.onTextSelectClick);
       }
+      this.emitSketchEngagement();
     }
     stopTextDraw() {
       var _a;
@@ -83122,6 +84300,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       map2 == null ? void 0 : map2.un("singleclick", this.onTextSelectClick);
       (_a = this.stylePopup) == null ? void 0 : _a.hide();
+      this.emitSketchEngagement();
     }
     runImport() {
       const map2 = this.getMap();
@@ -83333,12 +84512,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
-  const _hoisted_1$c = {
+  const sketchToolEngagedRef = /* @__PURE__ */ shallowRef(false);
+  function setSketchToolEngaged(engaged) {
+    sketchToolEngagedRef.value = engaged;
+  }
+  const _hoisted_1$f = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$c = /* @__PURE__ */ defineComponent({
+  const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -83365,14 +84548,178 @@ Expected function or array of functions, received type ${typeof value2}.`
           zIndex: props.zIndex,
           style: props.style,
           extraTools: props.extraTools,
-          enableFeatureStyleEditor: props.enableFeatureStyleEditor
-        })
+          enableFeatureStyleEditor: props.enableFeatureStyleEditor,
+          onSketchEngagementChange: setSketchToolEngaged
+        }),
+        {
+          afterCreate: (control) => setSketchToolEngaged(control.isSketchToolEngaged())
+        }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$c);
+        return openBlock(), createElementBlock("span", _hoisted_1$f);
       };
     }
   });
+  const mapPermalinkLayersBridgeRef = /* @__PURE__ */ shallowRef(null);
+  function registerMapPermalinkLayersBridge(api) {
+    mapPermalinkLayersBridgeRef.value = api;
+  }
+  function formatPermalinkOpacity(opacity) {
+    const n = Math.min(1, Math.max(0, opacity));
+    const rounded = Math.round(n * 100) / 100;
+    return String(rounded);
+  }
+  function decodeLayerPermalinkValue(raw) {
+    const parts = raw.split(":");
+    if (parts.length < 2) return null;
+    const head = parts[0];
+    if (head !== "0" && head !== "1") return null;
+    const checked = head === "1";
+    const opacity = Number(parts[1]);
+    const stackIndex = parts.length >= 3 ? Number(parts[2]) : 0;
+    if (!Number.isFinite(opacity)) return null;
+    if (parts.length >= 5) {
+      const grayscale2 = parts[3] === "1";
+      const visible = parts[4] === "1";
+      return {
+        checked,
+        opacity,
+        stackIndex: Number.isFinite(stackIndex) ? stackIndex : 0,
+        grayscale: grayscale2,
+        visible
+      };
+    }
+    const grayscale = parts.length >= 4 ? parts[3] === "1" : false;
+    return {
+      checked,
+      opacity,
+      stackIndex: Number.isFinite(stackIndex) ? stackIndex : 0,
+      grayscale,
+      visible: checked
+    };
+  }
+  function encodeLayerPermalinkValue(state) {
+    const v = state.checked ? 1 : 0;
+    const w = formatPermalinkOpacity(state.opacity);
+    const x = state.stackIndex;
+    const y = state.grayscale ? 1 : 0;
+    const z = state.visible ? 1 : 0;
+    return `${v}:${w}:${x}:${y}:${z}`;
+  }
+  function permalinkIdsForCatalogEntry(entry) {
+    var _a;
+    const ids = /* @__PURE__ */ new Set();
+    const parts = entry.path.split("/").filter(Boolean);
+    if (parts.length) {
+      ids.add(parts.join(","));
+      ids.add(parts[parts.length - 1]);
+    }
+    const legacy = pathToPermalinkId(entry.path);
+    if (legacy) ids.add(legacy);
+    const name2 = (_a = entry.config.name) == null ? void 0 : _a.trim();
+    if (name2) ids.add(name2);
+    return [...ids];
+  }
+  function shouldPreferPermalinkTarget(current, existing) {
+    const curLegend = Boolean(current.config.onlyLegend);
+    const exLegend = Boolean(existing.config.onlyLegend);
+    if (curLegend && !exLegend) return false;
+    if (!curLegend && exLegend) return true;
+    return current.path.length < existing.path.length;
+  }
+  function buildCatalogIdByPermalinkId(entries2) {
+    const byId = new Map(entries2.map((e) => [e.id, e]));
+    const map2 = /* @__PURE__ */ new Map();
+    for (const entry of entries2) {
+      for (const permalinkId of permalinkIdsForCatalogEntry(entry)) {
+        const prevId = map2.get(permalinkId);
+        if (!prevId) {
+          map2.set(permalinkId, entry.id);
+          continue;
+        }
+        const prevEntry = byId.get(prevId);
+        if (prevEntry && shouldPreferPermalinkTarget(entry, prevEntry)) {
+          map2.set(permalinkId, entry.id);
+        }
+      }
+    }
+    return map2;
+  }
+  function defaultOpacityFromCatalogEntry(entry) {
+    if (typeof entry.config.opacity === "number" && Number.isFinite(entry.config.opacity)) {
+      return entry.config.opacity;
+    }
+    return 0.7;
+  }
+  function resolveGpuLayerVisible(layer, parentVisible) {
+    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
+      return Boolean(layer.visible);
+    }
+    return parentVisible;
+  }
+  function pathToCatalogId(path) {
+    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
+    if (!normalized) return "root";
+    return normalized.split("/").map(
+      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    ).join("--");
+  }
+  function pathSegment(layer) {
+    var _a, _b;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
+      return parts[parts.length - 1] ?? "couche";
+    }
+    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
+    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
+      for (const value2 of layer.filterValue) {
+        uniqueName += value2;
+      }
+    }
+    if (layer.filterAttribute && layer.filterValueLike) {
+      uniqueName += `_${layer.filterValueLike}`;
+    }
+    return uniqueName.toLowerCase();
+  }
+  function buildLayerPath(layer, parentPath) {
+    var _a;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      return layer.path.replace(/\/+/g, "/");
+    }
+    const segment = pathSegment(layer);
+    if (!parentPath) return `/${segment}`;
+    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+    return `${base}/${segment}`.replace(/\/+/g, "/");
+  }
+  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
+    var _a, _b;
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a = layer.layers) == null ? void 0 : _a.length) {
+          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
+        }
+        continue;
+      }
+      const path = buildLayerPath(layer, parentPath || "");
+      const id = pathToCatalogId(path);
+      registry.push({ id, path, config: layer });
+      if ((_b = layer.layers) == null ? void 0 : _b.length) {
+        layerConfigToCatalogEntries(layer.layers, path, registry);
+      }
+    }
+    return registry;
+  }
+  function readLayerConfigFromWindow() {
+    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
+    if (!Array.isArray(raw) || !raw.length) return null;
+    return raw;
+  }
+  function resolveLayerConfig(paramsLayerConfig) {
+    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
+      return paramsLayerConfig;
+    }
+    return readLayerConfigFromWindow();
+  }
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
     const mapZoom = /* @__PURE__ */ ref(6);
@@ -84386,7 +85733,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     function syncPanelStateFromControlledWms(node, mapVis) {
       const wmsIds = wmsIdsControlledByDataLayersPanelEntry(node, mapVis);
       if (!wmsIds.length) return;
-      const visible = wmsIds.some((id) => Boolean(mapVis[id]));
+      const visible = getPanelState(node).visible;
       const opacityWmsIds = wmsIds.filter((id) => {
         const n = treeIndex.nodesById.get(id);
         return n && !n.gpuForceOpacity;
@@ -84443,15 +85790,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     function notifyStackOrder() {
       applyMapStackOrderFromDisplay();
     }
+    function mapVisibleFromCatalogAndPanel(nodeId, catalogOnMap) {
+      if (!catalogOnMap) return false;
+      if (!isShownInDataLayersPanel(nodeId)) return true;
+      return getPanelState(treeIndex.nodesById.get(nodeId)).visible;
+    }
     function reapplyCatalogMapState() {
       var _a, _b;
       syncSplitAggregateIds();
       const mapVis = catalogMapVisibility();
       for (const node of treeIndex.nodesById.values()) {
         if (!node.gpuMapLayer) continue;
-        const onMap = mapVis[node.id] ?? false;
-        syncMapVisible(node.id, onMap);
-        if (onMap) {
+        const catalogOnMap = mapVis[node.id] ?? false;
+        const showOnMap = mapVisibleFromCatalogAndPanel(node.id, catalogOnMap);
+        syncMapVisible(node.id, showOnMap);
+        if (catalogOnMap) {
           const n = treeIndex.nodesById.get(node.id);
           const op = n.gpuForceOpacity ? GPU_FORCE_OPACITY_PERCENT : ((_a = panelStateById.value[node.id]) == null ? void 0 : _a.opacity) ?? catalogNodeOpacityPercent(n);
           applyOpacityToMap(node.id, op);
@@ -84552,6 +85905,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       patchPanelState(id, { visible });
       for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
         patchPanelState(wmsId, { visible });
+      }
+      applyPanelStateToControlledWms(node, getPanelState(node), mapVis);
+    }
+    function applyDataLayerPermalinkPanelState(id, state) {
+      const node = treeIndex.nodesById.get(id);
+      if (!node || !isShownInDataLayersPanel(id)) return;
+      const mapVis = catalogMapVisibility();
+      const opacity = Math.min(100, Math.max(0, Math.round(state.opacity)));
+      patchPanelState(id, { visible: state.visible, opacity, grayscale: state.grayscale });
+      for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
+        patchPanelState(wmsId, { visible: state.visible, opacity, grayscale: state.grayscale });
       }
       applyPanelStateToControlledWms(node, getPanelState(node), mapVis);
     }
@@ -84656,6 +86020,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       applyMapStackOrderFromDisplay();
     }
+    function applyStackOrderFromPermalink(stackIndexByNodeId) {
+      const activeTopToBottom = layers.value.map((l) => l.id);
+      if (!activeTopToBottom.length) return;
+      const ranked = activeTopToBottom.filter((id) => stackIndexByNodeId[id] !== void 0).map((id) => ({ id, idx: stackIndexByNodeId[id] }));
+      ranked.sort((a, b) => a.idx - b.idx || a.id.localeCompare(b.id));
+      const orderedActive = ranked.map((r) => r.id);
+      for (const id of activeTopToBottom) {
+        if (!orderedActive.includes(id)) orderedActive.push(id);
+      }
+      const fullOrder = buildFullOrderAfterActiveReorder(stackSortKeyById.value, orderedActive);
+      stackSortKeyById.value = assignStackSortKeysFromFullOrder(stackSortKeyById.value, fullOrder);
+      applyMapStackOrderFromDisplay();
+    }
     return {
       layers,
       stackLayers,
@@ -84664,11 +86041,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       setCatalogChecked,
       setInStack,
       setVisible,
+      applyDataLayerPermalinkPanelState,
       setOpacity,
       setGrayscale,
       toggleGrayscale,
       removeFromStack,
       reorderStackByDisplayIndex,
+      applyStackOrderFromPermalink,
       enableAggregateDetail,
       regroupAggregate,
       notifyStackOrder,
@@ -84676,8 +86055,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogEntryInZoomRange
     };
   }
-  const _hoisted_1$b = ["innerHTML"];
-  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+  const _hoisted_1$e = ["innerHTML"];
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "SanitizedHtml",
     props: {
       html: {}
@@ -84686,25 +86065,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const safeHtml = computed(() => purify.sanitize(props.html));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$b);
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$e);
       };
     }
   });
-  const _hoisted_1$a = {
+  const _hoisted_1$d = {
     class: "ec-raw-info",
     "aria-label": "Données brutes"
   };
-  const _hoisted_2$9 = {
+  const _hoisted_2$a = {
     key: 0,
     class: "ec-raw-info__list"
   };
-  const _hoisted_3$9 = { class: "ec-raw-info__key" };
-  const _hoisted_4$8 = { class: "ec-raw-info__val" };
+  const _hoisted_3$a = { class: "ec-raw-info__key" };
+  const _hoisted_4$9 = { class: "ec-raw-info__val" };
   const _hoisted_5$8 = {
     key: 1,
     class: "ec-raw-info__placeholder"
   };
-  const _sfc_main$a = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "RawInfoPanel",
     props: {
       selection: {}
@@ -84721,15 +86100,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         }));
       });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$a, [
+        return openBlock(), createElementBlock("section", _hoisted_1$d, [
           _cache[1] || (_cache[1] = createBaseVNode("h2", { class: "ec-raw-info__title" }, "Attributs", -1)),
-          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$9, [
+          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$a, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(entries2.value, (row) => {
               return openBlock(), createElementBlock("li", {
                 key: row.key
               }, [
-                createBaseVNode("span", _hoisted_3$9, toDisplayString(row.key), 1),
-                createBaseVNode("span", _hoisted_4$8, toDisplayString(row.value), 1)
+                createBaseVNode("span", _hoisted_3$a, toDisplayString(row.key), 1),
+                createBaseVNode("span", _hoisted_4$9, toDisplayString(row.value), 1)
               ]);
             }), 128))
           ])) : (openBlock(), createElementBlock("div", _hoisted_5$8, [..._cache[0] || (_cache[0] = [
@@ -84740,10 +86119,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _hoisted_1$9 = { class: "ec-fiche-info" };
-  const _hoisted_2$8 = { class: "ec-fiche-info__inner" };
-  const _hoisted_3$8 = { class: "ec-fiche-info__title" };
-  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+  const _hoisted_1$c = { class: "ec-fiche-info" };
+  const _hoisted_2$9 = { class: "ec-fiche-info__inner" };
+  const _hoisted_3$9 = { class: "ec-fiche-info__title" };
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
       selection: {}
@@ -84756,22 +86135,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       const bodyHtml = computed(() => {
         var _a;
-        return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml;
+        return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? "";
       });
       return (_ctx, _cache) => {
         var _a;
-        return openBlock(), createElementBlock("article", _hoisted_1$9, [
+        return openBlock(), createElementBlock("article", _hoisted_1$c, [
           _cache[0] || (_cache[0] = createBaseVNode("div", {
             class: "ec-fiche-info__rail",
             "aria-hidden": "true"
           }, null, -1)),
-          createBaseVNode("div", _hoisted_2$8, [
-            createBaseVNode("h2", _hoisted_3$8, toDisplayString(title.value), 1),
-            createVNode(_sfc_main$b, {
+          createBaseVNode("div", _hoisted_2$9, [
+            createBaseVNode("h2", _hoisted_3$9, toDisplayString(title.value), 1),
+            createVNode(_sfc_main$e, {
               class: "ec-fiche-info__body",
               html: bodyHtml.value
             }, null, 8, ["html"]),
-            ((_a = __props.selection) == null ? void 0 : _a.raw) ? (openBlock(), createBlock(_sfc_main$a, {
+            ((_a = __props.selection) == null ? void 0 : _a.raw) ? (openBlock(), createBlock(_sfc_main$d, {
               key: 0,
               selection: __props.selection,
               class: "ec-fiche-info__raw"
@@ -84788,7 +86167,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-16a786f1"]]);
+  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["__scopeId", "data-v-df9a587a"]]);
   function flattenCatalogSwitcherNodes(roots) {
     const out = [];
     function walkLevel(nodes) {
@@ -84814,17 +86193,17 @@ Expected function or array of functions, received type ${typeof value2}.`
   function catalogDomIdFromNodeId(nodeId) {
     return nodeId.replace(/[^a-zA-Z0-9_-]/g, "_");
   }
-  const _hoisted_1$8 = ["id"];
-  const _hoisted_2$7 = ["aria-expanded", "aria-label", "onClick"];
-  const _hoisted_3$7 = {
+  const _hoisted_1$b = ["id"];
+  const _hoisted_2$8 = ["aria-expanded", "aria-label", "onClick"];
+  const _hoisted_3$8 = {
     key: 1,
     class: "ec-catalog-tree__fold-placeholder",
     "aria-hidden": "true"
   };
-  const _hoisted_4$7 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-tree__check" };
+  const _hoisted_4$8 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-tree__check" };
   const _hoisted_5$7 = ["id", "checked", "onChange"];
   const _hoisted_6$6 = ["for"];
-  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
     __name: "CatalogLayerTree",
     props: {
       nodes: {},
@@ -84931,8 +86310,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: normalizeClass(isCollapsed(node) ? "fr-icon-arrow-right-s-line" : "fr-icon-arrow-down-s-line"),
                     "aria-hidden": "true"
                   }, null, 2)
-                ], 8, _hoisted_2$7)) : (openBlock(), createElementBlock("span", _hoisted_3$7)),
-                createBaseVNode("div", _hoisted_4$7, [
+                ], 8, _hoisted_2$8)) : (openBlock(), createElementBlock("span", _hoisted_3$8)),
+                createBaseVNode("div", _hoisted_4$8, [
                   createBaseVNode("input", {
                     id: `ec-cat-${node.id}`,
                     type: "checkbox",
@@ -84944,7 +86323,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     for: `ec-cat-${node.id}`
                   }, toDisplayString(node.title), 9, _hoisted_6$6)
                 ])
-              ], 14, _hoisted_1$8),
+              ], 14, _hoisted_1$b),
               ((_b = node.children) == null ? void 0 : _b.length) && !isCollapsed(node) ? (openBlock(), createBlock(_component_CatalogLayerTree, {
                 key: 0,
                 nodes: node.children,
@@ -84964,17 +86343,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-7d64c043"]]);
-  const _hoisted_1$7 = {
+  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["__scopeId", "data-v-7d64c043"]]);
+  const _hoisted_1$a = {
     class: "ec-catalog-search",
     role: "search"
   };
-  const _hoisted_2$6 = { class: "fr-input-group" };
-  const _hoisted_3$6 = {
+  const _hoisted_2$7 = { class: "fr-input-group" };
+  const _hoisted_3$7 = {
     key: 0,
     class: "ec-catalog-search__results"
   };
-  const _hoisted_4$6 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-search__check" };
+  const _hoisted_4$7 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-search__check" };
   const _hoisted_5$6 = ["id", "checked", "onChange"];
   const _hoisted_6$5 = ["for", "onClick"];
   const _hoisted_7$5 = {
@@ -84982,7 +86361,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-catalog-search__empty",
     role: "status"
   };
-  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$a = /* @__PURE__ */ defineComponent({
     __name: "CatalogLayerSearch",
     props: {
       roots: {},
@@ -85005,8 +86384,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         return isCatalogNodeInZoomRange(node, props.mapZoom);
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$7, [
-          createBaseVNode("div", _hoisted_2$6, [
+        return openBlock(), createElementBlock("div", _hoisted_1$a, [
+          createBaseVNode("div", _hoisted_2$7, [
             _cache[1] || (_cache[1] = createBaseVNode("label", {
               class: "fr-label",
               for: "ec-catalog-layer-search-input"
@@ -85029,7 +86408,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               "aria-live": "polite"
             }, null, -1))
           ]),
-          query.value.trim() && results.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$6, [
+          query.value.trim() && results.value.length ? (openBlock(), createElementBlock("ul", _hoisted_3$7, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(results.value, (node) => {
               return openBlock(), createElementBlock("li", {
                 key: node.id,
@@ -85038,7 +86417,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createBaseVNode("div", {
                   class: normalizeClass(["ec-catalog-search__result-row", { "ec-not-in-zoom-range": !rowInZoomRange(node) }])
                 }, [
-                  createBaseVNode("div", _hoisted_4$6, [
+                  createBaseVNode("div", _hoisted_4$7, [
                     createBaseVNode("input", {
                       id: `ec-cat-search-${node.id}`,
                       type: "checkbox",
@@ -85059,7 +86438,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["__scopeId", "data-v-6e9ebd1a"]]);
+  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["__scopeId", "data-v-6e9ebd1a"]]);
   const GPU_TILE_LAYER_SWITCHER_TILE_COORD = [9, 253, -177];
   const GPU_PREVIEW_TILE_RESOLUTION = 156543.03392804097 / 2 ** GPU_TILE_LAYER_SWITCHER_TILE_COORD[0];
   function wmtsPreviewTileRow(storedRow) {
@@ -85082,13 +86461,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     const style = entry.style ?? "normal";
     return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
   }
-  const _hoisted_1$6 = {
+  const _hoisted_1$9 = {
     class: "ec-base-radio-list",
     "aria-label": "Fonds de cartes"
   };
-  const _hoisted_2$5 = { class: "ec-base-radio-list__list" };
-  const _hoisted_3$5 = { class: "ec-base-radio-list__grid" };
-  const _hoisted_4$5 = { class: "ec-base-radio-list__radio-slot" };
+  const _hoisted_2$6 = { class: "ec-base-radio-list__list" };
+  const _hoisted_3$6 = { class: "ec-base-radio-list__grid" };
+  const _hoisted_4$6 = { class: "ec-base-radio-list__radio-slot" };
   const _hoisted_5$5 = ["for"];
   const _hoisted_6$4 = ["id", "value", "checked", "onChange"];
   const _hoisted_7$4 = { class: "fr-sr-only" };
@@ -85103,13 +86482,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 1,
     class: "ec-base-radio-list__thumb ec-base-radio-list__thumb--blank"
   };
-  const _hoisted_13$2 = { class: "ec-base-radio-list__title-slot" };
+  const _hoisted_13$3 = { class: "ec-base-radio-list__title-slot" };
   const _hoisted_14$2 = ["onClick"];
   const _hoisted_15$1 = { class: "ec-base-radio-list__caret-slot" };
   const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
   const _hoisted_17$1 = ["id"];
   const _hoisted_18$1 = { class: "ec-base-radio-list__subtitle" };
-  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     __name: "BaseLayerRadioList",
     props: {
       presets: {},
@@ -85132,15 +86511,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         emit2("update:modelValue", id);
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$6, [
-          createBaseVNode("ul", _hoisted_2$5, [
+        return openBlock(), createElementBlock("section", _hoisted_1$9, [
+          createBaseVNode("ul", _hoisted_2$6, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(__props.presets, (preset) => {
               return openBlock(), createElementBlock("li", {
                 key: preset.id,
                 class: "ec-base-radio-list__item"
               }, [
-                createBaseVNode("div", _hoisted_3$5, [
-                  createBaseVNode("div", _hoisted_4$5, [
+                createBaseVNode("div", _hoisted_3$6, [
+                  createBaseVNode("div", _hoisted_4$6, [
                     createBaseVNode("label", {
                       class: "ec-base-radio",
                       for: `ec-base-${preset.id}`
@@ -85182,7 +86561,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       ])) : (openBlock(), createElementBlock("span", _hoisted_12$3))
                     ], 8, _hoisted_9$3)
                   ]),
-                  createBaseVNode("div", _hoisted_13$2, [
+                  createBaseVNode("div", _hoisted_13$3, [
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-base-radio-list__title",
@@ -85213,7 +86592,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "ec-base-radio-list__details-slot"
                   }, [
                     createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
-                    createVNode(_sfc_main$b, {
+                    createVNode(_sfc_main$e, {
                       class: "ec-base-radio-list__desc",
                       html: preset.description
                     }, null, 8, ["html"])
@@ -85226,18 +86605,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-ba4d31e9"]]);
-  const _hoisted_1$5 = {
+  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-ba4d31e9"]]);
+  const _hoisted_1$8 = {
     class: "ec-layer-catalogue",
     "aria-labelledby": "ec-layer-catalogue-title"
   };
-  const _hoisted_2$4 = {
+  const _hoisted_2$5 = {
     class: "fr-nav ec-layer-catalogue__nav",
     role: "tablist",
     "aria-label": "Catalogue de couches"
   };
-  const _hoisted_3$4 = { class: "fr-nav__list" };
-  const _hoisted_4$4 = { class: "fr-nav__item" };
+  const _hoisted_3$5 = { class: "fr-nav__list" };
+  const _hoisted_4$5 = { class: "fr-nav__item" };
   const _hoisted_5$4 = ["aria-selected", "aria-current", "tabindex"];
   const _hoisted_6$3 = { class: "fr-nav__item" };
   const _hoisted_7$3 = ["aria-selected", "aria-current", "tabindex"];
@@ -85248,21 +86627,28 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const _hoisted_10$2 = {
     key: 2,
+    class: "ec-layer-catalogue__waiting",
+    role: "status",
+    "aria-live": "polite"
+  };
+  const _hoisted_11$2 = {
+    key: 3,
     class: "ec-layer-catalogue__hint"
   };
-  const _hoisted_11$2 = ["hidden"];
-  const _hoisted_12$2 = {
+  const _hoisted_12$2 = ["hidden"];
+  const _hoisted_13$2 = {
     key: 1,
     class: "ec-layer-catalogue__hint"
   };
-  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$8 = /* @__PURE__ */ defineComponent({
     __name: "LayerCataloguePanel",
     props: {
       layerNodes: {},
       inStackById: {},
       mapZoom: {},
       basePresets: {},
-      baseModelValue: {}
+      baseModelValue: {},
+      catalogLayersLoading: { type: Boolean }
     },
     emits: ["update:baseModelValue", "catalog-toggle"],
     setup(__props, { emit: __emit }) {
@@ -85294,8 +86680,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         pinnedExpandIds.value = next;
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$5, [
-          _cache[4] || (_cache[4] = createBaseVNode("h2", {
+        return openBlock(), createElementBlock("section", _hoisted_1$8, [
+          _cache[5] || (_cache[5] = createBaseVNode("h2", {
             id: "ec-layer-catalogue-title",
             class: "ec-layer-catalogue__title"
           }, [
@@ -85305,9 +86691,9 @@ Expected function or array of functions, received type ${typeof value2}.`
             }),
             createTextVNode(" Catalogue ")
           ], -1)),
-          createBaseVNode("nav", _hoisted_2$4, [
-            createBaseVNode("ul", _hoisted_3$4, [
-              createBaseVNode("li", _hoisted_4$4, [
+          createBaseVNode("nav", _hoisted_2$5, [
+            createBaseVNode("ul", _hoisted_3$5, [
+              createBaseVNode("li", _hoisted_4$5, [
                 createBaseVNode("button", {
                   id: "ec-catalog-tab-donnees",
                   type: "button",
@@ -85366,7 +86752,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                 onToggle: onCatalogToggle,
                 onUnpinExpand
               }, null, 8, ["nodes", "map-zoom", "catalog-roots", "checked-by-id", "pinned-expand-ids", "highlighted-node-ids", "focus-catalog-node-id"])
-            ])) : (openBlock(), createElementBlock("p", _hoisted_10$2, "Aucune couche dans LAYER_CONFIG."))
+            ])) : __props.catalogLayersLoading ? (openBlock(), createElementBlock("div", _hoisted_10$2, [..._cache[4] || (_cache[4] = [
+              createBaseVNode("span", {
+                class: "ri-loader-4-line ec-layer-catalogue__spinner",
+                "aria-hidden": "true"
+              }, null, -1),
+              createBaseVNode("span", null, "En attente de la récupération des couches…", -1)
+            ])])) : (openBlock(), createElementBlock("p", _hoisted_11$2, "Aucune couche disponible."))
           ], 8, _hoisted_8$3),
           createBaseVNode("div", {
             id: "ec-catalog-panel-fonds",
@@ -85380,27 +86772,27 @@ Expected function or array of functions, received type ${typeof value2}.`
               presets: __props.basePresets,
               "model-value": __props.baseModelValue,
               "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("update:baseModelValue", $event))
-            }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_12$2, "Aucun fond de plan configuré."))
-          ], 8, _hoisted_11$2)
+            }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_13$2, "Aucun fond de plan configuré."))
+          ], 8, _hoisted_12$2)
         ]);
       };
     }
   });
-  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-e00379c6"]]);
-  const _hoisted_1$4 = {
+  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-617a4a8d"]]);
+  const _hoisted_1$7 = {
     class: "ec-data-layers",
     "aria-labelledby": "ec-data-layers-title"
   };
-  const _hoisted_2$3 = {
+  const _hoisted_2$4 = {
     key: 0,
     class: "ec-data-layers__hint"
   };
-  const _hoisted_3$3 = {
+  const _hoisted_3$4 = {
     key: 0,
     class: "ec-data-layers__drop-marker",
     "aria-hidden": "true"
   };
-  const _hoisted_4$3 = ["onDragover"];
+  const _hoisted_4$4 = ["onDragover"];
   const _hoisted_5$3 = { class: "ec-data-layers__head" };
   const _hoisted_6$2 = { class: "ec-data-layers__name" };
   const _hoisted_7$2 = { class: "ec-data-layers__head-end" };
@@ -85427,7 +86819,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-data-layers__drop-marker",
     "aria-hidden": "true"
   };
-  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$7 = /* @__PURE__ */ defineComponent({
     __name: "DataLayersManagerPanel",
     props: {
       layers: {},
@@ -85517,7 +86909,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return from !== null && dragInsertIndex.value === index2;
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$4, [
+        return openBlock(), createElementBlock("section", _hoisted_1$7, [
           _cache[6] || (_cache[6] = createBaseVNode("h2", {
             id: "ec-data-layers-title",
             class: "ec-data-layers__title"
@@ -85528,7 +86920,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }),
             createTextVNode(" Couches de données ")
           ], -1)),
-          !__props.layers.length ? (openBlock(), createElementBlock("p", _hoisted_2$3, " Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données. ")) : (openBlock(), createElementBlock("ul", {
+          !__props.layers.length ? (openBlock(), createElementBlock("p", _hoisted_2$4, " Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données. ")) : (openBlock(), createElementBlock("ul", {
             key: 1,
             class: "ec-data-layers__list",
             onDragover: onListDragOver,
@@ -85539,7 +86931,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               return openBlock(), createElementBlock(Fragment, {
                 key: layer.id
               }, [
-                showDropMarkerBefore(index2) ? (openBlock(), createElementBlock("li", _hoisted_3$3)) : createCommentVNode("", true),
+                showDropMarkerBefore(index2) ? (openBlock(), createElementBlock("li", _hoisted_3$4)) : createCommentVNode("", true),
                 createBaseVNode("li", {
                   class: normalizeClass(["ec-data-layers__item", {
                     "ec-data-layers__item--dragging": dragFromIndex() === index2,
@@ -85667,7 +87059,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       }, toDisplayString(layer.opacity) + " % ", 9, _hoisted_25)
                     ])
                   ])
-                ], 42, _hoisted_4$3)
+                ], 42, _hoisted_4$4)
               ], 64);
             }), 128)),
             dragLayerId.value && dragInsertIndex.value === __props.layers.length ? (openBlock(), createElementBlock("li", _hoisted_26)) : createCommentVNode("", true),
@@ -85686,19 +87078,19 @@ Expected function or array of functions, received type ${typeof value2}.`
   function rewriteLocalGpuSiteUrl(url) {
     return url;
   }
-  const _hoisted_1$3 = {
+  const _hoisted_1$6 = {
     class: "ec-layer-legends",
     "aria-labelledby": "ec-layer-legends-title"
   };
-  const _hoisted_2$2 = {
+  const _hoisted_2$3 = {
     key: 0,
     class: "ec-layer-legends__hint"
   };
-  const _hoisted_3$2 = {
+  const _hoisted_3$3 = {
     key: 1,
     class: "fr-accordions-group"
   };
-  const _hoisted_4$2 = ["id"];
+  const _hoisted_4$3 = ["id"];
   const _hoisted_5$2 = { class: "fr-accordion__title" };
   const _hoisted_6$1 = ["aria-expanded", "aria-controls", "onClick"];
   const _hoisted_7$1 = ["id"];
@@ -85724,7 +87116,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 0,
     class: "ec-layer-legends__hint"
   };
-  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$6 = /* @__PURE__ */ defineComponent({
     __name: "LayerLegendsPanel",
     props: {
       layers: {},
@@ -85799,7 +87191,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$3, [
+        return openBlock(), createElementBlock("section", _hoisted_1$6, [
           _cache[0] || (_cache[0] = createBaseVNode("h2", {
             id: "ec-layer-legends-title",
             class: "ec-layer-legends__title"
@@ -85810,7 +87202,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }),
             createTextVNode(" Légendes ")
           ], -1)),
-          !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$2, " Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici. ")) : (openBlock(), createElementBlock("div", _hoisted_3$2, [
+          !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$3, " Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici. ")) : (openBlock(), createElementBlock("div", _hoisted_3$3, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(displayLayers.value, (layer) => {
               var _a;
               return openBlock(), createElementBlock("section", {
@@ -85856,7 +87248,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     ])) : (openBlock(), createElementBlock("p", _hoisted_13, "Pas de légende pour cette couche."))
                   ])
                 ], 10, _hoisted_7$1)
-              ], 10, _hoisted_4$2);
+              ], 10, _hoisted_4$3);
             }), 128)),
             !legendItems.value.length ? (openBlock(), createElementBlock("p", _hoisted_14, " Aucune entrée de légende disponible pour les couches affichées. ")) : createCommentVNode("", true)
           ]))
@@ -85864,27 +87256,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-1d4fcda0"]]);
-  const _hoisted_1$2 = {
+  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-1d4fcda0"]]);
+  const _hoisted_1$5 = {
     class: "ec-tab-panels__tabs",
     role: "tablist",
     "aria-orientation": "vertical",
     "aria-label": "Onglets du panneau"
   };
-  const _hoisted_2$1 = ["id", "aria-selected", "aria-controls", "aria-label", "onClick"];
-  const _hoisted_3$1 = { class: "ec-tab-panels__panel" };
-  const _hoisted_4$1 = { class: "ec-tab-panels__panel-body" };
+  const _hoisted_2$2 = ["id", "aria-selected", "aria-controls", "aria-label", "onClick"];
+  const _hoisted_3$2 = { class: "ec-tab-panels__panel" };
+  const _hoisted_4$2 = { class: "ec-tab-panels__panel-body" };
   const _hoisted_5$1 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_6 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_7 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_8 = ["id", "hidden", "aria-labelledby"];
-  const _sfc_main$2 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     __name: "TabPanelsControl",
     props: {
       basePresets: { default: () => [] },
       baseModelValue: { default: "carte" },
       layerNodes: { default: () => [] },
-      layerMapHooks: { default: void 0 }
+      layerMapHooks: { default: void 0 },
+      catalogLayersLoading: { type: Boolean, default: false }
     },
     emits: ["update:baseModelValue", "toggle-layer"],
     setup(__props, { expose: __expose, emit: __emit }) {
@@ -85904,14 +87297,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         catalogCheckedById,
         catalogEntryInZoomRange,
         setCatalogChecked,
+        applyDataLayerPermalinkPanelState,
         setVisible,
         setOpacity,
         toggleGrayscale,
         removeFromStack,
         reorderStackByDisplayIndex,
+        applyStackOrderFromPermalink,
         enableAggregateDetail,
         regroupAggregate,
-        notifyStackOrder
+        notifyStackOrder,
+        reapplyCatalogMapState
       } = useManagedLayers(
         layerNodesRef,
         (id, visible) => emit2("toggle-layer", id, visible),
@@ -86017,8 +87413,130 @@ Expected function or array of functions, received type ${typeof value2}.`
         },
         { immediate: true }
       );
+      const catalogEntries = computed(() => {
+        void layerNodesRef.value.length;
+        return layerConfigToCatalogEntries(resolveLayerConfig() ?? []);
+      });
+      const catalogIdByPermalink = computed(() => buildCatalogIdByPermalinkId(catalogEntries.value));
+      function findCatalogTreeNode(id, roots = layerNodesRef.value) {
+        var _a;
+        for (const node of roots) {
+          if (node.id === id) return node;
+          if ((_a = node.children) == null ? void 0 : _a.length) {
+            const hit = findCatalogTreeNode(id, node.children);
+            if (hit) return hit;
+          }
+        }
+        return void 0;
+      }
+      function configDefaultCatalogChecked(entry) {
+        var _a;
+        return Boolean((_a = findCatalogTreeNode(entry.id)) == null ? void 0 : _a.visible);
+      }
+      function layerPermalinkStateForEntry(entry) {
+        const nodeId = entry.id;
+        const checked = Boolean(catalogCheckedById.value[nodeId]);
+        const row = layers.value.find((l) => l.id === nodeId);
+        const stackIds = layers.value.filter((l) => l.inStack).map((l) => l.id);
+        const stackIndex = (row == null ? void 0 : row.inStack) ? stackIds.indexOf(nodeId) : 0;
+        const opacity = row ? row.opacity / 100 : defaultOpacityFromCatalogEntry(entry);
+        return {
+          checked,
+          opacity,
+          stackIndex: stackIndex >= 0 ? stackIndex : 0,
+          grayscale: (row == null ? void 0 : row.grayscale) ?? false,
+          visible: (row == null ? void 0 : row.visible) ?? true
+        };
+      }
+      function layerStateDiffersFromConfig(entry) {
+        const state = layerPermalinkStateForEntry(entry);
+        const defaultChecked = configDefaultCatalogChecked(entry);
+        if (state.checked !== defaultChecked) return true;
+        const defaultOpacity = defaultOpacityFromCatalogEntry(entry);
+        if (Math.abs(state.opacity - defaultOpacity) > 1e-4) return true;
+        if (state.grayscale) return true;
+        if (state.checked && !state.visible) return true;
+        return false;
+      }
+      function primaryPermalinkIdForEntry(entry) {
+        const parts = entry.path.split("/").filter(Boolean);
+        if (!parts.length) return entry.config.name ?? entry.id;
+        if (parts.length === 1) return parts[0];
+        return parts.join(",");
+      }
+      function collectLayerParamsForPermalink() {
+        const out = {};
+        for (const entry of catalogEntries.value) {
+          if (entry.config.onlyLegend) continue;
+          const state = layerPermalinkStateForEntry(entry);
+          if (!state.checked && !layerStateDiffersFromConfig(entry)) continue;
+          const permalinkId = primaryPermalinkIdForEntry(entry);
+          if (!permalinkId) continue;
+          out[permalinkId] = encodeLayerPermalinkValue(state);
+        }
+        return out;
+      }
+      function applyLayerParamsFromPermalink(params2) {
+        const items = layerPermalinkEntriesFromParams(params2);
+        if (!items.length) return;
+        if (!layerNodesRef.value.length) return;
+        const stackIndexByNodeId = {};
+        const panelOverrides = [];
+        for (const { permalinkId, value: value2 } of items) {
+          const nodeId = catalogIdByPermalink.value.get(permalinkId);
+          if (!nodeId) continue;
+          const state = decodeLayerPermalinkValue(value2);
+          if (!state) continue;
+          setCatalogChecked(nodeId, state.checked);
+          if (state.checked) {
+            panelOverrides.push({ nodeId, state });
+            stackIndexByNodeId[nodeId] = state.stackIndex;
+          }
+        }
+        reapplyCatalogMapState();
+        for (const { nodeId, state } of panelOverrides) {
+          applyDataLayerPermalinkPanelState(nodeId, {
+            visible: state.visible,
+            opacity: Math.round(state.opacity * 100),
+            grayscale: state.grayscale
+          });
+        }
+        applyStackOrderFromPermalink(stackIndexByNodeId);
+      }
+      function scheduleApplyLayerParamsFromPermalink() {
+        void nextTick(() => {
+          applyLayerParamsFromPermalink(getMapPermalinkParams());
+        });
+      }
+      registerMapPermalinkLayersBridge({
+        applyLayerParamsFromPermalink,
+        collectLayerParamsForPermalink
+      });
+      watch(
+        () => [catalogEntries.value.length, layerNodesRef.value.length],
+        ([entryLen, nodeLen], prev) => {
+          const [prevEntryLen = 0, prevNodeLen = 0] = prev ?? [0, 0];
+          const becameReady = entryLen > 0 && nodeLen > 0 && (prevEntryLen === 0 || prevNodeLen === 0);
+          if (becameReady) scheduleApplyLayerParamsFromPermalink();
+        }
+      );
+      let layerPermalinkSyncTimer = null;
+      watch(
+        () => [
+          JSON.stringify(catalogCheckedById.value),
+          layers.value.map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`).join("|")
+        ].join(";"),
+        () => {
+          if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer);
+          layerPermalinkSyncTimer = setTimeout(() => {
+            layerPermalinkSyncTimer = null;
+            replaceLayerPermalinkParams(collectLayerParamsForPermalink());
+          }, 300);
+        }
+      );
       onUnmounted(() => {
         syncShellOpenClass(false);
+        registerMapPermalinkLayersBridge(null);
         registerTabPanelsApi(null);
         if (olControl && mapRef.value) {
           mapRef.value.removeControl(olControl);
@@ -86033,7 +87551,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           role: "complementary",
           "aria-label": "Panneau cartographique"
         }, [
-          createBaseVNode("div", _hoisted_1$2, [
+          createBaseVNode("div", _hoisted_1$5, [
             (openBlock(), createElementBlock(Fragment, null, renderList(tabs, (tab) => {
               return createBaseVNode("button", {
                 id: `ec-tab-${tab.id}`,
@@ -86054,11 +87572,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                   class: normalizeClass(tab.iconClass),
                   "aria-hidden": "true"
                 }, null, 2)) : createCommentVNode("", true)
-              ], 10, _hoisted_2$1);
+              ], 10, _hoisted_2$2);
             }), 64))
           ]),
-          createBaseVNode("div", _hoisted_3$1, [
-            createBaseVNode("div", _hoisted_4$1, [
+          createBaseVNode("div", _hoisted_3$2, [
+            createBaseVNode("div", _hoisted_4$2, [
               createBaseVNode("div", {
                 id: `ec-tab-panel-${unref(TAB_PANEL_IDS).fiche}`,
                 class: "ec-tab-panels__pane",
@@ -86081,9 +87599,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "map-zoom": unref(mapZoom),
                   "base-presets": __props.basePresets,
                   "base-model-value": __props.baseModelValue,
+                  "catalog-layers-loading": __props.catalogLayersLoading,
                   "onUpdate:baseModelValue": _cache[0] || (_cache[0] = ($event) => emit2("update:baseModelValue", $event)),
                   onCatalogToggle: unref(setCatalogChecked)
-                }, null, 8, ["layer-nodes", "in-stack-by-id", "map-zoom", "base-presets", "base-model-value", "onCatalogToggle"])
+                }, null, 8, ["layer-nodes", "in-stack-by-id", "map-zoom", "base-presets", "base-model-value", "catalog-layers-loading", "onCatalogToggle"])
               ], 8, _hoisted_6),
               createBaseVNode("div", {
                 id: `ec-tab-panel-${unref(TAB_PANEL_IDS).dataLayers}`,
@@ -86092,7 +87611,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 hidden: activeTab.value !== unref(TAB_PANEL_IDS).dataLayers,
                 "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).dataLayers}`
               }, [
-                createVNode(_sfc_main$4, {
+                createVNode(_sfc_main$7, {
                   layers: unref(layers),
                   "map-zoom": unref(mapZoom),
                   "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange),
@@ -86121,6 +87640,376 @@ Expected function or array of functions, received type ${typeof value2}.`
             ])
           ])
         ], 2);
+      };
+    }
+  });
+  const _hoisted_1$4 = {
+    class: "ec-map-mode-selector",
+    role: "radiogroup",
+    "aria-labelledby": "ec-map-mode-selector-label",
+    "data-testid": "map-mode-selector"
+  };
+  const _hoisted_2$1 = { class: "ec-map-mode-selector__options" };
+  const _hoisted_3$1 = ["value"];
+  const _hoisted_4$1 = ["value"];
+  const _sfc_main$4 = /* @__PURE__ */ defineComponent({
+    __name: "MapModeSelector",
+    props: {
+      modelValue: { default: void 0 }
+    },
+    emits: ["update:modelValue"],
+    setup(__props, { emit: __emit }) {
+      const props = __props;
+      const emit2 = __emit;
+      const injected = tryUseMapMode();
+      const mode2 = computed({
+        get() {
+          return props.modelValue ?? (injected == null ? void 0 : injected.mode.value) ?? MAP_MODE_TERRITORY;
+        },
+        set(next) {
+          if (injected) injected.setMode(next);
+          emit2("update:modelValue", next);
+        }
+      });
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", _hoisted_1$4, [
+          _cache[8] || (_cache[8] = createBaseVNode("span", {
+            id: "ec-map-mode-selector-label",
+            class: "ec-map-mode-selector__heading"
+          }, "Mode", -1)),
+          createBaseVNode("div", _hoisted_2$1, [
+            createBaseVNode("label", {
+              class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_PARCEL) }])
+            }, [
+              withDirectives(createBaseVNode("input", {
+                "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => mode2.value = $event),
+                class: "ec-map-mode-selector__input",
+                type: "radio",
+                name: "ec-map-mode",
+                value: unref(MAP_MODE_PARCEL)
+              }, null, 8, _hoisted_3$1), [
+                [vModelRadio, mode2.value]
+              ]),
+              _cache[2] || (_cache[2] = createBaseVNode("span", {
+                class: "ec-map-mode-selector__radio",
+                "aria-hidden": "true"
+              }, null, -1)),
+              _cache[3] || (_cache[3] = createBaseVNode("svg", {
+                class: "ec-map-mode-selector__icon",
+                width: "20",
+                height: "20",
+                viewBox: "0 0 20 20",
+                fill: "none",
+                xmlns: "http://www.w3.org/2000/svg",
+                "aria-hidden": "true",
+                focusable: "false"
+              }, [
+                createBaseVNode("path", { d: "M18.01 14.19H18V8.82C19.16 8.41 20 7.31 20 6C20 4.34 18.66 3 17 3C15.93 3 15 3.56 14.47 4.4L6.81 2.66C6.64 1.17 5.38 0 3.84 0C2.19 0.01 0.85 1.35 0.85 3.01C0.85 4.23 1.58 5.28 2.63 5.75L2.08 14.17C0.87 14.56 0 15.68 0 17.01C0 18.67 1.34 20.01 3 20.01C4.3 20.01 5.4 19.17 5.82 18.01H14.19C14.6 19.17 15.7 20.01 17.01 20.01C18.67 20.01 20.01 18.67 20.01 17.01C20.01 15.71 19.17 14.61 18.01 14.19ZM10.01 15.01C7.8 15.01 6.01 13.22 6.01 11.01C6.01 8.8 7.8 7.01 10.01 7.01C12.22 7.01 14.01 8.8 14.01 11.01C14.01 13.22 12.22 15.01 10.01 15.01Z" })
+              ], -1)),
+              _cache[4] || (_cache[4] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Parcelle", -1))
+            ], 2),
+            createBaseVNode("label", {
+              class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_TERRITORY) }])
+            }, [
+              withDirectives(createBaseVNode("input", {
+                "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => mode2.value = $event),
+                class: "ec-map-mode-selector__input",
+                type: "radio",
+                name: "ec-map-mode",
+                value: unref(MAP_MODE_TERRITORY)
+              }, null, 8, _hoisted_4$1), [
+                [vModelRadio, mode2.value]
+              ]),
+              _cache[5] || (_cache[5] = createBaseVNode("span", {
+                class: "ec-map-mode-selector__radio",
+                "aria-hidden": "true"
+              }, null, -1)),
+              _cache[6] || (_cache[6] = createBaseVNode("svg", {
+                class: "ec-map-mode-selector__icon",
+                width: "20",
+                height: "20",
+                viewBox: "0 0 20 20",
+                fill: "none",
+                xmlns: "http://www.w3.org/2000/svg",
+                "aria-hidden": "true",
+                focusable: "false"
+              }, [
+                createBaseVNode("path", {
+                  "fill-rule": "evenodd",
+                  "clip-rule": "evenodd",
+                  d: "M19.8176 14.7957C19.6615 14.4668 19.2797 14.3098 18.9298 14.4304L18.8395 14.4618L18.7546 14.4039C18.8455 14.2952 18.9008 14.1618 18.9128 14.019C18.931 13.8057 18.851 13.5992 18.6942 13.4534L18.6436 13.4061C18.8067 13.2831 18.9122 13.0929 18.9243 12.8858L18.9437 12.5212C18.952 12.3462 18.8934 12.1749 18.7783 12.0383L18.5082 11.7219C18.6828 11.486 18.6893 11.1647 18.5241 10.9207L18.2955 10.5865L18.1981 10.4663L18.1219 10.2105C18.0491 9.96637 17.85 9.78791 17.6103 9.72843L18.31 8.84355C18.3984 8.81591 18.4808 8.77205 18.5521 8.71397L18.9596 8.38069C19.1268 8.24369 19.2201 8.0432 19.2158 7.8313L19.1984 6.78659L19.4208 6.15649C19.4383 6.10521 19.4496 6.05334 19.4551 5.99686L19.471 5.82301L19.7819 5.24437C19.9544 4.92411 19.845 4.52033 19.5324 4.32465L19.244 4.14559C19.1335 4.07629 19.0053 4.03824 18.8728 4.03544L18.5421 4.02963L18.3151 3.90965C18.192 3.84516 18.0552 3.81812 17.9053 3.83054L17.5326 3.86799L17.2521 3.53211C17.1618 3.42396 17.0418 3.34564 16.9052 3.30539L16.5169 3.19122C16.363 3.14596 16.1945 3.15417 16.0412 3.21465L15.9422 3.25451L15.8644 3.22146C15.7609 3.1766 15.6468 3.15697 15.537 3.16318L15.0521 2.84092V2.59016C15.0521 2.37405 14.9527 2.17316 14.7792 2.03896C14.6064 1.90597 14.3786 1.8571 14.1704 1.90838L13.9344 1.96406C13.8656 1.85149 13.7649 1.75896 13.6404 1.69687L13.3536 1.55647C13.2941 1.52683 13.2321 1.5058 13.1676 1.49358C13.0649 1.36459 12.9193 1.27486 12.7564 1.24021L12.7172 1.11463C12.6257 0.816405 12.3508 0.616317 12.0333 0.616317H11.9208L11.7044 0.30547C11.537 0.0637223 11.2275 -0.0506422 10.9335 0.0212613L9.78088 0.315885C9.57223 0.369362 9.40095 0.510365 9.31112 0.703242L9.05756 1.24843C9.01061 1.35157 8.98938 1.46594 8.99632 1.5803L9.04266 2.29012L8.71724 2.58215L7.50416 2.99033C7.23448 3.08026 7.04543 3.318 7.02236 3.5956L7.01563 3.67512L6.37642 3.55134L5.88401 3.03239C5.73559 2.87677 5.51817 2.79245 5.32585 2.81107L4.75178 2.83972C4.53701 2.85153 4.34163 2.95528 4.21608 3.12392C4.09032 3.29137 4.04704 3.50367 4.09706 3.70676L4.28651 4.46365L4.53987 5.05951L4.35225 5.02626C4.22139 5.00183 4.08542 5.01424 3.95905 5.06251L3.90454 5.08354L3.64527 4.82497C3.49909 4.67896 3.2927 4.60405 3.0716 4.61787L1.67091 4.74145C1.58965 4.74806 1.51146 4.76829 1.42939 4.80454L0.412305 5.27021C0.0795358 5.42283 -0.08052 5.79457 0.0399301 6.13546L0.195086 6.57349C0.245104 6.71409 0.341872 6.83686 0.470284 6.92339C0.435374 7.09163 0.463547 7.27009 0.553374 7.4189L0.717513 7.6935C0.845109 7.90781 1.08152 8.0408 1.33426 8.0408H1.72031L3.06302 8.56455L3.30372 8.8772C3.34945 8.93568 3.40376 8.98636 3.46541 9.02802L3.53952 9.07829C3.54013 9.08109 3.54074 9.0839 3.54135 9.0867L3.70713 9.82376C3.72979 9.9203 3.77205 10.0094 3.83289 10.0887L4.39165 10.8166C4.45616 10.9023 4.54191 10.9734 4.63908 11.0223L4.96695 11.1873C4.97941 11.262 5.00431 11.3343 5.04065 11.4014C4.89305 11.5386 4.80935 11.7295 4.81221 11.9288C4.81384 12.0454 4.84569 12.1601 4.90326 12.2613C4.89448 12.2939 4.88815 12.3274 4.88427 12.361L4.67154 14.1828C4.65807 14.2954 4.67195 14.4074 4.71176 14.5113C4.70176 14.5417 4.69359 14.5726 4.68788 14.6038L4.43064 15.9832L3.96681 16.5368C3.83227 16.6978 3.77797 16.9084 3.81778 17.115C3.8584 17.3187 3.98804 17.4936 4.17464 17.5955L4.4725 17.7566L4.61459 18.0015C4.69114 18.1339 4.81159 18.2399 4.95348 18.2998L5.65005 18.5936L5.85849 18.8107C5.99282 18.9509 6.18228 19.0312 6.37847 19.0312H6.68735L6.89293 19.1502C6.97663 19.1992 7.06769 19.2307 7.16425 19.2433L8.37998 19.4041C8.58638 19.4334 8.79441 19.3719 8.951 19.2369C8.98039 19.2115 9.00734 19.1842 9.03204 19.1546L9.15004 19.1796L9.43198 19.2928C9.48955 19.4782 9.6245 19.6351 9.80395 19.7204L10.1477 19.8842C10.2857 19.9485 10.4456 19.9676 10.5979 19.9381L10.8898 19.8796L11.5335 19.9922L11.6358 20C11.7003 20 11.7646 19.9916 11.8193 19.9766L12.588 19.7761C12.7717 19.7268 12.9297 19.6066 13.0212 19.447C13.1153 19.2852 13.14 19.0889 13.0882 18.9078L12.902 18.2653L13.0935 17.8844L13.702 17.525C13.8588 17.6232 14.0485 17.6566 14.2298 17.6202L14.4519 17.7405C14.583 17.8096 14.7328 17.8369 14.8806 17.8185C14.8967 17.8245 14.9133 17.8299 14.9302 17.8347L15.576 18.0194L16.5461 18.2413C16.6351 18.2631 16.7296 18.2675 16.8192 18.2549L17.2917 18.1888C17.338 18.1826 17.3825 18.1716 17.4405 18.1519L18.0711 17.9236C18.25 17.8583 18.3969 17.7237 18.4735 17.5549C18.5194 17.4549 18.5407 17.346 18.5362 17.2376L18.8481 17.0411L19.5684 16.4549C19.7617 16.2961 19.8542 16.0533 19.8166 15.813L19.856 15.7581C20.014 15.553 20.0445 15.2798 19.935 15.0455L19.8176 14.7957Z"
+                })
+              ], -1)),
+              _cache[7] || (_cache[7] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Territoire", -1))
+            ], 2)
+          ])
+        ]);
+      };
+    }
+  });
+  const _hoisted_1$3 = {
+    class: "ec-click-info-host",
+    hidden: "",
+    "aria-hidden": "true"
+  };
+  const _sfc_main$3 = /* @__PURE__ */ defineComponent({
+    __name: "ClickInfoControl",
+    setup(__props) {
+      const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+      const mapMode = tryUseMapMode();
+      let clickKey = null;
+      let shellEl = null;
+      function mapShellFromMap(map2) {
+        const target2 = map2.getTargetElement();
+        return (target2 == null ? void 0 : target2.closest(".ec-map-shell")) ?? null;
+      }
+      function isSketchLayer(layer) {
+        if (!(layer instanceof VectorLayer)) return false;
+        return Boolean(layer.get("ec-sketch") || layer.get("ec-measure"));
+      }
+      function shouldIgnoreClick(evt) {
+        if (evt.dragging || sketchToolEngagedRef.value) return true;
+        const orig = evt.originalEvent.target;
+        if (!(orig instanceof Node)) return false;
+        if (orig instanceof Element && orig.closest(
+          ".ec-tab-panels, .gpf-widget, .ec-map-mode-selector, .ec-sketch-control, .ec-geometry-editor__tools-root, button, a, input, label, select, textarea"
+        )) {
+          return true;
+        }
+        const map2 = mapRef.value;
+        if (!map2) return true;
+        const hits = map2.getFeaturesAtPixel(evt.pixel, {
+          hitTolerance: 5,
+          layerFilter: (layer) => isSketchLayer(layer)
+        });
+        return hits.length > 0;
+      }
+      function onMapClick(evt) {
+        if (shouldIgnoreClick(evt)) return;
+        const map2 = mapRef.value;
+        if (!map2 || !mapMode) return;
+        const [lon, lat] = toLonLat(evt.coordinate);
+        const zoom = map2.getView().getZoom() ?? 6;
+        const empriseKey = empriseTargetKeyForPoint(lon, lat);
+        showMapLocationMarker(lon, lat, {
+          label: "",
+          origin: "ficheInfo",
+          center: false
+        });
+        ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey);
+        void loadFicheForMapPoint({
+          lon,
+          lat,
+          mode: mapMode.mode.value,
+          zoom,
+          markerPlacedAtClick: true
+        });
+      }
+      function syncCursor(map2) {
+        const nextShell = map2 ? mapShellFromMap(map2) : null;
+        if (shellEl && shellEl !== nextShell) {
+          shellEl.classList.remove("ec-map-shell--click-info");
+          shellEl = null;
+        }
+        if (!map2 || !nextShell) return;
+        shellEl = nextShell;
+        shellEl.classList.toggle("ec-map-shell--click-info", !sketchToolEngagedRef.value);
+      }
+      function bindMap(map2) {
+        unbindMap();
+        clickKey = map2.on("singleclick", onMapClick);
+        syncCursor(map2);
+      }
+      function unbindMap() {
+        if (clickKey) {
+          unByKey(clickKey);
+          clickKey = null;
+        }
+        shellEl == null ? void 0 : shellEl.classList.remove("ec-map-shell--click-info");
+        shellEl = null;
+      }
+      watch(
+        mapRef,
+        (map2) => {
+          unbindMap();
+          if (map2) bindMap(map2);
+        },
+        { immediate: true }
+      );
+      watch(sketchToolEngagedRef, () => {
+        syncCursor(mapRef.value);
+      });
+      onUnmounted(() => {
+        unbindMap();
+      });
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("span", _hoisted_1$3);
+      };
+    }
+  });
+  const MAP_PERMALINK_UI_KEY = Symbol("mapPermalinkUi");
+  function provideMapPermalinkUi(ctx) {
+    provide(MAP_PERMALINK_UI_KEY, ctx);
+  }
+  function useMapPermalinkUi() {
+    return inject(MAP_PERMALINK_UI_KEY) ?? null;
+  }
+  function tileIndexFromBaseId(presets, id) {
+    const idx = presets.findIndex((p5) => p5.id === id);
+    return idx >= 0 ? idx + 1 : 1;
+  }
+  function baseIdFromTileIndex(presets, tile) {
+    const preset = presets[tile - 1];
+    return (preset == null ? void 0 : preset.id) ?? null;
+  }
+  const _hoisted_1$2 = {
+    class: "ec-map-permalink-sync",
+    hidden: "",
+    "aria-hidden": "true"
+  };
+  const _sfc_main$2 = /* @__PURE__ */ defineComponent({
+    __name: "MapPermalinkSync",
+    props: {
+      skipMarkerRestore: { type: Boolean, default: false }
+    },
+    setup(__props) {
+      const props = __props;
+      const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+      const permalinkUi = useMapPermalinkUi();
+      const mapMode = tryUseMapMode();
+      let moveKey = null;
+      let appliedViewFromPermalink = false;
+      let appliedLayersFromPermalink = false;
+      let markerRestored = false;
+      if (locationHashLooksLikeMapPermalink()) {
+        bootstrapMapPermalinkFromLocation();
+      } else {
+        initMapPermalinkFromLocation();
+      }
+      function applyViewFromPermalink(map2) {
+        if (appliedViewFromPermalink) return;
+        const params2 = getMapPermalinkParams();
+        const center = readMapPermalinkCenter(params2);
+        const zoom = readMapPermalinkZoom(params2);
+        if (!center && zoom == null) return;
+        appliedViewFromPermalink = true;
+        const view = map2.getView();
+        if (center) {
+          view.setCenter(fromLonLat([center.lon, center.lat], view.getProjection()));
+        }
+        if (zoom != null) view.setZoom(zoom);
+      }
+      function applyTileFromPermalink() {
+        const ui = permalinkUi;
+        if (!(ui == null ? void 0 : ui.presets.length)) return;
+        const tile = readMapPermalinkTileIndex(getMapPermalinkParams());
+        if (tile == null) return;
+        const id = baseIdFromTileIndex(ui.presets, tile);
+        if (id) ui.setActiveBaseId(id);
+      }
+      function applyLayersFromPermalink() {
+        if (appliedLayersFromPermalink) return;
+        const bridge = mapPermalinkLayersBridgeRef.value;
+        if (!bridge) return;
+        const hasLayerKeys = layerPermalinkEntriesFromParams(getMapPermalinkParams()).length > 0;
+        bridge.applyLayerParamsFromPermalink(getMapPermalinkParams());
+        if (!hasLayerKeys) appliedLayersFromPermalink = true;
+      }
+      function restoreMarkerFromPermalink() {
+        if (markerRestored || props.skipMarkerRestore) return;
+        const marker = readMapPermalinkMarker(getMapPermalinkParams());
+        if (!marker) return;
+        markerRestored = true;
+        const mode2 = (mapMode == null ? void 0 : mapMode.mode.value) ?? 2;
+        const map2 = mapRef.value;
+        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+        showMapLocationMarker(marker.lon, marker.lat, { label: "", origin: "permalink", center: false });
+        const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
+        ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode2, key2);
+        void loadFicheForMapPoint({
+          lon: marker.lon,
+          lat: marker.lat,
+          mode: mode2,
+          zoom,
+          markerPlacedAtClick: true,
+          skipLocationMarker: true
+        });
+      }
+      function syncViewToPermalink(map2) {
+        const view = map2.getView();
+        const center = view.getCenter();
+        if (!center) return;
+        const [lon, lat] = toLonLat(center, view.getProjection());
+        updateMapPermalinkParam("lon", lon);
+        updateMapPermalinkParam("lat", lat);
+        const z = view.getZoom();
+        if (z != null) updateMapPermalinkParam("z", z);
+      }
+      function onMoveEnd(map2) {
+        syncViewToPermalink(map2);
+        const ui = permalinkUi;
+        if (ui == null ? void 0 : ui.presets.length) {
+          updateMapPermalinkParam("tile", tileIndexFromBaseId(ui.presets, ui.getActiveBaseId()));
+        }
+      }
+      function bindMap(map2) {
+        unbindMap();
+        applyViewFromPermalink(map2);
+        applyTileFromPermalink();
+        applyLayersFromPermalink();
+        restoreMarkerFromPermalink();
+        moveKey = map2.on("moveend", () => onMoveEnd(map2));
+        onMoveEnd(map2);
+      }
+      function unbindMap() {
+        if (moveKey) {
+          unByKey(moveKey);
+          moveKey = null;
+        }
+      }
+      watch(
+        mapRef,
+        (map2) => {
+          unbindMap();
+          if (map2) bindMap(map2);
+        },
+        { immediate: true }
+      );
+      watch(mapPermalinkLayersBridgeRef, () => {
+        applyLayersFromPermalink();
+      });
+      watch(
+        () => {
+          var _a;
+          const ui = permalinkUi;
+          if (!(ui == null ? void 0 : ui.presets.length)) return null;
+          return ((_a = ui.activeBaseIdRef) == null ? void 0 : _a.value) ?? ui.getActiveBaseId();
+        },
+        (baseId) => {
+          const ui = permalinkUi;
+          if (!(ui == null ? void 0 : ui.presets.length) || baseId == null) return;
+          updateMapPermalinkParam("tile", tileIndexFromBaseId(ui.presets, baseId));
+        }
+      );
+      watch(
+        () => mapMode == null ? void 0 : mapMode.mode.value,
+        (mode2) => {
+          if (mode2 == null) return;
+          const marker = readMapPermalinkMarker(getMapPermalinkParams());
+          if (!marker) return;
+          const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
+          ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode2, key2);
+          const map2 = mapRef.value;
+          const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+          refreshFicheForMapModeChange(mode2, zoom);
+        }
+      );
+      onUnmounted(() => {
+        unbindMap();
+        flushMapPermalinkHashNow();
+      });
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("span", _hoisted_1$2);
       };
     }
   });
@@ -86412,75 +88301,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const key2 of preset.stack) {
       env.mainLayers[key2].setVisible(true);
     }
-  }
-  function resolveGpuLayerVisible(layer, parentVisible) {
-    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
-      return Boolean(layer.visible);
-    }
-    return parentVisible;
-  }
-  function pathToCatalogId(path) {
-    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
-    if (!normalized) return "root";
-    return normalized.split("/").map(
-      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    ).join("--");
-  }
-  function pathSegment(layer) {
-    var _a, _b;
-    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
-      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
-      return parts[parts.length - 1] ?? "couche";
-    }
-    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
-    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
-      for (const value2 of layer.filterValue) {
-        uniqueName += value2;
-      }
-    }
-    if (layer.filterAttribute && layer.filterValueLike) {
-      uniqueName += `_${layer.filterValueLike}`;
-    }
-    return uniqueName.toLowerCase();
-  }
-  function buildLayerPath(layer, parentPath) {
-    var _a;
-    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
-      return layer.path.replace(/\/+/g, "/");
-    }
-    const segment = pathSegment(layer);
-    if (!parentPath) return `/${segment}`;
-    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
-    return `${base}/${segment}`.replace(/\/+/g, "/");
-  }
-  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
-    var _a, _b;
-    for (const layer of layers) {
-      if (layer.hideHimself) {
-        if ((_a = layer.layers) == null ? void 0 : _a.length) {
-          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
-        }
-        continue;
-      }
-      const path = buildLayerPath(layer, parentPath || "");
-      const id = pathToCatalogId(path);
-      registry.push({ id, path, config: layer });
-      if ((_b = layer.layers) == null ? void 0 : _b.length) {
-        layerConfigToCatalogEntries(layer.layers, path, registry);
-      }
-    }
-    return registry;
-  }
-  function readLayerConfigFromWindow() {
-    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
-    if (!Array.isArray(raw) || !raw.length) return null;
-    return raw;
-  }
-  function resolveLayerConfig(paramsLayerConfig) {
-    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
-      return paramsLayerConfig;
-    }
-    return readLayerConfigFromWindow();
   }
   function defaultOpacityPercent(layer) {
     if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT;
@@ -87108,15 +88928,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       params: {}
     },
     setup(__props) {
+      var _a;
       const props = __props;
+      provideMapMode({
+        initial: normalizeMapMode((_a = props.params) == null ? void 0 : _a.mode) ?? void 0
+      });
       const gpuBaseEnv = createGpuBaseLayerEnvironment();
       const presets = gpuBaseEnv.presets;
       const activeBase = /* @__PURE__ */ ref("carte");
       setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value);
+      provideMapPermalinkUi({
+        presets,
+        getActiveBaseId: () => activeBase.value,
+        setActiveBaseId: (id) => {
+          activeBase.value = id;
+          setActiveGpuBaseLayer(gpuBaseEnv, id);
+        },
+        activeBaseIdRef: activeBase
+      });
       const baseLayers = computed(() => gpuBaseEnv.allLayers);
       const initialSearch = computed(() => {
-        var _a;
-        return ((_a = props.params) == null ? void 0 : _a.search) ?? null;
+        var _a2;
+        return ((_a2 = props.params) == null ? void 0 : _a2.search) ?? null;
       });
       const mapShellRef = /* @__PURE__ */ ref(null);
       const layerNodes = /* @__PURE__ */ ref([]);
@@ -87127,14 +88960,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         onStackOrder: (ids) => gpuWmsLayerRegistry.applyStackOrder(ids)
       };
       function currentMapZoom() {
-        var _a, _b;
-        const z = (_b = (_a = mapShellRef.value) == null ? void 0 : _a.map) == null ? void 0 : _b.getView().getZoom();
+        var _a2, _b;
+        const z = (_b = (_a2 = mapShellRef.value) == null ? void 0 : _a2.map) == null ? void 0 : _b.getView().getZoom();
         return typeof z === "number" && Number.isFinite(z) ? Math.round(z) : 6;
       }
       function initLayerStack() {
-        var _a, _b, _c;
+        var _a2, _b, _c;
         syncEntreeConfigFromGpuScript();
-        const layerConfig = resolveLayerConfig((_a = props.params) == null ? void 0 : _a.layerConfig);
+        const layerConfig = resolveLayerConfig((_a2 = props.params) == null ? void 0 : _a2.layerConfig);
         if (!(layerConfig == null ? void 0 : layerConfig.length)) {
           layerNodes.value = [];
           gpuWmsLayerRegistry.detachMap();
@@ -87155,20 +88988,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       watch(
         () => {
-          var _a;
-          return ((_a = mapShellRef.value) == null ? void 0 : _a.map) ?? null;
+          var _a2;
+          return ((_a2 = mapShellRef.value) == null ? void 0 : _a2.map) ?? null;
         },
         (map2) => {
-          var _a, _b;
-          if (map2 && ((_b = resolveLayerConfig((_a = props.params) == null ? void 0 : _a.layerConfig)) == null ? void 0 : _b.length)) {
+          var _a2, _b;
+          if (map2 && ((_b = resolveLayerConfig((_a2 = props.params) == null ? void 0 : _a2.layerConfig)) == null ? void 0 : _b.length)) {
             gpuWmsLayerRegistry.attachMap(map2);
           }
         }
       );
       watch(
         () => {
-          var _a;
-          return (_a = props.params) == null ? void 0 : _a.document;
+          var _a2;
+          return (_a2 = props.params) == null ? void 0 : _a2.document;
         },
         () => {
           initLayerStack();
@@ -87179,10 +89012,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         setActiveGpuBaseLayer(gpuBaseEnv, id);
       }
       function findLayerNode(nodes, id) {
-        var _a;
+        var _a2;
         for (const n of nodes) {
           if (n.id === id) return n;
-          if ((_a = n.children) == null ? void 0 : _a.length) {
+          if ((_a2 = n.children) == null ? void 0 : _a2.length) {
             const hit = findLayerNode(n.children, id);
             if (hit) return hit;
           }
@@ -87195,14 +89028,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$j, {
+          createVNode(_sfc_main$m, {
             ref_key: "mapShellRef",
             ref: mapShellRef,
             layers: baseLayers.value,
             class: "ec-embed-viewer__map"
           }, {
             default: withCtx(() => [
-              createVNode(_sfc_main$2, {
+              createVNode(_sfc_main$5, {
                 "base-model-value": activeBase.value,
                 "onUpdate:baseModelValue": [
                   _cache[0] || (_cache[0] = ($event) => activeBase.value = $event),
@@ -87213,13 +89046,18 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-map-hooks": layerMapHooks,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$f, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
-              createVNode(_sfc_main$e),
-              createVNode(_sfc_main$c),
-              createVNode(_sfc_main$d),
-              createVNode(_sfc_main$i),
+              createVNode(_sfc_main$i, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$3),
+              createVNode(_sfc_main$2, {
+                "skip-marker-restore": Boolean(initialSearch.value)
+              }, null, 8, ["skip-marker-restore"]),
+              createVNode(_sfc_main$4),
               createVNode(_sfc_main$h),
-              createVNode(_sfc_main$g)
+              createVNode(_sfc_main$f),
+              createVNode(_sfc_main$g),
+              createVNode(_sfc_main$l),
+              createVNode(_sfc_main$k),
+              createVNode(_sfc_main$j)
             ]),
             _: 1
           }, 8, ["layers"])
@@ -87227,7 +89065,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-a4bc90f6"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-5ad1b89a"]]);
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -87235,6 +89073,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       embedApp = null;
     }
     container.innerHTML = "";
+    if (typeof window !== "undefined" && locationHashLooksLikeMapPermalink()) {
+      bootstrapMapPermalinkFromLocation();
+    }
     embedApp = createApp(EmbedMapViewer, { params: params2 });
     embedApp.mount(container);
     return {

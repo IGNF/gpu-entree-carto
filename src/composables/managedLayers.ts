@@ -41,6 +41,8 @@ import {
 } from '@/lib/layerConfig/catalogTreeIndex'
 import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 import {
+  assignStackSortKeysFromFullOrder,
+  buildFullOrderAfterActiveReorder,
   ensureStackSortKeys,
   reassignSortKeysAfterAggregateRegroup,
   reassignSortKeysAfterAggregateSplit,
@@ -208,7 +210,7 @@ export function useManagedLayers(
     const wmsIds = wmsIdsControlledByDataLayersPanelEntry(node, mapVis)
     if (!wmsIds.length) return
 
-    const visible = wmsIds.some((id) => Boolean(mapVis[id]))
+    const visible = getPanelState(node).visible
 
     const opacityWmsIds = wmsIds.filter((id) => {
       const n = treeIndex.nodesById.get(id)
@@ -277,15 +279,22 @@ export function useManagedLayers(
     applyMapStackOrderFromDisplay()
   }
 
+  function mapVisibleFromCatalogAndPanel(nodeId: string, catalogOnMap: boolean): boolean {
+    if (!catalogOnMap) return false
+    if (!isShownInDataLayersPanel(nodeId)) return true
+    return getPanelState(treeIndex.nodesById.get(nodeId)!).visible
+  }
+
   function reapplyCatalogMapState() {
     syncSplitAggregateIds()
     const mapVis = catalogMapVisibility()
 
     for (const node of treeIndex.nodesById.values()) {
       if (!node.gpuMapLayer) continue
-      const onMap = mapVis[node.id] ?? false
-      syncMapVisible(node.id, onMap)
-      if (onMap) {
+      const catalogOnMap = mapVis[node.id] ?? false
+      const showOnMap = mapVisibleFromCatalogAndPanel(node.id, catalogOnMap)
+      syncMapVisible(node.id, showOnMap)
+      if (catalogOnMap) {
         const n = treeIndex.nodesById.get(node.id)!
         const op = n.gpuForceOpacity
           ? GPU_FORCE_OPACITY_PERCENT
@@ -411,6 +420,22 @@ export function useManagedLayers(
     applyPanelStateToControlledWms(node, getPanelState(node), mapVis)
   }
 
+  /** Opacité / gris / visibilité panneau (permalink `w,y,z`) sans `reapplyCatalogMapState`. */
+  function applyDataLayerPermalinkPanelState(
+    id: string,
+    state: Pick<PanelLayerState, 'visible' | 'opacity' | 'grayscale'>,
+  ): void {
+    const node = treeIndex.nodesById.get(id)
+    if (!node || !isShownInDataLayersPanel(id)) return
+    const mapVis = catalogMapVisibility()
+    const opacity = Math.min(100, Math.max(0, Math.round(state.opacity)))
+    patchPanelState(id, { visible: state.visible, opacity, grayscale: state.grayscale })
+    for (const wmsId of wmsIdsControlledByDataLayersPanelEntry(node, mapVis)) {
+      patchPanelState(wmsId, { visible: state.visible, opacity, grayscale: state.grayscale })
+    }
+    applyPanelStateToControlledWms(node, getPanelState(node), mapVis)
+  }
+
   function setOpacity(id: string, opacity: number) {
     const node = treeIndex.nodesById.get(id)
     if (!node || node.gpuForceOpacity) return
@@ -531,6 +556,26 @@ export function useManagedLayers(
     applyMapStackOrderFromDisplay()
   }
 
+  /** x permalink (0 = haut panneau) → ordre d’affichage Couches de données. */
+  function applyStackOrderFromPermalink(stackIndexByNodeId: Record<string, number>): void {
+    const activeTopToBottom = layers.value.map((l) => l.id)
+    if (!activeTopToBottom.length) return
+
+    const ranked = activeTopToBottom
+      .filter((id) => stackIndexByNodeId[id] !== undefined)
+      .map((id) => ({ id, idx: stackIndexByNodeId[id]! }))
+    ranked.sort((a, b) => a.idx - b.idx || a.id.localeCompare(b.id))
+
+    const orderedActive: string[] = ranked.map((r) => r.id)
+    for (const id of activeTopToBottom) {
+      if (!orderedActive.includes(id)) orderedActive.push(id)
+    }
+
+    const fullOrder = buildFullOrderAfterActiveReorder(stackSortKeyById.value, orderedActive)
+    stackSortKeyById.value = assignStackSortKeysFromFullOrder(stackSortKeyById.value, fullOrder)
+    applyMapStackOrderFromDisplay()
+  }
+
   return {
     layers,
     stackLayers,
@@ -539,11 +584,13 @@ export function useManagedLayers(
     setCatalogChecked,
     setInStack,
     setVisible,
+    applyDataLayerPermalinkPanelState,
     setOpacity,
     setGrayscale,
     toggleGrayscale,
     removeFromStack,
     reorderStackByDisplayIndex,
+    applyStackOrderFromPermalink,
     enableAggregateDetail,
     regroupAggregate,
     notifyStackOrder,

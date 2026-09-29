@@ -83,6 +83,8 @@ export interface SketchControlOptions {
    * Défaut `false` — GeometryEditor inchangé.
    */
   enableFeatureStyleEditor?: boolean
+  /** État outils croquis actifs (dessin, modification, mesure…). */
+  onSketchEngagementChange?: (engaged: boolean) => void
 }
 
 const EXTRA_DEFS: Record<
@@ -133,6 +135,7 @@ export class SketchControl extends Control {
   private readonly historyEnabled: boolean
   private readonly extraTools: SketchExtraTool[]
   private readonly enableFeatureStyleEditor: boolean
+  private readonly onSketchEngagementChange: ((engaged: boolean) => void) | null
 
   private source: VectorSource
   private layer: VectorLayer | null
@@ -177,7 +180,7 @@ export class SketchControl extends Control {
     }) as OlFeature[]
     const feature = hits.find((f) => isSketchTextFeature(f))
     if (feature && this.stylePopup) {
-      this.stylePopup.open(feature, () => this.notifyChange())
+      this.stylePopup.open(feature, this.buildStylePopupOptions('edit'))
     }
   }
 
@@ -200,6 +203,7 @@ export class SketchControl extends Control {
     this.historyEnabled = Boolean(options.history)
     this.extraTools = options.extraTools ?? []
     this.enableFeatureStyleEditor = Boolean(options.enableFeatureStyleEditor)
+    this.onSketchEngagementChange = options.onSketchEngagementChange ?? null
 
     this.source = options.source ?? new VectorSource({ wrapX: false })
     this.layer = options.layer ?? null
@@ -261,6 +265,17 @@ export class SketchControl extends Control {
 
   getDrawBar(): DrawToolsBar | null {
     return this.drawBar
+  }
+
+  /** Dessin, modification, suppression, mesure ou texte en cours. */
+  isSketchToolEngaged(): boolean {
+    if (this.textDraw) return true
+    if (this.measure?.isActive()) return true
+    return this.drawBar?.getActiveId() != null
+  }
+
+  private emitSketchEngagement(): void {
+    this.onSketchEngagementChange?.(this.isSketchToolEngaged())
   }
 
   getFeatures(): OlFeature<OlGeometry>[] {
@@ -426,19 +441,38 @@ export class SketchControl extends Control {
       },
       onClearAll: () => this.clearFeatures(),
       onExtraTool: (id, active) => this.handleExtraTool(id, active),
-      onFeatureCreated: (feature) => this.openStylePopup(feature),
+      onFeatureCreated: (feature, anchor) => this.openStylePopup(feature, anchor, 'create'),
       onStyleEdit: this.enableFeatureStyleEditor
-        ? (feature, anchor) => this.openStylePopup(feature, anchor)
+        ? (feature, anchor) => this.openStylePopup(feature, anchor, 'edit')
         : undefined,
       onStyleDismiss: this.enableFeatureStyleEditor ? () => this.stylePopup?.hide() : undefined,
+      onToolStateChange: () => this.emitSketchEngagement(),
     })
+    this.emitSketchEngagement()
     this.syncToolbarClusterVisibility()
     this.syncHistoryButtons()
+  }
+
+  private buildStylePopupOptions(mode: 'create' | 'edit') {
+    return {
+      mode,
+      onCommit: () => this.notifyChange(),
+      onHistoryPush: () => {
+        this.history?.push()
+        this.notifyChange()
+      },
+      onDelete: (f: OlFeature<OlGeometry>) => {
+        this.source.removeFeature(f)
+        this.history?.push()
+        this.notifyChange()
+      },
+    }
   }
 
   private openStylePopup(
     feature: OlFeature<OlGeometry>,
     anchor?: import('ol/coordinate').Coordinate,
+    mode: 'create' | 'edit' = 'edit',
   ): void {
     if (!this.enableFeatureStyleEditor || !this.stylePopup) return
     const geom = feature.getGeometry()
@@ -447,7 +481,7 @@ export class SketchControl extends Control {
       const res = map?.getView().getResolution() ?? 1
       if (geom.getRadius() < 3 * res) return
     }
-    this.stylePopup.open(feature, () => this.notifyChange(), anchor)
+    this.stylePopup.open(feature, this.buildStylePopupOptions(mode), anchor)
   }
 
   private handleExtraTool(id: string, active: boolean): void {
@@ -500,6 +534,7 @@ export class SketchControl extends Control {
     if (id === 'measure-area') {
       this.measure?.activate('area')
     }
+    this.emitSketchEngagement()
   }
 
   private startTextDraw(): void {
@@ -538,6 +573,7 @@ export class SketchControl extends Control {
     if (this.enableFeatureStyleEditor) {
       map.on('singleclick', this.onTextSelectClick)
     }
+    this.emitSketchEngagement()
   }
 
   private stopTextDraw(): void {
@@ -555,6 +591,7 @@ export class SketchControl extends Control {
     }
     map?.un('singleclick', this.onTextSelectClick)
     this.stylePopup?.hide()
+    this.emitSketchEngagement()
   }
 
   private runImport(): void {

@@ -14,8 +14,8 @@ import {
   applyFeatureStyle,
   defaultFeatureStyleAttrs,
   featureStyleKindOf,
-  featureStylePopupAnchor,
   getFeatureStyleAttrs,
+  resolveStylePopupAnchor,
   type FeatureStyleAttrs,
   type FeatureStyleKind,
   type PointShape,
@@ -23,6 +23,16 @@ import {
   type StrokeLineJoin,
 } from './featureStyle'
 import { SketchColorPicker } from './SketchColorPicker'
+
+export type SketchFeatureStylePopupMode = 'create' | 'edit'
+
+export interface SketchFeatureStylePopupOpenOptions {
+  mode?: SketchFeatureStylePopupMode
+  onCommit?: () => void
+  /** Enregistre un snapshot undo/redo après modification de style. */
+  onHistoryPush?: () => void
+  onDelete?: (feature: OlFeature<OlGeometry>) => void
+}
 
 type BasicField =
   | 'text'
@@ -115,6 +125,16 @@ export class SketchFeatureStylePopup {
   private feature: OlFeature<OlGeometry> | null = null
   private kind: FeatureStyleKind = 'polygon'
   private onCommit: (() => void) | null = null
+  private onHistoryPush: (() => void) | null = null
+  private onDelete: ((feature: OlFeature<OlGeometry>) => void) | null = null
+  /** Historique local du style pendant la session popup (Annuler / Rétablir). */
+  private featureStyleHistory: FeatureStyleAttrs[] = []
+  private featureStyleHistoryIndex = 0
+  private suppressFeatureStyleHistory = false
+  private readonly btnUndo: HTMLButtonElement
+  private readonly btnRedo: HTMLButtonElement
+  private readonly btnDelete: HTMLButtonElement
+  private readonly btnClose: HTMLButtonElement
   private openFlag = false
   private advancedOpen = false
   private mapDragged = false
@@ -186,7 +206,16 @@ export class SketchFeatureStylePopup {
     const hits = this.map.getFeaturesAtPixel(evt.pixel, { hitTolerance: 14 }) as OlFeature[]
     const feature = hits[0]
     if (!feature) return
-    this.open(feature, this.onCommit ?? undefined, evt.coordinate)
+    this.open(
+      feature,
+      {
+        mode: 'edit',
+        onCommit: this.onCommit ?? undefined,
+        onHistoryPush: this.onHistoryPush ?? undefined,
+        onDelete: this.onDelete ?? undefined,
+      },
+      evt.coordinate,
+    )
   }
 
   constructor(private readonly map: Map) {
@@ -201,14 +230,33 @@ export class SketchFeatureStylePopup {
         </button>
         <div class="ec-sketch-style-popup__fields ec-sketch-style-popup__fields--advanced" data-section="advanced" hidden></div>
         <div class="ec-sketch-style-popup__actions">
-          <button type="button" class="fr-btn fr-btn--sm ec-sketch-style-popup__ok">OK</button>
-          <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__cancel">Fermer</button>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--history">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__undo" disabled>
+              <i class="ri-corner-up-left-line" aria-hidden="true"></i>
+              Annuler
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--tertiary-no-outline ec-sketch-style-popup__redo" disabled>
+              <i class="ri-corner-up-right-line" aria-hidden="true"></i>
+              Rétablir
+            </button>
+          </div>
+          <div class="ec-sketch-style-popup__actions-row ec-sketch-style-popup__actions-row--main">
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--secondary ec-sketch-style-popup__delete">
+              <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+              Supprimer
+            </button>
+            <button type="button" class="fr-btn fr-btn--sm fr-btn--primary ec-sketch-style-popup__close">Fermer</button>
+          </div>
         </div>
       </div>
     `
     this.basicFields = this.root.querySelector('[data-section="basic"]')!
     this.advancedFields = this.root.querySelector('[data-section="advanced"]')!
     this.advancedToggle = this.root.querySelector('.ec-sketch-style-popup__advanced-toggle')!
+    this.btnUndo = this.root.querySelector('.ec-sketch-style-popup__undo')!
+    this.btnRedo = this.root.querySelector('.ec-sketch-style-popup__redo')!
+    this.btnDelete = this.root.querySelector('.ec-sketch-style-popup__delete')!
+    this.btnClose = this.root.querySelector('.ec-sketch-style-popup__close')!
 
     this.basicFields.innerHTML = `
       <label class="ec-sketch-style-popup__field" data-field="text">
@@ -310,7 +358,8 @@ export class SketchFeatureStylePopup {
     for (const [key, picker] of Object.entries(this.colorPickers)) {
       const slot = this.basicFields.querySelector(`[data-color-slot="${key}"]`)
       slot?.appendChild(picker.root)
-      picker.setOnChange(() => this.applyFromForm())
+      picker.setOnChange(() => this.previewStyleFromForm())
+      picker.setOnFinalize(() => this.recordStyleFromForm())
     }
 
     this.els = {
@@ -354,29 +403,49 @@ export class SketchFeatureStylePopup {
       this.els.pointRotationValue.textContent = this.els.pointRotation.value
     }
 
-    const live = () => {
+    const liveCommit = () => {
       syncOutputs()
       this.syncDependentFields()
-      this.applyFromForm()
+      this.recordStyleFromForm()
+    }
+    const livePreview = () => {
+      syncOutputs()
+      this.syncDependentFields()
+      this.previewStyleFromForm()
+    }
+    const commitRangeSlider = () => {
+      syncOutputs()
+      this.syncDependentFields()
+      this.recordStyleFromForm()
     }
     for (const input of Object.values(this.els)) {
       if (input instanceof HTMLOutputElement) continue
-      input.addEventListener('input', live)
-      input.addEventListener('change', live)
+      if (input instanceof HTMLInputElement && input.type === 'range') {
+        input.addEventListener('input', livePreview)
+        input.addEventListener('pointerup', commitRangeSlider)
+        input.addEventListener('change', commitRangeSlider)
+        continue
+      }
+      input.addEventListener('input', liveCommit)
+      input.addEventListener('change', liveCommit)
     }
 
     this.advancedToggle.addEventListener('click', () => {
       this.setAdvancedOpen(!this.advancedOpen)
     })
 
-    this.root.querySelector('.ec-sketch-style-popup__ok')!.addEventListener('click', () => {
-      this.applyFromForm()
+    this.btnDelete.addEventListener('click', () => {
+      const feature = this.feature
+      if (!feature) return
+      this.onDelete?.(feature)
+      this.hide()
+    })
+    this.btnUndo.addEventListener('click', () => this.stepFeatureStyleHistory(-1))
+    this.btnRedo.addEventListener('click', () => this.stepFeatureStyleHistory(1))
+    this.btnClose.addEventListener('click', () => {
       this.onCommit?.()
       this.hide()
     })
-    this.root
-      .querySelector('.ec-sketch-style-popup__cancel')!
-      .addEventListener('click', () => this.hide())
 
     this.overlay = new Overlay({
       element: this.root,
@@ -388,14 +457,23 @@ export class SketchFeatureStylePopup {
     this.map.addOverlay(this.overlay)
   }
 
-  open(feature: OlFeature<OlGeometry>, onCommit?: () => void, anchor?: Coordinate): void {
+  open(
+    feature: OlFeature<OlGeometry>,
+    options?: (() => void) | SketchFeatureStylePopupOpenOptions,
+    anchor?: Coordinate,
+  ): void {
+    const opts: SketchFeatureStylePopupOpenOptions =
+      typeof options === 'function' ? { onCommit: options } : (options ?? {})
     this.unbindOutside()
     this.feature = feature
-    this.clickAnchor = anchor ?? null
-    this.onCommit = onCommit ?? null
+    this.onCommit = opts.onCommit ?? null
+    this.onHistoryPush = opts.onHistoryPush ?? null
+    this.onDelete = opts.onDelete ?? null
     this.kind = featureStyleKindOf(feature)
+    this.clickAnchor = anchor ?? null
     this.setAdvancedOpen(false)
     const attrs = getFeatureStyleAttrs(feature)
+    this.resetFeatureStyleHistory(attrs)
     this.syncFieldsVisibility()
     this.fillForm(attrs)
     this.syncDependentFields()
@@ -403,6 +481,7 @@ export class SketchFeatureStylePopup {
     this.root.hidden = false
     this.openFlag = true
     this.skipNextOutsideUp = true
+    this.syncPopupAnchorFromFeature()
     this.reposition()
     this.bindOutside()
     if (this.kind === 'text' && !this.els.text.closest('[hidden]')) {
@@ -425,6 +504,10 @@ export class SketchFeatureStylePopup {
     this.feature = null
     this.clickAnchor = null
     this.onCommit = null
+    this.onHistoryPush = null
+    this.onDelete = null
+    this.featureStyleHistory = []
+    this.featureStyleHistoryIndex = 0
     this.outsideGesture = null
     this.mapDragged = false
     this.skipNextOutsideUp = false
@@ -505,11 +588,22 @@ export class SketchFeatureStylePopup {
     }
   }
 
+  /** Disque : centre géométrique ; sinon clic ou heuristique par type. */
+  private syncPopupAnchorFromFeature(): void {
+    if (!this.feature) return
+    const resolved = resolveStylePopupAnchor(this.feature, {
+      clickAnchor: this.clickAnchor,
+      mapSize: this.map.getSize(),
+      getPixel: (c) => this.map.getPixelFromCoordinate(c),
+    })
+    if (resolved) this.clickAnchor = resolved
+  }
+
   /** Place la popup au-dessus d’un point d’ancrage sur la feature. */
   private reposition(): void {
     if (!this.feature || this.root.hidden) return
-    const anchor = this.clickAnchor ?? featureStylePopupAnchor(this.feature)
-    if (anchor) this.overlay.setPosition(anchor)
+    this.syncPopupAnchorFromFeature()
+    if (this.clickAnchor) this.overlay.setPosition(this.clickAnchor)
   }
 
   private syncFieldsVisibility(): void {
@@ -584,14 +678,63 @@ export class SketchFeatureStylePopup {
     this.els.zIndex.value = String(attrs.zIndex)
   }
 
-  private applyFromForm(): void {
-    if (!this.feature) return
+  /** Applique le formulaire sur la feature sans entrée d’historique (glissement slider). */
+  private previewStyleFromForm(): void {
+    if (!this.feature || this.suppressFeatureStyleHistory) return
+    applyFeatureStyle(this.feature, this.readAttrsFromForm())
+  }
+
+  private resetFeatureStyleHistory(attrs: FeatureStyleAttrs): void {
+    this.featureStyleHistory = [cloneFeatureStyleAttrs(attrs)]
+    this.featureStyleHistoryIndex = 0
+    this.syncFeatureStyleHistoryButtons()
+  }
+
+  private syncFeatureStyleHistoryButtons(): void {
+    this.btnUndo.disabled = this.featureStyleHistoryIndex <= 0
+    this.btnRedo.disabled = this.featureStyleHistoryIndex >= this.featureStyleHistory.length - 1
+  }
+
+  private recordStyleFromForm(): void {
+    if (!this.feature || this.suppressFeatureStyleHistory) return
+    const attrs = this.readAttrsFromForm()
+    const current = this.featureStyleHistory[this.featureStyleHistoryIndex]
+    if (current && featureStyleAttrsEqual(current, attrs)) return
+    this.featureStyleHistory = this.featureStyleHistory.slice(0, this.featureStyleHistoryIndex + 1)
+    this.featureStyleHistory.push(cloneFeatureStyleAttrs(attrs))
+    this.featureStyleHistoryIndex = this.featureStyleHistory.length - 1
+    applyFeatureStyle(this.feature, attrs)
+    this.onHistoryPush?.()
+    this.syncFeatureStyleHistoryButtons()
+  }
+
+  private stepFeatureStyleHistory(delta: -1 | 1): void {
+    const nextIndex = this.featureStyleHistoryIndex + delta
+    if (nextIndex < 0 || nextIndex >= this.featureStyleHistory.length) return
+    const feature = this.feature
+    if (!feature) return
+    this.suppressFeatureStyleHistory = true
+    try {
+      this.featureStyleHistoryIndex = nextIndex
+      const attrs = this.featureStyleHistory[this.featureStyleHistoryIndex]
+      applyFeatureStyle(feature, attrs)
+      this.fillForm(attrs)
+      this.syncDependentFields()
+      this.onHistoryPush?.()
+      this.syncFeatureStyleHistoryButtons()
+    } finally {
+      this.suppressFeatureStyleHistory = false
+    }
+  }
+
+  private readAttrsFromForm(): FeatureStyleAttrs {
     const base = defaultFeatureStyleAttrs(this.kind)
     const dash = clamp(Number(this.els.lineDash.value), 0, 64, base.lineDash)
     const shape = (this.els.pointShape.value as PointShape) || base.pointShape
     const join = (this.els.lineJoin.value as StrokeLineJoin) || base.lineJoin
-    const attrs: FeatureStyleAttrs = {
+    return {
       ...base,
+      kind: this.kind,
       text: this.els.text.value.trim() || base.text,
       fontSize: clamp(Number(this.els.fontSize.value), 8, 72, base.fontSize),
       fontColor: this.colorPickers.fontColor.getValue(),
@@ -621,8 +764,38 @@ export class SketchFeatureStylePopup {
           : clamp(Number(this.els.pointRotation.value), -180, 180, base.pointRotation),
       zIndex: clamp(Number(this.els.zIndex.value), 0, 9999, base.zIndex),
     }
-    applyFeatureStyle(this.feature, attrs)
   }
+}
+
+function cloneFeatureStyleAttrs(attrs: FeatureStyleAttrs): FeatureStyleAttrs {
+  return { ...attrs }
+}
+
+function featureStyleAttrsEqual(a: FeatureStyleAttrs, b: FeatureStyleAttrs): boolean {
+  return (
+    a.kind === b.kind &&
+    a.strokeColor === b.strokeColor &&
+    a.strokeWidth === b.strokeWidth &&
+    a.fillColor === b.fillColor &&
+    a.radius === b.radius &&
+    a.text === b.text &&
+    a.fontSize === b.fontSize &&
+    a.fontColor === b.fontColor &&
+    a.textStrokeColor === b.textStrokeColor &&
+    a.textStrokeWidth === b.textStrokeWidth &&
+    a.rotation === b.rotation &&
+    a.lineDash === b.lineDash &&
+    a.lineCap === b.lineCap &&
+    a.lineJoin === b.lineJoin &&
+    a.lineDashOffset === b.lineDashOffset &&
+    a.miterLimit === b.miterLimit &&
+    a.fontFamily === b.fontFamily &&
+    a.fontBold === b.fontBold &&
+    a.fontItalic === b.fontItalic &&
+    a.pointShape === b.pointShape &&
+    a.pointRotation === b.pointRotation &&
+    a.zIndex === b.zIndex
+  )
 }
 
 function clamp(n: number, min: number, max: number, fallback: number): number {

@@ -23,7 +23,7 @@ describe('demoConfig', () => {
     expect(cfg.map?.zoom).toBe(6)
     expect(cfg.map?.baseLayerId).toBe('carte')
     expect(resolveDemoBaseLayerId(cfg)).toBe('carte')
-    expect(resolveDemoLayerNodes(cfg).length).toBeGreaterThan(0)
+    expect(resolveDemoLayerNodes(cfg)).toEqual([])
   })
 
   it('fusionne window.DEMO_CONFIG', () => {

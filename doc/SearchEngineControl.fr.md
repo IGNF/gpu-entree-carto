@@ -31,6 +31,13 @@ Au build, le plugin Vite `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) remplac
 - `initialSearch` : préremplit le champ et appelle `baseSearchEngine.search({ location })` → **cerise**, emprise, popup (pas de marqueur rouge custom)
 - `initialSearch` avec `type: 'geolocate'` (accueil **Me géolocaliser** → `/map`) : `createMarker` + fiche TabPanels **sans** géocode texte (sinon le service échoue sur « Ma localisation » et geopf vide la couche → plus de marker)
 - Si un [TabPanelsControl](./TabPanelsControl.fr.md) est monté : ouvre l’onglet fiche **avant** le marker, puis recentre la vue avec un **padding à droite** (= largeur du panneau) pour que marker + popup geopf restent visibles (sinon `view.fit` centre sous le panneau opaque) ; réattache le pin si la couche a été vidée et impose un style pin visible
+- Recherche par localisation avec coordonnées : mise à jour du fragment **`mlon` / `mlat`** (cerise) via `setMapPermalinkMarker` — voir [MapPermalink](./MapPermalink.fr.md)
+- Contenu de l’onglet fiche après chaque événement geopf `search` (et `initialSearch`) : `loadFicheForSearch` selon le mode [MapModeSelector](./MapModeSelector.fr.md) — parcelle ou document aux coordonnées du résultat (`ficheInfoService`, API ou APICarto)
+- Recentrage **animé** sur l’**emprise complète** du résultat (cerise + polygone `trueGeometry` / pointillés), `maxZoom: 15` comme geopf — geopf ne fait plus de `fit` instantané (`SearchEngineAdvancedAnimated`) ; padding à droite si le panneau fiche est ouvert
+- Les **formulaires avancés** n’émettent pas l’événement geopf `search` — `SearchEngineAdvancedAnimated.onAdvancedSearchResult` le redispatche après `addResultToMap` pour aligner cerise, animation, fiche et `mlon`/`mlat` sur l’autocomplete
+- La fiche depuis la recherche (`loadFicheForSearch`) **ne rappelle pas** `createMarker` (`skipLocationMarker`) afin de conserver cerise et emprise pendant le chargement APICarto
+- **Pas de popup** geopf sur la carte (`SearchEngineAdvancedAnimated._setPopupInfo` + CSS) — informations dans l’onglet fiche uniquement
+- Conserve l’emprise **lieu** geopf (`trueGeometry`) et le vol animé ; ajoute la même **emprise mode** qu’au clic (parcelle rouge ; Territoire : commune rouge, arrondissement orange + commune ville à Paris/Lyon/Marseille) sans modifier la cible de zoom de la recherche
 - Popup géoloc : contenu au format geopf (`<strong>…</strong><br/>…`, sans `<p>`) + correctif CSS appendice (trait entre bulle et pointe)
 - Accueil hors carte : [mountSearchEngine](./mountSearchEngine.fr.md)
 - Fallback autocomplete seul : [LocationSearchWidget](./LocationSearchWidget.fr.md)

@@ -15,6 +15,7 @@ window.DEMO_CONFIG = {
    * S’il est défini, le script est chargé au démarrage de `/map` (globals LAYER_CONFIG, …).
    */
   configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
+  // configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
 
   /** Document GPU à ouvrir au chargement (optionnel). */
   document: null,

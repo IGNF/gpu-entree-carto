@@ -4,7 +4,6 @@
  */
 const config: Record<string, unknown> = {
   scriptDir: '/',
-  minZoomLevelForParcel: 12,
   yearOfIgnCopyright: 2019,
   showMapHelpAtLoad: false,
   prefix: '',

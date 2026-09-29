@@ -389,6 +389,19 @@
   margin-bottom: 0;
 }
 
+.ec-fiche-info__body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.ec-fiche-info__body li {
+  margin-bottom: 0.25rem;
+}
+
+.ec-fiche-info__body li:last-child {
+  margin-bottom: 0;
+}
+
 .ec-tab-panels__empty {
   margin: 0;
   color: var(--text-mention-grey, #666);

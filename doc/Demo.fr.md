@@ -39,7 +39,7 @@ La démo est publiée par le workflow `pages.yml` (branche par défaut) :
 
 Après le workflow vert : **Settings → Pages** (source _GitHub Actions_), URL typiquement du type
 `https://ignf.github.io/entree-carto/`. Les GeoJSON limites admin sont servis sous
-`{BASE_URL}json-data/` (pas à la racine du domaine `ignf.github.io/json-data/…`).
+`{BASE_URL}json-data/` (pas à la racine du domaine `ignf.github.io/json-data/…` sur GitHub Pages ; gpu-site sert les mêmes chemins depuis `public/json-data/`).
 
 En local, simuler GitHub Pages (même `base` au **build** et au **preview**) :
 

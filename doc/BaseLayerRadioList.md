@@ -28,4 +28,4 @@ Vertical list of **radio buttons** for base maps, with **thumbnail** and **colla
 
 Parent creates a `GpuBaseLayerEnvironment` (`createGpuBaseLayerEnvironment`), calls `setActiveGpuBaseLayer(env, id)` and passes `env.allLayers` to `MapShell` (see `DemoView.vue`). One OpenLayers instance per WMTS layer / boundary (pool `mainLayers`, as gpu-client).
 
-Layer stacks per base: aligned with gpu-client `createStandardViewer` / `TileLayerSwitcher` (`cadastreLow`/`cadastreHigh`, region/department GeoJSON limits in `public/json-data/` (URL via `import.meta.env.BASE_URL` for GitHub Pages), mixed without IGN plan). Definition: `src/ol/gpuBaseLayerPresets.ts`, `src/ol/gpuLimitOverlayLayers.ts`.
+Layer stacks per base: aligned with gpu-client `createStandardViewer` / `TileLayerSwitcher` (`cadastreLow`/`cadastreHigh`, region/department GeoJSON limits in `public/json-data/` (URL via `import.meta.env.BASE_URL` for GitHub Pages; gpu-site: site root `public/json-data/`), mixed without IGN plan). Definition: `src/ol/gpuBaseLayerPresets.ts`, `src/ol/gpuLimitOverlayLayers.ts`.

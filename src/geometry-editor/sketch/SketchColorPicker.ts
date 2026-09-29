@@ -13,6 +13,7 @@ export class SketchColorPicker {
   private readonly alphaInput: HTMLInputElement
   private color: RgbaColor
   private onChange: ColorChangeHandler | null = null
+  private onFinalize: ColorChangeHandler | null = null
 
   constructor(label: string, initial = 'rgba(0, 0, 145, 1)') {
     this.color = parseColor(initial)
@@ -46,8 +47,9 @@ export class SketchColorPicker {
       const c = parseColor(this.hueInput.value)
       this.color = { ...c, a: this.color.a }
       this.syncUi({ syncHue: false })
-      this.emit()
+      this.emitPreview()
     })
+    this.hueInput.addEventListener('change', () => this.emitFinalize())
 
     this.hexInput.addEventListener('input', () => {
       const raw = this.hexInput.value.trim()
@@ -61,14 +63,21 @@ export class SketchColorPicker {
       this.color = { ...this.color, a: Number(this.alphaInput.value) / 100 }
       this.syncHexFromColorUnlessEditing()
       this.paintSwatch()
-      this.emit()
+      this.emitPreview()
     })
+    this.alphaInput.addEventListener('pointerup', () => this.emitFinalize())
+    this.alphaInput.addEventListener('change', () => this.emitFinalize())
 
     this.syncUi({ forceHex: true })
   }
 
   setOnChange(cb: ColorChangeHandler | null): void {
     this.onChange = cb
+  }
+
+  /** Appelé à la fin d’un glissement (slider opacité) ou validation couleur native / hex. */
+  setOnFinalize(cb: ColorChangeHandler | null): void {
+    this.onFinalize = cb
   }
 
   getValue(): string {
@@ -93,7 +102,15 @@ export class SketchColorPicker {
     return this.root.contains(node)
   }
 
-  private emit(): void {
+  private emitPreview(): void {
+    this.onChange?.(this.getValue())
+  }
+
+  private emitFinalize(): void {
+    if (this.onFinalize) {
+      this.onFinalize(this.getValue())
+      return
+    }
     this.onChange?.(this.getValue())
   }
 
@@ -107,7 +124,7 @@ export class SketchColorPicker {
   private commitHexField(): void {
     this.color = parseColor(this.hexInput.value, this.color)
     this.syncUi({ forceHex: true })
-    this.emit()
+    this.emitFinalize()
   }
 
   private applyParsedColor(next: RgbaColor, opts: { updateHexField: boolean }): void {
@@ -118,7 +135,7 @@ export class SketchColorPicker {
       this.hexInput.value = toHexRgba(this.color)
     }
     this.paintSwatch()
-    this.emit()
+    this.emitPreview()
   }
 
   private syncHexFromColorUnlessEditing(): void {

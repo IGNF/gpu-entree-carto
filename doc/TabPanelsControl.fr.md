@@ -40,6 +40,7 @@ Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
 | `basePresets`    | `GpuBaseLayerPreset[]` | Fonds pour le catalogue → Fonds de cartes         |
 | `baseModelValue` | `GpuBaseLayerId`       | Fond actif (`v-model:base-model-value`)           |
 | `layerNodes`     | `TreeLayerNode[]`      | Catalogue _Données_ / pile / légendes             |
+| `catalogLayersLoading` | `boolean`        | `true` tant que `LAYER_CONFIG` n’est pas prêt (roue dans le catalogue) |
 | `layerMapHooks`  | `LayerMapHooks?`       | Callbacks visibilité / opacité → carte (WMS démo) |
 
 ## Events
@@ -76,7 +77,7 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 - Fiche structurée selon sélection : contenu riche à brancher plus tard.
 - Opacité / ordre : pile onglet 3 branchée sur hooks ; pas encore grisage zoom gpu-client.
 - Légendes `scaleDependant` : URL figée au zoom initial (pas d’écoute zoom OL pour l’instant).
-- Pas de permalink couches (hors scope).
+- Permalink couches : voir [MapPermalink.fr.md](./MapPermalink.fr.md) (catalogue + pile Couches de données).
 
 ## Dépendances
 

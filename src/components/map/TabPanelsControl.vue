@@ -3,7 +3,37 @@
  * Contrôle OpenLayers — panneau latéral à 4 onglets (droite de la carte).
  * Masqué par défaut ; ouverture via onglet ou `showSelection` (localisation).
  */
-import { inject, onUnmounted, provide, ref, shallowRef, toRef, watch, type ShallowRef } from 'vue'
+import {
+  computed,
+  inject,
+  nextTick,
+  onUnmounted,
+  provide,
+  ref,
+  shallowRef,
+  toRef,
+  watch,
+  type ShallowRef,
+} from 'vue'
+import { registerMapPermalinkLayersBridge } from '@/composables/mapPermalinkLayersBridge'
+import {
+  getMapPermalinkParams,
+  layerPermalinkEntriesFromParams,
+  replaceLayerPermalinkParams,
+  type MapPermalinkParams,
+} from '@/lib/map/mapPermalink'
+import {
+  buildCatalogIdByPermalinkId,
+  decodeLayerPermalinkValue,
+  defaultOpacityFromCatalogEntry,
+  encodeLayerPermalinkValue,
+  type LayerPermalinkState,
+} from '@/lib/map/mapPermalinkLayers'
+import {
+  layerConfigToCatalogEntries,
+  resolveLayerConfig,
+  type GpuLayerCatalogEntry,
+} from '@/lib/layerConfig/gpuLayerConfig'
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
@@ -30,12 +60,14 @@ const props = withDefaults(
     baseModelValue?: GpuBaseLayerId
     layerNodes?: TreeLayerNode[]
     layerMapHooks?: LayerMapHooks
+    catalogLayersLoading?: boolean
   }>(),
   {
     basePresets: () => [],
     baseModelValue: 'carte',
     layerNodes: () => [],
     layerMapHooks: undefined,
+    catalogLayersLoading: false,
   },
 )
 
@@ -61,14 +93,17 @@ const {
   catalogCheckedById,
   catalogEntryInZoomRange,
   setCatalogChecked,
+  applyDataLayerPermalinkPanelState,
   setVisible,
   setOpacity,
   toggleGrayscale,
   removeFromStack,
   reorderStackByDisplayIndex,
+  applyStackOrderFromPermalink,
   enableAggregateDetail,
   regroupAggregate,
   notifyStackOrder,
+  reapplyCatalogMapState,
 } = useManagedLayers(
   layerNodesRef,
   (id, visible) => emit('toggle-layer', id, visible),
@@ -201,8 +236,144 @@ watch(
   { immediate: true },
 )
 
+const catalogEntries = computed(() => {
+  // Re-calcul quand LAYER_CONFIG / arbre catalogue est prêt (chargement async gpu-client-config).
+  void layerNodesRef.value.length
+  return layerConfigToCatalogEntries(resolveLayerConfig() ?? [])
+})
+const catalogIdByPermalink = computed(() => buildCatalogIdByPermalinkId(catalogEntries.value))
+
+function findCatalogTreeNode(id: string, roots = layerNodesRef.value): TreeLayerNode | undefined {
+  for (const node of roots) {
+    if (node.id === id) return node
+    if (node.children?.length) {
+      const hit = findCatalogTreeNode(id, node.children)
+      if (hit) return hit
+    }
+  }
+  return undefined
+}
+
+function configDefaultCatalogChecked(entry: GpuLayerCatalogEntry): boolean {
+  return Boolean(findCatalogTreeNode(entry.id)?.visible)
+}
+
+function layerPermalinkStateForEntry(entry: GpuLayerCatalogEntry): LayerPermalinkState {
+  const nodeId = entry.id
+  const checked = Boolean(catalogCheckedById.value[nodeId])
+  const row = layers.value.find((l) => l.id === nodeId)
+  const stackIds = layers.value.filter((l) => l.inStack).map((l) => l.id)
+  const stackIndex = row?.inStack ? stackIds.indexOf(nodeId) : 0
+  const opacity = row ? row.opacity / 100 : defaultOpacityFromCatalogEntry(entry)
+  return {
+    checked,
+    opacity,
+    stackIndex: stackIndex >= 0 ? stackIndex : 0,
+    grayscale: row?.grayscale ?? false,
+    visible: row?.visible ?? true,
+  }
+}
+
+function layerStateDiffersFromConfig(entry: GpuLayerCatalogEntry): boolean {
+  const state = layerPermalinkStateForEntry(entry)
+  const defaultChecked = configDefaultCatalogChecked(entry)
+  if (state.checked !== defaultChecked) return true
+  const defaultOpacity = defaultOpacityFromCatalogEntry(entry)
+  if (Math.abs(state.opacity - defaultOpacity) > 0.0001) return true
+  if (state.grayscale) return true
+  if (state.checked && !state.visible) return true
+  return false
+}
+
+function primaryPermalinkIdForEntry(entry: GpuLayerCatalogEntry): string {
+  const parts = entry.path.split('/').filter(Boolean)
+  if (!parts.length) return entry.config.name ?? entry.id
+  if (parts.length === 1) return parts[0]!
+  return parts.join(',')
+}
+
+function collectLayerParamsForPermalink(): MapPermalinkParams {
+  const out: MapPermalinkParams = {}
+  for (const entry of catalogEntries.value) {
+    if (entry.config.onlyLegend) continue
+    const state = layerPermalinkStateForEntry(entry)
+    if (!state.checked && !layerStateDiffersFromConfig(entry)) continue
+    const permalinkId = primaryPermalinkIdForEntry(entry)
+    if (!permalinkId) continue
+    out[permalinkId] = encodeLayerPermalinkValue(state)
+  }
+  return out
+}
+
+function applyLayerParamsFromPermalink(params: MapPermalinkParams): void {
+  const items = layerPermalinkEntriesFromParams(params)
+  if (!items.length) return
+  if (!layerNodesRef.value.length) return
+  const stackIndexByNodeId: Record<string, number> = {}
+  const panelOverrides: Array<{ nodeId: string; state: LayerPermalinkState }> = []
+  for (const { permalinkId, value } of items) {
+    const nodeId = catalogIdByPermalink.value.get(permalinkId)
+    if (!nodeId) continue
+    const state = decodeLayerPermalinkValue(value)
+    if (!state) continue
+    setCatalogChecked(nodeId, state.checked)
+    if (state.checked) {
+      panelOverrides.push({ nodeId, state })
+      stackIndexByNodeId[nodeId] = state.stackIndex
+    }
+  }
+  reapplyCatalogMapState()
+  for (const { nodeId, state } of panelOverrides) {
+    applyDataLayerPermalinkPanelState(nodeId, {
+      visible: state.visible,
+      opacity: Math.round(state.opacity * 100),
+      grayscale: state.grayscale,
+    })
+  }
+  applyStackOrderFromPermalink(stackIndexByNodeId)
+}
+
+function scheduleApplyLayerParamsFromPermalink(): void {
+  void nextTick(() => {
+    applyLayerParamsFromPermalink(getMapPermalinkParams())
+  })
+}
+
+registerMapPermalinkLayersBridge({
+  applyLayerParamsFromPermalink,
+  collectLayerParamsForPermalink,
+})
+
+watch(
+  () => [catalogEntries.value.length, layerNodesRef.value.length] as const,
+  ([entryLen, nodeLen], prev) => {
+    const [prevEntryLen = 0, prevNodeLen = 0] = prev ?? [0, 0]
+    const becameReady = entryLen > 0 && nodeLen > 0 && (prevEntryLen === 0 || prevNodeLen === 0)
+    if (becameReady) scheduleApplyLayerParamsFromPermalink()
+  },
+)
+
+let layerPermalinkSyncTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () =>
+    [
+      JSON.stringify(catalogCheckedById.value),
+      layers.value
+        .map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`)
+        .join('|'),
+    ].join(';'),
+  () => {
+    if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer)
+    layerPermalinkSyncTimer = setTimeout(() => {
+      layerPermalinkSyncTimer = null
+      replaceLayerPermalinkParams(collectLayerParamsForPermalink())
+    }, 300)
+  },
+)
+
 onUnmounted(() => {
   syncShellOpenClass(false)
+  registerMapPermalinkLayersBridge(null)
   registerTabPanelsApi(null)
   if (olControl && mapRef.value) {
     mapRef.value.removeControl(olControl)
@@ -270,6 +441,7 @@ onUnmounted(() => {
             :map-zoom="mapZoom"
             :base-presets="basePresets"
             :base-model-value="baseModelValue"
+            :catalog-layers-loading="catalogLayersLoading"
             @update:base-model-value="emit('update:baseModelValue', $event)"
             @catalog-toggle="setCatalogChecked"
           />

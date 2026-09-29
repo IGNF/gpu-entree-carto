@@ -52,8 +52,18 @@ export const TAB_PANEL_IDS = {
   legends: 3,
 } as const
 
-export const DEFAULT_FICHE_EMPTY = {
+/** Texte fiche lorsqu’aucune cerise / sélection n’est active. */
+export const DEFAULT_FICHE_EMPTY: FicheInfoSelection = {
   title: 'Aucune sélection en cours',
-  bodyHtml:
-    '<p>Pour sélectionner une parcelle, cliquez directement sur la carte. Pour sélectionner une commune, utilisez la barre de recherche ou zoomez jusqu’à la voir apparaître, puis cliquez dessus.</p>',
-} as const
+  bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
+<ul>
+<li>choisissez le mode Parcelle</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Pour sélectionner une commune&nbsp;:</p>
+<ul>
+<li>choisissez le mode Territoire</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`,
+}

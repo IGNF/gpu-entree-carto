@@ -1,6 +1,10 @@
 import { createApp, type App } from 'vue'
 import EmbedMapViewer from '@/embed/EmbedMapViewer.vue'
 import type { StandardViewerParams } from '@/lib/types'
+import {
+  bootstrapMapPermalinkFromLocation,
+  locationHashLooksLikeMapPermalink,
+} from '@/lib/map/mapPermalink'
 
 let embedApp: App | null = null
 
@@ -18,6 +22,9 @@ export function mountMapViewer(
   }
 
   container.innerHTML = ''
+  if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
+    bootstrapMapPermalinkFromLocation()
+  }
   embedApp = createApp(EmbedMapViewer, { params })
   embedApp.mount(container)
 

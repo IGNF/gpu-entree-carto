@@ -4,6 +4,7 @@ import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
 import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import type { MapModeId } from '@/lib/map/mapMode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import type Map from 'ol/Map'
 import { transformExtent } from 'ol/proj'
@@ -16,6 +17,8 @@ export interface DemoMapConfig {
   zoom?: number
   layerNodes?: TreeLayerNode[]
   search?: StandardViewerSearch | null
+  /** Mode fiche / clic info (`1` parcelle, `2` territoire). */
+  mode?: MapModeId
 }
 
 export type DemoHomeSearchWidget = 'location' | 'search-engine'
@@ -43,21 +46,6 @@ export interface DemoConfig {
   useMinimified?: boolean
 }
 
-const DEFAULT_LAYER_NODES: TreeLayerNode[] = [
-  {
-    id: 'demo-plu',
-    title: 'Document d’urbanisme (exemple)',
-    visible: true,
-    legend: [{ id: 'demo-plu-leg', title: 'Zonage PLU (exemple)' }],
-  },
-  {
-    id: 'demo-sup',
-    title: 'Servitude (exemple)',
-    visible: false,
-    legend: [{ id: 'demo-sup-leg', title: 'Servitude (exemple)' }],
-  },
-]
-
 const DEFAULT_DEMO_CONFIG: DemoConfig = {
   configScriptUrl: null,
   document: null,
@@ -67,7 +55,6 @@ const DEFAULT_DEMO_CONFIG: DemoConfig = {
   map: {
     baseLayerId: 'carte',
     zoom: 6,
-    layerNodes: DEFAULT_LAYER_NODES,
     search: null,
   },
   home: {
@@ -243,6 +230,9 @@ export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
     const zoom = cfg.map?.zoom ?? 6
     return layerConfigToTreeNodes(fromGpu, zoom)
   }
+  if (cfg.configScriptUrl?.trim()) {
+    return []
+  }
   const nodes = cfg.map?.layerNodes
   if (Array.isArray(nodes) && nodes.length) {
     return nodes.map((n) => ({
@@ -253,7 +243,7 @@ export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
       children: n.children,
     }))
   }
-  return DEFAULT_LAYER_NODES.map((n) => ({ ...n, legend: n.legend ? [...n.legend] : undefined }))
+  return []
 }
 
 export function isValidBbox(bbox: unknown): bbox is [number, number, number, number] {
