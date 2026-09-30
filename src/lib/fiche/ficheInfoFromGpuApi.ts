@@ -41,7 +41,7 @@ export type GpuFicheInfoPayload = {
   psmvs?: Record<string, GpuFichePartition> | GpuFichePartition[]
   sups?: Record<string, GpuFichePartition> | GpuFichePartition[]
   scots?: Record<string, GpuFichePartition> | GpuFichePartition[]
-  lowScaleDocument?: unknown
+  lowScaleDocument?: Record<string, GpuFicheDocument> | GpuFicheDocument[] | null
   proceduresByDocument?: Record<string, GpuFicheProcedure[]>
   is_el9_alert?: boolean
 }
@@ -317,6 +317,28 @@ function buildCoastlineSupHint(): string {
   return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`
 }
 
+function normalizeLowScaleDocuments(
+  value: GpuFicheInfoPayload['lowScaleDocument'],
+): GpuFicheDocument[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'object') return Object.values(value)
+  return []
+}
+
+function buildLowScaleDocumentsHtml(documents: GpuFicheDocument[]): string {
+  if (!documents.length) return ''
+  if (documents.length === 1) {
+    return documentIntroHtml(documents[0]!, 'du')
+  }
+  const parts = ['<p>Zone d’incertitude où se superposent :</p><ul>']
+  for (const doc of documents) {
+    parts.push(`<li>${documentIntroHtml(doc, 'du')}</li>`)
+  }
+  parts.push('</ul>')
+  return parts.join('')
+}
+
 function buildDocumentTabs(data: GpuFicheInfoPayload): FicheInfoDocumentTab[] {
   const tabs: FicheInfoDocumentTab[] = []
   const proceduresByDocument = data.proceduresByDocument
@@ -368,6 +390,17 @@ function buildDocumentTabs(data: GpuFicheInfoPayload): FicheInfoDocumentTab[] {
     })
   }
 
+  if (!tabs.some((t) => t.id === TAB_DU)) {
+    const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument)
+    if (lowScaleDocs.length) {
+      tabs.unshift({
+        id: TAB_DU,
+        label: 'Document d’urbanisme',
+        bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs),
+      })
+    }
+  }
+
   return tabs
 }
 
@@ -413,9 +446,8 @@ function fallbackBodyHtml(data: GpuFicheInfoPayload): string {
   if (data.grid?.is_rnu) {
     return '<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>'
   }
-  if (data.lowScaleDocument) {
-    return '<p>Zoomer davantage pour afficher les documents d’urbanisme à cette échelle.</p>'
-  }
+  const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument))
+  if (lowScaleHtml) return lowScaleHtml
   return '<p>Aucun document disponible à cet emplacement.</p>'
 }
 

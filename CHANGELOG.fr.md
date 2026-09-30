@@ -27,6 +27,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Fiche info Territoire** — documents uniquement via `apiFicheInfoUrl` (gpu-client-config) ; plus de repli APICarto `gpu/document` ni d’appel `/api/fiche-info` par défaut ; message « Indisponibilité du service » si l’API n’est pas configurée.
 - **Config GPU** — URL relatives (`*Url`) résolues depuis l’hôte du script `gpu-client-config.js` (puis proxy dev Vite si besoin).
 - **Fiche info** — contenu parcelle / document construit à partir du JSON `/api/fiche-info` (gpu-site) : en-tête selon le mode, onglets DU / PSMV / SUP / SCoT et procédures en cours.
+- **Fiche info gpu-site** — config Twig (`LAYER_CONFIG`) reconnue comme prête ; chargement fiche permalink (`mlon`/`mlat`) après montage TabPanels ; affichage low scale ; sync `gpu.config` avant planification cerise ; URL du script `gpu-client-config` déduite du DOM pour les `*Url` relatives.
 - **Permalink carte** — `lon`, `lat`, `mlon` et `mlat` sont écrits avec au plus 8 décimales dans le fragment d’URL.
 - **Permalink carte** — sync des couches catalogue / données / fond de plan dans le hash ; `mode` dans `#…` (plus en query `?mode=`).
 - **Permalink carte** — encodage percent des clés/valeurs couche ; normalisation des hash gpu-client legacy (avertissement Vue Router).
