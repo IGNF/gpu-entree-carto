@@ -48,6 +48,18 @@ const CONFIG_URL_KEY = /Url$/i
 
 /** Réécrit les champs `*Url` relatifs après fusion de gpu.config. */
 export function resolveConfigUrlsInRecord(target: Record<string, unknown>): void {
+  if (
+    !gpuClientConfigScriptUrl &&
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined'
+  ) {
+    const fallback =
+      document.querySelector<HTMLScriptElement>('script[src*="gpu_map_client_config"]') ??
+      document.querySelector<HTMLScriptElement>('script#gpu-client-config[src]')
+    if (fallback?.src) {
+      gpuClientConfigScriptUrl = fallback.src
+    }
+  }
   if (!gpuClientConfigScriptUrl) return
   for (const [key, val] of Object.entries(target)) {
     if (typeof val !== 'string' || !val.trim()) continue

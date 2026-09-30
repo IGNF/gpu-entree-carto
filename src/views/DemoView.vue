@@ -30,6 +30,7 @@ import {
   resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
 import { markGpuClientConfigLoading } from '@/lib/demo/gpuClientConfigState'
+import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import {
   demoUsesMinifiedAssets,
   getCreateStandardViewerFromBundle,
@@ -102,6 +103,7 @@ const layerMapHooks = {
 
 onMounted(async () => {
   const cfg = await prepareDemoEnvironment(getDemoConfig())
+  scheduleFicheLoadForCherryWhenReady()
   gpuDocument.value = cfg.document ?? null
 
   if (useMinified.value) {

@@ -62299,6 +62299,17 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const FICHE_LOADING_SPINNER_HTML = `<p class="ec-fiche-info__loading"><span class="ec-fiche-info__spinner fr-icon-refresh-line" aria-hidden="true"></span> Chargement…</p>`;
   const gpuClientConfigStatus = /* @__PURE__ */ shallowRef("idle");
+  const readyQueue = [];
+  function markGpuClientConfigReady() {
+    gpuClientConfigStatus.value = "ready";
+    flushGpuClientConfigReadyQueue();
+  }
+  function flushGpuClientConfigReadyQueue() {
+    var _a;
+    while (readyQueue.length) {
+      (_a = readyQueue.shift()) == null ? void 0 : _a();
+    }
+  }
   function isGpuClientConfigSettled() {
     const s = gpuClientConfigStatus.value;
     return s === "ready" || s === "none" || s === "error";
@@ -62308,6 +62319,694 @@ Expected function or array of functions, received type ${typeof value2}.`
       fn();
       return;
     }
+    readyQueue.push(fn);
+  }
+  function resolveGpuLayerVisible(layer, parentVisible) {
+    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
+      return Boolean(layer.visible);
+    }
+    return parentVisible;
+  }
+  function pathToCatalogId(path) {
+    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
+    if (!normalized) return "root";
+    return normalized.split("/").map(
+      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    ).join("--");
+  }
+  function pathSegment(layer) {
+    var _a, _b;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
+      return parts[parts.length - 1] ?? "couche";
+    }
+    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
+    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
+      for (const value2 of layer.filterValue) {
+        uniqueName += value2;
+      }
+    }
+    if (layer.filterAttribute && layer.filterValueLike) {
+      uniqueName += `_${layer.filterValueLike}`;
+    }
+    return uniqueName.toLowerCase();
+  }
+  function buildLayerPath(layer, parentPath) {
+    var _a;
+    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
+      return layer.path.replace(/\/+/g, "/");
+    }
+    const segment = pathSegment(layer);
+    if (!parentPath) return `/${segment}`;
+    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+    return `${base}/${segment}`.replace(/\/+/g, "/");
+  }
+  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
+    var _a, _b;
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a = layer.layers) == null ? void 0 : _a.length) {
+          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
+        }
+        continue;
+      }
+      const path = buildLayerPath(layer, parentPath || "");
+      const id = pathToCatalogId(path);
+      registry.push({ id, path, config: layer });
+      if ((_b = layer.layers) == null ? void 0 : _b.length) {
+        layerConfigToCatalogEntries(layer.layers, path, registry);
+      }
+    }
+    return registry;
+  }
+  function readLayerConfigFromWindow() {
+    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
+    if (!Array.isArray(raw) || !raw.length) return null;
+    return raw;
+  }
+  function resolveLayerConfig(paramsLayerConfig) {
+    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
+      return paramsLayerConfig;
+    }
+    return readLayerConfigFromWindow();
+  }
+  const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
+  const GEOMETRY_TYPES = ["pct", "lin", "surf"];
+  function normalizeLayerNameForLegend(layerName) {
+    return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
+  }
+  function readScaleDependantThreshold(layer) {
+    const raw = layer.scaleDependantTreshold;
+    if (raw === void 0 || raw === null) return void 0;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : void 0;
+  }
+  function isLayerScaleDependant(layer, ancestors) {
+    if (layer.scaleDependant) return true;
+    for (const a of ancestors) {
+      if (a.scaleDependant) return true;
+    }
+    return false;
+  }
+  function getScaleDependantThreshold(layer, ancestors) {
+    const chain = [layer, ...ancestors];
+    for (const item of chain) {
+      const t = readScaleDependantThreshold(item);
+      if (t !== void 0 && !Number.isNaN(t)) return t;
+    }
+    return DEFAULT_SCALE_DEPENDANT_THRESHOLD;
+  }
+  function isHighScaleZoom(zoom, threshold) {
+    return zoom >= threshold;
+  }
+  function legendImageUrl(imagePath, imageName, scaleDependant, threshold, zoom) {
+    let name2 = imageName;
+    if (scaleDependant) {
+      name2 += isHighScaleZoom(zoom, threshold) ? "-highscale" : "-lowscale";
+    }
+    return `${imagePath}${name2}.png`;
+  }
+  function legendImageNamesForItem(item) {
+    var _a;
+    if ((_a = item.legendImageNames) == null ? void 0 : _a.length) return item.legendImageNames;
+    if (item.legendImageName) return [item.legendImageName];
+    return [];
+  }
+  function sortLegendImageNamesByGeometry(names2) {
+    function rank(name2) {
+      const match2 = name2.match(/_(pct|lin|surf)(?:\/|$|-)/);
+      if (!match2) return GEOMETRY_TYPES.length;
+      const idx = GEOMETRY_TYPES.indexOf(match2[1]);
+      return idx >= 0 ? idx : GEOMETRY_TYPES.length;
+    }
+    return [...names2].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  }
+  function resolveLegendItemImageUrls(item, zoom) {
+    const path = item.legendImagePath;
+    const names2 = legendImageNamesForItem(item);
+    if (path && names2.length) {
+      const scaleDependant = item.legendScaleDependant === true;
+      const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD;
+      return names2.map((name2) => legendImageUrl(path, name2, scaleDependant, threshold, zoom));
+    }
+    if (item.imageUrl) return [item.imageUrl];
+    return [];
+  }
+  function legendItemVisualKey(item) {
+    var _a;
+    const imagePart = ((_a = item.legendImageNames) == null ? void 0 : _a.length) ? [...item.legendImageNames].sort().join("") : item.legendImageName ?? item.imageUrl ?? "";
+    return `${item.title}${imagePart}${item.legendImagePath ?? ""}`;
+  }
+  function dedupeLegendItems(items) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const item of items) {
+      const key2 = legendItemVisualKey(item);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(item);
+    }
+    return out;
+  }
+  function layerLegendAccordionKey(title, legend) {
+    return `${title}${legend.map(legendItemVisualKey).sort().join("")}`;
+  }
+  function dedupeLegendLayersForPanel(layers) {
+    const seenLegendKeys = /* @__PURE__ */ new Set();
+    const seenAccordionKeys = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const layer of layers) {
+      const legend = dedupeLegendItems(layer.legend ?? []).filter((item) => {
+        const key2 = legendItemVisualKey(item);
+        if (seenLegendKeys.has(key2)) return false;
+        seenLegendKeys.add(key2);
+        return true;
+      });
+      if (!legend.length) continue;
+      const accordionKey = layerLegendAccordionKey(layer.title, legend);
+      if (seenAccordionKeys.has(accordionKey)) continue;
+      seenAccordionKeys.add(accordionKey);
+      out.push({ ...layer, legend });
+    }
+    return out;
+  }
+  function resolveLegendImageDetailDirectory() {
+    var _a;
+    const fromMerged = typeof config.legendImageDetailDirectory === "string" ? config.legendImageDetailDirectory : "";
+    if (fromMerged) return normalizeLegendImageBaseUrl(fromMerged);
+    const w = typeof window !== "undefined" ? window : void 0;
+    const gpuCfg = (_a = w == null ? void 0 : w.gpu) == null ? void 0 : _a.config;
+    const fromGpu = typeof (gpuCfg == null ? void 0 : gpuCfg.legendImageDetailDirectory) === "string" ? gpuCfg.legendImageDetailDirectory : "";
+    return normalizeLegendImageBaseUrl(fromGpu);
+  }
+  function normalizeLegendImageBaseUrl(raw) {
+    const withoutQuery = raw.replace(/\?.*$/i, "");
+    if (!withoutQuery.length) return "";
+    return withoutQuery.endsWith("/") ? withoutQuery : `${withoutQuery}/`;
+  }
+  function readLegendConfigArray(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") return Object.values(raw);
+    return [];
+  }
+  function hasFilterIn(layer) {
+    var _a;
+    return Boolean(layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length));
+  }
+  function isPsmvLayerName(layerName) {
+    return layerName.slice(-5) === "_psmv";
+  }
+  function hasLegendReferences(layerName, refs) {
+    return layerName in refs;
+  }
+  function getLegendReferenceRuleKey(layerName, rule, refs) {
+    const bucket = refs[layerName];
+    if (!bucket) return rule;
+    if (bucket[rule]) return rule;
+    if ((layerName === "info" || layerName === "prescription") && /^\d{2}$/.test(rule)) {
+      const defaultKey = `${rule}-00`;
+      if (bucket[defaultKey]) return defaultKey;
+      const prefix = `${rule}-`;
+      const matching = Object.keys(bucket).filter((k) => k.startsWith(prefix)).sort();
+      if (matching.length) return matching[0];
+    }
+    return rule;
+  }
+  function getLegendReference(layerName, rule, refs) {
+    const bucket = refs[layerName];
+    if (!bucket) return void 0;
+    return bucket[getLegendReferenceRuleKey(layerName, rule, refs)];
+  }
+  function getImageNameByGpuLayer(layer, rule, subRule, geometryType) {
+    const base = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    let imageName = `${base}_${geometryType}/${rule}`;
+    if (subRule) imageName += `-${subRule}`;
+    return imageName;
+  }
+  function getImageNameByLegendReferences(layerName, ruleName, type) {
+    if (type) return `${type}/${ruleName}`;
+    return `${normalizeLayerNameForLegend(layerName)}/${ruleName}`;
+  }
+  function getGeometryTypesForLegendWithFilter(layerName, rule, legendConfig) {
+    var _a;
+    const geometryTypes = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
+      if ((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule)) {
+        geometryTypes.push(childLayerName.split(`${layerName}_`)[1]);
+      }
+    }
+    return geometryTypes;
+  }
+  function getGeometryTypesForLegendWithFilterAndSubFilter(layerName, rule, subRule, legendConfig) {
+    var _a, _b, _c;
+    const geometryTypes = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      const suffix = childLayerName.split(`${layerName}_`)[1];
+      if (!suffix || !GEOMETRY_TYPES.includes(suffix)) continue;
+      if (!((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule))) continue;
+      if ((_c = (_b = entry.hasfilter2) == null ? void 0 : _b[rule]) == null ? void 0 : _c.includes(subRule)) {
+        geometryTypes.push(suffix);
+      }
+    }
+    return geometryTypes;
+  }
+  function getSubRules(layerName, rule, legendConfig) {
+    var _a;
+    const subRules = [];
+    for (const entry of legendConfig) {
+      const entryName = normalizeLayerNameForLegend(entry.name);
+      for (const geometryType of GEOMETRY_TYPES) {
+        if (entryName !== `${layerName}_${geometryType}`) continue;
+        const list = (_a = entry.hasfilter2) == null ? void 0 : _a[rule];
+        if (!(list == null ? void 0 : list.length)) continue;
+        for (const subRule of list) {
+          if (!subRules.includes(subRule)) subRules.push(subRule);
+        }
+      }
+    }
+    return subRules;
+  }
+  function getOtherLegendImageNamesByFilterValues(layerName, rules, legendConfig) {
+    var _a;
+    const imageNames = [];
+    for (const entry of legendConfig) {
+      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
+      if (entry.other !== true) continue;
+      const matchesRule = (_a = entry.allowedValues) == null ? void 0 : _a.some((v) => rules.includes(v));
+      if (!matchesRule) continue;
+      imageNames.push(`${childLayerName}/other`);
+    }
+    return imageNames;
+  }
+  function pushLegendItemsFromNames(items, names2, title, opts, scaleDependant, threshold, idPrefix) {
+    if (!names2.length) return;
+    const sorted = sortLegendImageNamesByGeometry(names2);
+    const item = {
+      id: `${idPrefix}-${sorted.join("|")}`,
+      title,
+      legendImagePath: opts.imagePath,
+      legendScaleDependant: scaleDependant,
+      legendScaleThreshold: threshold
+    };
+    if (sorted.length === 1) {
+      item.legendImageName = sorted[0];
+      if (opts.imagePath) {
+        item.imageUrl = legendImageUrl(
+          opts.imagePath,
+          sorted[0],
+          scaleDependant,
+          threshold,
+          opts.zoomAtInit
+        );
+      }
+    } else {
+      item.legendImageNames = sorted;
+    }
+    items.push(item);
+  }
+  function buildNoFilterLegends(layer, opts) {
+    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
+    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
+    const items = [];
+    const bucket = opts.legendReferences[layerName];
+    for (const ruleName of Object.keys(bucket)) {
+      const ref2 = bucket[ruleName];
+      if (ref2.hide) continue;
+      const names2 = [];
+      if (Array.isArray(ref2.type)) {
+        for (const t of ref2.type) {
+          names2.push(getImageNameByLegendReferences(layerName, ruleName, t));
+        }
+      } else {
+        names2.push(getImageNameByLegendReferences(layerName, ruleName, ref2.type));
+      }
+      if (ref2.combine) {
+        for (const subRuleName of Object.keys(ref2.combine)) {
+          for (const st of ref2.combine[subRuleName].type) {
+            names2.push(getImageNameByLegendReferences(layerName, subRuleName, st));
+          }
+        }
+      }
+      pushLegendItemsFromNames(
+        items,
+        names2,
+        ref2.title,
+        opts,
+        scaleDependant,
+        threshold,
+        layerName + ruleName
+      );
+    }
+    return items;
+  }
+  function buildFilterLegends(layer, opts) {
+    var _a;
+    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
+    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
+    const items = [];
+    for (const rule of layer.filterValue ?? []) {
+      const subRules = getSubRules(layerName, rule, opts.legendConfig);
+      if (subRules.length === 0) {
+        const geometryTypes = getGeometryTypesForLegendWithFilter(layerName, rule, opts.legendConfig);
+        if (!geometryTypes.length) continue;
+        const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, null, g));
+        const ref2 = getLegendReference(layerName, rule, opts.legendReferences);
+        if (!ref2 || ref2.hide) continue;
+        pushLegendItemsFromNames(
+          items,
+          names2,
+          ref2.title,
+          opts,
+          scaleDependant,
+          threshold,
+          `${layerName}${rule}`
+        );
+      } else {
+        for (const subRule of subRules) {
+          const geometryTypes = getGeometryTypesForLegendWithFilterAndSubFilter(
+            layerName,
+            rule,
+            subRule,
+            opts.legendConfig
+          );
+          if (!geometryTypes.length) continue;
+          const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, subRule, g));
+          const subLegendRef = (_a = opts.legendReferences[layerName]) == null ? void 0 : _a[`${rule}-${subRule}`];
+          if (!subLegendRef || subLegendRef.hide) continue;
+          pushLegendItemsFromNames(
+            items,
+            names2,
+            subLegendRef.title,
+            opts,
+            scaleDependant,
+            threshold,
+            `${layerName}${rule}-${subRule}`
+          );
+        }
+      }
+    }
+    const otherNames = getOtherLegendImageNamesByFilterValues(
+      layerName,
+      layer.filterValue ?? [],
+      opts.legendConfig
+    );
+    if (otherNames.length) {
+      let title = `Autres ${(layer.title ?? layer.name ?? "").toLowerCase()}`;
+      if (layerName === "prescription") title = "Autres prescriptions";
+      pushLegendItemsFromNames(items, otherNames, title, opts, false, threshold, `${layerName}-other`);
+    }
+    return items;
+  }
+  function buildLegendItemsForLeafGpuLayer(layer, opts) {
+    if (!layer.name) return [];
+    const layerName = normalizeLayerNameForLegend(layer.name.split(",")[0]);
+    if (isPsmvLayerName(layerName)) return [];
+    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
+    if (hasFilterIn(layer)) return buildFilterLegends(layer, opts);
+    return buildNoFilterLegends(layer, opts);
+  }
+  function buildHideLayersAggregatedLegendItems(layer, opts) {
+    const items = [];
+    for (const child of layer.layers ?? []) {
+      const childName = normalizeLayerNameForLegend((child.name ?? "").split(",")[0] ?? "");
+      if (childName === "prescription_psmv") continue;
+      items.push(...buildLegendItemsForLeafGpuLayer(child, opts));
+    }
+    return items;
+  }
+  function buildLegendItemsForGpuLayer(layer, opts) {
+    var _a;
+    if (!layer.name) return [];
+    if ((_a = layer.layers) == null ? void 0 : _a.length) {
+      if (!layer.hideLayers) return [];
+      if (hasFilterIn(layer)) return buildLegendItemsForLeafGpuLayer(layer, opts);
+      return buildHideLayersAggregatedLegendItems(layer, opts);
+    }
+    return buildLegendItemsForLeafGpuLayer(layer, opts);
+  }
+  function readGpuLegendBuildOptions(zoomAtInit = 6) {
+    const w = typeof window !== "undefined" ? window : void 0;
+    const legendConfig = readLegendConfigArray(w == null ? void 0 : w.LEGEND_CONFIG);
+    const legendReferences = (w == null ? void 0 : w.LEGEND_REFERENCES) && typeof w.LEGEND_REFERENCES === "object" ? w.LEGEND_REFERENCES : {};
+    return {
+      legendConfig,
+      legendReferences,
+      imagePath: resolveLegendImageDetailDirectory(),
+      zoomAtInit,
+      ancestorLayers: []
+    };
+  }
+  const GPU_FORCE_OPACITY_PERCENT = 100;
+  function catalogNodeOpacityPercent(node) {
+    if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
+    if (typeof node.gpuDefaultOpacity === "number") return node.gpuDefaultOpacity;
+    return 70;
+  }
+  function catalogChildNodes(node) {
+    return [...node.children ?? [], ...node.hiddenCatalogChildren ?? []];
+  }
+  function catalogSwitcherDisplayNodes(nodes) {
+    var _a;
+    const out = [];
+    for (const node of nodes) {
+      if (node.gpuOnlyLegend) {
+        out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)));
+        continue;
+      }
+      const children = ((_a = node.children) == null ? void 0 : _a.length) ? catalogSwitcherDisplayNodes(node.children) : void 0;
+      out.push({
+        ...node,
+        children: (children == null ? void 0 : children.length) ? children : void 0
+      });
+    }
+    return out;
+  }
+  function isCatalogAggregate(node) {
+    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
+  }
+  function directCatalogChildren(node) {
+    return catalogChildNodes(node);
+  }
+  function isCheckboxSameAsDirectChildren(checked, node) {
+    const self2 = Boolean(checked[node.id]);
+    for (const child of directCatalogChildren(node)) {
+      if (Boolean(checked[child.id]) !== self2) return false;
+    }
+    return true;
+  }
+  function isSameAsChildrenState(checked, node, opacityById) {
+    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
+    return isOpacitySameAsDirectChildren(node, opacityById);
+  }
+  function isSameAsDescendants(checked, node, index2, opacityById) {
+    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
+    for (const child of directCatalogChildren(node)) {
+      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
+    }
+    return true;
+  }
+  function splitAggregateAncestorId(nodeId, index2, splitIds) {
+    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
+    let current = index2.nodesById.get(nodeId);
+    while (current) {
+      const parent = index2.parentById.get(current.id);
+      if (!parent) return null;
+      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
+      current = parent;
+    }
+    return null;
+  }
+  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    const parent = index2.parentById.get(node.id);
+    if (!parent) return false;
+    if (split == null ? void 0 : split.has(parent.id)) {
+      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+    }
+    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
+      return true;
+    }
+    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+  }
+  function isOpacitySameAsDirectChildren(node, opacityById) {
+    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
+    for (const child of directCatalogChildren(node)) {
+      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
+      if (childOpacity !== selfOpacity) return false;
+    }
+    return true;
+  }
+  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
+    if (!node.gpuMapLayer || node.gpuVirtual) return false;
+    if (!checked[node.id]) return false;
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
+      return false;
+    }
+    if (splitAggregateAncestorId(node.id, index2, split)) {
+      return true;
+    }
+    const parent = index2.parentById.get(node.id);
+    if (!parent) {
+      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
+      return catalogChildNodes(node).length === 0;
+    }
+    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
+      return true;
+    }
+    return false;
+  }
+  function propagateCheckedToDescendants(checked, node, value2) {
+    for (const child of directCatalogChildren(node)) {
+      checked[child.id] = value2;
+      propagateCheckedToDescendants(checked, child, value2);
+    }
+  }
+  function propagateCheckedToAncestors(checked, nodeId, index2) {
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return;
+    let parentChecked = false;
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend) continue;
+      if (checked[child.id]) {
+        parentChecked = true;
+        break;
+      }
+    }
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend && Boolean(checked[child.id]) !== parentChecked) {
+        checked[child.id] = parentChecked;
+      }
+    }
+    if (Boolean(checked[parent.id]) !== parentChecked) {
+      checked[parent.id] = parentChecked;
+    }
+    propagateCheckedToAncestors(checked, parent.id, index2);
+  }
+  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
+    const node = index2.nodesById.get(nodeId);
+    if (!node) return;
+    checked[nodeId] = value2;
+    propagateCheckedToAncestors(checked, nodeId, index2);
+    propagateCheckedToDescendants(checked, node, value2);
+  }
+  function computeMapVisibilityById(checked, index2, opacityById, options) {
+    const out = {};
+    for (const node of index2.nodesById.values()) {
+      if (!node.gpuMapLayer) continue;
+      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
+    }
+    return out;
+  }
+  const DEFAULT_GPU_MIN_ZOOM = 0;
+  const DEFAULT_GPU_MAX_ZOOM = 22;
+  function isZoomInLayerRange(zoom, minZoom, maxZoom) {
+    return zoom >= minZoom && zoom <= maxZoom;
+  }
+  function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
+    return {
+      min: layer.minZoomLevel ?? inheritedMin,
+      max: layer.maxZoomLevel ?? inheritedMax
+    };
+  }
+  function isCatalogNodeInZoomRange(node, zoom) {
+    const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
+    const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM;
+    const children = catalogChildNodes(node);
+    if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
+      return isZoomInLayerRange(zoom, min, max);
+    }
+    if (!children.length) return true;
+    return children.some((child) => isCatalogNodeInZoomRange(child, zoom));
+  }
+  function defaultOpacityPercent(layer) {
+    if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT;
+    if (typeof layer.opacity === "number" && Number.isFinite(layer.opacity)) {
+      return Math.round(layer.opacity * 100);
+    }
+    return 70;
+  }
+  function isGpuMapLayerConfig(layer) {
+    var _a;
+    return !layer.virtual && Boolean((_a = layer.name) == null ? void 0 : _a.trim());
+  }
+  function buildTreeLevel(layers, parentPath, ancestorLayers, legendOpts, parentVisible = false, underHideLayersParent = false, inheritedMinZoom = DEFAULT_GPU_MIN_ZOOM, inheritedMaxZoom = DEFAULT_GPU_MAX_ZOOM) {
+    var _a, _b, _c;
+    const nodes = [];
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a = layer.layers) == null ? void 0 : _a.length) {
+          nodes.push(
+            ...buildTreeLevel(
+              layer.layers,
+              parentPath,
+              ancestorLayers,
+              legendOpts,
+              parentVisible,
+              underHideLayersParent,
+              inheritedMinZoom,
+              inheritedMaxZoom
+            )
+          );
+        }
+        continue;
+      }
+      const zoomLevels = effectiveZoomLevelsFromConfig(layer, inheritedMinZoom, inheritedMaxZoom);
+      const visible = resolveGpuLayerVisible(layer, parentVisible);
+      const path = buildLayerPath(layer, parentPath || "");
+      const id = pathToCatalogId(path);
+      const legendContext = {
+        ...legendOpts,
+        ancestorLayers: [...ancestorLayers]
+      };
+      const legend = underHideLayersParent ? [] : buildLegendItemsForGpuLayer(layer, legendContext);
+      const node = {
+        id,
+        title: ((_b = layer.title) == null ? void 0 : _b.trim()) || layer.name || id,
+        visible,
+        defaultCollapsed: Boolean(layer.hideLayers),
+        gpuHideLayers: Boolean(layer.hideLayers),
+        gpuVirtual: Boolean(layer.virtual),
+        gpuMapLayer: isGpuMapLayerConfig(layer),
+        gpuOnlyLegend: Boolean(layer.onlyLegend),
+        gpuForceOpacity: Boolean(layer.forceOpacity),
+        gpuDefaultOpacity: defaultOpacityPercent(layer),
+        gpuMinZoomLevel: zoomLevels.min,
+        gpuMaxZoomLevel: zoomLevels.max,
+        legend: legend.length ? legend : void 0
+      };
+      if ((_c = layer.layers) == null ? void 0 : _c.length) {
+        const childNodes = buildTreeLevel(
+          layer.layers,
+          path,
+          [...ancestorLayers, layer],
+          legendOpts,
+          visible,
+          underHideLayersParent || Boolean(layer.hideLayers),
+          zoomLevels.min,
+          zoomLevels.max
+        );
+        if (layer.hideLayers) {
+          node.hiddenCatalogChildren = childNodes;
+        } else {
+          node.children = childNodes;
+        }
+      }
+      nodes.push(node);
+    }
+    return nodes;
+  }
+  function layerConfigToTreeNodes(layers, zoomAtInit = 6) {
+    const legendOpts = readGpuLegendBuildOptions(zoomAtInit);
+    return buildTreeLevel(layers, "", [], legendOpts);
   }
   const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
   const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
@@ -62332,6 +63031,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!LOCAL_GPU_SITE.test(normalized)) return url;
     return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
   }
+  let gpuClientConfigScriptUrl = null;
+  function setGpuClientConfigScriptUrl(url) {
+    gpuClientConfigScriptUrl = (url == null ? void 0 : url.trim()) || null;
+  }
+  function getGpuClientConfigScriptUrl() {
+    return gpuClientConfigScriptUrl;
+  }
   function isAbsoluteUrl(value2) {
     return /^https?:\/\//i.test(value2) || value2.startsWith("//");
   }
@@ -62340,7 +63046,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!trimmed || isAbsoluteUrl(trimmed)) return trimmed;
     if (isGpuDevProxyPath(trimmed)) return trimmed;
     if (typeof window === "undefined") return trimmed;
-    const baseHref = typeof document !== "undefined" ? window.location.href : "http://localhost/";
+    const baseHref = gpuClientConfigScriptUrl ?? (typeof document !== "undefined" ? window.location.href : "http://localhost/");
     return new URL(trimmed, baseHref).href;
   }
   function resolveConfigUrlForFetch(raw) {
@@ -62348,8 +63054,73 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (isGpuDevProxyPath(trimmed)) return trimmed;
     return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
   }
+  const CONFIG_URL_KEY = /Url$/i;
   function resolveConfigUrlsInRecord(target2) {
-    return;
+    if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
+      const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
+      if (fallback == null ? void 0 : fallback.src) {
+        gpuClientConfigScriptUrl = fallback.src;
+      }
+    }
+    if (!gpuClientConfigScriptUrl) return;
+    for (const [key2, val] of Object.entries(target2)) {
+      if (typeof val !== "string" || !val.trim()) continue;
+      if (!CONFIG_URL_KEY.test(key2)) continue;
+      if (isAbsoluteUrl(val.trim())) continue;
+      if (isGpuDevProxyPath(val.trim())) continue;
+      target2[key2] = resolveConfigUrl(val);
+    }
+  }
+  function ensureGpuClientStub() {
+    const w = window;
+    if (typeof w.gpu !== "object" || w.gpu === null) {
+      w.gpu = { config: {} };
+      return;
+    }
+    const gpu2 = w.gpu;
+    if (typeof gpu2.config !== "object" || gpu2.config === null) {
+      gpu2.config = {};
+    }
+  }
+  function finalizeGpuClientConfigStateIfInjected() {
+    var _a, _b;
+    if (isGpuClientConfigSettled()) return;
+    const w = window;
+    if (w.LAYER_CONFIG) {
+      markGpuClientConfigReady();
+      return;
+    }
+    const fromGpu = (_b = (_a = w.gpu) == null ? void 0 : _a.config) == null ? void 0 : _b.apiFicheInfoUrl;
+    const fromModule = config.apiFicheInfoUrl;
+    const api = typeof fromGpu === "string" && fromGpu.trim() ? fromGpu : typeof fromModule === "string" ? fromModule : "";
+    if (api.trim()) {
+      markGpuClientConfigReady();
+    }
+  }
+  function bootstrapGpuSiteMapEmbed() {
+    syncEntreeConfigFromGpuScript();
+    finalizeGpuClientConfigStateIfInjected();
+  }
+  function inferGpuClientConfigScriptUrlFromDom() {
+    if (getGpuClientConfigScriptUrl()) return;
+    const script = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
+    if (script == null ? void 0 : script.src) {
+      setGpuClientConfigScriptUrl(script.src);
+    }
+  }
+  function syncEntreeConfigFromGpuScript() {
+    var _a, _b;
+    ensureGpuClientStub();
+    inferGpuClientConfigScriptUrlFromDom();
+    const w = window;
+    if ((_a = w.gpu) == null ? void 0 : _a.config) {
+      Object.assign(config, w.gpu.config);
+    }
+    resolveConfigUrlsInRecord(config);
+    if ((_b = w.gpu) == null ? void 0 : _b.config) {
+      resolveConfigUrlsInRecord(w.gpu.config);
+    }
+    finalizeGpuClientConfigStateIfInjected();
   }
   const TAB_DU = "du";
   const TAB_PSMV = "psmv";
@@ -62576,6 +63347,24 @@ Expected function or array of functions, received type ${typeof value2}.`
   function buildCoastlineSupHint() {
     return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`;
   }
+  function normalizeLowScaleDocuments(value2) {
+    if (!value2) return [];
+    if (Array.isArray(value2)) return value2;
+    if (typeof value2 === "object") return Object.values(value2);
+    return [];
+  }
+  function buildLowScaleDocumentsHtml(documents) {
+    if (!documents.length) return "";
+    if (documents.length === 1) {
+      return documentIntroHtml(documents[0], "du");
+    }
+    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
+    for (const doc2 of documents) {
+      parts.push(`<li>${documentIntroHtml(doc2, "du")}</li>`);
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
   function buildDocumentTabs(data) {
     const tabs = [];
     const proceduresByDocument = data.proceduresByDocument;
@@ -62621,6 +63410,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         bodyHtml: buildProceduresTabHtml(inProgress)
       });
     }
+    if (!tabs.some((t) => t.id === TAB_DU)) {
+      const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument);
+      if (lowScaleDocs.length) {
+        tabs.unshift({
+          id: TAB_DU,
+          label: "Document d’urbanisme",
+          bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs)
+        });
+      }
+    }
     return tabs;
   }
   function buildParcelHeaderHtml(parcel, lon, lat) {
@@ -62659,9 +63458,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if ((_a = data.grid) == null ? void 0 : _a.is_rnu) {
       return "<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>";
     }
-    if (data.lowScaleDocument) {
-      return "<p>Zoomer davantage pour afficher les documents d’urbanisme à cette échelle.</p>";
-    }
+    const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument));
+    if (lowScaleHtml) return lowScaleHtml;
     return "<p>Aucun document disponible à cet emplacement.</p>";
   }
   function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
@@ -62741,6 +63539,43 @@ Expected function or array of functions, received type ${typeof value2}.`
       title,
       loading: "data",
       bodyHtml: FICHE_LOADING_SPINNER_HTML
+    });
+  }
+  function loadFicheForCherryFromPermalink() {
+    const marker = readMapPermalinkMarker(getMapPermalinkParams());
+    if (!marker) return;
+    const params2 = getMapPermalinkParams();
+    const mode2 = readMapModeFromPermalinkParams(params2) ?? MAP_MODE_TERRITORY;
+    const zoom = readMapPermalinkZoom(params2) ?? 14;
+    void loadFicheForMapPoint({
+      lon: marker.lon,
+      lat: marker.lat,
+      mode: mode2,
+      zoom,
+      markerPlacedAtClick: true,
+      skipLocationMarker: true
+    });
+  }
+  let cherryFicheLoadQueued = false;
+  function scheduleFicheLoadForCherryWhenReady() {
+    if (cherryFicheLoadQueued) return;
+    if (!readMapPermalinkMarker(getMapPermalinkParams())) return;
+    syncEntreeConfigFromGpuScript();
+    finalizeGpuClientConfigStateIfInjected();
+    cherryFicheLoadQueued = true;
+    whenGpuClientConfigReady(() => {
+      cherryFicheLoadQueued = false;
+      const run = () => loadFicheForCherryFromPermalink();
+      if (tabPanelsApiRef.value) {
+        run();
+        return;
+      }
+      const stop = watch(tabPanelsApiRef, (api) => {
+        if (api) {
+          stop();
+          run();
+        }
+      });
     });
   }
   function showFiche(selection) {
@@ -85055,75 +85890,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return 0.7;
   }
-  function resolveGpuLayerVisible(layer, parentVisible) {
-    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
-      return Boolean(layer.visible);
-    }
-    return parentVisible;
-  }
-  function pathToCatalogId(path) {
-    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
-    if (!normalized) return "root";
-    return normalized.split("/").map(
-      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    ).join("--");
-  }
-  function pathSegment(layer) {
-    var _a, _b;
-    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
-      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
-      return parts[parts.length - 1] ?? "couche";
-    }
-    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
-    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
-      for (const value2 of layer.filterValue) {
-        uniqueName += value2;
-      }
-    }
-    if (layer.filterAttribute && layer.filterValueLike) {
-      uniqueName += `_${layer.filterValueLike}`;
-    }
-    return uniqueName.toLowerCase();
-  }
-  function buildLayerPath(layer, parentPath) {
-    var _a;
-    if ((_a = layer.path) == null ? void 0 : _a.startsWith("/")) {
-      return layer.path.replace(/\/+/g, "/");
-    }
-    const segment = pathSegment(layer);
-    if (!parentPath) return `/${segment}`;
-    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
-    return `${base}/${segment}`.replace(/\/+/g, "/");
-  }
-  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
-    var _a, _b;
-    for (const layer of layers) {
-      if (layer.hideHimself) {
-        if ((_a = layer.layers) == null ? void 0 : _a.length) {
-          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
-        }
-        continue;
-      }
-      const path = buildLayerPath(layer, parentPath || "");
-      const id = pathToCatalogId(path);
-      registry.push({ id, path, config: layer });
-      if ((_b = layer.layers) == null ? void 0 : _b.length) {
-        layerConfigToCatalogEntries(layer.layers, path, registry);
-      }
-    }
-    return registry;
-  }
-  function readLayerConfigFromWindow() {
-    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
-    if (!Array.isArray(raw) || !raw.length) return null;
-    return raw;
-  }
-  function resolveLayerConfig(paramsLayerConfig) {
-    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
-      return paramsLayerConfig;
-    }
-    return readLayerConfigFromWindow();
-  }
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
     const mapZoom = /* @__PURE__ */ ref(6);
@@ -85143,522 +85909,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     watch(() => mapRef.value ?? null, bindMap, { immediate: true });
     onUnmounted(() => unbind == null ? void 0 : unbind());
     return { mapZoom };
-  }
-  const GPU_FORCE_OPACITY_PERCENT = 100;
-  function catalogNodeOpacityPercent(node) {
-    if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
-    if (typeof node.gpuDefaultOpacity === "number") return node.gpuDefaultOpacity;
-    return 70;
-  }
-  function catalogChildNodes(node) {
-    return [...node.children ?? [], ...node.hiddenCatalogChildren ?? []];
-  }
-  function catalogSwitcherDisplayNodes(nodes) {
-    var _a;
-    const out = [];
-    for (const node of nodes) {
-      if (node.gpuOnlyLegend) {
-        out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)));
-        continue;
-      }
-      const children = ((_a = node.children) == null ? void 0 : _a.length) ? catalogSwitcherDisplayNodes(node.children) : void 0;
-      out.push({
-        ...node,
-        children: (children == null ? void 0 : children.length) ? children : void 0
-      });
-    }
-    return out;
-  }
-  const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
-  const GEOMETRY_TYPES = ["pct", "lin", "surf"];
-  function normalizeLayerNameForLegend(layerName) {
-    return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
-  }
-  function readScaleDependantThreshold(layer) {
-    const raw = layer.scaleDependantTreshold;
-    if (raw === void 0 || raw === null) return void 0;
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : void 0;
-  }
-  function isLayerScaleDependant(layer, ancestors) {
-    if (layer.scaleDependant) return true;
-    for (const a of ancestors) {
-      if (a.scaleDependant) return true;
-    }
-    return false;
-  }
-  function getScaleDependantThreshold(layer, ancestors) {
-    const chain = [layer, ...ancestors];
-    for (const item of chain) {
-      const t = readScaleDependantThreshold(item);
-      if (t !== void 0 && !Number.isNaN(t)) return t;
-    }
-    return DEFAULT_SCALE_DEPENDANT_THRESHOLD;
-  }
-  function isHighScaleZoom(zoom, threshold) {
-    return zoom >= threshold;
-  }
-  function legendImageUrl(imagePath, imageName, scaleDependant, threshold, zoom) {
-    let name2 = imageName;
-    if (scaleDependant) {
-      name2 += isHighScaleZoom(zoom, threshold) ? "-highscale" : "-lowscale";
-    }
-    return `${imagePath}${name2}.png`;
-  }
-  function legendImageNamesForItem(item) {
-    var _a;
-    if ((_a = item.legendImageNames) == null ? void 0 : _a.length) return item.legendImageNames;
-    if (item.legendImageName) return [item.legendImageName];
-    return [];
-  }
-  function sortLegendImageNamesByGeometry(names2) {
-    function rank(name2) {
-      const match2 = name2.match(/_(pct|lin|surf)(?:\/|$|-)/);
-      if (!match2) return GEOMETRY_TYPES.length;
-      const idx = GEOMETRY_TYPES.indexOf(match2[1]);
-      return idx >= 0 ? idx : GEOMETRY_TYPES.length;
-    }
-    return [...names2].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
-  }
-  function resolveLegendItemImageUrls(item, zoom) {
-    const path = item.legendImagePath;
-    const names2 = legendImageNamesForItem(item);
-    if (path && names2.length) {
-      const scaleDependant = item.legendScaleDependant === true;
-      const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD;
-      return names2.map((name2) => legendImageUrl(path, name2, scaleDependant, threshold, zoom));
-    }
-    if (item.imageUrl) return [item.imageUrl];
-    return [];
-  }
-  function legendItemVisualKey(item) {
-    var _a;
-    const imagePart = ((_a = item.legendImageNames) == null ? void 0 : _a.length) ? [...item.legendImageNames].sort().join("") : item.legendImageName ?? item.imageUrl ?? "";
-    return `${item.title}${imagePart}${item.legendImagePath ?? ""}`;
-  }
-  function dedupeLegendItems(items) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const item of items) {
-      const key2 = legendItemVisualKey(item);
-      if (seen.has(key2)) continue;
-      seen.add(key2);
-      out.push(item);
-    }
-    return out;
-  }
-  function layerLegendAccordionKey(title, legend) {
-    return `${title}${legend.map(legendItemVisualKey).sort().join("")}`;
-  }
-  function dedupeLegendLayersForPanel(layers) {
-    const seenLegendKeys = /* @__PURE__ */ new Set();
-    const seenAccordionKeys = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const layer of layers) {
-      const legend = dedupeLegendItems(layer.legend ?? []).filter((item) => {
-        const key2 = legendItemVisualKey(item);
-        if (seenLegendKeys.has(key2)) return false;
-        seenLegendKeys.add(key2);
-        return true;
-      });
-      if (!legend.length) continue;
-      const accordionKey = layerLegendAccordionKey(layer.title, legend);
-      if (seenAccordionKeys.has(accordionKey)) continue;
-      seenAccordionKeys.add(accordionKey);
-      out.push({ ...layer, legend });
-    }
-    return out;
-  }
-  function resolveLegendImageDetailDirectory() {
-    var _a;
-    const fromMerged = typeof config.legendImageDetailDirectory === "string" ? config.legendImageDetailDirectory : "";
-    if (fromMerged) return normalizeLegendImageBaseUrl(fromMerged);
-    const w = typeof window !== "undefined" ? window : void 0;
-    const gpuCfg = (_a = w == null ? void 0 : w.gpu) == null ? void 0 : _a.config;
-    const fromGpu = typeof (gpuCfg == null ? void 0 : gpuCfg.legendImageDetailDirectory) === "string" ? gpuCfg.legendImageDetailDirectory : "";
-    return normalizeLegendImageBaseUrl(fromGpu);
-  }
-  function normalizeLegendImageBaseUrl(raw) {
-    const withoutQuery = raw.replace(/\?.*$/i, "");
-    if (!withoutQuery.length) return "";
-    return withoutQuery.endsWith("/") ? withoutQuery : `${withoutQuery}/`;
-  }
-  function readLegendConfigArray(raw) {
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === "object") return Object.values(raw);
-    return [];
-  }
-  function hasFilterIn(layer) {
-    var _a;
-    return Boolean(layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length));
-  }
-  function isPsmvLayerName(layerName) {
-    return layerName.slice(-5) === "_psmv";
-  }
-  function hasLegendReferences(layerName, refs) {
-    return layerName in refs;
-  }
-  function getLegendReferenceRuleKey(layerName, rule, refs) {
-    const bucket = refs[layerName];
-    if (!bucket) return rule;
-    if (bucket[rule]) return rule;
-    if ((layerName === "info" || layerName === "prescription") && /^\d{2}$/.test(rule)) {
-      const defaultKey = `${rule}-00`;
-      if (bucket[defaultKey]) return defaultKey;
-      const prefix = `${rule}-`;
-      const matching = Object.keys(bucket).filter((k) => k.startsWith(prefix)).sort();
-      if (matching.length) return matching[0];
-    }
-    return rule;
-  }
-  function getLegendReference(layerName, rule, refs) {
-    const bucket = refs[layerName];
-    if (!bucket) return void 0;
-    return bucket[getLegendReferenceRuleKey(layerName, rule, refs)];
-  }
-  function getImageNameByGpuLayer(layer, rule, subRule, geometryType) {
-    const base = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
-    let imageName = `${base}_${geometryType}/${rule}`;
-    if (subRule) imageName += `-${subRule}`;
-    return imageName;
-  }
-  function getImageNameByLegendReferences(layerName, ruleName, type) {
-    if (type) return `${type}/${ruleName}`;
-    return `${normalizeLayerNameForLegend(layerName)}/${ruleName}`;
-  }
-  function getGeometryTypesForLegendWithFilter(layerName, rule, legendConfig) {
-    var _a;
-    const geometryTypes = [];
-    for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
-      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
-      if ((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule)) {
-        geometryTypes.push(childLayerName.split(`${layerName}_`)[1]);
-      }
-    }
-    return geometryTypes;
-  }
-  function getGeometryTypesForLegendWithFilterAndSubFilter(layerName, rule, subRule, legendConfig) {
-    var _a, _b, _c;
-    const geometryTypes = [];
-    for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
-      const suffix = childLayerName.split(`${layerName}_`)[1];
-      if (!suffix || !GEOMETRY_TYPES.includes(suffix)) continue;
-      if (!((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule))) continue;
-      if ((_c = (_b = entry.hasfilter2) == null ? void 0 : _b[rule]) == null ? void 0 : _c.includes(subRule)) {
-        geometryTypes.push(suffix);
-      }
-    }
-    return geometryTypes;
-  }
-  function getSubRules(layerName, rule, legendConfig) {
-    var _a;
-    const subRules = [];
-    for (const entry of legendConfig) {
-      const entryName = normalizeLayerNameForLegend(entry.name);
-      for (const geometryType of GEOMETRY_TYPES) {
-        if (entryName !== `${layerName}_${geometryType}`) continue;
-        const list = (_a = entry.hasfilter2) == null ? void 0 : _a[rule];
-        if (!(list == null ? void 0 : list.length)) continue;
-        for (const subRule of list) {
-          if (!subRules.includes(subRule)) subRules.push(subRule);
-        }
-      }
-    }
-    return subRules;
-  }
-  function getOtherLegendImageNamesByFilterValues(layerName, rules, legendConfig) {
-    var _a;
-    const imageNames = [];
-    for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
-      if (childLayerName.split(`${layerName}_`).length <= 1) continue;
-      if (entry.other !== true) continue;
-      const matchesRule = (_a = entry.allowedValues) == null ? void 0 : _a.some((v) => rules.includes(v));
-      if (!matchesRule) continue;
-      imageNames.push(`${childLayerName}/other`);
-    }
-    return imageNames;
-  }
-  function pushLegendItemsFromNames(items, names2, title, opts, scaleDependant, threshold, idPrefix) {
-    if (!names2.length) return;
-    const sorted = sortLegendImageNamesByGeometry(names2);
-    const item = {
-      id: `${idPrefix}-${sorted.join("|")}`,
-      title,
-      legendImagePath: opts.imagePath,
-      legendScaleDependant: scaleDependant,
-      legendScaleThreshold: threshold
-    };
-    if (sorted.length === 1) {
-      item.legendImageName = sorted[0];
-      if (opts.imagePath) {
-        item.imageUrl = legendImageUrl(
-          opts.imagePath,
-          sorted[0],
-          scaleDependant,
-          threshold,
-          opts.zoomAtInit
-        );
-      }
-    } else {
-      item.legendImageNames = sorted;
-    }
-    items.push(item);
-  }
-  function buildNoFilterLegends(layer, opts) {
-    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
-    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
-    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
-    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
-    const items = [];
-    const bucket = opts.legendReferences[layerName];
-    for (const ruleName of Object.keys(bucket)) {
-      const ref2 = bucket[ruleName];
-      if (ref2.hide) continue;
-      const names2 = [];
-      if (Array.isArray(ref2.type)) {
-        for (const t of ref2.type) {
-          names2.push(getImageNameByLegendReferences(layerName, ruleName, t));
-        }
-      } else {
-        names2.push(getImageNameByLegendReferences(layerName, ruleName, ref2.type));
-      }
-      if (ref2.combine) {
-        for (const subRuleName of Object.keys(ref2.combine)) {
-          for (const st of ref2.combine[subRuleName].type) {
-            names2.push(getImageNameByLegendReferences(layerName, subRuleName, st));
-          }
-        }
-      }
-      pushLegendItemsFromNames(
-        items,
-        names2,
-        ref2.title,
-        opts,
-        scaleDependant,
-        threshold,
-        layerName + ruleName
-      );
-    }
-    return items;
-  }
-  function buildFilterLegends(layer, opts) {
-    var _a;
-    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
-    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
-    const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
-    const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
-    const items = [];
-    for (const rule of layer.filterValue ?? []) {
-      const subRules = getSubRules(layerName, rule, opts.legendConfig);
-      if (subRules.length === 0) {
-        const geometryTypes = getGeometryTypesForLegendWithFilter(layerName, rule, opts.legendConfig);
-        if (!geometryTypes.length) continue;
-        const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, null, g));
-        const ref2 = getLegendReference(layerName, rule, opts.legendReferences);
-        if (!ref2 || ref2.hide) continue;
-        pushLegendItemsFromNames(
-          items,
-          names2,
-          ref2.title,
-          opts,
-          scaleDependant,
-          threshold,
-          `${layerName}${rule}`
-        );
-      } else {
-        for (const subRule of subRules) {
-          const geometryTypes = getGeometryTypesForLegendWithFilterAndSubFilter(
-            layerName,
-            rule,
-            subRule,
-            opts.legendConfig
-          );
-          if (!geometryTypes.length) continue;
-          const names2 = geometryTypes.map((g) => getImageNameByGpuLayer(layer, rule, subRule, g));
-          const subLegendRef = (_a = opts.legendReferences[layerName]) == null ? void 0 : _a[`${rule}-${subRule}`];
-          if (!subLegendRef || subLegendRef.hide) continue;
-          pushLegendItemsFromNames(
-            items,
-            names2,
-            subLegendRef.title,
-            opts,
-            scaleDependant,
-            threshold,
-            `${layerName}${rule}-${subRule}`
-          );
-        }
-      }
-    }
-    const otherNames = getOtherLegendImageNamesByFilterValues(
-      layerName,
-      layer.filterValue ?? [],
-      opts.legendConfig
-    );
-    if (otherNames.length) {
-      let title = `Autres ${(layer.title ?? layer.name ?? "").toLowerCase()}`;
-      if (layerName === "prescription") title = "Autres prescriptions";
-      pushLegendItemsFromNames(items, otherNames, title, opts, false, threshold, `${layerName}-other`);
-    }
-    return items;
-  }
-  function buildLegendItemsForLeafGpuLayer(layer, opts) {
-    if (!layer.name) return [];
-    const layerName = normalizeLayerNameForLegend(layer.name.split(",")[0]);
-    if (isPsmvLayerName(layerName)) return [];
-    if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
-    if (hasFilterIn(layer)) return buildFilterLegends(layer, opts);
-    return buildNoFilterLegends(layer, opts);
-  }
-  function buildHideLayersAggregatedLegendItems(layer, opts) {
-    const items = [];
-    for (const child of layer.layers ?? []) {
-      const childName = normalizeLayerNameForLegend((child.name ?? "").split(",")[0] ?? "");
-      if (childName === "prescription_psmv") continue;
-      items.push(...buildLegendItemsForLeafGpuLayer(child, opts));
-    }
-    return items;
-  }
-  function buildLegendItemsForGpuLayer(layer, opts) {
-    var _a;
-    if (!layer.name) return [];
-    if ((_a = layer.layers) == null ? void 0 : _a.length) {
-      if (!layer.hideLayers) return [];
-      if (hasFilterIn(layer)) return buildLegendItemsForLeafGpuLayer(layer, opts);
-      return buildHideLayersAggregatedLegendItems(layer, opts);
-    }
-    return buildLegendItemsForLeafGpuLayer(layer, opts);
-  }
-  function readGpuLegendBuildOptions(zoomAtInit = 6) {
-    const w = typeof window !== "undefined" ? window : void 0;
-    const legendConfig = readLegendConfigArray(w == null ? void 0 : w.LEGEND_CONFIG);
-    const legendReferences = (w == null ? void 0 : w.LEGEND_REFERENCES) && typeof w.LEGEND_REFERENCES === "object" ? w.LEGEND_REFERENCES : {};
-    return {
-      legendConfig,
-      legendReferences,
-      imagePath: resolveLegendImageDetailDirectory(),
-      zoomAtInit,
-      ancestorLayers: []
-    };
-  }
-  function isCatalogAggregate(node) {
-    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
-  }
-  function directCatalogChildren(node) {
-    return catalogChildNodes(node);
-  }
-  function isCheckboxSameAsDirectChildren(checked, node) {
-    const self2 = Boolean(checked[node.id]);
-    for (const child of directCatalogChildren(node)) {
-      if (Boolean(checked[child.id]) !== self2) return false;
-    }
-    return true;
-  }
-  function isSameAsChildrenState(checked, node, opacityById) {
-    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
-    return isOpacitySameAsDirectChildren(node, opacityById);
-  }
-  function isSameAsDescendants(checked, node, index2, opacityById) {
-    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
-    for (const child of directCatalogChildren(node)) {
-      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
-    }
-    return true;
-  }
-  function splitAggregateAncestorId(nodeId, index2, splitIds) {
-    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
-    let current = index2.nodesById.get(nodeId);
-    while (current) {
-      const parent = index2.parentById.get(current.id);
-      if (!parent) return null;
-      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
-      current = parent;
-    }
-    return null;
-  }
-  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    const parent = index2.parentById.get(node.id);
-    if (!parent) return false;
-    if (split == null ? void 0 : split.has(parent.id)) {
-      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-    }
-    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
-      return true;
-    }
-    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-  }
-  function isOpacitySameAsDirectChildren(node, opacityById) {
-    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
-    for (const child of directCatalogChildren(node)) {
-      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
-      if (childOpacity !== selfOpacity) return false;
-    }
-    return true;
-  }
-  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
-    if (!node.gpuMapLayer || node.gpuVirtual) return false;
-    if (!checked[node.id]) return false;
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
-      return false;
-    }
-    if (splitAggregateAncestorId(node.id, index2, split)) {
-      return true;
-    }
-    const parent = index2.parentById.get(node.id);
-    if (!parent) {
-      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
-      return catalogChildNodes(node).length === 0;
-    }
-    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
-      return true;
-    }
-    return false;
-  }
-  function propagateCheckedToDescendants(checked, node, value2) {
-    for (const child of directCatalogChildren(node)) {
-      checked[child.id] = value2;
-      propagateCheckedToDescendants(checked, child, value2);
-    }
-  }
-  function propagateCheckedToAncestors(checked, nodeId, index2) {
-    const parent = index2.parentById.get(nodeId);
-    if (!parent) return;
-    let parentChecked = false;
-    for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend) continue;
-      if (checked[child.id]) {
-        parentChecked = true;
-        break;
-      }
-    }
-    for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend && Boolean(checked[child.id]) !== parentChecked) {
-        checked[child.id] = parentChecked;
-      }
-    }
-    if (Boolean(checked[parent.id]) !== parentChecked) {
-      checked[parent.id] = parentChecked;
-    }
-    propagateCheckedToAncestors(checked, parent.id, index2);
-  }
-  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
-    const node = index2.nodesById.get(nodeId);
-    if (!node) return;
-    checked[nodeId] = value2;
-    propagateCheckedToAncestors(checked, nodeId, index2);
-    propagateCheckedToDescendants(checked, node, value2);
-  }
-  function computeMapVisibilityById(checked, index2, opacityById, options) {
-    const out = {};
-    for (const node of index2.nodesById.values()) {
-      if (!node.gpuMapLayer) continue;
-      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
-    }
-    return out;
   }
   function defaultPanelStateForNode(node) {
     return {
@@ -85917,27 +86167,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     for (const root of roots) visit(root);
     return expand;
-  }
-  const DEFAULT_GPU_MIN_ZOOM = 0;
-  const DEFAULT_GPU_MAX_ZOOM = 22;
-  function isZoomInLayerRange(zoom, minZoom, maxZoom) {
-    return zoom >= minZoom && zoom <= maxZoom;
-  }
-  function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
-    return {
-      min: layer.minZoomLevel ?? inheritedMin,
-      max: layer.maxZoomLevel ?? inheritedMax
-    };
-  }
-  function isCatalogNodeInZoomRange(node, zoom) {
-    const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
-    const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM;
-    const children = catalogChildNodes(node);
-    if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
-      return isZoomInLayerRange(zoom, min, max);
-    }
-    if (!children.length) return true;
-    return children.some((child) => isCatalogNodeInZoomRange(child, zoom));
   }
   const STACK_SORT_KEY_STEP = 1e3;
   function ensureStackSortKeys(sortKeyById, catalogStackOrderBottomToTop) {
@@ -88350,6 +88579,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         showMapLocationMarker(marker.lon, marker.lat, { label: "", origin: "permalink", center: false });
         const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
         ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode2, key2);
+        scheduleFicheLoadForCherryWhenReady();
       }
       function syncViewToPermalink(map2) {
         const view = map2.getView();
@@ -88716,109 +88946,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!preset) return;
     for (const key2 of preset.stack) {
       env.mainLayers[key2].setVisible(true);
-    }
-  }
-  function defaultOpacityPercent(layer) {
-    if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT;
-    if (typeof layer.opacity === "number" && Number.isFinite(layer.opacity)) {
-      return Math.round(layer.opacity * 100);
-    }
-    return 70;
-  }
-  function isGpuMapLayerConfig(layer) {
-    var _a;
-    return !layer.virtual && Boolean((_a = layer.name) == null ? void 0 : _a.trim());
-  }
-  function buildTreeLevel(layers, parentPath, ancestorLayers, legendOpts, parentVisible = false, underHideLayersParent = false, inheritedMinZoom = DEFAULT_GPU_MIN_ZOOM, inheritedMaxZoom = DEFAULT_GPU_MAX_ZOOM) {
-    var _a, _b, _c;
-    const nodes = [];
-    for (const layer of layers) {
-      if (layer.hideHimself) {
-        if ((_a = layer.layers) == null ? void 0 : _a.length) {
-          nodes.push(
-            ...buildTreeLevel(
-              layer.layers,
-              parentPath,
-              ancestorLayers,
-              legendOpts,
-              parentVisible,
-              underHideLayersParent,
-              inheritedMinZoom,
-              inheritedMaxZoom
-            )
-          );
-        }
-        continue;
-      }
-      const zoomLevels = effectiveZoomLevelsFromConfig(layer, inheritedMinZoom, inheritedMaxZoom);
-      const visible = resolveGpuLayerVisible(layer, parentVisible);
-      const path = buildLayerPath(layer, parentPath || "");
-      const id = pathToCatalogId(path);
-      const legendContext = {
-        ...legendOpts,
-        ancestorLayers: [...ancestorLayers]
-      };
-      const legend = underHideLayersParent ? [] : buildLegendItemsForGpuLayer(layer, legendContext);
-      const node = {
-        id,
-        title: ((_b = layer.title) == null ? void 0 : _b.trim()) || layer.name || id,
-        visible,
-        defaultCollapsed: Boolean(layer.hideLayers),
-        gpuHideLayers: Boolean(layer.hideLayers),
-        gpuVirtual: Boolean(layer.virtual),
-        gpuMapLayer: isGpuMapLayerConfig(layer),
-        gpuOnlyLegend: Boolean(layer.onlyLegend),
-        gpuForceOpacity: Boolean(layer.forceOpacity),
-        gpuDefaultOpacity: defaultOpacityPercent(layer),
-        gpuMinZoomLevel: zoomLevels.min,
-        gpuMaxZoomLevel: zoomLevels.max,
-        legend: legend.length ? legend : void 0
-      };
-      if ((_c = layer.layers) == null ? void 0 : _c.length) {
-        const childNodes = buildTreeLevel(
-          layer.layers,
-          path,
-          [...ancestorLayers, layer],
-          legendOpts,
-          visible,
-          underHideLayersParent || Boolean(layer.hideLayers),
-          zoomLevels.min,
-          zoomLevels.max
-        );
-        if (layer.hideLayers) {
-          node.hiddenCatalogChildren = childNodes;
-        } else {
-          node.children = childNodes;
-        }
-      }
-      nodes.push(node);
-    }
-    return nodes;
-  }
-  function layerConfigToTreeNodes(layers, zoomAtInit = 6) {
-    const legendOpts = readGpuLegendBuildOptions(zoomAtInit);
-    return buildTreeLevel(layers, "", [], legendOpts);
-  }
-  function ensureGpuClientStub() {
-    const w = window;
-    if (typeof w.gpu !== "object" || w.gpu === null) {
-      w.gpu = { config: {} };
-      return;
-    }
-    const gpu2 = w.gpu;
-    if (typeof gpu2.config !== "object" || gpu2.config === null) {
-      gpu2.config = {};
-    }
-  }
-  function syncEntreeConfigFromGpuScript() {
-    var _a, _b;
-    ensureGpuClientStub();
-    const w = window;
-    if ((_a = w.gpu) == null ? void 0 : _a.config) {
-      Object.assign(config, w.gpu.config);
-    }
-    if ((_b = w.gpu) == null ? void 0 : _b.config) {
-      resolveConfigUrlsInRecord(w.gpu.config);
     }
   }
   const DECIMALS = 4;
@@ -89497,6 +89624,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     embedApp = createApp(EmbedMapViewer, { params: params2 });
     embedApp.mount(container);
+    queueMicrotask(() => {
+      bootstrapGpuSiteMapEmbed();
+      scheduleFicheLoadForCherryWhenReady();
+    });
     return {
       destroy() {
         embedApp == null ? void 0 : embedApp.unmount();

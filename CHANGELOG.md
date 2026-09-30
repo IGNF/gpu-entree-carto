@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Territory fiche** — urban-planning data only via `apiFicheInfoUrl` from gpu-client-config; removed APICarto `gpu/document` fallback and default `/api/fiche-info`; shows “Indisponibilité du service” when the API is not configured.
 - **GPU config** — relative `*Url` values resolve against the `gpu-client-config.js` script host (then Vite dev proxy when applicable).
 - **Fiche info** — `/api/fiche-info` JSON (gpu-site): mode-specific header, tabs for DU / PSMV / SUP / SCoT and in-progress procedures.
+- **Fiche gpu-site embed** — Twig-injected config (`LAYER_CONFIG`) marks GPU config ready; permalink cherry fiche loads after TabPanels mount; low-scale document summary; sync gpu.config before cherry fiche scheduling; infer `gpu-client-config` script URL from the DOM for relative `*Url` resolution.
 - **Map permalink** — `lon`, `lat`, `mlon`, and `mlat` are written with at most 8 decimal places in the URL hash.
 - **Map permalink** — catalog, data-layer, and base-map changes update the hash; `mode` is stored in `#…` (not `?mode=`).
 - **Map permalink** — percent-encode layer keys/values; normalize legacy gpu-client hashes on load (Vue Router decode warning).

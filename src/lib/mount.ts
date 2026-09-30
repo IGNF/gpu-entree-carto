@@ -1,10 +1,12 @@
 import { createApp, type App } from 'vue'
 import EmbedMapViewer from '@/embed/EmbedMapViewer.vue'
 import type { StandardViewerParams } from '@/lib/types'
+import { bootstrapGpuSiteMapEmbed } from '@/lib/demo/demoConfig'
 import {
   bootstrapMapPermalinkFromLocation,
   locationHashLooksLikeMapPermalink,
 } from '@/lib/map/mapPermalink'
+import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 
 let embedApp: App | null = null
 
@@ -27,6 +29,11 @@ export function mountMapViewer(
   }
   embedApp = createApp(EmbedMapViewer, { params })
   embedApp.mount(container)
+
+  queueMicrotask(() => {
+    bootstrapGpuSiteMapEmbed()
+    scheduleFicheLoadForCherryWhenReady()
+  })
 
   return {
     destroy() {

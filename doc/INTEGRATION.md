@@ -223,13 +223,20 @@ cd ../entree-carto && make dev
 cd ../gpu-site && npm install && npm run watch
 ```
 
-To test without publishing: in gpu-site `package.json`:
+To test without publishing: in gpu-site `package.json`, replace the GitHub dependency with the local repo:
 
 ```json
 "entree-carto": "file:../entree-carto"
 ```
 
-Then `npm install` and `make build-lib` in entree-carto.
+Then:
+
+```sh
+cd ../entree-carto && npm run build
+cd ../gpu-site && npm install && npm run watch
+```
+
+Webpack copies `node_modules/entree-carto/dist/*.min.js` into `build/vendor/entree-carto/`. **Without a rebuild**, `/map/` on `localhost:8000` keeps running the old npm bundle (typical symptom: no `apiFicheInfoUrl` request / permalink fiche inactive while the GitHub Pages demo works).
 
 ---
 

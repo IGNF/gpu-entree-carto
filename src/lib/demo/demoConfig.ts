@@ -3,8 +3,13 @@ import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
-import { resolveConfigUrlsInRecord, setGpuClientConfigScriptUrl } from '@/lib/configUrls'
 import {
+  getGpuClientConfigScriptUrl,
+  resolveConfigUrlsInRecord,
+  setGpuClientConfigScriptUrl,
+} from '@/lib/configUrls'
+import {
+  isGpuClientConfigSettled,
   markGpuClientConfigError,
   markGpuClientConfigLoading,
   markGpuClientConfigNone,
@@ -149,8 +154,52 @@ export function ensureGpuClientStub(): void {
   }
 }
 
+/**
+ * gpu-site : config déjà injectée (Twig + gpu-client-config) sans passer par prepareDemoEnvironment.
+ */
+export function finalizeGpuClientConfigStateIfInjected(): void {
+  if (isGpuClientConfigSettled()) return
+  const w = window as Window & {
+    LAYER_CONFIG?: unknown
+    gpu?: { config?: Record<string, unknown> }
+  }
+  if (w.LAYER_CONFIG) {
+    markGpuClientConfigReady()
+    return
+  }
+  const fromGpu = w.gpu?.config?.apiFicheInfoUrl
+  const fromModule = config.apiFicheInfoUrl
+  const api =
+    typeof fromGpu === 'string' && fromGpu.trim()
+      ? fromGpu
+      : typeof fromModule === 'string'
+        ? fromModule
+        : ''
+  if (api.trim()) {
+    markGpuClientConfigReady()
+  }
+}
+
+/** Après montage embed gpu-site (#gpu-map-container) : sync config Twig + fiche permalink. */
+export function bootstrapGpuSiteMapEmbed(): void {
+  syncEntreeConfigFromGpuScript()
+  finalizeGpuClientConfigStateIfInjected()
+}
+
+/** gpu-site sert la config via Twig (`gpu_map_client_config_js`) sans attribut data-ec-demo-config. */
+function inferGpuClientConfigScriptUrlFromDom(): void {
+  if (getGpuClientConfigScriptUrl()) return
+  const script =
+    document.querySelector<HTMLScriptElement>('script[src*="gpu_map_client_config"]') ??
+    document.querySelector<HTMLScriptElement>('script#gpu-client-config[src]')
+  if (script?.src) {
+    setGpuClientConfigScriptUrl(script.src)
+  }
+}
+
 export function syncEntreeConfigFromGpuScript(): void {
   ensureGpuClientStub()
+  inferGpuClientConfigScriptUrlFromDom()
   const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
   if (w.gpu?.config) {
     Object.assign(config, w.gpu.config)
@@ -159,6 +208,7 @@ export function syncEntreeConfigFromGpuScript(): void {
   if (w.gpu?.config) {
     resolveConfigUrlsInRecord(w.gpu.config)
   }
+  finalizeGpuClientConfigStateIfInjected()
 }
 
 function applyGpuConfigSyncAndDevRewrite(): void {
@@ -233,8 +283,6 @@ export async function prepareDemoEnvironment(
   const url = cfg.configScriptUrl?.trim()
   if (!url) {
     markGpuClientConfigNone()
-    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
-    loadFicheForCherryFromPermalink()
     return cfg
   }
   markGpuClientConfigLoading()
@@ -242,12 +290,8 @@ export async function prepareDemoEnvironment(
     await loadGpuClientConfigScript(url)
     applyGpuConfigSyncAndDevRewrite()
     markGpuClientConfigReady()
-    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
-    loadFicheForCherryFromPermalink()
   } catch {
     markGpuClientConfigError()
-    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
-    loadFicheForCherryFromPermalink()
     /* démo utilisable avec layerNodes locaux */
   }
   return cfg

@@ -4,9 +4,14 @@ import type { StandardViewerSearch } from '@/lib/types'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
+import { watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { escapeHtml, FICHE_LOADING_SPINNER_HTML, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
+import {
+  finalizeGpuClientConfigStateIfInjected,
+  syncEntreeConfigFromGpuScript,
+} from '@/lib/demo/demoConfig'
 import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
@@ -114,13 +119,38 @@ export function loadFicheForCherryFromPermalink(): void {
   const params = getMapPermalinkParams()
   const mode = readMapModeFromPermalinkParams(params) ?? MAP_MODE_TERRITORY
   const zoom = readMapPermalinkZoom(params) ?? 14
-  void loadFicheForMapPointImpl({
+  void loadFicheForMapPoint({
     lon: marker.lon,
     lat: marker.lat,
     mode,
     zoom,
     markerPlacedAtClick: true,
     skipLocationMarker: true,
+  })
+}
+
+let cherryFicheLoadQueued = false
+
+/** Attend la config GPU et TabPanels, puis charge la fiche si mlon/mlat sont dans le permalink. */
+export function scheduleFicheLoadForCherryWhenReady(): void {
+  if (cherryFicheLoadQueued) return
+  if (!readMapPermalinkMarker(getMapPermalinkParams())) return
+  syncEntreeConfigFromGpuScript()
+  finalizeGpuClientConfigStateIfInjected()
+  cherryFicheLoadQueued = true
+  whenGpuClientConfigReady(() => {
+    cherryFicheLoadQueued = false
+    const run = () => loadFicheForCherryFromPermalink()
+    if (tabPanelsApiRef.value) {
+      run()
+      return
+    }
+    const stop = watch(tabPanelsApiRef, (api) => {
+      if (api) {
+        stop()
+        run()
+      }
+    })
   })
 }
 
