@@ -62145,7 +62145,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function locationHashLooksLikeMapPermalink(loc = typeof window !== "undefined" ? window.location : { hash: "" }) {
     const raw = loc.hash.replace(/^#/, "").trim();
     if (!raw) return false;
-    return /(?:^|&)lon=/.test(raw) || /(?:^|&)lat=/.test(raw) || /(?:^|&)tile=/.test(raw);
+    return /(?:^|&)lon=/.test(raw) || /(?:^|&)lat=/.test(raw) || /(?:^|&)tile=/.test(raw) || /(?:^|&)mlon=/.test(raw) || /(?:^|&)mlat=/.test(raw);
   }
   function getMapPermalinkParams() {
     return { ...cachedParams };
@@ -62314,7 +62314,24 @@ Expected function or array of functions, received type ${typeof value2}.`
     const s = gpuClientConfigStatus.value;
     return s === "ready" || s === "none" || s === "error";
   }
+  function trySettleGpuClientConfigFromWindow() {
+    var _a, _b;
+    if (isGpuClientConfigSettled()) return;
+    if (typeof window === "undefined") return;
+    const w = window;
+    if (w.LAYER_CONFIG) {
+      markGpuClientConfigReady();
+      return;
+    }
+    const fromGpu = (_b = (_a = w.gpu) == null ? void 0 : _a.config) == null ? void 0 : _b.apiFicheInfoUrl;
+    const fromModule = config.apiFicheInfoUrl;
+    const api = typeof fromGpu === "string" && fromGpu.trim() ? fromGpu : typeof fromModule === "string" ? fromModule : "";
+    if (api.trim()) {
+      markGpuClientConfigReady();
+    }
+  }
   function whenGpuClientConfigReady(fn) {
+    trySettleGpuClientConfigFromWindow();
     if (isGpuClientConfigSettled()) {
       fn();
       return;
@@ -63083,19 +63100,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   function finalizeGpuClientConfigStateIfInjected() {
-    var _a, _b;
-    if (isGpuClientConfigSettled()) return;
-    const w = window;
-    if (w.LAYER_CONFIG) {
-      markGpuClientConfigReady();
-      return;
-    }
-    const fromGpu = (_b = (_a = w.gpu) == null ? void 0 : _a.config) == null ? void 0 : _b.apiFicheInfoUrl;
-    const fromModule = config.apiFicheInfoUrl;
-    const api = typeof fromGpu === "string" && fromGpu.trim() ? fromGpu : typeof fromModule === "string" ? fromModule : "";
-    if (api.trim()) {
-      markGpuClientConfigReady();
-    }
+    trySettleGpuClientConfigFromWindow();
   }
   function bootstrapGpuSiteMapEmbed() {
     syncEntreeConfigFromGpuScript();
