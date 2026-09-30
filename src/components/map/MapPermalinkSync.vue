@@ -28,7 +28,7 @@ import {
 import { mapPermalinkLayersBridgeRef } from '@/composables/mapPermalinkLayersBridge'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { tryUseMapMode } from '@/composables/mapMode'
-import { loadFicheForMapPoint, refreshFicheForMapModeChange } from '@/lib/fiche/ficheInfoService'
+import { refreshFicheForMapModeChange } from '@/lib/fiche/ficheInfoService'
 import {
   empriseTargetKeyForPoint,
   ensureModeEmpriseForMapPoint,
@@ -95,19 +95,10 @@ function restoreMarkerFromPermalink(): void {
   if (!marker) return
   markerRestored = true
   const mode = mapMode?.mode.value ?? 2
-  const map = mapRef.value
-  const zoom = map?.getView().getZoom() ?? 6
   showMapLocationMarker(marker.lon, marker.lat, { label: '', origin: 'permalink', center: false })
   const key = empriseTargetKeyForPoint(marker.lon, marker.lat)
   ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode, key)
-  void loadFicheForMapPoint({
-    lon: marker.lon,
-    lat: marker.lat,
-    mode,
-    zoom,
-    markerPlacedAtClick: true,
-    skipLocationMarker: true,
-  })
+  /* Fiche : chargée après gpu-client-config via ficheInfoService + cerise permalink. */
 }
 
 function syncViewToPermalink(map: Map): void {

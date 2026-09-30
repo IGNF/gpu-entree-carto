@@ -10,3 +10,5 @@ export function htmlParagraph(label: string, value: string | number | null | und
   if (value == null || value === '') return ''
   return `<p><strong>${escapeHtml(label)}</strong> : ${escapeHtml(String(value))}</p>`
 }
+
+export const FICHE_LOADING_SPINNER_HTML = `<p class="ec-fiche-info__loading"><span class="ec-fiche-info__spinner fr-icon-refresh-line" aria-hidden="true"></span> Chargement…</p>`

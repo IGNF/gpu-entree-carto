@@ -3,6 +3,13 @@ import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
+import { resolveConfigUrlsInRecord, setGpuClientConfigScriptUrl } from '@/lib/configUrls'
+import {
+  markGpuClientConfigError,
+  markGpuClientConfigLoading,
+  markGpuClientConfigNone,
+  markGpuClientConfigReady,
+} from '@/lib/demo/gpuClientConfigState'
 import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
 import type { MapModeId } from '@/lib/map/mapMode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
@@ -123,6 +130,10 @@ export function applyGpuConfigOverrides(overrides: Record<string, unknown> | und
   if (w.gpu?.config) {
     Object.assign(w.gpu.config, overrides)
   }
+  resolveConfigUrlsInRecord(config as Record<string, unknown>)
+  if (w.gpu?.config) {
+    resolveConfigUrlsInRecord(w.gpu.config)
+  }
 }
 
 /** gpu-site n’injecte `legendImageDetailDirectory` que si `window.gpu` existe déjà. */
@@ -143,6 +154,10 @@ export function syncEntreeConfigFromGpuScript(): void {
   const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
   if (w.gpu?.config) {
     Object.assign(config, w.gpu.config)
+  }
+  resolveConfigUrlsInRecord(config as Record<string, unknown>)
+  if (w.gpu?.config) {
+    resolveConfigUrlsInRecord(w.gpu.config)
   }
 }
 
@@ -186,6 +201,7 @@ export function loadGpuClientConfigScript(url: string): Promise<void> {
       `script[data-ec-demo-config="${url}"]`,
     )
     if (existing) {
+      setGpuClientConfigScriptUrl(url)
       applyGpuConfigSyncAndDevRewrite()
       void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
       return
@@ -197,11 +213,13 @@ export function loadGpuClientConfigScript(url: string): Promise<void> {
     script.src = scriptUrl
     script.onload = () => {
       console.info(`${LOG_PREFIX} gpu-client-config chargé`, scriptUrl)
+      setGpuClientConfigScriptUrl(url)
       applyGpuConfigSyncAndDevRewrite()
       void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
     }
     script.onerror = () => {
       console.error(`${LOG_PREFIX} échec chargement`, url)
+      setGpuClientConfigScriptUrl(null)
       reject(new Error(`Impossible de charger ${url}`))
     }
     document.body.appendChild(script)
@@ -213,13 +231,24 @@ export async function prepareDemoEnvironment(
 ): Promise<DemoConfig> {
   applyGpuConfigOverrides(cfg.gpuConfigOverrides)
   const url = cfg.configScriptUrl?.trim()
-  if (url) {
-    try {
-      await loadGpuClientConfigScript(url)
-      applyGpuConfigSyncAndDevRewrite()
-    } catch {
-      /* démo utilisable avec layerNodes locaux */
-    }
+  if (!url) {
+    markGpuClientConfigNone()
+    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
+    loadFicheForCherryFromPermalink()
+    return cfg
+  }
+  markGpuClientConfigLoading()
+  try {
+    await loadGpuClientConfigScript(url)
+    applyGpuConfigSyncAndDevRewrite()
+    markGpuClientConfigReady()
+    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
+    loadFicheForCherryFromPermalink()
+  } catch {
+    markGpuClientConfigError()
+    const { loadFicheForCherryFromPermalink } = await import('@/lib/fiche/ficheInfoService')
+    loadFicheForCherryFromPermalink()
+    /* démo utilisable avec layerNodes locaux */
   }
   return cfg
 }

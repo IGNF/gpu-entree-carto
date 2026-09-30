@@ -26,7 +26,7 @@ Panneau latéral à **4 onglets** (contrôle OpenLayers), à droite de la carte.
 
 | #   | Icône                         | Contenu                                                                                                                                                      |
 | --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — fiche structurée (`FicheInfoPanel`) ; données brutes (`raw`) en bas si présentes                                           |
+| 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — fiche structurée (`FicheInfoPanel`) ; attente config GPU puis chargement `/api/fiche-info` si cerise présente              |
 | 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR _Données_ ([CatalogLayerTree](./CatalogLayerTree.fr.md)) et _Fonds de cartes_ ([BaseLayerRadioList](./BaseLayerRadioList.fr.md)) |
 | 2   | Remix `ri-stack-line`         | **Couches de données** — pile des couches cochées dans le catalogue : visibilité, opacité, ordre, retrait                                                    |
 | 3   | Remix `ri-list-indefinite`    | **Légendes** — légendes des couches visibles de la pile                                                                                                      |

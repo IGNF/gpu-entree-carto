@@ -26,7 +26,7 @@
 
 | #   | Icon                          | Content                                                                                                                                                      |
 | --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | DSFR `fr-icon-map-pin-2-line` | **Info / location** — structured sheet (`FicheInfoPanel`); raw data (`raw`) at bottom if present                                                             |
+| 0   | DSFR `fr-icon-map-pin-2-line` | **Info / location** — structured sheet (`FicheInfoPanel`); GPU config wait then `/api/fiche-info` when a cherry marker is present                            |
 | 1   | Remix `ri-map-2-line`         | **Catalogue** — DSFR sub-tabs _Data_ ([CatalogLayerTree](./CatalogLayerTree.md)) and _Base maps_ ([BaseLayerRadioList](./BaseLayerRadioList.md))           |
 | 2   | Remix `ri-stack-line`         | **Data layers** — stack of layers checked in catalogue: visibility, opacity, order, remove                                                                    |
 | 3   | Remix `ri-list-indefinite`    | **Legends** — legends for visible layers in the stack                                                                                                        |

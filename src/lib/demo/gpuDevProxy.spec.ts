@@ -17,4 +17,20 @@ describe('rewriteLocalGpuSiteUrl', () => {
     )
     vi.unstubAllEnvs()
   })
+
+  it('ne réécrit pas une URL déjà proxifiée', () => {
+    vi.stubEnv('DEV', true)
+    expect(rewriteLocalGpuSiteUrl('/__gpu_dev_proxy__/api/fiche-info')).toBe(
+      '/__gpu_dev_proxy__/api/fiche-info',
+    )
+    vi.unstubAllEnvs()
+  })
+
+  it('normalise gpu-site avec segments proxy en trop', () => {
+    vi.stubEnv('DEV', true)
+    expect(rewriteLocalGpuSiteUrl('http://127.0.0.1:8000/__gpu_dev_proxy__/api/fiche-info')).toBe(
+      '/__gpu_dev_proxy__/api/fiche-info',
+    )
+    vi.unstubAllEnvs()
+  })
 })

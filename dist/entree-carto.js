@@ -15,8 +15,7 @@ this.gpu = (function() {
     yearOfIgnCopyright: 2019,
     showMapHelpAtLoad: false,
     prefix: "",
-    envergoUrl: "https://envergo.beta.gouv.fr/simulateur/formulaire/?lng=[LONGITUDE]&lat=[LATITUDE]&zoom=[ZOOM]&mtm_campaign=service-gpu",
-    apiFicheInfoUrl: "/api/fiche-info"
+    envergoUrl: "https://envergo.beta.gouv.fr/simulateur/formulaire/?lng=[LONGITUDE]&lat=[LATITUDE]&zoom=[ZOOM]&mtm_campaign=service-gpu"
   };
   function setScriptDirFromCurrentScript() {
     const candidates = [
@@ -27869,11 +27868,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$m = {
+  const _hoisted_1$l = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$m = /* @__PURE__ */ defineComponent({
+  const _sfc_main$l = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -27898,7 +27897,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$m, [
+        return openBlock(), createElementBlock("div", _hoisted_1$l, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -28448,12 +28447,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$l = {
+  const _hoisted_1$k = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$l = /* @__PURE__ */ defineComponent({
+  const _sfc_main$k = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -28468,7 +28467,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$l);
+        return openBlock(), createElementBlock("span", _hoisted_1$k);
       };
     }
   });
@@ -28588,12 +28587,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$k = {
+  const _hoisted_1$j = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$k = /* @__PURE__ */ defineComponent({
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -28607,16 +28606,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$k);
+        return openBlock(), createElementBlock("span", _hoisted_1$j);
       };
     }
   });
-  const _hoisted_1$j = {
+  const _hoisted_1$i = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$j = /* @__PURE__ */ defineComponent({
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -28626,7 +28625,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$j);
+        return openBlock(), createElementBlock("span", _hoisted_1$i);
       };
     }
   });
@@ -62298,8 +62297,392 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (value2 == null || value2 === "") return "";
     return `<p><strong>${escapeHtml(label)}</strong> : ${escapeHtml(String(value2))}</p>`;
   }
-  const APICARTO_GPU = "https://apicarto.ign.fr/api/gpu/document";
+  const FICHE_LOADING_SPINNER_HTML = `<p class="ec-fiche-info__loading"><span class="ec-fiche-info__spinner fr-icon-refresh-line" aria-hidden="true"></span> Chargement…</p>`;
+  const gpuClientConfigStatus = /* @__PURE__ */ shallowRef("idle");
+  function isGpuClientConfigSettled() {
+    const s = gpuClientConfigStatus.value;
+    return s === "ready" || s === "none" || s === "error";
+  }
+  function whenGpuClientConfigReady(fn) {
+    if (isGpuClientConfigSettled()) {
+      fn();
+      return;
+    }
+  }
+  const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
+  const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
+  function isGpuDevProxyPath(url) {
+    const t = url.trim();
+    return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`);
+  }
+  function normalizeLocalGpuSiteUrl(url) {
+    if (!LOCAL_GPU_SITE.test(url)) return url;
+    try {
+      const u = new URL(url);
+      u.pathname = u.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, "") || "/";
+      return u.href;
+    } catch {
+      return url;
+    }
+  }
+  function rewriteLocalGpuSiteUrl(url) {
+    if (!url || true) return url;
+    if (isGpuDevProxyPath(url)) return url;
+    const normalized = normalizeLocalGpuSiteUrl(url);
+    if (!LOCAL_GPU_SITE.test(normalized)) return url;
+    return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
+  }
+  function isAbsoluteUrl(value2) {
+    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
+  }
+  function resolveConfigUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed || isAbsoluteUrl(trimmed)) return trimmed;
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    if (typeof window === "undefined") return trimmed;
+    const baseHref = typeof document !== "undefined" ? window.location.href : "http://localhost/";
+    return new URL(trimmed, baseHref).href;
+  }
+  function resolveConfigUrlForFetch(raw) {
+    const trimmed = raw.trim();
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
+  }
+  function resolveConfigUrlsInRecord(target2) {
+    return;
+  }
+  const TAB_DU = "du";
+  const TAB_PSMV = "psmv";
+  const TAB_SUP = "sup";
+  const TAB_SCOT = "scot";
+  const TAB_PROCEDURES = "procedures";
+  function isGpuFicheInfoPayload(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    return "parcel" in o || "grid" in o || "dus" in o || "partitions" in o || "parcelFeature" in o;
+  }
+  function normalizePartitionsMap(value2) {
+    if (!value2) return {};
+    if (Array.isArray(value2)) return {};
+    return value2;
+  }
+  const MUNICIPALITY_LOWER_PARTS = /* @__PURE__ */ new Set([
+    "de",
+    "la",
+    "le",
+    "les",
+    "du",
+    "des",
+    "en",
+    "sur",
+    "sous",
+    "aux"
+  ]);
+  function formatMunicipalityName(raw) {
+    return raw.split("-").map((part, index2) => {
+      if (!part) return part;
+      const lower = part.toLowerCase();
+      if (index2 > 0 && MUNICIPALITY_LOWER_PARTS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join("-");
+  }
+  function formatDatapproFromDocumentName(documentName) {
+    const match2 = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i);
+    if (!(match2 == null ? void 0 : match2[3])) return null;
+    const date2 = match2[3];
+    return `${date2.slice(6, 8)}/${date2.slice(4, 6)}/${date2.slice(0, 4)}`;
+  }
+  function pickProductionDocument(documents) {
+    if (!(documents == null ? void 0 : documents.length)) return null;
+    const production = documents.filter((d) => d.status === "document.production");
+    return production[0] ?? documents[0] ?? null;
+  }
+  function partitionHasProductionDocument(partition) {
+    return pickProductionDocument(partition.documents) != null;
+  }
+  function mapHasProductionDocument(map2) {
+    return Object.values(map2).some(partitionHasProductionDocument);
+  }
+  function isPetFeature(feature) {
+    const nomfic = feature.nomfic;
+    return typeof nomfic === "string" && nomfic.includes("_97_00_");
+  }
+  function featureLabelHtml(feature) {
+    if ("typezone" in feature) {
+      const code = String(feature.libelle ?? "");
+      const label = String(feature.libelong ?? feature.libelle ?? "");
+      if (code && label && code !== label) {
+        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
+      }
+      if (label) return `<strong>${escapeHtml(label)}</strong>.`;
+      if (code) return `Zone classée <strong>${escapeHtml(code)}</strong>.`;
+      return "Zonage de type inconnu";
+    }
+    if ("typesect" in feature) {
+      const code = String(feature.libelle ?? "");
+      const label = String(feature.libelong ?? feature.libelle ?? "");
+      if (code && label) {
+        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
+      }
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Secteur de type inconnu";
+    }
+    if ("typepsc" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Prescription de type inconnue";
+    }
+    if ("typeinf" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Information de type inconnue";
+    }
+    if ("libelle" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "";
+    }
+    return "";
+  }
+  function featureEntryHtml(feature) {
+    const info = featureLabelHtml(feature);
+    if (!info) return "";
+    const urlfic = feature.urlfic;
+    if (typeof urlfic === "string" && urlfic.trim()) {
+      return `<p><a href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer">${info}</a></p>`;
+    }
+    return `<p>${info}</p>`;
+  }
+  function buildPartitionFeaturesHtml(partition) {
+    const features = partition.features ?? [];
+    const seen = /* @__PURE__ */ new Set();
+    const parts = [];
+    for (const feature of features) {
+      if (isPetFeature(feature)) continue;
+      const info = featureLabelHtml(feature);
+      if (!info) continue;
+      const key2 = `${String(feature.nomfic ?? "")}|${info}`;
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      parts.push(featureEntryHtml(feature));
+    }
+    return parts.join("");
+  }
+  function documentIntroHtml(document2, kind) {
+    var _a;
+    const title = ((_a = document2.title) == null ? void 0 : _a.trim()) || document2.type || "document";
+    const documentName = document2.originalName ?? document2.name ?? "";
+    if (kind === "sup") {
+      return document2.title ? `<p><strong>${escapeHtml(document2.title)}</strong></p>` : `<p><strong>${escapeHtml(documentName || "Servitude")}</strong></p>`;
+    }
+    if (kind === "scot") {
+      const prefix = "Territoire couvert par ";
+      return `<p>${prefix}<strong>${escapeHtml(title)}</strong>.</p>`;
+    }
+    const article = document2.type === "CC" ? "la " : "le ";
+    let html2 = `<p>Parcelle couverte par ${article}<strong>${escapeHtml(title)}</strong>`;
+    if (documentName) {
+      const datappro = formatDatapproFromDocumentName(documentName);
+      if (datappro) {
+        const proc = typeof document2.typeproc_title === "string" && document2.typeproc_title.trim() ? ` (${document2.typeproc_title.trim()})` : "";
+        html2 += `, dont la dernière procédure${proc} a été approuvée le <strong>${escapeHtml(datappro)}</strong>`;
+      }
+    }
+    html2 += ".</p>";
+    if (document2.effectiveStatus === "NON_EXECUTOIRE") {
+      html2 += "<p><em>Ce document n’est pas exécutable en l’état.</em></p>";
+    }
+    return html2;
+  }
+  function buildNonExecutoireHint(document2, proceduresByDocument) {
+    var _a;
+    const key2 = document2.originalName ?? document2.name;
+    if (!key2 || !((_a = proceduresByDocument == null ? void 0 : proceduresByDocument[key2]) == null ? void 0 : _a.length)) return "";
+    const blocked = proceduresByDocument[key2].some((p5) => p5.documentNotEnforceable === true);
+    if (!blocked) return "";
+    return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`;
+  }
+  function buildPartitionBlockHtml(partitionKey, partition, kind, proceduresByDocument) {
+    const document2 = pickProductionDocument(partition.documents);
+    if (!document2) {
+      return `<p><strong>${escapeHtml(partitionKey)}</strong> — document indisponible.</p>`;
+    }
+    const parts = [documentIntroHtml(document2, kind)];
+    parts.push(buildNonExecutoireHint(document2, proceduresByDocument));
+    parts.push(buildPartitionFeaturesHtml(partition));
+    if (document2.archiveUrl) {
+      parts.push(
+        `<p><a href="${escapeHtml(document2.archiveUrl)}" target="_blank" rel="noopener noreferrer">Télécharger l’archive du document</a></p>`
+      );
+    }
+    return parts.filter(Boolean).join("");
+  }
+  function buildDocumentTypeTabHtml(partitions, kind, proceduresByDocument) {
+    const keys = Object.keys(partitions);
+    if (!keys.length) return "";
+    if (keys.length === 1) {
+      return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument);
+    }
+    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
+    for (const key2 of keys) {
+      parts.push(
+        `<li>${buildPartitionBlockHtml(key2, partitions[key2], kind, proceduresByDocument)}</li>`
+      );
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
+  function collectInProgressProcedures(proceduresByDocument) {
+    if (!proceduresByDocument) return [];
+    const out = [];
+    for (const list of Object.values(proceduresByDocument)) {
+      for (const procedure of list) {
+        if (procedure.inProgress === true) out.push(procedure);
+      }
+    }
+    return out;
+  }
+  function buildProceduresTabHtml(procedures) {
+    var _a, _b, _c;
+    if (!procedures.length) return "";
+    const parts = ['<ul class="ec-fiche-info__proc-list">'];
+    for (const procedure of procedures) {
+      const typeLabel = ((_a = procedure.procedureType) == null ? void 0 : _a.title) ?? procedure.documentType ?? "Procédure";
+      const docName = procedure.documentName ?? procedure.name ?? "";
+      const gridTitle = ((_b = procedure.grid) == null ? void 0 : _b.title) ?? ((_c = procedure.grid) == null ? void 0 : _c.name) ?? "";
+      parts.push("<li>");
+      parts.push(
+        `<p><strong>${escapeHtml(typeLabel)}</strong>${docName ? ` — ${escapeHtml(docName)}` : ""}${gridTitle ? ` (${escapeHtml(gridTitle)})` : ""}</p>`
+      );
+      if (procedure.approbationDate) {
+        parts.push(`<p>Date d’approbation : ${escapeHtml(procedure.approbationDate)}</p>`);
+      }
+      const files = procedure.files ?? [];
+      if (files.length) {
+        parts.push("<ul>");
+        for (const file of files) {
+          const label = file.title ?? file.name ?? "Pièce";
+          if (file.url) {
+            parts.push(
+              `<li><a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></li>`
+            );
+          } else {
+            parts.push(`<li>${escapeHtml(label)}</li>`);
+          }
+        }
+        parts.push("</ul>");
+      }
+      parts.push("</li>");
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
+  function buildCoastlineSupHint() {
+    return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`;
+  }
+  function buildDocumentTabs(data) {
+    const tabs = [];
+    const proceduresByDocument = data.proceduresByDocument;
+    const dus = normalizePartitionsMap(data.dus);
+    if (mapHasProductionDocument(dus)) {
+      tabs.push({
+        id: TAB_DU,
+        label: "Document d’urbanisme",
+        bodyHtml: buildDocumentTypeTabHtml(dus, "du", proceduresByDocument)
+      });
+    }
+    const psmvs = normalizePartitionsMap(data.psmvs);
+    if (mapHasProductionDocument(psmvs)) {
+      tabs.push({
+        id: TAB_PSMV,
+        label: "PSMV",
+        bodyHtml: buildDocumentTypeTabHtml(psmvs, "psmv", proceduresByDocument)
+      });
+    }
+    const sups = normalizePartitionsMap(data.sups);
+    if (mapHasProductionDocument(sups)) {
+      let body = buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
+      if (data.is_el9_alert) body += buildCoastlineSupHint();
+      tabs.push({
+        id: TAB_SUP,
+        label: "Servitude",
+        bodyHtml: body
+      });
+    }
+    const scots = normalizePartitionsMap(data.scots);
+    if (mapHasProductionDocument(scots)) {
+      tabs.push({
+        id: TAB_SCOT,
+        label: "SCoT",
+        bodyHtml: buildDocumentTypeTabHtml(scots, "scot", proceduresByDocument)
+      });
+    }
+    const inProgress = collectInProgressProcedures(proceduresByDocument);
+    if (inProgress.length) {
+      tabs.push({
+        id: TAB_PROCEDURES,
+        label: "Procédures en cours",
+        bodyHtml: buildProceduresTabHtml(inProgress)
+      });
+    }
+    return tabs;
+  }
+  function buildParcelHeaderHtml(parcel, lon, lat) {
+    if (!(parcel == null ? void 0 : parcel.idu) && !(parcel == null ? void 0 : parcel.numero)) {
+      return "<p>Aucune parcelle cadastrale à cet emplacement.</p>";
+    }
+    const parts = [
+      htmlParagraph("Commune", String(parcel.nom_com ?? "")),
+      htmlParagraph("Section", String(parcel.section ?? "")),
+      htmlParagraph("Numéro", String(parcel.numero ?? "")),
+      htmlParagraph("Contenance", parcel.contenance != null ? `${parcel.contenance} m²` : ""),
+      htmlParagraph("Code INSEE", String(parcel.code_insee ?? "")),
+      htmlParagraph("Identifiant", String(parcel.idu ?? parcel.id ?? "")),
+      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
+    ].filter(Boolean);
+    return parts.join("") || "<p>Parcelle identifiée.</p>";
+  }
+  function parcelTitle(parcel) {
+    if (!parcel) return "Parcelle";
+    const section = String(parcel.section ?? "");
+    const numero = String(parcel.numero ?? "");
+    const idu = String(parcel.idu ?? "");
+    if (section && numero) return `Parcelle ${section} ${numero}`;
+    if (idu) return `Parcelle ${idu}`;
+    return "Parcelle cadastrale";
+  }
+  function municipalityTitle(data) {
+    const grid = data.grid;
+    if (!(grid == null ? void 0 : grid.name)) return "Commune non trouvée";
+    const label = formatMunicipalityName(grid.name.trim());
+    const insee = grid.insee ? ` (${grid.insee})` : "";
+    return `${label}${insee}`;
+  }
+  function fallbackBodyHtml(data) {
+    var _a;
+    if ((_a = data.grid) == null ? void 0 : _a.is_rnu) {
+      return "<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>";
+    }
+    if (data.lowScaleDocument) {
+      return "<p>Zoomer davantage pour afficher les documents d’urbanisme à cette échelle.</p>";
+    }
+    return "<p>Aucun document disponible à cet emplacement.</p>";
+  }
+  function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
+    const parcel = data.parcel ?? null;
+    const documentTabs = buildDocumentTabs(data);
+    const bodyHtml = documentTabs.length ? void 0 : fallbackBodyHtml(data);
+    const base = {
+      title: mode2 === MAP_MODE_PARCEL ? parcelTitle(parcel) : municipalityTitle(data),
+      documentTabs: documentTabs.length ? documentTabs : void 0,
+      bodyHtml,
+      raw: { ...data, lon, lat, mode: mode2, source: "gpu-fiche-info-api" }
+    };
+    if (mode2 === MAP_MODE_PARCEL) {
+      base.headerHtml = buildParcelHeaderHtml(parcel, lon, lat);
+    } else if (mode2 === MAP_MODE_TERRITORY) {
+      base.headerHtml = void 0;
+    }
+    return base;
+  }
   const APICARTO_PARCEL$1 = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
   let mapPointRequestSeq = 0;
   const FICHE_POINT_EPS = 1e-7;
   let fichePointCache = null;
@@ -62339,11 +62722,25 @@ Expected function or array of functions, received type ${typeof value2}.`
   function pointGeomParam$1(lon, lat) {
     return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
   }
+  function resolveApiFicheInfoUrl() {
+    const raw = config.apiFicheInfoUrl;
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  function ficheServiceUnavailableSelection(title) {
+    return {
+      title,
+      bodyHtml: FICHE_UNAVAILABLE_BODY,
+      raw: { source: "fiche-service-unavailable" }
+    };
+  }
   function showLoading(title) {
     var _a;
     (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection({
       title,
-      bodyHtml: "<p>Chargement des informations…</p>"
+      loading: "data",
+      bodyHtml: FICHE_LOADING_SPINNER_HTML
     });
   }
   function showFiche(selection) {
@@ -62371,10 +62768,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
-  async function tryGpuSiteFiche(params2) {
+  async function tryGpuSiteFiche(apiBase, params2) {
     if (typeof window === "undefined") return null;
-    const base = String(config.apiFicheInfoUrl ?? "/api/fiche-info");
-    const url = new URL(base, window.location.origin);
+    const fetchBase = resolveConfigUrlForFetch(apiBase);
+    const url = fetchBase.startsWith("/") ? new URL(fetchBase, window.location.origin) : new URL(fetchBase);
     url.searchParams.set("lon", String(params2.lon));
     url.searchParams.set("lat", String(params2.lat));
     url.searchParams.set("mode", String(params2.mode));
@@ -62383,11 +62780,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       const res = await fetch(url.toString(), { credentials: "same-origin" });
       if (!res.ok) return null;
       const data = await res.json();
-      const title = String(data.title ?? data.name ?? "Informations");
+      if (isGpuFicheInfoPayload(data)) {
+        return ficheSelectionFromGpuApi(data, params2.mode, params2.lon, params2.lat);
+      }
+      const record = data;
+      const title = String(record.title ?? record.name ?? "Informations");
       const bodyHtml = String(
-        data.bodyHtml ?? data.html ?? data.content ?? data.body ?? "<p>Informations disponibles.</p>"
+        record.bodyHtml ?? record.html ?? record.content ?? record.body ?? "<p>Informations disponibles.</p>"
       );
-      const raw = data.raw && typeof data.raw === "object" ? data.raw : data;
+      const raw = record.raw && typeof record.raw === "object" ? record.raw : record;
       return { title, bodyHtml, raw };
     } catch {
       return null;
@@ -62412,71 +62813,67 @@ Expected function or array of functions, received type ${typeof value2}.`
       raw: { ...props, lon, lat, source: "apicarto-cadastre" }
     };
   }
-  function documentFromApicarto(lon, lat, props) {
-    const duType = String(props.du_type ?? props.type ?? "Document");
-    const gridTitle = String(props.grid_title ?? props.grid_name ?? "");
-    const name2 = String(props.name ?? props.partition ?? "Document d’urbanisme");
-    const title = gridTitle ? `${duType} — ${gridTitle}` : name2;
-    const parts = [
-      htmlParagraph("Document", name2),
-      htmlParagraph("Type", duType),
-      htmlParagraph("Commune", gridTitle),
-      htmlParagraph("Statut GPU", String(props.gpu_status ?? "")),
-      htmlParagraph("Identifiant", String(props.gpu_doc_id ?? props.id ?? "")),
-      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
-    ].filter(Boolean);
-    return {
-      title,
-      bodyHtml: parts.join("") || "<p>Document d’urbanisme identifié.</p>",
-      raw: { ...props, lon, lat, source: "apicarto-gpu-document" }
-    };
-  }
-  async function ficheFromApicarto(lon, lat, mode2) {
-    var _a, _b;
-    if (mode2 === MAP_MODE_PARCEL) {
-      const geo2 = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
-      const feature2 = (_a = geo2.features) == null ? void 0 : _a[0];
-      if (!(feature2 == null ? void 0 : feature2.properties)) {
-        return {
-          title: "Parcelle",
-          bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
-          raw: { lon, lat, mode: mode2 }
-        };
-      }
-      return parcelFromApicarto(lon, lat, feature2.properties);
-    }
-    const geo = await fetchGeoJson(`${APICARTO_GPU}?geom=${pointGeomParam$1(lon, lat)}`);
-    const feature = (_b = geo.features) == null ? void 0 : _b[0];
+  async function ficheParcelFromApicarto(lon, lat) {
+    var _a;
+    const geo = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
+    const feature = (_a = geo.features) == null ? void 0 : _a[0];
     if (!(feature == null ? void 0 : feature.properties)) {
       return {
-        title: "Document d’urbanisme",
-        bodyHtml: "<p>Aucun document d’urbanisme connu à cet emplacement.</p>",
-        raw: { lon, lat, mode: mode2 }
+        title: "Parcelle",
+        bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
+        raw: { lon, lat, mode: MAP_MODE_PARCEL }
       };
     }
-    return documentFromApicarto(lon, lat, feature.properties);
+    return parcelFromApicarto(lon, lat, feature.properties);
   }
-  async function loadFicheForMapPoint(params2) {
+  async function loadFicheForMapPointImpl(params2) {
     const requestId = ++mapPointRequestSeq;
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
     const skipLocationMarker = params2.skipLocationMarker === true;
     syncFichePointCache(params2.lon, params2.lat);
     const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
     showLoading(loadingTitle);
-    const fromSite = await tryGpuSiteFiche(params2);
-    if (fromSite) {
+    const apiUrl = resolveApiFicheInfoUrl();
+    if (params2.mode === MAP_MODE_TERRITORY) {
+      if (!apiUrl) {
+        return applyMapPointResult(
+          requestId,
+          params2.lon,
+          params2.lat,
+          params2.mode,
+          ficheServiceUnavailableSelection(loadingTitle),
+          markerPlacedAtClick,
+          skipLocationMarker
+        );
+      }
+      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
+      const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle);
       return applyMapPointResult(
         requestId,
         params2.lon,
         params2.lat,
         params2.mode,
-        fromSite,
+        selection,
         markerPlacedAtClick,
         skipLocationMarker
       );
     }
+    if (apiUrl) {
+      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
+      if (fromSite) {
+        return applyMapPointResult(
+          requestId,
+          params2.lon,
+          params2.lat,
+          params2.mode,
+          fromSite,
+          markerPlacedAtClick,
+          skipLocationMarker
+        );
+      }
+    }
     try {
-      const selection = await ficheFromApicarto(params2.lon, params2.lat, params2.mode);
+      const selection = await ficheParcelFromApicarto(params2.lon, params2.lat);
       return applyMapPointResult(
         requestId,
         params2.lon,
@@ -62502,6 +62899,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         skipLocationMarker
       );
     }
+  }
+  function loadFicheForMapPoint(params2) {
+    return new Promise((resolve2) => {
+      whenGpuClientConfigReady(() => {
+        void loadFicheForMapPointImpl(params2).then(resolve2);
+      });
+    });
   }
   async function loadFicheForSearch(search, mode2, zoom = 6) {
     var _a, _b, _c;
@@ -62731,13 +63135,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!host) return;
     void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
   }
-  const _hoisted_1$i = {
+  const _hoisted_1$h = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const GPU_PIN_BLUE = "#000091";
-  const _sfc_main$i = /* @__PURE__ */ defineComponent({
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -63061,7 +63465,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$i);
+        return openBlock(), createElementBlock("span", _hoisted_1$h);
       };
     }
   });
@@ -65673,12 +66077,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$h = {
+  const _hoisted_1$g = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+  const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -65694,7 +66098,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$h);
+        return openBlock(), createElementBlock("span", _hoisted_1$g);
       };
     }
   });
@@ -69518,13 +69922,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$g = {
+  const _hoisted_1$f = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$g = /* @__PURE__ */ defineComponent({
+  const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -69584,7 +69988,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$g);
+        return openBlock(), createElementBlock("span", _hoisted_1$f);
       };
     }
   });
@@ -84516,12 +84920,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   function setSketchToolEngaged(engaged) {
     sketchToolEngagedRef.value = engaged;
   }
-  const _hoisted_1$f = {
+  const _hoisted_1$e = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$f = /* @__PURE__ */ defineComponent({
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -84556,7 +84960,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$f);
+        return openBlock(), createElementBlock("span", _hoisted_1$e);
       };
     }
   });
@@ -86055,8 +86459,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogEntryInZoomRange
     };
   }
-  const _hoisted_1$e = ["innerHTML"];
-  const _sfc_main$e = /* @__PURE__ */ defineComponent({
+  const _hoisted_1$d = ["innerHTML"];
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "SanitizedHtml",
     props: {
       html: {}
@@ -86065,63 +86469,23 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const safeHtml = computed(() => purify.sanitize(props.html));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$e);
-      };
-    }
-  });
-  const _hoisted_1$d = {
-    class: "ec-raw-info",
-    "aria-label": "Données brutes"
-  };
-  const _hoisted_2$a = {
-    key: 0,
-    class: "ec-raw-info__list"
-  };
-  const _hoisted_3$a = { class: "ec-raw-info__key" };
-  const _hoisted_4$9 = { class: "ec-raw-info__val" };
-  const _hoisted_5$8 = {
-    key: 1,
-    class: "ec-raw-info__placeholder"
-  };
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
-    __name: "RawInfoPanel",
-    props: {
-      selection: {}
-    },
-    setup(__props) {
-      const props = __props;
-      const entries2 = computed(() => {
-        var _a;
-        const raw = (_a = props.selection) == null ? void 0 : _a.raw;
-        if (!raw || typeof raw !== "object") return [];
-        return Object.entries(raw).map(([key2, value2]) => ({
-          key: key2,
-          value: value2 === null || value2 === void 0 ? "—" : typeof value2 === "object" ? JSON.stringify(value2) : String(value2)
-        }));
-      });
-      return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$d, [
-          _cache[1] || (_cache[1] = createBaseVNode("h2", { class: "ec-raw-info__title" }, "Attributs", -1)),
-          entries2.value.length ? (openBlock(), createElementBlock("ul", _hoisted_2$a, [
-            (openBlock(true), createElementBlock(Fragment, null, renderList(entries2.value, (row) => {
-              return openBlock(), createElementBlock("li", {
-                key: row.key
-              }, [
-                createBaseVNode("span", _hoisted_3$a, toDisplayString(row.key), 1),
-                createBaseVNode("span", _hoisted_4$9, toDisplayString(row.value), 1)
-              ]);
-            }), 128))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_5$8, [..._cache[0] || (_cache[0] = [
-            createBaseVNode("p", null, "Accédez aux informations détaillées", -1),
-            createBaseVNode("p", { class: "fr-text--sm" }, " Les attributs bruts de la sélection (GetFeatureInfo) s’afficheront ici. ", -1)
-          ])]))
-        ]);
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$d);
       };
     }
   });
   const _hoisted_1$c = { class: "ec-fiche-info" };
   const _hoisted_2$9 = { class: "ec-fiche-info__inner" };
   const _hoisted_3$9 = { class: "ec-fiche-info__title" };
+  const _hoisted_4$9 = {
+    key: 1,
+    class: "ec-fiche-info__doc-tabs"
+  };
+  const _hoisted_5$8 = {
+    class: "ec-fiche-info__doc-tablist",
+    role: "tablist",
+    "aria-label": "Documents et procédures"
+  };
+  const _hoisted_6$7 = ["id", "aria-selected", "aria-controls", "onClick"];
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -86129,16 +86493,50 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(__props) {
       const props = __props;
+      const configLoading = computed(() => gpuClientConfigStatus.value === "loading");
       const title = computed(() => {
         var _a;
+        if (configLoading.value) return "Informations";
         return ((_a = props.selection) == null ? void 0 : _a.title) ?? DEFAULT_FICHE_EMPTY.title;
       });
+      const dataLoading = computed(() => {
+        var _a;
+        return ((_a = props.selection) == null ? void 0 : _a.loading) === "data";
+      });
+      const headerHtml = computed(() => {
+        var _a;
+        return configLoading.value ? "" : ((_a = props.selection) == null ? void 0 : _a.headerHtml) ?? "";
+      });
+      const documentTabs = computed(
+        () => {
+          var _a;
+          return configLoading.value ? [] : ((_a = props.selection) == null ? void 0 : _a.documentTabs) ?? [];
+        }
+      );
       const bodyHtml = computed(() => {
         var _a;
+        if (configLoading.value || dataLoading.value) return FICHE_LOADING_SPINNER_HTML;
         return ((_a = props.selection) == null ? void 0 : _a.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? "";
       });
+      const activeDocTabId = /* @__PURE__ */ ref(null);
+      watch(
+        () => props.selection,
+        (sel) => {
+          const tabs = sel == null ? void 0 : sel.documentTabs;
+          activeDocTabId.value = (tabs == null ? void 0 : tabs.length) ? tabs[0].id : null;
+        },
+        { immediate: true }
+      );
+      const activeDocTab = computed(() => {
+        const tabs = documentTabs.value;
+        if (!tabs.length) return null;
+        const id = activeDocTabId.value;
+        return tabs.find((t) => t.id === id) ?? tabs[0];
+      });
+      function selectDocTab(id) {
+        activeDocTabId.value = id;
+      }
       return (_ctx, _cache) => {
-        var _a;
         return openBlock(), createElementBlock("article", _hoisted_1$c, [
           _cache[0] || (_cache[0] = createBaseVNode("div", {
             class: "ec-fiche-info__rail",
@@ -86146,28 +86544,52 @@ Expected function or array of functions, received type ${typeof value2}.`
           }, null, -1)),
           createBaseVNode("div", _hoisted_2$9, [
             createBaseVNode("h2", _hoisted_3$9, toDisplayString(title.value), 1),
-            createVNode(_sfc_main$e, {
-              class: "ec-fiche-info__body",
-              html: bodyHtml.value
-            }, null, 8, ["html"]),
-            ((_a = __props.selection) == null ? void 0 : _a.raw) ? (openBlock(), createBlock(_sfc_main$d, {
+            configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$d, {
               key: 0,
-              selection: __props.selection,
-              class: "ec-fiche-info__raw"
-            }, null, 8, ["selection"])) : createCommentVNode("", true)
+              class: "ec-fiche-info__body",
+              html: unref(FICHE_LOADING_SPINNER_HTML),
+              "aria-live": "polite"
+            }, null, 8, ["html"])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+              headerHtml.value ? (openBlock(), createBlock(_sfc_main$d, {
+                key: 0,
+                class: "ec-fiche-info__header",
+                html: headerHtml.value
+              }, null, 8, ["html"])) : createCommentVNode("", true),
+              documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_4$9, [
+                createBaseVNode("div", _hoisted_5$8, [
+                  (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
+                    var _a, _b;
+                    return openBlock(), createElementBlock("button", {
+                      id: `ec-fiche-doc-tab-${tab.id}`,
+                      key: tab.id,
+                      type: "button",
+                      role: "tab",
+                      class: normalizeClass(["ec-fiche-info__doc-tab", { "is-active": ((_a = activeDocTab.value) == null ? void 0 : _a.id) === tab.id }]),
+                      "aria-selected": ((_b = activeDocTab.value) == null ? void 0 : _b.id) === tab.id,
+                      "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
+                      onClick: ($event) => selectDocTab(tab.id)
+                    }, toDisplayString(tab.label), 11, _hoisted_6$7);
+                  }), 128))
+                ]),
+                activeDocTab.value ? (openBlock(), createBlock(_sfc_main$d, {
+                  id: `ec-fiche-doc-panel-${activeDocTab.value.id}`,
+                  key: activeDocTab.value.id,
+                  class: "ec-fiche-info__body ec-fiche-info__doc-panel",
+                  role: "tabpanel",
+                  "aria-labelledby": `ec-fiche-doc-tab-${activeDocTab.value.id}`,
+                  html: activeDocTab.value.bodyHtml
+                }, null, 8, ["id", "aria-labelledby", "html"])) : createCommentVNode("", true)
+              ])) : (openBlock(), createBlock(_sfc_main$d, {
+                key: 2,
+                class: "ec-fiche-info__body",
+                html: bodyHtml.value
+              }, null, 8, ["html"]))
+            ], 64))
           ])
         ]);
       };
     }
   });
-  const _export_sfc = (sfc, props) => {
-    const target2 = sfc.__vccOpts || sfc;
-    for (const [key2, val] of props) {
-      target2[key2] = val;
-    }
-    return target2;
-  };
-  const FicheInfoPanel = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["__scopeId", "data-v-df9a587a"]]);
   function flattenCatalogSwitcherNodes(roots) {
     const out = [];
     function walkLevel(nodes) {
@@ -86343,6 +86765,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  const _export_sfc = (sfc, props) => {
+    const target2 = sfc.__vccOpts || sfc;
+    for (const [key2, val] of props) {
+      target2[key2] = val;
+    }
+    return target2;
+  };
   const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["__scopeId", "data-v-7d64c043"]]);
   const _hoisted_1$a = {
     class: "ec-catalog-search",
@@ -86592,7 +87021,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "ec-base-radio-list__details-slot"
                   }, [
                     createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
-                    createVNode(_sfc_main$e, {
+                    createVNode(_sfc_main$d, {
                       class: "ec-base-radio-list__desc",
                       html: preset.description
                     }, null, 8, ["html"])
@@ -87075,9 +87504,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  function rewriteLocalGpuSiteUrl(url) {
-    return url;
-  }
   const _hoisted_1$6 = {
     class: "ec-layer-legends",
     "aria-labelledby": "ec-layer-legends-title"
@@ -87584,7 +88010,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 hidden: activeTab.value !== unref(TAB_PANEL_IDS).fiche,
                 "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).fiche}`
               }, [
-                createVNode(FicheInfoPanel, { selection: selection.value }, null, 8, ["selection"])
+                createVNode(_sfc_main$c, { selection: selection.value }, null, 8, ["selection"])
               ], 8, _hoisted_5$1),
               createBaseVNode("div", {
                 id: `ec-tab-panel-${unref(TAB_PANEL_IDS).catalogue}`,
@@ -87921,19 +88347,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!marker) return;
         markerRestored = true;
         const mode2 = (mapMode == null ? void 0 : mapMode.mode.value) ?? 2;
-        const map2 = mapRef.value;
-        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
         showMapLocationMarker(marker.lon, marker.lat, { label: "", origin: "permalink", center: false });
         const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
         ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode2, key2);
-        void loadFicheForMapPoint({
-          lon: marker.lon,
-          lat: marker.lat,
-          mode: mode2,
-          zoom,
-          markerPlacedAtClick: true,
-          skipLocationMarker: true
-        });
       }
       function syncViewToPermalink(map2) {
         const view = map2.getView();
@@ -88395,11 +88811,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   function syncEntreeConfigFromGpuScript() {
-    var _a;
+    var _a, _b;
     ensureGpuClientStub();
     const w = window;
     if ((_a = w.gpu) == null ? void 0 : _a.config) {
       Object.assign(config, w.gpu.config);
+    }
+    if ((_b = w.gpu) == null ? void 0 : _b.config) {
+      resolveConfigUrlsInRecord(w.gpu.config);
     }
   }
   const DECIMALS = 4;
@@ -89028,7 +89447,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$m, {
+          createVNode(_sfc_main$l, {
             ref_key: "mapShellRef",
             ref: mapShellRef,
             layers: baseLayers.value,
@@ -89046,18 +89465,18 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-map-hooks": layerMapHooks,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$i, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$h, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
               createVNode(_sfc_main$3),
               createVNode(_sfc_main$2, {
                 "skip-marker-restore": Boolean(initialSearch.value)
               }, null, 8, ["skip-marker-restore"]),
               createVNode(_sfc_main$4),
-              createVNode(_sfc_main$h),
-              createVNode(_sfc_main$f),
               createVNode(_sfc_main$g),
-              createVNode(_sfc_main$l),
+              createVNode(_sfc_main$e),
+              createVNode(_sfc_main$f),
               createVNode(_sfc_main$k),
-              createVNode(_sfc_main$j)
+              createVNode(_sfc_main$j),
+              createVNode(_sfc_main$i)
             ]),
             _: 1
           }, 8, ["layers"])
