@@ -6,14 +6,33 @@ export const GPU_VITE_DEV_PROXY_PREFIX = '/__gpu_dev_proxy__'
 
 const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i
 
+export function isGpuDevProxyPath(url: string): boolean {
+  const t = url.trim()
+  return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`)
+}
+
 export function isViteDevBrowser(): boolean {
   return typeof import.meta !== 'undefined' && import.meta.env.DEV
 }
 
+/** Retire les segments proxy déjà injectés dans une URL gpu-site (réparation après double réécriture). */
+function normalizeLocalGpuSiteUrl(url: string): string {
+  if (!LOCAL_GPU_SITE.test(url)) return url
+  try {
+    const u = new URL(url)
+    u.pathname = u.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, '') || '/'
+    return u.href
+  } catch {
+    return url
+  }
+}
+
 export function rewriteLocalGpuSiteUrl(url: string): string {
   if (!url || !isViteDevBrowser()) return url
-  if (!LOCAL_GPU_SITE.test(url)) return url
-  return url.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX)
+  if (isGpuDevProxyPath(url)) return url
+  const normalized = normalizeLocalGpuSiteUrl(url)
+  if (!LOCAL_GPU_SITE.test(normalized)) return url
+  return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX)
 }
 
 /** Réécrit les URLs gpu-site dans `config` et `window.gpu.config`. */

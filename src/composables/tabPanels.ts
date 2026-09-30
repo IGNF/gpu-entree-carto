@@ -1,8 +1,22 @@
 import { shallowRef, type InjectionKey, type Ref } from 'vue'
 
+/** Onglet interne fiche info (type de document GPU). */
+export interface FicheInfoDocumentTab {
+  id: string
+  label: string
+  bodyHtml: string
+}
+
 /** Contenu de l’onglet fiche info (localisation / GetFeatureInfo plus tard). */
 export interface FicheInfoSelection {
+  /** En-tête court (commune ou parcelle selon le mode carte). */
   title: string
+  /** Détail sous le titre (ex. attributs parcelle en mode Parcelle). */
+  headerHtml?: string
+  /** Onglets document d’urbanisme / procédures (gpu-site). */
+  documentTabs?: FicheInfoDocumentTab[]
+  /** Roue de patience : config GPU ou données fiche. */
+  loading?: 'config' | 'data'
   bodyHtml?: string
   /** Attributs bruts (affichés dans l’onglet fiche si présents). */
   raw?: Record<string, unknown> | null

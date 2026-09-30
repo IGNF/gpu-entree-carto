@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Fiche info (empty state)** — static bulleted Parcelle / Territoire help when no marker; with a marker, switching map mode swaps the sheet from cache or one fetch per mode at the same point.
 - **Mode emprise** — APICarto parcel/commune (and geo.api parent commune) cached per marker point and mode; no repeat fetch when toggling modes at the same location.
+- **Territory fiche** — urban-planning data only via `apiFicheInfoUrl` from gpu-client-config; removed APICarto `gpu/document` fallback and default `/api/fiche-info`; shows “Indisponibilité du service” when the API is not configured.
+- **GPU config** — relative `*Url` values resolve against the `gpu-client-config.js` script host (then Vite dev proxy when applicable).
+- **Fiche info** — `/api/fiche-info` JSON (gpu-site): mode-specific header, tabs for DU / PSMV / SUP / SCoT and in-progress procedures.
 - **Map permalink** — `lon`, `lat`, `mlon`, and `mlat` are written with at most 8 decimal places in the URL hash.
 - **Map permalink** — catalog, data-layer, and base-map changes update the hash; `mode` is stored in `#…` (not `?mode=`).
 - **Map permalink** — percent-encode layer keys/values; normalize legacy gpu-client hashes on load (Vue Router decode warning).

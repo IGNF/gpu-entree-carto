@@ -5,11 +5,17 @@ import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/m
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
-import { escapeHtml, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
+import { escapeHtml, FICHE_LOADING_SPINNER_HTML, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
+import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
+import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
+import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
+import { resolveConfigUrlForFetch } from '@/lib/configUrls'
+import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
-const APICARTO_GPU = 'https://apicarto.ign.fr/api/gpu/document'
 const APICARTO_PARCEL = 'https://apicarto.ign.fr/api/cadastre/parcelle'
+
+const FICHE_UNAVAILABLE_BODY = '<p>Indisponibilité du service</p>'
 
 /** Ignore les réponses APICarto / API arrivées après un clic plus récent. */
 let mapPointRequestSeq = 0
@@ -73,10 +79,48 @@ function pointGeomParam(lon: number, lat: number): string {
   return encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [lon, lat] }))
 }
 
+/** URL fiche GPU (injectée par gpu-client-config / `gpu.config`), sinon indisponible. */
+export function resolveApiFicheInfoUrl(): string | null {
+  const raw = config.apiFicheInfoUrl
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  return trimmed.length ? trimmed : null
+}
+
+export function isFicheInfoApiConfigured(): boolean {
+  return resolveApiFicheInfoUrl() != null
+}
+
+function ficheServiceUnavailableSelection(title: string): FicheInfoSelection {
+  return {
+    title,
+    bodyHtml: FICHE_UNAVAILABLE_BODY,
+    raw: { source: 'fiche-service-unavailable' },
+  }
+}
+
 function showLoading(title: string): void {
   tabPanelsApiRef.value?.showSelection({
     title,
-    bodyHtml: '<p>Chargement des informations…</p>',
+    loading: 'data',
+    bodyHtml: FICHE_LOADING_SPINNER_HTML,
+  })
+}
+
+/** Cerise présente dans le permalink — après chargement gpu-client-config. */
+export function loadFicheForCherryFromPermalink(): void {
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (!marker) return
+  const params = getMapPermalinkParams()
+  const mode = readMapModeFromPermalinkParams(params) ?? MAP_MODE_TERRITORY
+  const zoom = readMapPermalinkZoom(params) ?? 14
+  void loadFicheForMapPointImpl({
+    lon: marker.lon,
+    lat: marker.lat,
+    mode,
+    zoom,
+    markerPlacedAtClick: true,
+    skipLocationMarker: true,
   })
 }
 
@@ -117,15 +161,20 @@ async function fetchGeoJson(url: string): Promise<FeatureCollection> {
   return (await res.json()) as FeatureCollection
 }
 
-async function tryGpuSiteFiche(params: {
-  lon: number
-  lat: number
-  mode: MapModeId
-  zoom: number
-}): Promise<FicheInfoSelection | null> {
+async function tryGpuSiteFiche(
+  apiBase: string,
+  params: {
+    lon: number
+    lat: number
+    mode: MapModeId
+    zoom: number
+  },
+): Promise<FicheInfoSelection | null> {
   if (typeof window === 'undefined') return null
-  const base = String(config.apiFicheInfoUrl ?? '/api/fiche-info')
-  const url = new URL(base, window.location.origin)
+  const fetchBase = resolveConfigUrlForFetch(apiBase)
+  const url = fetchBase.startsWith('/')
+    ? new URL(fetchBase, window.location.origin)
+    : new URL(fetchBase)
   url.searchParams.set('lon', String(params.lon))
   url.searchParams.set('lat', String(params.lat))
   url.searchParams.set('mode', String(params.mode))
@@ -133,13 +182,23 @@ async function tryGpuSiteFiche(params: {
   try {
     const res = await fetch(url.toString(), { credentials: 'same-origin' })
     if (!res.ok) return null
-    const data = (await res.json()) as Record<string, unknown>
-    const title = String(data.title ?? data.name ?? 'Informations')
+    const data: unknown = await res.json()
+    if (isGpuFicheInfoPayload(data)) {
+      return ficheSelectionFromGpuApi(data, params.mode, params.lon, params.lat)
+    }
+    const record = data as Record<string, unknown>
+    const title = String(record.title ?? record.name ?? 'Informations')
     const bodyHtml = String(
-      data.bodyHtml ?? data.html ?? data.content ?? data.body ?? '<p>Informations disponibles.</p>',
+      record.bodyHtml ??
+        record.html ??
+        record.content ??
+        record.body ??
+        '<p>Informations disponibles.</p>',
     )
     const raw =
-      data.raw && typeof data.raw === 'object' ? (data.raw as Record<string, unknown>) : data
+      record.raw && typeof record.raw === 'object'
+        ? (record.raw as Record<string, unknown>)
+        : record
     return { title, bodyHtml, raw }
   } catch {
     return null
@@ -174,69 +233,26 @@ function parcelFromApicarto(
   }
 }
 
-function documentFromApicarto(
-  lon: number,
-  lat: number,
-  props: Record<string, unknown>,
-): FicheInfoSelection {
-  const duType = String(props.du_type ?? props.type ?? 'Document')
-  const gridTitle = String(props.grid_title ?? props.grid_name ?? '')
-  const name = String(props.name ?? props.partition ?? 'Document d’urbanisme')
-  const title = gridTitle ? `${duType} — ${gridTitle}` : name
-  const parts = [
-    htmlParagraph('Document', name),
-    htmlParagraph('Type', duType),
-    htmlParagraph('Commune', gridTitle),
-    htmlParagraph('Statut GPU', String(props.gpu_status ?? '')),
-    htmlParagraph('Identifiant', String(props.gpu_doc_id ?? props.id ?? '')),
-    htmlParagraph('Coordonnées', `${lon.toFixed(5)}, ${lat.toFixed(5)}`),
-  ].filter(Boolean)
-  return {
-    title,
-    bodyHtml: parts.join('') || '<p>Document d’urbanisme identifié.</p>',
-    raw: { ...props, lon, lat, source: 'apicarto-gpu-document' },
-  }
-}
-
-async function ficheFromApicarto(
-  lon: number,
-  lat: number,
-  mode: MapModeId,
-): Promise<FicheInfoSelection> {
-  if (mode === MAP_MODE_PARCEL) {
-    const geo = await fetchGeoJson(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`)
-    const feature = geo.features?.[0]
-    if (!feature?.properties) {
-      return {
-        title: 'Parcelle',
-        bodyHtml: '<p>Aucune parcelle cadastrale à cet emplacement.</p>',
-        raw: { lon, lat, mode },
-      }
-    }
-    return parcelFromApicarto(lon, lat, feature.properties as Record<string, unknown>)
-  }
-
-  const geo = await fetchGeoJson(`${APICARTO_GPU}?geom=${pointGeomParam(lon, lat)}`)
+async function ficheParcelFromApicarto(lon: number, lat: number): Promise<FicheInfoSelection> {
+  const geo = await fetchGeoJson(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`)
   const feature = geo.features?.[0]
   if (!feature?.properties) {
     return {
-      title: 'Document d’urbanisme',
-      bodyHtml: '<p>Aucun document d’urbanisme connu à cet emplacement.</p>',
-      raw: { lon, lat, mode },
+      title: 'Parcelle',
+      bodyHtml: '<p>Aucune parcelle cadastrale à cet emplacement.</p>',
+      raw: { lon, lat, mode: MAP_MODE_PARCEL },
     }
   }
-  return documentFromApicarto(lon, lat, feature.properties as Record<string, unknown>)
+  return parcelFromApicarto(lon, lat, feature.properties as Record<string, unknown>)
 }
 
-export async function loadFicheForMapPoint(params: {
+async function loadFicheForMapPointImpl(params: {
   lon: number
   lat: number
   mode: MapModeId
   zoom: number
   loadingTitle?: string
-  /** Cerise déjà posée au clic — ne met à jour que la popup à la fin de la requête. */
   markerPlacedAtClick?: boolean
-  /** Ne pas appeler createMarker (ex. résultat SearchEngine : conserver cerise + emprise). */
   skipLocationMarker?: boolean
 }): Promise<FicheInfoSelection | null> {
   const requestId = ++mapPointRequestSeq
@@ -247,20 +263,50 @@ export async function loadFicheForMapPoint(params: {
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
   showLoading(loadingTitle)
 
-  const fromSite = await tryGpuSiteFiche(params)
-  if (fromSite) {
+  const apiUrl = resolveApiFicheInfoUrl()
+
+  if (params.mode === MAP_MODE_TERRITORY) {
+    if (!apiUrl) {
+      return applyMapPointResult(
+        requestId,
+        params.lon,
+        params.lat,
+        params.mode,
+        ficheServiceUnavailableSelection(loadingTitle),
+        markerPlacedAtClick,
+        skipLocationMarker,
+      )
+    }
+    const fromSite = await tryGpuSiteFiche(apiUrl, params)
+    const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle)
     return applyMapPointResult(
       requestId,
       params.lon,
       params.lat,
       params.mode,
-      fromSite,
+      selection,
       markerPlacedAtClick,
       skipLocationMarker,
     )
   }
+
+  if (apiUrl) {
+    const fromSite = await tryGpuSiteFiche(apiUrl, params)
+    if (fromSite) {
+      return applyMapPointResult(
+        requestId,
+        params.lon,
+        params.lat,
+        params.mode,
+        fromSite,
+        markerPlacedAtClick,
+        skipLocationMarker,
+      )
+    }
+  }
+
   try {
-    const selection = await ficheFromApicarto(params.lon, params.lat, params.mode)
+    const selection = await ficheParcelFromApicarto(params.lon, params.lat)
     return applyMapPointResult(
       requestId,
       params.lon,
@@ -286,6 +332,24 @@ export async function loadFicheForMapPoint(params: {
       skipLocationMarker,
     )
   }
+}
+
+export function loadFicheForMapPoint(params: {
+  lon: number
+  lat: number
+  mode: MapModeId
+  zoom: number
+  loadingTitle?: string
+  /** Cerise déjà posée au clic — ne met à jour que la popup à la fin de la requête. */
+  markerPlacedAtClick?: boolean
+  /** Ne pas appeler createMarker (ex. résultat SearchEngine : conserver cerise + emprise). */
+  skipLocationMarker?: boolean
+}): Promise<FicheInfoSelection | null> {
+  return new Promise((resolve) => {
+    whenGpuClientConfigReady(() => {
+      void loadFicheForMapPointImpl(params).then(resolve)
+    })
+  })
 }
 
 export async function loadFicheForSearch(

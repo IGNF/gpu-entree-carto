@@ -9,7 +9,6 @@ const config: Record<string, unknown> = {
   prefix: '',
   envergoUrl:
     'https://envergo.beta.gouv.fr/simulateur/formulaire/?lng=[LONGITUDE]&lat=[LATITUDE]&zoom=[ZOOM]&mtm_campaign=service-gpu',
-  apiFicheInfoUrl: '/api/fiche-info',
 }
 
 export function setScriptDirFromCurrentScript(): void {

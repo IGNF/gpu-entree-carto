@@ -29,6 +29,7 @@ import {
   resolveDemoBaseLayerId,
   resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
+import { markGpuClientConfigLoading } from '@/lib/demo/gpuClientConfigState'
 import {
   demoUsesMinifiedAssets,
   getCreateStandardViewerFromBundle,
@@ -74,6 +75,9 @@ const mapLayers = computed(() => gpuBaseEnv.allLayers)
 const handoff = takeLocationHandoff()
 const initialSearch = ref<StandardViewerSearch | null>(handoff ?? demoCfg.map?.search ?? null)
 const expectsRemoteLayerConfig = Boolean(demoCfg.configScriptUrl?.trim())
+if (expectsRemoteLayerConfig) {
+  markGpuClientConfigLoading()
+}
 const layerNodes = ref<TreeLayerNode[]>(
   expectsRemoteLayerConfig ? [] : resolveDemoLayerNodes(demoCfg),
 )

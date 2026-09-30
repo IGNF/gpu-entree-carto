@@ -16,8 +16,8 @@ Clic carte **permanent** qui remplit l’onglet **fiche** (premier onglet du pan
 - **Désactivé** tant qu’un outil croquis est actif (dessin, modification, suppression, mesure, texte, etc.).
 - Ignore les clics sur l’UI (panneaux, recherche, sélecteur de mode, barre croquis, champs de formulaire) et les pixels touchant les couches vectorielles croquis / mesure.
 - Appelle `loadFicheForMapPoint({ lon, lat, mode, zoom })` :
-  - tente d’abord `config.apiFicheInfoUrl` (`/api/fiche-info`) si disponible ;
-  - sinon repli APICarto (`cadastre/parcelle` ou `gpu/document`).
+  - **Territoire** : uniquement `config.apiFicheInfoUrl` (fourni par gpu-client-config) ; sans URL ou en cas d’échec → « Indisponibilité du service » (pas d’appel APICarto `gpu/document`) ; la réponse JSON gpu-site alimente la fiche : titre commune, puis onglets par type de document (DU, PSMV, SUP, SCoT) et onglet « Procédures en cours » si applicable ;
+  - **Parcelle** : `apiFicheInfoUrl` si configurée (même JSON : en-tête parcelle + mêmes onglets documents), sinon APICarto `cadastre/parcelle`.
 - Ouvre l’onglet fiche via `tabPanelsApiRef.showSelection`.
 - Pose la **cerise** geopf dès le `singleclick` (sans bulle popup — fiche dans le panneau), puis charge la fiche en **asynchrone** ; **sans recentrer** la vue.
 - Affiche une **emprise mode** sur la couche SearchEngine (`searchResultGraphics`) : **parcelle** (rouge, APICarto) en mode **Parcelle** ; **commune** (rouge) en mode **Territoire**, et **arrondissement** (orange) + **commune ville** (rouge, contour geo.api.gouv.fr) à Paris, Lyon et Marseille ; indépendant du niveau de zoom ; pas d’emprise « lieu » geopf au clic.
