@@ -15,6 +15,7 @@ import {
 import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
+import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
@@ -155,6 +156,7 @@ export function scheduleFicheLoadForCherryWhenReady(): void {
 }
 
 function showFiche(selection: FicheInfoSelection): void {
+  syncCadastreLowFromFicheSelectionRaw(selection.raw)
   tabPanelsApiRef.value?.showSelection(selection)
 }
 

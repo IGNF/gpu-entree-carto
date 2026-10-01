@@ -32,9 +32,12 @@ import {
   refreshFicheForMapModeChange,
   scheduleFicheLoadForCherryWhenReady,
 } from '@/lib/fiche/ficheInfoService'
+import { animateViewFit } from '@/lib/map/animateViewFit'
+import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
 import {
   empriseTargetKeyForPoint,
   ensureModeEmpriseForMapPoint,
+  ensureModeEmpriseForMapPointAsync,
 } from '@/lib/map/searchResultGraphics'
 
 const props = withDefaults(
@@ -168,15 +171,22 @@ watch(
 
 watch(
   () => mapMode?.mode.value,
-  (mode) => {
-    if (mode == null) return
+  async (mode, previousMode) => {
+    if (mode == null || previousMode == null) return
     const marker = readMapPermalinkMarker(getMapPermalinkParams())
     if (!marker) return
-    const key = empriseTargetKeyForPoint(marker.lon, marker.lat)
-    ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode, key)
     const map = mapRef.value
-    const zoom = map?.getView().getZoom() ?? 6
+    if (!map) return
+    const key = empriseTargetKeyForPoint(marker.lon, marker.lat)
+    const extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode, key)
+    const zoom = map.getView().getZoom() ?? 6
     refreshFicheForMapModeChange(mode, zoom)
+    if (extent) {
+      animateViewFit(map, extent, {
+        padding: defaultMapViewFitPadding(),
+        maxZoom: 15,
+      })
+    }
   },
 )
 

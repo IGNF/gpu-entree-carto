@@ -10,6 +10,7 @@ type GpuFicheDocument = {
   originalName?: string
   type?: string
   status?: string
+  typeref?: string | null
   archiveUrl?: string
   typeproc_title?: string
   effectiveStatus?: string
@@ -37,6 +38,8 @@ type GpuFicheProcedure = {
 export type GpuFicheInfoPayload = {
   parcel?: Record<string, unknown> | null
   grid?: { name?: string; insee?: string; is_rnu?: boolean } | null
+  /** Référentiel cadastral (CNIG), renvoyé par `/api/fiche-info` — pilote la couche cadastre basse. */
+  typeref?: string | null
   dus?: Record<string, GpuFichePartition> | GpuFichePartition[]
   psmvs?: Record<string, GpuFichePartition> | GpuFichePartition[]
   sups?: Record<string, GpuFichePartition> | GpuFichePartition[]

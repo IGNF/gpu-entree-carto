@@ -29,6 +29,16 @@ Without `modelValue`, uses `provideMapMode()` context on the map view.
 - `mode=2` — territory mode (default if parameter missing)  
 - Changing the selector updates the URL **hash** (`#mode=…`) via `history.replaceState` (no reload). Legacy `?mode=` is migrated into the hash on load.
 
+## Map behaviour
+
+When the user switches mode with the radio control and a cherry marker is present (`mlon` / `mlat` in the permalink), `MapPermalinkSync`:
+
+1. Refreshes the red dashed APICarto emprise (parcel or territory) on the search layer.
+2. Animates the view to fit that emprise (same padding as after a place search, `maxZoom: 15`). If APICarto returns no polygon for the mode, the view is unchanged.
+3. Updates the fiche tab for the new mode.
+
+Initial page load or permalink restore does **not** trigger this recenter (only a user mode change after mount).
+
 ## Integration
 
 ```vue

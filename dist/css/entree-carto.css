@@ -7552,6 +7552,7 @@ dialog[id^='GPterritoriesPanel-'] {
 }
 
 #gpu-map .ol-attribution img.map-logo-ign-svg,
+#gpu-map .ol-attribution img.map-logo-marianne-svg,
 #gpu-map .ol-attribution img.map-logo-ministere-svg {
   display: block;
   width: var(--ec-attribution-logo-width);

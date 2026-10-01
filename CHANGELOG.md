@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Place search submit** — magnifying-glass replay uses the stored **place** fly-to extent (geopf), not the red mode emprise; place view extent excludes mode polygons when computing zoom.
+- **Map mode selector** — when switching Parcel / Territory with a cherry marker, animated fit to the red APICarto emprise for that mode (no move if the emprise is missing).
+- **Mode emprise after place search** — in Parcel mode, drop geopf administrative `trueGeometry` so the red dashed APICarto parcel outline is shown instead of the commune; read map mode from setup (geopf search runs in `requestAnimationFrame`, where `inject()` would fall back to Territory).
+- **Cadastre low base layer** — switches between PCI Express, BD Parcellaire (`CADASTRALPARCELS.PARCELS`), and INSPIRE PCI Vecteur WMS from `/api/fiche-info` `typeref` and commune INSEE (gpu-client `CadastreLow`); INSPIRE attributions show Marianne + ministry logos (DGFIP copyright in `title`); IGN and ministry logos include `title` tooltips.
+- **Géoplateforme base maps** — WMTS sources use 512 px tiles and PM matrices 5–19 (`ol/source/WMTS`, same as gpu-client `createWMTSSource`), replacing pseudo-XYZ `{z}/{x}/{y}` URLs; OL layer stack order matches gpu-client (`cadastreLow` above base tiles, below regional/department limits).
 - **Fiche info (empty state)** — static bulleted Parcelle / Territoire help when no marker; with a marker, switching map mode swaps the sheet from cache or one fetch per mode at the same point.
 - **Mode emprise** — APICarto parcel/commune (and geo.api parent commune) cached per marker point and mode; no repeat fetch when toggling modes at the same location.
 - **Territory fiche** — urban-planning data only via `apiFicheInfoUrl` from gpu-client-config; removed APICarto `gpu/document` fallback and default `/api/fiche-info`; shows “Indisponibilité du service” when the API is not configured.

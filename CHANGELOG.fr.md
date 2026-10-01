@@ -22,6 +22,11 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Recherche lieu (loupe)** — rejeu sur l’emprise **lieu** mémorisée (geopf), pas l’emprise rouge du mode ; le calcul de zoom exclut les polygones mode.
+- **Sélecteur de mode carte** — changement Parcelle / Territoire avec cerise : vol animé sur l’emprise rouge APICarto du mode (pas de déplacement si emprise absente).
+- **Emprise mode après recherche lieu** — en mode Parcelle, suppression de l’emprise communale geopf (`trueGeometry`) au profit du contour parcellaire APICarto (rouge pointillé) ; lecture du mode au setup (recherche geopf en `requestAnimationFrame`, où `inject()` retombait sur Territoire).
+- **Couche cadastre basse (fonds de plan)** — bascule PCI Express, BD Parcellaire (`CADASTRALPARCELS.PARCELS`) ou WMS INSPIRE PCI Vecteur selon `typeref` et INSEE renvoyés par `/api/fiche-info` (aligné gpu-client `CadastreLow`) ; attributions INSPIRE : logos Marianne + ministère (© DGFIP en `title`) ; logos IGN et ministère avec infobulles `title`.
+- **Fonds Géoplateforme** — sources WMTS tuiles 512 px, matrices PM 5–19 (`ol/source/WMTS`, comme gpu-client `createWMTSSource`), à la place du pseudo-XYZ `{z}/{x}/{y}` ; ordre d’empilement OL aligné gpu-client (`cadastreLow` au-dessus des fonds, sous `limitRegional` / `limitDepartmental`).
 - **Fiche info (sans sélection)** — consignes à puces statiques ; avec cerise, changement de mode met à jour la fiche (cache par point/mode, sans refetch si déjà chargé).
 - **Emprise mode (Parcelle / Territoire)** — cache APICarto (parcelle, commune, geo.api) par point et par mode ; pas de nouvelle requête si la cerise n’a pas bougé.
 - **Fiche info Territoire** — documents uniquement via `apiFicheInfoUrl` (gpu-client-config) ; plus de repli APICarto `gpu/document` ni d’appel `/api/fiche-info` par défaut ; message « Indisponibilité du service » si l’API n’est pas configurée.

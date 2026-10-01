@@ -62018,32 +62018,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       ]
     });
   }
-  const legendPanelFocusRef = /* @__PURE__ */ shallowRef(null);
-  const TAB_PANELS_KEY = Symbol("ecTabPanels");
-  const tabPanelsApiRef = /* @__PURE__ */ shallowRef(null);
-  function registerTabPanelsApi(api) {
-    tabPanelsApiRef.value = api;
-  }
-  const TAB_PANEL_IDS = {
-    fiche: 0,
-    catalogue: 1,
-    dataLayers: 2,
-    legends: 3
-  };
-  const DEFAULT_FICHE_EMPTY = {
-    title: "Aucune sélection en cours",
-    bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
-<ul>
-<li>choisissez le mode Parcelle</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Pour sélectionner une commune&nbsp;:</p>
-<ul>
-<li>choisissez le mode Territoire</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`
-  };
   const MAP_PERMALINK_RESERVED_KEYS = /* @__PURE__ */ new Set([
     "lon",
     "lat",
@@ -62279,9 +62253,42 @@ Expected function or array of functions, received type ${typeof value2}.`
     provide(MAP_MODE_KEY, ctx);
     return ctx;
   }
+  function useMapMode() {
+    const ctx = inject(MAP_MODE_KEY);
+    if (!ctx) {
+      throw new Error("[useMapMode] provideMapMode() manquant sur la vue carte");
+    }
+    return ctx;
+  }
   function tryUseMapMode() {
     return inject(MAP_MODE_KEY) ?? null;
   }
+  const legendPanelFocusRef = /* @__PURE__ */ shallowRef(null);
+  const TAB_PANELS_KEY = Symbol("ecTabPanels");
+  const tabPanelsApiRef = /* @__PURE__ */ shallowRef(null);
+  function registerTabPanelsApi(api) {
+    tabPanelsApiRef.value = api;
+  }
+  const TAB_PANEL_IDS = {
+    fiche: 0,
+    catalogue: 1,
+    dataLayers: 2,
+    legends: 3
+  };
+  const DEFAULT_FICHE_EMPTY = {
+    title: "Aucune sélection en cours",
+    bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
+<ul>
+<li>choisissez le mode Parcelle</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Pour sélectionner une commune&nbsp;:</p>
+<ul>
+<li>choisissez le mode Territoire</li>
+<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
+</ul>
+<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`
+  };
   const mapLocationMarkerRef = /* @__PURE__ */ shallowRef(null);
   function setMapLocationMarker(fn) {
     mapLocationMarkerRef.value = fn;
@@ -63127,1213 +63134,55 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     finalizeGpuClientConfigStateIfInjected();
   }
-  const TAB_DU = "du";
-  const TAB_PSMV = "psmv";
-  const TAB_SUP = "sup";
-  const TAB_SCOT = "scot";
-  const TAB_PROCEDURES = "procedures";
-  function isGpuFicheInfoPayload(data) {
-    if (!data || typeof data !== "object") return false;
-    const o = data;
-    return "parcel" in o || "grid" in o || "dus" in o || "partitions" in o || "parcelFeature" in o;
-  }
-  function normalizePartitionsMap(value2) {
-    if (!value2) return {};
-    if (Array.isArray(value2)) return {};
-    return value2;
-  }
-  const MUNICIPALITY_LOWER_PARTS = /* @__PURE__ */ new Set([
-    "de",
-    "la",
-    "le",
-    "les",
-    "du",
-    "des",
-    "en",
-    "sur",
-    "sous",
-    "aux"
-  ]);
-  function formatMunicipalityName(raw) {
-    return raw.split("-").map((part, index2) => {
-      if (!part) return part;
-      const lower = part.toLowerCase();
-      if (index2 > 0 && MUNICIPALITY_LOWER_PARTS.has(lower)) return lower;
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    }).join("-");
-  }
-  function formatDatapproFromDocumentName(documentName) {
-    const match2 = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i);
-    if (!(match2 == null ? void 0 : match2[3])) return null;
-    const date2 = match2[3];
-    return `${date2.slice(6, 8)}/${date2.slice(4, 6)}/${date2.slice(0, 4)}`;
-  }
-  function pickProductionDocument(documents) {
-    if (!(documents == null ? void 0 : documents.length)) return null;
-    const production = documents.filter((d) => d.status === "document.production");
-    return production[0] ?? documents[0] ?? null;
-  }
-  function partitionHasProductionDocument(partition) {
-    return pickProductionDocument(partition.documents) != null;
-  }
-  function mapHasProductionDocument(map2) {
-    return Object.values(map2).some(partitionHasProductionDocument);
-  }
-  function isPetFeature(feature) {
-    const nomfic = feature.nomfic;
-    return typeof nomfic === "string" && nomfic.includes("_97_00_");
-  }
-  function featureLabelHtml(feature) {
-    if ("typezone" in feature) {
-      const code = String(feature.libelle ?? "");
-      const label = String(feature.libelong ?? feature.libelle ?? "");
-      if (code && label && code !== label) {
-        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
+  function appendParams(uri, params2) {
+    const keyParams = [];
+    Object.keys(params2).forEach(function(k) {
+      if (params2[k] !== null && params2[k] !== void 0) {
+        keyParams.push(k + "=" + encodeURIComponent(params2[k]));
       }
-      if (label) return `<strong>${escapeHtml(label)}</strong>.`;
-      if (code) return `Zone classée <strong>${escapeHtml(code)}</strong>.`;
-      return "Zonage de type inconnu";
-    }
-    if ("typesect" in feature) {
-      const code = String(feature.libelle ?? "");
-      const label = String(feature.libelong ?? feature.libelle ?? "");
-      if (code && label) {
-        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
-      }
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Secteur de type inconnu";
-    }
-    if ("typepsc" in feature) {
-      const label = String(feature.libelle ?? "");
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Prescription de type inconnue";
-    }
-    if ("typeinf" in feature) {
-      const label = String(feature.libelle ?? "");
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Information de type inconnue";
-    }
-    if ("libelle" in feature) {
-      const label = String(feature.libelle ?? "");
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "";
-    }
-    return "";
-  }
-  function featureEntryHtml(feature) {
-    const info = featureLabelHtml(feature);
-    if (!info) return "";
-    const urlfic = feature.urlfic;
-    if (typeof urlfic === "string" && urlfic.trim()) {
-      return `<p><a href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer">${info}</a></p>`;
-    }
-    return `<p>${info}</p>`;
-  }
-  function buildPartitionFeaturesHtml(partition) {
-    const features = partition.features ?? [];
-    const seen = /* @__PURE__ */ new Set();
-    const parts = [];
-    for (const feature of features) {
-      if (isPetFeature(feature)) continue;
-      const info = featureLabelHtml(feature);
-      if (!info) continue;
-      const key2 = `${String(feature.nomfic ?? "")}|${info}`;
-      if (seen.has(key2)) continue;
-      seen.add(key2);
-      parts.push(featureEntryHtml(feature));
-    }
-    return parts.join("");
-  }
-  function documentIntroHtml(document2, kind) {
-    var _a;
-    const title = ((_a = document2.title) == null ? void 0 : _a.trim()) || document2.type || "document";
-    const documentName = document2.originalName ?? document2.name ?? "";
-    if (kind === "sup") {
-      return document2.title ? `<p><strong>${escapeHtml(document2.title)}</strong></p>` : `<p><strong>${escapeHtml(documentName || "Servitude")}</strong></p>`;
-    }
-    if (kind === "scot") {
-      const prefix = "Territoire couvert par ";
-      return `<p>${prefix}<strong>${escapeHtml(title)}</strong>.</p>`;
-    }
-    const article = document2.type === "CC" ? "la " : "le ";
-    let html2 = `<p>Parcelle couverte par ${article}<strong>${escapeHtml(title)}</strong>`;
-    if (documentName) {
-      const datappro = formatDatapproFromDocumentName(documentName);
-      if (datappro) {
-        const proc = typeof document2.typeproc_title === "string" && document2.typeproc_title.trim() ? ` (${document2.typeproc_title.trim()})` : "";
-        html2 += `, dont la dernière procédure${proc} a été approuvée le <strong>${escapeHtml(datappro)}</strong>`;
-      }
-    }
-    html2 += ".</p>";
-    if (document2.effectiveStatus === "NON_EXECUTOIRE") {
-      html2 += "<p><em>Ce document n’est pas exécutable en l’état.</em></p>";
-    }
-    return html2;
-  }
-  function buildNonExecutoireHint(document2, proceduresByDocument) {
-    var _a;
-    const key2 = document2.originalName ?? document2.name;
-    if (!key2 || !((_a = proceduresByDocument == null ? void 0 : proceduresByDocument[key2]) == null ? void 0 : _a.length)) return "";
-    const blocked = proceduresByDocument[key2].some((p5) => p5.documentNotEnforceable === true);
-    if (!blocked) return "";
-    return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`;
-  }
-  function buildPartitionBlockHtml(partitionKey, partition, kind, proceduresByDocument) {
-    const document2 = pickProductionDocument(partition.documents);
-    if (!document2) {
-      return `<p><strong>${escapeHtml(partitionKey)}</strong> — document indisponible.</p>`;
-    }
-    const parts = [documentIntroHtml(document2, kind)];
-    parts.push(buildNonExecutoireHint(document2, proceduresByDocument));
-    parts.push(buildPartitionFeaturesHtml(partition));
-    if (document2.archiveUrl) {
-      parts.push(
-        `<p><a href="${escapeHtml(document2.archiveUrl)}" target="_blank" rel="noopener noreferrer">Télécharger l’archive du document</a></p>`
-      );
-    }
-    return parts.filter(Boolean).join("");
-  }
-  function buildDocumentTypeTabHtml(partitions, kind, proceduresByDocument) {
-    const keys = Object.keys(partitions);
-    if (!keys.length) return "";
-    if (keys.length === 1) {
-      return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument);
-    }
-    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
-    for (const key2 of keys) {
-      parts.push(
-        `<li>${buildPartitionBlockHtml(key2, partitions[key2], kind, proceduresByDocument)}</li>`
-      );
-    }
-    parts.push("</ul>");
-    return parts.join("");
-  }
-  function collectInProgressProcedures(proceduresByDocument) {
-    if (!proceduresByDocument) return [];
-    const out = [];
-    for (const list of Object.values(proceduresByDocument)) {
-      for (const procedure of list) {
-        if (procedure.inProgress === true) out.push(procedure);
-      }
-    }
-    return out;
-  }
-  function buildProceduresTabHtml(procedures) {
-    var _a, _b, _c;
-    if (!procedures.length) return "";
-    const parts = ['<ul class="ec-fiche-info__proc-list">'];
-    for (const procedure of procedures) {
-      const typeLabel = ((_a = procedure.procedureType) == null ? void 0 : _a.title) ?? procedure.documentType ?? "Procédure";
-      const docName = procedure.documentName ?? procedure.name ?? "";
-      const gridTitle = ((_b = procedure.grid) == null ? void 0 : _b.title) ?? ((_c = procedure.grid) == null ? void 0 : _c.name) ?? "";
-      parts.push("<li>");
-      parts.push(
-        `<p><strong>${escapeHtml(typeLabel)}</strong>${docName ? ` — ${escapeHtml(docName)}` : ""}${gridTitle ? ` (${escapeHtml(gridTitle)})` : ""}</p>`
-      );
-      if (procedure.approbationDate) {
-        parts.push(`<p>Date d’approbation : ${escapeHtml(procedure.approbationDate)}</p>`);
-      }
-      const files = procedure.files ?? [];
-      if (files.length) {
-        parts.push("<ul>");
-        for (const file of files) {
-          const label = file.title ?? file.name ?? "Pièce";
-          if (file.url) {
-            parts.push(
-              `<li><a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></li>`
-            );
-          } else {
-            parts.push(`<li>${escapeHtml(label)}</li>`);
-          }
-        }
-        parts.push("</ul>");
-      }
-      parts.push("</li>");
-    }
-    parts.push("</ul>");
-    return parts.join("");
-  }
-  function buildCoastlineSupHint() {
-    return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`;
-  }
-  function normalizeLowScaleDocuments(value2) {
-    if (!value2) return [];
-    if (Array.isArray(value2)) return value2;
-    if (typeof value2 === "object") return Object.values(value2);
-    return [];
-  }
-  function buildLowScaleDocumentsHtml(documents) {
-    if (!documents.length) return "";
-    if (documents.length === 1) {
-      return documentIntroHtml(documents[0], "du");
-    }
-    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
-    for (const doc2 of documents) {
-      parts.push(`<li>${documentIntroHtml(doc2, "du")}</li>`);
-    }
-    parts.push("</ul>");
-    return parts.join("");
-  }
-  function buildDocumentTabs(data) {
-    const tabs = [];
-    const proceduresByDocument = data.proceduresByDocument;
-    const dus = normalizePartitionsMap(data.dus);
-    if (mapHasProductionDocument(dus)) {
-      tabs.push({
-        id: TAB_DU,
-        label: "Document d’urbanisme",
-        bodyHtml: buildDocumentTypeTabHtml(dus, "du", proceduresByDocument)
-      });
-    }
-    const psmvs = normalizePartitionsMap(data.psmvs);
-    if (mapHasProductionDocument(psmvs)) {
-      tabs.push({
-        id: TAB_PSMV,
-        label: "PSMV",
-        bodyHtml: buildDocumentTypeTabHtml(psmvs, "psmv", proceduresByDocument)
-      });
-    }
-    const sups = normalizePartitionsMap(data.sups);
-    if (mapHasProductionDocument(sups)) {
-      let body = buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
-      if (data.is_el9_alert) body += buildCoastlineSupHint();
-      tabs.push({
-        id: TAB_SUP,
-        label: "Servitude",
-        bodyHtml: body
-      });
-    }
-    const scots = normalizePartitionsMap(data.scots);
-    if (mapHasProductionDocument(scots)) {
-      tabs.push({
-        id: TAB_SCOT,
-        label: "SCoT",
-        bodyHtml: buildDocumentTypeTabHtml(scots, "scot", proceduresByDocument)
-      });
-    }
-    const inProgress = collectInProgressProcedures(proceduresByDocument);
-    if (inProgress.length) {
-      tabs.push({
-        id: TAB_PROCEDURES,
-        label: "Procédures en cours",
-        bodyHtml: buildProceduresTabHtml(inProgress)
-      });
-    }
-    if (!tabs.some((t) => t.id === TAB_DU)) {
-      const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument);
-      if (lowScaleDocs.length) {
-        tabs.unshift({
-          id: TAB_DU,
-          label: "Document d’urbanisme",
-          bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs)
-        });
-      }
-    }
-    return tabs;
-  }
-  function buildParcelHeaderHtml(parcel, lon, lat) {
-    if (!(parcel == null ? void 0 : parcel.idu) && !(parcel == null ? void 0 : parcel.numero)) {
-      return "<p>Aucune parcelle cadastrale à cet emplacement.</p>";
-    }
-    const parts = [
-      htmlParagraph("Commune", String(parcel.nom_com ?? "")),
-      htmlParagraph("Section", String(parcel.section ?? "")),
-      htmlParagraph("Numéro", String(parcel.numero ?? "")),
-      htmlParagraph("Contenance", parcel.contenance != null ? `${parcel.contenance} m²` : ""),
-      htmlParagraph("Code INSEE", String(parcel.code_insee ?? "")),
-      htmlParagraph("Identifiant", String(parcel.idu ?? parcel.id ?? "")),
-      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
-    ].filter(Boolean);
-    return parts.join("") || "<p>Parcelle identifiée.</p>";
-  }
-  function parcelTitle(parcel) {
-    if (!parcel) return "Parcelle";
-    const section = String(parcel.section ?? "");
-    const numero = String(parcel.numero ?? "");
-    const idu = String(parcel.idu ?? "");
-    if (section && numero) return `Parcelle ${section} ${numero}`;
-    if (idu) return `Parcelle ${idu}`;
-    return "Parcelle cadastrale";
-  }
-  function municipalityTitle(data) {
-    const grid = data.grid;
-    if (!(grid == null ? void 0 : grid.name)) return "Commune non trouvée";
-    const label = formatMunicipalityName(grid.name.trim());
-    const insee = grid.insee ? ` (${grid.insee})` : "";
-    return `${label}${insee}`;
-  }
-  function fallbackBodyHtml(data) {
-    var _a;
-    if ((_a = data.grid) == null ? void 0 : _a.is_rnu) {
-      return "<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>";
-    }
-    const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument));
-    if (lowScaleHtml) return lowScaleHtml;
-    return "<p>Aucun document disponible à cet emplacement.</p>";
-  }
-  function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
-    const parcel = data.parcel ?? null;
-    const documentTabs = buildDocumentTabs(data);
-    const bodyHtml = documentTabs.length ? void 0 : fallbackBodyHtml(data);
-    const base = {
-      title: mode2 === MAP_MODE_PARCEL ? parcelTitle(parcel) : municipalityTitle(data),
-      documentTabs: documentTabs.length ? documentTabs : void 0,
-      bodyHtml,
-      raw: { ...data, lon, lat, mode: mode2, source: "gpu-fiche-info-api" }
-    };
-    if (mode2 === MAP_MODE_PARCEL) {
-      base.headerHtml = buildParcelHeaderHtml(parcel, lon, lat);
-    } else if (mode2 === MAP_MODE_TERRITORY) {
-      base.headerHtml = void 0;
-    }
-    return base;
-  }
-  const APICARTO_PARCEL$1 = "https://apicarto.ign.fr/api/cadastre/parcelle";
-  const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
-  let mapPointRequestSeq = 0;
-  const FICHE_POINT_EPS = 1e-7;
-  let fichePointCache = null;
-  function sameMapPoint(a, b) {
-    return Math.abs(a.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a.lat - b.lat) <= FICHE_POINT_EPS;
-  }
-  function syncFichePointCache(lon, lat) {
-    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
-      fichePointCache = { lon, lat, byMode: {} };
-    }
-  }
-  function storeFicheInCache(mode2, lon, lat, selection) {
-    syncFichePointCache(lon, lat);
-    fichePointCache.byMode[mode2] = selection;
-  }
-  function cachedFicheForMode(mode2, lon, lat) {
-    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null;
-    return fichePointCache.byMode[mode2] ?? null;
-  }
-  function refreshFicheForMapModeChange(mode2, zoom) {
-    const marker = readMapPermalinkMarker(getMapPermalinkParams());
-    if (!marker) return;
-    const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
-    if (cached) {
-      showFiche(cached);
-      return;
-    }
-    void loadFicheForMapPoint({
-      lon: marker.lon,
-      lat: marker.lat,
-      mode: mode2,
-      zoom,
-      markerPlacedAtClick: true,
-      skipLocationMarker: true
     });
+    const qs = keyParams.join("&");
+    uri = uri.replace(/[?&]$/, "");
+    uri += uri.includes("?") ? "&" : "?";
+    return uri + qs;
   }
-  function pointGeomParam$1(lon, lat) {
-    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
-  }
-  function resolveApiFicheInfoUrl() {
-    const raw = config.apiFicheInfoUrl;
-    if (typeof raw !== "string") return null;
-    const trimmed = raw.trim();
-    return trimmed.length ? trimmed : null;
-  }
-  function ficheServiceUnavailableSelection(title) {
-    return {
-      title,
-      bodyHtml: FICHE_UNAVAILABLE_BODY,
-      raw: { source: "fiche-service-unavailable" }
-    };
-  }
-  function showLoading(title) {
-    var _a;
-    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection({
-      title,
-      loading: "data",
-      bodyHtml: FICHE_LOADING_SPINNER_HTML
-    });
-  }
-  function loadFicheForCherryFromPermalink() {
-    const marker = readMapPermalinkMarker(getMapPermalinkParams());
-    if (!marker) return;
-    const params2 = getMapPermalinkParams();
-    const mode2 = readMapModeFromPermalinkParams(params2) ?? MAP_MODE_TERRITORY;
-    const zoom = readMapPermalinkZoom(params2) ?? 14;
-    void loadFicheForMapPoint({
-      lon: marker.lon,
-      lat: marker.lat,
-      mode: mode2,
-      zoom,
-      markerPlacedAtClick: true,
-      skipLocationMarker: true
-    });
-  }
-  let cherryFicheLoadQueued = false;
-  function scheduleFicheLoadForCherryWhenReady() {
-    if (cherryFicheLoadQueued) return;
-    if (!readMapPermalinkMarker(getMapPermalinkParams())) return;
-    syncEntreeConfigFromGpuScript();
-    finalizeGpuClientConfigStateIfInjected();
-    cherryFicheLoadQueued = true;
-    whenGpuClientConfigReady(() => {
-      cherryFicheLoadQueued = false;
-      const run = () => loadFicheForCherryFromPermalink();
-      if (tabPanelsApiRef.value) {
-        run();
-        return;
-      }
-      const stop = watch(tabPanelsApiRef, (api) => {
-        if (api) {
-          stop();
-          run();
-        }
-      });
-    });
-  }
-  function showFiche(selection) {
-    var _a;
-    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection(selection);
-  }
-  function syncFicheLocationMarker(lon, lat) {
-    showMapLocationMarker(lon, lat, {
-      label: "",
-      origin: "ficheInfo",
-      center: false
-    });
-  }
-  function applyMapPointResult(requestId, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker) {
-    if (requestId !== mapPointRequestSeq) return null;
-    storeFicheInCache(mode2, lon, lat, selection);
-    showFiche(selection);
-    if (!skipLocationMarker && !markerPlacedAtClick) {
-      syncFicheLocationMarker(lon, lat);
-    }
-    return selection;
-  }
-  async function fetchGeoJson(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  }
-  async function tryGpuSiteFiche(apiBase, params2) {
-    if (typeof window === "undefined") return null;
-    const fetchBase = resolveConfigUrlForFetch(apiBase);
-    const url = fetchBase.startsWith("/") ? new URL(fetchBase, window.location.origin) : new URL(fetchBase);
-    url.searchParams.set("lon", String(params2.lon));
-    url.searchParams.set("lat", String(params2.lat));
-    url.searchParams.set("mode", String(params2.mode));
-    url.searchParams.set("zoom", String(Math.round(params2.zoom)));
-    try {
-      const res = await fetch(url.toString(), { credentials: "same-origin" });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (isGpuFicheInfoPayload(data)) {
-        return ficheSelectionFromGpuApi(data, params2.mode, params2.lon, params2.lat);
-      }
-      const record = data;
-      const title = String(record.title ?? record.name ?? "Informations");
-      const bodyHtml = String(
-        record.bodyHtml ?? record.html ?? record.content ?? record.body ?? "<p>Informations disponibles.</p>"
-      );
-      const raw = record.raw && typeof record.raw === "object" ? record.raw : record;
-      return { title, bodyHtml, raw };
-    } catch {
-      return null;
-    }
-  }
-  function parcelFromApicarto(lon, lat, props) {
-    const section = String(props.section ?? "");
-    const numero = String(props.numero ?? "");
-    const idu = String(props.idu ?? "");
-    const title = idu ? `Parcelle ${idu}` : section && numero ? `Parcelle ${section} ${numero}` : "Parcelle cadastrale";
-    const parts = [
-      htmlParagraph("Commune", String(props.nom_com ?? "")),
-      htmlParagraph("Section", section),
-      htmlParagraph("Numéro", numero),
-      htmlParagraph("Contenance", props.contenance != null ? `${props.contenance} m²` : ""),
-      htmlParagraph("Code INSEE", String(props.code_insee ?? "")),
-      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
-    ].filter(Boolean);
-    return {
-      title,
-      bodyHtml: parts.join("") || "<p>Parcelle identifiée.</p>",
-      raw: { ...props, lon, lat, source: "apicarto-cadastre" }
-    };
-  }
-  async function ficheParcelFromApicarto(lon, lat) {
-    var _a;
-    const geo = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
-    const feature = (_a = geo.features) == null ? void 0 : _a[0];
-    if (!(feature == null ? void 0 : feature.properties)) {
-      return {
-        title: "Parcelle",
-        bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
-        raw: { lon, lat, mode: MAP_MODE_PARCEL }
-      };
-    }
-    return parcelFromApicarto(lon, lat, feature.properties);
-  }
-  async function loadFicheForMapPointImpl(params2) {
-    const requestId = ++mapPointRequestSeq;
-    const markerPlacedAtClick = params2.markerPlacedAtClick === true;
-    const skipLocationMarker = params2.skipLocationMarker === true;
-    syncFichePointCache(params2.lon, params2.lat);
-    const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
-    showLoading(loadingTitle);
-    const apiUrl = resolveApiFicheInfoUrl();
-    if (params2.mode === MAP_MODE_TERRITORY) {
-      if (!apiUrl) {
-        return applyMapPointResult(
-          requestId,
-          params2.lon,
-          params2.lat,
-          params2.mode,
-          ficheServiceUnavailableSelection(loadingTitle),
-          markerPlacedAtClick,
-          skipLocationMarker
+  const zRegEx = /\{z\}/g;
+  const xRegEx = /\{x\}/g;
+  const yRegEx = /\{y\}/g;
+  const dashYRegEx = /\{-y\}/g;
+  function renderXYZTemplate(template, z, x, y, maxY) {
+    return template.replace(zRegEx, z.toString()).replace(xRegEx, x.toString()).replace(yRegEx, y.toString()).replace(dashYRegEx, function() {
+      if (maxY === void 0) {
+        throw new Error(
+          "If the URL template has a {-y} placeholder, the grid extent must be known"
         );
       }
-      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
-      const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle);
-      return applyMapPointResult(
-        requestId,
-        params2.lon,
-        params2.lat,
-        params2.mode,
-        selection,
-        markerPlacedAtClick,
-        skipLocationMarker
-      );
-    }
-    if (apiUrl) {
-      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
-      if (fromSite) {
-        return applyMapPointResult(
-          requestId,
-          params2.lon,
-          params2.lat,
-          params2.mode,
-          fromSite,
-          markerPlacedAtClick,
-          skipLocationMarker
-        );
-      }
-    }
-    try {
-      const selection = await ficheParcelFromApicarto(params2.lon, params2.lat);
-      return applyMapPointResult(
-        requestId,
-        params2.lon,
-        params2.lat,
-        params2.mode,
-        selection,
-        markerPlacedAtClick,
-        skipLocationMarker
-      );
-    } catch {
-      const fallback = {
-        title: loadingTitle,
-        bodyHtml: `<p>Impossible de charger les informations (${escapeHtml(String(params2.lon))}, ${escapeHtml(String(params2.lat))}).</p>`,
-        raw: { lon: params2.lon, lat: params2.lat, mode: params2.mode }
-      };
-      return applyMapPointResult(
-        requestId,
-        params2.lon,
-        params2.lat,
-        params2.mode,
-        fallback,
-        markerPlacedAtClick,
-        skipLocationMarker
-      );
-    }
-  }
-  function loadFicheForMapPoint(params2) {
-    return new Promise((resolve2) => {
-      whenGpuClientConfigReady(() => {
-        void loadFicheForMapPointImpl(params2).then(resolve2);
-      });
+      return (maxY - y).toString();
     });
   }
-  async function loadFicheForSearch(search, mode2, zoom = 6) {
-    var _a, _b, _c;
-    const label = (_a = search.fullText) == null ? void 0 : _a.trim();
-    if (!label) return;
-    const x = Number((_b = search.position) == null ? void 0 : _b.x);
-    const y = Number((_c = search.position) == null ? void 0 : _c.y);
-    const hasCoords = Number.isFinite(x) && Number.isFinite(y);
-    if (hasCoords) {
-      await loadFicheForMapPoint({
-        lon: x,
-        lat: y,
-        mode: mode2,
-        zoom,
-        loadingTitle: label,
-        skipLocationMarker: true
-      });
-      return;
+  function expandUrl(url) {
+    const urls = [];
+    let match2 = /\{([a-z])-([a-z])\}/.exec(url);
+    if (match2) {
+      const startCharCode = match2[1].charCodeAt(0);
+      const stopCharCode = match2[2].charCodeAt(0);
+      let charCode;
+      for (charCode = startCharCode; charCode <= stopCharCode; ++charCode) {
+        urls.push(url.replace(match2[0], String.fromCharCode(charCode)));
+      }
+      return urls;
     }
-    if (mode2 === MAP_MODE_TERRITORY) {
-      const parts = [`<p><strong>${escapeHtml(label)}</strong></p>`];
-      if (search.type) parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
-      showFiche({
-        title: label,
-        bodyHtml: parts.join(""),
-        raw: {
-          fullText: label,
-          type: search.type ?? null,
-          kind: search.kind ?? null,
-          poiType: search.poiType ?? [],
-          mode: mode2
-        }
-      });
-      return;
+    match2 = /\{(\d+)-(\d+)\}/.exec(url);
+    if (match2) {
+      const stop = parseInt(match2[2], 10);
+      for (let i = parseInt(match2[1], 10); i <= stop; i++) {
+        urls.push(url.replace(match2[0], i.toString()));
+      }
+      return urls;
     }
-    showFiche({
-      title: label,
-      bodyHtml: `<p><strong>${escapeHtml(label)}</strong></p><p>Coordonnées absentes — zoomez et cliquez sur la parcelle.</p>`,
-      raw: { fullText: label, mode: mode2 }
-    });
+    urls.push(url);
+    return urls;
   }
-  const LOCATION_SEARCH_ANIMATION_MS = 650;
-  function animateViewFit(map2, extent, options = {}) {
-    const { duration, ...fitOptions } = options;
-    map2.getView().fit(extent, {
-      ...fitOptions,
-      duration: duration ?? LOCATION_SEARCH_ANIMATION_MS,
-      easing: easeOut
-    });
-  }
-  function parentCommuneInseeForArrondissement(codeInsee) {
-    if (!/^\d{5}$/.test(codeInsee)) return null;
-    if (codeInsee.startsWith("751") && codeInsee !== "75056") return "75056";
-    const codeNum = Number(codeInsee);
-    if (codeNum >= 13201 && codeNum <= 13216) return "13055";
-    if (codeNum >= 69381 && codeNum <= 69389) return "69123";
-    return null;
-  }
-  const APICARTO_COMMUNE = "https://apicarto.ign.fr/api/cadastre/commune";
-  const APICARTO_PARCEL = "https://apicarto.ign.fr/api/cadastre/parcelle";
-  const GEO_API_COMMUNE = "https://geo.api.gouv.fr/communes";
-  const MODE_EMPRISE_PROP = "ec-mode-emprise";
-  const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
-  let empriseTargetKey = null;
-  const EMPRISE_POINT_EPS = 1e-7;
-  let emprisePointCache = null;
-  const geoJson$1 = new GeoJSON();
-  function sameEmprisePoint(a, b) {
-    return Math.abs(a.lon - b.lon) <= EMPRISE_POINT_EPS && Math.abs(a.lat - b.lat) <= EMPRISE_POINT_EPS;
-  }
-  function syncEmprisePointCache(lon, lat) {
-    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) {
-      emprisePointCache = { lon, lat, byMode: {} };
-    }
-  }
-  function cloneEmpriseFeature(feature) {
-    const clone2 = feature.clone();
-    const kind = feature.get(MODE_EMPRISE_PROP);
-    if (kind) {
-      clone2.set(MODE_EMPRISE_PROP, kind);
-      clone2.setStyle(styleForKind(kind));
-    }
-    return clone2;
-  }
-  function storeEmpriseInCache(lon, lat, mode2, features) {
-    syncEmprisePointCache(lon, lat);
-    emprisePointCache.byMode[mode2] = features.map(cloneEmpriseFeature);
-  }
-  function cachedEmpriseForMode(lon, lat, mode2) {
-    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) return null;
-    if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
-    const stored = emprisePointCache.byMode[mode2] ?? [];
-    return stored.map(cloneEmpriseFeature);
-  }
-  function pointGeomParam(lon, lat) {
-    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
-  }
-  function modeEmpriseStyle(stroke, fill) {
-    return new Style({
-      stroke: new Stroke({
-        color: stroke,
-        width: 2,
-        lineDash: [8, 8]
-      }),
-      fill: new Fill({ color: fill })
-    });
-  }
-  function communeOrParcelEmpriseStyle() {
-    return modeEmpriseStyle("rgba(200, 16, 46, 0.95)", "rgba(200, 16, 46, 0.12)");
-  }
-  function arrondissementEmpriseStyle() {
-    return modeEmpriseStyle("rgba(230, 126, 34, 0.95)", "rgba(230, 126, 34, 0.14)");
-  }
-  function styleForKind(kind) {
-    return kind === "arrondissement" ? arrondissementEmpriseStyle() : communeOrParcelEmpriseStyle();
-  }
-  function dismissSearchEnginePopup(host) {
-    var _a;
-    (_a = host.popup) == null ? void 0 : _a.setPosition(void 0);
-  }
-  function removeModeEmpriseFeatures(host) {
-    var _a;
-    const source = (_a = host.layer) == null ? void 0 : _a.getSource();
-    if (!source) return;
-    for (const feature of [...source.getFeatures()]) {
-      if (!feature.get(MODE_EMPRISE_PROP)) continue;
-      if (typeof source.removeFeature === "function") {
-        source.removeFeature(feature);
-      }
-    }
-  }
-  function readGeoJsonFeature(raw, kind) {
-    var _a;
-    if (!(raw == null ? void 0 : raw.geometry)) return null;
-    const map2 = (_a = searchEngineLayerHostRef.value) == null ? void 0 : _a.getMap();
-    const projection = map2 == null ? void 0 : map2.getView().getProjection();
-    if (!projection) return null;
-    const feature = geoJson$1.readFeature(raw, {
-      dataProjection: "EPSG:4326",
-      featureProjection: projection
-    });
-    feature.set(MODE_EMPRISE_PROP, kind);
-    feature.setStyle(styleForKind(kind));
-    return feature;
-  }
-  async function fetchCadastreCommuneAtPoint(lon, lat) {
-    var _a;
-    const res = await fetch(`${APICARTO_COMMUNE}?geom=${pointGeomParam(lon, lat)}`);
-    if (!res.ok) return null;
-    const geo = await res.json();
-    return ((_a = geo.features) == null ? void 0 : _a[0]) ?? null;
-  }
-  async function fetchCommuneContourFromGeoApi(codeInsee) {
-    const res = await fetch(
-      `${GEO_API_COMMUNE}/${encodeURIComponent(codeInsee)}?format=geojson&geometry=contour`
-    );
-    if (!res.ok) return null;
-    const raw = await res.json();
-    return (raw == null ? void 0 : raw.geometry) ? raw : null;
-  }
-  async function fetchParcelFeature(lon, lat) {
-    var _a;
-    const res = await fetch(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`);
-    if (!res.ok) return null;
-    const geo = await res.json();
-    const raw = (_a = geo.features) == null ? void 0 : _a[0];
-    if (!(raw == null ? void 0 : raw.geometry) || !raw.properties) return null;
-    return readGeoJsonFeature(raw, "parcel");
-  }
-  async function fetchTerritoryEmpriseFeatures(lon, lat) {
-    var _a;
-    const atPoint = await fetchCadastreCommuneAtPoint(lon, lat);
-    if (!(atPoint == null ? void 0 : atPoint.geometry)) return [];
-    const codeInsee = String(((_a = atPoint.properties) == null ? void 0 : _a.code_insee) ?? "");
-    const parentInsee = parentCommuneInseeForArrondissement(codeInsee);
-    const features = [];
-    if (parentInsee) {
-      const parentRaw = await fetchCommuneContourFromGeoApi(parentInsee);
-      const commune2 = parentRaw ? readGeoJsonFeature(parentRaw, "commune") : null;
-      if (commune2) features.push(commune2);
-      const arrondissement = readGeoJsonFeature(atPoint, "arrondissement");
-      if (arrondissement) features.push(arrondissement);
-      return features;
-    }
-    const commune = readGeoJsonFeature(atPoint, "commune");
-    return commune ? [commune] : [];
-  }
-  async function fetchModeEmpriseFeatures(lon, lat, mode2) {
-    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
-    if (resolvedMode === MAP_MODE_PARCEL) {
-      const parcel = await fetchParcelFeature(lon, lat);
-      return parcel ? [parcel] : [];
-    }
-    if (resolvedMode === MAP_MODE_TERRITORY) {
-      return fetchTerritoryEmpriseFeatures(lon, lat);
-    }
-    return [];
-  }
-  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey) {
-    var _a, _b;
-    empriseTargetKey = targetKey;
-    removeModeEmpriseFeatures(host);
-    const fromCache = cachedEmpriseForMode(lon, lat, mode2);
-    if (fromCache) {
-      if (empriseTargetKey !== targetKey) return;
-      const source2 = (_a = host.layer) == null ? void 0 : _a.getSource();
-      if (!source2) return;
-      for (const feature of fromCache) {
-        source2.addFeature(feature);
-      }
-      return;
-    }
-    const features = await fetchModeEmpriseFeatures(lon, lat, mode2);
-    if (empriseTargetKey !== targetKey) return;
-    storeEmpriseInCache(lon, lat, mode2, features);
-    const source = (_b = host.layer) == null ? void 0 : _b.getSource();
-    if (!source) return;
-    for (const feature of features) {
-      source.addFeature(feature);
-    }
-  }
-  function empriseTargetKeyForPoint(lon, lat) {
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`;
-  }
-  function ensureModeEmpriseForMapPoint(lon, lat, mode2, targetKey) {
-    const host = searchEngineLayerHostRef.value;
-    if (!host) return;
-    void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
-  }
-  const _hoisted_1$h = {
-    class: "ec-ol-control-host",
-    hidden: "",
-    "aria-hidden": "true"
-  };
-  const GPU_PIN_BLUE = "#000091";
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
-    __name: "SearchEngineControl",
-    props: {
-      placeholder: { default: "Rechercher un lieu..." },
-      collapsed: { type: Boolean, default: false },
-      collapsible: { type: Boolean, default: false },
-      serviceBaseUrl: { default: "https://data.geopf.fr" },
-      initialSearch: { default: null }
-    },
-    setup(__props) {
-      const props = __props;
-      let appliedKey = null;
-      function searchKey(search) {
-        var _a, _b;
-        if (!(search == null ? void 0 : search.fullText)) return null;
-        const x = (_a = search.position) == null ? void 0 : _a.x;
-        const y = (_b = search.position) == null ? void 0 : _b.y;
-        return `${search.fullText}|${x ?? ""}|${y ?? ""}|${search.type ?? ""}`;
-      }
-      function openFicheFromSearch(search) {
-        var _a, _b, _c;
-        const map2 = ((_b = (_a = controlRef.value) == null ? void 0 : _a.getMap) == null ? void 0 : _b.call(_a)) ?? null;
-        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
-        const mode2 = ((_c = tryUseMapMode()) == null ? void 0 : _c.mode.value) ?? 2;
-        void loadFicheForSearch(search, mode2, zoom);
-      }
-      function searchLabelFromFeature(feature) {
-        if (!feature) return "";
-        const toponyme = feature.get("toponyme");
-        if (typeof toponyme === "string" && toponyme.trim()) return toponyme.trim();
-        const infoPopup = feature.get("infoPopup");
-        if (typeof infoPopup === "string" && infoPopup.trim()) {
-          const plain = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-          if (plain) return plain;
-        }
-        return "";
-      }
-      function searchFromGeopfResult(control, searchEvent) {
-        var _a, _b;
-        const label = control.baseSearchEngine.input.value.trim();
-        let feature = (_a = control.popup) == null ? void 0 : _a.get("feature");
-        if (!feature && (searchEvent == null ? void 0 : searchEvent.result)) {
-          feature = searchEvent.result;
-        }
-        const resolvedLabel = label || searchLabelFromFeature(feature);
-        if (!resolvedLabel && !feature) return null;
-        let x;
-        let y;
-        const geometry = feature == null ? void 0 : feature.getGeometry();
-        if (geometry) {
-          let coord;
-          if (geometry.getType() === "Point") {
-            coord = geometry.getCoordinates();
-          } else {
-            const interior = (_b = geometry.getInteriorPoint) == null ? void 0 : _b.call(geometry);
-            coord = (interior == null ? void 0 : interior.getCoordinates()) ?? getCenter(geometry.getExtent());
-          }
-          if (coord) {
-            [x, y] = toLonLat(coord);
-          }
-        }
-        const origin = feature == null ? void 0 : feature.get("origin");
-        const featureType = feature == null ? void 0 : feature.get("type");
-        return {
-          fullText: resolvedLabel || "Résultat",
-          type: typeof featureType === "string" && featureType || (typeof origin === "string" ? origin : void 0),
-          kind: typeof (feature == null ? void 0 : feature.get("kind")) === "string" ? feature.get("kind") : void 0,
-          ...Number.isFinite(x) && Number.isFinite(y) ? { position: { x, y } } : {}
-        };
-      }
-      function tabPanelsRightInset() {
-        const el = document.querySelector(".ec-tab-panels.is-open");
-        if (!(el instanceof HTMLElement)) return 40;
-        return Math.ceil(el.getBoundingClientRect().width) + 24;
-      }
-      function pinMarkerStyle() {
-        const make = (color) => new Style({
-          image: new Icon({
-            src: mapPinIcon,
-            color,
-            anchor: [0.5, 1]
-          }),
-          stroke: new Stroke({ color, width: 2 }),
-          fill: new Fill({ color: "rgba(0, 0, 0, 0.1)" })
-        });
-        return [make("#ffffff"), make(GPU_PIN_BLUE)];
-      }
-      function configureSearchPinInteraction(control) {
-        var _a, _b;
-        const select = control.selectInteraction;
-        if (!select) return;
-        (_a = select.setStyle) == null ? void 0 : _a.call(select, pinMarkerStyle());
-        (_b = select.setActive) == null ? void 0 : _b.call(select, false);
-      }
-      function bindSearchPinSelectGuard(control) {
-        const select = control.selectInteraction;
-        if (!(select == null ? void 0 : select.on)) return () => {
-        };
-        const onSelect = () => {
-          requestAnimationFrame(() => enforceSearchLayerPinStyles(control));
-        };
-        select.on("select", onSelect);
-        return () => {
-          var _a;
-          return (_a = select.un) == null ? void 0 : _a.call(select, "select", onSelect);
-        };
-      }
-      function enforceSearchLayerPinStyles(control) {
-        var _a, _b, _c, _d;
-        const source = (_a = control.layer) == null ? void 0 : _a.getSource();
-        if (source) {
-          for (const feature of source.getFeatures()) {
-            if (((_b = feature.getGeometry()) == null ? void 0 : _b.getType()) === "Point") {
-              feature.setStyle(pinMarkerStyle());
-            }
-          }
-        }
-        (_d = (_c = control.selectInteraction) == null ? void 0 : _c.getFeatures()) == null ? void 0 : _d.clear();
-      }
-      function searchResultFeature(control) {
-        var _a, _b;
-        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
-        let feature = (_b = control.popup) == null ? void 0 : _b.get("feature");
-        if (!feature) {
-          feature = source == null ? void 0 : source.getFeatures()[0];
-        }
-        return feature ?? null;
-      }
-      function searchResultViewExtent(control) {
-        var _a;
-        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
-        if (!source) return null;
-        const features = source.getFeatures();
-        if (!features.length) return null;
-        const emprise = createEmpty();
-        let hasEmprise = false;
-        for (const f of features) {
-          if (f.get(MODE_EMPRISE_PROP)) continue;
-          const geometry = f.getGeometry();
-          if (!geometry || geometry.getType() === "Point") continue;
-          extend$3(emprise, geometry.getExtent());
-          hasEmprise = true;
-        }
-        if (hasEmprise && !isEmpty(emprise)) return emprise;
-        const combined = createEmpty();
-        for (const f of features) {
-          const geometry = f.getGeometry();
-          if (geometry) extend$3(combined, geometry.getExtent());
-        }
-        return isEmpty(combined) ? null : combined;
-      }
-      function prepareSearchResultOnMap(control) {
-        var _a;
-        const map2 = control.getMap();
-        if (!map2) return null;
-        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
-        const feature = searchResultFeature(control);
-        const geometry = feature == null ? void 0 : feature.getGeometry();
-        if (!feature || !geometry) return null;
-        if (source && !source.getFeatures().includes(feature)) {
-          source.addFeature(feature);
-        }
-        enforceSearchLayerPinStyles(control);
-        dismissSearchEnginePopup(control);
-        return feature;
-      }
-      function animateViewToSearchResult(control) {
-        var _a;
-        const map2 = control.getMap();
-        if (!map2) return;
-        const extent = searchResultViewExtent(control);
-        if (!extent) return;
-        const rightPad = ((_a = tabPanelsApiRef.value) == null ? void 0 : _a.isOpen.value) ? tabPanelsRightInset() : 72;
-        animateViewFit(map2, extent, {
-          padding: [72, rightPad, 72, 72],
-          maxZoom: 15
-        });
-      }
-      function resolveMapModeForEmprise() {
-        var _a;
-        const raw = ((_a = tryUseMapMode()) == null ? void 0 : _a.mode.value) ?? DEFAULT_MAP_MODE;
-        return normalizeMapMode(raw) ?? DEFAULT_MAP_MODE;
-      }
-      function syncModeEmpriseAfterSearch(control, lon, lat, empriseKey) {
-        const mode2 = resolveMapModeForEmprise();
-        void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode2, empriseKey);
-        const map2 = control.getMap();
-        map2 == null ? void 0 : map2.once("moveend", () => {
-          void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode2, empriseKey);
-        });
-      }
-      function onLocationSearchResult(control, empriseKey, lon, lat) {
-        setMapPermalinkMarker(lon, lat);
-        prepareSearchResultOnMap(control);
-        animateViewToSearchResult(control);
-        syncModeEmpriseAfterSearch(control, lon, lat, empriseKey);
-      }
-      function applyInitialSearch(control, search) {
-        var _a, _b;
-        const key2 = searchKey(search);
-        if (!key2 || key2 === appliedKey) return;
-        appliedKey = key2;
-        const label = search.fullText ?? "";
-        control.baseSearchEngine.input.value = label;
-        const x = Number((_a = search.position) == null ? void 0 : _a.x);
-        const y = Number((_b = search.position) == null ? void 0 : _b.y);
-        const hasCoords = Number.isFinite(x) && Number.isFinite(y);
-        const isGeolocate = search.type === "geolocate";
-        const willGeocode = Boolean(label && !isGeolocate);
-        if (!willGeocode) {
-          openFicheFromSearch(search);
-        }
-        if (hasCoords) {
-          control.createMarker([x, y], "", isGeolocate ? "geolocate" : "searchAtInit", true);
-          dismissSearchEnginePopup(control);
-          enforceSearchLayerPinStyles(control);
-          setMapPermalinkMarker(x, y);
-        }
-        if (!label || isGeolocate) return;
-        const poiType = Array.isArray(search.poiType) ? search.poiType : [];
-        control.baseSearchEngine.search({
-          location: {
-            fullText: label,
-            type: search.type,
-            kind: search.kind,
-            poiType,
-            ...hasCoords ? { position: { x, y } } : {}
-          }
-        });
-      }
-      const controlRef = useOlControl(
-        () => createSearchEngineAdvanced({
-          placeholder: props.placeholder,
-          collapsed: props.collapsed,
-          collapsible: props.collapsible,
-          serviceBaseUrl: props.serviceBaseUrl
-        })
-      );
-      function bindMapLocationMarker(control) {
-        return (lon, lat, options) => {
-          if (!control.getMap()) return;
-          const origin = (options == null ? void 0 : options.origin) ?? "ficheInfo";
-          control.createMarker([lon, lat], "", origin, (options == null ? void 0 : options.center) ?? false);
-          dismissSearchEnginePopup(control);
-          enforceSearchLayerPinStyles(control);
-          setMapPermalinkMarker(lon, lat);
-        };
-      }
-      watch(
-        controlRef,
-        (control, _prev, onCleanup) => {
-          if (!control) {
-            setMapLocationMarker(null);
-            searchEngineLayerHostRef.value = null;
-            return;
-          }
-          const advanced = control;
-          configureSearchPinInteraction(advanced);
-          const unbindPinSelectGuard = bindSearchPinSelectGuard(advanced);
-          searchEngineLayerHostRef.value = advanced;
-          setMapLocationMarker(bindMapLocationMarker(advanced));
-          onCleanup(() => {
-            unbindPinSelectGuard();
-            setMapLocationMarker(null);
-            searchEngineLayerHostRef.value = null;
-          });
-          const onSearch = (e) => {
-            var _a, _b;
-            const origin = (_b = (_a = e == null ? void 0 : e.result) == null ? void 0 : _a.get) == null ? void 0 : _b.call(_a, "origin");
-            const fromFicheInfo = origin === "ficheInfo";
-            const fromPermalinkRestore = origin === "permalink";
-            requestAnimationFrame(() => {
-              var _a2, _b2;
-              if (fromFicheInfo || fromPermalinkRestore) {
-                enforceSearchLayerPinStyles(advanced);
-                return;
-              }
-              const search = searchFromGeopfResult(advanced, e);
-              const lon = Number((_a2 = search == null ? void 0 : search.position) == null ? void 0 : _a2.x);
-              const lat = Number((_b2 = search == null ? void 0 : search.position) == null ? void 0 : _b2.y);
-              if (Number.isFinite(lon) && Number.isFinite(lat)) {
-                const empriseKey = empriseTargetKeyForPoint(lon, lat);
-                onLocationSearchResult(advanced, empriseKey, lon, lat);
-              } else {
-                prepareSearchResultOnMap(advanced);
-                animateViewToSearchResult(advanced);
-                const feature = searchResultFeature(advanced);
-                const geometry = feature == null ? void 0 : feature.getGeometry();
-                if (geometry) {
-                  let coord;
-                  if (geometry.getType() === "Point") {
-                    coord = geometry.getCoordinates();
-                  } else {
-                    coord = getCenter(geometry.getExtent());
-                  }
-                  if (coord) {
-                    const [fallbackLon, fallbackLat] = toLonLat(coord);
-                    const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat);
-                    syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey);
-                  }
-                }
-              }
-              if (search == null ? void 0 : search.fullText) openFicheFromSearch(search);
-            });
-          };
-          advanced.on("search", onSearch);
-          onCleanup(() => {
-            var _a;
-            return (_a = advanced.un) == null ? void 0 : _a.call(advanced, "search", onSearch);
-          });
-        },
-        { immediate: true }
-      );
-      watch(
-        [controlRef, () => props.initialSearch],
-        ([control, search]) => {
-          if (!control || !(search == null ? void 0 : search.fullText)) return;
-          requestAnimationFrame(() => {
-            applyInitialSearch(control, search);
-          });
-        },
-        { immediate: true }
-      );
-      return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$h);
-      };
-    }
-  });
-  var Config = {
-    /**
-     * Config
-     *
-     * @public
-     * @type {Object}
-     */
-    configuration: {},
-    /**
-     * Check if the configuration is loaded
-     *
-     * @returns {Boolean} True if Config is loaded, false otherwise
-     */
-    isConfigLoaded: function() {
-      if (this.configuration && Object.keys(this.configuration).length !== 0) {
-        return true;
-      }
-      var scope = typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : typeof global !== "undefined" ? global : {};
-      if (scope.Gp && scope.Gp.Config && scope.Gp.Config.layers && Object.keys(scope.Gp.Config.layers).length !== 0) {
-        this.configuration = scope.Gp.Config;
-        return true;
-      }
-      return false;
-    }
-  };
   const tmpTileCoord = [0, 0, 0];
   const DECIMALS$1 = 5;
   class TileGrid {
@@ -64872,108 +63721,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       return this.matrixIds_;
     }
   }
-  function appendParams(uri, params2) {
-    const keyParams = [];
-    Object.keys(params2).forEach(function(k) {
-      if (params2[k] !== null && params2[k] !== void 0) {
-        keyParams.push(k + "=" + encodeURIComponent(params2[k]));
-      }
-    });
-    const qs = keyParams.join("&");
-    uri = uri.replace(/[?&]$/, "");
-    uri += uri.includes("?") ? "&" : "?";
-    return uri + qs;
-  }
-  const zRegEx = /\{z\}/g;
-  const xRegEx = /\{x\}/g;
-  const yRegEx = /\{y\}/g;
-  const dashYRegEx = /\{-y\}/g;
-  function renderXYZTemplate(template, z, x, y, maxY) {
-    return template.replace(zRegEx, z.toString()).replace(xRegEx, x.toString()).replace(yRegEx, y.toString()).replace(dashYRegEx, function() {
-      if (maxY === void 0) {
-        throw new Error(
-          "If the URL template has a {-y} placeholder, the grid extent must be known"
-        );
-      }
-      return (maxY - y).toString();
-    });
-  }
-  function expandUrl(url) {
-    const urls = [];
-    let match2 = /\{([a-z])-([a-z])\}/.exec(url);
-    if (match2) {
-      const startCharCode = match2[1].charCodeAt(0);
-      const stopCharCode = match2[2].charCodeAt(0);
-      let charCode;
-      for (charCode = startCharCode; charCode <= stopCharCode; ++charCode) {
-        urls.push(url.replace(match2[0], String.fromCharCode(charCode)));
-      }
-      return urls;
-    }
-    match2 = /\{(\d+)-(\d+)\}/.exec(url);
-    if (match2) {
-      const stop = parseInt(match2[2], 10);
-      for (let i = parseInt(match2[1], 10); i <= stop; i++) {
-        urls.push(url.replace(match2[0], i.toString()));
-      }
-      return urls;
-    }
-    urls.push(url);
-    return urls;
-  }
-  function createFromTemplate(template, tileGrid) {
-    return (
-      /**
-       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
-       * @param {number} pixelRatio Pixel ratio.
-       * @param {import("./proj/Projection.js").default} projection Projection.
-       * @return {string|undefined} Tile URL.
-       */
-      (function(tileCoord, pixelRatio, projection) {
-        if (!tileCoord) {
-          return void 0;
-        }
-        let maxY;
-        const z = tileCoord[0];
-        if (tileGrid) {
-          const range = tileGrid.getFullTileRange(z);
-          if (range) {
-            maxY = range.getHeight() - 1;
-          }
-        }
-        return renderXYZTemplate(template, z, tileCoord[1], tileCoord[2], maxY);
-      })
-    );
-  }
-  function createFromTemplates(templates, tileGrid) {
-    const len = templates.length;
-    const tileUrlFunctions = new Array(len);
-    for (let i = 0; i < len; ++i) {
-      tileUrlFunctions[i] = createFromTemplate(templates[i], tileGrid);
-    }
-    return createFromTileUrlFunctions(tileUrlFunctions);
-  }
-  function createFromTileUrlFunctions(tileUrlFunctions) {
-    if (tileUrlFunctions.length === 1) {
-      return tileUrlFunctions[0];
-    }
-    return (
-      /**
-       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
-       * @param {number} pixelRatio Pixel ratio.
-       * @param {import("./proj/Projection.js").default} projection Projection.
-       * @return {string|undefined} Tile URL.
-       */
-      (function(tileCoord, pixelRatio, projection) {
-        if (!tileCoord) {
-          return void 0;
-        }
-        const h = hash(tileCoord);
-        const index2 = modulo(h, tileUrlFunctions.length);
-        return tileUrlFunctions[index2](tileCoord, pixelRatio, projection);
-      })
-    );
-  }
   function getForProjection(projection) {
     let tileGrid = projection.getDefaultTileGrid();
     if (!tileGrid) {
@@ -65047,6 +63794,59 @@ Expected function or array of functions, received type ${typeof value2}.`
       extent = createOrUpdate$2(-half, -half, half, half);
     }
     return extent;
+  }
+  function createFromTemplate(template, tileGrid) {
+    return (
+      /**
+       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
+       * @param {number} pixelRatio Pixel ratio.
+       * @param {import("./proj/Projection.js").default} projection Projection.
+       * @return {string|undefined} Tile URL.
+       */
+      (function(tileCoord, pixelRatio, projection) {
+        if (!tileCoord) {
+          return void 0;
+        }
+        let maxY;
+        const z = tileCoord[0];
+        if (tileGrid) {
+          const range = tileGrid.getFullTileRange(z);
+          if (range) {
+            maxY = range.getHeight() - 1;
+          }
+        }
+        return renderXYZTemplate(template, z, tileCoord[1], tileCoord[2], maxY);
+      })
+    );
+  }
+  function createFromTemplates(templates, tileGrid) {
+    const len = templates.length;
+    const tileUrlFunctions = new Array(len);
+    for (let i = 0; i < len; ++i) {
+      tileUrlFunctions[i] = createFromTemplate(templates[i], tileGrid);
+    }
+    return createFromTileUrlFunctions(tileUrlFunctions);
+  }
+  function createFromTileUrlFunctions(tileUrlFunctions) {
+    if (tileUrlFunctions.length === 1) {
+      return tileUrlFunctions[0];
+    }
+    return (
+      /**
+       * @param {import("./tilecoord.js").TileCoord} tileCoord Tile Coordinate.
+       * @param {number} pixelRatio Pixel ratio.
+       * @param {import("./proj/Projection.js").default} projection Projection.
+       * @return {string|undefined} Tile URL.
+       */
+      (function(tileCoord, pixelRatio, projection) {
+        if (!tileCoord) {
+          return void 0;
+        }
+        const h = hash(tileCoord);
+        const index2 = modulo(h, tileUrlFunctions.length);
+        return tileUrlFunctions[index2](tileCoord, pixelRatio, projection);
+      })
+    );
   }
   class TileSource extends Source {
     /**
@@ -65635,6 +64435,343 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     imageTile.getImage().src = src;
   }
+  const DECIMALS = 4;
+  const DEFAULT_VERSION = "1.3.0";
+  function getRequestUrl(baseUrl, extent, size, projection, params2) {
+    params2["WIDTH"] = size[0];
+    params2["HEIGHT"] = size[1];
+    const axisOrientation = projection.getAxisOrientation();
+    const v13 = compareVersions(params2["VERSION"], "1.3") >= 0;
+    params2[v13 ? "CRS" : "SRS"] = projection.getCode();
+    const bbox = v13 && axisOrientation.startsWith("ne") ? [extent[1], extent[0], extent[3], extent[2]] : extent;
+    params2["BBOX"] = bbox.join(",");
+    return appendParams(baseUrl, params2);
+  }
+  function getImageSrc(extent, resolution, pixelRatio, projection, url, params2, serverType) {
+    params2 = Object.assign({ REQUEST: "GetMap" }, params2);
+    const imageResolution = resolution / pixelRatio;
+    const imageSize = [
+      round(getWidth(extent) / imageResolution, DECIMALS),
+      round(getHeight(extent) / imageResolution, DECIMALS)
+    ];
+    if (pixelRatio != 1) {
+      switch (serverType) {
+        case "geoserver":
+          const dpi = 90 * pixelRatio + 0.5 | 0;
+          if ("FORMAT_OPTIONS" in params2) {
+            params2["FORMAT_OPTIONS"] += ";dpi:" + dpi;
+          } else {
+            params2["FORMAT_OPTIONS"] = "dpi:" + dpi;
+          }
+          break;
+        case "mapserver":
+          params2["MAP_RESOLUTION"] = 90 * pixelRatio;
+          break;
+        case "carmentaserver":
+        case "qgis":
+          params2["DPI"] = 90 * pixelRatio;
+          break;
+        default:
+          throw new Error("Unknown `serverType` configured");
+      }
+    }
+    const src = getRequestUrl(url, extent, imageSize, projection, params2);
+    return src;
+  }
+  function getRequestParams(params2, request) {
+    return Object.assign(
+      {
+        "REQUEST": request,
+        "SERVICE": "WMS",
+        "VERSION": DEFAULT_VERSION,
+        "FORMAT": "image/png",
+        "STYLES": "",
+        "TRANSPARENT": "TRUE"
+      },
+      params2
+    );
+  }
+  class TileWMS extends TileImage {
+    /**
+     * @param {Options} [options] Tile WMS options.
+     */
+    constructor(options) {
+      options = options ? options : (
+        /** @type {Options} */
+        {}
+      );
+      const params2 = Object.assign({}, options.params);
+      super({
+        attributions: options.attributions,
+        attributionsCollapsible: options.attributionsCollapsible,
+        cacheSize: options.cacheSize,
+        crossOrigin: options.crossOrigin,
+        interpolate: options.interpolate,
+        projection: options.projection,
+        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+        tileClass: options.tileClass,
+        tileGrid: options.tileGrid,
+        tileLoadFunction: options.tileLoadFunction,
+        url: options.url,
+        urls: options.urls,
+        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
+        transition: options.transition,
+        zDirection: options.zDirection
+      });
+      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
+      this.params_ = params2;
+      this.v13_ = true;
+      this.serverType_ = options.serverType;
+      this.hidpi_ = options.hidpi !== void 0 ? options.hidpi : true;
+      this.tmpExtent_ = createEmpty();
+      this.updateV13_();
+      this.setKey(this.getKeyForParams_());
+    }
+    /**
+     * Return the GetFeatureInfo URL for the passed coordinate, resolution, and
+     * projection. Return `undefined` if the GetFeatureInfo URL cannot be
+     * constructed.
+     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {number} resolution Resolution.
+     * @param {import("../proj.js").ProjectionLike} projection Projection.
+     * @param {!Object} params GetFeatureInfo params. `INFO_FORMAT` at least should
+     *     be provided. If `QUERY_LAYERS` is not provided then the layers specified
+     *     in the `LAYERS` parameter will be used. `VERSION` should not be
+     *     specified here.
+     * @return {string|undefined} GetFeatureInfo URL.
+     * @api
+     */
+    getFeatureInfoUrl(coordinate, resolution, projection, params2) {
+      const projectionObj = get$2(projection);
+      const sourceProjectionObj = this.getProjection() || projectionObj;
+      let tileGrid = this.getTileGrid();
+      if (!tileGrid) {
+        tileGrid = this.getTileGridForProjection(sourceProjectionObj);
+      }
+      const sourceProjCoord = transform$1(
+        coordinate,
+        projectionObj,
+        sourceProjectionObj
+      );
+      const sourceResolution = calculateSourceResolution(
+        sourceProjectionObj,
+        projectionObj,
+        coordinate,
+        resolution
+      );
+      const z = tileGrid.getZForResolution(sourceResolution, this.zDirection);
+      const tileResolution = tileGrid.getResolution(z);
+      const tileCoord = tileGrid.getTileCoordForCoordAndZ(sourceProjCoord, z);
+      if (tileGrid.getResolutions().length <= tileCoord[0]) {
+        return void 0;
+      }
+      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
+      const gutter = this.gutter_;
+      if (gutter !== 0) {
+        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
+      }
+      const baseParams = {
+        "QUERY_LAYERS": this.params_["LAYERS"]
+      };
+      Object.assign(
+        baseParams,
+        getRequestParams(this.params_, "GetFeatureInfo"),
+        params2
+      );
+      const x = Math.floor((sourceProjCoord[0] - tileExtent[0]) / tileResolution);
+      const y = Math.floor((tileExtent[3] - sourceProjCoord[1]) / tileResolution);
+      baseParams[this.v13_ ? "I" : "X"] = x;
+      baseParams[this.v13_ ? "J" : "Y"] = y;
+      return this.getRequestUrl_(
+        tileCoord,
+        tileExtent,
+        1,
+        sourceProjectionObj || projectionObj,
+        baseParams
+      );
+    }
+    /**
+     * Return the GetLegendGraphic URL, optionally optimized for the passed
+     * resolution and possibly including any passed specific parameters. Returns
+     * `undefined` if the GetLegendGraphic URL cannot be constructed.
+     *
+     * @param {number} [resolution] Resolution. If set to undefined, `SCALE`
+     *     will not be calculated and included in URL.
+     * @param {Object} [params] GetLegendGraphic params. If `LAYER` is set, the
+     *     request is generated for this wms layer, else it will try to use the
+     *     configured wms layer. Default `FORMAT` is `image/png`.
+     *     `VERSION` should not be specified here.
+     * @return {string|undefined} GetLegendGraphic URL.
+     * @api
+     */
+    getLegendUrl(resolution, params2) {
+      if (this.urls[0] === void 0) {
+        return void 0;
+      }
+      const baseParams = {
+        "SERVICE": "WMS",
+        "VERSION": DEFAULT_VERSION,
+        "REQUEST": "GetLegendGraphic",
+        "FORMAT": "image/png"
+      };
+      if (params2 === void 0 || params2["LAYER"] === void 0) {
+        const layers = this.params_.LAYERS;
+        const isSingleLayer = !Array.isArray(layers) || layers.length === 1;
+        if (!isSingleLayer) {
+          return void 0;
+        }
+        baseParams["LAYER"] = layers;
+      }
+      if (resolution !== void 0) {
+        const mpu = this.getProjection() ? this.getProjection().getMetersPerUnit() : 1;
+        const pixelSize = 28e-5;
+        baseParams["SCALE"] = resolution * mpu / pixelSize;
+      }
+      Object.assign(baseParams, params2);
+      return appendParams(
+        /** @type {string} */
+        this.urls[0],
+        baseParams
+      );
+    }
+    /**
+     * @return {number} Gutter.
+     * @override
+     */
+    getGutter() {
+      return this.gutter_;
+    }
+    /**
+     * Get the user-provided params, i.e. those passed to the constructor through
+     * the "params" option, and possibly updated using the updateParams method.
+     * @return {Object} Params.
+     * @api
+     */
+    getParams() {
+      return this.params_;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
+     * @param {import("../extent.js").Extent} tileExtent Tile extent.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("../proj/Projection.js").default} projection Projection.
+     * @param {Object} params Params.
+     * @return {string|undefined} Request URL.
+     * @private
+     */
+    getRequestUrl_(tileCoord, tileExtent, pixelRatio, projection, params2) {
+      const urls = this.urls;
+      if (!urls) {
+        return void 0;
+      }
+      let url;
+      if (urls.length == 1) {
+        url = urls[0];
+      } else {
+        const index2 = modulo(hash(tileCoord), urls.length);
+        url = urls[index2];
+      }
+      return getImageSrc(
+        tileExtent,
+        (this.tileGrid || this.getTileGridForProjection(projection)).getResolution(tileCoord[0]),
+        pixelRatio,
+        projection,
+        url,
+        params2,
+        this.serverType_
+      );
+    }
+    /**
+     * Get the tile pixel ratio for this source.
+     * @param {number} pixelRatio Pixel ratio.
+     * @return {number} Tile pixel ratio.
+     * @override
+     */
+    getTilePixelRatio(pixelRatio) {
+      return !this.hidpi_ || this.serverType_ === void 0 ? 1 : pixelRatio;
+    }
+    /**
+     * @private
+     * @return {string} The key for the current params.
+     */
+    getKeyForParams_() {
+      let i = 0;
+      const res = [];
+      for (const key2 in this.params_) {
+        res[i++] = key2 + "-" + this.params_[key2];
+      }
+      return res.join("/");
+    }
+    /**
+     * @param {Object} params New URL paremeters.
+     * @private
+     */
+    setParams_(params2) {
+      this.params_ = params2;
+      this.updateV13_();
+      this.setKey(this.getKeyForParams_());
+    }
+    /**
+     * Set the URL parameters passed to the WMS source.
+     * @param {Object} params New URL paremeters.
+     * @api
+     */
+    setParams(params2) {
+      this.setParams_(Object.assign({}, params2));
+    }
+    /**
+     * Update the URL parameters. This method can be used to update a subset of the WMS
+     * parameters. Call `setParams` to set all of the parameters.
+     * @param {Object} params Updated URL parameters.
+     * @api
+     */
+    updateParams(params2) {
+      this.setParams_(Object.assign(this.params_, params2));
+    }
+    /**
+     * @private
+     */
+    updateV13_() {
+      const version2 = this.params_["VERSION"] || DEFAULT_VERSION;
+      this.v13_ = compareVersions(version2, "1.3") >= 0;
+    }
+    /**
+     * @param {import("../tilecoord.js").TileCoord} tileCoord The tile coordinate
+     * @param {number} pixelRatio The pixel ratio
+     * @param {import("../proj/Projection.js").default} projection The projection
+     * @return {string|undefined} The tile URL
+     * @override
+     */
+    tileUrlFunction(tileCoord, pixelRatio, projection) {
+      let tileGrid = this.getTileGrid();
+      if (!tileGrid) {
+        tileGrid = this.getTileGridForProjection(projection);
+      }
+      if (tileGrid.getResolutions().length <= tileCoord[0]) {
+        return void 0;
+      }
+      if (pixelRatio != 1 && (!this.hidpi_ || this.serverType_ === void 0)) {
+        pixelRatio = 1;
+      }
+      const tileResolution = tileGrid.getResolution(tileCoord[0]);
+      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
+      const gutter = this.gutter_;
+      if (gutter !== 0) {
+        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
+      }
+      const baseParams = Object.assign(
+        {},
+        getRequestParams(this.params_, "GetMap")
+      );
+      return this.getRequestUrl_(
+        tileCoord,
+        tileExtent,
+        pixelRatio,
+        projection,
+        baseParams
+      );
+    }
+  }
   let WMTS$1 = class WMTS extends TileImage {
     /**
      * @param {Options} options WMTS options.
@@ -65827,6 +64964,1579 @@ Expected function or array of functions, received type ${typeof value2}.`
           return url;
         })
       );
+    }
+  };
+  const ATTRIBUTION_TITLE_IGN = "IGN - Institut National de l'Information Géographique et Forestière";
+  const ATTRIBUTION_TITLE_MINISTERE = "Ministère de l'Aménagement du territoire - Ministère de la Transition écologique";
+  const ATTRIBUTION_TITLE_DGF = "© Direction générale des finances publiques";
+  function attributionLogoLink(href, imgClass, src, title) {
+    const safeTitle = title.replace(/"/g, "&quot;");
+    return `<a href="${href}" target="_blank" title="${safeTitle}"><img class="${imgClass}" src="${src}" alt="" title="${safeTitle}" /></a>`;
+  }
+  function normalizeDir(dir) {
+    return dir.replace(/\/$/, "");
+  }
+  function ignGeoportalAttributionsImgDir(override) {
+    if (override !== void 0 && override !== "") {
+      return normalizeDir(override);
+    }
+    const scriptDir = typeof config.scriptDir === "string" ? normalizeDir(config.scriptDir) : "";
+    if (scriptDir && scriptDir !== "/") {
+      return scriptDir;
+    }
+    return normalizeDir("/");
+  }
+  function ignGeoportalAttributions(options = {}) {
+    const year = options.yearOfIgnCopyright ?? (typeof config.yearOfIgnCopyright === "number" ? config.yearOfIgnCopyright : 2019);
+    const imgDir = ignGeoportalAttributionsImgDir(options.imgDir);
+    return [
+      `<a href="http://www.ign.fr/" target="_blank" class="legal-attribution">© IGN – ${year} – copie et reproduction interdite</a>`,
+      attributionLogoLink(
+        "http://www.ign.fr/",
+        "map-logo-ign-svg",
+        `${imgDir}/img/logos/logo-ign.svg`,
+        ATTRIBUTION_TITLE_IGN
+      ),
+      attributionLogoLink(
+        "http://www.cohesion-territoires.gouv.fr/",
+        "map-logo-ministere-svg",
+        `${imgDir}/img/logos/logo-ministere.png`,
+        ATTRIBUTION_TITLE_MINISTERE
+      )
+    ];
+  }
+  function dgfInspireCadastreAttributions(options = {}) {
+    const imgDir = ignGeoportalAttributionsImgDir(options.imgDir);
+    return [
+      attributionLogoLink(
+        "https://www.cadastre.gouv.fr",
+        "map-logo-marianne-svg",
+        `${imgDir}/img/logos/logo-marianne.svg`,
+        ATTRIBUTION_TITLE_DGF
+      ),
+      attributionLogoLink(
+        "http://www.cohesion-territoires.gouv.fr/",
+        "map-logo-ministere-svg",
+        `${imgDir}/img/logos/logo-ministere.png`,
+        ATTRIBUTION_TITLE_MINISTERE
+      )
+    ];
+  }
+  const GEOPF_WMTS_URL = "https://data.geopf.fr/wmts";
+  const TILE_SIZE_PX = 512;
+  const MATRIX_MIN = 5;
+  const MATRIX_MAX = 19;
+  function createGeopfWmtsTileGrid() {
+    const projection = get$2("EPSG:3857");
+    if (!projection) {
+      throw new Error("EPSG:3857 required for Géoplateforme WMTS");
+    }
+    const extent = projection.getExtent();
+    const tileSizeMeters = getWidth(extent) / TILE_SIZE_PX;
+    const resolutions = [];
+    const matrixIds = [];
+    for (let i = MATRIX_MIN; i <= MATRIX_MAX; i++) {
+      matrixIds[i] = String(i);
+      resolutions[i] = tileSizeMeters / 2 ** i;
+    }
+    return new WMTSTileGrid({
+      origin: getTopLeft(extent),
+      resolutions,
+      matrixIds,
+      tileSize: [TILE_SIZE_PX, TILE_SIZE_PX]
+    });
+  }
+  let sharedTileGrid = null;
+  function geopfWmtsTileGrid() {
+    if (!sharedTileGrid) {
+      sharedTileGrid = createGeopfWmtsTileGrid();
+    }
+    return sharedTileGrid;
+  }
+  function createGeopfWmtsSource(options) {
+    const format = options.format ?? "png";
+    return new WMTS$1({
+      url: GEOPF_WMTS_URL,
+      layer: options.layer,
+      style: options.style ?? "normal",
+      format: `image/${format}`,
+      matrixSet: "PM",
+      version: "1.0.0",
+      crossOrigin: "anonymous",
+      attributions: options.attributions ?? (() => ignGeoportalAttributions()),
+      attributionsCollapsible: false,
+      tileGrid: geopfWmtsTileGrid(),
+      cacheSize: 256
+    });
+  }
+  const INSPIRE_WMS_TEMPLATE = "https://inspire.cadastre.gouv.fr/scpc/<inseeCommune>.wms";
+  function createInspireWmsSource(inseeCommune) {
+    const url = INSPIRE_WMS_TEMPLATE.replace("<inseeCommune>", inseeCommune);
+    return new TileWMS({
+      url,
+      params: {
+        LAYERS: "AMORCES_CAD,CP.CadastralParcel",
+        FORMAT: "image/png",
+        STYLES: "DEFAULT",
+        CRS: "EPSG:3857",
+        VERSION: "1.3.0",
+        EXCEPTIONS: "INIMAGE",
+        SERVICE: "WMS",
+        REQUEST: "GetMap",
+        WIDTH: "256",
+        HEIGHT: "256",
+        TRANSPARENT: "TRUE"
+      },
+      attributions: dgfInspireCadastreAttributions(),
+      crossOrigin: "anonymous"
+    });
+  }
+  class GpuCadastreLowLayer extends TileLayer {
+    constructor(options) {
+      super({
+        visible: (options == null ? void 0 : options.visible) ?? false,
+        maxResolution: options == null ? void 0 : options.maxResolution,
+        source: createGeopfWmtsSource({
+          layer: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+          style: "PCI vecteur"
+        })
+      });
+      __publicField(this, "pciExpressSource", createGeopfWmtsSource({
+        layer: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+        style: "PCI vecteur"
+      }));
+      __publicField(this, "bdParcellaireSource", createGeopfWmtsSource({
+        layer: "CADASTRALPARCELS.PARCELS",
+        style: "bdparcellaire"
+      }));
+      __publicField(this, "inspireSource");
+      __publicField(this, "currentInseeCommune", null);
+      this.inspireSource = createInspireWmsSource("00000");
+      this.setInseeCommune(null, null);
+    }
+    /**
+     * - Sans INSEE : PCI Express
+     * - INSEE + typeref `01` : WMS inspire PCI Vecteur
+     * - INSEE + autre typeref (ou absent) : BD Parcellaire WMTS
+     */
+    setInseeCommune(inseeCommune, typeref) {
+      const insee = (inseeCommune == null ? void 0 : inseeCommune.trim()) || null;
+      if (!insee) {
+        this.setSource(this.pciExpressSource);
+        this.currentInseeCommune = null;
+        return;
+      }
+      if (typeref === "01") {
+        if (this.currentInseeCommune !== insee) {
+          this.inspireSource = createInspireWmsSource(insee);
+          this.currentInseeCommune = insee;
+        }
+        this.setSource(this.inspireSource);
+        return;
+      }
+      this.currentInseeCommune = insee;
+      this.setSource(this.bdParcellaireSource);
+    }
+  }
+  let registeredCadastreLow = null;
+  function registerGpuCadastreLowLayer(layer) {
+    registeredCadastreLow = layer;
+  }
+  function getGpuCadastreLowLayer() {
+    return registeredCadastreLow;
+  }
+  function resetGpuCadastreLowLayer() {
+    registeredCadastreLow == null ? void 0 : registeredCadastreLow.setInseeCommune(null, null);
+  }
+  function typerefFromProductionDocuments(data) {
+    const dus = data.dus;
+    if (!dus || Array.isArray(dus)) return null;
+    for (const partition of Object.values(dus)) {
+      const docs = partition.documents;
+      if (!Array.isArray(docs)) continue;
+      for (const doc2 of docs) {
+        const d = doc2;
+        if (d.status === "document.production" && d.typeref != null && String(d.typeref).trim()) {
+          return String(d.typeref).trim();
+        }
+      }
+    }
+    return null;
+  }
+  function resolveTyperefForCadastre(data) {
+    const root = data.typeref;
+    if (typeof root === "string" && root.trim()) return root.trim();
+    return typerefFromProductionDocuments(data);
+  }
+  function resolveInseeForCadastre(data) {
+    var _a;
+    const fromGrid = (_a = data.grid) == null ? void 0 : _a.insee;
+    if (typeof fromGrid === "string" && fromGrid.trim()) return fromGrid.trim();
+    const parcel = data.parcel;
+    const fromParcel = parcel == null ? void 0 : parcel.code_insee;
+    if (typeof fromParcel === "string" && fromParcel.trim()) return fromParcel.trim();
+    if (typeof fromParcel === "number" && Number.isFinite(fromParcel)) {
+      return String(fromParcel).padStart(5, "0");
+    }
+    return null;
+  }
+  function applyCadastreLowFromFichePayload(data) {
+    var _a;
+    const layer = getGpuCadastreLowLayer();
+    if (!layer || !data) {
+      resetGpuCadastreLowLayer();
+      return;
+    }
+    if (!data.grid) {
+      resetGpuCadastreLowLayer();
+      return;
+    }
+    const insee = ((_a = data.grid.insee) == null ? void 0 : _a.trim()) || resolveInseeForCadastre(data);
+    layer.setInseeCommune(insee, resolveTyperefForCadastre(data));
+  }
+  function syncCadastreLowFromFicheSelectionRaw(raw) {
+    if (!raw || raw.source !== "gpu-fiche-info-api") {
+      resetGpuCadastreLowLayer();
+      return;
+    }
+    applyCadastreLowFromFichePayload(raw);
+  }
+  const TAB_DU = "du";
+  const TAB_PSMV = "psmv";
+  const TAB_SUP = "sup";
+  const TAB_SCOT = "scot";
+  const TAB_PROCEDURES = "procedures";
+  function isGpuFicheInfoPayload(data) {
+    if (!data || typeof data !== "object") return false;
+    const o = data;
+    return "parcel" in o || "grid" in o || "dus" in o || "partitions" in o || "parcelFeature" in o;
+  }
+  function normalizePartitionsMap(value2) {
+    if (!value2) return {};
+    if (Array.isArray(value2)) return {};
+    return value2;
+  }
+  const MUNICIPALITY_LOWER_PARTS = /* @__PURE__ */ new Set([
+    "de",
+    "la",
+    "le",
+    "les",
+    "du",
+    "des",
+    "en",
+    "sur",
+    "sous",
+    "aux"
+  ]);
+  function formatMunicipalityName(raw) {
+    return raw.split("-").map((part, index2) => {
+      if (!part) return part;
+      const lower = part.toLowerCase();
+      if (index2 > 0 && MUNICIPALITY_LOWER_PARTS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join("-");
+  }
+  function formatDatapproFromDocumentName(documentName) {
+    const match2 = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i);
+    if (!(match2 == null ? void 0 : match2[3])) return null;
+    const date2 = match2[3];
+    return `${date2.slice(6, 8)}/${date2.slice(4, 6)}/${date2.slice(0, 4)}`;
+  }
+  function pickProductionDocument(documents) {
+    if (!(documents == null ? void 0 : documents.length)) return null;
+    const production = documents.filter((d) => d.status === "document.production");
+    return production[0] ?? documents[0] ?? null;
+  }
+  function partitionHasProductionDocument(partition) {
+    return pickProductionDocument(partition.documents) != null;
+  }
+  function mapHasProductionDocument(map2) {
+    return Object.values(map2).some(partitionHasProductionDocument);
+  }
+  function isPetFeature(feature) {
+    const nomfic = feature.nomfic;
+    return typeof nomfic === "string" && nomfic.includes("_97_00_");
+  }
+  function featureLabelHtml(feature) {
+    if ("typezone" in feature) {
+      const code = String(feature.libelle ?? "");
+      const label = String(feature.libelong ?? feature.libelle ?? "");
+      if (code && label && code !== label) {
+        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
+      }
+      if (label) return `<strong>${escapeHtml(label)}</strong>.`;
+      if (code) return `Zone classée <strong>${escapeHtml(code)}</strong>.`;
+      return "Zonage de type inconnu";
+    }
+    if ("typesect" in feature) {
+      const code = String(feature.libelle ?? "");
+      const label = String(feature.libelong ?? feature.libelle ?? "");
+      if (code && label) {
+        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
+      }
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Secteur de type inconnu";
+    }
+    if ("typepsc" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Prescription de type inconnue";
+    }
+    if ("typeinf" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Information de type inconnue";
+    }
+    if ("libelle" in feature) {
+      const label = String(feature.libelle ?? "");
+      return label ? `<strong>${escapeHtml(label)}</strong>.` : "";
+    }
+    return "";
+  }
+  function featureEntryHtml(feature) {
+    const info = featureLabelHtml(feature);
+    if (!info) return "";
+    const urlfic = feature.urlfic;
+    if (typeof urlfic === "string" && urlfic.trim()) {
+      return `<p><a href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer">${info}</a></p>`;
+    }
+    return `<p>${info}</p>`;
+  }
+  function buildPartitionFeaturesHtml(partition) {
+    const features = partition.features ?? [];
+    const seen = /* @__PURE__ */ new Set();
+    const parts = [];
+    for (const feature of features) {
+      if (isPetFeature(feature)) continue;
+      const info = featureLabelHtml(feature);
+      if (!info) continue;
+      const key2 = `${String(feature.nomfic ?? "")}|${info}`;
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      parts.push(featureEntryHtml(feature));
+    }
+    return parts.join("");
+  }
+  function documentIntroHtml(document2, kind) {
+    var _a;
+    const title = ((_a = document2.title) == null ? void 0 : _a.trim()) || document2.type || "document";
+    const documentName = document2.originalName ?? document2.name ?? "";
+    if (kind === "sup") {
+      return document2.title ? `<p><strong>${escapeHtml(document2.title)}</strong></p>` : `<p><strong>${escapeHtml(documentName || "Servitude")}</strong></p>`;
+    }
+    if (kind === "scot") {
+      const prefix = "Territoire couvert par ";
+      return `<p>${prefix}<strong>${escapeHtml(title)}</strong>.</p>`;
+    }
+    const article = document2.type === "CC" ? "la " : "le ";
+    let html2 = `<p>Parcelle couverte par ${article}<strong>${escapeHtml(title)}</strong>`;
+    if (documentName) {
+      const datappro = formatDatapproFromDocumentName(documentName);
+      if (datappro) {
+        const proc = typeof document2.typeproc_title === "string" && document2.typeproc_title.trim() ? ` (${document2.typeproc_title.trim()})` : "";
+        html2 += `, dont la dernière procédure${proc} a été approuvée le <strong>${escapeHtml(datappro)}</strong>`;
+      }
+    }
+    html2 += ".</p>";
+    if (document2.effectiveStatus === "NON_EXECUTOIRE") {
+      html2 += "<p><em>Ce document n’est pas exécutable en l’état.</em></p>";
+    }
+    return html2;
+  }
+  function buildNonExecutoireHint(document2, proceduresByDocument) {
+    var _a;
+    const key2 = document2.originalName ?? document2.name;
+    if (!key2 || !((_a = proceduresByDocument == null ? void 0 : proceduresByDocument[key2]) == null ? void 0 : _a.length)) return "";
+    const blocked = proceduresByDocument[key2].some((p5) => p5.documentNotEnforceable === true);
+    if (!blocked) return "";
+    return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`;
+  }
+  function buildPartitionBlockHtml(partitionKey, partition, kind, proceduresByDocument) {
+    const document2 = pickProductionDocument(partition.documents);
+    if (!document2) {
+      return `<p><strong>${escapeHtml(partitionKey)}</strong> — document indisponible.</p>`;
+    }
+    const parts = [documentIntroHtml(document2, kind)];
+    parts.push(buildNonExecutoireHint(document2, proceduresByDocument));
+    parts.push(buildPartitionFeaturesHtml(partition));
+    if (document2.archiveUrl) {
+      parts.push(
+        `<p><a href="${escapeHtml(document2.archiveUrl)}" target="_blank" rel="noopener noreferrer">Télécharger l’archive du document</a></p>`
+      );
+    }
+    return parts.filter(Boolean).join("");
+  }
+  function buildDocumentTypeTabHtml(partitions, kind, proceduresByDocument) {
+    const keys = Object.keys(partitions);
+    if (!keys.length) return "";
+    if (keys.length === 1) {
+      return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument);
+    }
+    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
+    for (const key2 of keys) {
+      parts.push(
+        `<li>${buildPartitionBlockHtml(key2, partitions[key2], kind, proceduresByDocument)}</li>`
+      );
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
+  function collectInProgressProcedures(proceduresByDocument) {
+    if (!proceduresByDocument) return [];
+    const out = [];
+    for (const list of Object.values(proceduresByDocument)) {
+      for (const procedure of list) {
+        if (procedure.inProgress === true) out.push(procedure);
+      }
+    }
+    return out;
+  }
+  function buildProceduresTabHtml(procedures) {
+    var _a, _b, _c;
+    if (!procedures.length) return "";
+    const parts = ['<ul class="ec-fiche-info__proc-list">'];
+    for (const procedure of procedures) {
+      const typeLabel = ((_a = procedure.procedureType) == null ? void 0 : _a.title) ?? procedure.documentType ?? "Procédure";
+      const docName = procedure.documentName ?? procedure.name ?? "";
+      const gridTitle = ((_b = procedure.grid) == null ? void 0 : _b.title) ?? ((_c = procedure.grid) == null ? void 0 : _c.name) ?? "";
+      parts.push("<li>");
+      parts.push(
+        `<p><strong>${escapeHtml(typeLabel)}</strong>${docName ? ` — ${escapeHtml(docName)}` : ""}${gridTitle ? ` (${escapeHtml(gridTitle)})` : ""}</p>`
+      );
+      if (procedure.approbationDate) {
+        parts.push(`<p>Date d’approbation : ${escapeHtml(procedure.approbationDate)}</p>`);
+      }
+      const files = procedure.files ?? [];
+      if (files.length) {
+        parts.push("<ul>");
+        for (const file of files) {
+          const label = file.title ?? file.name ?? "Pièce";
+          if (file.url) {
+            parts.push(
+              `<li><a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></li>`
+            );
+          } else {
+            parts.push(`<li>${escapeHtml(label)}</li>`);
+          }
+        }
+        parts.push("</ul>");
+      }
+      parts.push("</li>");
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
+  function buildCoastlineSupHint() {
+    return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`;
+  }
+  function normalizeLowScaleDocuments(value2) {
+    if (!value2) return [];
+    if (Array.isArray(value2)) return value2;
+    if (typeof value2 === "object") return Object.values(value2);
+    return [];
+  }
+  function buildLowScaleDocumentsHtml(documents) {
+    if (!documents.length) return "";
+    if (documents.length === 1) {
+      return documentIntroHtml(documents[0], "du");
+    }
+    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
+    for (const doc2 of documents) {
+      parts.push(`<li>${documentIntroHtml(doc2, "du")}</li>`);
+    }
+    parts.push("</ul>");
+    return parts.join("");
+  }
+  function buildDocumentTabs(data) {
+    const tabs = [];
+    const proceduresByDocument = data.proceduresByDocument;
+    const dus = normalizePartitionsMap(data.dus);
+    if (mapHasProductionDocument(dus)) {
+      tabs.push({
+        id: TAB_DU,
+        label: "Document d’urbanisme",
+        bodyHtml: buildDocumentTypeTabHtml(dus, "du", proceduresByDocument)
+      });
+    }
+    const psmvs = normalizePartitionsMap(data.psmvs);
+    if (mapHasProductionDocument(psmvs)) {
+      tabs.push({
+        id: TAB_PSMV,
+        label: "PSMV",
+        bodyHtml: buildDocumentTypeTabHtml(psmvs, "psmv", proceduresByDocument)
+      });
+    }
+    const sups = normalizePartitionsMap(data.sups);
+    if (mapHasProductionDocument(sups)) {
+      let body = buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
+      if (data.is_el9_alert) body += buildCoastlineSupHint();
+      tabs.push({
+        id: TAB_SUP,
+        label: "Servitude",
+        bodyHtml: body
+      });
+    }
+    const scots = normalizePartitionsMap(data.scots);
+    if (mapHasProductionDocument(scots)) {
+      tabs.push({
+        id: TAB_SCOT,
+        label: "SCoT",
+        bodyHtml: buildDocumentTypeTabHtml(scots, "scot", proceduresByDocument)
+      });
+    }
+    const inProgress = collectInProgressProcedures(proceduresByDocument);
+    if (inProgress.length) {
+      tabs.push({
+        id: TAB_PROCEDURES,
+        label: "Procédures en cours",
+        bodyHtml: buildProceduresTabHtml(inProgress)
+      });
+    }
+    if (!tabs.some((t) => t.id === TAB_DU)) {
+      const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument);
+      if (lowScaleDocs.length) {
+        tabs.unshift({
+          id: TAB_DU,
+          label: "Document d’urbanisme",
+          bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs)
+        });
+      }
+    }
+    return tabs;
+  }
+  function buildParcelHeaderHtml(parcel, lon, lat) {
+    if (!(parcel == null ? void 0 : parcel.idu) && !(parcel == null ? void 0 : parcel.numero)) {
+      return "<p>Aucune parcelle cadastrale à cet emplacement.</p>";
+    }
+    const parts = [
+      htmlParagraph("Commune", String(parcel.nom_com ?? "")),
+      htmlParagraph("Section", String(parcel.section ?? "")),
+      htmlParagraph("Numéro", String(parcel.numero ?? "")),
+      htmlParagraph("Contenance", parcel.contenance != null ? `${parcel.contenance} m²` : ""),
+      htmlParagraph("Code INSEE", String(parcel.code_insee ?? "")),
+      htmlParagraph("Identifiant", String(parcel.idu ?? parcel.id ?? "")),
+      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
+    ].filter(Boolean);
+    return parts.join("") || "<p>Parcelle identifiée.</p>";
+  }
+  function parcelTitle(parcel) {
+    if (!parcel) return "Parcelle";
+    const section = String(parcel.section ?? "");
+    const numero = String(parcel.numero ?? "");
+    const idu = String(parcel.idu ?? "");
+    if (section && numero) return `Parcelle ${section} ${numero}`;
+    if (idu) return `Parcelle ${idu}`;
+    return "Parcelle cadastrale";
+  }
+  function municipalityTitle(data) {
+    const grid = data.grid;
+    if (!(grid == null ? void 0 : grid.name)) return "Commune non trouvée";
+    const label = formatMunicipalityName(grid.name.trim());
+    const insee = grid.insee ? ` (${grid.insee})` : "";
+    return `${label}${insee}`;
+  }
+  function fallbackBodyHtml(data) {
+    var _a;
+    if ((_a = data.grid) == null ? void 0 : _a.is_rnu) {
+      return "<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>";
+    }
+    const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument));
+    if (lowScaleHtml) return lowScaleHtml;
+    return "<p>Aucun document disponible à cet emplacement.</p>";
+  }
+  function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
+    const parcel = data.parcel ?? null;
+    const documentTabs = buildDocumentTabs(data);
+    const bodyHtml = documentTabs.length ? void 0 : fallbackBodyHtml(data);
+    const base = {
+      title: mode2 === MAP_MODE_PARCEL ? parcelTitle(parcel) : municipalityTitle(data),
+      documentTabs: documentTabs.length ? documentTabs : void 0,
+      bodyHtml,
+      raw: { ...data, lon, lat, mode: mode2, source: "gpu-fiche-info-api" }
+    };
+    if (mode2 === MAP_MODE_PARCEL) {
+      base.headerHtml = buildParcelHeaderHtml(parcel, lon, lat);
+    } else if (mode2 === MAP_MODE_TERRITORY) {
+      base.headerHtml = void 0;
+    }
+    return base;
+  }
+  const APICARTO_PARCEL$1 = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
+  let mapPointRequestSeq = 0;
+  const FICHE_POINT_EPS = 1e-7;
+  let fichePointCache = null;
+  function sameMapPoint(a, b) {
+    return Math.abs(a.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a.lat - b.lat) <= FICHE_POINT_EPS;
+  }
+  function syncFichePointCache(lon, lat) {
+    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
+      fichePointCache = { lon, lat, byMode: {} };
+    }
+  }
+  function storeFicheInCache(mode2, lon, lat, selection) {
+    syncFichePointCache(lon, lat);
+    fichePointCache.byMode[mode2] = selection;
+  }
+  function cachedFicheForMode(mode2, lon, lat) {
+    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null;
+    return fichePointCache.byMode[mode2] ?? null;
+  }
+  function refreshFicheForMapModeChange(mode2, zoom) {
+    const marker = readMapPermalinkMarker(getMapPermalinkParams());
+    if (!marker) return;
+    const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
+    if (cached) {
+      showFiche(cached);
+      return;
+    }
+    void loadFicheForMapPoint({
+      lon: marker.lon,
+      lat: marker.lat,
+      mode: mode2,
+      zoom,
+      markerPlacedAtClick: true,
+      skipLocationMarker: true
+    });
+  }
+  function pointGeomParam$1(lon, lat) {
+    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
+  }
+  function resolveApiFicheInfoUrl() {
+    const raw = config.apiFicheInfoUrl;
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  function ficheServiceUnavailableSelection(title) {
+    return {
+      title,
+      bodyHtml: FICHE_UNAVAILABLE_BODY,
+      raw: { source: "fiche-service-unavailable" }
+    };
+  }
+  function showLoading(title) {
+    var _a;
+    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection({
+      title,
+      loading: "data",
+      bodyHtml: FICHE_LOADING_SPINNER_HTML
+    });
+  }
+  function loadFicheForCherryFromPermalink() {
+    const marker = readMapPermalinkMarker(getMapPermalinkParams());
+    if (!marker) return;
+    const params2 = getMapPermalinkParams();
+    const mode2 = readMapModeFromPermalinkParams(params2) ?? MAP_MODE_TERRITORY;
+    const zoom = readMapPermalinkZoom(params2) ?? 14;
+    void loadFicheForMapPoint({
+      lon: marker.lon,
+      lat: marker.lat,
+      mode: mode2,
+      zoom,
+      markerPlacedAtClick: true,
+      skipLocationMarker: true
+    });
+  }
+  let cherryFicheLoadQueued = false;
+  function scheduleFicheLoadForCherryWhenReady() {
+    if (cherryFicheLoadQueued) return;
+    if (!readMapPermalinkMarker(getMapPermalinkParams())) return;
+    syncEntreeConfigFromGpuScript();
+    finalizeGpuClientConfigStateIfInjected();
+    cherryFicheLoadQueued = true;
+    whenGpuClientConfigReady(() => {
+      cherryFicheLoadQueued = false;
+      const run = () => loadFicheForCherryFromPermalink();
+      if (tabPanelsApiRef.value) {
+        run();
+        return;
+      }
+      const stop = watch(tabPanelsApiRef, (api) => {
+        if (api) {
+          stop();
+          run();
+        }
+      });
+    });
+  }
+  function showFiche(selection) {
+    var _a;
+    syncCadastreLowFromFicheSelectionRaw(selection.raw);
+    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection(selection);
+  }
+  function syncFicheLocationMarker(lon, lat) {
+    showMapLocationMarker(lon, lat, {
+      label: "",
+      origin: "ficheInfo",
+      center: false
+    });
+  }
+  function applyMapPointResult(requestId, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker) {
+    if (requestId !== mapPointRequestSeq) return null;
+    storeFicheInCache(mode2, lon, lat, selection);
+    showFiche(selection);
+    if (!skipLocationMarker && !markerPlacedAtClick) {
+      syncFicheLocationMarker(lon, lat);
+    }
+    return selection;
+  }
+  async function fetchGeoJson(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+  async function tryGpuSiteFiche(apiBase, params2) {
+    if (typeof window === "undefined") return null;
+    const fetchBase = resolveConfigUrlForFetch(apiBase);
+    const url = fetchBase.startsWith("/") ? new URL(fetchBase, window.location.origin) : new URL(fetchBase);
+    url.searchParams.set("lon", String(params2.lon));
+    url.searchParams.set("lat", String(params2.lat));
+    url.searchParams.set("mode", String(params2.mode));
+    url.searchParams.set("zoom", String(Math.round(params2.zoom)));
+    try {
+      const res = await fetch(url.toString(), { credentials: "same-origin" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (isGpuFicheInfoPayload(data)) {
+        return ficheSelectionFromGpuApi(data, params2.mode, params2.lon, params2.lat);
+      }
+      const record = data;
+      const title = String(record.title ?? record.name ?? "Informations");
+      const bodyHtml = String(
+        record.bodyHtml ?? record.html ?? record.content ?? record.body ?? "<p>Informations disponibles.</p>"
+      );
+      const raw = record.raw && typeof record.raw === "object" ? record.raw : record;
+      return { title, bodyHtml, raw };
+    } catch {
+      return null;
+    }
+  }
+  function parcelFromApicarto(lon, lat, props) {
+    const section = String(props.section ?? "");
+    const numero = String(props.numero ?? "");
+    const idu = String(props.idu ?? "");
+    const title = idu ? `Parcelle ${idu}` : section && numero ? `Parcelle ${section} ${numero}` : "Parcelle cadastrale";
+    const parts = [
+      htmlParagraph("Commune", String(props.nom_com ?? "")),
+      htmlParagraph("Section", section),
+      htmlParagraph("Numéro", numero),
+      htmlParagraph("Contenance", props.contenance != null ? `${props.contenance} m²` : ""),
+      htmlParagraph("Code INSEE", String(props.code_insee ?? "")),
+      htmlParagraph("Coordonnées", `${lon.toFixed(5)}, ${lat.toFixed(5)}`)
+    ].filter(Boolean);
+    return {
+      title,
+      bodyHtml: parts.join("") || "<p>Parcelle identifiée.</p>",
+      raw: { ...props, lon, lat, source: "apicarto-cadastre" }
+    };
+  }
+  async function ficheParcelFromApicarto(lon, lat) {
+    var _a;
+    const geo = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
+    const feature = (_a = geo.features) == null ? void 0 : _a[0];
+    if (!(feature == null ? void 0 : feature.properties)) {
+      return {
+        title: "Parcelle",
+        bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
+        raw: { lon, lat, mode: MAP_MODE_PARCEL }
+      };
+    }
+    return parcelFromApicarto(lon, lat, feature.properties);
+  }
+  async function loadFicheForMapPointImpl(params2) {
+    const requestId = ++mapPointRequestSeq;
+    const markerPlacedAtClick = params2.markerPlacedAtClick === true;
+    const skipLocationMarker = params2.skipLocationMarker === true;
+    syncFichePointCache(params2.lon, params2.lat);
+    const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
+    showLoading(loadingTitle);
+    const apiUrl = resolveApiFicheInfoUrl();
+    if (params2.mode === MAP_MODE_TERRITORY) {
+      if (!apiUrl) {
+        return applyMapPointResult(
+          requestId,
+          params2.lon,
+          params2.lat,
+          params2.mode,
+          ficheServiceUnavailableSelection(loadingTitle),
+          markerPlacedAtClick,
+          skipLocationMarker
+        );
+      }
+      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
+      const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle);
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        selection,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    }
+    if (apiUrl) {
+      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
+      if (fromSite) {
+        return applyMapPointResult(
+          requestId,
+          params2.lon,
+          params2.lat,
+          params2.mode,
+          fromSite,
+          markerPlacedAtClick,
+          skipLocationMarker
+        );
+      }
+    }
+    try {
+      const selection = await ficheParcelFromApicarto(params2.lon, params2.lat);
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        selection,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    } catch {
+      const fallback = {
+        title: loadingTitle,
+        bodyHtml: `<p>Impossible de charger les informations (${escapeHtml(String(params2.lon))}, ${escapeHtml(String(params2.lat))}).</p>`,
+        raw: { lon: params2.lon, lat: params2.lat, mode: params2.mode }
+      };
+      return applyMapPointResult(
+        requestId,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        fallback,
+        markerPlacedAtClick,
+        skipLocationMarker
+      );
+    }
+  }
+  function loadFicheForMapPoint(params2) {
+    return new Promise((resolve2) => {
+      whenGpuClientConfigReady(() => {
+        void loadFicheForMapPointImpl(params2).then(resolve2);
+      });
+    });
+  }
+  async function loadFicheForSearch(search, mode2, zoom = 6) {
+    var _a, _b, _c;
+    const label = (_a = search.fullText) == null ? void 0 : _a.trim();
+    if (!label) return;
+    const x = Number((_b = search.position) == null ? void 0 : _b.x);
+    const y = Number((_c = search.position) == null ? void 0 : _c.y);
+    const hasCoords = Number.isFinite(x) && Number.isFinite(y);
+    if (hasCoords) {
+      await loadFicheForMapPoint({
+        lon: x,
+        lat: y,
+        mode: mode2,
+        zoom,
+        loadingTitle: label,
+        skipLocationMarker: true
+      });
+      return;
+    }
+    if (mode2 === MAP_MODE_TERRITORY) {
+      const parts = [`<p><strong>${escapeHtml(label)}</strong></p>`];
+      if (search.type) parts.push(`<p>Type : ${escapeHtml(String(search.type))}</p>`);
+      showFiche({
+        title: label,
+        bodyHtml: parts.join(""),
+        raw: {
+          fullText: label,
+          type: search.type ?? null,
+          kind: search.kind ?? null,
+          poiType: search.poiType ?? [],
+          mode: mode2
+        }
+      });
+      return;
+    }
+    showFiche({
+      title: label,
+      bodyHtml: `<p><strong>${escapeHtml(label)}</strong></p><p>Coordonnées absentes — zoomez et cliquez sur la parcelle.</p>`,
+      raw: { fullText: label, mode: mode2 }
+    });
+  }
+  const LOCATION_SEARCH_ANIMATION_MS = 650;
+  function animateViewFit(map2, extent, options = {}) {
+    const { duration, ...fitOptions } = options;
+    map2.getView().fit(extent, {
+      ...fitOptions,
+      duration: duration ?? LOCATION_SEARCH_ANIMATION_MS,
+      easing: easeOut
+    });
+  }
+  function tabPanelsRightInset() {
+    const el = document.querySelector(".ec-tab-panels.is-open");
+    if (!(el instanceof HTMLElement)) return 40;
+    return Math.ceil(el.getBoundingClientRect().width) + 24;
+  }
+  function defaultMapViewFitPadding() {
+    var _a;
+    const rightPad = ((_a = tabPanelsApiRef.value) == null ? void 0 : _a.isOpen.value) ? tabPanelsRightInset() : 72;
+    return [72, rightPad, 72, 72];
+  }
+  function parentCommuneInseeForArrondissement(codeInsee) {
+    if (!/^\d{5}$/.test(codeInsee)) return null;
+    if (codeInsee.startsWith("751") && codeInsee !== "75056") return "75056";
+    const codeNum = Number(codeInsee);
+    if (codeNum >= 13201 && codeNum <= 13216) return "13055";
+    if (codeNum >= 69381 && codeNum <= 69389) return "69123";
+    return null;
+  }
+  const APICARTO_COMMUNE = "https://apicarto.ign.fr/api/cadastre/commune";
+  const APICARTO_PARCEL = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  const GEO_API_COMMUNE = "https://geo.api.gouv.fr/communes";
+  const MODE_EMPRISE_PROP = "ec-mode-emprise";
+  const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
+  let empriseTargetKey = null;
+  const EMPRISE_POINT_EPS = 1e-7;
+  let emprisePointCache = null;
+  const geoJson$1 = new GeoJSON();
+  function sameEmprisePoint(a, b) {
+    return Math.abs(a.lon - b.lon) <= EMPRISE_POINT_EPS && Math.abs(a.lat - b.lat) <= EMPRISE_POINT_EPS;
+  }
+  function syncEmprisePointCache(lon, lat) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) {
+      emprisePointCache = { lon, lat, byMode: {} };
+    }
+  }
+  function cloneEmpriseFeature(feature) {
+    const clone2 = feature.clone();
+    const kind = feature.get(MODE_EMPRISE_PROP);
+    if (kind) {
+      clone2.set(MODE_EMPRISE_PROP, kind);
+      clone2.setStyle(styleForKind(kind));
+    }
+    return clone2;
+  }
+  function storeEmpriseInCache(lon, lat, mode2, features) {
+    syncEmprisePointCache(lon, lat);
+    emprisePointCache.byMode[mode2] = features.map(cloneEmpriseFeature);
+  }
+  function cachedEmpriseForMode(lon, lat, mode2) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) return null;
+    if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
+    const stored = emprisePointCache.byMode[mode2] ?? [];
+    return stored.map(cloneEmpriseFeature);
+  }
+  function pointGeomParam(lon, lat) {
+    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
+  }
+  function modeEmpriseStyle(stroke, fill) {
+    return new Style({
+      stroke: new Stroke({
+        color: stroke,
+        width: 2,
+        lineDash: [8, 8]
+      }),
+      fill: new Fill({ color: fill })
+    });
+  }
+  function communeOrParcelEmpriseStyle() {
+    return modeEmpriseStyle("rgba(200, 16, 46, 0.95)", "rgba(200, 16, 46, 0.12)");
+  }
+  function arrondissementEmpriseStyle() {
+    return modeEmpriseStyle("rgba(230, 126, 34, 0.95)", "rgba(230, 126, 34, 0.14)");
+  }
+  function styleForKind(kind) {
+    return kind === "arrondissement" ? arrondissementEmpriseStyle() : communeOrParcelEmpriseStyle();
+  }
+  function dismissSearchEnginePopup(host) {
+    var _a;
+    (_a = host.popup) == null ? void 0 : _a.setPosition(void 0);
+  }
+  function removeModeEmpriseFeatures(host) {
+    var _a;
+    const source = (_a = host.layer) == null ? void 0 : _a.getSource();
+    if (!source) return;
+    for (const feature of [...source.getFeatures()]) {
+      if (!feature.get(MODE_EMPRISE_PROP)) continue;
+      if (typeof source.removeFeature === "function") {
+        source.removeFeature(feature);
+      }
+    }
+  }
+  function removeGeopfSearchEmprisePolygons(host) {
+    var _a, _b;
+    const source = (_a = host.layer) == null ? void 0 : _a.getSource();
+    if (!source || typeof source.removeFeature !== "function") return;
+    for (const feature of [...source.getFeatures()]) {
+      if (feature.get(MODE_EMPRISE_PROP)) continue;
+      const type = (_b = feature.getGeometry()) == null ? void 0 : _b.getType();
+      if (type != null && type !== "Point") {
+        source.removeFeature(feature);
+      }
+    }
+  }
+  function readGeoJsonFeature(raw, kind) {
+    var _a;
+    if (!(raw == null ? void 0 : raw.geometry)) return null;
+    const map2 = (_a = searchEngineLayerHostRef.value) == null ? void 0 : _a.getMap();
+    const projection = map2 == null ? void 0 : map2.getView().getProjection();
+    if (!projection) return null;
+    const feature = geoJson$1.readFeature(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: projection
+    });
+    feature.set(MODE_EMPRISE_PROP, kind);
+    feature.setStyle(styleForKind(kind));
+    return feature;
+  }
+  async function fetchCadastreCommuneAtPoint(lon, lat) {
+    var _a;
+    const res = await fetch(`${APICARTO_COMMUNE}?geom=${pointGeomParam(lon, lat)}`);
+    if (!res.ok) return null;
+    const geo = await res.json();
+    return ((_a = geo.features) == null ? void 0 : _a[0]) ?? null;
+  }
+  async function fetchCommuneContourFromGeoApi(codeInsee) {
+    const res = await fetch(
+      `${GEO_API_COMMUNE}/${encodeURIComponent(codeInsee)}?format=geojson&geometry=contour`
+    );
+    if (!res.ok) return null;
+    const raw = await res.json();
+    return (raw == null ? void 0 : raw.geometry) ? raw : null;
+  }
+  async function fetchParcelFeature(lon, lat) {
+    var _a;
+    const res = await fetch(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`);
+    if (!res.ok) return null;
+    const geo = await res.json();
+    const raw = (_a = geo.features) == null ? void 0 : _a[0];
+    if (!(raw == null ? void 0 : raw.geometry) || !raw.properties) return null;
+    return readGeoJsonFeature(raw, "parcel");
+  }
+  async function fetchTerritoryEmpriseFeatures(lon, lat) {
+    var _a;
+    const atPoint = await fetchCadastreCommuneAtPoint(lon, lat);
+    if (!(atPoint == null ? void 0 : atPoint.geometry)) return [];
+    const codeInsee = String(((_a = atPoint.properties) == null ? void 0 : _a.code_insee) ?? "");
+    const parentInsee = parentCommuneInseeForArrondissement(codeInsee);
+    const features = [];
+    if (parentInsee) {
+      const parentRaw = await fetchCommuneContourFromGeoApi(parentInsee);
+      const commune2 = parentRaw ? readGeoJsonFeature(parentRaw, "commune") : null;
+      if (commune2) features.push(commune2);
+      const arrondissement = readGeoJsonFeature(atPoint, "arrondissement");
+      if (arrondissement) features.push(arrondissement);
+      return features;
+    }
+    const commune = readGeoJsonFeature(atPoint, "commune");
+    return commune ? [commune] : [];
+  }
+  async function fetchModeEmpriseFeatures(lon, lat, mode2) {
+    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
+    if (resolvedMode === MAP_MODE_PARCEL) {
+      const parcel = await fetchParcelFeature(lon, lat);
+      return parcel ? [parcel] : [];
+    }
+    if (resolvedMode === MAP_MODE_TERRITORY) {
+      return fetchTerritoryEmpriseFeatures(lon, lat);
+    }
+    return [];
+  }
+  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey) {
+    var _a, _b;
+    empriseTargetKey = targetKey;
+    removeModeEmpriseFeatures(host);
+    removeGeopfSearchEmprisePolygons(host);
+    const fromCache = cachedEmpriseForMode(lon, lat, mode2);
+    if (fromCache) {
+      if (empriseTargetKey !== targetKey) return;
+      const source2 = (_a = host.layer) == null ? void 0 : _a.getSource();
+      if (!source2) return;
+      for (const feature of fromCache) {
+        source2.addFeature(feature);
+      }
+      return;
+    }
+    const features = await fetchModeEmpriseFeatures(lon, lat, mode2);
+    if (empriseTargetKey !== targetKey) return;
+    storeEmpriseInCache(lon, lat, mode2, features);
+    const source = (_b = host.layer) == null ? void 0 : _b.getSource();
+    if (!source) return;
+    for (const feature of features) {
+      source.addFeature(feature);
+    }
+  }
+  function empriseTargetKeyForPoint(lon, lat) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`;
+  }
+  function ensureModeEmpriseForMapPoint(lon, lat, mode2, targetKey) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return;
+    void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
+  }
+  function modeEmpriseViewExtent(host) {
+    var _a;
+    const source = (_a = host.layer) == null ? void 0 : _a.getSource();
+    if (!source) return null;
+    const emprise = createEmpty();
+    let hasEmprise = false;
+    for (const feature of source.getFeatures()) {
+      if (!feature.get(MODE_EMPRISE_PROP)) continue;
+      const geometry = feature.getGeometry();
+      if (!geometry || geometry.getType() === "Point") continue;
+      extend$3(emprise, geometry.getExtent());
+      hasEmprise = true;
+    }
+    return hasEmprise && !isEmpty(emprise) ? emprise : null;
+  }
+  async function ensureModeEmpriseForMapPointAsync(lon, lat, mode2, targetKey) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return null;
+    await ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
+    return modeEmpriseViewExtent(host);
+  }
+  function storedPlaceViewExtent(extent) {
+    if (!extent) return null;
+    return [extent[0], extent[1], extent[2], extent[3]];
+  }
+  function extentFromStored(stored) {
+    return stored;
+  }
+  let lastPlaceSearch = null;
+  let lastSearchView = null;
+  function normalizeLabel(value2) {
+    return value2.trim().replace(/\s+/g, " ").toLocaleLowerCase("fr");
+  }
+  function autocompleteSuggestionsVisible(host) {
+    const { acContainer, autocompleteList } = host.baseSearchEngine;
+    if (acContainer.classList.contains("gpf-hidden")) return false;
+    if (acContainer.classList.contains("GPelementHidden")) return false;
+    return autocompleteList.querySelectorAll("li").length > 0;
+  }
+  function rememberLastPlaceSearch(entry) {
+    lastPlaceSearch = entry;
+    lastSearchView = null;
+  }
+  function scheduleCaptureSearchViewSnapshot(map2) {
+    if (!map2) return;
+    map2.once("moveend", () => {
+      const view = map2.getView();
+      const center = view.getCenter();
+      const zoom = view.getZoom();
+      if (!center || zoom == null) return;
+      lastSearchView = { center: [center[0], center[1]], zoom };
+    });
+  }
+  function mapViewChangedSinceLastPlaceSearch(map2) {
+    if (!lastSearchView) return true;
+    const view = map2.getView();
+    const center = view.getCenter();
+    const zoom = view.getZoom();
+    if (!center || zoom == null) return true;
+    const dx = Math.abs(center[0] - lastSearchView.center[0]);
+    const dy = Math.abs(center[1] - lastSearchView.center[1]);
+    const dz = Math.abs(zoom - lastSearchView.zoom);
+    return dx > 2 || dy > 2 || dz > 0.01;
+  }
+  function tryReplayPlaceSearchOnSubmit(host, e, replay, getMap) {
+    if (!(e instanceof SubmitEvent)) return;
+    const submitter = e.submitter;
+    if (!(submitter instanceof HTMLButtonElement) || submitter.type !== "submit") return;
+    const last = lastPlaceSearch;
+    if (!last) return;
+    const inputValue = host.baseSearchEngine.input.value;
+    if (normalizeLabel(inputValue) !== normalizeLabel(last.label)) return;
+    if (autocompleteSuggestionsVisible(host)) return;
+    const map2 = getMap();
+    if (!map2 || !mapViewChangedSinceLastPlaceSearch(map2)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    replay(last);
+  }
+  function bindPlaceSearchSubmitReplay(host, replay, getMap) {
+    const onSubmit = (e) => tryReplayPlaceSearchOnSubmit(host, e, replay, getMap);
+    host.baseSearchEngine.container.addEventListener("submit", onSubmit, true);
+    return () => host.baseSearchEngine.container.removeEventListener("submit", onSubmit, true);
+  }
+  const _hoisted_1$h = {
+    class: "ec-ol-control-host",
+    hidden: "",
+    "aria-hidden": "true"
+  };
+  const GPU_PIN_BLUE = "#000091";
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+    __name: "SearchEngineControl",
+    props: {
+      placeholder: { default: "Rechercher un lieu..." },
+      collapsed: { type: Boolean, default: false },
+      collapsible: { type: Boolean, default: false },
+      serviceBaseUrl: { default: "https://data.geopf.fr" },
+      initialSearch: { default: null }
+    },
+    setup(__props) {
+      const props = __props;
+      let appliedKey = null;
+      const mapMode = useMapMode();
+      function searchKey(search) {
+        var _a, _b;
+        if (!(search == null ? void 0 : search.fullText)) return null;
+        const x = (_a = search.position) == null ? void 0 : _a.x;
+        const y = (_b = search.position) == null ? void 0 : _b.y;
+        return `${search.fullText}|${x ?? ""}|${y ?? ""}|${search.type ?? ""}`;
+      }
+      function openFicheFromSearch(search) {
+        var _a, _b;
+        const map2 = ((_b = (_a = controlRef.value) == null ? void 0 : _a.getMap) == null ? void 0 : _b.call(_a)) ?? null;
+        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+        const mode2 = normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE;
+        void loadFicheForSearch(search, mode2, zoom);
+      }
+      function searchLabelFromFeature(feature) {
+        if (!feature) return "";
+        const toponyme = feature.get("toponyme");
+        if (typeof toponyme === "string" && toponyme.trim()) return toponyme.trim();
+        const infoPopup = feature.get("infoPopup");
+        if (typeof infoPopup === "string" && infoPopup.trim()) {
+          const plain = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          if (plain) return plain;
+        }
+        return "";
+      }
+      function searchFromGeopfResult(control, searchEvent) {
+        var _a, _b;
+        const label = control.baseSearchEngine.input.value.trim();
+        let feature = (_a = control.popup) == null ? void 0 : _a.get("feature");
+        if (!feature && (searchEvent == null ? void 0 : searchEvent.result)) {
+          feature = searchEvent.result;
+        }
+        const resolvedLabel = label || searchLabelFromFeature(feature);
+        if (!resolvedLabel && !feature) return null;
+        let x;
+        let y;
+        const geometry = feature == null ? void 0 : feature.getGeometry();
+        if (geometry) {
+          let coord;
+          if (geometry.getType() === "Point") {
+            coord = geometry.getCoordinates();
+          } else {
+            const interior = (_b = geometry.getInteriorPoint) == null ? void 0 : _b.call(geometry);
+            coord = (interior == null ? void 0 : interior.getCoordinates()) ?? getCenter(geometry.getExtent());
+          }
+          if (coord) {
+            [x, y] = toLonLat(coord);
+          }
+        }
+        const origin = feature == null ? void 0 : feature.get("origin");
+        const featureType = feature == null ? void 0 : feature.get("type");
+        return {
+          fullText: resolvedLabel || "Résultat",
+          type: typeof featureType === "string" && featureType || (typeof origin === "string" ? origin : void 0),
+          kind: typeof (feature == null ? void 0 : feature.get("kind")) === "string" ? feature.get("kind") : void 0,
+          ...Number.isFinite(x) && Number.isFinite(y) ? { position: { x, y } } : {}
+        };
+      }
+      function pinMarkerStyle() {
+        const make = (color) => new Style({
+          image: new Icon({
+            src: mapPinIcon,
+            color,
+            anchor: [0.5, 1]
+          }),
+          stroke: new Stroke({ color, width: 2 }),
+          fill: new Fill({ color: "rgba(0, 0, 0, 0.1)" })
+        });
+        return [make("#ffffff"), make(GPU_PIN_BLUE)];
+      }
+      function configureSearchPinInteraction(control) {
+        var _a, _b;
+        const select = control.selectInteraction;
+        if (!select) return;
+        (_a = select.setStyle) == null ? void 0 : _a.call(select, pinMarkerStyle());
+        (_b = select.setActive) == null ? void 0 : _b.call(select, false);
+      }
+      function bindSearchPinSelectGuard(control) {
+        const select = control.selectInteraction;
+        if (!(select == null ? void 0 : select.on)) return () => {
+        };
+        const onSelect = () => {
+          requestAnimationFrame(() => enforceSearchLayerPinStyles(control));
+        };
+        select.on("select", onSelect);
+        return () => {
+          var _a;
+          return (_a = select.un) == null ? void 0 : _a.call(select, "select", onSelect);
+        };
+      }
+      function enforceSearchLayerPinStyles(control) {
+        var _a, _b, _c, _d;
+        const source = (_a = control.layer) == null ? void 0 : _a.getSource();
+        if (source) {
+          for (const feature of source.getFeatures()) {
+            if (((_b = feature.getGeometry()) == null ? void 0 : _b.getType()) === "Point") {
+              feature.setStyle(pinMarkerStyle());
+            }
+          }
+        }
+        (_d = (_c = control.selectInteraction) == null ? void 0 : _c.getFeatures()) == null ? void 0 : _d.clear();
+      }
+      function searchResultFeature(control) {
+        var _a, _b;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        let feature = (_b = control.popup) == null ? void 0 : _b.get("feature");
+        if (!feature) {
+          feature = source == null ? void 0 : source.getFeatures()[0];
+        }
+        return feature ?? null;
+      }
+      function searchResultViewExtent(control) {
+        var _a;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        if (!source) return null;
+        const features = source.getFeatures();
+        if (!features.length) return null;
+        const emprise = createEmpty();
+        let hasEmprise = false;
+        for (const f of features) {
+          if (f.get(MODE_EMPRISE_PROP)) continue;
+          const geometry = f.getGeometry();
+          if (!geometry || geometry.getType() === "Point") continue;
+          extend$3(emprise, geometry.getExtent());
+          hasEmprise = true;
+        }
+        if (hasEmprise && !isEmpty(emprise)) return emprise;
+        const combined = createEmpty();
+        for (const f of features) {
+          if (f.get(MODE_EMPRISE_PROP)) continue;
+          const geometry = f.getGeometry();
+          if (geometry) extend$3(combined, geometry.getExtent());
+        }
+        return isEmpty(combined) ? null : combined;
+      }
+      function prepareSearchResultOnMap(control) {
+        var _a;
+        const map2 = control.getMap();
+        if (!map2) return null;
+        const source = ((_a = control.layer) == null ? void 0 : _a.getSource()) ?? null;
+        const feature = searchResultFeature(control);
+        const geometry = feature == null ? void 0 : feature.getGeometry();
+        if (!feature || !geometry) return null;
+        if (source && !source.getFeatures().includes(feature)) {
+          source.addFeature(feature);
+        }
+        enforceSearchLayerPinStyles(control);
+        dismissSearchEnginePopup(control);
+        return feature;
+      }
+      function animateViewToPlaceExtent(control, extent) {
+        const map2 = control.getMap();
+        if (!map2 || !extent || isEmpty(extent)) return;
+        animateViewFit(map2, extent, {
+          padding: defaultMapViewFitPadding(),
+          maxZoom: 15
+        });
+      }
+      function resolveMapModeForEmprise() {
+        return normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE;
+      }
+      function syncModeEmpriseAfterSearch(control, lon, lat, empriseKey) {
+        void ensureModeEmpriseOnSearchLayer(control, lon, lat, resolveMapModeForEmprise(), empriseKey);
+        const map2 = control.getMap();
+        map2 == null ? void 0 : map2.once("moveend", () => {
+          void ensureModeEmpriseOnSearchLayer(control, lon, lat, resolveMapModeForEmprise(), empriseKey);
+        });
+      }
+      function onLocationSearchResult(control, empriseKey, lon, lat, options) {
+        setMapPermalinkMarker(lon, lat);
+        prepareSearchResultOnMap(control);
+        const placeExtent = (options == null ? void 0 : options.placeViewExtent) ?? searchResultViewExtent(control);
+        animateViewToPlaceExtent(control, placeExtent);
+        syncModeEmpriseAfterSearch(control, lon, lat, empriseKey);
+        scheduleCaptureSearchViewSnapshot(control.getMap());
+        return placeExtent;
+      }
+      function commitLastPlaceSearch(control, search, lon, lat, placeViewExtent) {
+        const label = control.baseSearchEngine.input.value.trim();
+        if (!label) return;
+        rememberLastPlaceSearch({
+          label,
+          lon,
+          lat,
+          search,
+          placeViewExtent: storedPlaceViewExtent(placeViewExtent)
+        });
+      }
+      function replayLastPlaceSearch(control, last) {
+        const empriseKey = empriseTargetKeyForPoint(last.lon, last.lat);
+        const storedExtent = last.placeViewExtent ? extentFromStored(last.placeViewExtent) : null;
+        onLocationSearchResult(control, empriseKey, last.lon, last.lat, {
+          placeViewExtent: storedExtent
+        });
+        openFicheFromSearch(last.search);
+      }
+      function applyInitialSearch(control, search) {
+        var _a, _b;
+        const key2 = searchKey(search);
+        if (!key2 || key2 === appliedKey) return;
+        appliedKey = key2;
+        const label = search.fullText ?? "";
+        control.baseSearchEngine.input.value = label;
+        const x = Number((_a = search.position) == null ? void 0 : _a.x);
+        const y = Number((_b = search.position) == null ? void 0 : _b.y);
+        const hasCoords = Number.isFinite(x) && Number.isFinite(y);
+        const isGeolocate = search.type === "geolocate";
+        const willGeocode = Boolean(label && !isGeolocate);
+        if (!willGeocode) {
+          openFicheFromSearch(search);
+        }
+        if (hasCoords) {
+          control.createMarker([x, y], "", isGeolocate ? "geolocate" : "searchAtInit", true);
+          dismissSearchEnginePopup(control);
+          enforceSearchLayerPinStyles(control);
+          setMapPermalinkMarker(x, y);
+        }
+        if (!label || isGeolocate) return;
+        const poiType = Array.isArray(search.poiType) ? search.poiType : [];
+        control.baseSearchEngine.search({
+          location: {
+            fullText: label,
+            type: search.type,
+            kind: search.kind,
+            poiType,
+            ...hasCoords ? { position: { x, y } } : {}
+          }
+        });
+      }
+      const controlRef = useOlControl(
+        () => createSearchEngineAdvanced({
+          placeholder: props.placeholder,
+          collapsed: props.collapsed,
+          collapsible: props.collapsible,
+          serviceBaseUrl: props.serviceBaseUrl
+        })
+      );
+      function bindMapLocationMarker(control) {
+        return (lon, lat, options) => {
+          if (!control.getMap()) return;
+          const origin = (options == null ? void 0 : options.origin) ?? "ficheInfo";
+          control.createMarker([lon, lat], "", origin, (options == null ? void 0 : options.center) ?? false);
+          dismissSearchEnginePopup(control);
+          enforceSearchLayerPinStyles(control);
+          setMapPermalinkMarker(lon, lat);
+        };
+      }
+      watch(
+        controlRef,
+        (control, _prev, onCleanup) => {
+          if (!control) {
+            setMapLocationMarker(null);
+            searchEngineLayerHostRef.value = null;
+            return;
+          }
+          const advanced = control;
+          configureSearchPinInteraction(advanced);
+          const unbindPinSelectGuard = bindSearchPinSelectGuard(advanced);
+          const unbindSubmitReplay = bindPlaceSearchSubmitReplay(
+            advanced,
+            (last) => replayLastPlaceSearch(advanced, last),
+            () => advanced.getMap()
+          );
+          searchEngineLayerHostRef.value = advanced;
+          setMapLocationMarker(bindMapLocationMarker(advanced));
+          onCleanup(() => {
+            unbindPinSelectGuard();
+            unbindSubmitReplay();
+            setMapLocationMarker(null);
+            searchEngineLayerHostRef.value = null;
+          });
+          const onSearch = (e) => {
+            var _a, _b;
+            const origin = (_b = (_a = e == null ? void 0 : e.result) == null ? void 0 : _a.get) == null ? void 0 : _b.call(_a, "origin");
+            const fromFicheInfo = origin === "ficheInfo";
+            const fromPermalinkRestore = origin === "permalink";
+            requestAnimationFrame(() => {
+              var _a2, _b2;
+              if (fromFicheInfo || fromPermalinkRestore) {
+                enforceSearchLayerPinStyles(advanced);
+                return;
+              }
+              const search = searchFromGeopfResult(advanced, e);
+              const lon = Number((_a2 = search == null ? void 0 : search.position) == null ? void 0 : _a2.x);
+              const lat = Number((_b2 = search == null ? void 0 : search.position) == null ? void 0 : _b2.y);
+              if (Number.isFinite(lon) && Number.isFinite(lat)) {
+                const empriseKey = empriseTargetKeyForPoint(lon, lat);
+                const placeExtent = onLocationSearchResult(advanced, empriseKey, lon, lat);
+                if (search) commitLastPlaceSearch(advanced, search, lon, lat, placeExtent);
+              } else {
+                prepareSearchResultOnMap(advanced);
+                const placeExtent = searchResultViewExtent(advanced);
+                animateViewToPlaceExtent(advanced, placeExtent);
+                const feature = searchResultFeature(advanced);
+                const geometry = feature == null ? void 0 : feature.getGeometry();
+                if (geometry) {
+                  let coord;
+                  if (geometry.getType() === "Point") {
+                    coord = geometry.getCoordinates();
+                  } else {
+                    coord = getCenter(geometry.getExtent());
+                  }
+                  if (coord) {
+                    const [fallbackLon, fallbackLat] = toLonLat(coord);
+                    const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat);
+                    syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey);
+                    scheduleCaptureSearchViewSnapshot(advanced.getMap());
+                    if (search)
+                      commitLastPlaceSearch(advanced, search, fallbackLon, fallbackLat, placeExtent);
+                  }
+                }
+              }
+              if (search == null ? void 0 : search.fullText) openFicheFromSearch(search);
+            });
+          };
+          advanced.on("search", onSearch);
+          onCleanup(() => {
+            var _a;
+            return (_a = advanced.un) == null ? void 0 : _a.call(advanced, "search", onSearch);
+          });
+        },
+        { immediate: true }
+      );
+      watch(
+        [controlRef, () => props.initialSearch],
+        ([control, search]) => {
+          if (!control || !(search == null ? void 0 : search.fullText)) return;
+          requestAnimationFrame(() => {
+            applyInitialSearch(control, search);
+          });
+        },
+        { immediate: true }
+      );
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("span", _hoisted_1$h);
+      };
+    }
+  });
+  var Config = {
+    /**
+     * Config
+     *
+     * @public
+     * @type {Object}
+     */
+    configuration: {},
+    /**
+     * Check if the configuration is loaded
+     *
+     * @returns {Boolean} True if Config is loaded, false otherwise
+     */
+    isConfigLoaded: function() {
+      if (this.configuration && Object.keys(this.configuration).length !== 0) {
+        return true;
+      }
+      var scope = typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : typeof global !== "undefined" ? global : {};
+      if (scope.Gp && scope.Gp.Config && scope.Gp.Config.layers && Object.keys(scope.Gp.Config.layers).length !== 0) {
+        this.configuration = scope.Gp.Config;
+        return true;
+      }
+      return false;
     }
   };
   class WMTS extends WMTS$1 {
@@ -88644,15 +89354,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       watch(
         () => mapMode == null ? void 0 : mapMode.mode.value,
-        (mode2) => {
-          if (mode2 == null) return;
+        async (mode2, previousMode) => {
+          if (mode2 == null || previousMode == null) return;
           const marker = readMapPermalinkMarker(getMapPermalinkParams());
           if (!marker) return;
-          const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
-          ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode2, key2);
           const map2 = mapRef.value;
-          const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+          if (!map2) return;
+          const key2 = empriseTargetKeyForPoint(marker.lon, marker.lat);
+          const extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode2, key2);
+          const zoom = map2.getView().getZoom() ?? 6;
           refreshFicheForMapModeChange(mode2, zoom);
+          if (extent) {
+            animateViewFit(map2, extent, {
+              padding: defaultMapViewFitPadding(),
+              maxZoom: 15
+            });
+          }
         }
       );
       onUnmounted(() => {
@@ -88664,49 +89381,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  class XYZ extends TileImage {
-    /**
-     * @param {Options} [options] XYZ options.
-     */
-    constructor(options) {
-      options = options || {};
-      const projection = options.projection !== void 0 ? options.projection : "EPSG:3857";
-      const tileGrid = options.tileGrid !== void 0 ? options.tileGrid : createXYZ({
-        extent: extentFromProjection(projection),
-        maxResolution: options.maxResolution,
-        maxZoom: options.maxZoom,
-        minZoom: options.minZoom,
-        tileSize: options.tileSize
-      });
-      super({
-        attributions: options.attributions,
-        cacheSize: options.cacheSize,
-        crossOrigin: options.crossOrigin,
-        referrerPolicy: options.referrerPolicy,
-        interpolate: options.interpolate,
-        projection,
-        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-        tileGrid,
-        tileLoadFunction: options.tileLoadFunction,
-        tilePixelRatio: options.tilePixelRatio,
-        tileUrlFunction: options.tileUrlFunction,
-        url: options.url,
-        urls: options.urls,
-        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
-        transition: options.transition,
-        attributionsCollapsible: options.attributionsCollapsible,
-        zDirection: options.zDirection
-      });
-      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
-    }
-    /**
-     * @return {number} Gutter.
-     * @override
-     */
-    getGutter() {
-      return this.gutter_;
-    }
-  }
   const RES_REGION_MIN = 1222.99245256282;
   const RES_REGION_MAX = 2445.98490512564;
   const RES_DEPT_MAX = 1222.99245256282;
@@ -88789,30 +89463,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function createLimitDepartmentalLayer() {
     return createLimitVectorLayer(loadDepartments, void 0, RES_DEPT_MAX);
   }
-  function normalizeDir(dir) {
-    return dir.replace(/\/$/, "");
-  }
-  function ignGeoportalAttributionsImgDir(override) {
-    if (override !== void 0 && override !== "") {
-      return normalizeDir(override);
-    }
-    const scriptDir = typeof config.scriptDir === "string" ? normalizeDir(config.scriptDir) : "";
-    if (scriptDir && scriptDir !== "/") {
-      return scriptDir;
-    }
-    return normalizeDir("/");
-  }
-  function ignGeoportalAttributions(options = {}) {
-    const year = options.yearOfIgnCopyright ?? (typeof config.yearOfIgnCopyright === "number" ? config.yearOfIgnCopyright : 2019);
-    const imgDir = ignGeoportalAttributionsImgDir(options.imgDir);
-    return [
-      `<a href="http://www.ign.fr/" target="_blank" class="legal-attribution">© IGN – ${year} – copie et reproduction interdite</a>`,
-      `<a href="http://www.ign.fr/" target="_blank"><img class="map-logo-ign-svg" src="${imgDir}/img/logos/logo-ign.svg" /></a>`,
-      `<a href="http://www.cohesion-territoires.gouv.fr/" target="_blank"><img class="map-logo-ministere-svg" src="${imgDir}/img/logos/logo-ministere.png" /></a>`
-    ];
-  }
   const RES_ZOOM_17 = 156543.03392804097 / 2 ** 17;
-  const WMTS_CACHE_SIZE = 256;
   const THUMBNAIL_BY_MAIN_KEY = {
     cadastreLow: {
       layer: "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
@@ -88824,6 +89475,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       style: "PCI vecteur",
       minResolution: RES_ZOOM_17
     },
+    /* cadastreLow : source dynamique (PCI Express / BD Parcellaire / inspire) — vignette PCI Express par défaut. */
     planign: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2" },
     planignGris: { layer: "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", grayscale: true },
     ortho: { layer: "ORTHOIMAGERY.ORTHOPHOTOS", format: "jpeg" },
@@ -88834,6 +89486,19 @@ Expected function or array of functions, received type ${typeof value2}.`
     limitDepartmental: null,
     blank: null
   };
+  const GPU_MAIN_LAYER_MAP_ORDER = [
+    "ortho",
+    "planign",
+    "planignGris",
+    "limitesAdmin",
+    "roads",
+    "names",
+    "cadastreLow",
+    "cadastreHigh",
+    "limitRegional",
+    "limitDepartmental",
+    "blank"
+  ];
   function buildPreset(input) {
     const thumbnailLayers = input.stack.map((key2) => THUMBNAIL_BY_MAIN_KEY[key2]).filter((t) => t != null);
     return {
@@ -88849,14 +89514,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       className: (options == null ? void 0 : options.grayscale) ? "ec-gpu-layer-grayscale" : void 0,
       minResolution: options == null ? void 0 : options.minResolution,
       maxResolution: options == null ? void 0 : options.maxResolution,
-      source: new XYZ({
-        url: `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`,
-        attributions: () => ignGeoportalAttributions(),
-        attributionsCollapsible: false,
-        crossOrigin: "anonymous",
-        maxZoom: 19,
-        cacheSize: WMTS_CACHE_SIZE
-      })
+      source: createGeopfWmtsSource({ layer, style, format })
     });
     if (options == null ? void 0 : options.grayscale) {
       tileLayer.set("grayscale", true);
@@ -88864,21 +89522,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     return tileLayer;
   }
   function createMainLayerPool() {
-    return {
-      cadastreLow: wmtsLayer("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", "png", {
-        style: "PCI vecteur",
-        maxResolution: RES_ZOOM_17
-      }),
+    const cadastreLow = new GpuCadastreLowLayer({ maxResolution: RES_ZOOM_17 });
+    registerGpuCadastreLowLayer(cadastreLow);
+    const pool = {
+      ortho: wmtsLayer("ORTHOIMAGERY.ORTHOPHOTOS", "jpeg"),
+      planign: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2"),
+      planignGris: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", "png", { grayscale: true }),
+      limitesAdmin: wmtsLayer("LIMITES_ADMINISTRATIVES_EXPRESS.LATEST"),
+      roads: wmtsLayer("TRANSPORTNETWORKS.ROADS"),
+      names: wmtsLayer("GEOGRAPHICALNAMES.NAMES"),
+      cadastreLow,
       cadastreHigh: wmtsLayer("CADASTRALPARCELS.PARCELLAIRE_EXPRESS", "png", {
         style: "PCI vecteur",
         minResolution: RES_ZOOM_17
       }),
-      planign: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2"),
-      planignGris: wmtsLayer("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", "png", { grayscale: true }),
-      ortho: wmtsLayer("ORTHOIMAGERY.ORTHOPHOTOS", "jpeg"),
-      names: wmtsLayer("GEOGRAPHICALNAMES.NAMES"),
-      roads: wmtsLayer("TRANSPORTNETWORKS.ROADS"),
-      limitesAdmin: wmtsLayer("LIMITES_ADMINISTRATIVES_EXPRESS.LATEST"),
       limitRegional: createLimitRegionalLayer(),
       limitDepartmental: createLimitDepartmentalLayer(),
       blank: new VectorLayer({
@@ -88887,6 +89544,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         background: "#ffffff"
       })
     };
+    return pool;
   }
   const LIMIT_STACK = ["limitRegional", "limitDepartmental"];
   const PRESET_INPUTS = [
@@ -88940,7 +89598,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return {
       presets,
       mainLayers,
-      allLayers: Object.values(mainLayers)
+      allLayers: GPU_MAIN_LAYER_MAP_ORDER.map((key2) => mainLayers[key2])
     };
   }
   function setActiveGpuBaseLayer(env, id) {
@@ -88951,343 +89609,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!preset) return;
     for (const key2 of preset.stack) {
       env.mainLayers[key2].setVisible(true);
-    }
-  }
-  const DECIMALS = 4;
-  const DEFAULT_VERSION = "1.3.0";
-  function getRequestUrl(baseUrl, extent, size, projection, params2) {
-    params2["WIDTH"] = size[0];
-    params2["HEIGHT"] = size[1];
-    const axisOrientation = projection.getAxisOrientation();
-    const v13 = compareVersions(params2["VERSION"], "1.3") >= 0;
-    params2[v13 ? "CRS" : "SRS"] = projection.getCode();
-    const bbox = v13 && axisOrientation.startsWith("ne") ? [extent[1], extent[0], extent[3], extent[2]] : extent;
-    params2["BBOX"] = bbox.join(",");
-    return appendParams(baseUrl, params2);
-  }
-  function getImageSrc(extent, resolution, pixelRatio, projection, url, params2, serverType) {
-    params2 = Object.assign({ REQUEST: "GetMap" }, params2);
-    const imageResolution = resolution / pixelRatio;
-    const imageSize = [
-      round(getWidth(extent) / imageResolution, DECIMALS),
-      round(getHeight(extent) / imageResolution, DECIMALS)
-    ];
-    if (pixelRatio != 1) {
-      switch (serverType) {
-        case "geoserver":
-          const dpi = 90 * pixelRatio + 0.5 | 0;
-          if ("FORMAT_OPTIONS" in params2) {
-            params2["FORMAT_OPTIONS"] += ";dpi:" + dpi;
-          } else {
-            params2["FORMAT_OPTIONS"] = "dpi:" + dpi;
-          }
-          break;
-        case "mapserver":
-          params2["MAP_RESOLUTION"] = 90 * pixelRatio;
-          break;
-        case "carmentaserver":
-        case "qgis":
-          params2["DPI"] = 90 * pixelRatio;
-          break;
-        default:
-          throw new Error("Unknown `serverType` configured");
-      }
-    }
-    const src = getRequestUrl(url, extent, imageSize, projection, params2);
-    return src;
-  }
-  function getRequestParams(params2, request) {
-    return Object.assign(
-      {
-        "REQUEST": request,
-        "SERVICE": "WMS",
-        "VERSION": DEFAULT_VERSION,
-        "FORMAT": "image/png",
-        "STYLES": "",
-        "TRANSPARENT": "TRUE"
-      },
-      params2
-    );
-  }
-  class TileWMS extends TileImage {
-    /**
-     * @param {Options} [options] Tile WMS options.
-     */
-    constructor(options) {
-      options = options ? options : (
-        /** @type {Options} */
-        {}
-      );
-      const params2 = Object.assign({}, options.params);
-      super({
-        attributions: options.attributions,
-        attributionsCollapsible: options.attributionsCollapsible,
-        cacheSize: options.cacheSize,
-        crossOrigin: options.crossOrigin,
-        interpolate: options.interpolate,
-        projection: options.projection,
-        reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-        tileClass: options.tileClass,
-        tileGrid: options.tileGrid,
-        tileLoadFunction: options.tileLoadFunction,
-        url: options.url,
-        urls: options.urls,
-        wrapX: options.wrapX !== void 0 ? options.wrapX : true,
-        transition: options.transition,
-        zDirection: options.zDirection
-      });
-      this.gutter_ = options.gutter !== void 0 ? options.gutter : 0;
-      this.params_ = params2;
-      this.v13_ = true;
-      this.serverType_ = options.serverType;
-      this.hidpi_ = options.hidpi !== void 0 ? options.hidpi : true;
-      this.tmpExtent_ = createEmpty();
-      this.updateV13_();
-      this.setKey(this.getKeyForParams_());
-    }
-    /**
-     * Return the GetFeatureInfo URL for the passed coordinate, resolution, and
-     * projection. Return `undefined` if the GetFeatureInfo URL cannot be
-     * constructed.
-     * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-     * @param {number} resolution Resolution.
-     * @param {import("../proj.js").ProjectionLike} projection Projection.
-     * @param {!Object} params GetFeatureInfo params. `INFO_FORMAT` at least should
-     *     be provided. If `QUERY_LAYERS` is not provided then the layers specified
-     *     in the `LAYERS` parameter will be used. `VERSION` should not be
-     *     specified here.
-     * @return {string|undefined} GetFeatureInfo URL.
-     * @api
-     */
-    getFeatureInfoUrl(coordinate, resolution, projection, params2) {
-      const projectionObj = get$2(projection);
-      const sourceProjectionObj = this.getProjection() || projectionObj;
-      let tileGrid = this.getTileGrid();
-      if (!tileGrid) {
-        tileGrid = this.getTileGridForProjection(sourceProjectionObj);
-      }
-      const sourceProjCoord = transform$1(
-        coordinate,
-        projectionObj,
-        sourceProjectionObj
-      );
-      const sourceResolution = calculateSourceResolution(
-        sourceProjectionObj,
-        projectionObj,
-        coordinate,
-        resolution
-      );
-      const z = tileGrid.getZForResolution(sourceResolution, this.zDirection);
-      const tileResolution = tileGrid.getResolution(z);
-      const tileCoord = tileGrid.getTileCoordForCoordAndZ(sourceProjCoord, z);
-      if (tileGrid.getResolutions().length <= tileCoord[0]) {
-        return void 0;
-      }
-      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
-      const gutter = this.gutter_;
-      if (gutter !== 0) {
-        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
-      }
-      const baseParams = {
-        "QUERY_LAYERS": this.params_["LAYERS"]
-      };
-      Object.assign(
-        baseParams,
-        getRequestParams(this.params_, "GetFeatureInfo"),
-        params2
-      );
-      const x = Math.floor((sourceProjCoord[0] - tileExtent[0]) / tileResolution);
-      const y = Math.floor((tileExtent[3] - sourceProjCoord[1]) / tileResolution);
-      baseParams[this.v13_ ? "I" : "X"] = x;
-      baseParams[this.v13_ ? "J" : "Y"] = y;
-      return this.getRequestUrl_(
-        tileCoord,
-        tileExtent,
-        1,
-        sourceProjectionObj || projectionObj,
-        baseParams
-      );
-    }
-    /**
-     * Return the GetLegendGraphic URL, optionally optimized for the passed
-     * resolution and possibly including any passed specific parameters. Returns
-     * `undefined` if the GetLegendGraphic URL cannot be constructed.
-     *
-     * @param {number} [resolution] Resolution. If set to undefined, `SCALE`
-     *     will not be calculated and included in URL.
-     * @param {Object} [params] GetLegendGraphic params. If `LAYER` is set, the
-     *     request is generated for this wms layer, else it will try to use the
-     *     configured wms layer. Default `FORMAT` is `image/png`.
-     *     `VERSION` should not be specified here.
-     * @return {string|undefined} GetLegendGraphic URL.
-     * @api
-     */
-    getLegendUrl(resolution, params2) {
-      if (this.urls[0] === void 0) {
-        return void 0;
-      }
-      const baseParams = {
-        "SERVICE": "WMS",
-        "VERSION": DEFAULT_VERSION,
-        "REQUEST": "GetLegendGraphic",
-        "FORMAT": "image/png"
-      };
-      if (params2 === void 0 || params2["LAYER"] === void 0) {
-        const layers = this.params_.LAYERS;
-        const isSingleLayer = !Array.isArray(layers) || layers.length === 1;
-        if (!isSingleLayer) {
-          return void 0;
-        }
-        baseParams["LAYER"] = layers;
-      }
-      if (resolution !== void 0) {
-        const mpu = this.getProjection() ? this.getProjection().getMetersPerUnit() : 1;
-        const pixelSize = 28e-5;
-        baseParams["SCALE"] = resolution * mpu / pixelSize;
-      }
-      Object.assign(baseParams, params2);
-      return appendParams(
-        /** @type {string} */
-        this.urls[0],
-        baseParams
-      );
-    }
-    /**
-     * @return {number} Gutter.
-     * @override
-     */
-    getGutter() {
-      return this.gutter_;
-    }
-    /**
-     * Get the user-provided params, i.e. those passed to the constructor through
-     * the "params" option, and possibly updated using the updateParams method.
-     * @return {Object} Params.
-     * @api
-     */
-    getParams() {
-      return this.params_;
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-     * @param {import("../extent.js").Extent} tileExtent Tile extent.
-     * @param {number} pixelRatio Pixel ratio.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @param {Object} params Params.
-     * @return {string|undefined} Request URL.
-     * @private
-     */
-    getRequestUrl_(tileCoord, tileExtent, pixelRatio, projection, params2) {
-      const urls = this.urls;
-      if (!urls) {
-        return void 0;
-      }
-      let url;
-      if (urls.length == 1) {
-        url = urls[0];
-      } else {
-        const index2 = modulo(hash(tileCoord), urls.length);
-        url = urls[index2];
-      }
-      return getImageSrc(
-        tileExtent,
-        (this.tileGrid || this.getTileGridForProjection(projection)).getResolution(tileCoord[0]),
-        pixelRatio,
-        projection,
-        url,
-        params2,
-        this.serverType_
-      );
-    }
-    /**
-     * Get the tile pixel ratio for this source.
-     * @param {number} pixelRatio Pixel ratio.
-     * @return {number} Tile pixel ratio.
-     * @override
-     */
-    getTilePixelRatio(pixelRatio) {
-      return !this.hidpi_ || this.serverType_ === void 0 ? 1 : pixelRatio;
-    }
-    /**
-     * @private
-     * @return {string} The key for the current params.
-     */
-    getKeyForParams_() {
-      let i = 0;
-      const res = [];
-      for (const key2 in this.params_) {
-        res[i++] = key2 + "-" + this.params_[key2];
-      }
-      return res.join("/");
-    }
-    /**
-     * @param {Object} params New URL paremeters.
-     * @private
-     */
-    setParams_(params2) {
-      this.params_ = params2;
-      this.updateV13_();
-      this.setKey(this.getKeyForParams_());
-    }
-    /**
-     * Set the URL parameters passed to the WMS source.
-     * @param {Object} params New URL paremeters.
-     * @api
-     */
-    setParams(params2) {
-      this.setParams_(Object.assign({}, params2));
-    }
-    /**
-     * Update the URL parameters. This method can be used to update a subset of the WMS
-     * parameters. Call `setParams` to set all of the parameters.
-     * @param {Object} params Updated URL parameters.
-     * @api
-     */
-    updateParams(params2) {
-      this.setParams_(Object.assign(this.params_, params2));
-    }
-    /**
-     * @private
-     */
-    updateV13_() {
-      const version2 = this.params_["VERSION"] || DEFAULT_VERSION;
-      this.v13_ = compareVersions(version2, "1.3") >= 0;
-    }
-    /**
-     * @param {import("../tilecoord.js").TileCoord} tileCoord The tile coordinate
-     * @param {number} pixelRatio The pixel ratio
-     * @param {import("../proj/Projection.js").default} projection The projection
-     * @return {string|undefined} The tile URL
-     * @override
-     */
-    tileUrlFunction(tileCoord, pixelRatio, projection) {
-      let tileGrid = this.getTileGrid();
-      if (!tileGrid) {
-        tileGrid = this.getTileGridForProjection(projection);
-      }
-      if (tileGrid.getResolutions().length <= tileCoord[0]) {
-        return void 0;
-      }
-      if (pixelRatio != 1 && (!this.hidpi_ || this.serverType_ === void 0)) {
-        pixelRatio = 1;
-      }
-      const tileResolution = tileGrid.getResolution(tileCoord[0]);
-      let tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
-      const gutter = this.gutter_;
-      if (gutter !== 0) {
-        tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
-      }
-      const baseParams = Object.assign(
-        {},
-        getRequestParams(this.params_, "GetMap")
-      );
-      return this.getRequestUrl_(
-        tileCoord,
-        tileExtent,
-        pixelRatio,
-        projection,
-        baseParams
-      );
     }
   }
   function wmsUrl() {

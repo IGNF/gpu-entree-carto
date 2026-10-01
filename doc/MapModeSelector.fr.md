@@ -29,6 +29,16 @@ Sans `modelValue`, utilise le contexte `provideMapMode()` de la vue carte.
 - `mode=2` — mode territoire (défaut si paramètre absent)  
 - Changer le sélecteur met à jour le **fragment** (`#mode=…`, `history.replaceState`, sans rechargement). L’ancien `?mode=` est migré dans le hash au chargement.
 
+## Comportement carte
+
+Lorsque l’utilisateur change de mode via les radios et qu’une cerise est présente (`mlon` / `mlat` dans le permalink), `MapPermalinkSync` :
+
+1. Met à jour l’emprise rouge pointillée APICarto (parcelle ou territoire) sur la couche recherche.
+2. Anime la vue pour englober cette emprise (même padding qu’après une recherche lieu, `maxZoom: 15`). S’il n’y a pas de polygone pour le mode, la vue reste inchangée.
+3. Met à jour l’onglet fiche pour le nouveau mode.
+
+Le chargement initial ou la restauration permalink **ne** déclenche **pas** ce recentrage (uniquement un changement de mode après montage).
+
 ## Intégration
 
 ```vue
