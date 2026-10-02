@@ -14,6 +14,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 - [Démonstration](./Demo.fr.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
 - [Configuration démo](./DemoConfig.fr.md) — `public/js/demo-config.js` (équivalent gpu-client `exemple-config.js`)
 - [Notifications](./Notifications.fr.md) — toasts Notivue style cartes.gouv.fr
+- [Référence des icônes](./icone-references.fr.md) — classes DSFR / Remix et URLs catalogue utilisées dans l’app
 
 ## Contrôles
 

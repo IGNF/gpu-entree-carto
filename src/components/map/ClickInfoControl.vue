@@ -14,6 +14,7 @@ import { sketchToolEngagedRef } from '@/composables/sketchToolEngaged'
 import { tryUseMapMode } from '@/composables/mapMode'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { loadFicheForMapPoint } from '@/lib/fiche/ficheInfoService'
+import { setMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import {
   empriseTargetKeyForPoint,
   ensureModeEmpriseForMapPoint,
@@ -42,7 +43,7 @@ function shouldIgnoreClick(evt: MapBrowserEvent): boolean {
   if (
     orig instanceof Element &&
     orig.closest(
-      '.ec-tab-panels, .gpf-widget, .ec-map-mode-selector, .ec-sketch-control, .ec-geometry-editor__tools-root, button, a, input, label, select, textarea',
+      '.ec-tab-panels-shell, .ec-tab-panels__tabs-control, .gpf-widget, .ec-map-mode-selector, .ec-sketch-control, .ec-geometry-editor__tools-root, button, a, input, label, select, textarea',
     )
   ) {
     return true
@@ -69,6 +70,7 @@ function onMapClick(evt: MapBrowserEvent): void {
     origin: 'ficheInfo',
     center: false,
   })
+  setMapPermalinkMarker(lon, lat)
   ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey)
   void loadFicheForMapPoint({
     lon,

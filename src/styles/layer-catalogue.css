@@ -25,7 +25,7 @@
 }
 
 /* Neutralise `.ol-control button` sans casser `.fr-nav__link` */
-.ec-tab-panels.ol-control .ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link {
+.ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link {
   display: inline-flex !important;
   width: 100%;
   height: auto !important;
@@ -48,20 +48,15 @@
   color: var(--text-title-grey, #161616);
 }
 
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
-  button.ec-layer-catalogue__tab.fr-nav__link::before {
+.ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link::before {
   display: none;
 }
 
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
+.ec-layer-catalogue__nav
   button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):hover,
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
+.ec-layer-catalogue__nav
   button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):focus,
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
+.ec-layer-catalogue__nav
   button.ec-layer-catalogue__tab.fr-nav__link:not([aria-current='page']):focus-visible {
   background-color: var(--background-contrast-grey, #eee);
   outline: none !important;
@@ -69,21 +64,14 @@
   border: none !important;
 }
 
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
-  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page'] {
+.ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page'] {
   color: var(--text-action-high-blue-france, #000091);
   box-shadow: inset 0 -2px 0 0 var(--border-active-blue-france, #000091);
 }
 
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
-  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:hover,
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
-  button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:focus,
-.ec-tab-panels.ol-control
-  .ec-layer-catalogue__nav
+.ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:hover,
+.ec-layer-catalogue__nav button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:focus,
+.ec-layer-catalogue__nav
   button.ec-layer-catalogue__tab.fr-nav__link[aria-current='page']:focus-visible {
   outline: none !important;
   border: none !important;
@@ -97,7 +85,7 @@
 }
 
 /* Champ de recherche DSFR dans le panneau OL */
-.ec-tab-panels.ol-control .ec-layer-catalogue .fr-input-group .fr-input {
+.ec-layer-catalogue .fr-input-group .fr-input {
   box-sizing: border-box;
   min-height: 2.5rem;
   margin: 0;

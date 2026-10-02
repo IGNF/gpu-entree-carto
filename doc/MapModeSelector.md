@@ -11,9 +11,11 @@ Parcel / territory mode switch (gpu-client parity: permalink `mode=1` or `mode=2
 
 ## UI
 
-- Dark bar **to the right of SearchEngine** (square outer corners, no `border-radius` on `.ec-map-mode-selector`)
-- Label **Mode** + two **radio** cards: gpu-client SVG icons **Parcelle** / **Territoire** (`fill`: `--light-options-primary-color-sun-113-blue-france-sun-113`)
-- Same light blue background on both cards; selected: blue border, filled radio; unselected **radio** circle slightly transparent
+- Segmented **button group to the right of SearchEngine** (white background, shadow, rounded corners — `--ec-map-control-*`; gap `--ec-map-mode-search-gap`, 0 px default).
+- **`Teleport` to `.ol-overlaycontainer-stopevent`** (OL controls layer): `z-index` 2, **below** TabPanels tabs (`z-index` 3) and **below** the TabPanels surface / mobile sheet (`ec-tab-panels-shell`, `z-index` 2).
+- **Territories geopf active** (button `aria-pressed`): selector hidden to avoid overlapping the territories panel (especially on mobile).
+- Two options **Parcelle** / **Territoire**: icon + label; idle = blue icon and text on white; active = white on blue France. No **Mode** heading, no visible radio circles (hidden `radio` inputs for accessibility).
+- **Mobile** (bar below search): same group, **icons only** (labels visually hidden, still in the DOM for screen readers).
 
 ## Props
 
@@ -31,13 +33,10 @@ Without `modelValue`, uses `provideMapMode()` context on the map view.
 
 ## Map behaviour
 
-When the user switches mode with the radio control and a cherry marker is present (`mlon` / `mlat` in the permalink), `MapPermalinkSync`:
+With a cherry marker (`mlon` / `mlat` or last mode-emprise point), the selector refreshes the red dashed APICarto emprise and animates the view to fit it (place-search padding). Zoom cap: **19** in Parcel mode (tight parcel outline), **15** in Territory mode (commune). The geopf place outline (blue dashed) stays visible alongside it.
 
-1. Refreshes the red dashed APICarto emprise (parcel or territory) on the search layer.
-2. Animates the view to fit that emprise (same padding as after a place search, `maxZoom: 15`). If APICarto returns no polygon for the mode, the view is unchanged.
-3. Updates the fiche tab for the new mode.
-
-Initial page load or permalink restore does **not** trigger this recenter (only a user mode change after mount).
+- **Permalink restore** (`MapPermalinkSync`): cherry + emprise + fit once the search layer is ready.
+- **Parcel / Territory switch** (`MapModeSelector`): animated fit + fiche refresh for the new mode.
 
 ## Integration
 

@@ -144,19 +144,6 @@ function removeModeEmpriseFeatures(host: SearchEngineLayerHost): void {
   }
 }
 
-/** Emprise trueGeometry geopf (commune, etc.) — remplacée par l’emprise mode APICarto. */
-function removeGeopfSearchEmprisePolygons(host: SearchEngineLayerHost): void {
-  const source = host.layer?.getSource()
-  if (!source || typeof source.removeFeature !== 'function') return
-  for (const feature of [...source.getFeatures()]) {
-    if (feature.get(MODE_EMPRISE_PROP)) continue
-    const type = feature.getGeometry()?.getType()
-    if (type != null && type !== 'Point') {
-      source.removeFeature(feature)
-    }
-  }
-}
-
 function readGeoJsonFeature(raw: GeoJsonFeature, kind: ModeEmpriseKind): Feature | null {
   if (!raw?.geometry) return null
   const map = searchEngineLayerHostRef.value?.getMap()
@@ -195,7 +182,7 @@ async function fetchParcelFeature(lon: number, lat: number): Promise<Feature | n
   if (!res.ok) return null
   const geo = (await res.json()) as FeatureCollection
   const raw = geo.features?.[0]
-  if (!raw?.geometry || !raw.properties) return null
+  if (!raw?.geometry) return null
   return readGeoJsonFeature(raw, 'parcel')
 }
 
@@ -249,10 +236,9 @@ export async function ensureModeEmpriseOnSearchLayer(
 ): Promise<void> {
   empriseTargetKey = targetKey
   removeModeEmpriseFeatures(host)
-  removeGeopfSearchEmprisePolygons(host)
 
   const fromCache = cachedEmpriseForMode(lon, lat, mode)
-  if (fromCache) {
+  if (fromCache !== null && fromCache.length > 0) {
     if (empriseTargetKey !== targetKey) return
     const source = host.layer?.getSource()
     if (!source) return
@@ -274,8 +260,21 @@ export async function ensureModeEmpriseOnSearchLayer(
   }
 }
 
+/** Point cerise pour recentrage mode (permalink ou dernier chargement emprise). */
+export function readCherryOrModeEmprisePoint(): { lon: number; lat: number } | null {
+  if (emprisePointCache) {
+    return { lon: emprisePointCache.lon, lat: emprisePointCache.lat }
+  }
+  return null
+}
+
 export function empriseTargetKeyForPoint(lon: number, lat: number): string {
   return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`
+}
+
+/** Clé stable (changemenent Parcelle / Territoire) — évite les courses avec les clés horodatées. */
+export function empriseTargetKeyForModeFocus(lon: number, lat: number): string {
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|mode-emprise`
 }
 
 export function ensureModeEmpriseForMapPoint(

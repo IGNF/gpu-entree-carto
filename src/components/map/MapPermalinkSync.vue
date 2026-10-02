@@ -28,17 +28,9 @@ import {
 import { mapPermalinkLayersBridgeRef } from '@/composables/mapPermalinkLayersBridge'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { tryUseMapMode } from '@/composables/mapMode'
-import {
-  refreshFicheForMapModeChange,
-  scheduleFicheLoadForCherryWhenReady,
-} from '@/lib/fiche/ficheInfoService'
-import { animateViewFit } from '@/lib/map/animateViewFit'
-import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
-import {
-  empriseTargetKeyForPoint,
-  ensureModeEmpriseForMapPoint,
-  ensureModeEmpriseForMapPointAsync,
-} from '@/lib/map/searchResultGraphics'
+import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
+import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
+import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
 
 const props = withDefaults(
   defineProps<{
@@ -56,6 +48,7 @@ let moveKey: EventsKey | null = null
 let appliedViewFromPermalink = false
 let appliedLayersFromPermalink = false
 let markerRestored = false
+let cherryEmpriseFocusPending = false
 
 if (locationHashLooksLikeMapPermalink()) {
   bootstrapMapPermalinkFromLocation()
@@ -95,16 +88,31 @@ function applyLayersFromPermalink(): void {
   if (!hasLayerKeys) appliedLayersFromPermalink = true
 }
 
+async function syncCherryEmpriseFocusFromPermalink(map: Map): Promise<void> {
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (!marker) {
+    cherryEmpriseFocusPending = false
+    return
+  }
+  if (!searchEngineLayerHostRef.value) {
+    cherryEmpriseFocusPending = true
+    return
+  }
+  cherryEmpriseFocusPending = false
+  const mode = mapMode?.mode.value ?? 2
+  await focusModeEmpriseOnMap(map, mode, { skipFicheRefresh: true })
+}
+
 function restoreMarkerFromPermalink(): void {
   if (markerRestored || props.skipMarkerRestore) return
   const marker = readMapPermalinkMarker(getMapPermalinkParams())
   if (!marker) return
   markerRestored = true
-  const mode = mapMode?.mode.value ?? 2
   showMapLocationMarker(marker.lon, marker.lat, { label: '', origin: 'permalink', center: false })
-  const key = empriseTargetKeyForPoint(marker.lon, marker.lat)
-  ensureModeEmpriseForMapPoint(marker.lon, marker.lat, mode, key)
   scheduleFicheLoadForCherryWhenReady()
+  const map = mapRef.value
+  if (map) void syncCherryEmpriseFocusFromPermalink(map)
+  else cherryEmpriseFocusPending = true
 }
 
 function syncViewToPermalink(map: Map): void {
@@ -156,6 +164,12 @@ watch(mapPermalinkLayersBridgeRef, () => {
   applyLayersFromPermalink()
 })
 
+watch(searchEngineLayerHostRef, () => {
+  if (!cherryEmpriseFocusPending) return
+  const map = mapRef.value
+  if (map) void syncCherryEmpriseFocusFromPermalink(map)
+})
+
 watch(
   () => {
     const ui = permalinkUi
@@ -166,27 +180,6 @@ watch(
     const ui = permalinkUi
     if (!ui?.presets.length || baseId == null) return
     updateMapPermalinkParam('tile', tileIndexFromBaseId(ui.presets, baseId))
-  },
-)
-
-watch(
-  () => mapMode?.mode.value,
-  async (mode, previousMode) => {
-    if (mode == null || previousMode == null) return
-    const marker = readMapPermalinkMarker(getMapPermalinkParams())
-    if (!marker) return
-    const map = mapRef.value
-    if (!map) return
-    const key = empriseTargetKeyForPoint(marker.lon, marker.lat)
-    const extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode, key)
-    const zoom = map.getView().getZoom() ?? 6
-    refreshFicheForMapModeChange(mode, zoom)
-    if (extent) {
-      animateViewFit(map, extent, {
-        padding: defaultMapViewFitPadding(),
-        maxZoom: 15,
-      })
-    }
   },
 )
 

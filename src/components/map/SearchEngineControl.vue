@@ -7,7 +7,8 @@
  * `initialSearch` : rejoue la sélection comme un clic autocomplete
  * (cerise, emprise trueGeometry, popup) — parcours accueil → carte.
  */
-import { watch } from 'vue'
+import { inject, onMounted, shallowRef, watch } from 'vue'
+import type { ShallowRef } from 'vue'
 import type Feature from 'ol/Feature'
 import type Map from 'ol/Map'
 import type Geometry from 'ol/geom/Geometry'
@@ -19,6 +20,7 @@ import type Control from 'ol/control/Control'
 import { Style, Icon, Stroke, Fill } from 'ol/style'
 import mapPinIcon from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/map-pin-2-fill.svg'
 import { useOlControl } from '@/composables/useOlControl'
+import { useMobileSearchPopoverSync } from '@/composables/useMobileSearchPopoverSync'
 import { createSearchEngineAdvanced } from '@/lib/search/createSearchEngineAdvanced'
 import { useMapMode } from '@/composables/mapMode'
 import type { StandardViewerSearch } from '@/lib/types'
@@ -28,7 +30,7 @@ import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
 import { setMapLocationMarker, type MapLocationMarkerFn } from '@/composables/mapLocationMarker'
 import {
   dismissSearchEnginePopup,
-  empriseTargetKeyForPoint,
+  empriseTargetKeyForModeFocus,
   ensureModeEmpriseOnSearchLayer,
   MODE_EMPRISE_PROP,
   searchEngineLayerHostRef,
@@ -307,18 +309,13 @@ function syncModeEmpriseAfterSearch(
   control: SearchEngineAdvancedLike,
   lon: number,
   lat: number,
-  empriseKey: string,
 ): void {
+  const empriseKey = empriseTargetKeyForModeFocus(lon, lat)
   void ensureModeEmpriseOnSearchLayer(control, lon, lat, resolveMapModeForEmprise(), empriseKey)
-  const map = control.getMap()
-  map?.once('moveend', () => {
-    void ensureModeEmpriseOnSearchLayer(control, lon, lat, resolveMapModeForEmprise(), empriseKey)
-  })
 }
 
 function onLocationSearchResult(
   control: SearchEngineAdvancedLike,
-  empriseKey: string,
   lon: number,
   lat: number,
   options?: { placeViewExtent?: Extent | null },
@@ -327,7 +324,9 @@ function onLocationSearchResult(
   prepareSearchResultOnMap(control)
   const placeExtent = options?.placeViewExtent ?? searchResultViewExtent(control)
   animateViewToPlaceExtent(control, placeExtent)
-  syncModeEmpriseAfterSearch(control, lon, lat, empriseKey)
+  requestAnimationFrame(() => {
+    syncModeEmpriseAfterSearch(control, lon, lat)
+  })
   scheduleCaptureSearchViewSnapshot(control.getMap())
   return placeExtent
 }
@@ -351,9 +350,8 @@ function commitLastPlaceSearch(
 }
 
 function replayLastPlaceSearch(control: SearchEngineAdvancedLike, last: LastPlaceSearch): void {
-  const empriseKey = empriseTargetKeyForPoint(last.lon, last.lat)
   const storedExtent = last.placeViewExtent ? extentFromStored(last.placeViewExtent) : null
-  onLocationSearchResult(control, empriseKey, last.lon, last.lat, {
+  onLocationSearchResult(control, last.lon, last.lat, {
     placeViewExtent: storedExtent,
   })
   openFicheFromSearch(last.search)
@@ -410,6 +408,13 @@ function applyInitialSearch(control: SearchEngineAdvancedLike, search: StandardV
     },
   })
 }
+
+const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
+const { startMobileSearchPopoverSync } = useMobileSearchPopoverSync(mapRef)
+
+onMounted(() => {
+  startMobileSearchPopoverSync()
+})
 
 const controlRef = useOlControl(() =>
   createSearchEngineAdvanced({
@@ -468,8 +473,7 @@ watch(
         const lon = Number(search?.position?.x)
         const lat = Number(search?.position?.y)
         if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          const empriseKey = empriseTargetKeyForPoint(lon, lat)
-          const placeExtent = onLocationSearchResult(advanced, empriseKey, lon, lat)
+          const placeExtent = onLocationSearchResult(advanced, lon, lat)
           if (search) commitLastPlaceSearch(advanced, search, lon, lat, placeExtent)
         } else {
           prepareSearchResultOnMap(advanced)
@@ -486,8 +490,7 @@ watch(
             }
             if (coord) {
               const [fallbackLon, fallbackLat] = toLonLat(coord)
-              const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat)
-              syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey)
+              syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat)
               scheduleCaptureSearchViewSnapshot(advanced.getMap())
               if (search)
                 commitLastPlaceSearch(advanced, search, fallbackLon, fallbackLat, placeExtent)

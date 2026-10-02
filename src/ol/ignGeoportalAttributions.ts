@@ -46,7 +46,7 @@ export function ignGeoportalAttributions(options: IgnGeoportalAttributionOptions
   const imgDir = ignGeoportalAttributionsImgDir(options.imgDir)
 
   return [
-    `<a href="http://www.ign.fr/" target="_blank" class="legal-attribution">© IGN – ${year} – copie et reproduction interdite</a>`,
+    `<a href="http://www.ign.fr/" target="_blank" class="legal-attribution">© IGN – ${year} – copie et<br class="ec-legal-attribution__br" aria-hidden="true"><span class="ec-legal-attribution__line2"> reproduction interdite<i class="fr-icon-external-link-line ec-legal-attribution__ext-icon" aria-hidden="true"></i></span></a>`,
     attributionLogoLink(
       'http://www.ign.fr/',
       'map-logo-ign-svg',

@@ -24,6 +24,12 @@
   --ec-attribution-block-height: calc(var(--ec-attribution-logo-height) + 8px);
   /** Marge entre bandeau attributions et barre d’échelle (empilés). */
   --ec-scale-attribution-stack-gap: 6px;
+  /** Contrôles carte : inactif = picto bleu sur blanc (DSFR tertiaire) ; actif = picto blanc sur bleu (DSFR primaire). */
+  --ec-map-control-icon: var(--text-action-high-blue-france, #000091);
+  --ec-map-control-bg: var(--background-default-grey, #fff);
+  --ec-map-control-hover-bg: var(--hover-tint, #e3e3fd);
+  --ec-map-control-active-bg: var(--background-action-high-blue-france, #000091);
+  --ec-map-control-active-fg: #fff;
 }
 
 .position {
@@ -113,7 +119,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--ec-widget-gap);
-  bottom: var(--ec-widget-gap);
+  bottom: calc(var(--ec-widget-gap) + var(--ec-bottom-widgets-lift));
   right: var(--ec-bottom-right-inset);
   z-index: 0;
 }
@@ -145,20 +151,40 @@
   filter: none;
   max-width: initial !important;
   max-height: initial !important;
-  background-color: var(--background-default-grey, #fff);
-  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--background-default-grey, #fff);
+  color: var(--ec-map-control-icon);
+  background-color: var(--ec-map-control-bg);
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-bg);
   transition: background-color 300ms;
 }
 
-.gpf-widget-button > .gpf-btn-icon:not(:disabled):hover {
-  background-color: var(--hover-tint, #e3e3fd);
+.gpf-widget-button > .gpf-btn-icon:not([aria-pressed='true']):not([class*='fr-icon-'])::after,
+.gpf-widget > .gpf-btn-icon:not([aria-pressed='true']):not([class*='fr-icon-'])::after {
+  background-color: var(--ec-map-control-icon);
+}
+
+.gpf-widget-button > .gpf-btn-icon:not(:disabled):hover,
+.gpf-widget > .gpf-btn-icon:not(:disabled):hover {
+  background-color: var(--ec-map-control-hover-bg);
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-hover-bg);
 }
 
 .gpf-widget-button > .gpf-btn-icon[aria-pressed='true'],
 .gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover,
 .gpf-widget > .gpf-btn-icon[aria-pressed='true'],
 .gpf-widget > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover {
-  background-color: var(--background-open-blue-france, #e3e3fd);
+  color: var(--ec-map-control-active-fg);
+  background-color: var(--ec-map-control-active-bg);
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-active-bg);
+}
+
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after,
+.gpf-widget > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after {
+  background-color: var(--ec-map-control-active-fg) !important;
+}
+
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before,
+.gpf-widget > .gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before {
+  background-color: var(--ec-map-control-active-fg);
 }
 
 .gpf-widget-button:has(> .gpf-btn-icon[aria-pressed='true'])::after,
@@ -446,12 +472,12 @@ dialog[id^='GPterritoriesPanel-'] > .territories-entries {
   overflow: auto;
 }
 
-/* Territories — dialog « Modifier les territoires » collé à droite du panneau, bas alignés */
+/* Territories — dialog « Modifier les territoires » (bureau : à droite du panneau) */
 dialog[id^='GPterritoriesPanel-'] {
   overflow: visible;
 }
 
-#gpf-territories-views-container-id {
+.ec-map-shell:not(.ec-map-shell--tab-panels-layout-bottom) #gpf-territories-views-container-id {
   position: absolute;
   top: auto !important;
   bottom: 0;
@@ -487,6 +513,7 @@ dialog[id^='GPterritoriesPanel-'] {
  */
 .ec-map-shell {
   --ec-bottom-right-inset: var(--ec-widget-gap);
+  --ec-bottom-widgets-lift: 0px;
   --ec-scale-line-right: calc(
     var(--ec-bottom-right-inset) + var(--ec-widget-btn-size) + var(--ec-widget-gap)
   );
@@ -494,6 +521,235 @@ dialog[id^='GPterritoriesPanel-'] {
 
 .ec-map-shell--tab-panels-open {
   --ec-bottom-right-inset: calc(var(--ec-widget-gap) + var(--ec-tab-panels-inset));
+}
+
+/* Mobile : pas d’inset panneau bureau (y compris après resize avec panneau latéral ouvert). */
+.ec-map-shell--tab-panels-layout-bottom,
+.ec-map-shell--tab-panels-layout-bottom.ec-map-shell--tab-panels-open {
+  --ec-tab-panels-inset: 0px;
+  --ec-bottom-right-inset: calc(
+    var(--ec-widget-gap) + var(--ec-mobile-viewport-stack-width, var(--ec-widget-btn-size, 48px)) +
+      var(--ec-mobile-viewport-stack-gap, var(--ec-widget-gap, 8px)) + var(--ec-widget-gap)
+  );
+}
+
+.ec-map-shell--tab-panels-layout-bottom {
+  --ec-mobile-viewport-stack-width: var(--ec-widget-btn-size, 48px);
+  --ec-mobile-viewport-stack-gap: var(--ec-widget-gap, 8px);
+  --ec-scale-line-right: var(--ec-bottom-right-inset);
+  --ec-search-left-inset: 0px;
+  --ec-search-engine-max-width: none;
+  --ec-map-mode-top: calc(var(--ec-widget-gap) + var(--ec-widget-btn-size) + var(--ec-widget-gap));
+  /*
+   * Colonne croquis (position: fixed → viewport) :
+   * --ec-mobile-map-viewport-top = haut de .ec-map-shell (JS, sous en-tête démo) ;
+   * puis 3× gap + recherche + mode dans la carte.
+   */
+  --ec-mobile-map-chrome-above-sketch: calc(
+    var(--ec-widget-gap) + var(--ec-widget-btn-size) + var(--ec-widget-gap) +
+      var(--ec-widget-btn-size) + var(--ec-widget-gap)
+  );
+  --ec-mobile-map-viewport-top: 0px;
+  --ec-mobile-sketch-toolbar-top: calc(
+    var(--ec-mobile-map-viewport-top) + var(--ec-mobile-map-chrome-above-sketch)
+  );
+  --ec-mobile-sketch-toolbar-bottom: calc(
+    var(--ec-tab-panels-safe-bottom) + var(--ec-widget-gap) + var(--ec-widget-btn-size) +
+      var(--ec-widget-gap)
+  );
+  --ec-mobile-sketch-toolbar-max-height: calc(
+    100cqb - var(--ec-mobile-sketch-toolbar-top) - var(--ec-mobile-sketch-toolbar-bottom)
+  );
+  --ec-mobile-footer-stack-base: calc(
+    var(--ec-tab-panels-bottom-chrome, 56px) + var(--ec-widget-gap, 8px)
+  );
+  --ec-mobile-viewport-stack-height: calc(var(--ec-widget-btn-size) * 3 + var(--ec-widget-gap) * 2);
+  --ec-mobile-panel-stack-bottom: calc(
+    var(--ec-tab-panels-bottom-chrome) + var(--ec-widget-gap) +
+      var(--ec-mobile-viewport-stack-height)
+  );
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map {
+  position: relative;
+  z-index: 1;
+}
+
+.ec-map-shell--tab-panels-layout-bottom:has(.GPSearchEngine-advanced-btn[aria-expanded='true'])
+  #gpu-map,
+.ec-map-shell--tab-panels-layout-bottom:has(.GPautoCompleteContainer.gpf-visible) #gpu-map {
+  z-index: 6;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .gpf-widget[id^='GPsearchEngine-'] {
+  z-index: 3;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .GPautoCompleteContainer.gpf-visible,
+.ec-map-shell--tab-panels-layout-bottom .GPAdvancedContainer,
+.ec-map-shell--tab-panels-layout-bottom .gpf-widget[id^='GPsearchEngine-'] .GPAdvancedContainer {
+  z-index: 10000 !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .GPautoCompleteContainer.gpf-visible {
+  position: fixed !important;
+  margin: 0 !important;
+  right: auto !important;
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .gpf-widget[id^='GPsearchEngine-Advanced']
+  > .GPAdvancedContainer {
+  margin: 0 !important;
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .gpf-widget[id^='GPsearchEngine-Advanced']:has(.GPSearchEngine-advanced-btn[aria-expanded='true'])
+  > .GPAdvancedContainer {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-height: 10rem !important;
+  max-height: min(
+    55vh,
+    calc(100dvh - var(--ec-map-mode-top) - var(--ec-widget-btn-size) * 2)
+  ) !important;
+  height: auto !important;
+  overflow: auto !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .gpf-widget[id^='GPsearchEngine-Advanced']:not(
+    :has(.GPSearchEngine-advanced-btn[aria-expanded='true'])
+  )
+  > .GPAdvancedContainer {
+  max-height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .gpf-widget[id^='GPsearchEngine-Advanced'] {
+  overflow: visible !important;
+}
+
+/* Zoom / plein écran geopf : barre basse TabPanelsControl. */
+.ec-map-shell--tab-panels-layout-bottom .position-container-bottom-right {
+  display: none !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom.ec-map-shell--tab-panels-open {
+  --ec-bottom-widgets-lift: 0px;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .gpf-widget[id^='GPsearchEngine-'] {
+  top: var(--ec-widget-gap) !important;
+  left: var(--ec-widget-gap) !important;
+  right: var(--ec-widget-gap);
+  width: auto;
+  max-width: none;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .position-container-bottom-left {
+  position: absolute;
+  inset: auto auto 0 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .position-container-bottom-left > * {
+  pointer-events: auto;
+}
+
+/*
+ * Minimap mobile : le nœud geopf (#GPoverviewMap-*) est à la fois .gpf-widget et .ol-overviewmap
+ * (pas un enfant .ol-overviewmap) — cibler .ol-overviewmap-map sous le widget du slot.
+ */
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--overview
+  .gpf-widget[id^='GPoverviewMap-']:has(button[aria-pressed='true'])
+  .ol-overviewmap-map,
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--overview
+  .ec-tab-panels__geopf-widget.ol-overviewmap:not(.ol-collapsed)
+  .ol-overviewmap-map {
+  position: fixed !important;
+  top: calc(var(--ec-mobile-map-viewport-top, 0px) + var(--ec-map-mode-top)) !important;
+  right: var(--ec-widget-gap) !important;
+  left: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  width: calc(var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap)) !important;
+  height: calc(var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap)) !important;
+  border: solid 4px var(--background-default-grey, #fff);
+  background-color: var(--background-default-grey, #fff);
+  border-radius: 4px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+/*
+ * Mobile — Territories : reprendre le positionnement geopf (dialog en absolute sous
+ * gpf-mobile-fullscreen), sans fixed entree-carto. Le bouton reste stylé via tab-panels.css.
+ */
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--territories
+  .gpf-widget[id^='GPterritories-']
+  > button[aria-pressed='true']
+  + dialog[id^='GPterritoriesPanel-'] {
+  position: absolute;
+  top: auto !important;
+  bottom: calc(100% + var(--ec-widget-gap, 8px)) !important;
+  left: 0 !important;
+  right: auto !important;
+  max-height: min(
+    70dvh,
+    calc(
+      100dvh - var(--ec-mobile-footer-stack-base, 72px) - var(--ec-map-mode-top, 0px) -
+        var(--ec-widget-btn-size, 48px) - var(--ec-widget-gap, 8px) * 3
+    )
+  ) !important;
+  margin: 0;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--territories
+  #gpf-territories-views-container-id {
+  position: absolute;
+  top: 48px;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  max-height: none;
+}
+
+@media (max-width: 576px) {
+  .ec-map-shell--tab-panels-layout-bottom
+    .ec-tab-panels__geopf-slot--territories
+    .gpf-mobile-fullscreen
+    > button[aria-pressed='true']
+    ~ dialog[id^='GPterritoriesPanel-'] {
+    width: min(470px, calc(100vw - 2 * var(--ec-widget-gap, 8px))) !important;
+  }
 }
 
 #gpu-map .ol-control.ol-attribution {
@@ -508,6 +764,93 @@ dialog[id^='GPterritoriesPanel-'] {
   bottom: var(--ec-widget-gap);
 }
 
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-control.ol-attribution,
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution.ol-uncollapsible {
+  bottom: var(--ec-mobile-footer-stack-base);
+  left: var(--ec-widget-gap);
+  right: var(--ec-bottom-right-inset);
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution ul {
+  flex-flow: row nowrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: none;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution li:has(img) {
+  flex: 0 0 auto;
+  order: 1;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution li:not(:has(img)) {
+  flex: 0 1 auto;
+  order: 0;
+  max-width: 8.5rem;
+  margin: 0;
+  padding: 0 0 2px;
+  text-align: right;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution a.legal-attribution {
+  display: inline !important;
+  max-width: none;
+  white-space: normal !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-align: right;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  margin-right: 0;
+  padding-bottom: 2px;
+  vertical-align: bottom;
+}
+
+/* Mobile : 2 lignes fixes ; picto dans le span (le ::after du <a> DSFR ne suit pas le nowrap) */
+.ec-legal-attribution__br,
+.ec-legal-attribution__ext-icon {
+  display: none;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution .ec-legal-attribution__br {
+  display: block;
+  margin: 0;
+  line-height: 0;
+  content: '';
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution .ec-legal-attribution__line2 {
+  white-space: nowrap;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution .ec-legal-attribution__ext-icon {
+  display: inline-block;
+  --icon-size: 0.75rem;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin-left: 0.15rem;
+  vertical-align: -0.05em;
+  font-size: var(--icon-size);
+  line-height: 1;
+  color: currentColor;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ol-attribution
+  .ec-legal-attribution__ext-icon::before {
+  --icon-size: 0.75rem;
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ol-attribution a.legal-attribution::after {
+  content: none !important;
+  display: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+}
+
 .ol-scale-line {
   z-index: auto;
   left: auto;
@@ -517,6 +860,13 @@ dialog[id^='GPterritoriesPanel-'] {
       var(--ec-scale-attribution-stack-gap)
   );
   background: var(--background-default-grey, #fff);
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ol-scale-line {
+  bottom: calc(
+    var(--ec-mobile-footer-stack-base) + var(--ec-attribution-block-height) +
+      var(--ec-scale-attribution-stack-gap)
+  );
 }
 
 #gpu-map .ol-attribution ul {

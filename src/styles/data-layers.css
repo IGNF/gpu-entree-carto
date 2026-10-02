@@ -103,7 +103,7 @@
  * Annule `.ol-control button` (ol.css) — !important requis (même principe que les onglets).
  * Apparence = `fr-btn fr-btn--sm fr-btn--secondary`.
  */
-.ec-tab-panels.ol-control button.fr-btn.ec-data-layers__legend-btn {
+button.fr-btn.ec-data-layers__legend-btn {
   flex: 0 0 auto;
   box-sizing: border-box;
   display: inline-flex !important;
@@ -126,8 +126,8 @@
   box-shadow: none !important;
 }
 
-.ec-tab-panels.ol-control button.fr-btn.ec-data-layers__legend-btn:hover,
-.ec-tab-panels.ol-control button.fr-btn.ec-data-layers__legend-btn:focus-visible {
+button.fr-btn.ec-data-layers__legend-btn:hover,
+button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   background-color: var(--background-contrast-grey, #eee) !important;
   color: var(--text-action-high-blue-france, #000091) !important;
   border-color: var(--border-default-grey, #ddd) !important;
@@ -138,7 +138,7 @@
   line-height: 1;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__drag-handle {
+.ec-data-layers__drag-handle {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -156,7 +156,7 @@
   cursor: grab;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__detail-handle {
+.ec-data-layers__detail-handle {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -174,13 +174,13 @@
   cursor: pointer;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__detail-handle:hover,
-.ec-tab-panels.ol-control .ec-data-layers__detail-handle:focus-visible {
+.ec-data-layers__detail-handle:hover,
+.ec-data-layers__detail-handle:focus-visible {
   background-color: var(--hover-tint, #e3e3fd);
   outline: none;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__regroup-handle {
+.ec-data-layers__regroup-handle {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -198,18 +198,18 @@
   cursor: pointer;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__regroup-handle:hover,
-.ec-tab-panels.ol-control .ec-data-layers__regroup-handle:focus-visible {
+.ec-data-layers__regroup-handle:hover,
+.ec-data-layers__regroup-handle:focus-visible {
   background-color: var(--hover-tint, #e3e3fd);
   outline: none;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__drag-handle:active {
+.ec-data-layers__drag-handle:active {
   cursor: grabbing;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__drag-handle:hover,
-.ec-tab-panels.ol-control .ec-data-layers__drag-handle:focus-visible {
+.ec-data-layers__drag-handle:hover,
+.ec-data-layers__drag-handle:focus-visible {
   background-color: var(--background-contrast-grey, #eee);
 }
 
@@ -223,7 +223,7 @@
   min-width: 0;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__icon-btn {
+.ec-data-layers__icon-btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -241,12 +241,12 @@
   cursor: pointer;
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__icon-btn:hover,
-.ec-tab-panels.ol-control .ec-data-layers__icon-btn:focus-visible {
+.ec-data-layers__icon-btn:hover,
+.ec-data-layers__icon-btn:focus-visible {
   background-color: var(--background-contrast-grey, #eee);
 }
 
-.ec-tab-panels.ol-control .ec-data-layers__icon-btn--active {
+.ec-data-layers__icon-btn--active {
   background-color: var(--background-open-blue-france, #e3e3fd);
 }
 

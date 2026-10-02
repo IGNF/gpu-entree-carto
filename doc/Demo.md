@@ -20,7 +20,7 @@ Like gpu-client `exemple-config.js`: edit **`public/js/demo-config.js`** (`windo
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR): **Home**, **Map**, **Geometries**, **Sketch** links.
+`DemoHeader.vue` (DSFR, same pattern as gpu-site): **Home**, **Map**, **Geometries**, **Sketch** links. From the **`lg`** breakpoint downward, the bar is hidden behind the header **Menu** button (`fr-btn--menu`); navigation opens in the `fr-header__menu fr-modal` overlay. DSFR JavaScript runs in **Vue** mode (`window.dsfr` in `index.html`, `startDsfrForVueApp()` after `app.mount` in `main.ts`).
 
 ## Location flow
 

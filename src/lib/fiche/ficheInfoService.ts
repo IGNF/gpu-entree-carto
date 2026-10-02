@@ -6,7 +6,7 @@ import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
-import { escapeHtml, FICHE_LOADING_SPINNER_HTML, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
+import { escapeHtml, FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
 import {
   finalizeGpuClientConfigStateIfInjected,
@@ -16,6 +16,7 @@ import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
+import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
@@ -242,26 +243,17 @@ function parcelFromApicarto(
   lat: number,
   props: Record<string, unknown>,
 ): FicheInfoSelection {
-  const section = String(props.section ?? '')
-  const numero = String(props.numero ?? '')
-  const idu = String(props.idu ?? '')
-  const title = idu
-    ? `Parcelle ${idu}`
-    : section && numero
-      ? `Parcelle ${section} ${numero}`
-      : 'Parcelle cadastrale'
-  const parts = [
-    htmlParagraph('Commune', String(props.nom_com ?? '')),
-    htmlParagraph('Section', section),
-    htmlParagraph('Numéro', numero),
-    htmlParagraph('Contenance', props.contenance != null ? `${props.contenance} m²` : ''),
-    htmlParagraph('Code INSEE', String(props.code_insee ?? '')),
-    htmlParagraph('Coordonnées', `${lon.toFixed(5)}, ${lat.toFixed(5)}`),
-  ].filter(Boolean)
+  const parcel = props
+  const label = parcelShortLabel(parcel) || 'Parcelle'
   return {
-    title,
-    bodyHtml: parts.join('') || '<p>Parcelle identifiée.</p>',
-    raw: { ...props, lon, lat, source: 'apicarto-cadastre' },
+    title: label,
+    mapMode: MAP_MODE_PARCEL,
+    parcelLabel: label,
+    territoryTitle: String(props.nom_com ?? ''),
+    cadastreReferences: cadastreReferencesFromParcel(parcel),
+    parcelInfosHtml: '<p>Documents d’urbanisme indisponibles (parcelle APICarto seule).</p>',
+    parcelDocumentsHtml: '<p>Aucun document disponible (API fiche non configurée).</p>',
+    raw: { ...props, lon, lat, mode: MAP_MODE_PARCEL, source: 'apicarto-cadastre' },
   }
 }
 

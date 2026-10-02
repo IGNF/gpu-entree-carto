@@ -27,6 +27,8 @@ geopf `bottom: 0.5em` offset cancelled in the bottom-right column (`map-controls
 
 ## Behaviour / CSS
 
+- **Fullscreen target**: OpenLayers `source` is `.ec-map-shell` (not `#gpu-map` alone), so the lateral panel / mobile sheet and Vue overlays stay visible in fullscreen.
+- **Mobile**: bottom bar button in `TabPanelsControl` (`useMapViewportControls`) uses the same target; icon toggles `ri-fullscreen-line` / `ri-fullscreen-exit-line`.
 - Icon via `::after` (geopf mask), no Classic sprite or OpenLayers label.
 - `map-controls.css` forces `background-image: none` and hides the inner `<span>` to avoid duplication when the host also loads full DSFR (gpu-site).
 - Button uses `font-size: 0` (hide OL label): tooltip `::before` forces `font-size: 0.75rem` to match zoom / territory controls.

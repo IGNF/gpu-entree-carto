@@ -1,6 +1,11 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
+import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
+import {
+  buildParcelDocumentsPresentationHtml,
+  prependNonExecutoireCalloutIfNeeded,
+} from '@/lib/fiche/ficheDocumentPresentation'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
-import { escapeHtml, htmlParagraph } from '@/lib/fiche/ficheInfoHtml'
+import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 
 type GpuFicheFeature = Record<string, unknown>
 
@@ -342,25 +347,45 @@ function buildLowScaleDocumentsHtml(documents: GpuFicheDocument[]): string {
   return parts.join('')
 }
 
-function buildDocumentTabs(data: GpuFicheInfoPayload): FicheInfoDocumentTab[] {
+function territoryDocumentTabLabel(id: string, defaultLabel: string): string {
+  if (id === TAB_DU) return 'Documents'
+  if (id === TAB_SUP) return 'SUP'
+  if (id === TAB_PROCEDURES) return 'Procédures'
+  return defaultLabel
+}
+
+function wrapTerritoryTabBody(data: GpuFicheInfoPayload, bodyHtml: string): string {
+  let html = bodyHtml
+  if (html && !html.includes('ec-fiche-info__section-title')) {
+    html = `<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>${html}`
+  }
+  return prependNonExecutoireCalloutIfNeeded(html, data)
+}
+
+function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInfoDocumentTab[] {
   const tabs: FicheInfoDocumentTab[] = []
   const proceduresByDocument = data.proceduresByDocument
+  const territory = mode === MAP_MODE_TERRITORY
 
   const dus = normalizePartitionsMap(data.dus)
   if (mapHasProductionDocument(dus)) {
+    const bodyHtml = buildDocumentTypeTabHtml(dus, 'du', proceduresByDocument)
     tabs.push({
       id: TAB_DU,
-      label: 'Document d’urbanisme',
-      bodyHtml: buildDocumentTypeTabHtml(dus, 'du', proceduresByDocument),
+      label: territory
+        ? territoryDocumentTabLabel(TAB_DU, 'Document d’urbanisme')
+        : 'Document d’urbanisme',
+      bodyHtml: territory ? wrapTerritoryTabBody(data, bodyHtml) : bodyHtml,
     })
   }
 
   const psmvs = normalizePartitionsMap(data.psmvs)
   if (mapHasProductionDocument(psmvs)) {
+    const bodyHtml = buildDocumentTypeTabHtml(psmvs, 'psmv', proceduresByDocument)
     tabs.push({
       id: TAB_PSMV,
-      label: 'PSMV',
-      bodyHtml: buildDocumentTypeTabHtml(psmvs, 'psmv', proceduresByDocument),
+      label: territory ? territoryDocumentTabLabel(TAB_PSMV, 'PSMV') : 'PSMV',
+      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
     })
   }
 
@@ -370,26 +395,34 @@ function buildDocumentTabs(data: GpuFicheInfoPayload): FicheInfoDocumentTab[] {
     if (data.is_el9_alert) body += buildCoastlineSupHint()
     tabs.push({
       id: TAB_SUP,
-      label: 'Servitude',
-      bodyHtml: body,
+      label: territory ? territoryDocumentTabLabel(TAB_SUP, 'Servitude') : 'Servitude',
+      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(body, data) : body,
     })
   }
 
   const scots = normalizePartitionsMap(data.scots)
   if (mapHasProductionDocument(scots)) {
+    const bodyHtml = buildDocumentTypeTabHtml(scots, 'scot', proceduresByDocument)
     tabs.push({
       id: TAB_SCOT,
-      label: 'SCoT',
-      bodyHtml: buildDocumentTypeTabHtml(scots, 'scot', proceduresByDocument),
+      label: territory ? territoryDocumentTabLabel(TAB_SCOT, 'SCoT') : 'SCoT',
+      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
     })
   }
 
   const inProgress = collectInProgressProcedures(proceduresByDocument)
   if (inProgress.length) {
+    let bodyHtml = buildProceduresTabHtml(inProgress)
+    if (territory) {
+      bodyHtml = `<h3 class="ec-fiche-info__section-title">Procédures en cours</h3>${bodyHtml}`
+      bodyHtml = prependNonExecutoireCalloutIfNeeded(bodyHtml, data)
+    }
     tabs.push({
       id: TAB_PROCEDURES,
-      label: 'Procédures en cours',
-      bodyHtml: buildProceduresTabHtml(inProgress),
+      label: territory
+        ? territoryDocumentTabLabel(TAB_PROCEDURES, 'Procédures en cours')
+        : 'Procédures en cours',
+      bodyHtml,
     })
   }
 
@@ -407,34 +440,18 @@ function buildDocumentTabs(data: GpuFicheInfoPayload): FicheInfoDocumentTab[] {
   return tabs
 }
 
-function buildParcelHeaderHtml(
-  parcel: Record<string, unknown> | null | undefined,
-  lon: number,
-  lat: number,
-): string {
-  if (!parcel?.idu && !parcel?.numero) {
-    return '<p>Aucune parcelle cadastrale à cet emplacement.</p>'
+function buildParcelUrbanismInfosHtml(data: GpuFicheInfoPayload): string {
+  const dus = normalizePartitionsMap(data.dus)
+  const keys = Object.keys(dus)
+  if (!keys.length) {
+    return '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
   }
-  const parts = [
-    htmlParagraph('Commune', String(parcel.nom_com ?? '')),
-    htmlParagraph('Section', String(parcel.section ?? '')),
-    htmlParagraph('Numéro', String(parcel.numero ?? '')),
-    htmlParagraph('Contenance', parcel.contenance != null ? `${parcel.contenance} m²` : ''),
-    htmlParagraph('Code INSEE', String(parcel.code_insee ?? '')),
-    htmlParagraph('Identifiant', String(parcel.idu ?? parcel.id ?? '')),
-    htmlParagraph('Coordonnées', `${lon.toFixed(5)}, ${lat.toFixed(5)}`),
-  ].filter(Boolean)
-  return parts.join('') || '<p>Parcelle identifiée.</p>'
-}
-
-function parcelTitle(parcel: Record<string, unknown> | null | undefined): string {
-  if (!parcel) return 'Parcelle'
-  const section = String(parcel.section ?? '')
-  const numero = String(parcel.numero ?? '')
-  const idu = String(parcel.idu ?? '')
-  if (section && numero) return `Parcelle ${section} ${numero}`
-  if (idu) return `Parcelle ${idu}`
-  return 'Parcelle cadastrale'
+  const parts: string[] = []
+  for (const key of keys) {
+    const block = buildPartitionFeaturesHtml(dus[key]!)
+    if (block) parts.push(block)
+  }
+  return parts.join('') || '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
 }
 
 function municipalityTitle(data: GpuFicheInfoPayload): string {
@@ -461,19 +478,28 @@ export function ficheSelectionFromGpuApi(
   lat: number,
 ): FicheInfoSelection {
   const parcel = data.parcel ?? null
-  const documentTabs = buildDocumentTabs(data)
-  const bodyHtml = documentTabs.length ? undefined : fallbackBodyHtml(data)
+  const territoryTitle = municipalityTitle(data)
+  const parcelLabel = parcelShortLabel(parcel) || 'Parcelle'
+  const documentTabs = mode === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode) : undefined
+  const bodyHtml =
+    mode === MAP_MODE_TERRITORY && !documentTabs?.length ? fallbackBodyHtml(data) : undefined
 
   const base: FicheInfoSelection = {
-    title: mode === MAP_MODE_PARCEL ? parcelTitle(parcel) : municipalityTitle(data),
-    documentTabs: documentTabs.length ? documentTabs : undefined,
+    title: mode === MAP_MODE_PARCEL ? parcelLabel : territoryTitle,
+    mapMode: mode,
+    parcelLabel,
+    territoryTitle,
+    cadastreReferences: cadastreReferencesFromParcel(parcel),
+    documentTabs: documentTabs?.length ? documentTabs : undefined,
     bodyHtml,
     raw: { ...data, lon, lat, mode, source: 'gpu-fiche-info-api' },
   }
 
   if (mode === MAP_MODE_PARCEL) {
-    base.headerHtml = buildParcelHeaderHtml(parcel, lon, lat)
-  } else if (mode === MAP_MODE_TERRITORY) {
+    base.parcelInfosHtml = buildParcelUrbanismInfosHtml(data)
+    base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)
+    base.headerHtml = undefined
+  } else {
     base.headerHtml = undefined
   }
 
