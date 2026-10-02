@@ -1,9 +1,12 @@
 <script setup lang="ts">
 /**
- * En-tête démo façon gpu-site : logo RF + service + nav Accueil / Carte.
+ * En-tête démo façon gpu-site : logo RF + service + nav Accueil / Carte (menu DSFR rétractable en mobile).
  */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+
+const DEMO_HEADER_MENU_BUTTON_ID = 'ec-demo-button-header'
+const DEMO_HEADER_MODAL_ID = 'ec-demo-modal-header'
 
 const route = useRoute()
 
@@ -29,6 +32,19 @@ const isActive = computed(() => (name: string) => {
               <div class="fr-header__logo">
                 <p class="fr-logo">République<br />Française</p>
               </div>
+              <div class="fr-header__navbar">
+                <button
+                  :id="DEMO_HEADER_MENU_BUTTON_ID"
+                  type="button"
+                  class="fr-btn--menu fr-btn"
+                  data-fr-opened="false"
+                  :aria-controls="DEMO_HEADER_MODAL_ID"
+                  aria-haspopup="menu"
+                  title="Menu"
+                >
+                  Menu
+                </button>
+              </div>
             </div>
             <div class="fr-header__service">
               <RouterLink to="/" title="Accueil - entree-carto">
@@ -40,8 +56,22 @@ const isActive = computed(() => (name: string) => {
         </div>
       </div>
     </div>
-    <div class="fr-header__menu">
+    <div
+      :id="DEMO_HEADER_MODAL_ID"
+      class="fr-header__menu fr-modal"
+      :aria-labelledby="DEMO_HEADER_MENU_BUTTON_ID"
+      aria-modal="true"
+    >
       <div class="fr-container">
+        <button
+          type="button"
+          class="fr-btn--close fr-btn"
+          :aria-controls="DEMO_HEADER_MODAL_ID"
+          title="Fermer"
+        >
+          Fermer
+        </button>
+        <div class="fr-header__menu-links" />
         <nav id="ec-demo-navigation" class="fr-nav" role="navigation" aria-label="Menu principal">
           <ul class="fr-nav__list">
             <li v-for="link in links" :key="link.name" class="fr-nav__item">
@@ -63,9 +93,5 @@ const isActive = computed(() => (name: string) => {
 <style scoped>
 .ec-demo-header {
   flex-shrink: 0;
-}
-
-.ec-demo-header .fr-header__menu {
-  box-shadow: inset 0 1px 0 0 var(--border-default-grey, #ddd);
 }
 </style>

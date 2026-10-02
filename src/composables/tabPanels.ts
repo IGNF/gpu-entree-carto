@@ -1,4 +1,6 @@
 import { shallowRef, type InjectionKey, type Ref } from 'vue'
+import type { MapModeId } from '@/lib/map/mapMode'
+import type { CadastreReferences } from '@/lib/fiche/ficheCadastreReferences'
 
 /** Onglet interne fiche info (type de document GPU). */
 export interface FicheInfoDocumentTab {
@@ -11,9 +13,21 @@ export interface FicheInfoDocumentTab {
 export interface FicheInfoSelection {
   /** En-tête court (commune ou parcelle selon le mode carte). */
   title: string
-  /** Détail sous le titre (ex. attributs parcelle en mode Parcelle). */
+  /** Mode carte au moment du chargement (1 parcelle, 2 territoire). */
+  mapMode?: MapModeId
+  /** Ex. AY 0050 (mode Parcelle). */
+  parcelLabel?: string
+  /** Ex. Paris 1er arrondissement (75101) — bouton territoire / titre mode Territoire. */
+  territoryTitle?: string
+  /** Modal références cadastrales (mode Parcelle). */
+  cadastreReferences?: CadastreReferences | null
+  /** Onglet Infos — règles d’urbanisme (HTML, chargement différé côté UI). */
+  parcelInfosHtml?: string
+  /** Onglet Documents parcelle — cartes documents. */
+  parcelDocumentsHtml?: string
+  /** Détail sous le titre (legacy / APICarto seul). */
   headerHtml?: string
-  /** Onglets document d’urbanisme / procédures (gpu-site). */
+  /** Onglets document d’urbanisme / procédures (mode Territoire). */
   documentTabs?: FicheInfoDocumentTab[]
   /** Roue de patience : config GPU ou données fiche. */
   loading?: 'config' | 'data'

@@ -330,8 +330,8 @@
   border: none !important;
   border-radius: 0;
   outline: none;
-  background-color: var(--background-default-grey, #fff);
-  color: var(--text-action-high-blue-france, #000091);
+  background-color: var(--ec-map-control-bg, #fff);
+  color: var(--ec-map-control-icon, #000091);
   cursor: pointer;
   transition: background-color 300ms;
 }
@@ -382,14 +382,14 @@
 
 .ec-geometry-editor__tool:hover,
 .ec-geometry-editor__tool:focus-visible {
-  background-color: var(--hover-tint, #e3e3fd);
+  background-color: var(--ec-map-control-hover-bg, #e3e3fd);
   outline: none;
 }
 
 .ec-geometry-editor__tool.is-active,
 .ec-geometry-editor__tool[aria-pressed='true'] {
-  background-color: var(--background-open-blue-france, #e3e3fd);
-  color: var(--text-action-high-blue-france, #000091);
+  background-color: var(--ec-map-control-active-bg, #000091);
+  color: var(--ec-map-control-active-fg, #fff);
 }
 
 /* Pictogrammes Remix Icon (`<i class="ri-… ec-geometry-editor__tool-icon">`) */

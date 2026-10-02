@@ -37,8 +37,8 @@ Bottom-left, **below** the overview map.
 - Tooltip: append aligned on button edge
 - Long titles in `.gpf-tile`: reduced font + 3-line clamp
 - Close button `#GPterritoriesPanelClose`: `position: absolute; right` in header
-- Dialog `#gpf-territories-views-container-id`: flush right of Territories panel (`left: 100%`), bottoms aligned (`bottom: 0`)
-- Bottom-left Territories panel: `bottom: 0`, `max-height: 100cqb` (stays inside `.ec-map-shell`), scrollable tile list
+- **Desktop**: dialog `#gpf-territories-views-container-id` flush right of the panel (`left: 100%`), bottoms aligned; bottom-left panel `max-height: 100cqb`
+- **Mobile** (bottom bar / `ec-map-shell--tab-panels-layout-bottom`): only the **button** stays in the geopf slot (`tab-panels.css`); the `<dialog>` and “Modify territories” use geopf **absolute** positioning again (no entree-carto `position: fixed`), above the button in the widget containing block
 - Widget as containing block (avoids geopf `top: 0` over full map height)
 
 ## Dependencies

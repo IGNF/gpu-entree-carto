@@ -1,7 +1,7 @@
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import XYZ from 'ol/source/XYZ'
+import { createGeopfWmtsSource } from '@/ol/createGeopfWmtsSource'
 import type BaseLayer from 'ol/layer/Base'
 import {
   createLimitDepartmentalLayer,
@@ -9,7 +9,7 @@ import {
   preloadLimitGeoJson,
 } from '@/ol/gpuLimitOverlayLayers'
 import type { GpuBaseLayerThumbnailWmts } from '@/ol/gpuBaseLayerThumbnails'
-import { ignGeoportalAttributions } from '@/ol/ignGeoportalAttributions'
+import { GpuCadastreLowLayer, registerGpuCadastreLowLayer } from '@/ol/gpuCadastreLowLayer'
 import '@/styles/gpu-base-layers.css'
 
 export {
@@ -19,8 +19,6 @@ export {
 
 /** Frontière zoom cadastre bas / haut (gpu-client zoom 17). */
 const RES_ZOOM_17 = 156543.03392804097 / 2 ** 17
-
-const WMTS_CACHE_SIZE = 256
 
 /** Métadonnées vignette WMTS par clé `mainLayers` (absent = pas de tuile d’aperçu). */
 const THUMBNAIL_BY_MAIN_KEY: Record<GpuMainLayerKey, GpuBaseLayerThumbnailWmts | null> = {
@@ -34,6 +32,7 @@ const THUMBNAIL_BY_MAIN_KEY: Record<GpuMainLayerKey, GpuBaseLayerThumbnailWmts |
     style: 'PCI vecteur',
     minResolution: RES_ZOOM_17,
   },
+  /* cadastreLow : source dynamique (PCI Express / BD Parcellaire / inspire) — vignette PCI Express par défaut. */
   planign: { layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2' },
   planignGris: { layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', grayscale: true },
   ortho: { layer: 'ORTHOIMAGERY.ORTHOPHOTOS', format: 'jpeg' },
@@ -59,6 +58,24 @@ export type GpuMainLayerKey =
   | 'limitRegional'
   | 'limitDepartmental'
   | 'blank'
+
+/**
+ * Ordre d’empilement sur la carte (bas → haut), aligné gpu-client `viewer.addLayers(mainLayers)`.
+ * Les listes `stack` des presets ne contrôlent que la visibilité, pas le z-index.
+ */
+export const GPU_MAIN_LAYER_MAP_ORDER: GpuMainLayerKey[] = [
+  'ortho',
+  'planign',
+  'planignGris',
+  'limitesAdmin',
+  'roads',
+  'names',
+  'cadastreLow',
+  'cadastreHigh',
+  'limitRegional',
+  'limitDepartmental',
+  'blank',
+]
 
 export interface GpuBaseLayerPreset {
   id: GpuBaseLayerId
@@ -113,17 +130,7 @@ function wmtsLayer(
     className: options?.grayscale ? 'ec-gpu-layer-grayscale' : undefined,
     minResolution: options?.minResolution,
     maxResolution: options?.maxResolution,
-    source: new XYZ({
-      url:
-        `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
-        `&LAYER=${encodeURIComponent(layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}` +
-        `&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`,
-      attributions: () => ignGeoportalAttributions(),
-      attributionsCollapsible: false,
-      crossOrigin: 'anonymous',
-      maxZoom: 19,
-      cacheSize: WMTS_CACHE_SIZE,
-    }),
+    source: createGeopfWmtsSource({ layer, style, format }),
   })
 
   if (options?.grayscale) {
@@ -134,21 +141,20 @@ function wmtsLayer(
 }
 
 function createMainLayerPool(): Record<GpuMainLayerKey, BaseLayer> {
-  return {
-    cadastreLow: wmtsLayer('CADASTRALPARCELS.PARCELLAIRE_EXPRESS', 'png', {
-      style: 'PCI vecteur',
-      maxResolution: RES_ZOOM_17,
-    }),
+  const cadastreLow = new GpuCadastreLowLayer({ maxResolution: RES_ZOOM_17 })
+  registerGpuCadastreLowLayer(cadastreLow)
+  const pool: Record<GpuMainLayerKey, BaseLayer> = {
+    ortho: wmtsLayer('ORTHOIMAGERY.ORTHOPHOTOS', 'jpeg'),
+    planign: wmtsLayer('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2'),
+    planignGris: wmtsLayer('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'png', { grayscale: true }),
+    limitesAdmin: wmtsLayer('LIMITES_ADMINISTRATIVES_EXPRESS.LATEST'),
+    roads: wmtsLayer('TRANSPORTNETWORKS.ROADS'),
+    names: wmtsLayer('GEOGRAPHICALNAMES.NAMES'),
+    cadastreLow,
     cadastreHigh: wmtsLayer('CADASTRALPARCELS.PARCELLAIRE_EXPRESS', 'png', {
       style: 'PCI vecteur',
       minResolution: RES_ZOOM_17,
     }),
-    planign: wmtsLayer('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2'),
-    planignGris: wmtsLayer('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'png', { grayscale: true }),
-    ortho: wmtsLayer('ORTHOIMAGERY.ORTHOPHOTOS', 'jpeg'),
-    names: wmtsLayer('GEOGRAPHICALNAMES.NAMES'),
-    roads: wmtsLayer('TRANSPORTNETWORKS.ROADS'),
-    limitesAdmin: wmtsLayer('LIMITES_ADMINISTRATIVES_EXPRESS.LATEST'),
     limitRegional: createLimitRegionalLayer(),
     limitDepartmental: createLimitDepartmentalLayer(),
     blank: new VectorLayer({
@@ -157,6 +163,7 @@ function createMainLayerPool(): Record<GpuMainLayerKey, BaseLayer> {
       background: '#ffffff',
     }),
   }
+  return pool
 }
 
 /** Limites administratives vectorielles — suffixe gpu-client sur chaque tuile. */
@@ -225,7 +232,7 @@ export function createGpuBaseLayerEnvironment(): GpuBaseLayerEnvironment {
   return {
     presets,
     mainLayers,
-    allLayers: Object.values(mainLayers),
+    allLayers: GPU_MAIN_LAYER_MAP_ORDER.map((key) => mainLayers[key]),
   }
 }
 

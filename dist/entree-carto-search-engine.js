@@ -49157,15 +49157,45 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     panel.style.removeProperty("left");
     panel.style.removeProperty("right");
     panel.style.removeProperty("width");
+    panel.style.removeProperty("max-width");
     panel.style.removeProperty("max-height");
+    panel.style.removeProperty("min-height");
+    panel.style.removeProperty("height");
+    panel.style.removeProperty("display");
+    panel.style.removeProperty("overflow");
+  }
+  function isMobileMapSearchLayout() {
+    var _a;
+    return Boolean(
+      (_a = document.querySelector(".ec-map-shell")) == null ? void 0 : _a.classList.contains("ec-map-shell--tab-panels-layout-bottom")
+    );
   }
   function placeAdvancedPanel(panel, anchor, gap) {
+    const barRect = anchor.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - barRect.bottom - gap;
+    const maxHeight = Math.max(160, Math.min(spaceBelow - 8, window.innerHeight * 0.55));
+    if (isMobileMapSearchLayout()) {
+      const shell = document.querySelector(".ec-map-shell");
+      const left = shell ? Math.max(8, parseFloat(getComputedStyle(shell).getPropertyValue("--ec-widget-gap")) || 8) : 8;
+      const panelWidth = Math.max(280, window.innerWidth - left * 2);
+      panel.style.position = "fixed";
+      panel.style.left = `${left}px`;
+      panel.style.right = "auto";
+      panel.style.width = `${panelWidth}px`;
+      panel.style.maxWidth = `${panelWidth}px`;
+      panel.style.top = `${barRect.bottom + gap}px`;
+      panel.style.bottom = "auto";
+      panel.style.maxHeight = `${maxHeight}px`;
+      panel.style.minHeight = "120px";
+      panel.style.height = "auto";
+      panel.style.display = "block";
+      panel.style.overflow = "auto";
+      return;
+    }
     const widget = panel.closest('.gpf-widget[id^="GPsearchEngine-Advanced"]');
     if (!widget) return;
-    const barRect = anchor.getBoundingClientRect();
     const widgetRect = widget.getBoundingClientRect();
     const topOffset = barRect.bottom - widgetRect.top + gap;
-    const spaceBelow = window.innerHeight - barRect.bottom - gap;
     panel.style.position = "absolute";
     panel.style.left = "0";
     panel.style.right = "0";
@@ -49173,7 +49203,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     panel.style.maxWidth = "100%";
     panel.style.top = `${topOffset}px`;
     panel.style.bottom = "auto";
-    panel.style.maxHeight = `${Math.max(120, Math.min(spaceBelow - 4, window.innerHeight * 0.55))}px`;
+    panel.style.maxHeight = `${maxHeight}px`;
+    panel.style.minHeight = "";
+    panel.style.height = "auto";
+    panel.style.display = "block";
   }
   function placeAutocompletePanel(panel, anchor, gap, rootRect) {
     const anchorRect = anchor.getBoundingClientRect();

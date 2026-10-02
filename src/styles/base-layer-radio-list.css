@@ -70,7 +70,7 @@
   background-color: var(--background-default-grey, #fff);
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list button {
+.ec-base-radio-list button {
   width: auto !important;
   height: auto !important;
   min-width: 0;
@@ -87,40 +87,40 @@
   box-shadow: none;
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list button:hover,
-.ec-tab-panels.ol-control .ec-base-radio-list button:focus,
-.ec-tab-panels.ol-control .ec-base-radio-list button:focus-visible {
+.ec-base-radio-list button:hover,
+.ec-base-radio-list button:focus,
+.ec-base-radio-list button:focus-visible {
   background: transparent !important;
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list__thumb-btn:hover .ec-base-radio-list__thumb,
-.ec-tab-panels.ol-control .ec-base-radio-list__thumb-btn:focus .ec-base-radio-list__thumb,
-.ec-tab-panels.ol-control .ec-base-radio-list__thumb-btn:focus-visible .ec-base-radio-list__thumb {
+.ec-base-radio-list__thumb-btn:hover .ec-base-radio-list__thumb,
+.ec-base-radio-list__thumb-btn:focus .ec-base-radio-list__thumb,
+.ec-base-radio-list__thumb-btn:focus-visible .ec-base-radio-list__thumb {
   border-color: var(--border-default-grey, #ddd);
   outline: none;
   box-shadow: none;
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list .fr-btn.ec-base-radio-list__caret:hover,
-.ec-tab-panels.ol-control .ec-base-radio-list .fr-btn.ec-base-radio-list__caret:focus,
-.ec-tab-panels.ol-control .ec-base-radio-list .fr-btn.ec-base-radio-list__caret:focus-visible {
+.ec-base-radio-list .fr-btn.ec-base-radio-list__caret:hover,
+.ec-base-radio-list .fr-btn.ec-base-radio-list__caret:focus,
+.ec-base-radio-list .fr-btn.ec-base-radio-list__caret:focus-visible {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
   background: transparent !important;
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list .fr-btn.ec-base-radio-list__caret {
+.ec-base-radio-list .fr-btn.ec-base-radio-list__caret {
   min-width: 2rem;
   min-height: 2rem;
   padding: 0.25rem;
   color: var(--text-action-high-blue-france, #000091);
 }
 
-.ec-tab-panels.ol-control .ec-base-radio-list .ec-base-radio__input {
+.ec-base-radio-list .ec-base-radio__input {
   width: var(--ec-base-radio-size) !important;
   height: var(--ec-base-radio-size) !important;
   min-width: 0;

@@ -1,69 +1,83 @@
 /**
  * Sélecteur mode Parcelle / Territoire — à droite de la barre SearchEngine.
+ * Boutons segmentés (style contrôles carte) : icône + libellé ; mobile = icônes seules.
  */
 
-.ec-map-mode-selector {
+:root {
+  /** Espace entre la barre recherche (max-width réservée) et le sélecteur de mode — bureau. */
+  --ec-map-mode-search-gap: 0px;
+}
+
+#gpu-map .ol-overlaycontainer-stopevent .ec-map-mode-selector,
+.ec-map-shell .ec-map-mode-selector {
   position: absolute;
   top: var(--ec-widget-gap);
   left: calc(
     var(--ec-widget-gap) - 5px + var(--ec-search-left-inset) + var(--ec-search-engine-max-width) +
-      var(--ec-widget-gap)
+      var(--ec-map-mode-search-gap)
   );
   right: auto;
   z-index: 2;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
-  border-radius: 0;
-  background: rgba(70, 70, 70, 0.92);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  background: var(--ec-map-control-bg, #fff);
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
   pointer-events: auto;
   max-width: calc(100% - var(--ec-widget-gap) * 2);
 }
 
-.ec-map-mode-selector__heading {
-  flex: 0 0 auto;
-  font-family: Marianne, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.25rem;
-  color: #fff;
-  white-space: nowrap;
-}
-
 .ec-map-mode-selector__options {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: stretch;
-  gap: 0.35rem;
+  gap: 0;
 }
 
 .ec-map-mode-selector__option {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
+  box-sizing: border-box;
+  min-height: var(--ec-widget-btn-size, 48px);
   margin: 0;
-  padding: 0.35rem 0.55rem;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  background: var(--background-open-blue-france, #f5f5fe);
-  color: var(--text-title-grey, #161616);
+  padding: var(--ec-widget-btn-padding, 4px) 0.65rem;
+  border: none;
+  border-radius: 0;
+  background: var(--ec-map-control-bg, #fff);
+  color: var(--ec-map-control-icon, #000091);
   cursor: pointer;
   user-select: none;
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    opacity 150ms ease;
+  transition: background-color 150ms ease;
+}
+
+.ec-map-mode-selector__option:first-child {
+  border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px);
+}
+
+.ec-map-mode-selector__option:last-child {
+  border-radius: 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0;
 }
 
 .ec-map-mode-selector__option:hover {
-  box-shadow: 0 0 0 1px rgba(0, 0, 145, 0.12);
+  background: var(--ec-map-control-hover-bg, #e3e3fd);
 }
 
 .ec-map-mode-selector__option.is-selected {
-  border-color: var(--border-active-blue-france, #000091);
-  box-shadow: 0 0 0 1px rgba(0, 0, 145, 0.08);
+  background: var(--ec-map-control-active-bg, #000091);
+  color: var(--ec-map-control-active-fg, #fff);
+}
+
+.ec-map-mode-selector__option.is-selected:hover {
+  background: var(--ec-map-control-active-bg, #000091);
+}
+
+.ec-map-mode-selector__option:has(.ec-map-mode-selector__input:focus-visible) {
+  outline: 2px solid var(--border-active-blue-france, #000091);
+  outline-offset: 2px;
 }
 
 .ec-map-mode-selector__input {
@@ -78,43 +92,60 @@
   border: 0;
 }
 
-.ec-map-mode-selector__input:focus-visible + .ec-map-mode-selector__radio {
-  outline: 2px solid var(--border-active-blue-france, #000091);
-  outline-offset: 2px;
+.ec-map-mode-selector__option:not(.is-selected) {
+  --ec-map-mode-icon-color: var(--ec-map-control-icon, #000091);
 }
 
-.ec-map-mode-selector__radio {
+.ec-map-mode-selector__option.is-selected {
+  --ec-map-mode-icon-color: var(--ec-map-control-active-fg, #fff);
+}
+
+.ec-map-mode-selector__option .ec-map-mode-selector__icon {
   flex: 0 0 auto;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid var(--border-active-blue-france, #000091);
-  border-radius: 50%;
-  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--ec-map-mode-icon-color);
+  line-height: 1;
+}
+
+.ec-map-mode-selector__option .ec-map-mode-selector__icon.ec-icon-parcelle {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 1.25rem;
+  color: var(--ec-map-mode-icon-color);
+}
+
+.ec-map-mode-selector__option .ec-map-mode-selector__icon.ec-icon-parcelle::before {
+  background-color: var(--ec-map-mode-icon-color);
+}
+
+.ec-map-mode-selector__option .ec-map-mode-selector__icon.fr-icon-france-fill {
   position: relative;
-  opacity: 1;
-  transition: opacity 150ms ease;
+  font-size: 1.25rem;
 }
 
-.ec-map-mode-selector__option:not(.is-selected) .ec-map-mode-selector__radio {
-  opacity: 0.2;
-}
-
-.ec-map-mode-selector__option.is-selected .ec-map-mode-selector__radio::after {
+.ec-map-mode-selector__option .ec-map-mode-selector__icon.fr-icon-france-fill::before {
+  --icon-size: 1.25rem;
   content: '';
   position: absolute;
-  inset: 2px;
-  border-radius: 50%;
-  background: var(--background-action-high-blue-france, #000091);
+  top: 50%;
+  left: 50%;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  vertical-align: unset;
+  background-color: var(--ec-map-mode-icon-color);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
-.ec-map-mode-selector__icon {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-}
-
-.ec-map-mode-selector__icon path {
-  fill: var(--light-options-primary-color-sun-113-blue-france-sun-113, #000091);
+.ec-map-mode-selector__option .ec-map-mode-selector__icon.fr-icon-france-fill::after {
+  content: none !important;
+  display: none !important;
 }
 
 .ec-map-mode-selector__text {
@@ -122,24 +153,68 @@
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.25rem;
+  color: inherit;
   white-space: nowrap;
 }
 
 @media (max-width: 64rem) {
-  .ec-map-mode-selector {
+  #gpu-map .ol-overlaycontainer-stopevent .ec-map-mode-selector,
+  .ec-map-shell .ec-map-mode-selector {
     top: calc(var(--ec-widget-gap) + 3.25rem);
     left: calc(var(--ec-widget-gap) + var(--ec-search-left-inset));
     max-width: min(420px, calc(100% - var(--ec-widget-gap) * 2 - var(--ec-search-left-inset)));
   }
 }
 
-@media (max-width: 36rem) {
-  .ec-map-mode-selector {
-    flex-direction: column;
-    align-items: stretch;
-  }
+/*
+ * Mobile bottom sheet : sous la barre recherche (--ec-map-mode-top).
+ * Spécificité ≥ règle overlay (sinon top = --ec-widget-gap → chevauchement recherche).
+ */
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ol-overlaycontainer-stopevent
+  .ec-map-mode-selector,
+.ec-map-shell--tab-panels-layout-bottom .ec-map-mode-selector {
+  top: var(--ec-map-mode-top);
+  left: var(--ec-widget-gap);
+  max-width: none;
+}
 
-  .ec-map-mode-selector__options {
-    flex-direction: column;
-  }
+.ec-map-shell--tab-panels-layout-bottom .ec-map-mode-selector__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ec-map-mode-selector__option {
+  width: var(--ec-widget-btn-size, 48px);
+  min-height: var(--ec-widget-btn-size, 48px);
+  padding: var(--ec-widget-btn-padding, 4px);
+  gap: 0;
+}
+
+/*
+ * Territoires actif (bouton geopf) : masquer le mode pour laisser place au panneau /
+ * éviter la superposition en mobile.
+ */
+.ec-map-shell:has(
+    #gpu-map
+      .gpf-widget[id^='GPterritories-']
+      > button[id^='GPshowTerritoriesPicto-'][aria-pressed='true']
+  )
+  .ec-map-mode-selector,
+.ec-map-shell:has(
+    .ec-tab-panels__geopf-slot--territories
+      .gpf-widget[id^='GPterritories-']
+      > button[id^='GPshowTerritoriesPicto-'][aria-pressed='true']
+  )
+  .ec-map-mode-selector {
+  visibility: hidden;
+  pointer-events: none;
 }

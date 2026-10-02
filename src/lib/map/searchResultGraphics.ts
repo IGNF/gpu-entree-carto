@@ -1,6 +1,8 @@
 import { shallowRef } from 'vue'
 import Feature from 'ol/Feature'
 import GeoJSON from 'ol/format/GeoJSON'
+import { createEmpty, extend, isEmpty } from 'ol/extent'
+import type { Extent } from 'ol/extent'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Map from 'ol/Map'
 import type { Feature as GeoJsonFeature, FeatureCollection } from 'geojson'
@@ -180,7 +182,7 @@ async function fetchParcelFeature(lon: number, lat: number): Promise<Feature | n
   if (!res.ok) return null
   const geo = (await res.json()) as FeatureCollection
   const raw = geo.features?.[0]
-  if (!raw?.geometry || !raw.properties) return null
+  if (!raw?.geometry) return null
   return readGeoJsonFeature(raw, 'parcel')
 }
 
@@ -236,7 +238,7 @@ export async function ensureModeEmpriseOnSearchLayer(
   removeModeEmpriseFeatures(host)
 
   const fromCache = cachedEmpriseForMode(lon, lat, mode)
-  if (fromCache) {
+  if (fromCache !== null && fromCache.length > 0) {
     if (empriseTargetKey !== targetKey) return
     const source = host.layer?.getSource()
     if (!source) return
@@ -258,8 +260,21 @@ export async function ensureModeEmpriseOnSearchLayer(
   }
 }
 
+/** Point cerise pour recentrage mode (permalink ou dernier chargement emprise). */
+export function readCherryOrModeEmprisePoint(): { lon: number; lat: number } | null {
+  if (emprisePointCache) {
+    return { lon: emprisePointCache.lon, lat: emprisePointCache.lat }
+  }
+  return null
+}
+
 export function empriseTargetKeyForPoint(lon: number, lat: number): string {
   return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`
+}
+
+/** Clé stable (changemenent Parcelle / Territoire) — évite les courses avec les clés horodatées. */
+export function empriseTargetKeyForModeFocus(lon: number, lat: number): string {
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|mode-emprise`
 }
 
 export function ensureModeEmpriseForMapPoint(
@@ -271,4 +286,33 @@ export function ensureModeEmpriseForMapPoint(
   const host = searchEngineLayerHostRef.value
   if (!host) return
   void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode, targetKey)
+}
+
+/** Emprise rouge pointillée (parcelle / commune / arrondissement) sur la couche SearchEngine. */
+export function modeEmpriseViewExtent(host: SearchEngineLayerHost): Extent | null {
+  const source = host.layer?.getSource()
+  if (!source) return null
+  const emprise = createEmpty()
+  let hasEmprise = false
+  for (const feature of source.getFeatures()) {
+    if (!feature.get(MODE_EMPRISE_PROP)) continue
+    const geometry = feature.getGeometry()
+    if (!geometry || geometry.getType() === 'Point') continue
+    extend(emprise, geometry.getExtent())
+    hasEmprise = true
+  }
+  return hasEmprise && !isEmpty(emprise) ? emprise : null
+}
+
+/** Met à jour l’emprise mode puis retourne son extent (null si aucune géométrie). */
+export async function ensureModeEmpriseForMapPointAsync(
+  lon: number,
+  lat: number,
+  mode: MapModeId,
+  targetKey: string,
+): Promise<Extent | null> {
+  const host = searchEngineLayerHostRef.value
+  if (!host) return null
+  await ensureModeEmpriseOnSearchLayer(host, lon, lat, mode, targetKey)
+  return modeEmpriseViewExtent(host)
 }

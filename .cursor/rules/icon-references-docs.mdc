@@ -1,0 +1,24 @@
+---
+description: Tenir à jour doc/icone-references (DSFR / Remix) à chaque changement de pictogramme
+alwaysApply: true
+---
+
+# Référence des icônes (`doc/icone-references`)
+
+L’application mélange pictos **DSFR** (`fr-icon-*`), **Remix Icon** (`ri-*`), assets **custom** et pictos **geopf** (bundle recherche).
+
+À chaque **ajout**, **remplacement** ou **suppression** d’une classe d’icône dans `src/` (ou section geopf documentée) :
+
+1. Mettre à jour **`doc/icone-references.md`** (anglais, référence) et **`doc/icone-references.fr.md`** (français) :
+   - même structure de sections et tableaux ;
+   - colonnes : **Aperçu** (`.fr.md`) ou **Preview** (`.md`), libellé / label, classe HTML, catalogue, URL (DSFR ou Remix selon les règles du fichier) ;
+   - badges langue en tête (règle `bilingual-docs`).
+2. Exécuter **`npm run doc:icon-previews`** et **committer** les SVG sous **`doc/img/icon-previews/`** avec la doc.
+3. Si la classe geopf change uniquement en amont : rebuild `dist/entree-carto-search-engine.js` si besoin, puis mettre à jour la section recherche Géoplateforme.
+
+Ne pas introduire de nouvelle icône dans l’UI sans entrée correspondante dans cette référence (sauf pictos geopf purement internes non exposés — les documenter quand ils sont visibles utilisateur).
+
+URLs catalogue (rappel) :
+
+- DSFR : `https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=` + nom sans `fr-icon-`
+- Remix : `https://remixicon.com/icon/` + nom sans `ri-`

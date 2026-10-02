@@ -77,7 +77,7 @@ useOlControl(
       title: PANEL_TITLE,
       thumbnail: false,
       reduce: false,
-      tiles: 3,
+      tiles: 4,
       view: {
         active: props.viewActive,
         title: 'Modifier les territoires',

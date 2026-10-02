@@ -1,50 +1,77 @@
 @import './catalog-zoom-range.css';
 
 /**
- * Panneau latéral à onglets (droite de la carte).
- * Boutons = même boîte que zoom / plein écran (48×48).
- * Attention : `.ol-control button` (ol.css) force 1.375em → il faut surcharger.
- * Ouvert : onglets collés au bord gauche du panneau.
+ * Panneau à onglets — bureau : latéral droit ; mobile (à venir) : bottom sheet.
+ *
+ * Architecture (piste A) :
+ * - `ec-tab-panels-shell` + `ec-tab-panels__surface` : contenu DSFR, hors `.ol-control`
+ * - `ec-tab-panels__tabs-control` : seul nœud OpenLayers Control (`.ol-control button` → onglets)
+ *
+ * Mobile futur : `data-ec-tab-panels-layout="bottom"`, snaps `--ec-tab-panels-snap-*`,
+ * `--ec-tab-panels-max-sheet-height` (en-tête site + safe areas).
  */
 
 :root {
   /* ~80 % de 38.25rem (~612px → ~490px) */
   --ec-tab-panels-width: min(30.6rem, 92vw);
-  /*
-   * Décalage des contrôles bas-droite = largeur du panneau seul.
-   * Les onglets sont en haut : en bas, l’écart contrôles ↔ panneau
-   * doit égaler l’écart contrôles ↔ bord de carte (fermé) = --ec-widget-gap.
-   */
   --ec-tab-panels-inset: var(--ec-tab-panels-width);
+  --ec-tab-panels-tabs-offset-right: 0px;
+  --ec-tab-panels-site-header-offset: 0px;
+  --ec-tab-panels-safe-top: env(safe-area-inset-top, 0px);
+  --ec-tab-panels-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ec-tab-panels-snap-0: 0%;
+  --ec-tab-panels-snap-1: 35%;
+  --ec-tab-panels-snap-2: 70%;
+  --ec-tab-panels-snap-3: 98%;
+  --ec-tab-panels-max-sheet-height: calc(
+    100cqb - var(--ec-tab-panels-safe-top) - var(--ec-tab-panels-site-header-offset)
+  );
 }
 
-.ec-tab-panels.ol-control {
-  top: 0;
-  right: 0;
-  left: auto;
-  bottom: 0;
-  height: 100%;
-  max-height: 100%;
+.ec-map-shell--tab-panels-open {
+  --ec-tab-panels-tabs-offset-right: var(--ec-tab-panels-width);
+}
+
+/* Overlay carte : panneau contenu (reste dans le shell Vue, pas dans le contrôle OL). */
+.ec-tab-panels-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'] {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/*
+ * Contrôle OL — onglets uniquement (détaché dans `#gpu-map` au montage).
+ * `.ol-control button` ne s’applique qu’ici, pas au panneau.
+ */
+#gpu-map .ec-tab-panels__tabs-control.ol-control {
+  top: 0;
+  right: var(--ec-tab-panels-tabs-offset-right);
+  left: auto;
+  bottom: auto;
+  height: auto;
+  max-height: none;
   padding: 0 !important;
   margin: 0;
   background: transparent !important;
   border: none;
   border-radius: 0;
   box-shadow: none;
-  /*
-   * OpenLayers Control pose `pointer-events: auto` en style inline sur
-   * l’élément — sans !important, le bandeau pleine hauteur masque zoom /
-   * plein écran (bas-droite) : pas de cursor, clics morts.
-   */
   pointer-events: none !important;
-  z-index: 2;
+  z-index: 3;
+  transition: right 300ms ease;
 }
 
-.ec-tab-panels.ol-control > * {
+#gpu-map .ec-tab-panels__tabs-control.ol-control > * {
   pointer-events: auto;
 }
 
@@ -74,7 +101,7 @@
 }
 
 /* Collés au panneau (plus de marge à droite) */
-.ec-tab-panels.is-open .ec-tab-panels__tabs {
+.ec-map-shell--tab-panels-open .ec-tab-panels__tabs {
   margin: var(--ec-widget-gap, 8px) 0 0 0;
 }
 
@@ -83,7 +110,7 @@
  * Pas d’inset blanc (sinon « bordure » quand fond actif ≠ blanc).
  * Spécificité + !important pour battre `.ol-control button { width/height: 1.375em }`.
  */
-.ec-tab-panels.ol-control button.ec-tab-panels__tab {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab {
   box-sizing: border-box;
   position: relative;
   display: flex;
@@ -102,55 +129,65 @@
   font-weight: 400;
   line-height: 1;
   text-decoration: none;
-  background-color: var(--background-default-grey, #fff);
+  background-color: var(--ec-map-control-bg, #fff);
   box-shadow: none;
-  color: var(--text-action-high-blue-france, #000091);
+  color: var(--ec-map-control-icon, #000091);
   cursor: pointer;
   transition: background-color 300ms;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab:first-child {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:first-child {
   border-radius: var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0 0;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab:last-child {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:last-child {
   border-radius: 0 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px);
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab:only-child {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:only-child {
   border-radius: var(--ec-widget-btn-radius, 4px);
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab:hover,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab:focus-visible {
-  background-color: var(--hover-tint, #e3e3fd);
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:hover,
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:focus-visible {
+  background-color: var(--ec-map-control-hover-bg, #e3e3fd);
   outline: none;
   box-shadow: none;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active {
-  background-color: var(--background-open-blue-france, #e3e3fd);
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active {
+  background-color: var(--ec-map-control-active-bg, #000091);
+  color: var(--ec-map-control-active-fg, #fff);
   box-shadow: none;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:hover,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:focus-visible {
-  background-color: var(--hover-tint, #e3e3fd);
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active:hover,
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active:focus-visible {
+  background-color: var(--ec-map-control-active-bg, #000091);
+  color: var(--ec-map-control-active-fg, #fff);
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[class*='fr-icon-']::before {
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab.is-active[class*='fr-icon-']::before {
+  background-color: var(--ec-map-control-active-fg, #fff);
+}
+
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[class*='fr-icon-']::before {
   --icon-size: 1.5rem;
   width: var(--icon-size);
   height: var(--icon-size);
   margin: 0;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab--remix {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab--remix {
   font-size: 1.5rem;
   line-height: 1;
 }
 
-.ec-tab-panels.ol-control button.ec-tab-panels__tab--remix i {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab--remix i {
   display: block;
   font-size: 1.5rem;
   line-height: 1;
@@ -158,7 +195,8 @@
 }
 
 /* Masque le doublon DSFR ::after (sauf infobulle au survol) */
-.ec-tab-panels.ol-control
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
   button.ec-tab-panels__tab[class*='fr-icon-']:not(:hover):not(:focus-visible)::after {
   content: none !important;
   display: none !important;
@@ -171,8 +209,10 @@
  * via ::after (le picto DSFR reste sur ::before).
  * `right: 100%` = tip collé au bord du bouton (pas translate(%) de la bulle).
  */
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-label]:hover::after,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-label]:focus-visible::after {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab[aria-label]:hover::after,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[aria-label]:focus-visible::after {
   content: attr(aria-label) !important;
   display: block !important;
   box-sizing: border-box;
@@ -236,28 +276,814 @@
 }
 
 /* Pas d’infobulle si l’onglet est déjà actif (comme geopf aria-pressed) */
-.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:hover::after,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab.is-active:focus-visible::after,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-selected='true']:hover::after,
-.ec-tab-panels.ol-control button.ec-tab-panels__tab[aria-selected='true']:focus-visible::after {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active:hover::after,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab.is-active:focus-visible::after,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[aria-selected='true']:hover::after,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[aria-selected='true']:focus-visible::after {
   content: none !important;
   display: none !important;
 }
 
-.ec-tab-panels__panel {
+.ec-tab-panels__surface {
   display: none;
   flex-direction: column;
   width: var(--ec-tab-panels-width);
   height: 100%;
   max-height: 100%;
+  pointer-events: auto;
+}
+
+.ec-tab-panels-shell.is-open .ec-tab-panels__surface {
+  display: flex;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'] .ec-tab-panels__surface {
+  width: 100%;
+  max-height: none;
+  height: 0;
+  overflow: hidden;
+  border-radius: 0.75rem 0.75rem 0 0;
+  box-shadow: var(--raised-shadow, 0 -2px 12px rgba(0, 0, 18, 0.12));
+  transition: height 280ms ease;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'].is-sheet-dragging .ec-tab-panels__surface {
+  transition: none;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'] .ec-tab-panels__surface--visible {
+  display: flex;
+  flex-direction: column;
+  height: calc(
+    (100% - var(--ec-tab-panels-bottom-chrome, 3.5rem)) * var(--ec-tab-panels-sheet-fraction, 0) /
+      100
+  );
+  max-height: calc(
+    var(--ec-tab-panels-max-sheet-height) - var(--ec-tab-panels-bottom-chrome, 3.5rem)
+  );
+  min-height: 0;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'] .ec-tab-panels__panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: none;
+  border-radius: inherit;
+}
+
+.ec-tab-panels-shell[data-ec-tab-panels-layout='bottom'] .ec-tab-panels__panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ec-tab-panels__bottom-chrome:not(.ec-tab-panels__bottom-chrome--mobile)
+  .ec-tab-panels__geopf-slots,
+.ec-map-shell:not(.ec-map-shell--tab-panels-layout-bottom) .ec-tab-panels__viewport-stack {
+  display: none !important;
+}
+
+.ec-tab-panels__sheet-grab,
+.ec-tab-panels__modal-slider {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 0 0.5rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.ec-tab-panels__sheet-grab::before,
+.ec-tab-panels__modal-slider::before {
+  content: '';
+  display: block;
+  width: 2.75rem;
+  height: 0.3125rem;
+  border-radius: 999px;
+  background: var(--border-default-grey, #ddd);
+}
+
+.ec-tab-panels-shell.is-sheet-dragging .ec-tab-panels__sheet-grab {
+  cursor: grabbing;
+}
+
+/* ——— Mobile : barre d’onglets basse (contrôle OL dans #gpu-map) ——— */
+.ec-map-shell--tab-panels-layout-bottom {
+  --ec-tab-panels-tabs-offset-right: 0px;
+  --ec-tab-panels-inset: 0px;
+  --ec-mobile-tab-bar-padding-end: var(--ec-widget-gap, 8px);
+  --ec-tab-panels-bottom-chrome: calc(
+    var(--ec-widget-btn-size, 48px) + var(--ec-widget-gap, 8px) * 2 +
+      var(--ec-tab-panels-safe-bottom)
+  );
+  --ec-tab-panels-sheet-fraction: 0;
+  --ec-tab-panels-sheet-occupied-height: 0px;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ec-tab-panels-shell {
+  box-sizing: border-box;
+  padding-bottom: var(--ec-tab-panels-bottom-chrome);
+}
+
+.ec-tab-panels__bottom-chrome {
+  display: contents;
+}
+
+.ec-tab-panels__bottom-chrome--mobile {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  gap: var(--ec-widget-gap, 8px);
+  padding-inline-start: var(--ec-widget-gap, 8px);
+  /* Zoom / plein écran flottent au-dessus : pas de réserve dans la barre (≠ attributions / échelle). */
+  padding-inline-end: var(--ec-mobile-tab-bar-padding-end, var(--ec-widget-gap, 8px));
+  overflow: visible;
+}
+
+.ec-tab-panels__bottom-chrome--mobile .ec-tab-panels__tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ec-tab-panels__geopf-slots {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: var(--background-default-grey, #fff);
+  border: none;
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-tab-panels__geopf-slot {
+  display: flex;
+  flex: 0 0 var(--ec-widget-btn-size, 48px);
+  width: var(--ec-widget-btn-size, 48px);
+  min-width: var(--ec-widget-btn-size, 48px);
+  max-width: var(--ec-widget-btn-size, 48px);
+  align-items: flex-end;
+  justify-content: center;
+  overflow: visible;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ec-tab-panels__bottom-chrome--mobile .ec-tab-panels__tabs {
+  justify-content: flex-end;
+  min-width: min-content;
+}
+
+.ec-tab-panels__geopf-slot--sketch {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+  align-self: flex-end;
+}
+
+.ec-tab-panels__geopf-slot--sketch > .ec-sketch-control--geopf-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: var(--ec-widget-btn-size, 48px);
+  min-height: var(--ec-widget-btn-size, 48px);
+  max-height: none;
+  overflow: visible;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  pointer-events: auto;
+}
+
+.ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root[data-corner]
+  .ec-geometry-editor__toolbar-cluster {
+  flex: none !important;
+  max-height: none !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root[data-corner].is-open
+  > .ec-geometry-editor__toolbar-cluster {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root[data-corner]
+  .ec-geometry-editor__toolbar {
+  flex: none !important;
+  max-height: 100% !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root[data-corner]
+  > .ec-geometry-editor__tool--tools-toggle {
+  box-shadow: none !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root[data-corner]
+  .ec-geometry-editor__toolbar {
+  flex: 1 1 auto !important;
+  max-height: none !important;
+}
+
+.ec-tab-panels__geopf-slot--overview > .ec-tab-panels__geopf-widget,
+.ec-tab-panels__geopf-slot--territories > .ec-tab-panels__geopf-widget {
+  position: relative !important;
+  inset: auto !important;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  min-width: var(--ec-widget-btn-size, 48px);
+  max-width: var(--ec-widget-btn-size, 48px);
+  min-height: var(--ec-widget-btn-size, 48px);
+  max-height: var(--ec-widget-btn-size, 48px);
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ec-tab-panels__geopf-slot--overview .gpf-widget-button,
+.ec-tab-panels__geopf-slot--territories .gpf-widget-button {
+  width: var(--ec-widget-btn-size, 48px);
+  padding: 0;
+}
+
+.ec-tab-panels__geopf-slot--overview .gpf-widget-button > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--territories .gpf-widget-button > .gpf-btn-icon {
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__toolbar-cluster {
+  position: fixed !important;
+  top: var(--ec-mobile-sketch-toolbar-top);
+  bottom: var(--ec-mobile-sketch-toolbar-bottom);
+  left: var(--ec-widget-gap, 8px);
+  width: var(--ec-widget-btn-size, 48px) !important;
+  max-width: var(--ec-widget-btn-size, 48px) !important;
+  max-height: none;
+  margin: 0;
+  flex: none;
+  min-height: 0;
+  z-index: 10;
+  pointer-events: auto;
+  /* overflow: visible — la barre modify est en absolute à droite de la colonne 48px */
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  touch-action: pan-y;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__modify-toolbar {
+  z-index: 12;
+  pointer-events: auto;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__toolbar {
+  --ec-geom-tooltip-space: 0px;
+  flex: 1 1 auto;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  max-width: var(--ec-widget-btn-size, 48px) !important;
+  min-width: var(--ec-widget-btn-size, 48px) !important;
+  min-height: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: var(--background-default-grey, #fff) !important;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  filter: none;
+  pointer-events: auto;
+  max-height: none !important;
+  box-sizing: border-box;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
+  overflow: visible;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__tool[aria-label]:focus-visible::before {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
+  flex: 0 0 auto;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__tool--tools-toggle {
+  flex: 0 0 auto;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+  min-width: var(--ec-widget-btn-size, 48px) !important;
+  min-height: var(--ec-widget-btn-size, 48px) !important;
+  padding: 0 !important;
+  border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px) !important;
+  box-shadow: none !important;
+}
+
+.ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool--tools-toggle
+  .ec-geometry-editor__tool-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.ec-tab-panels__geopf-slot--sketch .ec-geometry-editor__toolbar > .ec-geometry-editor__tool {
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+/*
+ * Mobile — croquis : pictos bleu / blanc (barre fixed + toggle dans le slot ;
+ * les règles globales geometry-editor peuvent perdre face au DSFR / geopf).
+ */
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool {
+  background-color: var(--ec-map-control-bg, #fff) !important;
+  color: var(--ec-map-control-icon, #000091) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool
+  .ec-geometry-editor__tool-icon,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool
+  .ec-geometry-editor__tool-icon {
+  color: var(--ec-map-control-icon, #000091) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool:focus-visible,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool:focus-visible {
+  background-color: var(--ec-map-control-hover-bg, #e3e3fd) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root.is-open
+  > .ec-geometry-editor__tool--tools-toggle,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool--tools-toggle[aria-pressed='true'],
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__toolbar
+  > .ec-geometry-editor__tool.is-active,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__toolbar
+  > .ec-geometry-editor__tool[aria-pressed='true'],
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__modify-toolbar
+  > .ec-geometry-editor__tool.is-active,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__modify-toolbar
+  > .ec-geometry-editor__tool[aria-pressed='true'],
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool.is-active,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool[aria-pressed='true'] {
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  color: var(--ec-map-control-active-fg, #fff) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool.is-active
+  .ec-geometry-editor__tool-icon,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool[aria-pressed='true']
+  .ec-geometry-editor__tool-icon,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool.is-active
+  .ec-geometry-editor__tool-icon,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool[aria-pressed='true']
+  .ec-geometry-editor__tool-icon {
+  color: var(--ec-map-control-active-fg, #fff) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__toolbar-sep {
+  background-color: var(--ec-map-control-bg, #fff) !important;
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control .ec-tab-panels__viewport-stack {
+  pointer-events: auto;
+  position: absolute;
+  right: var(--ec-widget-gap, 8px);
+  bottom: calc(100% + var(--ec-widget-gap, 8px));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ec-widget-gap, 8px);
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  z-index: 2;
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control .ec-tab-panels__viewport-stack-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  background: var(--background-default-grey, #fff);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+  margin: 0 !important;
+  padding: var(--ec-widget-btn-padding, 4px) !important;
+  border: none;
+  border-radius: 0;
+  background-color: var(--ec-map-control-bg, #fff) !important;
+  color: var(--ec-map-control-icon, #000091);
+  font-family: Marianne, sans-serif;
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-bg, #fff);
+}
+
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  .ec-tab-panels__viewport-stack-zoom
+  button:first-child {
+  border-radius: var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0 0;
+}
+
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  .ec-tab-panels__viewport-stack-zoom
+  button:last-child {
+  border-radius: 0 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--remix {
+  font-size: 1.25rem;
+  border-radius: var(--ec-widget-btn-radius, 4px) !important;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--zoom span {
+  transform: translateY(-1px);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool:hover,
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool:focus-visible {
+  background-color: var(--ec-map-control-hover-bg, #e3e3fd) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-hover-bg, #e3e3fd);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--zoom span {
+  color: inherit;
+}
+
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__viewport-tool[aria-pressed='true'],
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__viewport-tool[aria-pressed='true']:hover,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__viewport-tool[aria-pressed='true']:focus-visible {
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  color: var(--ec-map-control-active-fg, #fff) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+}
+
+#gpu-map .ec-tab-panels__geopf-slot .ec-tab-panels__geopf-btn,
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget-button > button.gpf-btn-icon,
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon,
+#gpu-map .ec-tab-panels__geopf-slot button.ec-geometry-editor__tool--tools-toggle {
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+  margin: 0 !important;
+  padding: var(--ec-widget-btn-padding, 4px) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--ec-map-control-icon, #000091);
+  background-color: var(--ec-map-control-bg, #fff) !important;
+}
+
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget-button > button.gpf-btn-icon[aria-pressed='true'],
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget-button
+  > button.gpf-btn-icon[aria-pressed='true']:hover,
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true'],
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover {
+  color: var(--ec-map-control-active-fg, #fff) !important;
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+}
+
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget-button
+  > button.gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget
+  > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after {
+  background-color: var(--ec-map-control-active-fg, #fff) !important;
+}
+
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget-button
+  > button.gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget
+  > .gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before {
+  background-color: var(--ec-map-control-active-fg, #fff);
+}
+
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:first-child
+  .ec-tab-panels__geopf-btn,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:first-child
+  button.ec-geometry-editor__tool--tools-toggle,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:first-child
+  .gpf-widget-button
+  > button.gpf-btn-icon {
+  border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px) !important;
+}
+
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:last-child
+  .ec-tab-panels__geopf-btn,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:last-child
+  .gpf-widget-button
+  > button.gpf-btn-icon {
+  border-radius: 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0 !important;
+}
+
+.ec-tab-panels__map-tools {
+  display: flex;
+  flex-direction: row;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: var(--background-default-grey, #fff);
+  border: none;
+  border-radius: var(--ec-widget-btn-radius, 4px);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-widget-btn-size, 48px) !important;
+  height: var(--ec-widget-btn-size, 48px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none;
+  border-radius: 0;
+  background: var(--background-default-grey, #fff);
+  color: var(--text-title-grey, #161616);
+  font-family: Marianne, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool--zoom span {
+  transform: translateY(-1px);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool--remix {
+  font-size: 1.25rem;
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool:first-child {
+  border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px);
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool:last-child {
+  border-radius: 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0;
+}
+
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool:hover,
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__map-tool:focus-visible {
+  background: var(--background-alt-grey, #f6f6f6);
+}
+
+.ec-map-shell--tab-panels-layout-bottom #gpu-map .ec-tab-panels__tabs-control.ol-control {
+  top: auto;
+  bottom: calc(var(--ec-tab-panels-safe-bottom) + var(--ec-widget-gap, 8px));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  transition: none;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  .ec-tab-panels__bottom-chrome--mobile {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ec-tab-panels__tabs {
+  flex-direction: row;
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+/* Après la règle ci-dessus : onglets à droite (margin: 0 annulait margin-inline-start: auto). */
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  .ec-tab-panels__bottom-chrome--mobile
+  .ec-tab-panels__tabs {
+  flex: 0 1 auto;
+  align-self: stretch;
+  margin-inline-start: auto;
+  justify-content: flex-end;
+}
+
+.ec-map-shell--tab-panels-layout-bottom.ec-map-shell--tab-panels-open .ec-tab-panels__tabs {
+  margin: 0;
+}
+
+.ec-map-shell--tab-panels-layout-bottom.ec-map-shell--tab-panels-open
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  .ec-tab-panels__bottom-chrome--mobile
+  .ec-tab-panels__tabs {
+  margin-inline-start: auto;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab:first-child {
+  border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px);
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab:last-child {
+  border-radius: 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[aria-label]:hover::after,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab[aria-label]:focus-visible::after {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-tab-panels__panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   margin: 0;
   background: var(--background-default-grey, #fff);
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
   overflow: hidden;
-}
-
-.ec-tab-panels.is-open .ec-tab-panels__panel {
-  display: flex;
 }
 
 .ec-tab-panels__panel-body {
@@ -268,55 +1094,37 @@
 }
 
 /*
- * Panneau latéral : pas de bordure / contour au survol ou au focus (OL, DSFR, navigateur).
- * Le soulignement de l’onglet catalogue actif est rétabli plus bas.
+ * Panneau latéral (catalogue, couches…) : pas de contour au survol / focus sur les boutons
+ * non DSFR. La fiche info a ses propres styles (`fiche-info.css`).
  */
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):hover,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus-visible {
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):hover,
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus,
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus-visible {
   outline: none !important;
 }
 
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):not(
-    .ec-fiche-info__doc-tab
-  ):hover,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):not(
-    .ec-fiche-info__doc-tab
-  ):focus,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  button:not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(.fr-accordion__btn):not(
-    .ec-fiche-info__doc-tab
-  ):focus-visible {
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):not(.ec-fiche-info__doc-tab):hover,
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):not(.ec-fiche-info__doc-tab):focus,
+.ec-tab-panels__panel-body
+  button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
+    .fr-accordion__btn
+  ):not(.ec-fiche-info__doc-tab):focus-visible {
   box-shadow: none !important;
   border: none !important;
 }
 
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body .fr-btn:not(.ec-data-layers__legend-btn):hover,
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body .fr-btn:not(.ec-data-layers__legend-btn):focus,
-.ec-tab-panels.ol-control
-  .ec-tab-panels__panel-body
-  .fr-btn:not(.ec-data-layers__legend-btn):focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:hover,
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:focus,
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body img:focus-visible {
+.ec-tab-panels__panel-body img:hover,
+.ec-tab-panels__panel-body img:focus,
+.ec-tab-panels__panel-body img:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -330,177 +1138,6 @@
   flex-direction: column;
   min-height: 0;
   max-width: 100%;
-}
-
-/* Fiche info — bandeau bleu + pictogramme i (capture / Figma) */
-.ec-fiche-info {
-  position: relative;
-  padding-left: 0.25rem;
-}
-
-.ec-fiche-info__rail {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0.25rem;
-  height: 100%;
-  min-height: 4rem;
-  background: var(--background-action-high-blue-france, #000091);
-  border-radius: 0.125rem;
-}
-
-.ec-fiche-info__rail::after {
-  content: 'i';
-  position: absolute;
-  top: 0.75rem;
-  left: 50%;
-  transform: translate(-50%, 0);
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-left: 0;
-  border-radius: 50%;
-  background: var(--background-default-grey, #fff);
-  color: var(--text-action-high-blue-france, #000091);
-  font:
-    700 0.75rem/1.25rem Marianne,
-    arial,
-    sans-serif;
-  text-align: center;
-  box-shadow: 0 0 0 2px var(--background-action-high-blue-france, #000091);
-}
-
-.ec-fiche-info__inner {
-  padding-left: 1.5rem;
-}
-
-.ec-fiche-info__header {
-  margin-bottom: 0.75rem;
-  font-size: 0.9375rem;
-}
-
-.ec-fiche-info__doc-tabs {
-  margin-top: 0.5rem;
-}
-
-.ec-fiche-info__loading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
-  color: var(--text-mention-grey, #666);
-}
-
-.ec-fiche-info__spinner {
-  display: inline-block;
-  font-size: 1.25rem;
-  color: var(--text-action-high-blue-france, #000091);
-  animation: ec-fiche-info-spin 0.85s linear infinite;
-}
-
-@keyframes ec-fiche-info-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.ec-fiche-info__doc-tablist {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-default-grey, #ddd);
-  padding-bottom: 0.35rem;
-}
-
-/* Neutralise `.ol-control button` (carrés 1.375em) — cf. onglets latéraux. */
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body button.ec-fiche-info__doc-tab {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: auto !important;
-  height: auto !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  max-width: 100%;
-  margin: 0 !important;
-  padding: 0.4rem 0.55rem !important;
-  border: none !important;
-  border-radius: 0.25rem 0.25rem 0 0;
-  outline: none;
-  background: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  color: var(--text-default-grey, #3a3a3a);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.35;
-  text-align: center;
-  white-space: normal;
-}
-
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body button.ec-fiche-info__doc-tab:hover,
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body button.ec-fiche-info__doc-tab:focus-visible {
-  background: var(--background-contrast-grey, #f6f6f6) !important;
-  outline: 2px solid var(--border-active-blue-france, #000091);
-  outline-offset: 1px;
-}
-
-.ec-tab-panels.ol-control .ec-tab-panels__panel-body button.ec-fiche-info__doc-tab.is-active {
-  color: var(--text-active-blue-france, #000091);
-  box-shadow: inset 0 -2px 0 var(--border-active-blue-france, #000091);
-}
-
-.ec-fiche-info__warn {
-  padding: 0.5rem 0.65rem;
-  background: var(--background-contrast-warning, #ffe9e6);
-  border-radius: 0.25rem;
-}
-
-.ec-fiche-info__proc-list {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.ec-fiche-info__proc-list > li {
-  margin-bottom: 0.75rem;
-}
-
-.ec-fiche-info__title {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
-  line-height: 1.4;
-  color: var(--text-title-grey, #161616);
-}
-
-.ec-fiche-info__body {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-default-grey, #161616);
-}
-
-.ec-fiche-info__body p {
-  margin: 0 0 0.75rem;
-}
-
-.ec-fiche-info__body p:last-child {
-  margin-bottom: 0;
-}
-
-.ec-fiche-info__body ul {
-  margin: 0 0 0.75rem;
-  padding-left: 1.25rem;
-}
-
-.ec-fiche-info__body li {
-  margin-bottom: 0.25rem;
-}
-
-.ec-fiche-info__body li:last-child {
-  margin-bottom: 0;
 }
 
 .ec-tab-panels__empty {

@@ -236,7 +236,7 @@ cd ../entree-carto && npm run build
 cd ../gpu-site && npm install && npm run watch
 ```
 
-Webpack copie `node_modules/entree-carto/dist/*.min.js` vers `build/vendor/entree-carto/`. **Sans rebuild**, `/map/` sur `localhost:8000` continue d’exécuter l’ancien bundle npm (symptôme typique : pas d’appel `apiFicheInfoUrl` / fiche permalink inactive alors que la démo GitHub Pages fonctionne).
+Webpack copie `node_modules/entree-carto/dist/*.min.js` vers `build/vendor/entree-carto/`. gpu-site exécute `npm run copy:entree-carto-vendor` avant `watch` / `build`, surveille `node_modules/entree-carto/dist` en mode watch et force la recopie CopyPlugin (`force: true`). Après mise à jour de entree-carto : `npm run build` dans entree-carto, puis `npm install` (ou lien `file:../entree-carto`) et `npm run watch` dans gpu-site. Contrôle : `md5sum node_modules/entree-carto/dist/entree-carto.min.js public/build/vendor/entree-carto/entree-carto.min.js`.
 
 ---
 
