@@ -72,7 +72,7 @@
 }
 
 .ec-map-mode-selector__option.is-selected:hover {
-  background: var(--ec-map-control-active-bg, #000091);
+  background: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff));
 }
 
 .ec-map-mode-selector__option:has(.ec-map-mode-selector__input:focus-visible) {

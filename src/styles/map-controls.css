@@ -30,6 +30,8 @@
   --ec-map-control-hover-bg: var(--hover-tint, #e3e3fd);
   --ec-map-control-active-bg: var(--background-action-high-blue-france, #000091);
   --ec-map-control-active-fg: #fff;
+  /** Survol d’un bouton déjà actif (bleu) — aligné DSFR primaire / loupe recherche (`--hover-tint`, ex. #1212ff). */
+  --ec-map-control-active-hover-bg: var(--hover-tint, #1212ff);
 }
 
 .position {
@@ -169,12 +171,19 @@
 }
 
 .gpf-widget-button > .gpf-btn-icon[aria-pressed='true'],
-.gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover,
-.gpf-widget > .gpf-btn-icon[aria-pressed='true'],
-.gpf-widget > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover {
+.gpf-widget > .gpf-btn-icon[aria-pressed='true'] {
   color: var(--ec-map-control-active-fg);
   background-color: var(--ec-map-control-active-bg);
   box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-active-bg);
+}
+
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover,
+.gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not(:disabled):focus-visible,
+.gpf-widget > .gpf-btn-icon[aria-pressed='true']:not(:disabled):hover,
+.gpf-widget > .gpf-btn-icon[aria-pressed='true']:not(:disabled):focus-visible {
+  color: var(--ec-map-control-active-fg);
+  background-color: var(--ec-map-control-active-hover-bg);
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-active-hover-bg);
 }
 
 .gpf-widget-button > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after,

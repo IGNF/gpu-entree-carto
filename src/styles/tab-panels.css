@@ -148,8 +148,10 @@
   border-radius: var(--ec-widget-btn-radius, 4px);
 }
 
-#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:hover,
-#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:focus-visible {
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab:not(.is-active):hover,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__tab:not(.is-active):focus-visible {
   background-color: var(--ec-map-control-hover-bg, #e3e3fd);
   outline: none;
   box-shadow: none;
@@ -163,7 +165,7 @@
 
 #gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active:hover,
 #gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__tab.is-active:focus-visible {
-  background-color: var(--ec-map-control-active-bg, #000091);
+  background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff));
   color: var(--ec-map-control-active-fg, #fff);
 }
 
@@ -671,19 +673,19 @@
 .ec-map-shell--tab-panels-layout-bottom
   #gpu-map
   .ec-tab-panels__geopf-slot--sketch
-  .ec-geometry-editor__tool:hover,
+  .ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):hover,
 .ec-map-shell--tab-panels-layout-bottom
   #gpu-map
   .ec-tab-panels__geopf-slot--sketch
-  .ec-geometry-editor__tool:focus-visible,
+  .ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):focus-visible,
 .ec-map-shell--tab-panels-layout-bottom
   #gpu-map
   .ec-sketch-control--geopf-slot
-  .ec-geometry-editor__tool:hover,
+  .ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):hover,
 .ec-map-shell--tab-panels-layout-bottom
   #gpu-map
   .ec-sketch-control--geopf-slot
-  .ec-geometry-editor__tool:focus-visible {
+  .ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):focus-visible {
   background-color: var(--ec-map-control-hover-bg, #e3e3fd) !important;
 }
 
@@ -725,6 +727,47 @@
   .ec-sketch-control--geopf-slot
   .ec-geometry-editor__tool[aria-pressed='true'] {
   background-color: var(--ec-map-control-active-bg, #000091) !important;
+  color: var(--ec-map-control-active-fg, #fff) !important;
+}
+
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tools-root.is-open
+  > .ec-geometry-editor__tool--tools-toggle:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__tool--tools-toggle[aria-pressed='true']:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__toolbar
+  > .ec-geometry-editor__tool.is-active:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__toolbar
+  > .ec-geometry-editor__tool[aria-pressed='true']:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__modify-toolbar
+  > .ec-geometry-editor__tool.is-active:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-tab-panels__geopf-slot--sketch
+  .ec-geometry-editor__modify-toolbar
+  > .ec-geometry-editor__tool[aria-pressed='true']:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool.is-active:hover,
+.ec-map-shell--tab-panels-layout-bottom
+  #gpu-map
+  .ec-sketch-control--geopf-slot
+  .ec-geometry-editor__tool[aria-pressed='true']:hover {
+  background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
   color: var(--ec-map-control-active-fg, #fff) !important;
 }
 
@@ -832,8 +875,12 @@
   transform: translateY(-1px);
 }
 
-#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool:hover,
-#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool:focus-visible {
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__viewport-tool:not([aria-pressed='true']):hover,
+#gpu-map
+  .ec-tab-panels__tabs-control.ol-control
+  button.ec-tab-panels__viewport-tool:not([aria-pressed='true']):focus-visible {
   background-color: var(--ec-map-control-hover-bg, #e3e3fd) !important;
   box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-hover-bg, #e3e3fd);
 }
@@ -844,16 +891,22 @@
 
 #gpu-map
   .ec-tab-panels__tabs-control.ol-control
-  button.ec-tab-panels__viewport-tool[aria-pressed='true'],
+  button.ec-tab-panels__viewport-tool[aria-pressed='true'] {
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  color: var(--ec-map-control-active-fg, #fff) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+}
+
 #gpu-map
   .ec-tab-panels__tabs-control.ol-control
   button.ec-tab-panels__viewport-tool[aria-pressed='true']:hover,
 #gpu-map
   .ec-tab-panels__tabs-control.ol-control
   button.ec-tab-panels__viewport-tool[aria-pressed='true']:focus-visible {
-  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
   color: var(--ec-map-control-active-fg, #fff) !important;
-  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px)
+    var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
 }
 
 #gpu-map .ec-tab-panels__geopf-slot .ec-tab-panels__geopf-btn,
@@ -876,15 +929,26 @@
 }
 
 #gpu-map .ec-tab-panels__geopf-slot .gpf-widget-button > button.gpf-btn-icon[aria-pressed='true'],
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true'] {
+  color: var(--ec-map-control-active-fg, #fff) !important;
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+}
+
 #gpu-map
   .ec-tab-panels__geopf-slot
   .gpf-widget-button
   > button.gpf-btn-icon[aria-pressed='true']:hover,
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true'],
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover {
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  .gpf-widget-button
+  > button.gpf-btn-icon[aria-pressed='true']:focus-visible,
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover,
+#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:focus-visible {
   color: var(--ec-map-control-active-fg, #fff) !important;
-  background-color: var(--ec-map-control-active-bg, #000091) !important;
-  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
+  background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px)
+    var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
 }
 
 #gpu-map

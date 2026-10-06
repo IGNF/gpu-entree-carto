@@ -380,8 +380,8 @@
   background-color: var(--border-default-grey, #ddd);
 }
 
-.ec-geometry-editor__tool:hover,
-.ec-geometry-editor__tool:focus-visible {
+.ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):hover,
+.ec-geometry-editor__tool:not(.is-active):not([aria-pressed='true']):focus-visible {
   background-color: var(--ec-map-control-hover-bg, #e3e3fd);
   outline: none;
 }
@@ -390,6 +390,15 @@
 .ec-geometry-editor__tool[aria-pressed='true'] {
   background-color: var(--ec-map-control-active-bg, #000091);
   color: var(--ec-map-control-active-fg, #fff);
+}
+
+.ec-geometry-editor__tool.is-active:hover,
+.ec-geometry-editor__tool.is-active:focus-visible,
+.ec-geometry-editor__tool[aria-pressed='true']:hover,
+.ec-geometry-editor__tool[aria-pressed='true']:focus-visible {
+  background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff));
+  color: var(--ec-map-control-active-fg, #fff);
+  outline: none;
 }
 
 /* Pictogrammes Remix Icon (`<i class="ri-… ec-geometry-editor__tool-icon">`) */
