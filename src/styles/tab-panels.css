@@ -528,14 +528,26 @@
   box-shadow: none !important;
 }
 
-.ec-tab-panels__geopf-slot--overview .gpf-widget-button,
-.ec-tab-panels__geopf-slot--territories .gpf-widget-button {
+.ec-tab-panels__geopf-slot--overview > .ec-tab-panels__geopf-widget > .gpf-widget-button,
+.ec-tab-panels__geopf-slot--territories > .ec-tab-panels__geopf-widget > .gpf-widget-button,
+.ec-tab-panels__geopf-slot--overview > .gpf-widget > .gpf-widget-button,
+.ec-tab-panels__geopf-slot--territories > .gpf-widget > .gpf-widget-button {
   width: var(--ec-widget-btn-size, 48px);
   padding: 0;
 }
 
-.ec-tab-panels__geopf-slot--overview .gpf-widget-button > .gpf-btn-icon,
-.ec-tab-panels__geopf-slot--territories .gpf-widget-button > .gpf-btn-icon {
+.ec-tab-panels__geopf-slot--overview
+  > .ec-tab-panels__geopf-widget
+  > .gpf-widget-button
+  > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--territories
+  > .ec-tab-panels__geopf-widget
+  > .gpf-widget-button
+  > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--overview > .gpf-widget > .gpf-widget-button > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--territories > .gpf-widget > .gpf-widget-button > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--overview > .ec-tab-panels__geopf-widget.gpf-widget > .gpf-btn-icon,
+.ec-tab-panels__geopf-slot--territories > .ec-tab-panels__geopf-widget.gpf-widget > .gpf-btn-icon {
   width: var(--ec-widget-btn-size, 48px) !important;
   height: var(--ec-widget-btn-size, 48px) !important;
 }
@@ -909,9 +921,11 @@
     var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
 }
 
-#gpu-map .ec-tab-panels__geopf-slot .ec-tab-panels__geopf-btn,
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget-button > button.gpf-btn-icon,
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon,
+/* Uniquement le picto / bouton racine du slot — pas les boutons dans dialog geopf (Territories). */
+#gpu-map .ec-tab-panels__geopf-slot > .ec-tab-panels__geopf-btn,
+#gpu-map .ec-tab-panels__geopf-slot > .gpf-widget-button > button.gpf-btn-icon,
+#gpu-map .ec-tab-panels__geopf-slot > .gpf-widget > .gpf-btn-icon,
+#gpu-map .ec-tab-panels__geopf-slot > .ec-tab-panels__geopf-widget.gpf-widget > .gpf-btn-icon,
 #gpu-map .ec-tab-panels__geopf-slot button.ec-geometry-editor__tool--tools-toggle {
   box-sizing: border-box;
   display: flex !important;
@@ -928,8 +942,12 @@
   background-color: var(--ec-map-control-bg, #fff) !important;
 }
 
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget-button > button.gpf-btn-icon[aria-pressed='true'],
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true'] {
+#gpu-map .ec-tab-panels__geopf-slot > .gpf-widget-button > button.gpf-btn-icon[aria-pressed='true'],
+#gpu-map .ec-tab-panels__geopf-slot > .gpf-widget > .gpf-btn-icon[aria-pressed='true'],
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .ec-tab-panels__geopf-widget.gpf-widget
+  > .gpf-btn-icon[aria-pressed='true'] {
   color: var(--ec-map-control-active-fg, #fff) !important;
   background-color: var(--ec-map-control-active-bg, #000091) !important;
   box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px) var(--ec-map-control-active-bg, #000091) !important;
@@ -937,14 +955,25 @@
 
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget-button
+  > .gpf-widget-button
   > button.gpf-btn-icon[aria-pressed='true']:hover,
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget-button
+  > .gpf-widget-button
   > button.gpf-btn-icon[aria-pressed='true']:focus-visible,
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover,
-#gpu-map .ec-tab-panels__geopf-slot .gpf-widget > .gpf-btn-icon[aria-pressed='true']:focus-visible {
+#gpu-map .ec-tab-panels__geopf-slot > .gpf-widget > .gpf-btn-icon[aria-pressed='true']:hover,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .gpf-widget
+  > .gpf-btn-icon[aria-pressed='true']:focus-visible,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .ec-tab-panels__geopf-widget.gpf-widget
+  > .gpf-btn-icon[aria-pressed='true']:hover,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .ec-tab-panels__geopf-widget.gpf-widget
+  > .gpf-btn-icon[aria-pressed='true']:focus-visible {
   color: var(--ec-map-control-active-fg, #fff) !important;
   background-color: var(--ec-map-control-active-hover-bg, var(--hover-tint, #1212ff)) !important;
   box-shadow: inset 0 0 0 var(--ec-widget-btn-padding, 4px)
@@ -953,22 +982,30 @@
 
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget-button
+  > .gpf-widget-button
   > button.gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after,
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget
+  > .gpf-widget
+  > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .ec-tab-panels__geopf-widget.gpf-widget
   > .gpf-btn-icon[aria-pressed='true']:not([class*='fr-icon-'])::after {
   background-color: var(--ec-map-control-active-fg, #fff) !important;
 }
 
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget-button
+  > .gpf-widget-button
   > button.gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before,
 #gpu-map
   .ec-tab-panels__geopf-slot
-  .gpf-widget
+  > .gpf-widget
+  > .gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before,
+#gpu-map
+  .ec-tab-panels__geopf-slot
+  > .ec-tab-panels__geopf-widget.gpf-widget
   > .gpf-btn-icon[aria-pressed='true'][class*='fr-icon-']::before {
   background-color: var(--ec-map-control-active-fg, #fff);
 }
@@ -984,8 +1021,18 @@
 #gpu-map
   .ec-tab-panels__geopf-slots
   .ec-tab-panels__geopf-slot:first-child
-  .gpf-widget-button
-  > button.gpf-btn-icon {
+  > .gpf-widget-button
+  > button.gpf-btn-icon,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:first-child
+  > .gpf-widget
+  > .gpf-btn-icon,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:first-child
+  > .ec-tab-panels__geopf-widget
+  > .gpf-btn-icon {
   border-radius: var(--ec-widget-btn-radius, 4px) 0 0 var(--ec-widget-btn-radius, 4px) !important;
 }
 
@@ -996,8 +1043,18 @@
 #gpu-map
   .ec-tab-panels__geopf-slots
   .ec-tab-panels__geopf-slot:last-child
-  .gpf-widget-button
-  > button.gpf-btn-icon {
+  > .gpf-widget-button
+  > button.gpf-btn-icon,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:last-child
+  > .gpf-widget
+  > .gpf-btn-icon,
+#gpu-map
+  .ec-tab-panels__geopf-slots
+  .ec-tab-panels__geopf-slot:last-child
+  > .ec-tab-panels__geopf-widget
+  > .gpf-btn-icon {
   border-radius: 0 var(--ec-widget-btn-radius, 4px) var(--ec-widget-btn-radius, 4px) 0 !important;
 }
 

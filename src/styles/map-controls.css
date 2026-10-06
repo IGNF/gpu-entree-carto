@@ -393,10 +393,10 @@
  * → grande icône (::after) + petite (::before). On garde uniquement ::before.
  * Les boutons sans fr-icon-* (zoom, fullscreen, search…) continuent d’utiliser ::after.
  */
-.gpf-btn--primary[class*='fr-icon-']::after,
-.gpf-btn--secondary[class*='fr-icon-']::after,
-.gpf-btn--tertiary[class*='fr-icon-']::after,
-.gpf-btn[class*='fr-icon-']::after {
+.gpf-btn--primary[class*='fr-icon-']:not(.gpf-btn-icon-close)::after,
+.gpf-btn--secondary[class*='fr-icon-']:not(.gpf-btn-icon-close)::after,
+.gpf-btn--tertiary[class*='fr-icon-']:not(.gpf-btn-icon-close)::after,
+.gpf-btn[class*='fr-icon-']:not(.gpf-btn-icon-close)::after {
   content: none !important;
   mask: none !important;
   -webkit-mask: none !important;
@@ -466,6 +466,112 @@ dialog[id^='GPterritoriesPanel-'] .GPpanelTitle {
   transform: translateY(-50%);
   margin: 0 !important;
   z-index: 2;
+}
+
+/*
+ * Territories — boutons des panneaux (dialog, vues) : le widget est un `.ol-control`,
+ * ol.css force 1.375em / fond blanc sur tous les `button` descendants.
+ */
+#gpu-map .gpf-widget[id^='GPterritories-'] dialog[id^='GPterritoriesPanel-'] button,
+#gpu-map #gpf-territories-views-container-id button,
+#GPterritoriesPanelClose {
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  white-space: normal !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+#gpu-map .gpf-widget[id^='GPterritories-'] dialog[id^='GPterritoriesPanel-'] button:hover,
+#gpu-map .gpf-widget[id^='GPterritories-'] dialog[id^='GPterritoriesPanel-'] button:focus,
+#gpu-map .gpf-widget[id^='GPterritories-'] dialog[id^='GPterritoriesPanel-'] button:focus-visible,
+#gpu-map #gpf-territories-views-container-id button:hover,
+#gpu-map #gpf-territories-views-container-id button:focus,
+#gpu-map #gpf-territories-views-container-id button:focus-visible,
+#GPterritoriesPanelClose:hover,
+#GPterritoriesPanelClose:focus,
+#GPterritoriesPanelClose:focus-visible {
+  outline: none !important;
+}
+
+#GPterritoriesPanelClose {
+  padding: 0.25rem 0.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+  background-color: transparent !important;
+  color: var(--text-action-high-blue-france, #000091) !important;
+}
+
+/*
+ * Bandeau texte « Modifier les territoires » (ouverture + retour) — pas picto 40×40 :
+ * geopf `.gpf-btn-icon` + `.gpf-btn--tertiary::after` masquent le libellé.
+ */
+#gpu-map #gpf-territories-button-open-views-id,
+#gpu-map #gpf-territories-views-back-button-id {
+  width: auto !important;
+  height: auto !important;
+  min-height: 2.5rem !important;
+  max-width: none !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+#gpu-map #gpf-territories-button-open-views-id.gpf-btn--tertiary::after,
+#gpu-map #gpf-territories-button-open-views-id::after,
+#gpu-map #gpf-territories-views-back-button-id::after {
+  content: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  background: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+#gpu-map #gpf-territories-button-open-views-id {
+  color: var(--text-action-high-blue-france, #000091) !important;
+  background-color: var(--background-default-grey, #fff) !important;
+}
+
+#gpu-map #gpf-territories-button-open-views-id[aria-pressed='true'] {
+  color: var(--ec-map-control-active-fg, #fff) !important;
+  background-color: var(--ec-map-control-active-bg, #000091) !important;
+}
+
+/* Retour sous-panneau vues : lien DSFR (flèche + libellé bleu, sans fond) */
+#gpu-map #gpf-territories-views-back-button-id {
+  justify-content: flex-start !important;
+  padding: 0.5rem 0 !important;
+  color: var(--text-action-high-blue-france, #000091) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+#gpu-map #gpf-territories-views-back-button-id:hover,
+#gpu-map #gpf-territories-views-back-button-id:focus-visible {
+  color: var(--text-action-high-blue-france, #000091) !important;
+  background-color: transparent !important;
+}
+
+#gpu-map #gpf-territories-views-back-button-id.fr-btn--icon-left[class*='fr-icon-']::before {
+  background-color: var(--text-action-high-blue-france, #000091) !important;
 }
 
 /* Territories — corps scrollable pour ne pas sortir en haut de la carte */
@@ -577,6 +683,13 @@ dialog[id^='GPterritoriesPanel-'] {
     var(--ec-tab-panels-bottom-chrome) + var(--ec-widget-gap) +
       var(--ec-mobile-viewport-stack-height)
   );
+  --ec-mobile-territories-panel-top: calc(
+    var(--ec-mobile-map-viewport-top, 0px) + var(--ec-widget-gap) + var(--ec-widget-btn-size) +
+      var(--ec-widget-gap)
+  );
+  --ec-mobile-territories-panel-bottom: calc(
+    var(--ec-tab-panels-bottom-chrome, 56px) + var(--ec-widget-gap, 8px)
+  );
 }
 
 .ec-map-shell--tab-panels-layout-bottom #gpu-map {
@@ -669,6 +782,7 @@ dialog[id^='GPterritoriesPanel-'] {
   width: auto;
   max-width: none;
   padding-left: 0 !important;
+  padding-right: 0 !important;
   margin-left: 0 !important;
 }
 
@@ -714,51 +828,54 @@ dialog[id^='GPterritoriesPanel-'] {
 }
 
 /*
- * Mobile — Territories : reprendre le positionnement geopf (dialog en absolute sous
- * gpf-mobile-fullscreen), sans fixed entree-carto. Le bouton reste stylé via tab-panels.css.
+ * Mobile — Territories : panneaux pleine largeur (marges --ec-widget-gap), top sous la
+ * recherche lieu, bottom au-dessus de la barre d’onglets (bouton dans le slot geopf).
  */
 .ec-map-shell--tab-panels-layout-bottom
   .ec-tab-panels__geopf-slot--territories
   .gpf-widget[id^='GPterritories-']
   > button[aria-pressed='true']
-  + dialog[id^='GPterritoriesPanel-'] {
-  position: absolute;
-  top: auto !important;
-  bottom: calc(100% + var(--ec-widget-gap, 8px)) !important;
-  left: 0 !important;
-  right: auto !important;
-  max-height: min(
-    70dvh,
-    calc(
-      100dvh - var(--ec-mobile-footer-stack-base, 72px) - var(--ec-map-mode-top, 0px) -
-        var(--ec-widget-btn-size, 48px) - var(--ec-widget-gap, 8px) * 3
-    )
-  ) !important;
-  margin: 0;
+  + dialog[id^='GPterritoriesPanel-'],
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--territories
+  .gpf-mobile-fullscreen
+  > button[aria-pressed='true']
+  ~ dialog[id^='GPterritoriesPanel-'],
+.ec-map-shell--tab-panels-layout-bottom #gpf-territories-views-container-id.gpf-visible {
+  position: fixed !important;
+  top: var(--ec-mobile-territories-panel-top) !important;
+  left: var(--ec-widget-gap) !important;
+  right: var(--ec-widget-gap) !important;
+  bottom: var(--ec-mobile-territories-panel-bottom) !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  z-index: 10000;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  background-color: var(--background-default-grey, #fff);
 }
 
 .ec-map-shell--tab-panels-layout-bottom
   .ec-tab-panels__geopf-slot--territories
-  #gpf-territories-views-container-id {
-  position: absolute;
-  top: 48px;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  max-height: none;
+  .gpf-widget[id^='GPterritories-']
+  > button[aria-pressed='true']
+  + dialog[id^='GPterritoriesPanel-'],
+.ec-map-shell--tab-panels-layout-bottom
+  .ec-tab-panels__geopf-slot--territories
+  .gpf-mobile-fullscreen
+  > button[aria-pressed='true']
+  ~ dialog[id^='GPterritoriesPanel-'] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-@media (max-width: 576px) {
-  .ec-map-shell--tab-panels-layout-bottom
-    .ec-tab-panels__geopf-slot--territories
-    .gpf-mobile-fullscreen
-    > button[aria-pressed='true']
-    ~ dialog[id^='GPterritoriesPanel-'] {
-    width: min(470px, calc(100vw - 2 * var(--ec-widget-gap, 8px))) !important;
-  }
+.ec-map-shell--tab-panels-layout-bottom #gpf-territories-views-container-id.gpf-visible {
+  overflow: auto;
 }
 
 #gpu-map .ol-control.ol-attribution {

@@ -38,7 +38,7 @@ Bottom-left, **below** the overview map.
 - Long titles in `.gpf-tile`: reduced font + 3-line clamp
 - Close button `#GPterritoriesPanelClose`: `position: absolute; right` in header
 - **Desktop**: dialog `#gpf-territories-views-container-id` flush right of the panel (`left: 100%`), bottoms aligned; bottom-left panel `max-height: 100cqb`
-- **Mobile** (bottom bar / `ec-map-shell--tab-panels-layout-bottom`): only the **button** stays in the geopf slot (`tab-panels.css`); the `<dialog>` and “Modify territories” use geopf **absolute** positioning again (no entree-carto `position: fixed`), above the button in the widget containing block
+- **Mobile** (`ec-map-shell--tab-panels-layout-bottom`): France pictogram in the slot (`--ec-map-control-*`); panels **fixed** (`--ec-mobile-territories-panel-top` / `--ec-mobile-territories-panel-bottom`, `--ec-widget-gap` insets); **in-panel** buttons match desktop geopf/DSFR (`map-controls.css`, `ol.css` neutralisation on dialog buttons — not the 48×48 bar slot style)
 - Widget as containing block (avoids geopf `top: 0` over full map height)
 
 ## Dependencies

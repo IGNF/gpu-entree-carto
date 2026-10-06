@@ -38,7 +38,7 @@ Bas-gauche, **sous** la minimap.
 - Titres longs dans `.gpf-tile` : police réduite + clamp 3 lignes
 - Bouton fermer `#GPterritoriesPanelClose` : `position: absolute; right` dans le header
 - **Bureau** : dialog `#gpf-territories-views-container-id` à droite du panneau (`left: 100%`), bas alignés ; panneau bas-gauche `max-height: 100cqb`
-- **Mobile** (barre basse / `ec-map-shell--tab-panels-layout-bottom`) : seul le **bouton** reste dans le slot geopf (`tab-panels.css`) ; le `<dialog>` et « Modifier les territoires » reprennent le positionnement **absolute** geopf (plus de `position: fixed` entree-carto), au-dessus du bouton dans le containing block du widget
+- **Mobile** (`ec-map-shell--tab-panels-layout-bottom`) : picto France dans le slot (`--ec-map-control-*`) ; panneaux en **fixed** (`--ec-mobile-territories-panel-top` / `--ec-mobile-territories-panel-bottom`, marges `--ec-widget-gap`) ; boutons **dans** les panneaux = rendu geopf/DSFR comme au bureau (`map-controls.css`, neutralisation `ol.css` sur les `button` du dialog — hors style barre 48×48 du slot)
 - Widget en containing block (évite le `top: 0` geopf sur toute la hauteur de la carte)
 
 ## Dépendances
