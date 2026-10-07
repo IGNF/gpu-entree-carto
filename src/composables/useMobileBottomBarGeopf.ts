@@ -7,7 +7,7 @@ type SavedNode = {
 }
 
 /**
- * En mobile : racine croquis + widgets geopf minimap / territoires entiers dans la barre basse
+ * En mobile : racine croquis + widgets geopf minimap / territoires dans la barre basse
  * (ne pas détacher le seul bouton — casse PanelManager geopf).
  */
 export function useMobileBottomBarGeopf(

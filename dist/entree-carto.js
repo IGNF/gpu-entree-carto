@@ -28846,18 +28846,37 @@ Expected function or array of functions, received type ${typeof value2}.`
     const shell = target2.closest(".ec-map-shell");
     return shell instanceof HTMLElement ? shell : target2;
   }
+  const PSEUDO_FULLSCREEN_CLASS = "ec-map-shell--viewport-maximized";
+  const PSEUDO_FULLSCREEN_HTML_CLASS = "ec-html--map-viewport-maximized";
+  function clearPseudoFullscreen(root) {
+    root == null ? void 0 : root.classList.remove(PSEUDO_FULLSCREEN_CLASS);
+    document.documentElement.classList.remove(PSEUDO_FULLSCREEN_HTML_CLASS);
+  }
+  function enablePseudoFullscreen(root) {
+    root.classList.add(PSEUDO_FULLSCREEN_CLASS);
+    document.documentElement.classList.add(PSEUDO_FULLSCREEN_HTML_CLASS);
+  }
   function useMapViewportControls() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
     const isFullscreen = /* @__PURE__ */ ref(false);
     function syncFullscreenState() {
-      isFullscreen.value = Boolean(document.fullscreenElement);
+      const root = getMapShellFullscreenElement(mapRef.value);
+      isFullscreen.value = Boolean(document.fullscreenElement) || Boolean(root == null ? void 0 : root.classList.contains(PSEUDO_FULLSCREEN_CLASS));
+    }
+    function onFullscreenChange() {
+      if (!document.fullscreenElement) {
+        clearPseudoFullscreen(getMapShellFullscreenElement(mapRef.value));
+      }
+      syncFullscreenState();
+      window.dispatchEvent(new Event("ec-map-viewport-chrome-remount"));
     }
     onMounted(() => {
       syncFullscreenState();
-      document.addEventListener("fullscreenchange", syncFullscreenState);
+      document.addEventListener("fullscreenchange", onFullscreenChange);
     });
     onUnmounted(() => {
-      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      clearPseudoFullscreen(getMapShellFullscreenElement(mapRef.value));
     });
     function zoomBy(delta) {
       const map2 = mapRef.value;
@@ -28870,12 +28889,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     async function toggleFullscreen() {
       const root = getMapShellFullscreenElement(mapRef.value);
       if (!root) return;
+      const pseudoActive = root.classList.contains(PSEUDO_FULLSCREEN_CLASS);
       try {
-        if (document.fullscreenElement) await document.exitFullscreen();
-        else await root.requestFullscreen();
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if (pseudoActive) {
+          clearPseudoFullscreen(root);
+        } else if (typeof root.requestFullscreen === "function") {
+          try {
+            await root.requestFullscreen();
+          } catch {
+            enablePseudoFullscreen(root);
+          }
+        } else {
+          enablePseudoFullscreen(root);
+        }
       } catch {
+        if (!document.fullscreenElement && !pseudoActive) {
+          enablePseudoFullscreen(root);
+        }
       } finally {
         syncFullscreenState();
+        window.dispatchEvent(new Event("ec-map-viewport-chrome-remount"));
       }
     }
     return {
@@ -29099,24 +29134,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const barRect = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - barRect.bottom - gap;
     const maxHeight = Math.max(160, Math.min(spaceBelow - 8, window.innerHeight * 0.55));
-    if (isMobileMapSearchLayout()) {
-      const shell = document.querySelector(".ec-map-shell");
-      const left = shell ? Math.max(8, parseFloat(getComputedStyle(shell).getPropertyValue("--ec-widget-gap")) || 8) : 8;
-      const panelWidth = Math.max(280, window.innerWidth - left * 2);
-      panel.style.position = "fixed";
-      panel.style.left = `${left}px`;
-      panel.style.right = "auto";
-      panel.style.width = `${panelWidth}px`;
-      panel.style.maxWidth = `${panelWidth}px`;
-      panel.style.top = `${barRect.bottom + gap}px`;
-      panel.style.bottom = "auto";
-      panel.style.maxHeight = `${maxHeight}px`;
-      panel.style.minHeight = "120px";
-      panel.style.height = "auto";
-      panel.style.display = "block";
-      panel.style.overflow = "auto";
-      return;
-    }
     const widget = panel.closest('.gpf-widget[id^="GPsearchEngine-Advanced"]');
     if (!widget) return;
     const widgetRect = widget.getBoundingClientRect();
@@ -29137,11 +29154,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     const anchorRect = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - anchorRect.bottom - gap;
     const spaceAbove = anchorRect.top - gap;
+    const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
+    const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
+    if (isMobileMapSearchLayout()) {
+      const topOffset = anchorRect.bottom - rootRect.top + gap;
+      panel.style.position = "absolute";
+      panel.style.left = "0";
+      panel.style.right = "0";
+      panel.style.width = "100%";
+      panel.style.maxWidth = "100%";
+      panel.style.maxHeight = `${Math.max(80, maxH)}px`;
+      if (preferAbove) {
+        panel.style.top = "auto";
+        panel.style.bottom = `${rootRect.bottom - anchorRect.top + gap}px`;
+      } else {
+        panel.style.bottom = "auto";
+        panel.style.top = `${topOffset}px`;
+      }
+      return;
+    }
     const maxRight = rootRect.right;
     const panelLeft = Math.max(rootRect.left, anchorRect.left);
     const panelWidth = Math.max(120, Math.min(anchorRect.width, maxRight - panelLeft));
-    const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
-    const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
     panel.style.position = "fixed";
     panel.style.left = `${panelLeft}px`;
     panel.style.width = `${panelWidth}px`;
@@ -72293,17 +72327,29 @@ Expected function or array of functions, received type ${typeof value2}.`
         } else if (panel) {
           panel.setAttribute("aria-label", PANEL_TITLE);
         }
-        const btn = root.querySelector(
+        const closeBtn = root.querySelector(
           ".gpf-panel__header button.GPpanelClose, .GPpanelHeader button.GPpanelClose"
         );
-        if (!btn) return;
+        if (closeBtn) {
+          patchTerritoriesPanelClose(closeBtn);
+        }
+        patchTerritoriesMenuViewsBandButtons(root);
+      }
+      function patchTerritoriesMenuViewsBandButtons(root) {
+        const open = root.querySelector("#gpf-territories-button-open-views-id");
+        if (open && open.dataset.ecTerritoriesBandBtn !== "1") {
+          open.dataset.ecTerritoriesBandBtn = "1";
+          open.classList.remove("gpf-btn-icon");
+        }
+      }
+      function patchTerritoriesPanelClose(btn) {
         btn.id = "GPterritoriesPanelClose";
         btn.className = "gpf-btn gpf-btn-icon-close fr-btn--close fr-btn fr-btn--tertiary-no-outline";
         btn.title = "Fermer le panneau";
         btn.removeAttribute("style");
         btn.replaceChildren();
         const span = document.createElement("span");
-        span.className = "GPelementHidden gpf-visible";
+        span.className = "fr-sr-only";
         span.textContent = "Fermer";
         btn.appendChild(span);
       }
@@ -89814,10 +89860,82 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (headerBottom <= mapTop + 1) return 0;
     return Math.max(0, Math.ceil(headerBottom - mapTop));
   }
+  function isMapViewportMaximized(mapShell) {
+    if (mapShell.classList.contains("ec-map-shell--viewport-maximized")) return true;
+    return document.fullscreenElement === mapShell;
+  }
+  const MOBILE_FIXED_PROBE_TOP_PX = 10;
+  const MOBILE_FIXED_PROBE_TOLERANCE_PX = 3;
+  function detectMobileFixedUsesShellContainingBlock(mapShell) {
+    const shellTop = mapShell.getBoundingClientRect().top;
+    const probe = document.createElement("div");
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText = "position:fixed;top:10px;left:0;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;z-index:-1";
+    mapShell.appendChild(probe);
+    const probeTop = probe.getBoundingClientRect().top;
+    mapShell.removeChild(probe);
+    const viewportDelta = Math.abs(probeTop - MOBILE_FIXED_PROBE_TOP_PX);
+    const shellDelta = Math.abs(probeTop - (shellTop + MOBILE_FIXED_PROBE_TOP_PX));
+    if (shellDelta + MOBILE_FIXED_PROBE_TOLERANCE_PX < viewportDelta) return true;
+    return false;
+  }
+  function readShellCssPx(mapShell, name2, fallback) {
+    const raw = getComputedStyle(mapShell).getPropertyValue(name2).trim();
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function queryMobileSearchBarElement(mapShell) {
+    const widget = mapShell.querySelector('.gpf-widget[id^="GPsearchEngine-"]');
+    return widget instanceof HTMLElement ? widget : null;
+  }
+  function mobileFixedTopCSSValue(viewportY, shellTop, originPx) {
+    if (originPx === 0) return Math.round(viewportY - shellTop);
+    return Math.round(viewportY);
+  }
+  function mobileMapFixedOriginTopPx(mapShell) {
+    const shellTop = Math.max(0, Math.round(mapShell.getBoundingClientRect().top));
+    if (isMapViewportMaximized(mapShell)) return shellTop;
+    if (!mapShell.classList.contains("ec-map-shell--tab-panels-layout-bottom")) return shellTop;
+    if (detectMobileFixedUsesShellContainingBlock(mapShell)) return 0;
+    return shellTop;
+  }
+  function measureMobileFixedChromeTops(mapShell, originPx) {
+    const clear2 = () => {
+      mapShell.style.removeProperty("--ec-mobile-sketch-toolbar-top-measured");
+      mapShell.style.removeProperty("--ec-mobile-minimap-top-measured");
+      mapShell.style.removeProperty("--ec-mobile-territories-panel-top-measured");
+    };
+    if (!mapShell.classList.contains("ec-map-shell--tab-panels-layout-bottom")) {
+      clear2();
+      return;
+    }
+    const shellTop = mapShell.getBoundingClientRect().top;
+    const gap = readShellCssPx(mapShell, "--ec-widget-gap", 8);
+    const toTop = (viewportY) => `${mobileFixedTopCSSValue(viewportY, shellTop, originPx)}px`;
+    const modeEl = mapShell.querySelector(".ec-map-mode-selector");
+    if (!(modeEl instanceof HTMLElement)) {
+      clear2();
+      return;
+    }
+    const modeRect = modeEl.getBoundingClientRect();
+    mapShell.style.setProperty(
+      "--ec-mobile-sketch-toolbar-top-measured",
+      toTop(modeRect.bottom + gap)
+    );
+    mapShell.style.setProperty("--ec-mobile-minimap-top-measured", toTop(modeRect.top));
+    const searchBar = queryMobileSearchBarElement(mapShell);
+    const territoriesViewportTop = searchBar ? searchBar.getBoundingClientRect().bottom + gap : modeRect.top;
+    mapShell.style.setProperty(
+      "--ec-mobile-territories-panel-top-measured",
+      toTop(territoriesViewportTop)
+    );
+  }
   function useTabPanelsLayout(mapShellRef) {
     const layoutMode = /* @__PURE__ */ ref("side");
     const siteHeaderOffsetPx = /* @__PURE__ */ ref(0);
     let media = null;
+    let shellClassObserver = null;
+    let remeasureTimer = null;
     function applyLayout() {
       var _a;
       layoutMode.value = (media == null ? void 0 : media.matches) ? "bottom" : "side";
@@ -89831,21 +89949,61 @@ Expected function or array of functions, received type ${typeof value2}.`
         shell.style.setProperty("--ec-tab-panels-site-header-offset", `${siteHeaderOffsetPx.value}px`);
         const mapViewportTop = Math.max(0, Math.round(shell.getBoundingClientRect().top));
         shell.style.setProperty("--ec-mobile-map-viewport-top", `${mapViewportTop}px`);
+        const fixedOriginTop = mobileMapFixedOriginTopPx(shell);
+        shell.style.setProperty("--ec-mobile-map-fixed-origin-top", `${fixedOriginTop}px`);
+        measureMobileFixedChromeTops(shell, fixedOriginTop);
       }
     }
+    function remeasureAfterViewportChange() {
+      applyLayout();
+      requestAnimationFrame(() => applyLayout());
+      if (remeasureTimer) clearTimeout(remeasureTimer);
+      remeasureTimer = setTimeout(() => {
+        remeasureTimer = null;
+        applyLayout();
+      }, 150);
+    }
+    function attachShellClassObserver(shell) {
+      shellClassObserver == null ? void 0 : shellClassObserver.disconnect();
+      shellClassObserver = new MutationObserver((records) => {
+        if (records.some((r) => r.type === "attributes" && r.attributeName === "class")) {
+          remeasureAfterViewportChange();
+        }
+      });
+      shellClassObserver.observe(shell, { attributes: true, attributeFilter: ["class"] });
+    }
+    function bindShellObservers() {
+      var _a;
+      const shell = (_a = mapShellRef.value) == null ? void 0 : _a.closest(".ec-map-shell");
+      if (shell instanceof HTMLElement) attachShellClassObserver(shell);
+    }
     onMounted(() => {
+      var _a, _b;
       media = window.matchMedia(TAB_PANELS_MOBILE_MEDIA);
       applyLayout();
+      bindShellObservers();
       media.addEventListener("change", applyLayout);
       window.addEventListener("resize", applyLayout);
+      document.addEventListener("fullscreenchange", remeasureAfterViewportChange);
+      window.addEventListener("ec-map-viewport-chrome-remount", remeasureAfterViewportChange);
+      (_a = window.visualViewport) == null ? void 0 : _a.addEventListener("resize", remeasureAfterViewportChange);
+      (_b = window.visualViewport) == null ? void 0 : _b.addEventListener("scroll", remeasureAfterViewportChange);
     });
     onUnmounted(() => {
-      var _a, _b;
+      var _a, _b, _c, _d;
       media == null ? void 0 : media.removeEventListener("change", applyLayout);
       window.removeEventListener("resize", applyLayout);
-      (_b = (_a = mapShellRef.value) == null ? void 0 : _a.closest(".ec-map-shell")) == null ? void 0 : _b.classList.remove("ec-map-shell--tab-panels-layout-bottom");
+      document.removeEventListener("fullscreenchange", remeasureAfterViewportChange);
+      window.removeEventListener("ec-map-viewport-chrome-remount", remeasureAfterViewportChange);
+      (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", remeasureAfterViewportChange);
+      (_b = window.visualViewport) == null ? void 0 : _b.removeEventListener("scroll", remeasureAfterViewportChange);
+      shellClassObserver == null ? void 0 : shellClassObserver.disconnect();
+      shellClassObserver = null;
+      if (remeasureTimer) clearTimeout(remeasureTimer);
+      (_d = (_c = mapShellRef.value) == null ? void 0 : _c.closest(".ec-map-shell")) == null ? void 0 : _d.classList.remove("ec-map-shell--tab-panels-layout-bottom");
     });
-    return { layoutMode, siteHeaderOffsetPx, refreshLayoutMetrics: applyLayout };
+    watch(mapShellRef, () => bindShellObservers());
+    return { layoutMode, siteHeaderOffsetPx, refreshLayoutMetrics: remeasureAfterViewportChange };
   }
   function useTabPanelsMobileSheet(layoutMode, mapShellRef) {
     const sheetSnapIndex = /* @__PURE__ */ ref(0);

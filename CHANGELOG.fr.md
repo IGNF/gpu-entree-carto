@@ -26,7 +26,11 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - **Chrome carte mobile** — autocomplétion / recherche avancée au-dessus des modes Parcelle–Territoire (empilement + `attachStandalonePopoverSync`) ; panneau territoires entre le sélecteur de mode et la pile zoom (`tiles: 4`) ; aperçu minimap en `position: fixed` ; barre croquis scrollable et hauteur plafonnée ; **4 onglets du panneau alignés à droite** dans la barre basse (outils geopf à gauche).
 - **Contrôles carte** — tokens `--ec-map-control-*` (picto bleu / fond blanc inactif, picto blanc / fond bleu actif) pour geopf, onglets TabPanels, croquis et zoom mobile.
-- **Plein écran** — cible `.ec-map-shell` (geopf + barre mobile) pour conserver le panneau latéral ; mobile : bascule `ri-fullscreen-line` / `ri-fullscreen-exit-line`.
+- **Plein écran** — cible `.ec-map-shell` (geopf + barre mobile) pour conserver le panneau latéral ; mobile : bascule `ri-fullscreen-line` / `ri-fullscreen-exit-line` ; pseudo plein écran iOS.
+- **TabPanels mobile** — croquis : colonne entre mode et bouton toggle (`--ec-mobile-sketch-toolbar-*-inset`, sans double `btn-size` en bas).
+- **TabPanels mobile** — remesure `--ec-mobile-map-viewport-top` à la sortie plein écran (`fullscreenchange` + classe shell).
+- **TabPanels mobile (iOS)** — `--ec-mobile-map-fixed-origin-top` (fixed repère shell hors plein écran) ; territoires sous la recherche ; minimap alignée sur le haut du mode.
+- **TabPanels mobile** — `top` mesurés (croquis / minimap / territoires) via le DOM (`measureMobileFixedChromeTops`) ; origine fixed via sonde dans le shell (`detectMobileFixedUsesShellContainingBlock`) : vue adaptative Firefox / fenêtre étroite bureau = viewport ; Safari iOS = repère shell.
 - **Recentrage carte** — padding `view.fit` : mesure la surface panneau (plus le shell pleine largeur) pour ne plus pousser la cerise à gauche.
 - **Mode Parcelle** — recentrage sur l’emprise APICarto : cache vide non réutilisé, clé stable au changement de mode, vol avant refresh fiche.
 - **TabPanels mobile** — onglets alignés à droite sans réserver la colonne zoom ; attributions / échelle : `--ec-tab-panels-inset` forcé à 0 en mobile ; passage bureau→mobile avec panneau ouvert → feuille snap aperçu 35 % ; pictos croisis mobile rétablis (`--ec-map-control-*`).

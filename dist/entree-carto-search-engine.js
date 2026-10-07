@@ -49174,24 +49174,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const barRect = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - barRect.bottom - gap;
     const maxHeight = Math.max(160, Math.min(spaceBelow - 8, window.innerHeight * 0.55));
-    if (isMobileMapSearchLayout()) {
-      const shell = document.querySelector(".ec-map-shell");
-      const left = shell ? Math.max(8, parseFloat(getComputedStyle(shell).getPropertyValue("--ec-widget-gap")) || 8) : 8;
-      const panelWidth = Math.max(280, window.innerWidth - left * 2);
-      panel.style.position = "fixed";
-      panel.style.left = `${left}px`;
-      panel.style.right = "auto";
-      panel.style.width = `${panelWidth}px`;
-      panel.style.maxWidth = `${panelWidth}px`;
-      panel.style.top = `${barRect.bottom + gap}px`;
-      panel.style.bottom = "auto";
-      panel.style.maxHeight = `${maxHeight}px`;
-      panel.style.minHeight = "120px";
-      panel.style.height = "auto";
-      panel.style.display = "block";
-      panel.style.overflow = "auto";
-      return;
-    }
     const widget = panel.closest('.gpf-widget[id^="GPsearchEngine-Advanced"]');
     if (!widget) return;
     const widgetRect = widget.getBoundingClientRect();
@@ -49212,11 +49194,28 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const anchorRect = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - anchorRect.bottom - gap;
     const spaceAbove = anchorRect.top - gap;
+    const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
+    const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
+    if (isMobileMapSearchLayout()) {
+      const topOffset = anchorRect.bottom - rootRect.top + gap;
+      panel.style.position = "absolute";
+      panel.style.left = "0";
+      panel.style.right = "0";
+      panel.style.width = "100%";
+      panel.style.maxWidth = "100%";
+      panel.style.maxHeight = `${Math.max(80, maxH)}px`;
+      if (preferAbove) {
+        panel.style.top = "auto";
+        panel.style.bottom = `${rootRect.bottom - anchorRect.top + gap}px`;
+      } else {
+        panel.style.bottom = "auto";
+        panel.style.top = `${topOffset}px`;
+      }
+      return;
+    }
     const maxRight = rootRect.right;
     const panelLeft = Math.max(rootRect.left, anchorRect.left);
     const panelWidth = Math.max(120, Math.min(anchorRect.width, maxRight - panelLeft));
-    const preferAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
-    const maxH = preferAbove ? Math.min(spaceAbove - 4, window.innerHeight * 0.5, 320) : Math.min(spaceBelow - 4, window.innerHeight * 0.5, 320);
     panel.style.position = "fixed";
     panel.style.left = `${panelLeft}px`;
     panel.style.width = `${panelWidth}px`;

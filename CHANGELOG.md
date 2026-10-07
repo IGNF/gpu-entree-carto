@@ -26,7 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Mobile map chrome** — search autocomplete / advanced panel above parcel–territory controls (stacking + `attachStandalonePopoverSync`); territories panel between mode selector and zoom stack (`tiles: 4`); minimap preview `position: fixed`; sketch toolbar scroll and height clamp; **panel four tabs right-aligned** in the bottom bar (geopf tools on the left).
 - **Map controls** — shared `--ec-map-control-*` tokens (blue icon on white when idle, white on blue when active) for geopf widgets, TabPanels tabs, sketch tools, and mobile zoom / full-screen stack.
-- **Full screen** — target `.ec-map-shell` (geopf + mobile bar) so the lateral panel stays visible; mobile toggles `ri-fullscreen-line` / `ri-fullscreen-exit-line`.
+- **Full screen** — target `.ec-map-shell` (geopf + mobile bar) so the lateral panel stays visible; mobile toggles `ri-fullscreen-line` / `ri-fullscreen-exit-line`; iOS pseudo full screen.
+- **TabPanels mobile** — sketch column between mode and toggle (`--ec-mobile-sketch-toolbar-*-inset`, fix bottom inset without extra btn height).
+- **TabPanels mobile** — remeasure `--ec-mobile-map-viewport-top` when exiting fullscreen (`fullscreenchange` + shell class).
+- **TabPanels mobile (iOS)** — `--ec-mobile-map-fixed-origin-top` (shell-relative fixed off fullscreen); territories below search; minimap top aligned with mode row.
+- **TabPanels mobile** — measured `top` for sketch / minimap / territories from DOM (`measureMobileFixedChromeTops`); fixed origin from a shell probe (`detectMobileFixedUsesShellContainingBlock`) so Firefox responsive mode and desktop narrow windows match real viewport fixed, while iOS Safari keeps shell-relative fixed.
 - **Map refocus** — `view.fit` padding measures panel surface width (not full-width shell) so the cherry marker is no longer shoved to the left.
 - **Parcel mode** — APICarto emprise refocus: do not reuse empty cache entries, stable target key on mode switch, animate view before fiche refresh.
 - **TabPanels mobile** — tabs flush right without zoom-column padding in the bar; attributions / scale `--ec-tab-panels-inset` forced to 0 on mobile; desktop→mobile resize with panel open opens sheet at 35 % preview snap; mobile sketch icons use `--ec-map-control-*` again.
