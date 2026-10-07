@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "private": true,
   "engines": {
-    "node": "^24.15.0 || >=26.0.0"
+    "node": ">=24.15.0"
   },
   "type": "module",
   "description": "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)",
@@ -24,7 +24,7 @@
     "preview": "vite preview",
     "preview:pages": "GITHUB_REPOSITORY=ignf/gpu-entree-carto vite preview",
     "serve:pages": "npm run build:demo:pages && npm run preview:pages",
-    "test": "vitest run",
+    "test": "vitest run && vitest run eslint/groupVueFiles.spec.mjs",
     "test:watch": "vitest",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint src --max-warnings 0",
@@ -63,7 +63,6 @@
     "@types/dompurify": "^3.2.0",
     "@types/node": "^26.6.4",
     "@vitejs/plugin-vue": "^6.0.9",
-    "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.4.6",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
@@ -74,8 +73,14 @@
     "prettier": "^3.9.9",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.71.0",
+    "vue-eslint-parser": "^10.4.0",
     "vite": "^6.0.7",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.3.11"
+  },
+  "allowScripts": {
+    "@gouvfr/dsfr@1.15.3": true,
+    "@gouvfr/dsfr@1.14.4": true,
+    "esbuild@0.25.12": true
   }
 }

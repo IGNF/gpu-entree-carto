@@ -4,7 +4,7 @@
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import { catalogDomIdFromNodeId } from '@/lib/layerConfig/catalogTreeSearch'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { catalogSwitcherDisplayNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import { catalogAncestorIdsToExpand, flattenCatalogNodes } from '@/lib/layerConfig/catalogTreeIndex'
 import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
@@ -82,7 +82,7 @@ watch(
   () => props.focusCatalogNodeId,
   (nodeId) => {
     if (!nodeId || (props.depth ?? 0) > 0) return
-    nextTick(() => {
+    void nextTick(() => {
       document.getElementById(`ec-cat-row-${catalogDomIdFromNodeId(nodeId)}`)?.scrollIntoView({
         block: 'nearest',
         behavior: 'smooth',

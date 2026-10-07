@@ -31,9 +31,8 @@ npm ls --depth=0
 
 | Package | Version (sample) | Role |
 | ------- | ---------------- | ---- |
-| `@eslint/js`, `eslint`, `eslint-plugin-vue`, `typescript-eslint`, `eslint-config-prettier` | see `npm ls` | Lint |
+| `@eslint/js`, `eslint`, `eslint-plugin-vue`, `typescript-eslint`, `vue-eslint-parser`, `eslint-config-prettier` | see `npm ls` | Lint (flat config in `eslint.config.js`) |
 | `@vitejs/plugin-vue` | 6.0.x | Vue build (Vite) |
-| `@vue/eslint-config-typescript` | 14.x | ESLint rules for Vue + TypeScript |
 | `@vue/test-utils` | 2.5.x | Component tests |
 | `@types/dompurify`, `@types/node` | — | TypeScript types |
 | `globals` | 17.x | ESLint flat config |

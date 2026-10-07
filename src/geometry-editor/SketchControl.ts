@@ -279,7 +279,7 @@ export class SketchControl extends Control {
   }
 
   getFeatures(): OlFeature<OlGeometry>[] {
-    return this.source.getFeatures() as OlFeature<OlGeometry>[]
+    return this.source.getFeatures()
   }
 
   setFeatures(features: OlFeature<OlGeometry>[]): void {
@@ -561,7 +561,7 @@ export class SketchControl extends Control {
       return
     }
     if (id === 'export') {
-      this.runExport()
+      void this.runExport()
       return
     }
 

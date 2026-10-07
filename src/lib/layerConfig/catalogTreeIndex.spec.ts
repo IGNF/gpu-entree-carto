@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
   catalogAncestorIdsToExpand,
   catalogSubtreeFullyChecked,
@@ -144,7 +144,7 @@ describe('catalogAncestorIdsToExpand', () => {
       },
     ]
     const checked = { sup: false, 'sup-a': false, 'sup-b': false }
-    expect(catalogSubtreePartiallyChecked(roots[0]!, checked)).toBe(false)
+    expect(catalogSubtreePartiallyChecked(roots[0], checked)).toBe(false)
     expect(catalogAncestorIdsToExpand(roots, checked).size).toBe(0)
   })
 })

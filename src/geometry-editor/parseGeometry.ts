@@ -113,7 +113,7 @@ export function parseRawToFeatures(
         features = geoJsonFormat.readFeatures(data, {
           dataProjection: 'EPSG:4326',
           featureProjection: mapProjection,
-        }) as OlFeature<OlGeometry>[]
+        })
       } else {
         features = geoJsonFormat.readFeatures(
           { type: 'Feature', geometry: data, properties: {} },
@@ -121,7 +121,7 @@ export function parseRawToFeatures(
             dataProjection: 'EPSG:4326',
             featureProjection: mapProjection,
           },
-        ) as OlFeature<OlGeometry>[]
+        )
       }
     } catch {
       console.error('[entree-carto-geometry-editor] parse failed')

@@ -6,6 +6,7 @@ import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
 import { watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
+import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import { escapeHtml, FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
 import {
@@ -220,13 +221,10 @@ async function tryGpuSiteFiche(
       return ficheSelectionFromGpuApi(data, params.mode, params.lon, params.lat)
     }
     const record = data as Record<string, unknown>
-    const title = String(record.title ?? record.name ?? 'Informations')
-    const bodyHtml = String(
-      record.bodyHtml ??
-        record.html ??
-        record.content ??
-        record.body ??
-        '<p>Informations disponibles.</p>',
+    const title = coerceDisplayString(record.title ?? record.name, 'Informations')
+    const bodyHtml = coerceDisplayString(
+      record.bodyHtml ?? record.html ?? record.content ?? record.body,
+      '<p>Informations disponibles.</p>',
     )
     const raw =
       record.raw && typeof record.raw === 'object'
@@ -249,7 +247,7 @@ function parcelFromApicarto(
     title: label,
     mapMode: MAP_MODE_PARCEL,
     parcelLabel: label,
-    territoryTitle: String(props.nom_com ?? ''),
+    territoryTitle: coerceDisplayString(props.nom_com),
     cadastreReferences: cadastreReferencesFromParcel(parcel),
     parcelInfosHtml: '<p>Documents d’urbanisme indisponibles (parcelle APICarto seule).</p>',
     parcelDocumentsHtml: '<p>Aucun document disponible (API fiche non configurée).</p>',
@@ -267,7 +265,7 @@ async function ficheParcelFromApicarto(lon: number, lat: number): Promise<FicheI
       raw: { lon, lat, mode: MAP_MODE_PARCEL },
     }
   }
-  return parcelFromApicarto(lon, lat, feature.properties as Record<string, unknown>)
+  return parcelFromApicarto(lon, lat, feature.properties)
 }
 
 async function loadFicheForMapPointImpl(params: {

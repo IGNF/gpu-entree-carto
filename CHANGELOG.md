@@ -24,8 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `useMinimified` support across demo routes (home, map, geometry-editor, sketch) loading `dist/` bundles.
 - Bilingual documentation: English `*.md` and French `*.fr.md` at repository root and under `doc/`.
 
+### Fixed
+
+- **Map permalink** — validate hash parameter names before assignment (`js/remote-property-injection` / CodeQL).
+
 ### Changed
 
+- **ESLint** — replace `@vue/eslint-config-typescript` with an explicit flat config (`typescript-eslint` + `vue-eslint-parser`); removes the dev-only `fast-glob` / `braces` audit chain.
+- **ESLint** — enable `recommendedTypeChecked` with `projectService`, Vue SFC split via `eslint/groupVueFiles.mjs` (no `fast-glob`).
 - **Fiche Territoire tag** — recentre on red mode emprise even without `territoryTitle` (e.g. gpu-client-config unavailable); `focusModeEmpriseOnMap` falls back to visible emprise extent.
 - **Main map sketch** — default `toolsToggle: bottom-left`; geopf slot uses `column-reverse` so the menu button stays fixed when the toolbar opens (desktop).
 - **Mobile map chrome** — search autocomplete / advanced panel above parcel–territory controls (stacking + `attachStandalonePopoverSync`); territories panel between mode selector and zoom stack (`tiles: 4`); minimap preview `position: fixed`; sketch toolbar scroll and height clamp; **panel four tabs right-aligned** in the bottom bar (geopf tools on the left).

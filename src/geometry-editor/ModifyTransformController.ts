@@ -671,11 +671,11 @@ export class ModifyTransformController {
         this.dragging = {
           role,
           feature: this.hovered,
-          startCoord: coord.slice() as Coordinate,
+          startCoord: coord.slice(),
           startGeom: geom.clone(),
           origin: featureCentroid(geom),
           startAngle: 0,
-          startExtent: geom.getExtent().slice() as Extent,
+          startExtent: geom.getExtent().slice(),
           startTextRotation: 0,
         }
         if (el) el.style.cursor = cursorForResizeRole(role)
@@ -694,11 +694,11 @@ export class ModifyTransformController {
       this.dragging = {
         role: 'rotate',
         feature,
-        startCoord: coord.slice() as Coordinate,
+        startCoord: coord.slice(),
         startGeom: geom.clone(),
         origin: featureCentroid(geom),
         startAngle: angleBetween(featureCentroid(geom), coord),
-        startExtent: geom.getExtent().slice() as Extent,
+        startExtent: geom.getExtent().slice(),
         startTextRotation: isSketchTextFeature(feature) ? getSketchTextAttrs(feature).rotation : 0,
       }
       if (el) el.style.cursor = SKETCH_MODIFY_ROTATE_GRABBING_CURSOR
@@ -713,11 +713,11 @@ export class ModifyTransformController {
           this.dragging = {
             role: 'resize-radius',
             feature,
-            startCoord: coord.slice() as Coordinate,
+            startCoord: coord.slice(),
             startGeom: geom.clone(),
-            origin: geom.getCenter().slice() as Coordinate,
+            origin: geom.getCenter().slice(),
             startAngle: 0,
-            startExtent: geom.getExtent().slice() as Extent,
+            startExtent: geom.getExtent().slice(),
             startTextRotation: 0,
           }
           if (el) el.style.cursor = cursorForResizeRole('resize-radius')
@@ -735,9 +735,9 @@ export class ModifyTransformController {
 
     let origin: Coordinate
     if (geom instanceof Point) {
-      origin = geom.getCoordinates().slice() as Coordinate
+      origin = geom.getCoordinates().slice()
     } else if (geom instanceof Circle) {
-      origin = geom.getCenter().slice() as Coordinate
+      origin = geom.getCenter().slice()
     } else {
       origin = featureCentroid(geom)
     }
@@ -745,11 +745,11 @@ export class ModifyTransformController {
     this.dragging = {
       role: 'translate',
       feature,
-      startCoord: coord.slice() as Coordinate,
+      startCoord: coord.slice(),
       startGeom: geom.clone(),
       origin,
       startAngle: 0,
-      startExtent: geom.getExtent().slice() as Extent,
+      startExtent: geom.getExtent().slice(),
       startTextRotation: isSketchTextFeature(feature) ? getSketchTextAttrs(feature).rotation : 0,
     }
     if (el) el.style.cursor = SKETCH_MODIFY_TRANSLATE_CURSOR
@@ -780,7 +780,7 @@ export class ModifyTransformController {
     }
 
     if (role === 'resize-radius' && startGeom instanceof Circle) {
-      const next = startGeom.clone() as Circle
+      const next = startGeom.clone()
       next.setRadius(Math.max(distToCenter(origin, coord), 1e-3))
       feature.setGeometry(next)
       return

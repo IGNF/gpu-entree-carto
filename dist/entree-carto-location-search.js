@@ -8363,7 +8363,7 @@ Expected function or array of functions, received type ${typeof value}.`
           text += ` - ${autocompleteResult.kind}`;
         }
       } else if ((_a = autocompleteResult.poiType) == null ? void 0 : _a.length) {
-        text += ` - ${autocompleteResult.poiType.slice(-1)}`;
+        text += ` - ${autocompleteResult.poiType.at(-1) ?? ""}`;
       }
       return text;
     }

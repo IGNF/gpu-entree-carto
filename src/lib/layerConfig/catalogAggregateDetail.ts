@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
   isCatalogAggregate,
   propagateCheckedToDescendants,

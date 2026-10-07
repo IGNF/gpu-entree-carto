@@ -89,14 +89,14 @@ export function mountSearchEngine(
   const finish = (location: LocationPayload | null) => {
     if (!location || redirected) return
     redirected = true
-    options.onSelect?.(location as AutocompleteLocation)
+    options.onSelect?.(location)
     if (mode === 'redirect') {
       redirectToMapWithLocation(location, { mapUrl, method })
     }
   }
 
   const onSelect = (event: Record<string, unknown>) => {
-    finish(locationFromGeopfSelect(event as Parameters<typeof locationFromGeopfSelect>[0]))
+    finish(locationFromGeopfSelect(event))
   }
 
   const onSearch = (event: Record<string, unknown>) => {

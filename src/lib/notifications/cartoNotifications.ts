@@ -31,7 +31,7 @@ const LIFE_MESSAGES = [
 ] as const
 
 function pickRandom<T>(items: readonly T[]): T {
-  return items[Math.floor(Math.random() * items.length)]!
+  return items[Math.floor(Math.random() * items.length)]
 }
 
 /** Démo temporaire — notification aléatoire « philosophie carto / vie ». */

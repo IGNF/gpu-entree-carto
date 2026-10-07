@@ -33,7 +33,7 @@ function readGeoJsonFeatures(data: object): Feature<Geometry>[] {
   return geoJson.readFeatures(data, {
     dataProjection: DATA_PROJECTION,
     featureProjection: MAP_PROJECTION,
-  }) as Feature<Geometry>[]
+  })
 }
 
 async function loadRegions(): Promise<Feature<Geometry>[]> {

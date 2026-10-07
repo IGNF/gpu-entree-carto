@@ -31,7 +31,7 @@ describe('dedupeLegendItems', () => {
       { id: 'l2', title: 'MISE EN COMPATIBILITE', legend: [...legend] },
     ])
     expect(layers).toHaveLength(1)
-    expect(layers[0]!.id).toBe('l1')
+    expect(layers[0].id).toBe('l1')
   })
 })
 
@@ -143,8 +143,8 @@ describe('buildLegendItemsForGpuLayer filter + LEGEND_CONFIG', () => {
     }
     const items = buildLegendItemsForGpuLayer(layer, optsMulti)
     expect(items).toHaveLength(1)
-    expect(items[0]!.title).toBe('Diversité commerciale à protéger ou à développer')
-    expect(items[0]!.legendImageNames).toEqual([
+    expect(items[0].title).toBe('Diversité commerciale à protéger ou à développer')
+    expect(items[0].legendImageNames).toEqual([
       'prescription_pct/01',
       'prescription_lin/01',
       'prescription_surf/01',

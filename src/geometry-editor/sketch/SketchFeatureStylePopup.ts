@@ -624,23 +624,17 @@ export class SketchFeatureStylePopup {
   /** Désactive les champs devenus non pertinents. */
   private syncDependentFields(): void {
     const dash = Number(this.els.lineDash.value) || 0
-    const dashOffsetField = this.els.lineDashOffset.closest(
-      '.ec-sketch-style-popup__field',
-    ) as HTMLElement | null
+    const dashOffsetField = this.els.lineDashOffset.closest('.ec-sketch-style-popup__field')
     this.els.lineDashOffset.disabled = dash <= 0
     dashOffsetField?.classList.toggle('is-disabled', dash <= 0)
 
     const join = this.els.lineJoin.value
-    const miterField = this.els.miterLimit.closest(
-      '.ec-sketch-style-popup__field',
-    ) as HTMLElement | null
+    const miterField = this.els.miterLimit.closest('.ec-sketch-style-popup__field')
     this.els.miterLimit.disabled = join !== 'miter'
     miterField?.classList.toggle('is-disabled', join !== 'miter')
 
     const shape = this.els.pointShape.value
-    const rotField = this.els.pointRotation.closest(
-      '.ec-sketch-style-popup__field',
-    ) as HTMLElement | null
+    const rotField = this.els.pointRotation.closest('.ec-sketch-style-popup__field')
     this.els.pointRotation.disabled = shape === 'circle'
     rotField?.classList.toggle('is-disabled', shape === 'circle')
   }

@@ -8,6 +8,7 @@ import type { SketchExtraTool } from '@/geometry-editor/SketchControl'
 import type { GeometryTypeOption, ToolsToggleCorner } from '@/geometry-editor/types'
 import { GEOMETRY_TYPE_NAMES } from '@/geometry-editor/types'
 import { appendGeometryToolIcon } from '@/geometry-editor/geometryToolIcons'
+import { formDataString } from '@/lib/coerceDisplayString'
 
 const TOOLS_TOGGLE_VALUES: Array<ToolsToggleCorner | ''> = [
   '',
@@ -315,12 +316,12 @@ export class SketchSettingsPanel {
       if (fd.get(`extraTool_${id}`) === 'on') extraTools.push(id)
     }
 
-    const lsRaw = String(fd.get('localStorageKey') ?? '').trim()
+    const lsRaw = formDataString(fd, 'localStorageKey').trim()
 
     const patch: Partial<MountSketchOptions> = {
-      geometryType: String(fd.get('geometryType')) as GeometryTypeOption,
+      geometryType: formDataString(fd, 'geometryType'),
       height: num('height'),
-      width: String(fd.get('width') ?? '100%'),
+      width: formDataString(fd, 'width', '100%'),
       lon: roundTo(num('lon'), LON_LAT_DECIMALS),
       lat: roundTo(num('lat'), LON_LAT_DECIMALS),
       zoom: roundTo(num('zoom'), ZOOM_DECIMALS),
@@ -335,7 +336,7 @@ export class SketchSettingsPanel {
       localStorageKey: lsRaw === '' ? null : lsRaw,
       extraTools,
       toolsToggle: (() => {
-        const v = String(fd.get('toolsToggle') ?? '')
+        const v = formDataString(fd, 'toolsToggle')
         return v === '' ? null : (v as ToolsToggleCorner)
       })(),
     }

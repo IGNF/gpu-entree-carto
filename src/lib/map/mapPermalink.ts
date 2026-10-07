@@ -18,6 +18,26 @@ export const MAP_PERMALINK_COORD_DECIMALS = 8
 
 const MAP_PERMALINK_COORD_KEYS = new Set(['lon', 'lat', 'mlon', 'mlat'])
 
+const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** Clés autorisées dans le hash (réservées + identifiants couche gpu-client). */
+const MAP_PERMALINK_KEY_PATTERN = /^[\w%.,:@-]+$/
+
+export function isSafeMapPermalinkKey(key: string): boolean {
+  if (!key || key.length > 512 || UNSAFE_OBJECT_KEYS.has(key)) return false
+  if (MAP_PERMALINK_RESERVED_KEYS.has(key)) return true
+  return MAP_PERMALINK_KEY_PATTERN.test(key)
+}
+
+function createEmptyPermalinkParams(): MapPermalinkParams {
+  return Object.create(null) as MapPermalinkParams
+}
+
+function assignPermalinkParam(target: MapPermalinkParams, key: string, value: string): void {
+  if (!isSafeMapPermalinkKey(key)) return
+  target[key] = value
+}
+
 export function formatMapPermalinkCoord(value: number): string {
   return value.toFixed(MAP_PERMALINK_COORD_DECIMALS)
 }
@@ -41,7 +61,7 @@ function normalizeCoordParamsInPlace(params: MapPermalinkParams): void {
 
 const HASH_DEBOUNCE_MS = 300
 
-let cachedParams: MapPermalinkParams = {}
+let cachedParams: MapPermalinkParams = createEmptyPermalinkParams()
 let hashDebounce: ReturnType<typeof setTimeout> | null = null
 
 export function pathToPermalinkId(path: string): string {
@@ -61,14 +81,14 @@ export function decodeMapPermalinkComponent(part: string): string {
 export function parseMapPermalinkHash(hash: string): MapPermalinkParams {
   const raw = hash.replace(/^#/, '').trim()
   if (!raw) return {}
-  const out: MapPermalinkParams = {}
+  const out = createEmptyPermalinkParams()
   for (const part of raw.split('&')) {
     if (!part) continue
     const eq = part.indexOf('=')
     if (eq <= 0) continue
     const key = decodeMapPermalinkComponent(part.slice(0, eq))
     const value = decodeMapPermalinkComponent(part.slice(eq + 1))
-    out[key] = value
+    assignPermalinkParam(out, key, value)
   }
   return out
 }
@@ -167,6 +187,7 @@ export function updateMapPermalinkParam(
   key: string,
   value: string | number | null | undefined,
 ): void {
+  if (!isSafeMapPermalinkKey(key)) return
   if (value === null || value === undefined || value === '') {
     delete cachedParams[key]
   } else {
@@ -177,6 +198,7 @@ export function updateMapPermalinkParam(
 
 export function setMapPermalinkParams(partial: MapPermalinkParams): void {
   for (const [key, value] of Object.entries(partial)) {
+    if (!isSafeMapPermalinkKey(key)) continue
     if (value === '' || value == null) delete cachedParams[key]
     else cachedParams[key] = formatMapPermalinkParamValue(key, value)
   }
@@ -185,10 +207,16 @@ export function setMapPermalinkParams(partial: MapPermalinkParams): void {
 
 /** Remplace les clés « couche » (hors réservées) tout en conservant vue / cerise / tuile. */
 export function replaceLayerPermalinkParams(layerParams: MapPermalinkParams): void {
-  for (const key of Object.keys(cachedParams)) {
-    if (!MAP_PERMALINK_RESERVED_KEYS.has(key)) delete cachedParams[key]
+  const next = createEmptyPermalinkParams()
+  for (const key of MAP_PERMALINK_RESERVED_KEYS) {
+    const v = cachedParams[key]
+    if (v != null && v !== '') next[key] = v
   }
-  Object.assign(cachedParams, layerParams)
+  for (const [key, value] of Object.entries(layerParams)) {
+    if (!isSafeMapPermalinkKey(key) || value == null || value === '') continue
+    next[key] = formatMapPermalinkParamValue(key, value)
+  }
+  cachedParams = next
   scheduleMapPermalinkHashWrite()
 }
 

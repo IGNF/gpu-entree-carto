@@ -19,7 +19,7 @@ export class LocateControl {
         text += ` - ${autocompleteResult.kind}`
       }
     } else if (autocompleteResult.poiType?.length) {
-      text += ` - ${autocompleteResult.poiType.slice(-1)}`
+      text += ` - ${autocompleteResult.poiType.at(-1) ?? ''}`
     }
 
     return text

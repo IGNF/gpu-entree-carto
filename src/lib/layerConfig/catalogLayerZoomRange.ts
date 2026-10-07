@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import { isCatalogAggregate } from '@/lib/layerConfig/catalogCheckboxLogic'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'

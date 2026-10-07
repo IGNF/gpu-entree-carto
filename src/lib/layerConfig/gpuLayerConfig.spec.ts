@@ -59,8 +59,8 @@ describe('gpuLayerConfig paths', () => {
       },
     ]
 
-    const p1 = buildLayerPath(du[0]!, parentPath)
-    const p2 = buildLayerPath(du[1]!, parentPath)
+    const p1 = buildLayerPath(du[0], parentPath)
+    const p2 = buildLayerPath(du[1], parentPath)
     expect(p1).not.toBe(p2)
     expect(pathToCatalogId(p1)).not.toBe(pathToCatalogId(p2))
   })

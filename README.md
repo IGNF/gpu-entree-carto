@@ -28,7 +28,7 @@
 
 ### Requirements
 
-- **Node.js** 24 LTS (≥ 24.15) or ≥ 26 — see `.nvmrc` and `package.json` → `engines`
+- **Node.js** ≥ 24.15 — **recommended:** 24 LTS via `.nvmrc` (`nvm use` / `fnm use`); see `package.json` → `engines`
 - **npm** (bundled with Node)
 - **Git**
 

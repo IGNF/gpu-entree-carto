@@ -1,6 +1,6 @@
 import type OlMap from 'ol/Map'
 import { listInitiallyVisibleStackableIds } from '@/lib/layerConfig/catalogLayerTargets'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { flattenTreeLayerNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 

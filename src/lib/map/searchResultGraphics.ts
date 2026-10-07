@@ -71,7 +71,7 @@ function syncEmprisePointCache(lon: number, lat: number): void {
 }
 
 function cloneEmpriseFeature(feature: Feature): Feature {
-  const clone = feature.clone() as Feature
+  const clone = feature.clone()
   const kind = feature.get(MODE_EMPRISE_PROP) as ModeEmpriseKind | undefined
   if (kind) {
     clone.set(MODE_EMPRISE_PROP, kind)

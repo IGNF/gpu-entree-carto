@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 
 /** Opacité imposée par `forceOpacity` (gpu-client `Layer` → `opacity = 1.0`). */
 export const GPU_FORCE_OPACITY_PERCENT = 100

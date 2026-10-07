@@ -213,7 +213,7 @@ function getLegendReferenceRuleKey(
     const matching = Object.keys(bucket)
       .filter((k) => k.startsWith(prefix))
       .sort()
-    if (matching.length) return matching[0]!
+    if (matching.length) return matching[0]
   }
   return rule
 }
@@ -234,7 +234,7 @@ function getImageNameByGpuLayer(
   subRule: string | null,
   geometryType: string,
 ): string {
-  const base = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0]!)
+  const base = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0])
   let imageName = `${base}_${geometryType}/${rule}`
   if (subRule) imageName += `-${subRule}`
   return imageName
@@ -259,7 +259,7 @@ function getGeometryTypesForLegendWithFilter(
     const childLayerName = normalizeLayerNameForLegend(entry.name)
     if (childLayerName.split(`${layerName}_`).length <= 1) continue
     if (entry.allowedValues?.includes(rule)) {
-      geometryTypes.push(childLayerName.split(`${layerName}_`)[1]!)
+      geometryTypes.push(childLayerName.split(`${layerName}_`)[1])
     }
   }
   return geometryTypes
@@ -340,7 +340,7 @@ function pushLegendItemsFromNames(
     if (opts.imagePath) {
       item.imageUrl = legendImageUrl(
         opts.imagePath,
-        sorted[0]!,
+        sorted[0],
         scaleDependant,
         threshold,
         opts.zoomAtInit,
@@ -353,16 +353,16 @@ function pushLegendItemsFromNames(
 }
 
 function buildNoFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions): LegendItem[] {
-  const layerName = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0]!)
+  const layerName = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0])
   if (!hasLegendReferences(layerName, opts.legendReferences)) return []
 
   const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers)
   const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers)
   const items: LegendItem[] = []
-  const bucket = opts.legendReferences[layerName]!
+  const bucket = opts.legendReferences[layerName]
 
   for (const ruleName of Object.keys(bucket)) {
-    const ref = bucket[ruleName]!
+    const ref = bucket[ruleName]
     if (ref.hide) continue
     const names: string[] = []
     if (Array.isArray(ref.type)) {
@@ -374,7 +374,7 @@ function buildNoFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions
     }
     if (ref.combine) {
       for (const subRuleName of Object.keys(ref.combine)) {
-        for (const st of ref.combine[subRuleName]!.type) {
+        for (const st of ref.combine[subRuleName].type) {
           names.push(getImageNameByLegendReferences(layerName, subRuleName, st))
         }
       }
@@ -393,7 +393,7 @@ function buildNoFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions
 }
 
 function buildFilterLegends(layer: GpuLayerConfig, opts: GpuLegendBuildOptions): LegendItem[] {
-  const layerName = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0]!)
+  const layerName = normalizeLayerNameForLegend((layer.name ?? '').split(',')[0])
   if (!hasLegendReferences(layerName, opts.legendReferences)) return []
 
   const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers)
@@ -464,7 +464,7 @@ function buildLegendItemsForLeafGpuLayer(
 ): LegendItem[] {
   if (!layer.name) return []
 
-  const layerName = normalizeLayerNameForLegend(layer.name.split(',')[0]!)
+  const layerName = normalizeLayerNameForLegend(layer.name.split(',')[0])
   if (isPsmvLayerName(layerName)) return []
   if (!hasLegendReferences(layerName, opts.legendReferences)) return []
 

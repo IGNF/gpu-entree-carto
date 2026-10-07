@@ -35,7 +35,7 @@ Library IIFE builds: `vite.lib.config.ts`, `vite.search-engine.config.ts`, `vite
 
 ## Code style
 
-- **ESLint:** `npm run lint` — scope `src/` (`eslint.config.js`).
+- **ESLint:** `npm run lint` — scope `src/` (`eslint.config.js`, type-aware `recommendedTypeChecked` + `projectService`).
 - **Prettier:** `npm run format:check` / `npm run format` — scope `src/`.
 - **Auto-fix:** `make fix` (`lint:fix` + `format`).
 
