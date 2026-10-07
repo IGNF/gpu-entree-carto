@@ -20,7 +20,7 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**.
+`DemoHeader.vue` (DSFR, même schéma que gpu-site) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**. En dessous du breakpoint **`lg`**, la barre est masquée ; le bouton **Menu** (`fr-btn--menu`) ouvre la navigation dans la modale `fr-header__menu fr-modal`. Le JavaScript DSFR tourne en mode **Vue** (`window.dsfr` dans `index.html`, `startDsfrForVueApp()` après `app.mount` dans `main.ts`).
 
 ## Flux localisation
 

@@ -32,6 +32,7 @@
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "verify": "npm run lint && npm run format:check && npm run typecheck",
+    "doc:icon-previews": "node scripts/sync-doc-icon-previews.mjs",
     "codeql:install": "bash scripts/codeql-install.sh",
     "verify:codeql": "bash scripts/codeql-verify.sh",
     "fix": "npm run lint:fix && npm run format",

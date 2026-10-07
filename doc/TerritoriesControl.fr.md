@@ -37,8 +37,8 @@ Bas-gauche, **sous** la minimap.
 - Infobulle : appendice aligné sur le bord du bouton
 - Titres longs dans `.gpf-tile` : police réduite + clamp 3 lignes
 - Bouton fermer `#GPterritoriesPanelClose` : `position: absolute; right` dans le header
-- Dialog `#gpf-territories-views-container-id` : collé à droite du panneau Territories (`left: 100%`), bas alignés (`bottom: 0`)
-- Panneau Territories bas-gauche : `bottom: 0`, `max-height: 100cqb` (reste dans `.ec-map-shell`), liste de tuiles scrollable
+- **Bureau** : dialog `#gpf-territories-views-container-id` à droite du panneau (`left: 100%`), bas alignés ; panneau bas-gauche `max-height: 100cqb`
+- **Mobile** (`ec-map-shell--tab-panels-layout-bottom`) : picto France dans le slot (`--ec-map-control-*`) ; panneaux en **fixed** (`--ec-mobile-territories-panel-top` / `--ec-mobile-territories-panel-bottom`, marges `--ec-widget-gap`) ; boutons **dans** les panneaux = rendu geopf/DSFR comme au bureau (`map-controls.css`, neutralisation `ol.css` sur les `button` du dialog — hors style barre 48×48 du slot)
 - Widget en containing block (évite le `top: 0` geopf sur toute la hauteur de la carte)
 
 ## Dépendances

@@ -128,13 +128,13 @@ export class SketchControl extends Control {
   private toolsToggle: ToolsToggleCorner | null
   private readonly position: ToolsToggleCorner | null
   private style: StyleLike | null | undefined
-  private readonly zIndex: number
+  private zIndex: number
   private readonly onChangeCb: SketchControlOptions['onChange']
-  private readonly localStorageKey: string | null
-  private readonly clearAll: boolean
-  private readonly historyEnabled: boolean
-  private readonly extraTools: SketchExtraTool[]
-  private readonly enableFeatureStyleEditor: boolean
+  private localStorageKey: string | null
+  private clearAll: boolean
+  private historyEnabled: boolean
+  private extraTools: SketchExtraTool[]
+  private enableFeatureStyleEditor: boolean
   private readonly onSketchEngagementChange: ((engaged: boolean) => void) | null
 
   private source: VectorSource
@@ -343,6 +343,57 @@ export class SketchControl extends Control {
     if (corner) this.toolsMenuOpen = false
     this.applyToolsChrome()
     this.syncToolbarClusterVisibility()
+  }
+
+  /**
+   * Options barre d’outils modifiables à chaud (remonte la barre si nécessaire).
+   */
+  setRuntimeOptions(
+    patch: Partial<
+      Pick<
+        SketchControlOptions,
+        | 'clearAll'
+        | 'history'
+        | 'extraTools'
+        | 'enableFeatureStyleEditor'
+        | 'localStorageKey'
+        | 'zIndex'
+      >
+    >,
+  ): void {
+    let remountBar = false
+    if (patch.zIndex !== undefined && patch.zIndex !== this.zIndex) {
+      this.zIndex = patch.zIndex
+      this.layer?.setZIndex(this.zIndex)
+    }
+    if (patch.localStorageKey !== undefined && patch.localStorageKey !== this.localStorageKey) {
+      this.localStorageKey = patch.localStorageKey
+      remountBar = true
+    }
+    if (patch.clearAll !== undefined && patch.clearAll !== this.clearAll) {
+      this.clearAll = patch.clearAll
+      remountBar = true
+    }
+    if (patch.history !== undefined && patch.history !== this.historyEnabled) {
+      this.historyEnabled = patch.history
+      remountBar = true
+    }
+    if (patch.extraTools !== undefined) {
+      this.extraTools = [...patch.extraTools]
+      remountBar = true
+    }
+    if (
+      patch.enableFeatureStyleEditor !== undefined &&
+      patch.enableFeatureStyleEditor !== this.enableFeatureStyleEditor
+    ) {
+      this.enableFeatureStyleEditor = patch.enableFeatureStyleEditor
+      remountBar = true
+    }
+    if (remountBar) {
+      const map = this.getMap()
+      if (map) this.mountDrawBar(map)
+      else this.syncSaveButtonState()
+    }
   }
 
   private buildExtraTools(): DrawBarExtraTool[] {

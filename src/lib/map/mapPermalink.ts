@@ -150,7 +150,13 @@ export function locationHashLooksLikeMapPermalink(
 ): boolean {
   const raw = loc.hash.replace(/^#/, '').trim()
   if (!raw) return false
-  return /(?:^|&)lon=/.test(raw) || /(?:^|&)lat=/.test(raw) || /(?:^|&)tile=/.test(raw)
+  return (
+    /(?:^|&)lon=/.test(raw) ||
+    /(?:^|&)lat=/.test(raw) ||
+    /(?:^|&)tile=/.test(raw) ||
+    /(?:^|&)mlon=/.test(raw) ||
+    /(?:^|&)mlat=/.test(raw)
+  )
 }
 
 export function getMapPermalinkParams(): MapPermalinkParams {

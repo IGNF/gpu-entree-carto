@@ -12,6 +12,7 @@ import {
   loadLibBundle,
 } from '@/lib/demo/demoLibAssets'
 import 'ol/ol.css'
+import '@/geometry-editor/styles/geometry-editor.css'
 
 /** Index ouvert dans DsfrAccordionsGroup (-1 = fermé). */
 const docsAccordionOpen = ref(-1)
@@ -87,6 +88,12 @@ const optionDocs: OptionDoc[] = [
     description: 'Contrôle +/- OpenLayers',
   },
   {
+    name: 'showSettings',
+    def: 'false',
+    description:
+      'Bouton réglages (haut droite) : formulaire pour modifier les options à chaud (comme GeometryEditor)',
+  },
+  {
     name: 'onChange',
     def: '—',
     description: 'Callback après dessin / modification / suppression',
@@ -143,6 +150,7 @@ const sketchMountOptions = {
   localStorageKey: 'entree-carto-sketch-demo',
   geometryType: 'Geometry' as const,
   enableFeatureStyleEditor: true,
+  showSettings: true,
   onChange: () => {
     geoJsonOut.value =
       handle?.sketch.serialize({
@@ -182,9 +190,7 @@ onUnmounted(() => {
     <p class="fr-text--sm fr-mb-3w">
       Bundle standalone
       <code>entree-carto-sketch</code>
-      : croquis sur une carte OL (même moteur que la carte principale et GeometryEditor). Démo
-      ci-dessous via
-      <code>mountSketch</code>.
+      : croquis sur une carte Openlayers.
     </p>
 
     <DsfrAccordionsGroup v-model="docsAccordionOpen" class="fr-mb-5w">
@@ -238,7 +244,14 @@ onUnmounted(() => {
       </DsfrAccordion>
     </DsfrAccordionsGroup>
 
-    <div ref="mapHost" class="ec-sketch-demo__map" data-testid="sketch-demo-map" />
+    <section class="fr-mb-3w">
+      <h2 class="fr-h5">Réglages à la volée (<code>showSettings</code>)</h2>
+      <p class="fr-text--sm fr-mb-2w">
+        Bouton roue crantée en haut à droite de la carte : ajuste les options du croquis sans
+        recharger la page.
+      </p>
+      <div ref="mapHost" class="ec-sketch-demo__map" data-testid="sketch-demo-map" />
+    </section>
 
     <label class="fr-label fr-mt-3w" for="ec-sketch-geojson">
       GeoJSON du croquis (sérialisé)

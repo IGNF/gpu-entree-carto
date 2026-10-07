@@ -7,7 +7,8 @@
  * `initialSearch` : rejoue la sélection comme un clic autocomplete
  * (cerise, emprise trueGeometry, popup) — parcours accueil → carte.
  */
-import { watch } from 'vue'
+import { inject, onMounted, shallowRef, watch } from 'vue'
+import type { ShallowRef } from 'vue'
 import type Feature from 'ol/Feature'
 import type Map from 'ol/Map'
 import type Geometry from 'ol/geom/Geometry'
@@ -19,22 +20,31 @@ import type Control from 'ol/control/Control'
 import { Style, Icon, Stroke, Fill } from 'ol/style'
 import mapPinIcon from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/map-pin-2-fill.svg'
 import { useOlControl } from '@/composables/useOlControl'
+import { useMobileSearchPopoverSync } from '@/composables/useMobileSearchPopoverSync'
 import { createSearchEngineAdvanced } from '@/lib/search/createSearchEngineAdvanced'
-import { tabPanelsApiRef } from '@/composables/tabPanels'
-import { tryUseMapMode } from '@/composables/mapMode'
+import { useMapMode } from '@/composables/mapMode'
 import type { StandardViewerSearch } from '@/lib/types'
 import { loadFicheForSearch } from '@/lib/fiche/ficheInfoService'
 import { animateViewFit } from '@/lib/map/animateViewFit'
+import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
 import { setMapLocationMarker, type MapLocationMarkerFn } from '@/composables/mapLocationMarker'
 import {
   dismissSearchEnginePopup,
-  empriseTargetKeyForPoint,
+  empriseTargetKeyForModeFocus,
   ensureModeEmpriseOnSearchLayer,
   MODE_EMPRISE_PROP,
   searchEngineLayerHostRef,
 } from '@/lib/map/searchResultGraphics'
 import { DEFAULT_MAP_MODE, normalizeMapMode, type MapModeId } from '@/lib/map/mapMode'
 import { setMapPermalinkMarker } from '@/lib/map/mapPermalink'
+import {
+  bindPlaceSearchSubmitReplay,
+  extentFromStored,
+  rememberLastPlaceSearch,
+  scheduleCaptureSearchViewSnapshot,
+  storedPlaceViewExtent,
+  type LastPlaceSearch,
+} from '@/lib/search/placeSearchSubmitReplay'
 
 /** Bleu France — cerise localisation (gpu-client / cartes.gouv.fr). */
 const GPU_PIN_BLUE = '#000091'
@@ -95,10 +105,16 @@ type SearchEngineAdvancedLike = Control & {
   baseSearchEngine: {
     input: HTMLInputElement
     search: (item: { location?: unknown; text?: string }) => void
+    container: HTMLFormElement
+    autocompleteList: HTMLUListElement
+    acContainer: HTMLElement
   }
 }
 
 let appliedKey: string | null = null
+
+/** inject() ne fonctionne pas dans les callbacks rAF / geopf — capturer le contexte au setup. */
+const mapMode = useMapMode()
 
 function searchKey(search: StandardViewerSearch | null | undefined): string | null {
   if (!search?.fullText) return null
@@ -110,7 +126,7 @@ function searchKey(search: StandardViewerSearch | null | undefined): string | nu
 function openFicheFromSearch(search: StandardViewerSearch): void {
   const map = controlRef.value?.getMap?.() ?? null
   const zoom = map?.getView().getZoom() ?? 6
-  const mode = tryUseMapMode()?.mode.value ?? 2
+  const mode = normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE
   void loadFicheForSearch(search, mode, zoom)
 }
 
@@ -169,13 +185,6 @@ function searchFromGeopfResult(
     kind: typeof feature?.get('kind') === 'string' ? (feature.get('kind') as string) : undefined,
     ...(Number.isFinite(x) && Number.isFinite(y) ? { position: { x: x!, y: y! } } : {}),
   }
-}
-
-/** Largeur du bandeau TabPanels ouvert (onglets + panneau). */
-function tabPanelsRightInset(): number {
-  const el = document.querySelector('.ec-tab-panels.is-open')
-  if (!(el instanceof HTMLElement)) return 40
-  return Math.ceil(el.getBoundingClientRect().width) + 24
 }
 
 /** Pin geopf (bleu #000091 + halo blanc). */
@@ -255,6 +264,7 @@ function searchResultViewExtent(control: SearchEngineAdvancedLike): Extent | nul
 
   const combined = createEmpty()
   for (const f of features) {
+    if (f.get(MODE_EMPRISE_PROP)) continue
     const geometry = f.getGeometry()
     if (geometry) extend(combined, geometry.getExtent())
   }
@@ -281,49 +291,70 @@ function prepareSearchResultOnMap(control: SearchEngineAdvancedLike): Feature | 
   return feature
 }
 
-/** Vol animé vers l’emprise du résultat (padding si panneau fiche ouvert). */
-function animateViewToSearchResult(control: SearchEngineAdvancedLike): void {
+/** Vol animé vers l’emprise lieu (geopf / cerise), jamais l’emprise mode rouge. */
+function animateViewToPlaceExtent(control: SearchEngineAdvancedLike, extent: Extent | null): void {
   const map = control.getMap()
-  if (!map) return
-  const extent = searchResultViewExtent(control)
-  if (!extent) return
-
-  const rightPad = tabPanelsApiRef.value?.isOpen.value ? tabPanelsRightInset() : 72
+  if (!map || !extent || isEmpty(extent)) return
   animateViewFit(map, extent, {
-    padding: [72, rightPad, 72, 72],
+    padding: defaultMapViewFitPadding(),
     maxZoom: 15,
   })
 }
 
 function resolveMapModeForEmprise(): MapModeId {
-  const raw = tryUseMapMode()?.mode.value ?? DEFAULT_MAP_MODE
-  return normalizeMapMode(raw) ?? DEFAULT_MAP_MODE
+  return normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE
 }
 
 function syncModeEmpriseAfterSearch(
   control: SearchEngineAdvancedLike,
   lon: number,
   lat: number,
-  empriseKey: string,
 ): void {
-  const mode = resolveMapModeForEmprise()
-  void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode, empriseKey)
-  const map = control.getMap()
-  map?.once('moveend', () => {
-    void ensureModeEmpriseOnSearchLayer(control, lon, lat, mode, empriseKey)
-  })
+  const empriseKey = empriseTargetKeyForModeFocus(lon, lat)
+  void ensureModeEmpriseOnSearchLayer(control, lon, lat, resolveMapModeForEmprise(), empriseKey)
 }
 
 function onLocationSearchResult(
   control: SearchEngineAdvancedLike,
-  empriseKey: string,
   lon: number,
   lat: number,
-): void {
+  options?: { placeViewExtent?: Extent | null },
+): Extent | null {
   setMapPermalinkMarker(lon, lat)
   prepareSearchResultOnMap(control)
-  animateViewToSearchResult(control)
-  syncModeEmpriseAfterSearch(control, lon, lat, empriseKey)
+  const placeExtent = options?.placeViewExtent ?? searchResultViewExtent(control)
+  animateViewToPlaceExtent(control, placeExtent)
+  requestAnimationFrame(() => {
+    syncModeEmpriseAfterSearch(control, lon, lat)
+  })
+  scheduleCaptureSearchViewSnapshot(control.getMap())
+  return placeExtent
+}
+
+function commitLastPlaceSearch(
+  control: SearchEngineAdvancedLike,
+  search: StandardViewerSearch,
+  lon: number,
+  lat: number,
+  placeViewExtent: Extent | null,
+): void {
+  const label = control.baseSearchEngine.input.value.trim()
+  if (!label) return
+  rememberLastPlaceSearch({
+    label,
+    lon,
+    lat,
+    search,
+    placeViewExtent: storedPlaceViewExtent(placeViewExtent),
+  })
+}
+
+function replayLastPlaceSearch(control: SearchEngineAdvancedLike, last: LastPlaceSearch): void {
+  const storedExtent = last.placeViewExtent ? extentFromStored(last.placeViewExtent) : null
+  onLocationSearchResult(control, last.lon, last.lat, {
+    placeViewExtent: storedExtent,
+  })
+  openFicheFromSearch(last.search)
 }
 
 /**
@@ -378,6 +409,13 @@ function applyInitialSearch(control: SearchEngineAdvancedLike, search: StandardV
   })
 }
 
+const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
+const { startMobileSearchPopoverSync } = useMobileSearchPopoverSync(mapRef)
+
+onMounted(() => {
+  startMobileSearchPopoverSync()
+})
+
 const controlRef = useOlControl(() =>
   createSearchEngineAdvanced({
     placeholder: props.placeholder,
@@ -409,10 +447,16 @@ watch(
     const advanced = control as SearchEngineAdvancedLike
     configureSearchPinInteraction(advanced)
     const unbindPinSelectGuard = bindSearchPinSelectGuard(advanced)
+    const unbindSubmitReplay = bindPlaceSearchSubmitReplay(
+      advanced,
+      (last) => replayLastPlaceSearch(advanced, last),
+      () => advanced.getMap(),
+    )
     searchEngineLayerHostRef.value = advanced
     setMapLocationMarker(bindMapLocationMarker(advanced))
     onCleanup(() => {
       unbindPinSelectGuard()
+      unbindSubmitReplay()
       setMapLocationMarker(null)
       searchEngineLayerHostRef.value = null
     })
@@ -429,11 +473,12 @@ watch(
         const lon = Number(search?.position?.x)
         const lat = Number(search?.position?.y)
         if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          const empriseKey = empriseTargetKeyForPoint(lon, lat)
-          onLocationSearchResult(advanced, empriseKey, lon, lat)
+          const placeExtent = onLocationSearchResult(advanced, lon, lat)
+          if (search) commitLastPlaceSearch(advanced, search, lon, lat, placeExtent)
         } else {
           prepareSearchResultOnMap(advanced)
-          animateViewToSearchResult(advanced)
+          const placeExtent = searchResultViewExtent(advanced)
+          animateViewToPlaceExtent(advanced, placeExtent)
           const feature = searchResultFeature(advanced)
           const geometry = feature?.getGeometry()
           if (geometry) {
@@ -445,8 +490,10 @@ watch(
             }
             if (coord) {
               const [fallbackLon, fallbackLat] = toLonLat(coord)
-              const empriseKey = empriseTargetKeyForPoint(fallbackLon, fallbackLat)
-              syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat, empriseKey)
+              syncModeEmpriseAfterSearch(advanced, fallbackLon, fallbackLat)
+              scheduleCaptureSearchViewSnapshot(advanced.getMap())
+              if (search)
+                commitLastPlaceSearch(advanced, search, fallbackLon, fallbackLat, placeExtent)
             }
           }
         }

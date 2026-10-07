@@ -39164,6 +39164,42 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.applyToolsChrome();
       this.syncToolbarClusterVisibility();
     }
+    /**
+     * Options barre d’outils modifiables à chaud (remonte la barre si nécessaire).
+     */
+    setRuntimeOptions(patch) {
+      var _a;
+      let remountBar = false;
+      if (patch.zIndex !== void 0 && patch.zIndex !== this.zIndex) {
+        this.zIndex = patch.zIndex;
+        (_a = this.layer) == null ? void 0 : _a.setZIndex(this.zIndex);
+      }
+      if (patch.localStorageKey !== void 0 && patch.localStorageKey !== this.localStorageKey) {
+        this.localStorageKey = patch.localStorageKey;
+        remountBar = true;
+      }
+      if (patch.clearAll !== void 0 && patch.clearAll !== this.clearAll) {
+        this.clearAll = patch.clearAll;
+        remountBar = true;
+      }
+      if (patch.history !== void 0 && patch.history !== this.historyEnabled) {
+        this.historyEnabled = patch.history;
+        remountBar = true;
+      }
+      if (patch.extraTools !== void 0) {
+        this.extraTools = [...patch.extraTools];
+        remountBar = true;
+      }
+      if (patch.enableFeatureStyleEditor !== void 0 && patch.enableFeatureStyleEditor !== this.enableFeatureStyleEditor) {
+        this.enableFeatureStyleEditor = patch.enableFeatureStyleEditor;
+        remountBar = true;
+      }
+      if (remountBar) {
+        const map = this.getMap();
+        if (map) this.mountDrawBar(map);
+        else this.syncSaveButtonState();
+      }
+    }
     buildExtraTools() {
       const list = [];
       if (this.historyEnabled) {
@@ -47442,6 +47478,355 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.gutter_;
     }
   }
+  const TOOLS_TOGGLE_VALUES = [
+    "",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right"
+  ];
+  const EXTRA_TOOL_IDS = [
+    "Text",
+    "Import",
+    "Export",
+    "MeasureDistance",
+    "MeasureArea"
+  ];
+  const LON_LAT_DECIMALS = 7;
+  const ZOOM_DECIMALS = 1;
+  const LON_LAT_STEP = 10 ** -LON_LAT_DECIMALS;
+  const ZOOM_STEP = 10 ** -ZOOM_DECIMALS;
+  function roundTo(value, decimals) {
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+  }
+  class SketchSettingsPanel {
+    constructor(host, mapHost) {
+      __publicField(this, "host");
+      __publicField(this, "mapHost");
+      __publicField(this, "root");
+      __publicField(this, "button");
+      __publicField(this, "dialog", null);
+      __publicField(this, "form", null);
+      __publicField(this, "open", false);
+      __publicField(this, "onDocPointerDown", (evt) => {
+        if (!this.open || !this.dialog) return;
+        const t = evt.target;
+        if (this.root.contains(t) || this.dialog.contains(t)) return;
+        this.close();
+      });
+      __publicField(this, "onViewChange", () => {
+        this.syncViewFieldsFromMap();
+      });
+      this.host = host;
+      this.mapHost = mapHost;
+      this.root = document.createElement("div");
+      this.root.className = "ec-sketch-settings";
+      this.button = document.createElement("button");
+      this.button.type = "button";
+      this.button.className = "ec-geometry-editor__tool ec-geometry-editor__tool--settings ec-sketch-settings__toggle";
+      this.button.setAttribute("aria-label", "Options du croquis");
+      this.button.setAttribute("aria-pressed", "false");
+      this.button.setAttribute("aria-expanded", "false");
+      this.button.setAttribute("aria-haspopup", "dialog");
+      this.button.addEventListener("click", () => this.toggle());
+      appendGeometryToolIcon(this.button, "ec-geometry-editor__tool--settings");
+      this.root.appendChild(this.button);
+      this.mapHost.appendChild(this.root);
+    }
+    toggle() {
+      if (this.open) this.close();
+      else this.openDialog();
+    }
+    openDialog() {
+      if (this.open) return;
+      this.open = true;
+      this.button.setAttribute("aria-expanded", "true");
+      this.button.setAttribute("aria-pressed", "true");
+      this.button.classList.add("is-active");
+      this.dialog = this.buildDialog();
+      this.mapHost.appendChild(this.dialog);
+      document.addEventListener("pointerdown", this.onDocPointerDown, true);
+      this.bindViewListeners(true);
+    }
+    close() {
+      var _a;
+      if (!this.open) return;
+      this.open = false;
+      this.button.setAttribute("aria-expanded", "false");
+      this.button.setAttribute("aria-pressed", "false");
+      this.button.classList.remove("is-active");
+      this.bindViewListeners(false);
+      (_a = this.dialog) == null ? void 0 : _a.remove();
+      this.dialog = null;
+      this.form = null;
+      document.removeEventListener("pointerdown", this.onDocPointerDown, true);
+    }
+    destroy() {
+      this.close();
+      this.root.remove();
+    }
+    bindViewListeners(active) {
+      const view = this.host.getMap().getView();
+      if (active) {
+        view.on("change:center", this.onViewChange);
+        view.on("change:resolution", this.onViewChange);
+      } else {
+        view.un("change:center", this.onViewChange);
+        view.un("change:resolution", this.onViewChange);
+      }
+    }
+    buildDialog() {
+      const opts = this.host.getOptions();
+      const viewState = this.readCurrentView(opts);
+      const dialog = document.createElement("div");
+      dialog.className = "ec-geometry-editor__settings-dialog ec-sketch-settings__dialog";
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-label", "Options du croquis");
+      const form = document.createElement("form");
+      form.className = "ec-geometry-editor__settings-form";
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        this.applyForm(form);
+      });
+      this.form = form;
+      const title = document.createElement("p");
+      title.className = "ec-geometry-editor__settings-title";
+      title.textContent = "Options croquis";
+      form.appendChild(title);
+      form.appendChild(this.geometryTypeField(String(opts.geometryType)));
+      form.appendChild(
+        this.selectField(
+          "toolsToggle",
+          "Menu outils (toolsToggle)",
+          TOOLS_TOGGLE_VALUES,
+          opts.toolsToggle ?? "",
+          {
+            "": "(toujours visibles)",
+            "top-left": "top-left",
+            "top-right": "top-right",
+            "bottom-left": "bottom-left",
+            "bottom-right": "bottom-right"
+          }
+        )
+      );
+      form.appendChild(this.numberField("height", "Hauteur (px)", Number(opts.height) || 480, 1));
+      form.appendChild(this.textField("width", "Largeur", String(opts.width)));
+      form.appendChild(this.numberField("lon", "Longitude courante", viewState.lon, LON_LAT_STEP));
+      form.appendChild(this.numberField("lat", "Latitude courante", viewState.lat, LON_LAT_STEP));
+      form.appendChild(this.numberField("zoom", "Zoom courant", viewState.zoom, ZOOM_STEP));
+      form.appendChild(this.numberField("minZoom", "Zoom min", opts.minZoom, 1));
+      form.appendChild(this.numberField("maxZoom", "Zoom max", opts.maxZoom, 1));
+      form.appendChild(this.numberField("zIndex", "zIndex couche", opts.zIndex, 1));
+      form.appendChild(this.checkField("showZoom", "Contrôle zoom", opts.showZoom));
+      form.appendChild(this.checkField("showSettings", "Bouton réglages", opts.showSettings));
+      form.appendChild(this.checkField("clearAll", "Tout supprimer", opts.clearAll));
+      form.appendChild(this.checkField("history", "Annuler / Rétablir", opts.history));
+      form.appendChild(
+        this.checkField(
+          "enableFeatureStyleEditor",
+          "Popup style à la création",
+          opts.enableFeatureStyleEditor
+        )
+      );
+      form.appendChild(
+        this.textField(
+          "localStorageKey",
+          "Clé localStorage (vide = off)",
+          opts.localStorageKey ?? ""
+        )
+      );
+      const extraLegend = document.createElement("fieldset");
+      extraLegend.className = "ec-geometry-editor__settings-field";
+      const extraTitle = document.createElement("span");
+      extraTitle.textContent = "extraTools";
+      extraLegend.appendChild(extraTitle);
+      for (const id of EXTRA_TOOL_IDS) {
+        extraLegend.appendChild(this.extraToolCheck(id, opts.extraTools.includes(id)));
+      }
+      form.appendChild(extraLegend);
+      const actions = document.createElement("div");
+      actions.className = "ec-geometry-editor__settings-actions";
+      const applyBtn = document.createElement("button");
+      applyBtn.type = "submit";
+      applyBtn.className = "fr-btn fr-btn--sm fr-btn--primary";
+      applyBtn.textContent = "Appliquer";
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.className = "fr-btn fr-btn--sm fr-btn--secondary";
+      resetBtn.textContent = "Réinitialiser";
+      resetBtn.title = "Remettre les options du chargement de la page";
+      resetBtn.addEventListener("click", () => this.resetToInitial());
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "fr-btn fr-btn--sm fr-btn--tertiary";
+      cancelBtn.textContent = "Fermer";
+      cancelBtn.addEventListener("click", () => this.close());
+      actions.append(applyBtn, resetBtn, cancelBtn);
+      form.appendChild(actions);
+      dialog.appendChild(form);
+      return dialog;
+    }
+    resetToInitial() {
+      var _a;
+      this.host.resetOptions();
+      if (!this.host.getOptions().showSettings) {
+        this.close();
+        return;
+      }
+      this.bindViewListeners(false);
+      (_a = this.dialog) == null ? void 0 : _a.remove();
+      this.dialog = this.buildDialog();
+      this.mapHost.appendChild(this.dialog);
+      this.bindViewListeners(true);
+    }
+    readCurrentView(opts) {
+      const view = this.host.getMap().getView();
+      const zoom = roundTo(view.getZoom() ?? opts.zoom, ZOOM_DECIMALS);
+      const center = view.getCenter();
+      if (center) {
+        const [lon, lat] = toLonLat(center);
+        return {
+          lon: roundTo(lon, LON_LAT_DECIMALS),
+          lat: roundTo(lat, LON_LAT_DECIMALS),
+          zoom
+        };
+      }
+      return {
+        lon: roundTo(opts.lon, LON_LAT_DECIMALS),
+        lat: roundTo(opts.lat, LON_LAT_DECIMALS),
+        zoom
+      };
+    }
+    syncViewFieldsFromMap() {
+      if (!this.open || !this.form) return;
+      const viewState = this.readCurrentView(this.host.getOptions());
+      this.setNumberIfIdle(this.form, "lon", viewState.lon);
+      this.setNumberIfIdle(this.form, "lat", viewState.lat);
+      this.setNumberIfIdle(this.form, "zoom", viewState.zoom);
+    }
+    setNumberIfIdle(form, name, value) {
+      const input = form.elements.namedItem(name);
+      if (!(input instanceof HTMLInputElement)) return;
+      if (document.activeElement === input) return;
+      const next = String(value);
+      if (input.value === next) return;
+      input.value = next;
+    }
+    applyForm(form) {
+      const fd = new FormData(form);
+      const num = (name) => Number(fd.get(name));
+      const bool = (name) => fd.get(name) === "on";
+      const extraTools = [];
+      for (const id of EXTRA_TOOL_IDS) {
+        if (fd.get(`extraTool_${id}`) === "on") extraTools.push(id);
+      }
+      const lsRaw = String(fd.get("localStorageKey") ?? "").trim();
+      const patch = {
+        geometryType: String(fd.get("geometryType")),
+        height: num("height"),
+        width: String(fd.get("width") ?? "100%"),
+        lon: roundTo(num("lon"), LON_LAT_DECIMALS),
+        lat: roundTo(num("lat"), LON_LAT_DECIMALS),
+        zoom: roundTo(num("zoom"), ZOOM_DECIMALS),
+        minZoom: num("minZoom"),
+        maxZoom: num("maxZoom"),
+        zIndex: num("zIndex"),
+        showZoom: bool("showZoom"),
+        showSettings: bool("showSettings"),
+        clearAll: bool("clearAll"),
+        history: bool("history"),
+        enableFeatureStyleEditor: bool("enableFeatureStyleEditor"),
+        localStorageKey: lsRaw === "" ? null : lsRaw,
+        extraTools,
+        toolsToggle: (() => {
+          const v = String(fd.get("toolsToggle") ?? "");
+          return v === "" ? null : v;
+        })()
+      };
+      this.host.setOptions(patch);
+      if (this.host.getOptions().showSettings) {
+        this.close();
+      }
+    }
+    fieldWrap(labelText, control) {
+      const wrap2 = document.createElement("label");
+      wrap2.className = "ec-geometry-editor__settings-field";
+      const span = document.createElement("span");
+      span.textContent = labelText;
+      wrap2.append(span, control);
+      return wrap2;
+    }
+    geometryTypeField(current) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.name = "geometryType";
+      input.value = current;
+      input.className = "fr-input";
+      input.setAttribute("list", "ec-sketch-type-list");
+      input.placeholder = "Point,Disc ou Geometry…";
+      const list = document.createElement("datalist");
+      list.id = "ec-sketch-type-list";
+      for (const name of GEOMETRY_TYPE_NAMES) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        list.appendChild(opt);
+      }
+      const wrap2 = this.fieldWrap("geometryType", input);
+      wrap2.appendChild(list);
+      return wrap2;
+    }
+    textField(name, label, value) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.name = name;
+      input.value = value;
+      input.className = "fr-input";
+      return this.fieldWrap(label, input);
+    }
+    numberField(name, label, value, step) {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.name = name;
+      input.value = String(value);
+      input.step = String(step);
+      input.className = "fr-input";
+      return this.fieldWrap(label, input);
+    }
+    checkField(name, label, checked) {
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = name;
+      input.checked = checked;
+      const wrap2 = document.createElement("label");
+      wrap2.className = "ec-geometry-editor__settings-field ec-geometry-editor__settings-field--check";
+      wrap2.append(input, document.createTextNode(` ${label}`));
+      return wrap2;
+    }
+    extraToolCheck(id, checked) {
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = `extraTool_${id}`;
+      input.checked = checked;
+      const wrap2 = document.createElement("label");
+      wrap2.className = "ec-geometry-editor__settings-field ec-geometry-editor__settings-field--check";
+      wrap2.append(input, document.createTextNode(` ${id}`));
+      return wrap2;
+    }
+    selectField(name, label, values, current, labels) {
+      const select = document.createElement("select");
+      select.name = name;
+      select.className = "fr-select";
+      for (const v of values) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = (labels == null ? void 0 : labels[v]) ?? v;
+        if (v === current) opt.selected = true;
+        select.appendChild(opt);
+      }
+      return this.fieldWrap(label, select);
+    }
+  }
   const DEFAULT_TILE = {
     title: "Plan IGN",
     url: "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
@@ -47461,60 +47846,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       properties: { title: cfg.title ?? "Fond" }
     });
   }
-  function mountSketch(target, options = {}) {
+  function resolveMountOptions(options) {
     var _a;
-    const el = typeof target === "string" ? document.querySelector(target) : target;
-    if (!el) {
-      throw new Error("[entree-carto-sketch] élément introuvable");
-    }
-    const width = options.width ?? "100%";
-    const height = options.height ?? 480;
-    const lon = options.lon ?? 2;
-    const lat = options.lat ?? 46.5;
-    const zoom = options.zoom ?? 5;
-    const minZoom = options.minZoom ?? 4;
-    const maxZoom = options.maxZoom ?? 19;
-    const tileLayers = ((_a = options.tileLayers) == null ? void 0 : _a.length) ? options.tileLayers : [DEFAULT_TILE];
-    const showZoom = options.showZoom !== false;
-    const toolsToggle = options.toolsToggle ?? "top-left";
-    el.classList.add("ec-sketch-mount");
-    if (options.className) el.classList.add(options.className);
-    el.style.position = "relative";
-    el.style.width = cssSize(width);
-    el.style.height = cssSize(height);
-    el.style.overflow = "hidden";
-    el.style.border = "1px solid var(--border-default-grey, #ddd)";
-    el.style.borderRadius = "0.25rem";
-    el.replaceChildren();
-    const mapTarget = document.createElement("div");
-    mapTarget.style.position = "absolute";
-    mapTarget.style.inset = "0";
-    mapTarget.style.width = "100%";
-    mapTarget.style.height = "100%";
-    el.appendChild(mapTarget);
-    const map = new Map$1({
-      target: mapTarget,
-      layers: tileLayers.map(createTileLayer),
-      view: new View({
-        center: fromLonLat([lon, lat]),
-        zoom,
-        minZoom,
-        maxZoom
-      }),
-      controls: defaults$1({ attribution: false, zoom: false })
-    });
-    if (showZoom) {
-      map.addControl(
-        new Zoom({
-          className: "ol-zoom ol-unselectable ol-control",
-          zoomInLabel: "+",
-          zoomOutLabel: "−"
-        })
-      );
-    }
-    const sketch = new SketchControl({
-      geometryType: options.geometryType ?? "Geometry",
+    const toolsToggle = options.toolsToggle === void 0 ? "top-left" : options.toolsToggle;
+    return {
+      ...options,
+      width: options.width ?? "100%",
+      height: options.height ?? 480,
+      lon: options.lon ?? 2,
+      lat: options.lat ?? 46.5,
+      zoom: options.zoom ?? 5,
+      minZoom: options.minZoom ?? 4,
+      maxZoom: options.maxZoom ?? 19,
+      showZoom: options.showZoom !== false,
+      showSettings: Boolean(options.showSettings),
       toolsToggle,
+      geometryType: options.geometryType ?? "Geometry",
       clearAll: options.clearAll ?? true,
       history: options.history ?? true,
       localStorageKey: options.localStorageKey === void 0 ? "entree-carto-sketch" : options.localStorageKey,
@@ -47526,25 +47873,181 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         "MeasureArea"
       ],
       enableFeatureStyleEditor: options.enableFeatureStyleEditor ?? true,
+      zIndex: options.zIndex ?? 500,
+      tileLayers: ((_a = options.tileLayers) == null ? void 0 : _a.length) ? options.tileLayers : [DEFAULT_TILE]
+    };
+  }
+  function mountSketch(target, options = {}) {
+    const found = typeof target === "string" ? document.querySelector(target) : target;
+    if (!found) {
+      throw new Error("[entree-carto-sketch] élément introuvable");
+    }
+    const mapHost = found;
+    let resolved = resolveMountOptions(options);
+    const initialOptions = resolveMountOptions(options);
+    mapHost.classList.add("ec-sketch-mount");
+    if (options.className) mapHost.classList.add(options.className);
+    applyHostSize(mapHost, resolved);
+    mapHost.style.position = "relative";
+    mapHost.style.overflow = "hidden";
+    mapHost.style.border = "1px solid var(--border-default-grey, #ddd)";
+    mapHost.style.borderRadius = "0.25rem";
+    mapHost.replaceChildren();
+    const mapTarget = document.createElement("div");
+    mapTarget.style.position = "absolute";
+    mapTarget.style.inset = "0";
+    mapTarget.style.width = "100%";
+    mapTarget.style.height = "100%";
+    mapHost.appendChild(mapTarget);
+    const map = new Map$1({
+      target: mapTarget,
+      layers: resolved.tileLayers.map(createTileLayer),
+      view: new View({
+        center: fromLonLat([resolved.lon, resolved.lat]),
+        zoom: resolved.zoom,
+        minZoom: resolved.minZoom,
+        maxZoom: resolved.maxZoom
+      }),
+      controls: defaults$1({ attribution: false, zoom: false })
+    });
+    let zoomControl = null;
+    const sketch = new SketchControl({
+      geometryType: resolved.geometryType,
+      toolsToggle: resolved.toolsToggle,
+      clearAll: resolved.clearAll,
+      history: resolved.history,
+      localStorageKey: resolved.localStorageKey,
+      extraTools: resolved.extraTools,
+      enableFeatureStyleEditor: resolved.enableFeatureStyleEditor,
       source: options.source,
       layer: options.layer,
       style: options.style,
-      zIndex: options.zIndex,
+      zIndex: resolved.zIndex,
       position: options.position,
-      onChange: options.onChange
+      onChange: options.onChange,
+      onSketchEngagementChange: options.onSketchEngagementChange
     });
     map.addControl(sketch);
+    let settingsPanel = null;
+    function applyHostClasses() {
+      mapHost.classList.toggle("ec-sketch-mount--has-settings", resolved.showSettings);
+      for (const corner of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
+        mapHost.classList.remove(`ec-sketch-mount--tools-toggle-${corner}`);
+      }
+      if (resolved.toolsToggle) {
+        mapHost.classList.add(`ec-sketch-mount--tools-toggle-${resolved.toolsToggle}`);
+      }
+    }
+    function applyZoom() {
+      if (zoomControl) {
+        map.removeControl(zoomControl);
+        zoomControl = null;
+      }
+      if (resolved.showZoom) {
+        zoomControl = new Zoom();
+        map.addControl(zoomControl);
+      }
+    }
+    function applyView(patch) {
+      const view = map.getView();
+      if (patch.minZoom !== void 0) view.setMinZoom(resolved.minZoom);
+      if (patch.maxZoom !== void 0) view.setMaxZoom(resolved.maxZoom);
+      if (patch.lon !== void 0 || patch.lat !== void 0 || patch.zoom !== void 0) {
+        view.setCenter(fromLonLat([resolved.lon, resolved.lat]));
+        view.setZoom(resolved.zoom);
+      }
+    }
+    function applySettingsPanel() {
+      if (resolved.showSettings && !settingsPanel) {
+        settingsPanel = new SketchSettingsPanel(host, mapHost);
+      } else if (!resolved.showSettings && settingsPanel) {
+        settingsPanel.destroy();
+        settingsPanel = null;
+      }
+    }
+    const host = {
+      getOptions: () => resolved,
+      getInitialOptions: () => initialOptions,
+      getMap: () => map,
+      setOptions(patch) {
+        setOptions(patch);
+      },
+      resetOptions() {
+        resetOptions();
+      }
+    };
+    function setOptions(patch) {
+      const prev = resolved;
+      resolved = resolveMountOptions({ ...resolved, ...patch });
+      if (patch.width !== void 0 || patch.height !== void 0) {
+        applyHostSize(mapHost, resolved);
+        map.updateSize();
+      }
+      if (patch.showSettings !== void 0 || patch.toolsToggle !== void 0 || patch.toolsToggle === null) {
+        applyHostClasses();
+      }
+      if (patch.showSettings !== void 0) {
+        applySettingsPanel();
+      }
+      if (patch.showZoom !== void 0) {
+        applyZoom();
+      }
+      if (patch.lon !== void 0 || patch.lat !== void 0 || patch.zoom !== void 0 || patch.minZoom !== void 0 || patch.maxZoom !== void 0) {
+        applyView(patch);
+      }
+      if (patch.geometryType !== void 0 && patch.geometryType !== prev.geometryType) {
+        sketch.setGeometryType(resolved.geometryType);
+      }
+      if (patch.toolsToggle !== void 0 || patch.toolsToggle === null) {
+        sketch.setToolsToggle(resolved.toolsToggle);
+      }
+      if (patch.style !== void 0) {
+        sketch.setStyle(patch.style);
+      }
+      if (patch.clearAll !== void 0 || patch.history !== void 0 || patch.extraTools !== void 0 || patch.enableFeatureStyleEditor !== void 0 || patch.localStorageKey !== void 0 || patch.zIndex !== void 0) {
+        sketch.setRuntimeOptions({
+          clearAll: resolved.clearAll,
+          history: resolved.history,
+          extraTools: resolved.extraTools,
+          enableFeatureStyleEditor: resolved.enableFeatureStyleEditor,
+          localStorageKey: resolved.localStorageKey,
+          zIndex: resolved.zIndex
+        });
+      }
+    }
+    function resetOptions() {
+      setOptions({
+        ...initialOptions,
+        extraTools: [...initialOptions.extraTools]
+      });
+    }
+    applyHostClasses();
+    applyZoom();
+    applySettingsPanel();
     return {
       map,
       sketch,
+      getOptions: () => resolved,
+      setOptions,
+      resetOptions,
       destroy: () => {
+        settingsPanel == null ? void 0 : settingsPanel.destroy();
+        settingsPanel = null;
         map.removeControl(sketch);
+        if (zoomControl) map.removeControl(zoomControl);
         map.setTarget(void 0);
-        el.replaceChildren();
-        el.classList.remove("ec-sketch-mount");
-        if (options.className) el.classList.remove(options.className);
+        mapHost.replaceChildren();
+        mapHost.classList.remove("ec-sketch-mount", "ec-sketch-mount--has-settings");
+        for (const corner of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
+          mapHost.classList.remove(`ec-sketch-mount--tools-toggle-${corner}`);
+        }
+        if (options.className) mapHost.classList.remove(options.className);
       }
     };
+  }
+  function applyHostSize(el, opts) {
+    el.style.width = cssSize(opts.width);
+    el.style.height = cssSize(opts.height);
   }
   const publicApi = {
     mountSketch,

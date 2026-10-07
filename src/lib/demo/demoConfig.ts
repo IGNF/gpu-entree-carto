@@ -9,11 +9,11 @@ import {
   setGpuClientConfigScriptUrl,
 } from '@/lib/configUrls'
 import {
-  isGpuClientConfigSettled,
   markGpuClientConfigError,
   markGpuClientConfigLoading,
   markGpuClientConfigNone,
   markGpuClientConfigReady,
+  trySettleGpuClientConfigFromWindow,
 } from '@/lib/demo/gpuClientConfigState'
 import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
 import type { MapModeId } from '@/lib/map/mapMode'
@@ -158,26 +158,7 @@ export function ensureGpuClientStub(): void {
  * gpu-site : config déjà injectée (Twig + gpu-client-config) sans passer par prepareDemoEnvironment.
  */
 export function finalizeGpuClientConfigStateIfInjected(): void {
-  if (isGpuClientConfigSettled()) return
-  const w = window as Window & {
-    LAYER_CONFIG?: unknown
-    gpu?: { config?: Record<string, unknown> }
-  }
-  if (w.LAYER_CONFIG) {
-    markGpuClientConfigReady()
-    return
-  }
-  const fromGpu = w.gpu?.config?.apiFicheInfoUrl
-  const fromModule = config.apiFicheInfoUrl
-  const api =
-    typeof fromGpu === 'string' && fromGpu.trim()
-      ? fromGpu
-      : typeof fromModule === 'string'
-        ? fromModule
-        : ''
-  if (api.trim()) {
-    markGpuClientConfigReady()
-  }
+  trySettleGpuClientConfigFromWindow()
 }
 
 /** Après montage embed gpu-site (#gpu-map-container) : sync config Twig + fiche permalink. */

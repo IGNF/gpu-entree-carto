@@ -92,16 +92,33 @@ npm run build:sketch
 ```
 
 ```js
-const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
+const handle = EntreeCartoSketch.mountSketch('#sketch-map', {
   toolsToggle: 'top-left',
   clearAll: true,
   history: true,
   localStorageKey: 'entree-carto-sketch',
   extraTools: ['Text', 'Import', 'Export', 'MeasureDistance', 'MeasureArea'],
   enableFeatureStyleEditor: true,
+  showSettings: true,
   height: 480,
 })
+// handle.setOptions({ toolsToggle: 'bottom-right' })
+// handle.resetOptions()
+// handle.destroy()
 ```
+
+### `mountSketch` options (container + map)
+
+| Option          | Default | Description                                                                 |
+| --------------- | ------- | --------------------------------------------------------------------------- |
+| `showSettings`  | `false` | Cog button (top right): live options form; zoom shifts below (like GeometryEditor) |
+| `showZoom`      | `true`  | OpenLayers +/- control (top right)                                          |
+| `width` / `height` | `'100%'` / `480` | Map container size                                                     |
+| `lon` / `lat` / `zoom` | France defaults | Initial view                                                      |
+| `minZoom` / `maxZoom` | `4` / `19` | View limits                                                          |
+| `tileLayers`    | Plan IGN | Background XYZ tiles                                                       |
+
+After mount: `handle.getOptions()`, `handle.setOptions(patch)`, `handle.resetOptions()` (initial mount snapshot).
 
 ## Options (TS class)
 
@@ -122,7 +139,7 @@ const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
 
 ## Vue props (`SketchControl.vue`)
 
-Main map defaults: `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, all `extraTools`, `enableFeatureStyleEditor: true`.
+Main map defaults (`SketchControl.vue`): `position` / `toolsToggle`: **`bottom-left`** (toggle stays anchored above minimap; toolbar opens upward); `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, all `extraTools`, `enableFeatureStyleEditor: true`.
 
 ## GeometryEditor
 

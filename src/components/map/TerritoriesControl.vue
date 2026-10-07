@@ -28,8 +28,8 @@ const props = withDefaults(
 )
 
 /**
- * Geopf hardcode « Sélecteur de territoires » dans le header et un close
- * `fr-icon-close-line` : on aligne sur l’UI cartes.gouv / options.title.
+ * Geopf hardcode « Sélecteur de territoires » dans le header : on aligne titre /
+ * bouton fermer (`gpf-btn-icon-close`, sans `fr-icon-close-line` — cf. map-controls.css).
  */
 function patchTerritoriesPanel(control: Control): void {
   const root = (control as Control & { element: HTMLElement }).element
@@ -51,18 +51,34 @@ function patchTerritoriesPanel(control: Control): void {
     panel.setAttribute('aria-label', PANEL_TITLE)
   }
 
-  const btn = root.querySelector<HTMLButtonElement>(
+  const closeBtn = root.querySelector<HTMLButtonElement>(
     '.gpf-panel__header button.GPpanelClose, .GPpanelHeader button.GPpanelClose',
   )
-  if (!btn) return
+  if (closeBtn) {
+    patchTerritoriesPanelClose(closeBtn)
+  }
 
+  patchTerritoriesMenuViewsBandButtons(root)
+}
+
+/** geopf pose `gpf-btn-icon` (40×40 + ::after) sur un bouton libellé — on garde le bandeau texte. */
+function patchTerritoriesMenuViewsBandButtons(root: HTMLElement): void {
+  const open = root.querySelector<HTMLButtonElement>('#gpf-territories-button-open-views-id')
+  if (open && open.dataset.ecTerritoriesBandBtn !== '1') {
+    open.dataset.ecTerritoriesBandBtn = '1'
+    open.classList.remove('gpf-btn-icon')
+  }
+}
+
+function patchTerritoriesPanelClose(btn: HTMLButtonElement): void {
   btn.id = 'GPterritoriesPanelClose'
+  /* Pas de `fr-icon-close-line` : map-controls.css neutralise le ::after geopf des `.gpf-btn.fr-icon-*`. */
   btn.className = 'gpf-btn gpf-btn-icon-close fr-btn--close fr-btn fr-btn--tertiary-no-outline'
   btn.title = 'Fermer le panneau'
   btn.removeAttribute('style')
   btn.replaceChildren()
   const span = document.createElement('span')
-  span.className = 'GPelementHidden gpf-visible'
+  span.className = 'fr-sr-only'
   span.textContent = 'Fermer'
   btn.appendChild(span)
 }
@@ -77,7 +93,7 @@ useOlControl(
       title: PANEL_TITLE,
       thumbnail: false,
       reduce: false,
-      tiles: 3,
+      tiles: 4,
       view: {
         active: props.viewActive,
         title: 'Modifier les territoires',

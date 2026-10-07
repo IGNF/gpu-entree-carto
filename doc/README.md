@@ -14,6 +14,7 @@ When adding or changing a control: **update the associated page** (description, 
 - [Demo](./Demo.md) — routes `/` (location), `/map` (map), `/geometry-editor`, `/sketch` + DSFR nav
 - [Demo configuration](./DemoConfig.md) — `public/js/demo-config.js` (gpu-client `exemple-config.js` equivalent)
 - [Notifications](./Notifications.md) — Notivue toasts in cartes.gouv.fr style
+- [Icon reference](./icone-references.md) — DSFR / Remix classes and catalog URLs used in the app
 
 ## Controls
 

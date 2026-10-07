@@ -32,6 +32,6 @@ Fournit `olMap` (`ShallowRef<Map | null>`) aux descendants pour attacher / déta
 ## Notes
 
 - Projection : EPSG:3857, centre France, minZoom 5 / maxZoom 19.
-- Attribution OL **activée**, non repliable (`collapsible: false`, comme gpu-client) ; texte et logos IGN via `ignGeoportalAttributions` ; bandeau bas-droite sous l’échelle (`map-controls.css`).
+- Attribution OL **activée**, non repliable (`collapsible: false`, comme gpu-client) ; texte et logos IGN via `ignGeoportalAttributions` (`title` sur les logos IGN et ministère) ; cadastre INSPIRE : logos Marianne + ministère via `dgfInspireCadastreAttributions` (`public/img/logos/logo-marianne.svg`, texte DGFIP en `title`) ; bandeau bas-droite sous l’échelle (`map-controls.css`).
 - Zoom / rotate natifs désactivés (contrôles dédiés).
 - Le conteneur carte expose `id="gpu-map"` pour compatibilité gpu-site (`gpu-map.css`).

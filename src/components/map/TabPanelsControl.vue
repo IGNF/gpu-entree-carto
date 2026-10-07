@@ -7,6 +7,7 @@ import {
   computed,
   inject,
   nextTick,
+  onMounted,
   onUnmounted,
   provide,
   ref,
@@ -52,6 +53,11 @@ import DataLayersManagerPanel from '@/components/panels/DataLayersManagerPanel.v
 import LayerLegendsPanel from '@/components/panels/LayerLegendsPanel.vue'
 import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
+import { TAB_PANELS_AUTO_OPEN_SNAP, type TabPanelsSheetSnapIndex } from '@/lib/map/tabPanelsLayout'
+import { useTabPanelsLayout } from '@/composables/useTabPanelsLayout'
+import { useTabPanelsMobileSheet } from '@/composables/useTabPanelsMobileSheet'
+import { useMapViewportControls } from '@/composables/useMapViewportControls'
+import { useMobileBottomBarGeopf } from '@/composables/useMobileBottomBarGeopf'
 import '@/styles/tab-panels.css'
 
 const props = withDefaults(
@@ -77,12 +83,42 @@ const emit = defineEmits<{
 }>()
 
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
-const rootEl = ref<HTMLElement | null>(null)
+/** Overlay carte : panneau contenu (hors `.ol-control`). */
+const shellEl = ref<HTMLElement | null>(null)
+/** Seul nœud passé à OpenLayers — colonne / barre d’onglets. */
+const tabsControlEl = ref<HTMLElement | null>(null)
+const mobileSketchSlotEl = ref<HTMLElement | null>(null)
+const mobileTerritoriesSlotEl = ref<HTMLElement | null>(null)
+const mobileOverviewSlotEl = ref<HTMLElement | null>(null)
 let olControl: Control | null = null
 
 const isOpen = ref(false)
 const activeTab = ref<number | null>(null)
 const selection = ref<FicheInfoSelection | null>(null)
+
+const { layoutMode, refreshLayoutMetrics } = useTabPanelsLayout(shellEl)
+const {
+  sheetSnapIndex,
+  sheetDragPercent,
+  sheetFractionPercent,
+  openSheetDefault,
+  setSheetSnap,
+  closeSheet,
+  syncSheetCssVars,
+  onSheetGrabPointerDown,
+  onSheetGrabPointerMove,
+  onSheetGrabPointerUp,
+} = useTabPanelsMobileSheet(layoutMode, shellEl)
+
+const isBottomLayout = computed(() => layoutMode.value === 'bottom')
+const tabListOrientation = computed(() => (isBottomLayout.value ? 'horizontal' : 'vertical'))
+const { zoomIn, zoomOut, toggleFullscreen, isFullscreen } = useMapViewportControls()
+const { startMobileBottomBarGeopfObserver } = useMobileBottomBarGeopf(
+  layoutMode,
+  mobileSketchSlotEl,
+  mobileOverviewSlotEl,
+  mobileTerritoriesSlotEl,
+)
 
 const layerNodesRef = toRef(props, 'layerNodes')
 const { mapZoom } = useMapZoom()
@@ -154,13 +190,20 @@ const tabs: TabDef[] = [
   },
 ]
 
-function openTab(index: number) {
+function openTab(index: number, sheetSnap?: TabPanelsSheetSnapIndex) {
   if (index < 0 || index >= tabs.length) return
   activeTab.value = index
-  isOpen.value = true
+  if (layoutMode.value === 'bottom') {
+    if (sheetSnap !== undefined) setSheetSnap(sheetSnap)
+    else openSheetDefault()
+    isOpen.value = sheetSnapIndex.value > 0
+  } else {
+    isOpen.value = true
+  }
 }
 
 function closePanels() {
+  if (layoutMode.value === 'bottom') closeSheet()
   isOpen.value = false
   activeTab.value = null
 }
@@ -175,7 +218,7 @@ function onTabClick(index: number) {
 
 function showSelection(next: FicheInfoSelection) {
   selection.value = next
-  openTab(TAB_PANEL_IDS.fiche)
+  openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP)
 }
 
 function openLegendForLayer(layerId: string) {
@@ -191,8 +234,13 @@ function syncShellOpenClass(open: boolean) {
   const target = mapRef.value?.getTargetElement()
   const shell =
     (target instanceof HTMLElement ? target.closest('.ec-map-shell') : null) ??
-    rootEl.value?.closest('.ec-map-shell')
-  shell?.classList.toggle('ec-map-shell--tab-panels-open', open)
+    shellEl.value?.closest('.ec-map-shell')
+  if (!(shell instanceof HTMLElement)) return
+  shell.classList.toggle('ec-map-shell--tab-panels-open', open)
+  refreshLayoutMetrics()
+  if (layoutMode.value === 'bottom') {
+    syncSheetCssVars(open ? sheetFractionPercent.value : 0)
+  }
 }
 
 const api: TabPanelsApi = {
@@ -212,8 +260,34 @@ defineExpose(api)
 
 watch(isOpen, (open) => syncShellOpenClass(open))
 
+watch(sheetSnapIndex, (idx) => {
+  if (layoutMode.value !== 'bottom') return
+  if (idx === 0 && isOpen.value) {
+    isOpen.value = false
+    activeTab.value = null
+  }
+})
+
+watch(layoutMode, (mode) => {
+  refreshLayoutMetrics()
+  if (mode === 'side') {
+    closeSheet()
+    if (isOpen.value) syncShellOpenClass(true)
+    return
+  }
+  if (isOpen.value && activeTab.value !== null) {
+    setSheetSnap(TAB_PANELS_AUTO_OPEN_SNAP)
+    isOpen.value = true
+    syncShellOpenClass(true)
+  } else {
+    closeSheet()
+    syncShellOpenClass(false)
+  }
+  void nextTick(() => mapRef.value?.updateSize())
+})
+
 watch(
-  [mapRef, rootEl],
+  [mapRef, tabsControlEl],
   ([map, el], _prev, onCleanup) => {
     if (olControl) {
       mapRef.value?.removeControl(olControl)
@@ -371,6 +445,10 @@ watch(
   },
 )
 
+onMounted(() => {
+  startMobileBottomBarGeopfObserver()
+})
+
 onUnmounted(() => {
   syncShellOpenClass(false)
   registerMapPermalinkLayersBridge(null)
@@ -384,102 +462,176 @@ onUnmounted(() => {
 
 <template>
   <div
-    ref="rootEl"
-    class="ec-tab-panels ol-unselectable ol-control"
-    :class="{ 'is-open': isOpen }"
+    ref="shellEl"
+    class="ec-tab-panels-shell"
+    :class="{ 'is-open': isOpen, 'is-sheet-dragging': sheetDragPercent !== null }"
+    :data-ec-tab-panels-layout="layoutMode"
+    :style="{ '--ec-tab-panels-sheet-fraction': String(sheetFractionPercent) }"
     role="complementary"
     aria-label="Panneau cartographique"
   >
-    <div
-      class="ec-tab-panels__tabs"
-      role="tablist"
-      aria-orientation="vertical"
-      aria-label="Onglets du panneau"
-    >
-      <button
-        v-for="tab in tabs"
-        :id="`ec-tab-${tab.id}`"
-        :key="tab.id"
-        type="button"
-        role="tab"
-        class="ec-tab-panels__tab"
-        :class="[
-          tab.iconKind === 'dsfr' ? tab.iconClass : 'ec-tab-panels__tab--remix',
-          { 'is-active': isOpen && activeTab === tab.id },
-        ]"
-        :aria-selected="isOpen && activeTab === tab.id"
-        :aria-controls="`ec-tab-panel-${tab.id}`"
-        :aria-label="tab.label"
-        @click="onTabClick(tab.id)"
+    <div ref="tabsControlEl" class="ec-tab-panels__tabs-control ol-unselectable ol-control">
+      <div
+        class="ec-tab-panels__bottom-chrome"
+        :class="{ 'ec-tab-panels__bottom-chrome--mobile': isBottomLayout }"
       >
-        <i v-if="tab.iconKind === 'remix'" :class="tab.iconClass" aria-hidden="true" />
-      </button>
+        <div
+          v-show="isBottomLayout"
+          class="ec-tab-panels__geopf-slots"
+          role="group"
+          aria-label="Outils carte"
+        >
+          <div
+            ref="mobileSketchSlotEl"
+            class="ec-tab-panels__geopf-slot ec-tab-panels__geopf-slot--sketch"
+          />
+          <div
+            ref="mobileOverviewSlotEl"
+            class="ec-tab-panels__geopf-slot ec-tab-panels__geopf-slot--overview"
+          />
+          <div
+            ref="mobileTerritoriesSlotEl"
+            class="ec-tab-panels__geopf-slot ec-tab-panels__geopf-slot--territories"
+          />
+        </div>
+        <div
+          class="ec-tab-panels__tabs"
+          role="tablist"
+          :aria-orientation="tabListOrientation"
+          aria-label="Onglets du panneau"
+        >
+          <button
+            v-for="tab in tabs"
+            :id="`ec-tab-${tab.id}`"
+            :key="tab.id"
+            type="button"
+            role="tab"
+            class="ec-tab-panels__tab"
+            :class="[
+              tab.iconKind === 'dsfr' ? tab.iconClass : 'ec-tab-panels__tab--remix',
+              { 'is-active': isOpen && activeTab === tab.id },
+            ]"
+            :aria-selected="isOpen && activeTab === tab.id"
+            :aria-controls="`ec-tab-panel-${tab.id}`"
+            :aria-label="tab.label"
+            @click="onTabClick(tab.id)"
+          >
+            <i v-if="tab.iconKind === 'remix'" :class="tab.iconClass" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      <div
+        v-show="isBottomLayout"
+        class="ec-tab-panels__viewport-stack"
+        role="group"
+        aria-label="Zoom et plein écran"
+      >
+        <div class="ec-tab-panels__viewport-stack-zoom">
+          <button
+            type="button"
+            class="ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--zoom"
+            aria-label="Zoom avant"
+            @click="zoomIn"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+          <button
+            type="button"
+            class="ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--zoom"
+            aria-label="Zoom arrière"
+            @click="zoomOut"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--remix"
+          :class="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"
+          :aria-label="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
+          :aria-pressed="isFullscreen"
+          @click="toggleFullscreen"
+        />
+      </div>
     </div>
 
-    <div class="ec-tab-panels__panel">
-      <div class="ec-tab-panels__panel-body">
+    <div class="ec-tab-panels__surface" :class="{ 'ec-tab-panels__surface--visible': isOpen }">
+      <div class="ec-tab-panels__panel">
         <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.fiche}`"
-          class="ec-tab-panels__pane"
-          role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.fiche"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.fiche}`"
-        >
-          <FicheInfoPanel :selection="selection" />
-        </div>
+          v-if="isBottomLayout"
+          class="ec-tab-panels__sheet-grab ec-tab-panels__modal-slider"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Slider modale — redimensionner le panneau"
+          @pointerdown="onSheetGrabPointerDown"
+          @pointermove="onSheetGrabPointerMove"
+          @pointerup="onSheetGrabPointerUp"
+          @pointercancel="onSheetGrabPointerUp"
+        />
+        <div class="ec-tab-panels__panel-body">
+          <div
+            :id="`ec-tab-panel-${TAB_PANEL_IDS.fiche}`"
+            class="ec-tab-panels__pane"
+            role="tabpanel"
+            :hidden="activeTab !== TAB_PANEL_IDS.fiche"
+            :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.fiche}`"
+          >
+            <FicheInfoPanel :selection="selection" />
+          </div>
 
-        <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.catalogue}`"
-          class="ec-tab-panels__pane"
-          role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.catalogue"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.catalogue}`"
-        >
-          <LayerCataloguePanel
-            :layer-nodes="layerNodes"
-            :in-stack-by-id="catalogCheckedById"
-            :map-zoom="mapZoom"
-            :base-presets="basePresets"
-            :base-model-value="baseModelValue"
-            :catalog-layers-loading="catalogLayersLoading"
-            @update:base-model-value="emit('update:baseModelValue', $event)"
-            @catalog-toggle="setCatalogChecked"
-          />
-        </div>
+          <div
+            :id="`ec-tab-panel-${TAB_PANEL_IDS.catalogue}`"
+            class="ec-tab-panels__pane"
+            role="tabpanel"
+            :hidden="activeTab !== TAB_PANEL_IDS.catalogue"
+            :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.catalogue}`"
+          >
+            <LayerCataloguePanel
+              :layer-nodes="layerNodes"
+              :in-stack-by-id="catalogCheckedById"
+              :map-zoom="mapZoom"
+              :base-presets="basePresets"
+              :base-model-value="baseModelValue"
+              :catalog-layers-loading="catalogLayersLoading"
+              @update:base-model-value="emit('update:baseModelValue', $event)"
+              @catalog-toggle="setCatalogChecked"
+            />
+          </div>
 
-        <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.dataLayers}`"
-          class="ec-tab-panels__pane"
-          role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.dataLayers"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.dataLayers}`"
-        >
-          <DataLayersManagerPanel
-            :layers="layers"
-            :map-zoom="mapZoom"
-            :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
-            @visible="setVisible"
-            @opacity="setOpacity"
-            @toggle-grayscale="toggleGrayscale"
-            @remove="removeFromStack"
-            @reorder="reorderStackByDisplayIndex"
-            @enable-aggregate-detail="enableAggregateDetail"
-            @regroup-aggregate="regroupAggregate"
-          />
-        </div>
+          <div
+            :id="`ec-tab-panel-${TAB_PANEL_IDS.dataLayers}`"
+            class="ec-tab-panels__pane"
+            role="tabpanel"
+            :hidden="activeTab !== TAB_PANEL_IDS.dataLayers"
+            :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.dataLayers}`"
+          >
+            <DataLayersManagerPanel
+              :layers="layers"
+              :map-zoom="mapZoom"
+              :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
+              @visible="setVisible"
+              @opacity="setOpacity"
+              @toggle-grayscale="toggleGrayscale"
+              @remove="removeFromStack"
+              @reorder="reorderStackByDisplayIndex"
+              @enable-aggregate-detail="enableAggregateDetail"
+              @regroup-aggregate="regroupAggregate"
+            />
+          </div>
 
-        <div
-          :id="`ec-tab-panel-${TAB_PANEL_IDS.legends}`"
-          class="ec-tab-panels__pane"
-          role="tabpanel"
-          :hidden="activeTab !== TAB_PANEL_IDS.legends"
-          :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.legends}`"
-        >
-          <LayerLegendsPanel
-            :layers="legendLayers"
-            :map-zoom="mapZoom"
-            :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
-          />
+          <div
+            :id="`ec-tab-panel-${TAB_PANEL_IDS.legends}`"
+            class="ec-tab-panels__pane"
+            role="tabpanel"
+            :hidden="activeTab !== TAB_PANEL_IDS.legends"
+            :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.legends}`"
+          >
+            <LayerLegendsPanel
+              :layers="legendLayers"
+              :map-zoom="mapZoom"
+              :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
+            />
+          </div>
         </div>
       </div>
     </div>

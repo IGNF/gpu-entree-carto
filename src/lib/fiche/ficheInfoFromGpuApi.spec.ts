@@ -63,16 +63,19 @@ describe('ficheSelectionFromGpuApi', () => {
   it('mode territoire : commune + onglets DU, SUP et procédures', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_TERRITORY, 2.33, 48.96)
     expect(sel.title).toBe('Deuil-la-Barre (95197)')
-    expect(sel.headerHtml).toBeFalsy()
+    expect(sel.territoryTitle).toBe('Deuil-la-Barre (95197)')
     expect(sel.documentTabs?.map((t) => t.id)).toEqual(['du', 'sup', 'procedures'])
+    expect(sel.documentTabs?.[0]?.label).toBe('Documents')
     expect(sel.documentTabs?.[0]?.bodyHtml).toContain('Plan Local')
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
   })
 
   it('mode parcelle : en-tête parcelle + mêmes onglets documents', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_PARCEL, 2.33, 48.96)
-    expect(sel.title).toBe('Parcelle AK 0432')
-    expect(sel.headerHtml).toContain('Deuil-la-Barre')
-    expect(sel.documentTabs?.length).toBe(3)
+    expect(sel.title).toBe('AK 0432')
+    expect(sel.parcelLabel).toBe('AK 0432')
+    expect(sel.cadastreReferences?.headline).toContain('AK')
+    expect(sel.parcelDocumentsHtml).toContain('Plan Local')
+    expect(sel.documentTabs).toBeUndefined()
   })
 })

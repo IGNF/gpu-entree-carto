@@ -1,0 +1,413 @@
+/**
+ * Fiche info (onglet localisation) — mise en forme DSFR et contenu markdown.
+ */
+
+.ec-fiche-info {
+  position: relative;
+}
+
+.ec-fiche-info__inner {
+  padding-left: 0;
+}
+
+.ec-fiche-info__header {
+  margin-bottom: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.ec-fiche-info__doc-tabs {
+  margin-top: 0.5rem;
+}
+
+.ec-fiche-info__loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-fiche-info__spinner {
+  display: inline-block;
+  font-size: 1.25rem;
+  color: var(--text-action-high-blue-france, #000091);
+  animation: ec-fiche-info-spin 0.85s linear infinite;
+}
+
+@keyframes ec-fiche-info-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ec-fiche-info__doc-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-default-grey, #ddd);
+  padding-bottom: 0.35rem;
+}
+
+.ec-fiche-info .ec-fiche-info__territory-cta.fr-btn {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.ec-fiche-info .ec-fiche-info__back-parcel.fr-btn {
+  justify-content: flex-start;
+  margin-bottom: 24px;
+  padding-left: 0;
+  padding-right: 0.5rem;
+}
+
+.ec-fiche-info .ec-fiche-info__info-btn.fr-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ec-fiche-info button.ec-fiche-info__doc-tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border: none;
+  border-radius: 0.25rem 0.25rem 0 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-default-grey, #3a3a3a);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+}
+
+.ec-fiche-info button.ec-fiche-info__doc-tab:hover,
+.ec-fiche-info button.ec-fiche-info__doc-tab:focus-visible {
+  background: var(--background-contrast-grey, #f6f6f6);
+  outline: 2px solid var(--border-active-blue-france, #000091);
+  outline-offset: 1px;
+}
+
+.ec-fiche-info button.ec-fiche-info__doc-tab.is-active {
+  color: var(--text-active-blue-france, #000091);
+  box-shadow: inset 0 -2px 0 var(--border-active-blue-france, #000091);
+}
+
+.ec-fiche-info__warn {
+  padding: 0.5rem 0.65rem;
+  background: var(--background-contrast-warning, #ffe9e6);
+  border-radius: 0.25rem;
+}
+
+.ec-fiche-info__proc-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ec-fiche-info__proc-list > li {
+  margin-bottom: 0.75rem;
+}
+
+.ec-fiche-info__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: var(--text-title-grey, #161616);
+}
+
+.ec-fiche-info__body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-default-grey, #161616);
+}
+
+.ec-fiche-info__body p {
+  margin: 0 0 0.75rem;
+}
+
+.ec-fiche-info__body p:last-child {
+  margin-bottom: 0;
+}
+
+.ec-fiche-info__body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.ec-fiche-info__body li {
+  margin-bottom: 0.25rem;
+}
+
+.ec-fiche-info__body li:last-child {
+  margin-bottom: 0;
+}
+
+.ec-fiche-info__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ec-fiche-info__mode-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ec-fiche-info__mode-tag-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: auto;
+  max-width: 100%;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Pas de ::before fantôme (fr-tag--icon-left) quand l’icône est un enfant */
+.ec-fiche-info__mode-tag-link::before {
+  content: none;
+  display: none;
+}
+
+.ec-fiche-info__mode-tag-link:hover,
+.ec-fiche-info__mode-tag-link:focus-visible {
+  text-decoration: none;
+}
+
+.ec-fiche-info__mode-tag-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.ec-fiche-info__mode-tag-icon.ec-icon-parcelle {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ec-fiche-info__mode-tag-icon.ec-icon-parcelle::before {
+  background-color: currentColor;
+}
+
+.ec-fiche-info__mode-tag-icon.fr-icon-france-fill {
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  color: currentColor;
+  line-height: 0;
+}
+
+.ec-fiche-info__mode-tag-icon.fr-icon-france-fill::before {
+  --icon-size: 1rem;
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  vertical-align: unset;
+  background-color: currentColor;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.ec-fiche-info__mode-tag-icon.fr-icon-france-fill::after {
+  content: none;
+  display: none;
+}
+
+.ec-fiche-info__info-btn {
+  margin-left: auto;
+}
+
+.ec-fiche-info__load-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+.ec-fiche-info__infos-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ec-fiche-info__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-title-grey, #161616);
+}
+
+.ec-fiche-info__intro {
+  margin: 0 0 0.75rem;
+}
+
+.ec-fiche-info__callout {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-left: 4px solid var(--border-active-blue-france, #000091);
+  background: var(--background-contrast-grey, #f6f6f6);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.ec-fiche-info__doc-card {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: 0.25rem;
+}
+
+.ec-fiche-info__doc-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.ec-fiche-info__badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ec-fiche-info__badge--vigueur {
+  background: #ccefd9;
+  color: #18753c;
+}
+
+.ec-fiche-info__badge--approuve {
+  background: #e8edff;
+  color: #000091;
+}
+
+.ec-fiche-info__doc-card-title {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-active-blue-france, #000091);
+  text-decoration: none;
+}
+
+a.ec-fiche-info__doc-card-title:hover {
+  text-decoration: underline;
+}
+
+.ec-fiche-info__doc-card-meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-fiche-cadastre-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  margin: 0;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  border: none;
+  background: rgb(0 0 0 / 45%);
+}
+
+.ec-fiche-cadastre-modal__panel {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 1rem 1.25rem 1.25rem;
+  background: #fff;
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 18%);
+}
+
+.ec-fiche-cadastre-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ec-fiche-cadastre-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.ec-fiche-cadastre-modal__headline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ec-fiche-cadastre-modal__headline {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.ec-fiche-cadastre-modal__dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+.ec-fiche-cadastre-modal__dl dt {
+  margin: 0;
+  color: var(--text-mention-grey, #666);
+  font-weight: 400;
+}
+
+.ec-fiche-cadastre-modal__dl dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.ec-fiche-info .visually-hidden,
+.ec-fiche-cadastre-modal .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
