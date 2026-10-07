@@ -92,16 +92,33 @@ npm run build:sketch
 ```
 
 ```js
-const { map, sketch, destroy } = EntreeCartoSketch.mountSketch('#sketch-map', {
+const handle = EntreeCartoSketch.mountSketch('#sketch-map', {
   toolsToggle: 'top-left',
   clearAll: true,
   history: true,
   localStorageKey: 'entree-carto-sketch',
   extraTools: ['Text', 'Import', 'Export', 'MeasureDistance', 'MeasureArea'],
   enableFeatureStyleEditor: true,
+  showSettings: true,
   height: 480,
 })
+// handle.setOptions({ toolsToggle: 'bottom-right' })
+// handle.resetOptions()
+// handle.destroy()
 ```
+
+### Options `mountSketch` (conteneur + carte)
+
+| Option          | Défaut | Description                                                                 |
+| --------------- | ------ | --------------------------------------------------------------------------- |
+| `showSettings`  | `false` | Bouton roue crantée (haut droite) : formulaire d’options à chaud ; zoom décalé sous le bouton (comme GeometryEditor) |
+| `showZoom`      | `true`  | Contrôle +/- OpenLayers (haut droite)                                       |
+| `width` / `height` | `'100%'` / `480` | Taille du conteneur carte                                          |
+| `lon` / `lat` / `zoom` | défauts France | Vue initiale                                                       |
+| `minZoom` / `maxZoom` | `4` / `19` | Limites de zoom                                                         |
+| `tileLayers`    | Plan IGN | Fonds XYZ                                                                   |
+
+Après montage : `handle.getOptions()`, `handle.setOptions(patch)`, `handle.resetOptions()` (snapshot du mount initial).
 
 ## Options (classe TS)
 

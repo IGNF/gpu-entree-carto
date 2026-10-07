@@ -4814,7 +4814,8 @@ span.ec-icon-parcelle::before {
 }
 
 /* Zoom — même look que GeoportalZoom (carte principale) : 48×48, masques +/− */
-.ec-geometry-editor .ol-zoom {
+.ec-geometry-editor .ol-zoom,
+.ec-sketch-mount .ol-zoom {
   top: var(--ec-geom-btn-gap);
   right: var(--ec-geom-btn-gap);
   left: auto;
@@ -4827,16 +4828,19 @@ span.ec-icon-parcelle::before {
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
 }
 
-.ec-geometry-editor--has-settings .ol-zoom {
+.ec-geometry-editor--has-settings .ol-zoom,
+.ec-sketch-mount--has-settings .ol-zoom {
   top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
 }
 
 /* toolsToggle en haut à droite : décaler zoom (et réglages déjà en haut) */
-.ec-geometry-editor--tools-toggle-top-right .ol-zoom {
+.ec-geometry-editor--tools-toggle-top-right .ol-zoom,
+.ec-sketch-mount--tools-toggle-top-right .ol-zoom {
   top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
 }
 
-.ec-geometry-editor--tools-toggle-top-right.ec-geometry-editor--has-settings .ol-zoom {
+.ec-geometry-editor--tools-toggle-top-right.ec-geometry-editor--has-settings .ol-zoom,
+.ec-sketch-mount--tools-toggle-top-right.ec-sketch-mount--has-settings .ol-zoom {
   top: calc(
     var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap) +
       var(--ec-geom-btn-size) + var(--ec-geom-btn-gap)
@@ -4854,7 +4858,8 @@ span.ec-icon-parcelle::before {
   );
 }
 
-.ec-geometry-editor .ol-zoom button {
+.ec-geometry-editor .ol-zoom button,
+.ec-sketch-mount .ol-zoom button {
   box-sizing: border-box;
   position: relative;
   display: flex;
@@ -4874,7 +4879,8 @@ span.ec-icon-parcelle::before {
   transition: background-color 300ms;
 }
 
-.ec-geometry-editor .ol-zoom button::after {
+.ec-geometry-editor .ol-zoom button::after,
+.ec-sketch-mount .ol-zoom button::after {
   content: '';
   display: block;
   width: 1.5rem;
@@ -4889,18 +4895,21 @@ span.ec-icon-parcelle::before {
 }
 
 /* Pictos geopf DSFRzoomStyle */
-.ec-geometry-editor .ol-zoom .ol-zoom-in::after {
+.ec-geometry-editor .ol-zoom .ol-zoom-in::after,
+.ec-sketch-mount .ol-zoom .ol-zoom-in::after {
   -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik0xMSAxMVY1SDEzVjExSDE5VjEzSDEzVjE5SDExVjEzSDVWMTFIMTFaIj48L3BhdGg+PC9zdmc+Cg==');
   mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik0xMSAxMVY1SDEzVjExSDE5VjEzSDEzVjE5SDExVjEzSDVWMTFIMTFaIj48L3BhdGg+PC9zdmc+Cg==');
 }
 
-.ec-geometry-editor .ol-zoom .ol-zoom-out::after {
+.ec-geometry-editor .ol-zoom .ol-zoom-out::after,
+.ec-sketch-mount .ol-zoom .ol-zoom-out::after {
   -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik01IDExVjEzSDE5VjExSDVaIj48L3BhdGg+PC9zdmc+');
   mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJjdXJyZW50Q29sb3IiPjxwYXRoIGQ9Ik01IDExVjEzSDE5VjExSDVaIj48L3BhdGg+PC9zdmc+');
 }
 
 /* Séparateur horizontal (comme geopf sur le bouton −) */
-.ec-geometry-editor .ol-zoom .ol-zoom-out::before {
+.ec-geometry-editor .ol-zoom .ol-zoom-out::before,
+.ec-sketch-mount .ol-zoom .ol-zoom-out::before {
   content: '';
   position: absolute;
   top: 0;
@@ -4911,7 +4920,9 @@ span.ec-icon-parcelle::before {
 }
 
 .ec-geometry-editor .ol-zoom button:hover,
-.ec-geometry-editor .ol-zoom button:focus-visible {
+.ec-geometry-editor .ol-zoom button:focus-visible,
+.ec-sketch-mount .ol-zoom button:hover,
+.ec-sketch-mount .ol-zoom button:focus-visible {
   background-color: var(--hover-tint, #e3e3fd) !important;
   outline: none;
 }
@@ -4927,7 +4938,87 @@ span.ec-icon-parcelle::before {
   z-index: 5;
 }
 
-/* mountSketch (démo croquis) : % max-height outils = hauteur viewport carte */
+/* mountSketch (démo croquis) : tokens alignés sur .ec-geometry-editor */
+.ec-sketch-mount {
+  --ec-geom-btn-size: 48px;
+  --ec-geom-btn-gap: 8px;
+  --ec-geom-btn-padding: 4px;
+  --ec-geom-btn-radius: 4px;
+  --ec-map-control-icon: var(--text-action-high-blue-france, #000091);
+  --ec-map-control-bg: var(--background-default-grey, #fff);
+  --ec-map-control-hover-bg: var(--hover-tint, #e3e3fd);
+  --ec-map-control-active-bg: var(--background-action-high-blue-france, #000091);
+  --ec-map-control-active-fg: #fff;
+}
+
+/* Réglages croquis : haut droite, même boîte 48×48 que zoom / geopf */
+.ec-sketch-mount .ec-sketch-settings {
+  position: absolute;
+  top: var(--ec-geom-btn-gap);
+  right: var(--ec-geom-btn-gap);
+  left: auto;
+  z-index: 5;
+  margin: 0;
+  padding: 0;
+  width: var(--ec-geom-btn-size);
+  border-radius: var(--ec-geom-btn-radius);
+  background: var(--background-default-grey, #fff);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.ec-sketch-mount .ec-sketch-settings__toggle {
+  border-radius: var(--ec-geom-btn-radius);
+  box-shadow: none;
+}
+
+.ec-sketch-mount .ec-sketch-settings .ec-geometry-editor__tool[aria-label]:hover::before,
+.ec-sketch-mount .ec-sketch-settings .ec-geometry-editor__tool[aria-label]:focus-visible::before {
+  display: none;
+}
+
+.ec-sketch-mount .ec-sketch-settings__dialog {
+  position: absolute;
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+  right: var(--ec-geom-btn-gap);
+  left: auto;
+  z-index: 6;
+  box-sizing: border-box;
+  width: min(20rem, calc(100% - 2 * var(--ec-geom-btn-gap)));
+  max-height: calc(
+    100% - var(--ec-geom-btn-gap) - var(--ec-geom-btn-size) - 2 * var(--ec-geom-btn-gap)
+  );
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0.75rem;
+  background: var(--background-default-grey, #fff);
+  border: 1px solid var(--border-default-grey, #ddd);
+  border-radius: var(--ec-geom-btn-radius);
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  color: var(--text-default-grey, #161616);
+}
+
+.ec-sketch-mount .ec-sketch-settings__dialog .fr-btn {
+  flex: 1 1 calc(33% - 0.35rem);
+  min-width: 5.5rem;
+}
+
+.ec-sketch-mount--tools-toggle-top-right .ec-sketch-settings {
+  top: calc(var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap));
+}
+
+.ec-sketch-mount--tools-toggle-top-right .ec-sketch-settings__dialog {
+  top: calc(
+    var(--ec-geom-btn-gap) + var(--ec-geom-btn-size) + var(--ec-geom-btn-gap) +
+      var(--ec-geom-btn-size) + var(--ec-geom-btn-gap)
+  );
+  max-height: calc(100% - 2 * var(--ec-geom-btn-size) - 4 * var(--ec-geom-btn-gap));
+}
+
+/* mountSketch : % max-height outils = hauteur viewport carte */
 .ec-sketch-mount .ol-viewport,
 .ec-sketch-mount .ol-overlaycontainer,
 .ec-sketch-mount .ol-overlaycontainer-stopevent {

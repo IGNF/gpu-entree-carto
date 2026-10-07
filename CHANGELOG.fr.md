@@ -12,6 +12,8 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Démo croquis** — option `showSettings` sur `mountSketch` (roue crantée, réglages à chaud) ; `setOptions` / `resetOptions` sur le handle ; route `/sketch` activée.
+
 - **TabPanelsControl (mobile)** — bottom sheet (snaps 0 / 35 / 70 / 98 %), barre horizontale (onglets + zoom / plein écran), poignée, safe areas et décalage en-tête site ; composables `useTabPanelsLayout` / `useTabPanelsMobileSheet`, `useMapViewportControls`.
 - **Référence des icônes** — `doc/icone-references.md` / `.fr.md` (classes DSFR / Remix, URLs catalogue, aperçus SVG dans `doc/img/icon-previews/`) ; `npm run doc:icon-previews` ; règle Cursor pour maintenir la doc à chaque changement de pictogramme.
 - **MapModeSelector** — commutateur radio Parcelle / Territoire (haut-droite), sync permalink `mode=1|2` via `provideMapMode()`.

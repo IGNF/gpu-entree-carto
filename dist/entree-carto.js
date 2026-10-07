@@ -86850,6 +86850,42 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.applyToolsChrome();
       this.syncToolbarClusterVisibility();
     }
+    /**
+     * Options barre d’outils modifiables à chaud (remonte la barre si nécessaire).
+     */
+    setRuntimeOptions(patch) {
+      var _a;
+      let remountBar = false;
+      if (patch.zIndex !== void 0 && patch.zIndex !== this.zIndex) {
+        this.zIndex = patch.zIndex;
+        (_a = this.layer) == null ? void 0 : _a.setZIndex(this.zIndex);
+      }
+      if (patch.localStorageKey !== void 0 && patch.localStorageKey !== this.localStorageKey) {
+        this.localStorageKey = patch.localStorageKey;
+        remountBar = true;
+      }
+      if (patch.clearAll !== void 0 && patch.clearAll !== this.clearAll) {
+        this.clearAll = patch.clearAll;
+        remountBar = true;
+      }
+      if (patch.history !== void 0 && patch.history !== this.historyEnabled) {
+        this.historyEnabled = patch.history;
+        remountBar = true;
+      }
+      if (patch.extraTools !== void 0) {
+        this.extraTools = [...patch.extraTools];
+        remountBar = true;
+      }
+      if (patch.enableFeatureStyleEditor !== void 0 && patch.enableFeatureStyleEditor !== this.enableFeatureStyleEditor) {
+        this.enableFeatureStyleEditor = patch.enableFeatureStyleEditor;
+        remountBar = true;
+      }
+      if (remountBar) {
+        const map2 = this.getMap();
+        if (map2) this.mountDrawBar(map2);
+        else this.syncSaveButtonState();
+      }
+    }
     buildExtraTools() {
       const list = [];
       if (this.historyEnabled) {

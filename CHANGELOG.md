@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Sketch demo** — `mountSketch` option `showSettings` (cog top-right live options form); `setOptions` / `resetOptions` on handle; demo route `/sketch` enables it.
+
 - **TabPanelsControl (mobile)** — bottom sheet (snaps 0 / 35 / 70 / 98 %), horizontal tab bar with zoom / full-screen tools, drag handle, safe areas and site header offset; composables `useTabPanelsLayout` / `useTabPanelsMobileSheet`, `useMapViewportControls`.
 - **Icon reference** — `doc/icone-references.md` / `.fr.md` (DSFR / Remix classes, catalog URLs, SVG previews under `doc/img/icon-previews/`); `npm run doc:icon-previews`; Cursor rule to keep the doc in sync when pictograms change.
 - **MapModeSelector** — parcel / territory radio switch (top-right), `mode=1|2` permalink sync via `provideMapMode()`.
