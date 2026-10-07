@@ -26,6 +26,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Tag Territoire (fiche)** — recentrage sur l’emprise rouge même sans `territoryTitle` (ex. gpu-client-config indisponible) ; repli sur l’emprise déjà affichée dans `focusModeEmpriseOnMap`.
 - **Croquis carte principale** — `toolsToggle: bottom-left` par défaut ; slot geopf en `column-reverse` pour ancrer le bouton menu à l’ouverture de la barre (bureau).
 - **Chrome carte mobile** — autocomplétion / recherche avancée au-dessus des modes Parcelle–Territoire (empilement + `attachStandalonePopoverSync`) ; panneau territoires entre le sélecteur de mode et la pile zoom (`tiles: 4`) ; aperçu minimap en `position: fixed` ; barre croquis scrollable et hauteur plafonnée ; **4 onglets du panneau alignés à droite** dans la barre basse (outils geopf à gauche).
 - **Contrôles carte** — tokens `--ec-map-control-*` (picto bleu / fond blanc inactif, picto blanc / fond bleu actif) pour geopf, onglets TabPanels, croquis et zoom mobile.

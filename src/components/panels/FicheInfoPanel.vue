@@ -99,7 +99,6 @@ async function activateParcelMode(): Promise<void> {
 }
 
 async function activateTerritoryMode(): Promise<void> {
-  if (!props.selection?.territoryTitle) return
   if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
     mapMode.setMode(MAP_MODE_TERRITORY)
     return

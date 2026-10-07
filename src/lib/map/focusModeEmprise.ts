@@ -1,4 +1,5 @@
 import type Map from 'ol/Map'
+import type { Extent } from 'ol/extent'
 import { refreshFicheForMapModeChange } from '@/lib/fiche/ficheInfoService'
 import { animateViewFit } from '@/lib/map/animateViewFit'
 import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
@@ -7,7 +8,9 @@ import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPerm
 import {
   empriseTargetKeyForModeFocus,
   ensureModeEmpriseForMapPointAsync,
+  modeEmpriseViewExtent,
   readCherryOrModeEmprisePoint,
+  searchEngineLayerHostRef,
 } from '@/lib/map/searchResultGraphics'
 
 export type FocusModeEmpriseOptions = {
@@ -22,16 +25,23 @@ export function maxZoomForModeEmpriseFit(map: Map, mode: MapModeId): number {
   return viewMax != null ? Math.min(viewMax, cap) : cap
 }
 
-/** Vol sur l’emprise rouge APICarto du mode (cerise permalink requise). */
+/** Vol sur l’emprise rouge APICarto du mode (cerise ou emprise déjà affichée). */
+function extentFromVisibleModeEmprise(): Extent | null {
+  const host = searchEngineLayerHostRef.value
+  return host ? modeEmpriseViewExtent(host) : null
+}
+
 export async function focusModeEmpriseOnMap(
   map: Map,
   mode: MapModeId,
   options: FocusModeEmpriseOptions = {},
 ): Promise<void> {
   const marker = readMapPermalinkMarker(getMapPermalinkParams()) ?? readCherryOrModeEmprisePoint()
-  if (!marker) return
-  const key = empriseTargetKeyForModeFocus(marker.lon, marker.lat)
-  const extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode, key)
+  let extent = extentFromVisibleModeEmprise()
+  if (marker) {
+    const key = empriseTargetKeyForModeFocus(marker.lon, marker.lat)
+    extent = (await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode, key)) ?? extent
+  }
   if (!extent) return
   const maxZoom = maxZoomForModeEmpriseFit(map, mode)
   requestAnimationFrame(() => {

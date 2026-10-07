@@ -88383,11 +88383,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     const cap = mode2 === MAP_MODE_PARCEL ? 19 : 15;
     return viewMax != null ? Math.min(viewMax, cap) : cap;
   }
+  function extentFromVisibleModeEmprise() {
+    const host = searchEngineLayerHostRef.value;
+    return host ? modeEmpriseViewExtent(host) : null;
+  }
   async function focusModeEmpriseOnMap(map2, mode2, options = {}) {
     const marker = readMapPermalinkMarker(getMapPermalinkParams()) ?? readCherryOrModeEmprisePoint();
-    if (!marker) return;
-    const key2 = empriseTargetKeyForModeFocus(marker.lon, marker.lat);
-    const extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode2, key2);
+    let extent = extentFromVisibleModeEmprise();
+    if (marker) {
+      const key2 = empriseTargetKeyForModeFocus(marker.lon, marker.lat);
+      extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode2, key2) ?? extent;
+    }
     if (!extent) return;
     const maxZoom = maxZoomForModeEmpriseFit(map2, mode2);
     requestAnimationFrame(() => {
@@ -88546,8 +88552,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (map2) await focusModeEmpriseOnMap(map2, MAP_MODE_PARCEL);
       }
       async function activateTerritoryMode() {
-        var _a;
-        if (!((_a = props.selection) == null ? void 0 : _a.territoryTitle)) return;
         if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
           mapMode.setMode(MAP_MODE_TERRITORY);
           return;
