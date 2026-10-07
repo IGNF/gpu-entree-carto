@@ -249,7 +249,7 @@ export class DrawToolsBar {
       if (geom instanceof Circle && getCircleKind(feature) === 'circle') {
         if (!isNearCircleEdge(geom, evt.coordinate, edgeTol)) continue
       }
-      return feature as OlFeature<OlGeometry>
+      return feature
     }
     return null
   }
@@ -677,7 +677,7 @@ export class DrawToolsBar {
       if (tool.circleKind) {
         const g = evt.feature.getGeometry()
         if (g instanceof Circle) {
-          this.circleDrawCenter = g.getCenter().slice() as Coordinate
+          this.circleDrawCenter = g.getCenter().slice()
         }
       }
     })
@@ -692,7 +692,7 @@ export class DrawToolsBar {
       }
       this.circleDrawCenter = null
       queueMicrotask(() => {
-        const feature = evt.feature as OlFeature<OlGeometry>
+        const feature = evt.feature
         const anchor = resolveStylePopupAnchor(feature) ?? undefined
         this.onFeatureCreated?.(feature, anchor)
         this.onChange()

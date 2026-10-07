@@ -73,7 +73,7 @@ const activeDocTabId = ref<string | null>(null)
 watch(
   () => props.selection?.documentTabs,
   (tabs) => {
-    activeDocTabId.value = tabs?.length ? tabs[0]!.id : null
+    activeDocTabId.value = tabs?.length ? tabs[0].id : null
   },
   { immediate: true },
 )
@@ -82,7 +82,7 @@ const activeDocTab = computed(() => {
   const tabs = documentTabs.value
   if (!tabs.length) return null
   const id = activeDocTabId.value
-  return tabs.find((t) => t.id === id) ?? tabs[0]!
+  return tabs.find((t) => t.id === id) ?? tabs[0]
 })
 
 function selectDocTab(id: string): void {

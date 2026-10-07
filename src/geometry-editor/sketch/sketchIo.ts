@@ -123,7 +123,7 @@ function readSketchGeoJsonFeature(
   return GEOJSON.readFeatures(raw, {
     dataProjection: 'EPSG:4326',
     featureProjection: mapProjection,
-  }) as OlFeature<OlGeometry>[]
+  })
 }
 
 /** Lit un objet GeoJSON croquis (FeatureCollection ou géométrie seule). */
@@ -146,7 +146,7 @@ export function readSketchGeoJsonObject(map: Map, data: unknown): OlFeature<OlGe
     features = GEOJSON.readFeatures(
       { type: 'Feature', geometry: data, properties: {} },
       { dataProjection: 'EPSG:4326', featureProjection: mapProjection },
-    ) as OlFeature<OlGeometry>[]
+    )
   }
 
   features = restoreImportedCircleFeatures(features)

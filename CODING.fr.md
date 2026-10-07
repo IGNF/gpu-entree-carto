@@ -35,7 +35,7 @@ Builds IIFE : `vite.lib.config.ts`, `vite.search-engine.config.ts`, `vite.locati
 
 ## Style de code
 
-- **ESLint :** `npm run lint` — périmètre `src/`.
+- **ESLint :** `npm run lint` — périmètre `src/` (`eslint.config.js`, `recommendedTypeChecked` + `projectService`).
 - **Prettier :** `npm run format:check` / `npm run format`.
 - **Correction auto :** `make fix`.
 

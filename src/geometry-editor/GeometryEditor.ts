@@ -23,9 +23,7 @@ import type { Geometry as OlGeometry } from 'ol/geom'
 import {
   DEFAULT_GEOMETRY_EDITOR_OPTIONS,
   type GeometryEditorOptions,
-  type GeometryTypeOption,
   type TileLayerConfig,
-  type ToolsToggleCorner,
 } from './types'
 import { parseRawToFeatures } from './parseGeometry'
 import { serializeFeatures } from './serializeGeometry'
@@ -291,13 +289,13 @@ export class GeometryEditor {
       this.applyEditable()
     } else if (patch.toolsToggle !== undefined) {
       this.applyHostClass()
-      this.sketch?.setToolsToggle((this.options.toolsToggle as ToolsToggleCorner | null) ?? null)
+      this.sketch?.setToolsToggle(this.options.toolsToggle ?? null)
     } else if (
       this.sketch &&
       patch.geometryType !== undefined &&
       patch.geometryType !== prev.geometryType
     ) {
-      this.sketch.setGeometryType(this.options.geometryType as GeometryTypeOption)
+      this.sketch.setGeometryType(this.options.geometryType)
     }
 
     if (
@@ -380,7 +378,7 @@ export class GeometryEditor {
   serializeToElement(): void {
     const features = this.source.getFeatures() as OlFeature<OlGeometry>[]
     const raw = serializeFeatures(features, {
-      geometryType: this.options.geometryType as GeometryTypeOption,
+      geometryType: this.options.geometryType,
       precision: this.options.precision,
       outputFormat: this.options.outputFormat,
     })
@@ -538,8 +536,8 @@ export class GeometryEditor {
     if (this.options.editable) {
       if (!this.sketch) {
         this.sketch = new SketchControl({
-          geometryType: this.options.geometryType as GeometryTypeOption,
-          toolsToggle: (this.options.toolsToggle as ToolsToggleCorner | null) ?? null,
+          geometryType: this.options.geometryType,
+          toolsToggle: this.options.toolsToggle ?? null,
           source: this.source,
           layer: this.vectorLayer,
           style: this.options.customStyle,
@@ -550,8 +548,8 @@ export class GeometryEditor {
         // Comme avant SketchControl : chrome sur le host, pas dans l’overlay OL
         this.mapHost.appendChild(this.sketch.getElement())
       } else {
-        this.sketch.setGeometryType(this.options.geometryType as GeometryTypeOption)
-        this.sketch.setToolsToggle((this.options.toolsToggle as ToolsToggleCorner | null) ?? null)
+        this.sketch.setGeometryType(this.options.geometryType)
+        this.sketch.setToolsToggle(this.options.toolsToggle ?? null)
         this.sketch.setStyle(this.options.customStyle)
       }
       this.applyHostClass()

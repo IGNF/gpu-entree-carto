@@ -4,6 +4,7 @@
  */
 import { computed } from 'vue'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
+import { coerceDisplayString } from '@/lib/coerceDisplayString'
 
 const props = defineProps<{
   selection: FicheInfoSelection | null
@@ -19,7 +20,7 @@ const entries = computed(() => {
         ? '—'
         : typeof value === 'object'
           ? JSON.stringify(value)
-          : String(value),
+          : coerceDisplayString(value),
   }))
 })
 </script>

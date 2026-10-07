@@ -37,7 +37,7 @@ export function buildFullOrderAfterActiveReorder(
   activeTopToBottom: string[],
 ): string[] {
   const activeSet = new Set(activeTopToBottom)
-  const sorted = Object.keys(sortKeyById).sort((a, b) => sortKeyById[a]! - sortKeyById[b]!)
+  const sorted = Object.keys(sortKeyById).sort((a, b) => sortKeyById[a] - sortKeyById[b])
   const out: string[] = []
   let injectedActive = false
   for (const id of sorted) {
@@ -131,7 +131,7 @@ export function reorderActiveStackSortKeys(
   const [item] = order.splice(fromDisplayIndex, 1)
   let insertAt = toInsertBefore
   if (fromDisplayIndex < toInsertBefore) insertAt -= 1
-  order.splice(insertAt, 0, item!)
+  order.splice(insertAt, 0, item)
 
   const fullOrder = buildFullOrderAfterActiveReorder(sortKeyById, order)
   return assignStackSortKeysFromFullOrder(sortKeyById, fullOrder)

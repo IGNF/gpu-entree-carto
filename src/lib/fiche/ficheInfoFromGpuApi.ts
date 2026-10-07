@@ -6,6 +6,7 @@ import {
 } from '@/lib/fiche/ficheDocumentPresentation'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
+import { coerceDisplayString } from '@/lib/coerceDisplayString'
 
 type GpuFicheFeature = Record<string, unknown>
 
@@ -129,8 +130,8 @@ function isPetFeature(feature: GpuFicheFeature): boolean {
 
 function featureLabelHtml(feature: GpuFicheFeature): string {
   if ('typezone' in feature) {
-    const code = String(feature.libelle ?? '')
-    const label = String(feature.libelong ?? feature.libelle ?? '')
+    const code = coerceDisplayString(feature.libelle)
+    const label = coerceDisplayString(feature.libelong ?? feature.libelle)
     if (code && label && code !== label) {
       return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`
     }
@@ -139,23 +140,23 @@ function featureLabelHtml(feature: GpuFicheFeature): string {
     return 'Zonage de type inconnu'
   }
   if ('typesect' in feature) {
-    const code = String(feature.libelle ?? '')
-    const label = String(feature.libelong ?? feature.libelle ?? '')
+    const code = coerceDisplayString(feature.libelle)
+    const label = coerceDisplayString(feature.libelong ?? feature.libelle)
     if (code && label) {
       return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`
     }
     return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Secteur de type inconnu'
   }
   if ('typepsc' in feature) {
-    const label = String(feature.libelle ?? '')
+    const label = coerceDisplayString(feature.libelle)
     return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Prescription de type inconnue'
   }
   if ('typeinf' in feature) {
-    const label = String(feature.libelle ?? '')
+    const label = coerceDisplayString(feature.libelle)
     return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Information de type inconnue'
   }
   if ('libelle' in feature) {
-    const label = String(feature.libelle ?? '')
+    const label = coerceDisplayString(feature.libelle)
     return label ? `<strong>${escapeHtml(label)}</strong>.` : ''
   }
   return ''
@@ -179,7 +180,7 @@ function buildPartitionFeaturesHtml(partition: GpuFichePartition): string {
     if (isPetFeature(feature)) continue
     const info = featureLabelHtml(feature)
     if (!info) continue
-    const key = `${String(feature.nomfic ?? '')}|${info}`
+    const key = `${coerceDisplayString(feature.nomfic)}|${info}`
     if (seen.has(key)) continue
     seen.add(key)
     parts.push(featureEntryHtml(feature))
@@ -227,7 +228,7 @@ function buildNonExecutoireHint(
 ): string {
   const key = document.originalName ?? document.name
   if (!key || !proceduresByDocument?.[key]?.length) return ''
-  const blocked = proceduresByDocument[key]!.some((p) => p.documentNotEnforceable === true)
+  const blocked = proceduresByDocument[key].some((p) => p.documentNotEnforceable === true)
   if (!blocked) return ''
   return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`
 }
@@ -261,12 +262,12 @@ function buildDocumentTypeTabHtml(
   const keys = Object.keys(partitions)
   if (!keys.length) return ''
   if (keys.length === 1) {
-    return buildPartitionBlockHtml(keys[0]!, partitions[keys[0]!]!, kind, proceduresByDocument)
+    return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument)
   }
   const parts = ['<p>Zone d’incertitude où se superposent :</p><ul>']
   for (const key of keys) {
     parts.push(
-      `<li>${buildPartitionBlockHtml(key, partitions[key]!, kind, proceduresByDocument)}</li>`,
+      `<li>${buildPartitionBlockHtml(key, partitions[key], kind, proceduresByDocument)}</li>`,
     )
   }
   parts.push('</ul>')
@@ -337,7 +338,7 @@ function normalizeLowScaleDocuments(
 function buildLowScaleDocumentsHtml(documents: GpuFicheDocument[]): string {
   if (!documents.length) return ''
   if (documents.length === 1) {
-    return documentIntroHtml(documents[0]!, 'du')
+    return documentIntroHtml(documents[0], 'du')
   }
   const parts = ['<p>Zone d’incertitude où se superposent :</p><ul>']
   for (const doc of documents) {
@@ -448,7 +449,7 @@ function buildParcelUrbanismInfosHtml(data: GpuFicheInfoPayload): string {
   }
   const parts: string[] = []
   for (const key of keys) {
-    const block = buildPartitionFeaturesHtml(dus[key]!)
+    const block = buildPartitionFeaturesHtml(dus[key])
     if (block) parts.push(block)
   }
   return parts.join('') || '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'

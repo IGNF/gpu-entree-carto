@@ -1,3 +1,5 @@
+import { coerceDisplayString } from '@/lib/coerceDisplayString'
+
 export type CadastreReferenceRow = {
   label: string
   value: string
@@ -30,22 +32,22 @@ export function cadastreReferencesFromParcel(
   parcel: Record<string, unknown> | null | undefined,
 ): CadastreReferences | null {
   if (!parcel) return null
-  const section = String(parcel.section ?? '').trim()
-  const numero = String(parcel.numero ?? '').trim()
-  const idu = String(parcel.idu ?? parcel.id ?? '').trim()
+  const section = coerceDisplayString(parcel.section).trim()
+  const numero = coerceDisplayString(parcel.numero).trim()
+  const idu = coerceDisplayString(parcel.idu ?? parcel.id).trim()
   if (!section && !numero && !idu) return null
 
-  const codeInsee = String(parcel.code_insee ?? '').trim()
+  const codeInsee = coerceDisplayString(parcel.code_insee).trim()
   const headline =
     idu || [codeInsee, section, numero].filter(Boolean).join(' ') || `${section} ${numero}`.trim()
 
   const rows: CadastreReferenceRow[] = [
     { label: 'Département', value: departementFromInsee(codeInsee) },
-    { label: 'Commune', value: String(parcel.nom_com ?? '') },
+    { label: 'Commune', value: coerceDisplayString(parcel.nom_com) },
     { label: 'Code INSEE', value: codeInsee },
   ]
 
-  const codeArr = String(parcel.code_arr ?? '').trim()
+  const codeArr = coerceDisplayString(parcel.code_arr).trim()
   const arr = codeArr && codeArr !== '000' ? codeArr : arrondissementFromInsee(codeInsee)
   if (arr) {
     rows.push({ label: 'Code d’arrondissement', value: arr })
@@ -53,12 +55,15 @@ export function cadastreReferencesFromParcel(
 
   rows.push(
     { label: 'Section', value: section },
-    { label: 'Feuille', value: String(parcel.feuille ?? parcel.num_feuf ?? '1') },
+    {
+      label: 'Feuille',
+      value: coerceDisplayString(parcel.feuille ?? parcel.num_feuf, '1'),
+    },
     { label: 'Numéro de parcelle', value: numero },
   )
 
-  const contenance = parcel.contenance
-  if (contenance != null && contenance !== '') {
+  const contenance = coerceDisplayString(parcel.contenance)
+  if (contenance !== '') {
     rows.push({ label: 'Superficie', value: `${contenance} m²` })
   }
 
@@ -67,9 +72,9 @@ export function cadastreReferencesFromParcel(
 
 export function parcelShortLabel(parcel: Record<string, unknown> | null | undefined): string {
   if (!parcel) return ''
-  const section = String(parcel.section ?? '').trim()
-  const numero = String(parcel.numero ?? '').trim()
+  const section = coerceDisplayString(parcel.section).trim()
+  const numero = coerceDisplayString(parcel.numero).trim()
   if (section && numero) return `${section} ${numero}`
-  const idu = String(parcel.idu ?? '').trim()
+  const idu = coerceDisplayString(parcel.idu).trim()
   return idu
 }

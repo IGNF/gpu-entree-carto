@@ -21,7 +21,7 @@ make install
 make dev       # http://localhost:5173/
 ```
 
-Node **24 LTS** (≥ 24.15, `.nvmrc`) — `nvm use` / `fnm use` avant `npm install`.
+Node **≥ 24.15** — **recommandé :** 24 LTS (`.nvmrc`, ex. 24.21.0) : `nvm use` / `fnm use` avant `npm install`.
 
 | Commande | Effet |
 | -------- | ----- |

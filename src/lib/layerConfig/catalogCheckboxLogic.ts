@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import type { CatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
 

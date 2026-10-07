@@ -42,7 +42,7 @@ function parseGpuStyle(raw: unknown): GpuClientSketchStyle | null {
     }
   }
   if (typeof raw !== 'object') return null
-  return raw as GpuClientSketchStyle
+  return raw
 }
 
 function parseGpuFont(

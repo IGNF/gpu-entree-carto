@@ -69,7 +69,7 @@ export function permalinkIdsForCatalogEntry(entry: GpuLayerCatalogEntry): string
   const parts = entry.path.split('/').filter(Boolean)
   if (parts.length) {
     ids.add(parts.join(','))
-    ids.add(parts[parts.length - 1]!)
+    ids.add(parts[parts.length - 1])
   }
   const legacy = pathToPermalinkId(entry.path)
   if (legacy) ids.add(legacy)

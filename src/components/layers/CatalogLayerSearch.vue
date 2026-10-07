@@ -3,7 +3,7 @@
  * Recherche de couches dans le catalogue Données (résultats + lien vers l’arbre).
  */
 import { computed, ref } from 'vue'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { catalogNodesMatchingSearch } from '@/lib/layerConfig/catalogTreeSearch'
 import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 

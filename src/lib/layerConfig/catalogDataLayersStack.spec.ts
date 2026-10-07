@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { computeMapVisibilityById } from '@/lib/layerConfig/catalogCheckboxLogic'
 import {
   aggregateStackNodeLegend,

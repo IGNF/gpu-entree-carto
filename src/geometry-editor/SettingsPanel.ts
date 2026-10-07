@@ -3,12 +3,8 @@
  */
 import type Map from 'ol/Map'
 import { toLonLat } from 'ol/proj'
-import type {
-  GeometryEditorOptions,
-  GeometryOutputFormat,
-  GeometryTypeOption,
-  ToolsToggleCorner,
-} from './types'
+import type { GeometryEditorOptions, GeometryOutputFormat, ToolsToggleCorner } from './types'
+import { formDataString } from '@/lib/coerceDisplayString'
 import { DEFAULT_GEOMETRY_EDITOR_OPTIONS, GEOMETRY_TYPE_NAMES } from './types'
 import { appendGeometryToolIcon } from './geometryToolIcons'
 
@@ -281,10 +277,10 @@ export class SettingsPanel {
     const bool = (name: string): boolean => fd.get(name) === 'on'
 
     const patch: GeometryEditorOptions = {
-      geometryType: String(fd.get('geometryType')) as GeometryTypeOption,
-      outputFormat: String(fd.get('outputFormat')) as GeometryOutputFormat,
+      geometryType: formDataString(fd, 'geometryType'),
+      outputFormat: formDataString(fd, 'outputFormat') as GeometryOutputFormat,
       height: num('height'),
-      width: String(fd.get('width') ?? '100%'),
+      width: formDataString(fd, 'width', '100%'),
       lon: roundTo(num('lon'), LON_LAT_DECIMALS),
       lat: roundTo(num('lat'), LON_LAT_DECIMALS),
       zoom: roundTo(num('zoom'), ZOOM_DECIMALS),
@@ -298,7 +294,7 @@ export class SettingsPanel {
       showAttributions: bool('showAttributions'),
       showSettings: bool('showSettings'),
       toolsToggle: (() => {
-        const v = String(fd.get('toolsToggle') ?? '')
+        const v = formDataString(fd, 'toolsToggle')
         return v === '' ? null : (v as ToolsToggleCorner)
       })(),
       hide: bool('hide'),

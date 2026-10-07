@@ -7,6 +7,7 @@ import type { Geometry as OlGeometry } from 'ol/geom'
 import { LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from 'ol/geom'
 import type { Coordinate } from 'ol/coordinate'
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
+import { coerceDisplayString } from '@/lib/coerceDisplayString'
 
 /** Motifs interdits dans du XML KML issu d’un champ utilisateur (XSS / HTML embarqué). */
 const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i
@@ -82,10 +83,10 @@ function asRecordArray(value: unknown): Record<string, unknown>[] {
 function kmlText(value: unknown): string {
   if (value == null) return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value).trim()
-  if (typeof value === 'object' && '#text' in (value as object)) {
-    return String((value as Record<string, unknown>)['#text']).trim()
+  if (typeof value === 'object' && '#text' in value) {
+    return coerceDisplayString((value as Record<string, unknown>)['#text']).trim()
   }
-  return String(value).trim()
+  return coerceDisplayString(value).trim()
 }
 
 function parseKmlCoordinates(raw: string): Coordinate[] {
@@ -121,7 +122,7 @@ function polygonFromKml(node: Record<string, unknown>): Polygon {
   const first = coords[0]
   const last = coords[coords.length - 1]
   if (first[0] !== last[0] || first[1] !== last[1]) {
-    coords.push(first.slice() as Coordinate)
+    coords.push(first.slice())
   }
   const rings = [coords]
   for (const inner of asRecordArray(node.innerBoundaryIs)) {
@@ -162,7 +163,7 @@ function multiGeometryFromKml(node: Record<string, unknown>): OlGeometry {
     if (g instanceof Point) points.push(g)
     else if (g instanceof LineString) lines.push(g)
     else if (g instanceof Polygon) polygons.push(g)
-    else if (g instanceof MultiPoint) points.push(...(g.getPoints() as Point[]))
+    else if (g instanceof MultiPoint) points.push(...g.getPoints())
     else if (g instanceof MultiLineString) lines.push(...g.getLineStrings())
     else if (g instanceof MultiPolygon) polygons.push(...g.getPolygons())
   }
@@ -257,7 +258,7 @@ export function readUserKmlFeatures(
     }
     if (!geom) continue
     geom.transform(dataProjection, featureProjection)
-    const feature = new Feature({ geometry: geom }) as OlFeature<OlGeometry>
+    const feature = new Feature({ geometry: geom })
     for (const [key, value] of Object.entries(propertiesFromPlacemark(pm))) {
       feature.set(key, value)
     }

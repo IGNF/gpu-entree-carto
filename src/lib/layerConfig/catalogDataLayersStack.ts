@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { LegendItem } from '@/types/stubs'
 import { dedupeLegendItems } from '@/lib/layerConfig/gpuLegendItems'
 import { isCatalogAggregate } from '@/lib/layerConfig/catalogCheckboxLogic'

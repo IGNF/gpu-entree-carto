@@ -39855,6 +39855,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const XMLValidator = {
     validate
   };
+  function coerceDisplayString(value, fallback = "") {
+    if (value == null) return fallback;
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+      return String(value);
+    }
+    return fallback;
+  }
+  function formDataString(fd, key, fallback = "") {
+    return coerceDisplayString(fd.get(key), fallback);
+  }
   const UNSAFE_TAG = /<\s*(script|iframe|object|embed|foreignObject|link|meta|svg)\b/i;
   const EVENT_HANDLER = /\son[a-z]+\s*=/i;
   const JAVASCRIPT_URI = /javascript\s*:/i;
@@ -39912,9 +39923,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
     if (typeof value === "object" && "#text" in value) {
-      return String(value["#text"]).trim();
+      return coerceDisplayString(value["#text"]).trim();
     }
-    return String(value).trim();
+    return coerceDisplayString(value).trim();
   }
   function parseKmlCoordinates(raw) {
     const coords = [];
@@ -46349,21 +46360,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /** Désactive les champs devenus non pertinents. */
     syncDependentFields() {
       const dash = Number(this.els.lineDash.value) || 0;
-      const dashOffsetField = this.els.lineDashOffset.closest(
-        ".ec-sketch-style-popup__field"
-      );
+      const dashOffsetField = this.els.lineDashOffset.closest(".ec-sketch-style-popup__field");
       this.els.lineDashOffset.disabled = dash <= 0;
       dashOffsetField == null ? void 0 : dashOffsetField.classList.toggle("is-disabled", dash <= 0);
       const join = this.els.lineJoin.value;
-      const miterField = this.els.miterLimit.closest(
-        ".ec-sketch-style-popup__field"
-      );
+      const miterField = this.els.miterLimit.closest(".ec-sketch-style-popup__field");
       this.els.miterLimit.disabled = join !== "miter";
       miterField == null ? void 0 : miterField.classList.toggle("is-disabled", join !== "miter");
       const shape = this.els.pointShape.value;
-      const rotField = this.els.pointRotation.closest(
-        ".ec-sketch-style-popup__field"
-      );
+      const rotField = this.els.pointRotation.closest(".ec-sketch-style-popup__field");
       this.els.pointRotation.disabled = shape === "circle";
       rotField == null ? void 0 : rotField.classList.toggle("is-disabled", shape === "circle");
     }
@@ -47170,7 +47175,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (id === "export") {
-        this.runExport();
+        void this.runExport();
         return;
       }
       if (!active) {
@@ -47685,10 +47690,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const num = (name) => Number(fd.get(name));
       const bool = (name) => fd.get(name) === "on";
       const patch = {
-        geometryType: String(fd.get("geometryType")),
-        outputFormat: String(fd.get("outputFormat")),
+        geometryType: formDataString(fd, "geometryType"),
+        outputFormat: formDataString(fd, "outputFormat"),
         height: num("height"),
-        width: String(fd.get("width") ?? "100%"),
+        width: formDataString(fd, "width", "100%"),
         lon: roundTo(num("lon"), LON_LAT_DECIMALS),
         lat: roundTo(num("lat"), LON_LAT_DECIMALS),
         zoom: roundTo(num("zoom"), ZOOM_DECIMALS),
@@ -47702,7 +47707,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         showAttributions: bool("showAttributions"),
         showSettings: bool("showSettings"),
         toolsToggle: (() => {
-          const v = String(fd.get("toolsToggle") ?? "");
+          const v = formDataString(fd, "toolsToggle");
           return v === "" ? null : v;
         })(),
         hide: bool("hide")

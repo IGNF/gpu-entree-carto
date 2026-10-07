@@ -1,4 +1,4 @@
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
@@ -135,7 +135,7 @@ export function applyGpuConfigOverrides(overrides: Record<string, unknown> | und
   if (w.gpu?.config) {
     Object.assign(w.gpu.config, overrides)
   }
-  resolveConfigUrlsInRecord(config as Record<string, unknown>)
+  resolveConfigUrlsInRecord(config)
   if (w.gpu?.config) {
     resolveConfigUrlsInRecord(w.gpu.config)
   }
@@ -185,7 +185,7 @@ export function syncEntreeConfigFromGpuScript(): void {
   if (w.gpu?.config) {
     Object.assign(config, w.gpu.config)
   }
-  resolveConfigUrlsInRecord(config as Record<string, unknown>)
+  resolveConfigUrlsInRecord(config)
   if (w.gpu?.config) {
     resolveConfigUrlsInRecord(w.gpu.config)
   }
@@ -194,7 +194,7 @@ export function syncEntreeConfigFromGpuScript(): void {
 
 function applyGpuConfigSyncAndDevRewrite(): void {
   syncEntreeConfigFromGpuScript()
-  rewriteGpuConfigUrlsForViteDev(config as Record<string, unknown>)
+  rewriteGpuConfigUrlsForViteDev(config)
   const w = window as Window & { gpu?: { config?: Record<string, unknown> } }
   if (w.gpu?.config) {
     rewriteGpuConfigUrlsForViteDev(w.gpu.config)

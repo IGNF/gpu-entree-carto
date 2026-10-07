@@ -15,7 +15,7 @@ import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
 import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
 import { provideMapMode } from '@/composables/mapMode'
 import { normalizeMapMode } from '@/lib/map/mapMode'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
   createGpuBaseLayerEnvironment,
   setActiveGpuBaseLayer,

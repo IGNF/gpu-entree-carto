@@ -30,7 +30,7 @@ Voir aussi : [README.fr.md](README.fr.md), [CODING.fr.md](CODING.fr.md), [doc/De
 
 ### Node.js
 
-- **Node.js 24 LTS** (≥ 24.15) ou **Node ≥ 26** (`package.json` → `engines`).
+- **Node.js ≥ 24.15** — **24 LTS recommandé** (voir `.nvmrc`), (`package.json` → `engines`).
 - Fichier `.nvmrc` : `nvm use` / `fnm use` avant `npm install`.
 
 Téléchargement : https://nodejs.org/

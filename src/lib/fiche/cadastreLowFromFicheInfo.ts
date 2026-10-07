@@ -65,5 +65,5 @@ export function syncCadastreLowFromFicheSelectionRaw(
     resetGpuCadastreLowLayer()
     return
   }
-  applyCadastreLowFromFichePayload(raw as GpuFicheInfoPayload)
+  applyCadastreLowFromFichePayload(raw)
 }

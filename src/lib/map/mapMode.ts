@@ -16,7 +16,7 @@ export function normalizeMapMode(raw: unknown): MapModeId | null {
   if (raw === '1' || raw === '2') return Number(raw) as MapModeId
   if (typeof raw === 'string') {
     const n = parseInt(raw, 10)
-    if (n === 1 || n === 2) return n as MapModeId
+    if (n === 1 || n === 2) return n
   }
   return null
 }

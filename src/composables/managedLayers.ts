@@ -1,6 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { LegendItem } from '@/types/stubs'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
   catalogNodeOpacityPercent,
   GPU_FORCE_OPACITY_PERCENT,
@@ -218,11 +218,12 @@ export function useManagedLayers(
     })
     let opacity = getPanelState(node).opacity
     if (opacityWmsIds.length) {
-      const opacities = opacityWmsIds.map(
-        (id) =>
-          panelStateById.value[id]?.opacity ??
-          catalogNodeOpacityPercent(treeIndex.nodesById.get(id)!),
-      )
+      const opacities = opacityWmsIds.map((id) => {
+        const fromPanel = panelStateById.value[id]?.opacity
+        if (fromPanel != null) return fromPanel
+        const indexed = treeIndex.nodesById.get(id)
+        return indexed ? catalogNodeOpacityPercent(indexed) : 100
+      })
       opacity = opacities[0]!
     }
 
@@ -282,7 +283,9 @@ export function useManagedLayers(
   function mapVisibleFromCatalogAndPanel(nodeId: string, catalogOnMap: boolean): boolean {
     if (!catalogOnMap) return false
     if (!isShownInDataLayersPanel(nodeId)) return true
-    return getPanelState(treeIndex.nodesById.get(nodeId)!).visible
+    const node = treeIndex.nodesById.get(nodeId)
+    if (!node) return false
+    return getPanelState(node).visible
   }
 
   function reapplyCatalogMapState() {
@@ -563,7 +566,7 @@ export function useManagedLayers(
 
     const ranked = activeTopToBottom
       .filter((id) => stackIndexByNodeId[id] !== undefined)
-      .map((id) => ({ id, idx: stackIndexByNodeId[id]! }))
+      .map((id) => ({ id, idx: stackIndexByNodeId[id] }))
     ranked.sort((a, b) => a.idx - b.idx || a.id.localeCompare(b.id))
 
     const orderedActive: string[] = ranked.map((r) => r.id)

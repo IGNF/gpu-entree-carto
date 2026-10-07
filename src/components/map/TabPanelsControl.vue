@@ -51,7 +51,7 @@ import FicheInfoPanel from '@/components/panels/FicheInfoPanel.vue'
 import LayerCataloguePanel from '@/components/panels/LayerCataloguePanel.vue'
 import DataLayersManagerPanel from '@/components/panels/DataLayersManagerPanel.vue'
 import LayerLegendsPanel from '@/components/panels/LayerLegendsPanel.vue'
-import type { TreeLayerNode } from '@/components/layers/TreeLayerSwitcher.vue'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
 import { TAB_PANELS_AUTO_OPEN_SNAP, type TabPanelsSheetSnapIndex } from '@/lib/map/tabPanelsLayout'
 import { useTabPanelsLayout } from '@/composables/useTabPanelsLayout'
@@ -362,7 +362,7 @@ function layerStateDiffersFromConfig(entry: GpuLayerCatalogEntry): boolean {
 function primaryPermalinkIdForEntry(entry: GpuLayerCatalogEntry): string {
   const parts = entry.path.split('/').filter(Boolean)
   if (!parts.length) return entry.config.name ?? entry.id
-  if (parts.length === 1) return parts[0]!
+  if (parts.length === 1) return parts[0]
   return parts.join(',')
 }
 

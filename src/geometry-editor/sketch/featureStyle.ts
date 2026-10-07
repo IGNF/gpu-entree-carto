@@ -346,7 +346,7 @@ export function featureStylePopupAnchorCandidates(feature: OlFeature<OlGeometry>
   }
   if (geom instanceof Polygon) {
     // Point intérieur (meilleur ancrage popup) + sommets de l’anneau
-    const interior = geom.getInteriorPoint().getCoordinates().slice(0, 2) as Coordinate
+    const interior = geom.getInteriorPoint().getCoordinates().slice(0, 2)
     const ring = geom.getCoordinates()[0] || []
     const verts = ring.length > 1 ? ring.slice(0, -1) : ring
     return [interior, ...verts]
@@ -354,7 +354,7 @@ export function featureStylePopupAnchorCandidates(feature: OlFeature<OlGeometry>
   if (geom instanceof MultiPolygon) {
     const out: Coordinate[] = []
     for (const poly of geom.getPolygons()) {
-      const interior = poly.getInteriorPoint().getCoordinates().slice(0, 2) as Coordinate
+      const interior = poly.getInteriorPoint().getCoordinates().slice(0, 2)
       out.push(interior)
       const ring = poly.getCoordinates()[0] || []
       if (ring.length > 1) out.push(...ring.slice(0, -1))
@@ -430,7 +430,7 @@ export function resolveStylePopupAnchor(
 ): Coordinate | null {
   const geom = feature.getGeometry()
   if (geom instanceof Circle && getCircleKind(feature) === 'disc') {
-    return geom.getCenter().slice() as Coordinate
+    return geom.getCenter().slice()
   }
   if (options?.clickAnchor) return options.clickAnchor
   return featureStylePopupAnchor(feature, options?.mapSize, options?.getPixel)

@@ -5,7 +5,7 @@ import type { LineString, Polygon } from 'ol/geom'
 /** Longueur géodésique formatée (m / km). */
 export function formatMapLength(map: Map, line: LineString): string {
   const proj = map.getView().getProjection()
-  const clone = line.clone().transform(proj, 'EPSG:4326') as LineString
+  const clone = line.clone().transform(proj, 'EPSG:4326')
   const length = getLength(clone, { projection: 'EPSG:4326' })
   if (length > 1000) return `${Math.round((length / 1000) * 100) / 100} km`
   return `${Math.round(length * 100) / 100} m`
@@ -14,7 +14,7 @@ export function formatMapLength(map: Map, line: LineString): string {
 /** Aire géodésique formatée (m² / km²). */
 export function formatMapArea(map: Map, polygon: Polygon): string {
   const proj = map.getView().getProjection()
-  const clone = polygon.clone().transform(proj, 'EPSG:4326') as Polygon
+  const clone = polygon.clone().transform(proj, 'EPSG:4326')
   const area = getArea(clone, { projection: 'EPSG:4326' })
   if (area > 100_000) {
     return `${Math.round((area / 1_000_000) * 100) / 100} km²`

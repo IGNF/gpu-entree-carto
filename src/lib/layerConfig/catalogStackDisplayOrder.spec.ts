@@ -47,10 +47,10 @@ describe('aggregate split sort keys', () => {
       'c2',
       'c3',
     ])
-    expect(keys.c1).toBeLessThan(keys.c2!)
-    expect(keys.c2).toBeLessThan(keys.c3!)
-    expect(keys.c3).toBeLessThan(keys.other!)
-    expect(keys.vue).toBeLessThan(keys.c1!)
+    expect(keys.c1).toBeLessThan(keys.c2)
+    expect(keys.c2).toBeLessThan(keys.c3)
+    expect(keys.c3).toBeLessThan(keys.other)
+    expect(keys.vue).toBeLessThan(keys.c1)
   })
 })
 
@@ -59,7 +59,7 @@ describe('reorderActiveStackSortKeys', () => {
     let keys = ensureStackSortKeys({}, catalogOrder)
     keys = reorderActiveStackSortKeys(keys, ['zonages', 'presc', 'perim'], 0, 3)
     expect(keys.vue).toBe(STACK_SORT_KEY_STEP)
-    expect(keys.vue).toBeLessThan(keys.presc!)
-    expect(keys.presc).toBeLessThan(keys.zonages!)
+    expect(keys.vue).toBeLessThan(keys.presc)
+    expect(keys.presc).toBeLessThan(keys.zonages)
   })
 })
