@@ -31,9 +31,9 @@ const props = withDefaults(
     enableFeatureStyleEditor?: boolean
   }>(),
   {
-    position: CONTROL_POSITIONS.overviewMap,
+    position: CONTROL_POSITIONS.sketch,
     geometryType: 'Geometry',
-    toolsToggle: undefined,
+    toolsToggle: CONTROL_POSITIONS.sketch,
     localStorageKey: 'entree-carto-sketch',
     clearAll: true,
     history: true,

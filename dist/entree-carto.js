@@ -28317,7 +28317,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     zoom: "bottom-right",
     fullscreen: "bottom-right",
     overviewMap: "bottom-left",
-    territories: "bottom-left"
+    territories: "bottom-left",
+    /** Croquis : même colonne, au-dessus de la minimap (CSS order). */
+    sketch: "bottom-left"
   };
   var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
   function getDefaultExportFromCjs(x) {
@@ -87348,9 +87350,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
-      position: { default: CONTROL_POSITIONS.overviewMap },
+      position: { default: CONTROL_POSITIONS.sketch },
       geometryType: { default: "Geometry" },
-      toolsToggle: { default: void 0 },
+      toolsToggle: { default: CONTROL_POSITIONS.sketch },
       localStorageKey: { default: "entree-carto-sketch" },
       clearAll: { type: Boolean, default: true },
       history: { type: Boolean, default: true },

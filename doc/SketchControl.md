@@ -139,7 +139,7 @@ After mount: `handle.getOptions()`, `handle.setOptions(patch)`, `handle.resetOpt
 
 ## Vue props (`SketchControl.vue`)
 
-Main map defaults: `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, all `extraTools`, `enableFeatureStyleEditor: true`.
+Main map defaults (`SketchControl.vue`): `position` / `toolsToggle`: **`bottom-left`** (toggle stays anchored above minimap; toolbar opens upward); `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, all `extraTools`, `enableFeatureStyleEditor: true`.
 
 ## GeometryEditor
 

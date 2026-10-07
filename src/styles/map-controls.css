@@ -262,9 +262,15 @@
   );
   min-height: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: stretch;
   gap: var(--ec-widget-gap);
+}
+
+/* toolsToggle top-* : barre sous le bouton menu (comme geometry-editor.css) */
+.position-container-bottom-left > .ec-sketch-control--geopf-slot[data-corner='top-left'],
+.position-container-bottom-left > .ec-sketch-control--geopf-slot[data-corner='top-right'] {
+  flex-direction: column;
 }
 
 /*

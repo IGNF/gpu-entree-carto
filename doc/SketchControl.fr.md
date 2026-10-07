@@ -139,7 +139,7 @@ Après montage : `handle.getOptions()`, `handle.setOptions(patch)`, `handle.rese
 
 ## Props Vue (`SketchControl.vue`)
 
-Défauts carte principale : `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, tous les `extraTools`, `enableFeatureStyleEditor: true`.
+Défauts carte principale (`SketchControl.vue`) : `position` / `toolsToggle` : **`bottom-left`** (bouton menu ancré au-dessus de la minimap ; barre d’outils vers le haut) ; `history: true`, `clearAll: true`, `localStorageKey: 'entree-carto-sketch'`, tous les `extraTools`, `enableFeatureStyleEditor: true`.
 
 ## GeometryEditor
 
