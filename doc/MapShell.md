@@ -32,6 +32,6 @@ Provides `olMap` (`ShallowRef<Map | null>`) to descendants for attaching / detac
 ## Notes
 
 - Projection: EPSG:3857, France center, minZoom 5 / maxZoom 19.
-- OL attribution **enabled**, not collapsible (`collapsible: false`, as gpu-client); IGN text and logos via `ignGeoportalAttributions` (`title` on IGN and ministry logos); INSPIRE cadastre WMS uses Marianne + ministry logos via `dgfInspireCadastreAttributions` (`public/img/logos/logo-marianne.svg`, DGFIP text in `title`); bottom-right strip under the scale bar (`map-controls.css`).
+- OL attribution **enabled**, not collapsible (`collapsible: false`, as gpu-client); IGN text and logos via `ignGeoportalAttributions` (`title` on IGN and ministry logos); INSPIRE cadastre WMS uses Marianne + ministry logos via `dgfInspireCadastreAttributions` (`public/img/logos/logo-marianne.svg`, DGFIP text in `title`); bottom-right strip under the scale bar (`map-controls.css`). Display-only controls (`.ol-attribution`, scale bar) are moved from `ol-overlaycontainer-stopevent` to `ol-overlaycontainer` and use `pointer-events: none` on the root (`configureDisplayOnlyOlControls` in `useOlMap.ts`, CSS in `map-controls.css`) so **ClickInfo** / pan work over the transparent strip; links and buttons stay clickable.
 - Native zoom / rotate disabled (dedicated controls).
 - Map container exposes `id="gpu-map"` for gpu-site compatibility (`gpu-map.css`).

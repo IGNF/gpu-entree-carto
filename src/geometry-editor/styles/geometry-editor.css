@@ -1133,6 +1133,12 @@
   bottom: 0;
   right: 0;
   font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.ec-geometry-editor .ol-attribution a,
+.ec-geometry-editor .ol-attribution button {
+  pointer-events: auto;
 }
 
 /* Poignées transform au-dessus du reste de la carte */

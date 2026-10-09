@@ -1,6 +1,7 @@
 import { inject, onUnmounted, shallowRef, watch, type ShallowRef } from 'vue'
 import type Map from 'ol/Map'
 import type Control from 'ol/control/Control'
+import { configureDisplayOnlyOlControls } from '@/composables/useOlMap'
 
 /**
  * Attache / détache un contrôle OpenLayers (ou geopf) sur la carte injectée.
@@ -28,6 +29,7 @@ export function useOlControl(
       const control = createControl()
       options?.afterCreate?.(control)
       map.addControl(control)
+      configureDisplayOnlyOlControls(map)
       controlRef.value = control
 
       onCleanup(() => {
