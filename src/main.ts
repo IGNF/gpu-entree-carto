@@ -24,9 +24,15 @@ import {
   bootstrapMapPermalinkFromLocation,
   locationHashLooksLikeMapPermalink,
 } from '@/lib/map/mapPermalink'
+import { captureInitialLayerPermalinkFromLocation } from '@/lib/layerConfig/documentCatalogStartup'
 
-if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
-  bootstrapMapPermalinkFromLocation()
+if (typeof window !== 'undefined') {
+  if (window.location.pathname.replace(/\/+$/, '').endsWith('/map')) {
+    captureInitialLayerPermalinkFromLocation()
+  }
+  if (locationHashLooksLikeMapPermalink()) {
+    bootstrapMapPermalinkFromLocation()
+  }
 }
 
 const notivue = createNotivue({

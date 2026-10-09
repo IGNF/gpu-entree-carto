@@ -7,6 +7,7 @@ Clic carte **permanent** qui remplit l’onglet **fiche** (premier onglet du pan
 
 **Source :** `src/components/map/ClickInfoControl.vue`  
 **Service :** `src/lib/fiche/ficheInfoService.ts`  
+**Spécification cible (Territoire / Parcelle, APIs, backlog) :** [FicheInfo.fr.md](./FicheInfo.fr.md)  
 **Styles :** `src/styles/click-info.css`  
 **Verrou croquis :** `src/composables/sketchToolEngaged.ts` (mis à jour par `SketchControl`)
 

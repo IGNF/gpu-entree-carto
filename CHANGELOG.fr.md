@@ -12,6 +12,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Fiche info P0–P2** — chargement différé **`gpu_api_parcel_fiche`** (Infos / Documents), params **`/api/fiche-info`** (`includeParcel`, preview, `client`/`seq`), communes absorbées (`deletedGrids`), preview démo (emprise + couches WMS + rechargement fiche), styles règles d’urbanisme, impression parcelle ; modules `parcelId`, `ficheInfoQuery`, `parcelFicheFromGpuApi` ; tests Vitest associés.
 - **Démo croquis** — option `showSettings` sur `mountSketch` (roue crantée, réglages à chaud) ; `setOptions` / `resetOptions` sur le handle ; route `/sketch` activée.
 
 - **TabPanelsControl (mobile)** — bottom sheet (snaps 0 / 35 / 70 / 98 %), barre horizontale (onglets + zoom / plein écran), poignée, safe areas et décalage en-tête site ; composables `useTabPanelsLayout` / `useTabPanelsMobileSheet`, `useMapViewportControls`.

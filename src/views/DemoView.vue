@@ -15,7 +15,7 @@ import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
 import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
 import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
 import { provideMapMode } from '@/composables/mapMode'
-import { normalizeMapMode } from '@/lib/map/mapMode'
+import { MAP_MODE_TERRITORY, normalizeMapMode } from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
@@ -30,7 +30,14 @@ import {
   resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
 import { markGpuClientConfigLoading } from '@/lib/demo/gpuClientConfigState'
-import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
+import {
+  isFicheInfoApiConfigured,
+  loadFicheForCherryFromPermalink,
+  loadFicheForMapPoint,
+  scheduleFicheLoadForCherryWhenReady,
+} from '@/lib/fiche/ficheInfoService'
+import { parseDocumentBbox } from '@/lib/fiche/ficheInfoQuery'
+import config from '@/lib/config'
 import {
   demoUsesMinifiedAssets,
   getCreateStandardViewerFromBundle,
@@ -52,11 +59,17 @@ import '@/styles/map-mode-selector.css'
 import '@/styles/click-info.css'
 import {
   bootstrapMapPermalinkFromLocation,
+  getMapPermalinkParams,
   locationHashLooksLikeMapPermalink,
+  readMapPermalinkMarker,
 } from '@/lib/map/mapPermalink'
+import { captureInitialLayerPermalinkFromLocation } from '@/lib/layerConfig/documentCatalogStartup'
 
-if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
-  bootstrapMapPermalinkFromLocation()
+if (typeof window !== 'undefined') {
+  captureInitialLayerPermalinkFromLocation()
+  if (locationHashLooksLikeMapPermalink()) {
+    bootstrapMapPermalinkFromLocation()
+  }
 }
 
 provideMapMode({
@@ -87,8 +100,10 @@ const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const pendingBbox = ref<number[] | null>(
   !handoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
 )
-const pendingDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
 const gpuDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
+/** Évite double fetch fiche / double reload WMS au démarrage démo. */
+let demoStartupLayersApplied = false
+let demoStartupFicheRequested = false
 
 if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
   setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value)
@@ -104,7 +119,10 @@ const layerMapHooks = {
 onMounted(async () => {
   const cfg = await prepareDemoEnvironment(getDemoConfig())
   scheduleFicheLoadForCherryWhenReady()
-  gpuDocument.value = cfg.document ?? null
+  gpuDocument.value = cfg.document ?? gpuDocument.value
+  if (cfg.document) {
+    config.document = cfg.document
+  }
 
   if (useMinified.value) {
     await loadLibBundle('entree-carto')
@@ -118,12 +136,7 @@ onMounted(async () => {
 
   catalogLayersLoading.value = false
   layerNodes.value = resolveDemoLayerNodes(getDemoConfig())
-  const layerConfig = resolveLayerConfig()
-  if (layerConfig?.length) {
-    gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, gpuDocument.value)
-    const map = mapShellRef.value?.map ?? null
-    if (map) gpuWmsLayerRegistry.attachMap(map)
-  }
+  tryApplyDemoDocumentAndBboxStartup()
 })
 
 onUnmounted(() => {
@@ -138,18 +151,91 @@ watch(
     if (map && resolveLayerConfig()?.length) {
       gpuWmsLayerRegistry.attachMap(map)
     }
+    if (map) tryApplyDemoDocumentAndBboxStartup()
   },
 )
 
-function applyPendingDocument() {
-  const doc = pendingDocument.value
-  const api = tabPanelsApiRef.value
-  if (!doc || !api) return
-  api.showSelection(documentToFicheSelection(doc))
-  pendingDocument.value = null
+function resolveDemoStartupBbox(cfg = getDemoConfig()): [number, number, number, number] | null {
+  if (handoff) return null
+  const fromDoc = cfg.document ? parseDocumentBbox(cfg.document) : null
+  if (fromDoc) return fromDoc
+  return isValidBbox(cfg.bbox) ? cfg.bbox : null
 }
 
-watch(tabPanelsApiRef, applyPendingDocument, { immediate: true })
+function applyDemoPreviewLayers(doc: StandardViewerDocument): void {
+  if (demoStartupLayersApplied) return
+  const layerConfig = resolveLayerConfig()
+  if (!layerConfig?.length) return
+  demoStartupLayersApplied = true
+  gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, doc)
+  const map = mapShellRef.value?.map ?? null
+  if (map) gpuWmsLayerRegistry.attachMap(map)
+}
+
+function applyDemoStartupFiche(
+  doc: StandardViewerDocument,
+  bbox: [number, number, number, number] | null,
+): void {
+  if (demoStartupFicheRequested || !tabPanelsApiRef.value) return
+  demoStartupFicheRequested = true
+  if (readMapPermalinkMarker(getMapPermalinkParams())) {
+    loadFicheForCherryFromPermalink()
+    return
+  }
+  if (
+    doc.status === 'document.preview' &&
+    bbox &&
+    isFicheInfoApiConfigured() &&
+    !locationHashLooksLikeMapPermalink()
+  ) {
+    const [minLon, minLat, maxLon, maxLat] = bbox
+    const map = mapShellRef.value?.map ?? null
+    const zoom = map?.getView().getZoom() ?? getDemoConfig().map?.zoom ?? 14
+    void loadFicheForMapPoint({
+      lon: (minLon + maxLon) / 2,
+      lat: (minLat + maxLat) / 2,
+      mode: MAP_MODE_TERRITORY,
+      zoom,
+      loadingTitle: doc.name ?? doc.type ?? 'Document',
+    })
+    return
+  }
+  tabPanelsApiRef.value.showSelection(documentToFicheSelection(doc))
+}
+
+function tryApplyDemoDocumentAndBboxStartup(): void {
+  const cfg = getDemoConfig()
+  const doc = cfg.document ?? null
+  const bbox = resolveDemoStartupBbox(cfg)
+  if (!doc && !bbox) return
+
+  const expectsRemoteLayerConfig = Boolean(cfg.configScriptUrl?.trim())
+  if (expectsRemoteLayerConfig && !resolveLayerConfig()?.length) {
+    return
+  }
+
+  if (doc) {
+    config.document = doc
+    gpuDocument.value = doc
+    applyDemoPreviewLayers(doc)
+  }
+
+  if (bbox && !locationHashLooksLikeMapPermalink()) {
+    const map = mapShellRef.value?.map ?? null
+    if (map) {
+      fitMapToBbox(map, bbox)
+      pendingBbox.value = null
+    } else if (!pendingBbox.value) {
+      pendingBbox.value = bbox
+    }
+  }
+
+  if (doc) {
+    applyDemoStartupFiche(doc, bbox)
+  }
+}
+
+watch(tabPanelsApiRef, () => tryApplyDemoDocumentAndBboxStartup(), { immediate: true })
 
 watch(
   () => mapShellRef.value?.map ?? null,

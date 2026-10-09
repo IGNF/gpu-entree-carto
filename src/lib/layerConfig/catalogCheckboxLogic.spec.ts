@@ -4,6 +4,7 @@ import {
   applyUserCatalogToggle,
   computeMapVisibilityById,
   isSameAsDescendants,
+  propagateCheckedToAncestors,
 } from '@/lib/layerConfig/catalogCheckboxLogic'
 import { buildCatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
 
@@ -52,6 +53,34 @@ describe('catalogCheckboxLogic', () => {
     expect(checked.zone).toBe(true)
     expect(checked.presc).toBe(true)
     expect(checked['presc-leaf']).toBe(true)
+  })
+
+  it('init visible : parent virtual reste coché si seul enfant onlyLegend est coché', () => {
+    const scotRoots: TreeLayerNode[] = [
+      node({
+        id: 'dev-scot',
+        title: 'SCHEMA DE COHERENCE TERRITORIALE',
+        visible: true,
+        gpuVirtual: true,
+        children: [
+          node({
+            id: 'dev-scot--dev-scot',
+            title: 'SCHEMA DE COHERENCE TERRITORIALE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+        ],
+      }),
+    ]
+    const scotIndex = buildCatalogTreeIndex(scotRoots)
+    const checked: Record<string, boolean> = {
+      'dev-scot': true,
+      'dev-scot--dev-scot': true,
+    }
+    propagateCheckedToAncestors(checked, 'dev-scot--dev-scot', scotIndex)
+    expect(checked['dev-scot']).toBe(true)
+    expect(checked['dev-scot--dev-scot']).toBe(true)
   })
 
   it('affiche les feuilles onlyLegend quand le parent virtual est coché', () => {

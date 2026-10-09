@@ -143,7 +143,7 @@ export function propagateCheckedToDescendants(
   }
 }
 
-/** gpu-client setParentCheckbox (OR sur enfants, hors onlyLegend) */
+/** gpu-client setParentCheckbox (OR sur enfants ; onlyLegend compte pour l’état parent). */
 export function propagateCheckedToAncestors(
   checked: Record<string, boolean>,
   nodeId: string,
@@ -154,7 +154,6 @@ export function propagateCheckedToAncestors(
 
   let parentChecked = false
   for (const child of directCatalogChildren(parent)) {
-    if (child.gpuOnlyLegend) continue
     if (checked[child.id]) {
       parentChecked = true
       break

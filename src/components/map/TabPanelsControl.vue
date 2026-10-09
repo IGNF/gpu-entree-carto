@@ -35,6 +35,11 @@ import {
   resolveLayerConfig,
   type GpuLayerCatalogEntry,
 } from '@/lib/layerConfig/gpuLayerConfig'
+import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
+import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
+import { getDemoConfig } from '@/lib/demo/demoConfig'
+import config from '@/lib/config'
+import type { StandardViewerDocument } from '@/lib/types'
 import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import {
@@ -140,6 +145,7 @@ const {
   regroupAggregate,
   notifyStackOrder,
   reapplyCatalogMapState,
+  syncCatalogCheckedFromTreeVisible,
 } = useManagedLayers(
   layerNodesRef,
   (id, visible) => emit('toggle-layer', id, visible),
@@ -379,7 +385,29 @@ function collectLayerParamsForPermalink(): MapPermalinkParams {
   return out
 }
 
+function resolveDocumentForCatalogStartup(): StandardViewerDocument | null {
+  const demoDoc = getDemoConfig().document
+  if (demoDoc?.type) return demoDoc
+  const injected = config.document
+  if (injected && typeof injected === 'object' && 'type' in injected) {
+    return injected as StandardViewerDocument
+  }
+  return null
+}
+
+function applyDocumentCatalogFromStartupConfig(): void {
+  const doc = resolveDocumentForCatalogStartup()
+  if (!doc?.type || !layerNodesRef.value.length) return
+  applyDocumentCatalogVisibility(layerNodesRef.value, doc)
+  syncCatalogCheckedFromTreeVisible()
+  replaceLayerPermalinkParams(collectLayerParamsForPermalink())
+}
+
 function applyLayerParamsFromPermalink(params: MapPermalinkParams): void {
+  const startupDoc = resolveDocumentForCatalogStartup()
+  if (startupDoc?.type && !initialHashHadLayerPermalinkParams()) {
+    return
+  }
   const items = layerPermalinkEntriesFromParams(params)
   if (!items.length) return
   if (!layerNodesRef.value.length) return
@@ -409,7 +437,15 @@ function applyLayerParamsFromPermalink(params: MapPermalinkParams): void {
 
 function scheduleApplyLayerParamsFromPermalink(): void {
   void nextTick(() => {
-    applyLayerParamsFromPermalink(getMapPermalinkParams())
+    const params = getMapPermalinkParams()
+    const startupDoc = resolveDocumentForCatalogStartup()
+    if (startupDoc?.type && !initialHashHadLayerPermalinkParams()) {
+      applyDocumentCatalogFromStartupConfig()
+      return
+    }
+    if (layerPermalinkEntriesFromParams(params).length) {
+      applyLayerParamsFromPermalink(params)
+    }
   })
 }
 

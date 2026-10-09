@@ -70,12 +70,13 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
   })
 
-  it('mode parcelle : en-tête parcelle + mêmes onglets documents', () => {
+  it('mode parcelle : en-tête parcelle, détail différé (gpu_api_parcel_fiche)', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_PARCEL, 2.33, 48.96)
     expect(sel.title).toBe('AK 0432')
     expect(sel.parcelLabel).toBe('AK 0432')
     expect(sel.cadastreReferences?.headline).toContain('AK')
-    expect(sel.parcelDocumentsHtml).toContain('Plan Local')
+    expect(sel.parcelInfosHtml).toBeUndefined()
+    expect(sel.parcelDocumentsHtml).toBeUndefined()
     expect(sel.documentTabs).toBeUndefined()
   })
 })

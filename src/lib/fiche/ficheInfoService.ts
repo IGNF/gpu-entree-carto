@@ -19,6 +19,14 @@ import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
+import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
+import { resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
+import {
+  buildParcelDocumentsHtmlFromFiche,
+  buildParcelInfosHtmlFromFiche,
+  fetchGpuParcelFiche,
+  type GpuParcelFichePayload,
+} from '@/lib/fiche/parcelFicheFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
 const APICARTO_PARCEL = 'https://apicarto.ign.fr/api/cadastre/parcelle'
@@ -209,10 +217,8 @@ async function tryGpuSiteFiche(
   const url = fetchBase.startsWith('/')
     ? new URL(fetchBase, window.location.origin)
     : new URL(fetchBase)
-  url.searchParams.set('lon', String(params.lon))
-  url.searchParams.set('lat', String(params.lat))
+  appendFicheInfoQueryParams(url, params)
   url.searchParams.set('mode', String(params.mode))
-  url.searchParams.set('zoom', String(Math.round(params.zoom)))
   try {
     const res = await fetch(url.toString(), { credentials: 'same-origin' })
     if (!res.ok) return null
@@ -249,8 +255,8 @@ function parcelFromApicarto(
     parcelLabel: label,
     territoryTitle: coerceDisplayString(props.nom_com),
     cadastreReferences: cadastreReferencesFromParcel(parcel),
-    parcelInfosHtml: '<p>Documents d’urbanisme indisponibles (parcelle APICarto seule).</p>',
-    parcelDocumentsHtml: '<p>Aucun document disponible (API fiche non configurée).</p>',
+    parcelInfosHtml: undefined,
+    parcelDocumentsHtml: undefined,
     raw: { ...props, lon, lat, mode: MAP_MODE_PARCEL, source: 'apicarto-cadastre' },
   }
 }
@@ -420,6 +426,32 @@ export async function loadFicheForSearch(
     bodyHtml: `<p><strong>${escapeHtml(label)}</strong></p><p>Coordonnées absentes — zoomez et cliquez sur la parcelle.</p>`,
     raw: { fullText: label, mode },
   })
+}
+
+export async function loadParcelFicheTabContent(
+  selection: FicheInfoSelection,
+  tab: 'infos' | 'documents',
+): Promise<FicheInfoSelection> {
+  const raw: Record<string, unknown> = {
+    ...(selection.raw && typeof selection.raw === 'object' ? selection.raw : {}),
+  }
+  let payload = raw._parcelFiche as GpuParcelFichePayload | undefined
+  if (!payload) {
+    const parcelId = resolveParcelIdFromRaw(raw)
+    if (!parcelId) {
+      throw new Error('Identifiant parcelle indisponible')
+    }
+    payload = await fetchGpuParcelFiche(parcelId)
+    raw._parcelFiche = payload
+    raw.parcelId = parcelId
+  }
+  const patch =
+    tab === 'infos'
+      ? { parcelInfosHtml: buildParcelInfosHtmlFromFiche(payload) }
+      : { parcelDocumentsHtml: buildParcelDocumentsHtmlFromFiche(payload) }
+  const next: FicheInfoSelection = { ...selection, ...patch, raw }
+  showFiche(next)
+  return next
 }
 
 export { MAP_MODE_PARCEL, MAP_MODE_TERRITORY }

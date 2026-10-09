@@ -12,6 +12,8 @@ import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/m
 import { FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { gpuClientConfigStatus } from '@/lib/demo/gpuClientConfigState'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
+import { loadParcelFicheTabContent } from '@/lib/fiche/ficheInfoService'
+import { isGpuParcelFichePayload } from '@/lib/fiche/parcelFicheFromGpuApi'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
@@ -57,6 +59,8 @@ const documentTabs = computed(() =>
 const activeParcelTab = ref<'infos' | 'documents'>('infos')
 const infosLoaded = ref(false)
 const documentsLoaded = ref(false)
+const parcelTabLoading = ref(false)
+const parcelTabError = ref<string | null>(null)
 const cadastreModalOpen = ref(false)
 
 watch(
@@ -65,6 +69,8 @@ watch(
     activeParcelTab.value = 'infos'
     infosLoaded.value = false
     documentsLoaded.value = false
+    parcelTabLoading.value = false
+    parcelTabError.value = null
     cadastreModalOpen.value = false
   },
 )
@@ -107,13 +113,52 @@ async function activateTerritoryMode(): Promise<void> {
   if (map) await focusModeEmpriseOnMap(map, MAP_MODE_TERRITORY)
 }
 
+async function ensureParcelFicheTab(tab: 'infos' | 'documents'): Promise<void> {
+  if (!props.selection) return
+  if (tab === 'infos' && infosLoaded.value) return
+  if (tab === 'documents' && documentsLoaded.value) return
+  parcelTabError.value = null
+  parcelTabLoading.value = true
+  try {
+    await loadParcelFicheTabContent(props.selection, tab)
+    if (tab === 'infos') infosLoaded.value = true
+    else documentsLoaded.value = true
+  } catch (e) {
+    parcelTabError.value =
+      e instanceof Error ? e.message : 'Impossible de charger la fiche parcelle.'
+  } finally {
+    parcelTabLoading.value = false
+  }
+}
+
 function loadParcelInfos(): void {
-  infosLoaded.value = true
+  void ensureParcelFicheTab('infos')
 }
 
 function loadParcelDocuments(): void {
-  documentsLoaded.value = true
+  void ensureParcelFicheTab('documents')
 }
+
+function printParcelFiche(): void {
+  const html =
+    activeParcelTab.value === 'documents'
+      ? props.selection?.parcelDocumentsHtml
+      : props.selection?.parcelInfosHtml
+  if (!html || typeof window === 'undefined') return
+  const w = window.open('', '_blank', 'noopener,noreferrer')
+  if (!w) return
+  w.document.write(
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiche parcelle</title></head><body>${html}</body></html>`,
+  )
+  w.document.close()
+  w.focus()
+  w.print()
+}
+
+const parcelDetailCached = computed(() => {
+  const raw = props.selection?.raw
+  return Boolean(raw && typeof raw === 'object' && isGpuParcelFichePayload(raw._parcelFiche))
+})
 
 const emptyBodyHtml = computed(
   () => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? '',
@@ -200,11 +245,18 @@ const emptyBodyHtml = computed(
           class="ec-fiche-info__parcel-panel"
           role="tabpanel"
         >
-          <div v-if="!infosLoaded" class="ec-fiche-info__load-wrap">
+          <div
+            v-if="parcelTabLoading && activeParcelTab === 'infos'"
+            class="ec-fiche-info__load-wrap"
+          >
+            <SanitizedHtml class="ec-fiche-info__body" :html="FICHE_LOADING_SPINNER_HTML" />
+          </div>
+          <div v-else-if="!infosLoaded" class="ec-fiche-info__load-wrap">
             <button type="button" class="fr-btn fr-btn--secondary" @click="loadParcelInfos">
               <span class="ri-refresh-line" aria-hidden="true" />
               Charger les informations
             </button>
+            <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
           <template v-else>
             <div class="ec-fiche-info__infos-toolbar">
@@ -212,11 +264,12 @@ const emptyBodyHtml = computed(
               <button
                 type="button"
                 class="fr-btn fr-btn--secondary fr-btn--sm"
-                disabled
-                title="Bientôt disponible"
+                :disabled="!parcelDetailCached"
+                title="Imprimer la fiche parcelle"
+                @click="printParcelFiche"
               >
                 <span class="ri-printer-line" aria-hidden="true" />
-                Imprimer la fiche parcelle
+                Imprimer
               </button>
             </div>
             <SanitizedHtml
@@ -231,11 +284,18 @@ const emptyBodyHtml = computed(
           class="ec-fiche-info__parcel-panel"
           role="tabpanel"
         >
-          <div v-if="!documentsLoaded" class="ec-fiche-info__load-wrap">
+          <div
+            v-if="parcelTabLoading && activeParcelTab === 'documents'"
+            class="ec-fiche-info__load-wrap"
+          >
+            <SanitizedHtml class="ec-fiche-info__body" :html="FICHE_LOADING_SPINNER_HTML" />
+          </div>
+          <div v-else-if="!documentsLoaded" class="ec-fiche-info__load-wrap">
             <button type="button" class="fr-btn fr-btn--secondary" @click="loadParcelDocuments">
               <span class="ri-refresh-line" aria-hidden="true" />
               Charger les informations
             </button>
+            <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
           <SanitizedHtml
             v-else

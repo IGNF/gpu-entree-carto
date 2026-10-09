@@ -31,6 +31,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | TerritoriesControl          | `src/components/map/TerritoriesControl.vue`                  | [TerritoriesControl.md](./TerritoriesControl.fr.md)                |
 | MapModeSelector             | `src/components/map/MapModeSelector.vue`                     | [MapModeSelector.fr.md](./MapModeSelector.fr.md)                   |
 | ClickInfoControl            | `src/components/map/ClickInfoControl.vue`                    | [ClickInfoControl.fr.md](./ClickInfoControl.fr.md)                 |
+| FicheInfoPanel              | `src/components/panels/FicheInfoPanel.vue`                   | [FicheInfo.fr.md](./FicheInfo.fr.md)                               |
 | MapPermalinkSync            | `src/components/map/MapPermalinkSync.vue`                    | [MapPermalink.fr.md](./MapPermalink.fr.md)                         |
 | TabPanelsControl            | `src/components/map/TabPanelsControl.vue`                    | [TabPanelsControl.md](./TabPanelsControl.fr.md)                    |
 | LayerCataloguePanel         | `src/components/panels/LayerCataloguePanel.vue`              | [TabPanelsControl.fr.md](./TabPanelsControl.fr.md#composants-panneau) |

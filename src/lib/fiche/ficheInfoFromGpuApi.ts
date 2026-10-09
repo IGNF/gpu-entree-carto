@@ -1,9 +1,6 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
-import {
-  buildParcelDocumentsPresentationHtml,
-  prependNonExecutoireCalloutIfNeeded,
-} from '@/lib/fiche/ficheDocumentPresentation'
+import { prependNonExecutoireCalloutIfNeeded } from '@/lib/fiche/ficheDocumentPresentation'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
@@ -41,9 +38,15 @@ type GpuFicheProcedure = {
   grid?: { title?: string; name?: string }
 }
 
+export type GpuFicheDeletedGrid = {
+  id?: string
+  properties?: { insee?: string; name?: string; is_rnu?: boolean }
+}
+
 export type GpuFicheInfoPayload = {
   parcel?: Record<string, unknown> | null
   grid?: { name?: string; insee?: string; is_rnu?: boolean } | null
+  deletedGrids?: GpuFicheDeletedGrid[]
   /** Référentiel cadastral (CNIG), renvoyé par `/api/fiche-info` — pilote la couche cadastre basse. */
   typeref?: string | null
   dus?: Record<string, GpuFichePartition> | GpuFichePartition[]
@@ -441,18 +444,15 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   return tabs
 }
 
-function buildParcelUrbanismInfosHtml(data: GpuFicheInfoPayload): string {
-  const dus = normalizePartitionsMap(data.dus)
-  const keys = Object.keys(dus)
-  if (!keys.length) {
-    return '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
-  }
-  const parts: string[] = []
-  for (const key of keys) {
-    const block = buildPartitionFeaturesHtml(dus[key])
-    if (block) parts.push(block)
-  }
-  return parts.join('') || '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
+function absorbedMunicipalityHint(data: GpuFicheInfoPayload): string {
+  const deleted = data.deletedGrids ?? []
+  const grid = data.grid
+  if (!deleted.length || !grid?.name) return ''
+  const absorbed = deleted.find((g) => g.properties?.name)?.properties?.name
+  if (!absorbed) return ''
+  const current = formatMunicipalityName(grid.name.trim())
+  const former = formatMunicipalityName(String(absorbed).trim())
+  return `<p class="ec-fiche-info__absorbed">Zone de ${escapeHtml(former)} (fusionnée au sein de la commune de ${escapeHtml(current)}).</p>`
 }
 
 function municipalityTitle(data: GpuFicheInfoPayload): string {
@@ -485,6 +485,8 @@ export function ficheSelectionFromGpuApi(
   const bodyHtml =
     mode === MAP_MODE_TERRITORY && !documentTabs?.length ? fallbackBodyHtml(data) : undefined
 
+  const absorbedHtml = absorbedMunicipalityHint(data)
+
   const base: FicheInfoSelection = {
     title: mode === MAP_MODE_PARCEL ? parcelLabel : territoryTitle,
     mapMode: mode,
@@ -492,16 +494,24 @@ export function ficheSelectionFromGpuApi(
     territoryTitle,
     cadastreReferences: cadastreReferencesFromParcel(parcel),
     documentTabs: documentTabs?.length ? documentTabs : undefined,
-    bodyHtml,
+    bodyHtml:
+      mode === MAP_MODE_TERRITORY && absorbedHtml && !documentTabs?.length
+        ? `${absorbedHtml}${fallbackBodyHtml(data)}`
+        : bodyHtml,
+    headerHtml: mode === MAP_MODE_TERRITORY && absorbedHtml ? absorbedHtml : undefined,
     raw: { ...data, lon, lat, mode, source: 'gpu-fiche-info-api' },
   }
 
   if (mode === MAP_MODE_PARCEL) {
-    base.parcelInfosHtml = buildParcelUrbanismInfosHtml(data)
-    base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)
+    base.parcelInfosHtml = undefined
+    base.parcelDocumentsHtml = undefined
     base.headerHtml = undefined
-  } else {
-    base.headerHtml = undefined
+  }
+
+  if (mode === MAP_MODE_TERRITORY && documentTabs?.length && absorbedHtml) {
+    base.documentTabs = documentTabs.map((tab, index) =>
+      index === 0 ? { ...tab, bodyHtml: `${absorbedHtml}${tab.bodyHtml}` } : tab,
+    )
   }
 
   return base

@@ -7,6 +7,7 @@ Always-on map click that fills the **fiche** tab (first lateral panel tab) with 
 
 **Source:** `src/components/map/ClickInfoControl.vue`  
 **Service:** `src/lib/fiche/ficheInfoService.ts`  
+**Target spec (Territory / Parcel modes, APIs, backlog):** [FicheInfo.md](./FicheInfo.md)  
 **Styles:** `src/styles/click-info.css`  
 **Sketch gate:** `src/composables/sketchToolEngaged.ts` (set from `SketchControl`)
 
