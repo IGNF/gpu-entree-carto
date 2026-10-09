@@ -8,7 +8,7 @@ Target alignment with **gpu-client** and **gpu-site**, based on:
 - [`gpu-client/doc/FicheInfoDetaillee.md`](https://github.com/ignf/gpu-client/blob/main/doc/FicheInfoDetaillee.md) — **Territory** sheet (map click / point);
 - [`gpu-client/doc/FicheParcelleDetaillee.md`](https://github.com/ignf/gpu-client/blob/main/doc/FicheParcelleDetaillee.md) — **parcel** content (former `/map/parcel-info/` page).
 
-**UI:** `src/components/panels/FicheInfoPanel.vue`  
+**UI:** `src/components/panels/FicheInfoPanel.vue` — inner tabs use DSFR **Tabs** (`fr-tabs`, `tab.min.css`), not the catalogue `fr-nav` bar.  
 **Orchestration:** `src/lib/fiche/ficheInfoService.ts`  
 **gpu-site JSON mapping:** `src/lib/fiche/ficheInfoFromGpuApi.ts`  
 **Document presentation:** `src/lib/fiche/ficheDocumentPresentation.ts`

@@ -15,6 +15,7 @@ import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
 import { loadParcelFicheTabContent } from '@/lib/fiche/ficheInfoService'
 import { isGpuParcelFichePayload } from '@/lib/fiche/parcelFicheFromGpuApi'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
+import '@gouvfr/dsfr/dist/component/tab/tab.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
 import 'remixicon/fonts/remixicon.css'
@@ -216,34 +217,43 @@ const emptyBodyHtml = computed(
         <span class="ri-arrow-right-line" aria-hidden="true" />
       </button>
 
-      <div class="ec-fiche-info__doc-tabs">
-        <div class="ec-fiche-info__doc-tablist" role="tablist" aria-label="Fiche parcelle">
-          <button
-            type="button"
-            role="tab"
-            class="ec-fiche-info__doc-tab"
-            :class="{ 'is-active': activeParcelTab === 'infos' }"
-            :aria-selected="activeParcelTab === 'infos'"
-            @click="activeParcelTab = 'infos'"
-          >
-            Infos
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="ec-fiche-info__doc-tab"
-            :class="{ 'is-active': activeParcelTab === 'documents' }"
-            :aria-selected="activeParcelTab === 'documents'"
-            @click="activeParcelTab = 'documents'"
-          >
-            Documents
-          </button>
-        </div>
+      <div class="fr-tabs ec-fiche-info__tabs">
+        <ul class="fr-tabs__list" role="tablist" aria-label="Fiche parcelle">
+          <li role="presentation">
+            <button
+              id="ec-fiche-parcel-tab-infos"
+              type="button"
+              role="tab"
+              class="fr-tabs__tab"
+              :aria-selected="activeParcelTab === 'infos'"
+              aria-controls="ec-fiche-parcel-panel-infos"
+              @click="activeParcelTab = 'infos'"
+            >
+              Infos
+            </button>
+          </li>
+          <li role="presentation">
+            <button
+              id="ec-fiche-parcel-tab-documents"
+              type="button"
+              role="tab"
+              class="fr-tabs__tab"
+              :aria-selected="activeParcelTab === 'documents'"
+              aria-controls="ec-fiche-parcel-panel-documents"
+              @click="activeParcelTab = 'documents'"
+            >
+              Documents
+            </button>
+          </li>
+        </ul>
 
         <div
-          v-show="activeParcelTab === 'infos'"
-          class="ec-fiche-info__parcel-panel"
+          id="ec-fiche-parcel-panel-infos"
+          class="fr-tabs__panel ec-fiche-info__parcel-panel"
+          :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'infos' }"
           role="tabpanel"
+          aria-labelledby="ec-fiche-parcel-tab-infos"
+          :tabindex="activeParcelTab === 'infos' ? 0 : -1"
         >
           <div
             v-if="parcelTabLoading && activeParcelTab === 'infos'"
@@ -280,9 +290,12 @@ const emptyBodyHtml = computed(
         </div>
 
         <div
-          v-show="activeParcelTab === 'documents'"
-          class="ec-fiche-info__parcel-panel"
+          id="ec-fiche-parcel-panel-documents"
+          class="fr-tabs__panel ec-fiche-info__parcel-panel"
+          :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'documents' }"
           role="tabpanel"
+          aria-labelledby="ec-fiche-parcel-tab-documents"
+          :tabindex="activeParcelTab === 'documents' ? 0 : -1"
         >
           <div
             v-if="parcelTabLoading && activeParcelTab === 'documents'"
@@ -339,31 +352,32 @@ const emptyBodyHtml = computed(
 
       <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
 
-      <div v-if="documentTabs.length" class="ec-fiche-info__doc-tabs">
-        <div class="ec-fiche-info__doc-tablist" role="tablist" aria-label="Documents et procédures">
-          <button
-            v-for="tab in documentTabs"
-            :id="`ec-fiche-doc-tab-${tab.id}`"
-            :key="tab.id"
-            type="button"
-            role="tab"
-            class="ec-fiche-info__doc-tab"
-            :class="{ 'is-active': activeDocTab?.id === tab.id }"
-            :aria-selected="activeDocTab?.id === tab.id"
-            :aria-controls="`ec-fiche-doc-panel-${tab.id}`"
-            @click="selectDocTab(tab.id)"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
+      <div v-if="documentTabs.length" class="fr-tabs ec-fiche-info__tabs">
+        <ul class="fr-tabs__list" role="tablist" aria-label="Documents et procédures">
+          <li v-for="tab in documentTabs" :key="tab.id" role="presentation">
+            <button
+              :id="`ec-fiche-doc-tab-${tab.id}`"
+              type="button"
+              role="tab"
+              class="fr-tabs__tab"
+              :aria-selected="activeDocTab?.id === tab.id"
+              :aria-controls="`ec-fiche-doc-panel-${tab.id}`"
+              @click="selectDocTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </li>
+        </ul>
         <SanitizedHtml
-          v-if="activeDocTab"
-          :id="`ec-fiche-doc-panel-${activeDocTab.id}`"
-          :key="activeDocTab.id"
-          class="ec-fiche-info__body ec-fiche-info__doc-panel"
+          v-for="tab in documentTabs"
+          :id="`ec-fiche-doc-panel-${tab.id}`"
+          :key="tab.id"
+          class="fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel"
+          :class="{ 'fr-tabs__panel--selected': activeDocTab?.id === tab.id }"
           role="tabpanel"
-          :aria-labelledby="`ec-fiche-doc-tab-${activeDocTab.id}`"
-          :html="activeDocTab.bodyHtml"
+          :aria-labelledby="`ec-fiche-doc-tab-${tab.id}`"
+          :tabindex="activeDocTab?.id === tab.id ? 0 : -1"
+          :html="tab.bodyHtml"
         />
       </div>
       <SanitizedHtml v-else class="ec-fiche-info__body" :html="emptyBodyHtml" />

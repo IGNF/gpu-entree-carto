@@ -8,7 +8,7 @@ Alignement cible avec **gpu-client** et **gpu-site**, à partir de :
 - [`gpu-client/doc/FicheInfoDetaillee.md`](https://github.com/ignf/gpu-client/blob/main/doc/FicheInfoDetaillee.md) — fiche **Territoire** (clic carte / point) ;
 - [`gpu-client/doc/FicheParcelleDetaillee.md`](https://github.com/ignf/gpu-client/blob/main/doc/FicheParcelleDetaillee.md) — contenu **parcelle** (ex-page `/map/parcel-info/`).
 
-**UI :** `src/components/panels/FicheInfoPanel.vue`  
+**UI :** `src/components/panels/FicheInfoPanel.vue` — onglets internes DSFR **Onglets** (`fr-tabs`, `tab.min.css`), distincts de la barre `fr-nav` du catalogue.  
 **Orchestration :** `src/lib/fiche/ficheInfoService.ts`  
 **Mapping JSON gpu-site :** `src/lib/fiche/ficheInfoFromGpuApi.ts`  
 **Présentation documents :** `src/lib/fiche/ficheDocumentPresentation.ts`
@@ -133,7 +133,7 @@ Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `M
 
 | Fichier | Rôle |
 | ------- | ---- |
-| `FicheInfoPanel.vue` | Layout Parcelle / Territoire, onglets, chargement différé |
+| `FicheInfoPanel.vue` | Layout Parcelle / Territoire, onglets DSFR (`fr-tabs`), chargement différé |
 | `ficheInfoService.ts` | Fetch, cache par mode, APICarto, TabPanels |
 | `ficheInfoFromGpuApi.ts` | JSON fiche-info → `FicheInfoSelection` |
 | `ficheDocumentPresentation.ts` | Cartes documents (Territoire / parcelle documents) |
