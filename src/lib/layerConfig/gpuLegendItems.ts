@@ -1,6 +1,8 @@
 import type { LegendItem } from '@/types/stubs'
 import type { GpuLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import config from '@/lib/config'
+import { resolveConfigUrl } from '@/lib/configUrls'
+import { rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
 
 const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16
 const GEOMETRY_TYPES = ['pct', 'lin', 'surf'] as const
@@ -159,16 +161,23 @@ export function dedupeLegendLayersForPanel<
   return out
 }
 
+function resolveLegendImageBaseFromConfig(raw: string): string {
+  const normalized = normalizeLegendImageBaseUrl(raw)
+  if (!normalized) return ''
+  const absolute = resolveConfigUrl(normalized)
+  return rewriteLocalGpuSiteUrl(absolute)
+}
+
 export function resolveLegendImageDetailDirectory(): string {
   const fromMerged =
     typeof config.legendImageDetailDirectory === 'string' ? config.legendImageDetailDirectory : ''
-  if (fromMerged) return normalizeLegendImageBaseUrl(fromMerged)
+  if (fromMerged) return resolveLegendImageBaseFromConfig(fromMerged)
 
   const w = typeof window !== 'undefined' ? window : undefined
   const gpuCfg = (w as Window & { gpu?: { config?: Record<string, unknown> } })?.gpu?.config
   const fromGpu =
     typeof gpuCfg?.legendImageDetailDirectory === 'string' ? gpuCfg.legendImageDetailDirectory : ''
-  return normalizeLegendImageBaseUrl(fromGpu)
+  return resolveLegendImageBaseFromConfig(fromGpu)
 }
 
 export function normalizeLegendImageBaseUrl(raw: string): string {

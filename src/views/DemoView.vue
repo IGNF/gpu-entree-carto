@@ -101,8 +101,7 @@ const pendingBbox = ref<number[] | null>(
   !handoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
 )
 const gpuDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
-/** Évite double fetch fiche / double reload WMS au démarrage démo. */
-let demoStartupLayersApplied = false
+/** Évite double fetch fiche au démarrage démo. */
 let demoStartupFicheRequested = false
 
 if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
@@ -162,16 +161,6 @@ function resolveDemoStartupBbox(cfg = getDemoConfig()): [number, number, number,
   return isValidBbox(cfg.bbox) ? cfg.bbox : null
 }
 
-function applyDemoPreviewLayers(doc: StandardViewerDocument): void {
-  if (demoStartupLayersApplied) return
-  const layerConfig = resolveLayerConfig()
-  if (!layerConfig?.length) return
-  demoStartupLayersApplied = true
-  gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, doc)
-  const map = mapShellRef.value?.map ?? null
-  if (map) gpuWmsLayerRegistry.attachMap(map)
-}
-
 function applyDemoStartupFiche(
   doc: StandardViewerDocument,
   bbox: [number, number, number, number] | null,
@@ -217,7 +206,6 @@ function tryApplyDemoDocumentAndBboxStartup(): void {
   if (doc) {
     config.document = doc
     gpuDocument.value = doc
-    applyDemoPreviewLayers(doc)
   }
 
   if (bbox && !locationHashLooksLikeMapPermalink()) {

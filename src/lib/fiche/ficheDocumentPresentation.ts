@@ -44,8 +44,38 @@ function formatDatapproFromDocumentName(documentName: string): string | null {
   return `${date.slice(6, 8)}/${date.slice(4, 6)}/${date.slice(0, 4)}`
 }
 
+export function documentIsNonExecutoireEffectiveStatus(
+  effectiveStatus: string | undefined,
+): boolean {
+  return effectiveStatus === 'NON_EXECUTOIRE'
+}
+
 function documentIsNonExecutoire(document: GpuFicheDocument): boolean {
-  return document.effectiveStatus === 'NON_EXECUTOIRE'
+  return documentIsNonExecutoireEffectiveStatus(document.effectiveStatus)
+}
+
+/** Badges EN VIGUEUR / NON EXÉCUTOIRE + APPROUVÉ pour une carte document. */
+export function documentCardBadgesHtml(options: {
+  effectiveStatus?: string
+  status?: string
+  /** Fiche parcelle WFS : statut absent → considéré approuvé (comportement historique). */
+  defaultApprovedWhenStatusMissing?: boolean
+}): string {
+  const { effectiveStatus, status, defaultApprovedWhenStatusMissing } = options
+  const nonExecutoire = documentIsNonExecutoireEffectiveStatus(effectiveStatus)
+  const approved =
+    status === 'document.production' || (defaultApprovedWhenStatusMissing && !status)
+  const badges = [
+    nonExecutoire
+      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--non-executoire">NON EXÉCUTOIRE</span>'
+      : '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">EN VIGUEUR</span>',
+    approved
+      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>'
+      : '',
+  ]
+    .filter(Boolean)
+    .join('')
+  return badges
 }
 
 function collectProductionDocuments(map: Record<string, GpuFichePartition>): GpuFicheDocument[] {
@@ -57,6 +87,12 @@ function collectProductionDocuments(map: Record<string, GpuFichePartition>): Gpu
   return out
 }
 
+export function partitionMapHasNonExecutoireDocument(
+  map: Record<string, GpuFichePartition>,
+): boolean {
+  return collectProductionDocuments(map).some(documentIsNonExecutoire)
+}
+
 export function fichePayloadHasNonExecutoireDocument(data: GpuFicheInfoPayload): boolean {
   const maps = [
     normalizePartitionsMap(data.dus),
@@ -64,28 +100,17 @@ export function fichePayloadHasNonExecutoireDocument(data: GpuFicheInfoPayload):
     normalizePartitionsMap(data.sups),
     normalizePartitionsMap(data.scots),
   ]
-  for (const map of maps) {
-    if (collectProductionDocuments(map).some(documentIsNonExecutoire)) return true
-  }
-  return false
+  return maps.some(partitionMapHasNonExecutoireDocument)
 }
 
 function documentCardHtml(document: GpuFicheDocument, href?: string): string {
   const title = document.title?.trim() || document.type || 'Document'
   const name = document.originalName ?? document.name ?? ''
   const datappro = name ? formatDatapproFromDocumentName(name) : null
-  const approved = document.status === 'document.production'
-  const inForce = document.effectiveStatus !== 'NON_EXECUTOIRE'
-  const badges = [
-    inForce
-      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">EN VIGUEUR</span>'
-      : '',
-    approved
-      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>'
-      : '',
-  ]
-    .filter(Boolean)
-    .join('')
+  const badges = documentCardBadgesHtml({
+    effectiveStatus: document.effectiveStatus,
+    status: document.status,
+  })
   const titleInner = escapeHtml(title)
   const titleBlock = href
     ? `<a class="ec-fiche-info__doc-card-title" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a>`
@@ -133,11 +158,12 @@ export function buildParcelDocumentsPresentationHtml(data: GpuFicheInfoPayload):
   return body || '<p>Aucun document disponible pour cette parcelle.</p>'
 }
 
-export function prependNonExecutoireCalloutIfNeeded(
+/** Encart non exécutoire pour un onglet territoire (documents de la partition concernée uniquement). */
+export function prependNonExecutoireCalloutForPartitionMap(
   bodyHtml: string,
-  data: GpuFicheInfoPayload,
+  map: Record<string, GpuFichePartition>,
 ): string {
-  if (!fichePayloadHasNonExecutoireDocument(data)) return bodyHtml
+  if (!partitionMapHasNonExecutoireDocument(map)) return bodyHtml
   if (bodyHtml.includes('ec-fiche-info__callout')) return bodyHtml
   return FICHE_NON_EXECUTOIRE_CALLOUT_HTML + bodyHtml
 }

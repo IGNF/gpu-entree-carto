@@ -20,7 +20,12 @@ import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFro
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
-import { resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
+import {
+  applyParcelFicheDetailCache,
+  getParcelFicheDetailCache,
+  parcelIdFromSelection,
+  storeParcelFicheDetailCache,
+} from '@/lib/fiche/parcelFicheDetailCache'
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
@@ -78,7 +83,7 @@ export function refreshFicheForMapModeChange(mode: MapModeId, zoom: number): voi
   if (!marker) return
   const cached = cachedFicheForMode(mode, marker.lon, marker.lat)
   if (cached) {
-    showFiche(cached)
+    showFiche(withParcelDetailCache(cached, mode))
     return
   }
   void loadFicheForMapPoint({
@@ -179,6 +184,11 @@ function syncFicheLocationMarker(lon: number, lat: number): void {
   })
 }
 
+function withParcelDetailCache(selection: FicheInfoSelection, mode: MapModeId): FicheInfoSelection {
+  if (mode !== MAP_MODE_PARCEL) return selection
+  return applyParcelFicheDetailCache(selection)
+}
+
 function applyMapPointResult(
   requestId: number,
   lon: number,
@@ -189,12 +199,13 @@ function applyMapPointResult(
   skipLocationMarker: boolean,
 ): FicheInfoSelection | null {
   if (requestId !== mapPointRequestSeq) return null
-  storeFicheInCache(mode, lon, lat, selection)
-  showFiche(selection)
+  const resolved = withParcelDetailCache(selection, mode)
+  storeFicheInCache(mode, lon, lat, resolved)
+  showFiche(resolved)
   if (!skipLocationMarker && !markerPlacedAtClick) {
     syncFicheLocationMarker(lon, lat)
   }
-  return selection
+  return resolved
 }
 
 async function fetchGeoJson(url: string): Promise<FeatureCollection> {
@@ -428,29 +439,54 @@ export async function loadFicheForSearch(
   })
 }
 
-export async function loadParcelFicheTabContent(
+/** Charge la fiche parcelle complète (Infos + Documents) en un seul appel. */
+export async function loadParcelFicheDetail(
   selection: FicheInfoSelection,
-  tab: 'infos' | 'documents',
 ): Promise<FicheInfoSelection> {
+  const parcelId = parcelIdFromSelection(selection)
+  if (!parcelId) {
+    throw new Error('Identifiant parcelle indisponible')
+  }
+
+  const cachedDetail = getParcelFicheDetailCache(parcelId)
+  if (cachedDetail) {
+    const next = applyParcelFicheDetailCache(selection)
+    showFiche(next)
+    const marker = readMapPermalinkMarker(getMapPermalinkParams())
+    if (marker) {
+      storeFicheInCache(MAP_MODE_PARCEL, marker.lon, marker.lat, next)
+    }
+    return next
+  }
+
   const raw: Record<string, unknown> = {
     ...(selection.raw && typeof selection.raw === 'object' ? selection.raw : {}),
   }
   let payload = raw._parcelFiche as GpuParcelFichePayload | undefined
   if (!payload) {
-    const parcelId = resolveParcelIdFromRaw(raw)
-    if (!parcelId) {
-      throw new Error('Identifiant parcelle indisponible')
-    }
     payload = await fetchGpuParcelFiche(parcelId)
     raw._parcelFiche = payload
     raw.parcelId = parcelId
   }
-  const patch =
-    tab === 'infos'
-      ? { parcelInfosHtml: buildParcelInfosHtmlFromFiche(payload) }
-      : { parcelDocumentsHtml: buildParcelDocumentsHtmlFromFiche(payload) }
-  const next: FicheInfoSelection = { ...selection, ...patch, raw }
+  const parcelInfosHtml = buildParcelInfosHtmlFromFiche(payload)
+  const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload)
+  storeParcelFicheDetailCache({
+    parcelId,
+    parcelFiche: payload,
+    parcelInfosHtml,
+    parcelDocumentsHtml,
+  })
+  const next: FicheInfoSelection = {
+    ...selection,
+    raw,
+    parcelInfosHtml,
+    parcelDocumentsHtml,
+  }
   showFiche(next)
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (marker) {
+    storeFicheInCache(MAP_MODE_PARCEL, marker.lon, marker.lat, next)
+  }
   return next
 }
 

@@ -35,6 +35,7 @@ import {
   resolveLayerConfig,
   type GpuLayerCatalogEntry,
 } from '@/lib/layerConfig/gpuLayerConfig'
+import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
 import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
 import { getDemoConfig } from '@/lib/demo/demoConfig'
@@ -395,6 +396,22 @@ function resolveDocumentForCatalogStartup(): StandardViewerDocument | null {
   return null
 }
 
+function wmsDocumentSyncKey(): string {
+  const doc = resolveDocumentForCatalogStartup()
+  if (!doc) return ''
+  return `${doc.id ?? ''}|${doc.status ?? ''}|${doc.name ?? ''}|${doc.type ?? ''}`
+}
+
+/** Alimente le registre WMS puis réapplique visibilité catalogue (cases cochées → tuiles). */
+function syncGpuWmsRegistryFromLayerConfig(): void {
+  const layerConfig = resolveLayerConfig()
+  if (!layerConfig?.length) return
+  gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, resolveDocumentForCatalogStartup())
+  const map = mapRef.value
+  if (map) gpuWmsLayerRegistry.attachMap(map)
+  reapplyCatalogMapState()
+}
+
 function applyDocumentCatalogFromStartupConfig(): void {
   const doc = resolveDocumentForCatalogStartup()
   if (!doc?.type || !layerNodesRef.value.length) return
@@ -455,10 +472,15 @@ registerMapPermalinkLayersBridge({
 })
 
 watch(
-  () => [catalogEntries.value.length, layerNodesRef.value.length] as const,
+  () => [catalogEntries.value.length, layerNodesRef.value.length, wmsDocumentSyncKey()] as const,
   ([entryLen, nodeLen], prev) => {
-    const [prevEntryLen = 0, prevNodeLen = 0] = prev ?? [0, 0]
+    const [prevEntryLen = 0, prevNodeLen = 0, prevDocKey = ''] = prev ?? [0, 0, '']
     const becameReady = entryLen > 0 && nodeLen > 0 && (prevEntryLen === 0 || prevNodeLen === 0)
+    const docChanged =
+      entryLen > 0 && nodeLen > 0 && prev != null && wmsDocumentSyncKey() !== prevDocKey
+    if (becameReady || docChanged) {
+      syncGpuWmsRegistryFromLayerConfig()
+    }
     if (becameReady) scheduleApplyLayerParamsFromPermalink()
   },
 )

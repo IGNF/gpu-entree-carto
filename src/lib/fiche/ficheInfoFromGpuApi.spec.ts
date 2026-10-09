@@ -70,6 +70,41 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
   })
 
+  it('mode territoire : encart non exécutoire seulement sur l’onglet document concerné', () => {
+    const payload = {
+      ...samplePayload,
+      dus: {
+        DU_95197: {
+          ...samplePayload.dus.DU_95197,
+          documents: [
+            {
+              ...samplePayload.dus.DU_95197.documents[0],
+              effectiveStatus: 'NON_EXECUTOIRE',
+            },
+          ],
+        },
+      },
+      sups: {
+        SUP_X: {
+          features: [{ libelle: 'Servitude test' }],
+          documents: [
+            {
+              title: 'SUP AC1',
+              status: 'document.production',
+              name: 'SUP_X',
+              effectiveStatus: 'EXECUTOIRE',
+            },
+          ],
+        },
+      },
+    }
+    const sel = ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, 2.33, 48.96)
+    const callout = 'Certains documents ne sont pas exécutoires'
+    expect(sel.documentTabs?.[0]?.bodyHtml).toContain(callout)
+    expect(sel.documentTabs?.[1]?.bodyHtml).not.toContain(callout)
+    expect(sel.documentTabs?.[2]?.bodyHtml).not.toContain(callout)
+  })
+
   it('mode parcelle : en-tête parcelle, détail différé (gpu_api_parcel_fiche)', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_PARCEL, 2.33, 48.96)
     expect(sel.title).toBe('AK 0432')

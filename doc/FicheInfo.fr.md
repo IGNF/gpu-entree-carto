@@ -32,7 +32,7 @@ La fiche parcelle **disparaît** de gpu-site (branche DSFR) : son contenu est **
 
 ### UI mode Parcelle
 
-- Onglets **Infos** / **Documents** et boutons « Charger les informations » : le clic ne déclenche **aucun fetch** (flags locaux seulement).
+- Onglets **Infos** / **Documents** : chargement différé `gpu_api_parcel_fiche` ; cache mémoire par **`parcelId`** (`parcelFicheDetailCache.ts`) — reclic sur la même parcelle ou bouton « Charger les informations » sans nouvel appel si déjà en cache.
 - Au clic carte, si l’API fiche-info répond, `parcelInfosHtml` / `parcelDocumentsHtml` sont **pré-remplis** depuis le JSON **point** (`/api/fiche-info`), pas depuis **`gpu_api_parcel_fiche`**.
 
 ### UI mode Territoire
@@ -104,7 +104,7 @@ Côté gpu-client, **ParcelLegend** + présentation documents transforment `feat
    - construire `parcelId` depuis `selection.raw.parcel` ou propriétés cadastre ;
    - `GET apiParcelFicheUrl` ;
    - **Infos :** HTML type légende gpu-client (zonage, prescriptions, infos, MEC) ;
-   - **Documents :** cartes documents intersectant la parcelle (statuts EN VIGUEUR / APPROUVÉ, etc.).
+   - **Documents :** cartes documents intersectant la parcelle (badges **EN VIGUEUR** ou **NON EXÉCUTOIRE** + **APPROUVÉ** selon `effectiveStatus` / `status`) ; encart « Certains documents ne sont pas exécutoires… » **uniquement** si au moins une carte est non exécutoire.
 3. **Imprimer** : fenêtre d’impression navigateur une fois la fiche parcelle chargée (`gpu_api_parcel_fiche`).
 
 ### Preview document (`documentId`)
@@ -126,7 +126,7 @@ Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `M
 
 | Priorité | Sujet | Fichiers / notes |
 | -------- | ----- | ---------------- |
-| P3 | Parité visuelle complète **ParcelLegend** gpu-client (images légende CNIG) | `parcelFicheFromGpuApi.ts`, `legendImageDetailDirectory` |
+| P3 | **ParcelLegend** : libellés DU/SUP + pictos CNIG (`LEGEND_CONFIG`, `legendImageDetailDirectory`) — bascule lowscale/highscale au zoom carte (`useMapLegendZoom`) | `parcelLegendImage.ts`, `parcelFeatureLabel.ts` |
 | P3 | Catalogue preview : activation partition côté arbre couches (embed gpu-site) | `gpuWmsLayers`, layer config |
 
 ## Fichiers de référence entree-carto
@@ -135,6 +135,7 @@ Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `M
 | ------- | ---- |
 | `FicheInfoPanel.vue` | Layout Parcelle / Territoire, onglets DSFR (`fr-tabs`), chargement différé |
 | `ficheInfoService.ts` | Fetch, cache par mode, APICarto, TabPanels |
+| `parcelFicheDetailCache.ts` | Cache détail parcelle (`parcelId` → Infos/Documents + `_parcelFiche`) |
 | `ficheInfoFromGpuApi.ts` | JSON fiche-info → `FicheInfoSelection` |
 | `ficheDocumentPresentation.ts` | Cartes documents (Territoire / parcelle documents) |
 | `ficheCadastreReferences.ts` | Modal références cadastrales |

@@ -47,7 +47,7 @@ Voir les blocs commentés en bas de `public/js/demo-config.js` (environnements g
 1. Handoff recherche depuis l’accueil (SPA)
 2. Sinon `map.search` ou `bbox` / `document` du fichier JS
 3. **Catalogue _Données_** : si le script `configScriptUrl` a défini `window.LAYER_CONFIG`, arbre via `layerConfigToTreeNodes` ; sinon `map.layerNodes` du fichier JS
-4. Après chargement du script gpu, fusion de `window.gpu.config` dans le module `config` entree-carto (URLs WMS, etc.) ; les champs `*Url` relatifs (ex. `/api/fiche-info`) sont résolus par rapport à l’URL du fichier `gpu-client-config.js`, pas l’origine de la SPA.
+4. Après chargement du script gpu, fusion de `window.gpu.config` dans le module `config` entree-carto (URLs WMS, etc.) ; les champs `*Url` relatifs (ex. `/api/fiche-info`) et **`legendImageDetailDirectory`** sont résolus par rapport à l’URL du fichier `gpu-client-config.js`, pas l’origine de la SPA (`configUrls.ts`, relu à l’affichage dans `resolveLegendImageDetailDirectory`).
 
 ## Limites
 

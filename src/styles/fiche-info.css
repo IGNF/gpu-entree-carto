@@ -77,9 +77,37 @@
   text-align: center;
 }
 
+/*
+ * DSFR `fr-tabs__panel` : carousel (`left: -100%`) + JS officiel.
+ * Ici onglets pilotés par Vue : panneau sélectionné en flux normal.
+ */
+.ec-fiche-info__tabs.fr-tabs {
+  overflow: visible;
+  height: auto !important;
+}
+
 .ec-fiche-info__tabs .fr-tabs__panel {
+  left: 0;
+  margin-right: 0;
+  flex: none;
+  width: 100%;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
+  transform: none !important;
+}
+
+.ec-fiche-info__tabs .fr-tabs__panel:not(.fr-tabs__panel--selected) {
+  display: none;
+  visibility: hidden;
+}
+
+.ec-fiche-info__tabs .fr-tabs__panel.fr-tabs__panel--selected {
+  display: block;
+  visibility: visible;
+}
+
+.ec-fiche-info .ec-fiche-info__load-btn.fr-btn--icon-left .ri-refresh-line {
+  margin-right: 0.35rem;
 }
 
 .ec-fiche-info__warn {
@@ -236,7 +264,7 @@
 
 .ec-fiche-info__rule-row {
   display: grid;
-  grid-template-columns: 2.25rem 1fr auto;
+  grid-template-columns: 2.75rem 1fr auto;
   gap: 0.5rem 0.65rem;
   align-items: start;
   margin: 0 0 0.65rem;
@@ -254,14 +282,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  min-height: 2.75rem;
   border-radius: 0.25rem;
   background: var(--background-contrast-grey, #f6f6f6);
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
+}
+
+.ec-fiche-info__rule-icon-img {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
 }
 
 .ec-fiche-info__rule-title {
@@ -353,6 +388,11 @@
 .ec-fiche-info__badge--vigueur {
   background: #ccefd9;
   color: #18753c;
+}
+
+.ec-fiche-info__badge--non-executoire {
+  background: var(--background-contrast-warning, #ffe9e6);
+  color: var(--text-default-warning, #b34000);
 }
 
 .ec-fiche-info__badge--approuve {

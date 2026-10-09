@@ -47,7 +47,7 @@ See commented blocks at the bottom of `public/js/demo-config.js` (gpu-site envir
 1. Search handoff from home (SPA)
 2. Otherwise `map.search` or JS file `bbox` / `document`
 3. **_Data_ catalogue**: if `configScriptUrl` defined `window.LAYER_CONFIG`, tree via `layerConfigToTreeNodes`; otherwise JS file `map.layerNodes`
-4. After gpu script load, merge `window.gpu.config` into entree-carto `config` module (WMS URLs, etc.); relative `*Url` fields (e.g. `/api/fiche-info`) resolve against the `gpu-client-config.js` script URL, not the SPA origin.
+4. After gpu script load, merge `window.gpu.config` into entree-carto `config` module (WMS URLs, etc.); relative `*Url` fields (e.g. `/api/fiche-info`) and **`legendImageDetailDirectory`** resolve against the `gpu-client-config.js` script URL, not the SPA origin (`configUrls.ts`, also applied at display time in `resolveLegendImageDetailDirectory`).
 
 ## Limits
 

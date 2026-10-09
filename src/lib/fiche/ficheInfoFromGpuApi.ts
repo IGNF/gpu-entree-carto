@@ -1,6 +1,6 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
-import { prependNonExecutoireCalloutIfNeeded } from '@/lib/fiche/ficheDocumentPresentation'
+import { prependNonExecutoireCalloutForPartitionMap } from '@/lib/fiche/ficheDocumentPresentation'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
@@ -358,12 +358,15 @@ function territoryDocumentTabLabel(id: string, defaultLabel: string): string {
   return defaultLabel
 }
 
-function wrapTerritoryTabBody(data: GpuFicheInfoPayload, bodyHtml: string): string {
+function wrapTerritoryTabBody(
+  bodyHtml: string,
+  partitions: Record<string, GpuFichePartition>,
+): string {
   let html = bodyHtml
   if (html && !html.includes('ec-fiche-info__section-title')) {
     html = `<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>${html}`
   }
-  return prependNonExecutoireCalloutIfNeeded(html, data)
+  return prependNonExecutoireCalloutForPartitionMap(html, partitions)
 }
 
 function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInfoDocumentTab[] {
@@ -379,7 +382,7 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
       label: territory
         ? territoryDocumentTabLabel(TAB_DU, 'Document d’urbanisme')
         : 'Document d’urbanisme',
-      bodyHtml: territory ? wrapTerritoryTabBody(data, bodyHtml) : bodyHtml,
+      bodyHtml: territory ? wrapTerritoryTabBody(bodyHtml, dus) : bodyHtml,
     })
   }
 
@@ -389,7 +392,7 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     tabs.push({
       id: TAB_PSMV,
       label: territory ? territoryDocumentTabLabel(TAB_PSMV, 'PSMV') : 'PSMV',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, psmvs) : bodyHtml,
     })
   }
 
@@ -400,7 +403,7 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     tabs.push({
       id: TAB_SUP,
       label: territory ? territoryDocumentTabLabel(TAB_SUP, 'Servitude') : 'Servitude',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(body, data) : body,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(body, sups) : body,
     })
   }
 
@@ -410,7 +413,7 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     tabs.push({
       id: TAB_SCOT,
       label: territory ? territoryDocumentTabLabel(TAB_SCOT, 'SCoT') : 'SCoT',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, scots) : bodyHtml,
     })
   }
 
@@ -419,7 +422,6 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     let bodyHtml = buildProceduresTabHtml(inProgress)
     if (territory) {
       bodyHtml = `<h3 class="ec-fiche-info__section-title">Procédures en cours</h3>${bodyHtml}`
-      bodyHtml = prependNonExecutoireCalloutIfNeeded(bodyHtml, data)
     }
     tabs.push({
       id: TAB_PROCEDURES,

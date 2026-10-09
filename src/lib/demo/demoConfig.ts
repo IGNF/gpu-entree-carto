@@ -6,6 +6,7 @@ import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
 import {
   getGpuClientConfigScriptUrl,
+  resolveConfigUrl,
   resolveConfigUrlsInRecord,
   setGpuClientConfigScriptUrl,
 } from '@/lib/configUrls'
@@ -216,10 +217,10 @@ async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
     if (!match?.[1]) return
     const cleaned = match[1].replace(/\\\//g, '/').replace(/\?.*$/i, '')
     const base = cleaned.endsWith('/') ? cleaned : `${cleaned}/`
-    config.legendImageDetailDirectory = base
+    config.legendImageDetailDirectory = resolveConfigUrl(base)
     ensureGpuClientStub()
     const stub = window as Window & { gpu?: { config?: Record<string, unknown> } }
-    if (stub.gpu?.config) stub.gpu.config.legendImageDetailDirectory = base
+    if (stub.gpu?.config) stub.gpu.config.legendImageDetailDirectory = resolveConfigUrl(base)
     applyGpuConfigSyncAndDevRewrite()
   } catch {
     /* ignore */

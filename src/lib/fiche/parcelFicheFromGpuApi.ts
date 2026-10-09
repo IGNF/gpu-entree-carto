@@ -1,7 +1,24 @@
 import config from '@/lib/config'
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
-import { FICHE_NON_EXECUTOIRE_CALLOUT_HTML } from '@/lib/fiche/ficheDocumentPresentation'
+import {
+  documentCardBadgesHtml,
+  documentIsNonExecutoireEffectiveStatus,
+  FICHE_NON_EXECUTOIRE_CALLOUT_HTML,
+} from '@/lib/fiche/ficheDocumentPresentation'
+import {
+  labelsForParcelFeature,
+  formatParcelRuleLabel,
+  type ParcelFeatureLabel,
+} from '@/lib/fiche/parcelFeatureLabel'
+import type { SupCategory } from '@/lib/fiche/parcelLegendImage'
+import {
+  createParcelFeatureLabel,
+  DEFAULT_PARCEL_FICHE_LEGEND_ZOOM,
+  getSupLabelFromProperties,
+  readSupCategories,
+  resolveParcelFeatureLegendImageUrl,
+} from '@/lib/fiche/parcelLegendImage'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 
 export type ParcelFicheFeature = {
@@ -55,41 +72,69 @@ function classifyFeature(feature: ParcelFicheFeature): RuleSection | null {
   return null
 }
 
-function featureLabelParts(properties: Record<string, unknown>): {
-  icon: string
-  title: string
-  subtitle: string
-} {
-  const code = coerceDisplayString(properties.libelle ?? properties.typezone ?? properties.typepsc)
-  const long = coerceDisplayString(
-    properties.libelong ?? properties.nomsuplitt ?? properties.title ?? properties.libelle,
-  )
-  const icon = code.slice(0, 4).toUpperCase() || '—'
-  let title = long || code || 'Règle d’urbanisme'
-  let subtitle = ''
-  if ('typezone' in properties && code && long && code !== long) {
-    title = `Parcelle classée ${code}`
-    subtitle = long
-  } else if (prefixSup(properties)) {
-    subtitle = long
-    title = coerceDisplayString(properties.suptype ?? properties.partition) || title
-  }
-  return { icon, title, subtitle }
-}
-
-function prefixSup(properties: Record<string, unknown>): boolean {
-  return 'suptype' in properties || 'nomsuplitt' in properties
-}
-
-function ruleRowHtml(feature: ParcelFicheFeature): string {
+function ruleTextsForFeature(
+  feature: ParcelFicheFeature,
+  featureLabel: ParcelFeatureLabel,
+  supCategories: SupCategory[],
+): { title: string; subtitle: string } {
   const props = feature.properties ?? {}
-  const { icon, title, subtitle } = featureLabelParts(props)
+  const section = classifyFeature(feature)
+  if (section === 'sup') {
+    const title = getSupLabelFromProperties(props, supCategories)
+    const subtitle = coerceDisplayString(props.nomsuplitt)
+    return { title, subtitle }
+  }
+  if (section === 'scot') {
+    return {
+      title: formatParcelRuleLabel(coerceDisplayString(props.title) || 'SCoT'),
+      subtitle: '',
+    }
+  }
+  if (section === 'mec') {
+    return {
+      title: formatParcelRuleLabel(
+        props.libelle
+          ? `Mise en compatibilité - ${coerceDisplayString(props.libelle)}`
+          : 'Mise en compatibilité',
+      ),
+      subtitle: '',
+    }
+  }
+  const labels = labelsForParcelFeature(featureLabel, props)
+  if (!labels.length) {
+    return { title: 'Règle d’urbanisme', subtitle: '' }
+  }
+  return { title: labels[0], subtitle: labels.slice(1).join(' — ') }
+}
+
+function ruleIconInnerHtml(feature: ParcelFicheFeature, zoom: number): string {
+  const imageUrl = resolveParcelFeatureLegendImageUrl(feature, zoom)
+  if (imageUrl) {
+    return `<img class="ec-fiche-info__rule-icon-img" src="${escapeHtml(imageUrl)}" alt="" width="40" height="40" loading="lazy" decoding="async" />`
+  }
+  const props = feature.properties ?? {}
+  const fallback =
+    coerceDisplayString(props.libelle ?? props.typezone ?? props.typepsc ?? props.suptype)
+      .slice(0, 4)
+      .toUpperCase() || '—'
+  return escapeHtml(fallback)
+}
+
+function ruleRowHtml(
+  feature: ParcelFicheFeature,
+  zoom: number,
+  featureLabel: ParcelFeatureLabel,
+  supCategories: SupCategory[],
+): string {
+  const props = feature.properties ?? {}
+  const { title, subtitle } = ruleTextsForFeature(feature, featureLabel, supCategories)
   const urlfic = coerceDisplayString(props.urlfic)
   const docLink = urlfic
     ? `<a class="ec-fiche-info__rule-doc" href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer" title="Pièce écrite"><span class="ri-file-line" aria-hidden="true"></span></a>`
     : `<span class="ec-fiche-info__rule-doc ec-fiche-info__rule-doc--muted" aria-hidden="true"><span class="ri-file-line"></span></span>`
   const subBlock = subtitle ? `<p class="ec-fiche-info__rule-sub">${escapeHtml(subtitle)}</p>` : ''
-  return `<article class="ec-fiche-info__rule-row"><div class="ec-fiche-info__rule-icon" aria-hidden="true">${escapeHtml(icon)}</div><div class="ec-fiche-info__rule-body"><p class="ec-fiche-info__rule-title">${escapeHtml(title)}</p>${subBlock}</div>${docLink}</article>`
+  const iconInner = ruleIconInnerHtml(feature, zoom)
+  return `<article class="ec-fiche-info__rule-row"><div class="ec-fiche-info__rule-icon" aria-hidden="true">${iconInner}</div><div class="ec-fiche-info__rule-body"><p class="ec-fiche-info__rule-title">${escapeHtml(title)}</p>${subBlock}</div>${docLink}</article>`
 }
 
 function documentCardFromFeature(feature: ParcelFicheFeature): string {
@@ -99,20 +144,13 @@ function documentCardFromFeature(feature: ParcelFicheFeature): string {
     coerceDisplayString(props.originalName) ||
     coerceDisplayString(props.name) ||
     'Document d’urbanisme'
-  const status = coerceDisplayString(props.status)
-  const effective = coerceDisplayString(props.effectiveStatus)
-  const inForce = effective !== 'NON_EXECUTOIRE'
-  const approved = status === 'document.production' || !status
-  const badges = [
-    inForce
-      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">EN VIGUEUR</span>'
-      : '',
-    approved
-      ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>'
-      : '',
-  ]
-    .filter(Boolean)
-    .join('')
+  const status = coerceDisplayString(props.status) || undefined
+  const effective = coerceDisplayString(props.effectiveStatus) || undefined
+  const badges = documentCardBadgesHtml({
+    effectiveStatus: effective,
+    status,
+    defaultApprovedWhenStatusMissing: true,
+  })
   const archive = coerceDisplayString(props.archiveUrl ?? props.urlfic)
   const titleInner = escapeHtml(title)
   const titleBlock = archive
@@ -133,9 +171,14 @@ function groupFeatures(features: ParcelFicheFeature[]): Map<RuleSection, ParcelF
   return map
 }
 
-export function buildParcelInfosHtmlFromFiche(data: GpuParcelFichePayload): string {
+export function buildParcelInfosHtmlFromFiche(
+  data: GpuParcelFichePayload,
+  zoom = DEFAULT_PARCEL_FICHE_LEGEND_ZOOM,
+): string {
   const features = data.features ?? []
   const grouped = groupFeatures(features)
+  const featureLabel = createParcelFeatureLabel()
+  const supCategories = readSupCategories()
   const order: RuleSection[] = [
     'zonage',
     'prescription',
@@ -149,7 +192,7 @@ export function buildParcelInfosHtmlFromFiche(data: GpuParcelFichePayload): stri
   for (const section of order) {
     const list = grouped.get(section)
     if (!list?.length) continue
-    const rows = list.map(ruleRowHtml).join('')
+    const rows = list.map((f) => ruleRowHtml(f, zoom, featureLabel, supCategories)).join('')
     parts.push(
       `<section class="ec-fiche-info__rules-section"><h4 class="ec-fiche-info__rules-section-title">${escapeHtml(SECTION_TITLES[section])}</h4>${rows}</section>`,
     )
@@ -160,9 +203,17 @@ export function buildParcelInfosHtmlFromFiche(data: GpuParcelFichePayload): stri
   return parts.join('')
 }
 
+function documentFeatureIsNonExecutoire(feature: ParcelFicheFeature): boolean {
+  const effective = coerceDisplayString(feature.properties?.effectiveStatus) || undefined
+  return documentIsNonExecutoireEffectiveStatus(effective)
+}
+
 export function buildParcelDocumentsHtmlFromFiche(data: GpuParcelFichePayload): string {
   const features = (data.features ?? []).filter((f) => classifyFeature(f) === 'document')
-  const parts: string[] = [FICHE_NON_EXECUTOIRE_CALLOUT_HTML]
+  const parts: string[] = []
+  if (features.some(documentFeatureIsNonExecutoire)) {
+    parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML)
+  }
   parts.push(
     '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>',
   )

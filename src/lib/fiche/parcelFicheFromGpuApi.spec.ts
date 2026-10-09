@@ -49,5 +49,26 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
     const html = buildParcelDocumentsHtmlFromFiche(sample)
     expect(html).toContain('ec-fiche-info__doc-card')
     expect(html).toContain('PLU Paris')
+    expect(html).toContain('ec-fiche-info__badge--vigueur')
+    expect(html).not.toContain('ec-fiche-info__callout')
+  })
+
+  it('encart et badge warning seulement si document non exécutoire', () => {
+    const html = buildParcelDocumentsHtmlFromFiche({
+      features: [
+        {
+          id: 'document.1',
+          properties: {
+            title: 'PLU obsolète',
+            status: 'document.production',
+            effectiveStatus: 'NON_EXECUTOIRE',
+          },
+        },
+      ],
+    })
+    expect(html).toContain('ec-fiche-info__callout')
+    expect(html).toContain('Certains documents ne sont pas exécutoires')
+    expect(html).toContain('ec-fiche-info__badge--non-executoire')
+    expect(html).not.toContain('ec-fiche-info__badge--vigueur')
   })
 })

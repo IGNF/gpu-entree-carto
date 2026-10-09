@@ -32,8 +32,7 @@ The standalone parcel page is removed from gpu-site (DSFR branch); its content l
 
 ### Parcel mode UI
 
-- **Infos** / **Documents** tabs and “Load information” buttons only toggle local flags — **no fetch**.
-- On map click, when fiche-info returns, `parcelInfosHtml` / `parcelDocumentsHtml` are filled from **point** JSON, not **`gpu_api_parcel_fiche`**.
+- **Infos** / **Documents** tabs: deferred **`gpu_api_parcel_fiche`** load; in-memory cache keyed by **`parcelId`** (`parcelFicheDetailCache.ts`) — same parcel on a new click or “Load information” reuses cached HTML without a new request when already loaded.
 
 ### Territory mode UI
 
@@ -73,7 +72,7 @@ Response: `{ parcel, features, typeref }`. gpu-client **ParcelLegend** builds In
 ### Parcel mode
 
 1. **Map click:** light header (parcel + territory CTA + cadastre modal).
-2. **“Load information”:** resolve `parcelId` → `gpu_api_parcel_fiche` → **Infos** (urbanism rules intersecting parcel) and **Documents** (document cards).
+2. **“Load information”:** resolve `parcelId` → `gpu_api_parcel_fiche` → **Infos** (urbanism rules intersecting parcel) and **Documents** (document cards with **IN FORCE** or **NON-ENFORCEABLE** + **APPROVED** badges from `effectiveStatus` / `status`; non-enforceable callout only when at least one listed document is non-enforceable).
 3. **Print:** browser print dialog after parcel fiche load (`gpu_api_parcel_fiche`).
 
 ### Document preview
@@ -88,7 +87,7 @@ Titles and document lookup rules per FicheInfoDetaillee.
 
 | Priority | Topic | Notes |
 | -------- | ----- | ----- |
-| P3 | Full **ParcelLegend** parity (CNIG legend images) | `parcelFicheFromGpuApi.ts`, `legendImageDetailDirectory` |
+| P3 | **ParcelLegend**: DU/SUP labels + CNIG pictograms (`LEGEND_CONFIG`, `legendImageDetailDirectory`) — lowscale/highscale follows map zoom (`useMapLegendZoom`) | `parcelLegendImage.ts`, `parcelFeatureLabel.ts` |
 | P3 | Preview catalog partition activation on layer tree | `gpuWmsLayers`, layer config |
 
 ## Related docs

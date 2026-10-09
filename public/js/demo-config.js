@@ -17,12 +17,16 @@ window.DEMO_CONFIG = {
   configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
   // configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
 
-  /** Document GPU à ouvrir au chargement (optionnel). */
   document: null,
-
-  /** Bbox initiale [minLon, minLat, maxLon, maxLat] (EPSG:4326), si pas de handoff recherche. */
   bbox: null,
+  // /** Document GPU à ouvrir au chargement (optionnel). */
+  // document: { id: "89866a4198db08c8b6c0077e0aa3407a", status: "document.preview", type: "PLU", name: "DU_62193" },
+  // /** Bbox initiale [minLon, minLat, maxLon, maxLat] (EPSG:4326), si pas de handoff recherche. */
+  // bbox: [1.8058684734,50.92189849159999,1.9320945718,50.98187589790001],
 
+  // /** Document GPU à ouvrir au chargement (optionnel). */
+  // document: { id: "2e7fac47f27a0825cd0091dd1471d985", status: "document.production", type: "MEC", name: "MEC_1_scot_200051183" },
+  // bbox: [-0.467093, 49.0459842, -0.3386296, 49.1704163],
   /** Surcharges de gpu.config (URLs WFS, WMS, API, etc.). */
   gpuConfigOverrides: {},
 
