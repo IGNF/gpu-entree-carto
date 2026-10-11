@@ -13,18 +13,24 @@ import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/m
 import { FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { gpuClientConfigStatus } from '@/lib/demo/gpuClientConfigState'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
-import { loadParcelFicheDetail } from '@/lib/fiche/ficheInfoService'
+import { loadParcelFicheDetail, refreshFicheForMapModeChange } from '@/lib/fiche/ficheInfoService'
 import { resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
+import { ficheCatalogVisibilityRevision } from '@/lib/fiche/ficheCatalogVisibilityFilter'
+import { isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import {
+  buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvfr/dsfr/dist/component/tab/tab.min.css'
+import '@gouvfr/dsfr/dist/component/button/button.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
 import 'remixicon/fonts/remixicon.css'
+import '@gouvfr/dsfr/dist/component/tile/tile.min.css'
+import { syncFicheGeometryHighlight } from '@/lib/fiche/ficheGeometryHighlight'
 
 const props = defineProps<{
   selection: FicheInfoSelection | null
@@ -47,7 +53,7 @@ const isEmpty = computed(
 
 const effectiveMode = computed((): MapModeId | null => {
   if (configLoading.value || dataLoading.value || isEmpty.value) return null
-  return props.selection?.mapMode ?? mapMode.mode.value
+  return mapMode.mode.value
 })
 
 const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL)
@@ -55,6 +61,9 @@ const showTerritoryLayout = computed(() => effectiveMode.value === MAP_MODE_TERR
 
 const parcelLabel = computed(
   () => props.selection?.parcelLabel ?? props.selection?.title ?? 'Parcelle',
+)
+const parcelSwitchLabel = computed(
+  () => props.selection?.parcelSwitchLabel ?? props.selection?.parcelLabel ?? 'Parcelle',
 )
 const territoryTitle = computed(
   () => props.selection?.territoryTitle ?? props.selection?.title ?? 'Territoire',
@@ -81,6 +90,15 @@ const parcelDetailReady = computed(() => {
 })
 
 watch(
+  () => props.selection?.raw,
+  (raw) => {
+    const record = raw && typeof raw === 'object' ? raw : null
+    syncFicheGeometryHighlight(mapRef.value, record)
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
   () => parcelFicheKey(props.selection),
   (next, prev) => {
     if (next === prev) return
@@ -89,6 +107,15 @@ watch(
     parcelTabError.value = null
     cadastreModalOpen.value = false
   },
+)
+
+watch(
+  () => [parcelFicheKey(props.selection), parcelDetailReady.value, showParcelLayout.value] as const,
+  ([key, ready, parcelMode]) => {
+    if (!parcelMode || !key || ready || props.selection?.parcelMissingAtPoint) return
+    void loadParcelDetail()
+  },
+  { immediate: true },
 )
 
 const activeDocTabId = ref<string | null>(null)
@@ -112,8 +139,10 @@ function selectDocTab(id: string): void {
 }
 
 async function activateParcelMode(): Promise<void> {
+  const zoom = legendZoom.value
   if (mapMode.mode.value !== MAP_MODE_PARCEL) {
     mapMode.setMode(MAP_MODE_PARCEL)
+    refreshFicheForMapModeChange(MAP_MODE_PARCEL, zoom)
     return
   }
   const map = mapRef.value
@@ -121,8 +150,10 @@ async function activateParcelMode(): Promise<void> {
 }
 
 async function activateTerritoryMode(): Promise<void> {
+  const zoom = legendZoom.value
   if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
     mapMode.setMode(MAP_MODE_TERRITORY)
+    refreshFicheForMapModeChange(MAP_MODE_TERRITORY, zoom)
     return
   }
   const map = mapRef.value
@@ -146,7 +177,7 @@ async function loadParcelDetail(): Promise<void> {
 function printParcelFiche(): void {
   const html =
     activeParcelTab.value === 'documents'
-      ? props.selection?.parcelDocumentsHtml
+      ? parcelDocumentsDisplayHtml.value
       : parcelInfosDisplayHtml.value
   if (!html || typeof window === 'undefined') return
   const w = window.open('', '_blank', 'noopener,noreferrer')
@@ -172,12 +203,25 @@ const parcelDetailCached = computed(() => Boolean(parcelFichePayloadFromSelectio
 
 /** Pictos scaleDependant recalculés au zoom (données `_parcelFiche`, pas le HTML figé en cache). */
 const parcelInfosDisplayHtml = computed((): string => {
+  void ficheCatalogVisibilityRevision.value
   if (!parcelDetailReady.value) return ''
   const payload = parcelFichePayloadFromSelection(props.selection)
   if (payload) {
     return buildParcelInfosHtmlFromFiche(payload, legendZoom.value)
   }
   return props.selection?.parcelInfosHtml ?? '<p>Aucune information.</p>'
+})
+
+const parcelDocumentsDisplayHtml = computed((): string => {
+  void ficheCatalogVisibilityRevision.value
+  if (!parcelDetailReady.value) return ''
+  const payload = parcelFichePayloadFromSelection(props.selection)
+  if (payload) {
+    const raw = props.selection?.raw
+    const ficheApi = raw && typeof raw === 'object' && isGpuFicheInfoPayload(raw) ? raw : null
+    return buildParcelDocumentsHtmlFromFiche(payload, ficheApi)
+  }
+  return props.selection?.parcelDocumentsHtml ?? ''
 })
 
 const emptyBodyHtml = computed(
@@ -275,23 +319,22 @@ const emptyBodyHtml = computed(
           :tabindex="activeParcelTab === 'infos' ? 0 : -1"
         >
           <div
-            v-if="parcelTabLoading && activeParcelTab === 'infos'"
+            v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'infos'"
             class="ec-fiche-info__load-wrap"
           >
-            <SanitizedHtml class="ec-fiche-info__body" :html="FICHE_LOADING_SPINNER_HTML" />
-          </div>
-          <div v-else-if="!parcelDetailReady" class="ec-fiche-info__load-wrap">
-            <button
-              type="button"
-              class="ec-fiche-info__load-btn fr-btn fr-btn--secondary fr-btn--icon-left"
-              @click="loadParcelDetail"
-            >
-              <span class="ri-refresh-line" aria-hidden="true" />
-              Charger les informations
-            </button>
+            <SanitizedHtml
+              v-if="parcelTabLoading"
+              class="ec-fiche-info__body"
+              :html="FICHE_LOADING_SPINNER_HTML"
+            />
+            <SanitizedHtml
+              v-else-if="selection?.parcelInfosHtml"
+              class="ec-fiche-info__body"
+              :html="selection.parcelInfosHtml"
+            />
             <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
-          <template v-else>
+          <template v-else-if="parcelDetailReady">
             <div class="ec-fiche-info__infos-toolbar">
               <h3 class="ec-fiche-info__section-title">Règles d’urbanisme</h3>
               <button
@@ -318,26 +361,25 @@ const emptyBodyHtml = computed(
           :tabindex="activeParcelTab === 'documents' ? 0 : -1"
         >
           <div
-            v-if="parcelTabLoading && activeParcelTab === 'documents'"
+            v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'documents'"
             class="ec-fiche-info__load-wrap"
           >
-            <SanitizedHtml class="ec-fiche-info__body" :html="FICHE_LOADING_SPINNER_HTML" />
-          </div>
-          <div v-else-if="!parcelDetailReady" class="ec-fiche-info__load-wrap">
-            <button
-              type="button"
-              class="ec-fiche-info__load-btn fr-btn fr-btn--secondary fr-btn--icon-left"
-              @click="loadParcelDetail"
-            >
-              <span class="ri-refresh-line" aria-hidden="true" />
-              Charger les informations
-            </button>
+            <SanitizedHtml
+              v-if="parcelTabLoading"
+              class="ec-fiche-info__body"
+              :html="FICHE_LOADING_SPINNER_HTML"
+            />
+            <SanitizedHtml
+              v-else-if="parcelDocumentsDisplayHtml"
+              class="ec-fiche-info__body"
+              :html="parcelDocumentsDisplayHtml"
+            />
             <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
           <SanitizedHtml
             v-else
             class="ec-fiche-info__body"
-            :html="selection?.parcelDocumentsHtml ?? '<p>Aucun document.</p>'"
+            :html="parcelDocumentsDisplayHtml || '<p>Aucun document.</p>'"
           />
         </div>
       </div>
@@ -349,13 +391,14 @@ const emptyBodyHtml = computed(
       class="ec-fiche-info__inner ec-fiche-info__inner--territory"
     >
       <button
-        v-if="selection?.parcelLabel"
+        v-if="selection?.parcelSwitchLabel || selection?.parcelLabel"
         type="button"
         class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
         @click="activateParcelMode"
       >
         <span class="ri-arrow-left-line" aria-hidden="true" />
-        Parcelle {{ parcelLabel }}
+        <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
+        <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
       </button>
 
       <header class="ec-fiche-info__topbar">

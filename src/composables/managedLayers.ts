@@ -19,6 +19,7 @@ import {
 } from '@/lib/layerConfig/catalogDataLayersStack'
 import {
   applyUserCatalogToggle,
+  catalogIdToUncheckWhenRemovingScotGroup,
   computeMapVisibilityById,
   isCatalogAggregate,
   propagateCheckedToAncestors,
@@ -477,7 +478,8 @@ export function useManagedLayers(
   }
 
   function removeFromStack(id: string) {
-    setCatalogChecked(id, false)
+    const targetId = catalogIdToUncheckWhenRemovingScotGroup(id, treeIndex)
+    setCatalogChecked(targetId, false)
   }
 
   function enableAggregateDetail(aggregateId: string) {

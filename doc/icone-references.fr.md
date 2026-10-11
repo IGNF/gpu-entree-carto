@@ -71,7 +71,7 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | <img src="./img/icon-previews/remix/drag-move-2-fill.svg" width="24" height="24" alt="" /> | Poignée de déplacement | `ri-drag-move-2-fill` | Remix | [drag-move-2-fill](https://remixicon.com/icon/drag-move-2-fill) |
 | <img src="./img/icon-previews/remix/eye-line.svg" width="24" height="24" alt="" /> | Visible | `ri-eye-line` | Remix | [eye-line](https://remixicon.com/icon/eye-line) |
 | <img src="./img/icon-previews/remix/eye-off-line.svg" width="24" height="24" alt="" /> | Masqué | `ri-eye-off-line` | Remix | [eye-off-line](https://remixicon.com/icon/eye-off-line) |
-| <img src="./img/icon-previews/remix/delete-bin-line.svg" width="24" height="24" alt="" /> | Supprimer la couche | `ri-delete-bin-line` | Remix | [delete-bin-line](https://remixicon.com/icon/delete-bin-line) |
+| <img src="./img/icon-previews/remix/delete-bin-line.svg" width="24" height="24" alt="" /> | Retirer du catalogue (Couches de données) | `ri-delete-bin-line` | Remix | [delete-bin-line](https://remixicon.com/icon/delete-bin-line) |
 | <img src="./img/icon-previews/remix/contrast-fill.svg" width="24" height="24" alt="" /> | Opacité | `ri-contrast-fill` | Remix | [contrast-fill](https://remixicon.com/icon/contrast-fill) |
 
 ---

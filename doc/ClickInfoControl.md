@@ -18,10 +18,10 @@ Always-on map click that fills the **fiche** tab (first lateral panel tab) with 
 - Ignores clicks on UI (tab panels, search widget, mode selector, sketch bar, form controls) and hits on sketch/measure vector layers.
 - Calls `loadFicheForMapPoint({ lon, lat, mode, zoom })`:
   - **Territory:** only `config.apiFicheInfoUrl` (from gpu-client-config); if missing or request fails → “Indisponibilité du service” (no APICarto `gpu/document`); gpu-site JSON fills the fiche: municipality title, then tabs per document type (DU, PSMV, SUP, SCoT) plus an “Procédures en cours” tab when applicable;
-  - **Parcel:** `apiFicheInfoUrl` when configured (same JSON: parcel header + same document tabs), otherwise APICarto `cadastre/parcelle`.
+  - **Parcel:** gpu-site API only (`apiFicheInfoUrl` / v2 parcel endpoint); no browser APICarto fallback; unavailability message when the API is missing or fails.
 - Opens the fiche tab via `tabPanelsApiRef.showSelection`.
 - Places the geopf **cherry** on `singleclick` (no map popup — fiche in the side panel), then loads the fiche **asynchronously**; **no map recentering**.
-- Draws a **mode emprise** on the SearchEngine layer (`searchResultGraphics`): **parcel** (red, APICarto) in **Parcelle** mode; **municipality** (red) in **Territoire** mode, plus **municipal arrondissement** (orange) and **city-wide municipality** (red, geo.api.gouv.fr contour) in Paris, Lyon, and Marseille; at all zoom levels; no geopf place extent on click.
+- Draws a **mode emprise** on the SearchEngine layer (`searchResultGraphics`) from **fiche-info v2** fields **`parcelGeometry` / `gridGeometry` / `parentGridGeometry`** (gpu-site): **parcel** (red) in **Parcelle** mode; **municipality** (red) in **Territoire** mode, plus **arrondissement** (orange) and **city-wide municipality** (red) in Paris, Lyon, and Marseille; at all zoom levels; no geopf place extent on click; **no APICarto or geo.api calls from the browser**.
 
 ## Cursor
 

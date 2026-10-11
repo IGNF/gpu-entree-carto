@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fiche info v2 (client)** — `fiche-info-v2` territory / parcel / combined routes (`ficheInfoApiUrls`, `ficheInfoFetch`), DSFR document and procedure tiles, legal status badges, parcel/territory GeoJSON highlight, dual-mode cherry cache, [FicheInfoApi](./doc/FicheInfoApi.md) contract doc; removed browser APICarto parcel fallback.
+
+### Changed
+
+- **Fiche info v2 API (gpu-site)** — v2 JSON trimmed to entree-carto fiche fields only (`FicheInfoV2PayloadOptimizer`: drop unused top-level keys, whitelist document/procedure/grid/parcel fields, scope-specific `parcelFiche`); see [FicheInfoApi](./doc/FicheInfoApi.md).
+- **Mode emprise (map)** — red/orange parcel and territory outlines come from fiche-info v2 JSON only (`searchResultGraphics`, `modeEmpriseFromFiche`); no browser APICarto or geo.api; v2 fetch prefers the combined endpoint when configured.
+- **Document / procedure links (demo)** — fiche tile `viewUrl` and related paths resolve against the gpu-client-config script host (`ficheGpuSiteUrls`); document/procedure fallbacks use **`documentViewUrl` / `procedureViewUrl`** templates from gpu-site config (Symfony routes), not hard-coded paths in entree-carto.
 - **Fiche info P0–P2** — deferred **`gpu_api_parcel_fiche`** load (Infos / Documents tabs), **`/api/fiche-info`** query params (`includeParcel`, preview, `client`/`seq`), absorbed municipalities (`deletedGrids`), demo document preview (extent, WMS layers, fiche reload), urbanism rule CSS, parcel print; modules `parcelId`, `ficheInfoQuery`, `parcelFicheFromGpuApi`; Vitest coverage.
 - **Sketch demo** — `mountSketch` option `showSettings` (cog top-right live options form); `setOptions` / `resetOptions` on handle; demo route `/sketch` enables it.
 
@@ -27,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche info MEC notice** — territory document tiles show the MEC compatibility notice only when a MEC record exists in gpu-site (32-char document id), not from WFS-only partition keys.
+- **Fiche info vs catalogue** — toggling _Data_ layer checkboxes refreshes the open fiche (territory tabs, parcel Infos/Documents) from cached API payload; no extra fetch.
+- **MEC document tile link** — parcel and territory MEC tiles open the gpu-site document page (`/document/{id}`), not the ZIP `archiveUrl`.
+- **Parcel fiche Documents tab** — unified document list: dedupe WFS duplicates; one gpu-site production tile per DU partition plus **NOT IN BDD** for orphan WFS versions; **SUP** section from gpu-site when an assiette intersects; parcel **MEC** replaces the parent DU/SCoT tile using the same **procedure** tile as territory (**IN PROGRESS** badge, notice as detail, document link).
 - **Map permalink** — validate hash parameter names before assignment (`js/remote-property-injection` / CodeQL).
 
 ### Changed

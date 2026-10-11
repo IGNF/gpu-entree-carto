@@ -18,10 +18,10 @@ Clic carte **permanent** qui remplit l’onglet **fiche** (premier onglet du pan
 - Ignore les clics sur l’UI (panneaux, recherche, sélecteur de mode, barre croquis, champs de formulaire) et les pixels touchant les couches vectorielles croquis / mesure.
 - Appelle `loadFicheForMapPoint({ lon, lat, mode, zoom })` :
   - **Territoire** : uniquement `config.apiFicheInfoUrl` (fourni par gpu-client-config) ; sans URL ou en cas d’échec → « Indisponibilité du service » (pas d’appel APICarto `gpu/document`) ; la réponse JSON gpu-site alimente la fiche : titre commune, puis onglets par type de document (DU, PSMV, SUP, SCoT) et onglet « Procédures en cours » si applicable ;
-  - **Parcelle** : `apiFicheInfoUrl` si configurée (même JSON : en-tête parcelle + mêmes onglets documents), sinon APICarto `cadastre/parcelle`.
+  - **Parcelle** : uniquement l’API gpu-site (`apiFicheInfoUrl` / v2 parcelle) ; plus d’appel APICarto depuis le navigateur ; message d’indisponibilité si l’API est absente ou en échec.
 - Ouvre l’onglet fiche via `tabPanelsApiRef.showSelection`.
 - Pose la **cerise** geopf dès le `singleclick` (sans bulle popup — fiche dans le panneau), puis charge la fiche en **asynchrone** ; **sans recentrer** la vue.
-- Affiche une **emprise mode** sur la couche SearchEngine (`searchResultGraphics`) : **parcelle** (rouge, APICarto) en mode **Parcelle** ; **commune** (rouge) en mode **Territoire**, et **arrondissement** (orange) + **commune ville** (rouge, contour geo.api.gouv.fr) à Paris, Lyon et Marseille ; indépendant du niveau de zoom ; pas d’emprise « lieu » geopf au clic.
+- Affiche une **emprise mode** sur la couche SearchEngine (`searchResultGraphics`) : géométries **`parcelGeometry` / `gridGeometry` / `parentGridGeometry`** renvoyées par **fiche-info v2** (gpu-site) ; **parcelle** (rouge) en mode **Parcelle** ; **commune** (rouge) en mode **Territoire**, et **arrondissement** (orange) + **commune ville** (rouge) à Paris, Lyon et Marseille ; indépendant du niveau de zoom ; pas d’emprise « lieu » geopf au clic ; **aucun appel APICarto / geo.api depuis le navigateur**.
 
 ## Curseur
 

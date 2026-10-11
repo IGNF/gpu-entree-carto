@@ -30,6 +30,10 @@ function normalizeLayerNameForLegend(layerName: string): string {
 export type SupCategory = {
   name?: string
   libelle?: string
+  libelle_court?: string
+  libelleCourt?: string
+  url_fiche?: string
+  urlFiche?: string
   downloadable?: boolean
 }
 

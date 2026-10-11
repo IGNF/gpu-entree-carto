@@ -1,15 +1,28 @@
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
+import { isFicheDocumentFamilyVisible } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
+import {
+  documentSupTileHtml,
+  documentTileHrefFromApiFields,
+  documentTilesListHtml,
+  documentUrbanismTileHtml,
+} from '@/lib/fiche/ficheDocumentTiles'
+import { readSupCategories } from '@/lib/fiche/parcelLegendImage'
+import { supCategoryForDocument, supCategoryLibelle } from '@/lib/fiche/ficheSupGroupedPresentation'
 
 type GpuFicheDocument = {
+  id?: string
   title?: string
   name?: string
   originalName?: string
   type?: string
   status?: string
   effectiveStatus?: string
+  legalStatus?: string
   archiveUrl?: string
+  viewUrl?: string
   typeproc_title?: string
+  typepsc?: string
 }
 
 type GpuFichePartition = {
@@ -37,11 +50,64 @@ function pickProductionDocument(
   return production[0] ?? documents[0] ?? null
 }
 
-function formatDatapproFromDocumentName(documentName: string): string | null {
+export function formatDatapproFromDocumentName(documentName: string): string | null {
   const match = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i)
   if (!match?.[3]) return null
   const date = match[3]
   return `${date.slice(6, 8)}/${date.slice(4, 6)}/${date.slice(0, 4)}`
+}
+
+export type FicheProcedureNatureSource = {
+  inProgress?: boolean
+  procedureType?: { title?: string }
+  name?: string
+}
+
+/** Libellé nature (ex. « Mise à jour n°2 ») : document enrichi gpu-site ou dernière procédure approuvée. */
+export function resolveLastApprovedProcedureNatureLabel(
+  document: { originalName?: string; name?: string; typeproc_title?: string },
+  proceduresByDocument?: Record<string, FicheProcedureNatureSource[]>,
+): string | null {
+  const fromDocument = document.typeproc_title?.trim()
+  if (fromDocument) return fromDocument
+
+  if (!proceduresByDocument) return null
+  const keys = [document.originalName, document.name].filter(
+    (key): key is string => typeof key === 'string' && key.length > 0,
+  )
+  for (const key of keys) {
+    const procedures = proceduresByDocument[key]
+    if (!procedures?.length) continue
+    const approved = procedures.find((procedure) => procedure.inProgress !== true)
+    if (!approved) continue
+    const title = approved.procedureType?.title?.trim() || approved.name?.trim() || null
+    if (title) return title
+  }
+  return null
+}
+
+/** « Procédure de révision » / « Procédure d'élaboration » à partir du libellé nature. */
+export function procedureNaturePhraseForTileDetail(nature: string): string {
+  const trimmed = nature.trim()
+  if (!trimmed) return trimmed
+  const lowerFirst = trimmed.charAt(0).toLocaleLowerCase('fr-FR') + trimmed.slice(1)
+  if (/^[aeiouyéèêëàâäùûüîïôöh]/i.test(trimmed)) {
+    return `Procédure d'${lowerFirst}`
+  }
+  return `Procédure de ${lowerFirst}`
+}
+
+export function lastApprovedProcedureTileDetail(
+  datapproLabel: string | null | undefined,
+  procedureNatureLabel: string | null | undefined,
+): string | null {
+  const date = datapproLabel?.trim()
+  const nature = procedureNatureLabel?.trim()
+  if (nature && date) {
+    return `${procedureNaturePhraseForTileDetail(nature)} approuvée le ${date}`
+  }
+  if (date) return `Dernière procédure approuvée le : ${date}`
+  return null
 }
 
 export function documentIsNonExecutoireEffectiveStatus(
@@ -63,8 +129,7 @@ export function documentCardBadgesHtml(options: {
 }): string {
   const { effectiveStatus, status, defaultApprovedWhenStatusMissing } = options
   const nonExecutoire = documentIsNonExecutoireEffectiveStatus(effectiveStatus)
-  const approved =
-    status === 'document.production' || (defaultApprovedWhenStatusMissing && !status)
+  const approved = status === 'document.production' || (defaultApprovedWhenStatusMissing && !status)
   const badges = [
     nonExecutoire
       ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--non-executoire">NON EXÉCUTOIRE</span>'
@@ -103,22 +168,36 @@ export function fichePayloadHasNonExecutoireDocument(data: GpuFicheInfoPayload):
   return maps.some(partitionMapHasNonExecutoireDocument)
 }
 
-function documentCardHtml(document: GpuFicheDocument, href?: string): string {
+function documentTileFromGpuDocument(
+  document: GpuFicheDocument,
+  kind: 'du' | 'psmv' | 'scot' | 'sup',
+  proceduresByDocument?: GpuFicheInfoPayload['proceduresByDocument'],
+): string {
   const title = document.title?.trim() || document.type || 'Document'
   const name = document.originalName ?? document.name ?? ''
   const datappro = name ? formatDatapproFromDocumentName(name) : null
-  const badges = documentCardBadgesHtml({
+  const procedureNatureLabel = resolveLastApprovedProcedureNatureLabel(
+    document,
+    proceduresByDocument,
+  )
+  const href = documentTileHrefFromApiFields(document)
+  if (kind === 'sup') {
+    const category = supCategoryForDocument(document, readSupCategories())
+    return documentSupTileHtml({
+      title: supCategoryLibelle(category),
+      detail: title,
+      href,
+    })
+  }
+  return documentUrbanismTileHtml({
+    title,
+    href,
     effectiveStatus: document.effectiveStatus,
+    legalStatus: document.legalStatus,
     status: document.status,
+    datapproLabel: datappro,
+    procedureNatureLabel,
   })
-  const titleInner = escapeHtml(title)
-  const titleBlock = href
-    ? `<a class="ec-fiche-info__doc-card-title" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a>`
-    : `<p class="ec-fiche-info__doc-card-title">${titleInner}</p>`
-  const footer = datappro
-    ? `<p class="ec-fiche-info__doc-card-meta">Dernière procédure approuvée le : ${escapeHtml(datappro)}</p>`
-    : ''
-  return `<article class="ec-fiche-info__doc-card">${badges ? `<div class="ec-fiche-info__doc-card-badges">${badges}</div>` : ''}${titleBlock}${footer}</article>`
 }
 
 const SECTION_TITLES: Record<string, string> = {
@@ -128,10 +207,16 @@ const SECTION_TITLES: Record<string, string> = {
   scot: 'Schémas de cohérence territoriale',
 }
 
-function sectionBlock(kind: keyof typeof SECTION_TITLES, documents: GpuFicheDocument[]): string {
+function sectionBlock(
+  kind: keyof typeof SECTION_TITLES,
+  documents: GpuFicheDocument[],
+  proceduresByDocument?: GpuFicheInfoPayload['proceduresByDocument'],
+): string {
   if (!documents.length) return ''
-  const cards = documents.map((d) => documentCardHtml(d, d.archiveUrl)).join('')
-  return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES[kind] ?? kind)}</h3>${cards}`
+  const tileKind =
+    kind === 'sup' ? 'sup' : kind === 'scot' ? 'scot' : kind === 'psmv' ? 'psmv' : 'du'
+  const tiles = documents.map((d) => documentTileFromGpuDocument(d, tileKind, proceduresByDocument))
+  return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES[kind] ?? kind)}</h3>${documentTilesListHtml(tiles)}`
 }
 
 /** Liste cartes documents (onglet Documents mode Parcelle). */
@@ -149,13 +234,37 @@ export function buildParcelDocumentsPresentationHtml(data: GpuFicheInfoPayload):
   const sups = collectProductionDocuments(normalizePartitionsMap(data.sups))
   const scots = collectProductionDocuments(normalizePartitionsMap(data.scots))
 
-  parts.push(sectionBlock('du', dus))
-  parts.push(sectionBlock('psmv', psmvs))
-  parts.push(sectionBlock('sup', sups))
-  parts.push(sectionBlock('scot', scots))
+  const proceduresByDocument = data.proceduresByDocument
+  if (isFicheDocumentFamilyVisible('du')) parts.push(sectionBlock('du', dus, proceduresByDocument))
+  if (isFicheDocumentFamilyVisible('psmv')) {
+    parts.push(sectionBlock('psmv', psmvs, proceduresByDocument))
+  }
+  if (isFicheDocumentFamilyVisible('sup'))
+    parts.push(sectionBlock('sup', sups, proceduresByDocument))
+  if (isFicheDocumentFamilyVisible('scot')) {
+    parts.push(sectionBlock('scot', scots, proceduresByDocument))
+  }
 
   const body = parts.filter(Boolean).join('')
   return body || '<p>Aucun document disponible pour cette parcelle.</p>'
+}
+
+/** Tuiles DSFR pour un onglet territoire (liste de documents production par partition). */
+export function buildDocumentTypeTabTilesHtml(
+  partitions: Record<string, GpuFichePartition>,
+  kind: 'du' | 'psmv' | 'scot' | 'sup',
+  proceduresByDocument?: GpuFicheInfoPayload['proceduresByDocument'],
+): string {
+  const keys = Object.keys(partitions)
+  if (!keys.length) return ''
+  const documents = collectProductionDocuments(partitions)
+  if (!documents.length) return ''
+  const tiles = documents.map((d) => documentTileFromGpuDocument(d, kind, proceduresByDocument))
+  const list = documentTilesListHtml(tiles)
+  if (keys.length > 1) {
+    return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`
+  }
+  return list
 }
 
 /** Encart non exécutoire pour un onglet territoire (documents de la partition concernée uniquement). */

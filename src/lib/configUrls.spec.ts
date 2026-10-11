@@ -31,13 +31,13 @@ describe('resolveConfigUrlsInRecord', () => {
   it('résout legendImageDetailDirectory', () => {
     setGpuClientConfigScriptUrl('http://127.0.0.1:8000/js/gpu-client-config.js')
     const cfg: Record<string, unknown> = {
-      apiFicheInfoUrl: '/api/fiche-info',
+      apiFicheInfoUrl: '/api/fiche-info-v2',
       legendImageDetailDirectory: '/build/gpu/images/map_legend/',
     }
     resolveConfigUrlsInRecord(cfg)
     expect(cfg.legendImageDetailDirectory).toBe(
       'http://127.0.0.1:8000/build/gpu/images/map_legend/',
     )
-    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info')
+    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info-v2')
   })
 })

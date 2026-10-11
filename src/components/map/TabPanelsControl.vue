@@ -16,6 +16,11 @@ import {
   watch,
   type ShallowRef,
 } from 'vue'
+import {
+  computeFicheCatalogFamilyVisibility,
+  setFicheCatalogFamilyVisibility,
+} from '@/lib/fiche/ficheCatalogVisibilityFilter'
+import { refreshFicheForCatalogVisibility } from '@/lib/fiche/ficheInfoService'
 import { registerMapPermalinkLayersBridge } from '@/composables/mapPermalinkLayersBridge'
 import {
   getMapPermalinkParams,
@@ -228,6 +233,10 @@ function showSelection(next: FicheInfoSelection) {
   openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP)
 }
 
+function updateSelection(next: FicheInfoSelection) {
+  selection.value = next
+}
+
 function openLegendForLayer(layerId: string) {
   legendPanelFocusRef.value = { layerId, at: Date.now() }
   openTab(TAB_PANEL_IDS.legends)
@@ -250,11 +259,26 @@ function syncShellOpenClass(open: boolean) {
   }
 }
 
+function syncFicheCatalogFamilyVisibilityFromCatalog(): void {
+  setFicheCatalogFamilyVisibility(
+    computeFicheCatalogFamilyVisibility(
+      catalogCheckedById.value,
+      catalogEntries.value.map((entry) => ({
+        id: entry.id,
+        path: entry.path,
+        permalinkId: primaryPermalinkIdForEntry(entry),
+      })),
+      layerNodesRef.value,
+    ),
+  )
+}
+
 const api: TabPanelsApi = {
   openTab,
   openLegendForLayer,
   closePanels,
   showSelection,
+  updateSelection,
   clearSelection,
   isOpen,
   activeTab,
@@ -450,6 +474,8 @@ function applyLayerParamsFromPermalink(params: MapPermalinkParams): void {
     })
   }
   applyStackOrderFromPermalink(stackIndexByNodeId)
+  syncFicheCatalogFamilyVisibilityFromCatalog()
+  refreshFicheForCatalogVisibility()
 }
 
 function scheduleApplyLayerParamsFromPermalink(): void {
@@ -481,19 +507,27 @@ watch(
     if (becameReady || docChanged) {
       syncGpuWmsRegistryFromLayerConfig()
     }
-    if (becameReady) scheduleApplyLayerParamsFromPermalink()
+    if (becameReady) {
+      scheduleApplyLayerParamsFromPermalink()
+      syncFicheCatalogFamilyVisibilityFromCatalog()
+    }
+  },
+)
+
+watch(
+  () => JSON.stringify(catalogCheckedById.value),
+  () => {
+    syncFicheCatalogFamilyVisibilityFromCatalog()
+    refreshFicheForCatalogVisibility()
   },
 )
 
 let layerPermalinkSyncTimer: ReturnType<typeof setTimeout> | null = null
 watch(
   () =>
-    [
-      JSON.stringify(catalogCheckedById.value),
-      layers.value
-        .map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`)
-        .join('|'),
-    ].join(';'),
+    layers.value
+      .map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`)
+      .join('|'),
   () => {
     if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer)
     layerPermalinkSyncTimer = setTimeout(() => {

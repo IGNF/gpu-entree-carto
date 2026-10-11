@@ -36,7 +36,7 @@ At build time, Vite plugin `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) repla
 - **Animated** fly-to to the full result **extent** (cherry + `trueGeometry` dashed polygon), `maxZoom: 15` like geopf — instant geopf `fit` disabled via `SearchEngineAdvancedAnimated`; extra right padding when the fiche panel is open
 - **Search submit (magnifying glass)** — if the main field still shows the last resolved place label, the autocomplete list is closed, and the map view has moved since that search, clicking submit recentres on the **stored place search extent** (geopf / cherry — not the red mode emprise), then refreshes mode emprise and fiche (`placeSearchSubmitReplay.ts`)
 - **Advanced forms** do not emit geopf `search` by default — `SearchEngineAdvancedAnimated.onAdvancedSearchResult` dispatches it after `addResultToMap` so pin styling, animation, fiche, and `mlon`/`mlat` match autocomplete
-- Fiche load from search (`loadFicheForSearch`) skips `createMarker` (`skipLocationMarker`) so cherry and extent stay visible while APICarto loads
+- Fiche load from search (`loadFicheForSearch`) skips `createMarker` (`skipLocationMarker`) so cherry and extent stay visible while fiche-info loads
 - **No geopf map popup** (`SearchEngineAdvancedAnimated._setPopupInfo` + CSS) — details only in the fiche tab
 - Keeps the geopf **place** dashed extent (`trueGeometry`) and animated fly-to; adds the same **mode emprise** as click-info (red parcel; Territoire: red commune, orange arrondissement + city commune in Paris/Lyon/Marseille) without changing the search zoom target
 - Geoloc popup: geopf content format (`<strong>…</strong><br/>…`, no `<p>`) + CSS fix for append (line between bubble and pointer)

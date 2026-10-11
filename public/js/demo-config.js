@@ -14,6 +14,7 @@ window.DEMO_CONFIG = {
    * URL du script gpu-client-config (prod / dev / local), optionnel.
    * S’il est défini, le script est chargé au démarrage de `/map` (globals LAYER_CONFIG, …).
    */
+  /** gpu-site local : injecte apiFicheInfo* → /api/fiche-info-v2* (cadastre APICarto côté serveur). */
   configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
   // configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
 
@@ -27,8 +28,18 @@ window.DEMO_CONFIG = {
   // /** Document GPU à ouvrir au chargement (optionnel). */
   // document: { id: "2e7fac47f27a0825cd0091dd1471d985", status: "document.production", type: "MEC", name: "MEC_1_scot_200051183" },
   // bbox: [-0.467093, 49.0459842, -0.3386296, 49.1704163],
-  /** Surcharges de gpu.config (URLs WFS, WMS, API, etc.). */
+  /**
+   * Surcharges de gpu.config (URLs WFS, WMS, API, etc.).
+   * Après chargement de configScriptUrl, les clés fiche info v2 sont déjà définies ;
+   * ne surcharger que pour tests sans script gpu (proxy Vite → gpu-site :8000).
+   */
   gpuConfigOverrides: {},
+  // gpuConfigOverrides: {
+  //   apiFicheInfoUrl: '/__gpu_dev_proxy__/api/fiche-info-v2',
+  //   apiFicheInfoCombinedUrl: '/__gpu_dev_proxy__/api/fiche-info-v2',
+  //   apiFicheInfoTerritoireUrl: '/__gpu_dev_proxy__/api/fiche-info-v2/territoire',
+  //   apiFicheInfoParcelleUrl: '/__gpu_dev_proxy__/api/fiche-info-v2/parcelle',
+  // },
 
   /** Options carte démo (`/map`). */
   map: {

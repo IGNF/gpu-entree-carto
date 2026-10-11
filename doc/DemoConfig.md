@@ -47,7 +47,7 @@ See commented blocks at the bottom of `public/js/demo-config.js` (gpu-site envir
 1. Search handoff from home (SPA)
 2. Otherwise `map.search` or JS file `bbox` / `document`
 3. **_Data_ catalogue**: if `configScriptUrl` defined `window.LAYER_CONFIG`, tree via `layerConfigToTreeNodes`; otherwise JS file `map.layerNodes`
-4. After gpu script load, merge `window.gpu.config` into entree-carto `config` module (WMS URLs, etc.); relative `*Url` fields (e.g. `/api/fiche-info`) and **`legendImageDetailDirectory`** resolve against the `gpu-client-config.js` script URL, not the SPA origin (`configUrls.ts`, also applied at display time in `resolveLegendImageDetailDirectory`).
+4. After gpu script load, merge `window.gpu.config` into entree-carto `config` module (WMS URLs, etc.); relative `*Url` fields (e.g. `/api/fiche-info-v2`, `/api/fiche-info-v2/territoire`, `/api/fiche-info-v2/parcelle`) and **`legendImageDetailDirectory`** resolve against the `gpu-client-config.js` script URL, not the SPA origin (`configUrls.ts`, also applied at display time in `resolveLegendImageDetailDirectory`). APICarto cadastre calls run **on gpu-site only**. Fiche document and procedure links use **`documentViewUrl` / `procedureViewUrl`** and **`urlPlaceholders`** from gpu-client-config (Symfony `path()` templates, not hard-coded routes in entree-carto), then **`ficheGpuSiteUrls`** for the `configScriptUrl` host in Vite dev.
 
 ## Limits
 

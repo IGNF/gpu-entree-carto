@@ -122,6 +122,13 @@ Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `M
 - Affichage titres / messages « commune fusionnée » ;
 - recherche documents sur maillages absorbés quand aucune partition au point (règles FicheInfoDetaillee §11–12).
 
+### Visibilité catalogue (couches Données)
+
+Les cases cochées dans le catalogue (état reflété dans le **permalink** hash, clés `dev-du`, `dev-sup`, `dev-scot`, `mec`, etc.) pilotent la fiche sans nouvel appel API :
+
+- **Territoire** : onglets Documents / SUP / SCoT / Procédures (MEC) masqués si la famille est décochée ; contenu recalculé via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
+- **Parcelle** : sections **Infos** (zonage, prescriptions, SUP, MEC, SCoT…) et **Documents** (DU, SUP, SCoT, tuiles MEC de remplacement) filtrées ou reconstruites au changement catalogue (`TabPanelsControl`).
+
 ## Écarts restants (après P0–P2)
 
 | Priorité | Sujet | Fichiers / notes |

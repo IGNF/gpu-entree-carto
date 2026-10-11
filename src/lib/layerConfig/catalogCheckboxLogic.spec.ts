@@ -83,6 +83,81 @@ describe('catalogCheckboxLogic', () => {
     expect(checked['dev-scot--dev-scot']).toBe(true)
   })
 
+  it('décocher la tuile SCoT WFS décocher le groupe virtual (SCoT + MEC scot)', () => {
+    const scotRoots: TreeLayerNode[] = [
+      node({
+        id: 'dev-scot',
+        title: 'SCHEMA DE COHERENCE TERRITORIALE',
+        visible: false,
+        gpuVirtual: true,
+        children: [
+          node({
+            id: 'dev-scot--dev-scot',
+            title: 'SCHEMA DE COHERENCE TERRITORIALE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+          node({
+            id: 'dev-scot--dev-mec',
+            title: 'MISE EN COMPATIBILITE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+            gpuForceOpacity: true,
+          }),
+        ],
+      }),
+    ]
+    const scotIndex = buildCatalogTreeIndex(scotRoots)
+    const checked: Record<string, boolean> = {
+      'dev-scot': true,
+      'dev-scot--dev-scot': true,
+      'dev-scot--dev-mec': true,
+    }
+    applyUserCatalogToggle(checked, 'dev-scot--dev-scot', false, scotIndex)
+    expect(checked['dev-scot']).toBe(false)
+    expect(checked['dev-scot--dev-scot']).toBe(false)
+    expect(checked['dev-scot--dev-mec']).toBe(false)
+  })
+
+  it('décocher uniquement MEC scot laisse le SCoT WFS actif', () => {
+    const scotRoots: TreeLayerNode[] = [
+      node({
+        id: 'dev-scot',
+        title: 'SCHEMA DE COHERENCE TERRITORIALE',
+        visible: false,
+        gpuVirtual: true,
+        children: [
+          node({
+            id: 'dev-scot--dev-scot',
+            title: 'SCHEMA DE COHERENCE TERRITORIALE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+          node({
+            id: 'dev-scot--dev-mec',
+            title: 'MISE EN COMPATIBILITE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+        ],
+      }),
+    ]
+    const scotIndex = buildCatalogTreeIndex(scotRoots)
+    const checked: Record<string, boolean> = {
+      'dev-scot': true,
+      'dev-scot--dev-scot': true,
+      'dev-scot--dev-mec': true,
+    }
+    applyUserCatalogToggle(checked, 'dev-scot--dev-mec', false, scotIndex)
+    expect(checked['dev-scot--dev-scot']).toBe(true)
+    expect(checked['dev-scot--dev-mec']).toBe(false)
+    expect(checked['dev-scot']).toBe(true)
+  })
+
   it('affiche les feuilles onlyLegend quand le parent virtual est coché', () => {
     const scotRoots: TreeLayerNode[] = [
       node({

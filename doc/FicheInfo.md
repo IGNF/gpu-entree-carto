@@ -83,6 +83,13 @@ On embed load with preview document: pass `previewDocumentId` / validation zone,
 
 Titles and document lookup rules per FicheInfoDetaillee.
 
+### Catalogue visibility (_Data_ layers)
+
+Checked catalogue entries (permalink hash keys such as `dev-du`, `dev-sup`, `dev-scot`, `mec`, …) drive the fiche **without** a new API call:
+
+- **Territory:** hide document tabs (DU, SUP, SCoT, procedures/MEC) when the family is unchecked; content rebuilt via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
+- **Parcel:** **Infos** sections and **Documents** blocks (DU, SUP, SCoT, MEC replacement tiles) filtered or rebuilt on catalogue change (`TabPanelsControl`).
+
 ## Remaining gaps (after P0–P2)
 
 | Priority | Topic | Notes |

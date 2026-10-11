@@ -1,12 +1,10 @@
-import type { FeatureCollection } from 'geojson'
 import config from '@/lib/config'
 import type { StandardViewerSearch } from '@/lib/types'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
-import { tabPanelsApiRef } from '@/composables/tabPanels'
+import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
 import { watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
-import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import { escapeHtml, FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
 import {
@@ -15,11 +13,14 @@ import {
 } from '@/lib/demo/demoConfig'
 import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
-import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
-import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
-import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
-import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
+import { fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
+import {
+  ficheSelectionFromGpuApi,
+  isGpuFicheInfoPayload,
+  refreshFicheSelectionCatalogVisibility,
+} from '@/lib/fiche/ficheInfoFromGpuApi'
+import { rememberFicheSelectionCaches } from '@/lib/fiche/ficheInfoSelectionCache'
 import {
   applyParcelFicheDetailCache,
   getParcelFicheDetailCache,
@@ -34,11 +35,11 @@ import {
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 
-const APICARTO_PARCEL = 'https://apicarto.ign.fr/api/cadastre/parcelle'
-
 const FICHE_UNAVAILABLE_BODY = '<p>Indisponibilité du service</p>'
+const FICHE_PARCEL_UNAVAILABLE_BODY =
+  '<p>Indisponibilité du service fiche parcelle (API gpu-site requise).</p>'
 
-/** Ignore les réponses APICarto / API arrivées après un clic plus récent. */
+/** Ignore les réponses API arrivées après un clic plus récent. */
 let mapPointRequestSeq = 0
 
 const FICHE_POINT_EPS = 1e-7
@@ -94,10 +95,6 @@ export function refreshFicheForMapModeChange(mode: MapModeId, zoom: number): voi
     markerPlacedAtClick: true,
     skipLocationMarker: true,
   })
-}
-
-function pointGeomParam(lon: number, lat: number): string {
-  return encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [lon, lat] }))
 }
 
 /** URL fiche GPU (injectée par gpu-client-config / `gpu.config`), sinon indisponible. */
@@ -170,12 +167,56 @@ export function scheduleFicheLoadForCherryWhenReady(): void {
   })
 }
 
-function showFiche(selection: FicheInfoSelection): void {
-  syncCadastreLowFromFicheSelectionRaw(selection.raw)
-  tabPanelsApiRef.value?.showSelection(selection)
+/** Ne pas voler le focus si l’utilisateur consulte un autre onglet (catalogue, légendes…). */
+function shouldFocusFicheTabOnPublish(): boolean {
+  const api = tabPanelsApiRef.value
+  if (!api?.isOpen.value) return true
+  if (api.activeTab.value == null) return true
+  return api.activeTab.value === TAB_PANEL_IDS.fiche
 }
 
-/** Cerise geopf au point interrogé (GetFeatureInfo / APICarto). */
+function showFiche(selection: FicheInfoSelection): void {
+  syncCadastreLowFromFicheSelectionRaw(selection.raw)
+  const api = tabPanelsApiRef.value
+  if (!api) return
+  if (shouldFocusFicheTabOnPublish()) {
+    api.showSelection(selection)
+  } else {
+    api.updateSelection(selection)
+  }
+}
+
+/** Réaffiche la fiche courante après changement de visibilité catalogue (permalink). */
+export function refreshFicheForCatalogVisibility(): void {
+  const api = tabPanelsApiRef.value
+  const current = api?.selection.value
+  if (!current?.raw || current.loading) return
+
+  const next = refreshFicheSelectionCatalogVisibility(current)
+  syncCadastreLowFromFicheSelectionRaw(next.raw)
+  api?.updateSelection(next)
+
+  const parcelId = parcelIdFromSelection(next)
+  if (
+    parcelId &&
+    next.parcelInfosHtml?.trim() &&
+    next.parcelDocumentsHtml?.trim() &&
+    next.raw &&
+    typeof next.raw === 'object'
+  ) {
+    const parcelFiche = next.raw._parcelFiche as GpuParcelFichePayload | undefined
+    if (parcelFiche) {
+      storeParcelFicheDetailCache({
+        parcelId,
+        parcelFiche,
+        parcelInfosHtml: next.parcelInfosHtml,
+        parcelDocumentsHtml: next.parcelDocumentsHtml,
+      })
+    }
+  }
+}
+
+/** Cerise geopf au point interrogé (fiche-info gpu-site). */
 function syncFicheLocationMarker(lon: number, lat: number): void {
   showMapLocationMarker(lon, lat, {
     label: '',
@@ -208,81 +249,26 @@ function applyMapPointResult(
   return resolved
 }
 
-async function fetchGeoJson(url: string): Promise<FeatureCollection> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return (await res.json()) as FeatureCollection
-}
-
-async function tryGpuSiteFiche(
-  apiBase: string,
-  params: {
-    lon: number
-    lat: number
-    mode: MapModeId
-    zoom: number
-  },
-): Promise<FicheInfoSelection | null> {
-  if (typeof window === 'undefined') return null
-  const fetchBase = resolveConfigUrlForFetch(apiBase)
-  const url = fetchBase.startsWith('/')
-    ? new URL(fetchBase, window.location.origin)
-    : new URL(fetchBase)
-  appendFicheInfoQueryParams(url, params)
-  url.searchParams.set('mode', String(params.mode))
-  try {
-    const res = await fetch(url.toString(), { credentials: 'same-origin' })
-    if (!res.ok) return null
-    const data: unknown = await res.json()
-    if (isGpuFicheInfoPayload(data)) {
-      return ficheSelectionFromGpuApi(data, params.mode, params.lon, params.lat)
-    }
-    const record = data as Record<string, unknown>
-    const title = coerceDisplayString(record.title ?? record.name, 'Informations')
-    const bodyHtml = coerceDisplayString(
-      record.bodyHtml ?? record.html ?? record.content ?? record.body,
-      '<p>Informations disponibles.</p>',
-    )
-    const raw =
-      record.raw && typeof record.raw === 'object'
-        ? (record.raw as Record<string, unknown>)
-        : record
-    return { title, bodyHtml, raw }
-  } catch {
-    return null
-  }
-}
-
-function parcelFromApicarto(
+function selectionFromGpuPayload(
+  data: Parameters<typeof ficheSelectionFromGpuApi>[0],
+  mode: MapModeId,
   lon: number,
   lat: number,
-  props: Record<string, unknown>,
 ): FicheInfoSelection {
-  const parcel = props
-  const label = parcelShortLabel(parcel) || 'Parcelle'
-  return {
-    title: label,
-    mapMode: MAP_MODE_PARCEL,
-    parcelLabel: label,
-    territoryTitle: coerceDisplayString(props.nom_com),
-    cadastreReferences: cadastreReferencesFromParcel(parcel),
-    parcelInfosHtml: undefined,
-    parcelDocumentsHtml: undefined,
-    raw: { ...props, lon, lat, mode: MAP_MODE_PARCEL, source: 'apicarto-cadastre' },
-  }
+  return ficheSelectionFromGpuApi(data, mode, lon, lat)
 }
 
-async function ficheParcelFromApicarto(lon: number, lat: number): Promise<FicheInfoSelection> {
-  const geo = await fetchGeoJson(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`)
-  const feature = geo.features?.[0]
-  if (!feature?.properties) {
-    return {
-      title: 'Parcelle',
-      bodyHtml: '<p>Aucune parcelle cadastrale à cet emplacement.</p>',
-      raw: { lon, lat, mode: MAP_MODE_PARCEL },
-    }
-  }
-  return parcelFromApicarto(lon, lat, feature.properties)
+function storeBothModeSelectionsAtPoint(
+  lon: number,
+  lat: number,
+  data: Parameters<typeof ficheSelectionFromGpuApi>[0],
+): { territory: FicheInfoSelection; parcel: FicheInfoSelection } {
+  const territory = selectionFromGpuPayload(data, MAP_MODE_TERRITORY, lon, lat)
+  const parcel = selectionFromGpuPayload(data, MAP_MODE_PARCEL, lon, lat)
+  rememberFicheSelectionCaches(data, territory, parcel)
+  storeFicheInCache(MAP_MODE_TERRITORY, lon, lat, territory)
+  storeFicheInCache(MAP_MODE_PARCEL, lon, lat, parcel)
+  return { territory, parcel }
 }
 
 async function loadFicheForMapPointImpl(params: {
@@ -303,74 +289,44 @@ async function loadFicheForMapPointImpl(params: {
   showLoading(loadingTitle)
 
   const apiUrl = resolveApiFicheInfoUrl()
-
-  if (params.mode === MAP_MODE_TERRITORY) {
-    if (!apiUrl) {
-      return applyMapPointResult(
-        requestId,
-        params.lon,
-        params.lat,
-        params.mode,
-        ficheServiceUnavailableSelection(loadingTitle),
-        markerPlacedAtClick,
-        skipLocationMarker,
-      )
-    }
-    const fromSite = await tryGpuSiteFiche(apiUrl, params)
-    const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle)
+  if (!apiUrl) {
+    const body =
+      params.mode === MAP_MODE_PARCEL ? FICHE_PARCEL_UNAVAILABLE_BODY : FICHE_UNAVAILABLE_BODY
     return applyMapPointResult(
       requestId,
       params.lon,
       params.lat,
       params.mode,
-      selection,
+      { title: loadingTitle, bodyHtml: body, raw: { source: 'fiche-service-unavailable' } },
       markerPlacedAtClick,
       skipLocationMarker,
     )
   }
 
-  if (apiUrl) {
-    const fromSite = await tryGpuSiteFiche(apiUrl, params)
-    if (fromSite) {
-      return applyMapPointResult(
-        requestId,
-        params.lon,
-        params.lat,
-        params.mode,
-        fromSite,
-        markerPlacedAtClick,
-        skipLocationMarker,
-      )
-    }
+  const payload = await fetchGpuFicheInfoPayload(params)
+  if (!payload) {
+    return applyMapPointResult(
+      requestId,
+      params.lon,
+      params.lat,
+      params.mode,
+      ficheServiceUnavailableSelection(loadingTitle),
+      markerPlacedAtClick,
+      skipLocationMarker,
+    )
   }
 
-  try {
-    const selection = await ficheParcelFromApicarto(params.lon, params.lat)
-    return applyMapPointResult(
-      requestId,
-      params.lon,
-      params.lat,
-      params.mode,
-      selection,
-      markerPlacedAtClick,
-      skipLocationMarker,
-    )
-  } catch {
-    const fallback: FicheInfoSelection = {
-      title: loadingTitle,
-      bodyHtml: `<p>Impossible de charger les informations (${escapeHtml(String(params.lon))}, ${escapeHtml(String(params.lat))}).</p>`,
-      raw: { lon: params.lon, lat: params.lat, mode: params.mode },
-    }
-    return applyMapPointResult(
-      requestId,
-      params.lon,
-      params.lat,
-      params.mode,
-      fallback,
-      markerPlacedAtClick,
-      skipLocationMarker,
-    )
-  }
+  const { territory, parcel } = storeBothModeSelectionsAtPoint(params.lon, params.lat, payload)
+  const selection = params.mode === MAP_MODE_PARCEL ? parcel : territory
+  return applyMapPointResult(
+    requestId,
+    params.lon,
+    params.lat,
+    params.mode,
+    selection,
+    markerPlacedAtClick,
+    skipLocationMarker,
+  )
 }
 
 export function loadFicheForMapPoint(params: {
@@ -469,7 +425,8 @@ export async function loadParcelFicheDetail(
     raw.parcelId = parcelId
   }
   const parcelInfosHtml = buildParcelInfosHtmlFromFiche(payload)
-  const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload)
+  const ficheApi = isGpuFicheInfoPayload(raw) ? raw : null
+  const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload, ficheApi)
   storeParcelFicheDetailCache({
     parcelId,
     parcelFiche: payload,

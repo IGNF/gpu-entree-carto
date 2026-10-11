@@ -25,7 +25,7 @@ export function maxZoomForModeEmpriseFit(map: Map, mode: MapModeId): number {
   return viewMax != null ? Math.min(viewMax, cap) : cap
 }
 
-/** Vol sur l’emprise rouge APICarto du mode (cerise ou emprise déjà affichée). */
+/** Vol sur l’emprise rouge mode (fiche-info v2, cerise ou emprise déjà affichée). */
 function extentFromVisibleModeEmprise(): Extent | null {
   const host = searchEngineLayerHostRef.value
   return host ? modeEmpriseViewExtent(host) : null

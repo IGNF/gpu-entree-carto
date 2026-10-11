@@ -67,6 +67,9 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.map((t) => t.id)).toEqual(['du', 'sup', 'procedures'])
     expect(sel.documentTabs?.[0]?.label).toBe('Documents')
     expect(sel.documentTabs?.[0]?.bodyHtml).toContain('Plan Local')
+    expect(sel.documentTabs?.[0]?.bodyHtml).toContain(
+      "Procédure d'elaboration approuvée le 21/01/2020",
+    )
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
   })
 
@@ -105,13 +108,13 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.[2]?.bodyHtml).not.toContain(callout)
   })
 
-  it('mode parcelle : en-tête parcelle, détail différé (gpu_api_parcel_fiche)', () => {
+  it('mode parcelle : en-tête parcelle, documents depuis partitions, Infos différées', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_PARCEL, 2.33, 48.96)
     expect(sel.title).toBe('AK 0432')
     expect(sel.parcelLabel).toBe('AK 0432')
     expect(sel.cadastreReferences?.headline).toContain('AK')
     expect(sel.parcelInfosHtml).toBeUndefined()
-    expect(sel.parcelDocumentsHtml).toBeUndefined()
+    expect(sel.parcelDocumentsHtml).toContain('fr-tile')
     expect(sel.documentTabs).toBeUndefined()
   })
 })

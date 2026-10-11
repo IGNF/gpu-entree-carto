@@ -71,7 +71,7 @@ Stylesheets: DSFR `icons.min.css` (`main.ts`, demo); Remix `remixicon.css` + `sr
 | <img src="./img/icon-previews/remix/drag-move-2-fill.svg" width="24" height="24" alt="" /> | Drag handle | `ri-drag-move-2-fill` | Remix | [drag-move-2-fill](https://remixicon.com/icon/drag-move-2-fill) |
 | <img src="./img/icon-previews/remix/eye-line.svg" width="24" height="24" alt="" /> | Visible | `ri-eye-line` | Remix | [eye-line](https://remixicon.com/icon/eye-line) |
 | <img src="./img/icon-previews/remix/eye-off-line.svg" width="24" height="24" alt="" /> | Hidden | `ri-eye-off-line` | Remix | [eye-off-line](https://remixicon.com/icon/eye-off-line) |
-| <img src="./img/icon-previews/remix/delete-bin-line.svg" width="24" height="24" alt="" /> | Remove layer | `ri-delete-bin-line` | Remix | [delete-bin-line](https://remixicon.com/icon/delete-bin-line) |
+| <img src="./img/icon-previews/remix/delete-bin-line.svg" width="24" height="24" alt="" /> | Remove from catalogue (Data layers) | `ri-delete-bin-line` | Remix | [delete-bin-line](https://remixicon.com/icon/delete-bin-line) |
 | <img src="./img/icon-previews/remix/contrast-fill.svg" width="24" height="24" alt="" /> | Opacity | `ri-contrast-fill` | Remix | [contrast-fill](https://remixicon.com/icon/contrast-fill) |
 
 ---
