@@ -28206,13 +28206,26 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.updateElement_();
     }
   }
+  const DISPLAY_ONLY_CONTROL_SELECTOR = ".ol-attribution, .ol-scale-line";
+  function configureDisplayOnlyOlControls(map2) {
+    const passiveContainer = map2.getOverlayContainer();
+    const stopContainer = map2.getOverlayContainerStopEvent();
+    const nodes = map2.getViewport().querySelectorAll(DISPLAY_ONLY_CONTROL_SELECTOR);
+    for (const node of nodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      node.style.setProperty("pointer-events", "none");
+      if (node.parentElement === stopContainer) {
+        passiveContainer.appendChild(node);
+      }
+    }
+  }
   const FRANCE_CENTER = fromLonLat([2.424722, 46.763056]);
   function useOlMap(options) {
     const map2 = /* @__PURE__ */ shallowRef(null);
     onMounted(() => {
       const el = options.target.value;
       if (!el) return;
-      map2.value = new Map$1({
+      const mapInstance = new Map$1({
         target: el,
         layers: options.layers ?? [],
         controls: defaults$2({
@@ -28229,6 +28242,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           projection: "EPSG:3857"
         })
       });
+      configureDisplayOnlyOlControls(mapInstance);
+      mapInstance.getControls().on("add", () => configureDisplayOnlyOlControls(mapInstance));
+      map2.value = mapInstance;
     });
     onUnmounted(() => {
       var _a;
@@ -28295,6 +28311,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const control = createControl();
         (_a = options == null ? void 0 : options.afterCreate) == null ? void 0 : _a.call(options, control);
         map2.addControl(control);
+        configureDisplayOnlyOlControls(map2);
         controlRef.value = control;
         onCleanup(() => {
           if (controlRef.value && map2) {
@@ -33329,7 +33346,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @override
      */
     readGeometryFromObject(object, options) {
-      return readGeometry(object, options);
+      return readGeometry$2(object, options);
     }
     /**
      * @param {Object} object Object.
@@ -33484,7 +33501,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return geometry;
   }
-  function readGeometry(object, options) {
+  function readGeometry$2(object, options) {
     const geometryObject = readGeometryInternal(object);
     return createGeometry(geometryObject, options);
   }
@@ -63312,14 +63329,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     var _a;
     (_a = mapLocationMarkerRef.value) == null ? void 0 : _a.call(mapLocationMarkerRef, lon, lat, options);
   }
-  function coerceDisplayString(value2, fallback = "") {
-    if (value2 == null) return fallback;
-    if (typeof value2 === "string") return value2;
-    if (typeof value2 === "number" || typeof value2 === "boolean" || typeof value2 === "bigint") {
-      return String(value2);
-    }
-    return fallback;
-  }
   function escapeHtml(value2) {
     return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -63363,6 +63372,113 @@ Expected function or array of functions, received type ${typeof value2}.`
       return;
     }
     readyQueue.push(fn);
+  }
+  const GPU_FORCE_OPACITY_PERCENT = 100;
+  function catalogNodeOpacityPercent(node) {
+    if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
+    if (typeof node.gpuDefaultOpacity === "number") return node.gpuDefaultOpacity;
+    return 70;
+  }
+  function catalogChildNodes(node) {
+    return [...node.children ?? [], ...node.hiddenCatalogChildren ?? []];
+  }
+  function catalogSwitcherDisplayNodes(nodes) {
+    var _a;
+    const out = [];
+    for (const node of nodes) {
+      if (node.gpuOnlyLegend) {
+        out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)));
+        continue;
+      }
+      const children = ((_a = node.children) == null ? void 0 : _a.length) ? catalogSwitcherDisplayNodes(node.children) : void 0;
+      out.push({
+        ...node,
+        children: (children == null ? void 0 : children.length) ? children : void 0
+      });
+    }
+    return out;
+  }
+  function normalizeCatalogTitle(title) {
+    return title.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase().replace(/\s+/g, " ").trim();
+  }
+  function documentCatalogBranchesForDocument(document2) {
+    var _a;
+    if (!((_a = document2 == null ? void 0 : document2.type) == null ? void 0 : _a.trim())) return null;
+    const typeLower = document2.type.trim().toLowerCase();
+    const nameLower = (document2.name ?? "").trim().toLowerCase();
+    const branches = /* @__PURE__ */ new Set();
+    if (typeLower === "sup") {
+      branches.add("sup");
+      return branches;
+    }
+    if (typeLower === "scot") {
+      branches.add("scot");
+      return branches;
+    }
+    if (["plu", "pos", "cc", "plui", "psmv", "du"].includes(typeLower)) {
+      branches.add("du-overview");
+      branches.add("du-detail");
+      return branches;
+    }
+    if (typeLower === "mec") {
+      if (/^mec_.+_scot_/i.test(nameLower) || nameLower.includes("_scot")) {
+        branches.add("scot");
+      }
+      if (/^mec_.+_du_/i.test(nameLower) || nameLower.includes("_du")) {
+        branches.add("du-overview");
+        branches.add("du-detail");
+      }
+      return branches.size ? branches : null;
+    }
+    return null;
+  }
+  function catalogBranchForRootNode(node) {
+    const title = normalizeCatalogTitle(node.title);
+    const id = node.id.toLowerCase();
+    if (title.includes("vue d'ensemble") || title.includes("vue") && title.includes("ensemble") && title.includes("urbanisme")) {
+      return "du-overview";
+    }
+    if (title.includes("vue detail") || title.includes("vue") && title.includes("detail") && title.includes("urbanisme")) {
+      return "du-detail";
+    }
+    if (title.includes("servitude") && title.includes("utilite publique")) {
+      return "sup";
+    }
+    if (title.includes("schema") && title.includes("coherence territoriale")) {
+      return "scot";
+    }
+    if (id.includes("lowscale")) return "du-overview";
+    if (id.includes("du-psmv")) return "du-detail";
+    if (id === "sup" || id.endsWith("--sup") || /--sup--/.test(id)) return "sup";
+    if (id.includes("scot")) return "scot";
+    return null;
+  }
+  function branchForCatalogSubtree(root) {
+    const self2 = catalogBranchForRootNode(root);
+    if (self2) return self2;
+    for (const child of catalogChildNodes(root)) {
+      const branch = catalogBranchForRootNode(child);
+      if (branch) return branch;
+    }
+    return null;
+  }
+  function setSubtreeVisible(node, visible) {
+    node.visible = visible;
+    for (const child of catalogChildNodes(node)) {
+      setSubtreeVisible(child, visible);
+    }
+  }
+  function applyDocumentCatalogVisibility(roots, document2) {
+    const enabled = documentCatalogBranchesForDocument(document2);
+    if (!(enabled == null ? void 0 : enabled.size)) return;
+    for (const root of roots) {
+      const branch = branchForCatalogSubtree(root);
+      if (!branch) {
+        setSubtreeVisible(root, false);
+        continue;
+      }
+      setSubtreeVisible(root, enabled.has(branch));
+    }
   }
   function resolveGpuLayerVisible(layer, parentVisible) {
     if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
@@ -63433,9 +63549,100 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return readLayerConfigFromWindow();
   }
+  const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
+  const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
+  function isGpuDevProxyPath(url) {
+    const t = url.trim();
+    return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`);
+  }
+  function normalizeLocalGpuSiteUrl(url) {
+    if (!LOCAL_GPU_SITE.test(url)) return url;
+    try {
+      const u = new URL(url);
+      u.pathname = u.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, "") || "/";
+      return u.href;
+    } catch {
+      return url;
+    }
+  }
+  function rewriteLocalGpuSiteUrl(url) {
+    if (!url || true) return url;
+    if (isGpuDevProxyPath(url)) return url;
+    const normalized = normalizeLocalGpuSiteUrl(url);
+    if (!LOCAL_GPU_SITE.test(normalized)) return url;
+    return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
+  }
+  function gpuSiteNavigationUrlFromProxy(raw) {
+    var _a, _b;
+    const trimmed = raw.trim();
+    if (!trimmed || typeof window === "undefined") return trimmed;
+    let pathname = trimmed;
+    let search = "";
+    let hash2 = "";
+    if (trimmed.includes(GPU_VITE_DEV_PROXY_PREFIX)) {
+      try {
+        const u = new URL(trimmed, window.location.href);
+        pathname = u.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+        search = u.search;
+        hash2 = u.hash;
+      } catch {
+        pathname = trimmed.replace(GPU_VITE_DEV_PROXY_PREFIX, "") || "/";
+      }
+    } else if (LOCAL_GPU_SITE.test(trimmed)) {
+      return trimmed;
+    }
+    const scriptBase = getGpuClientConfigScriptUrl() ?? (typeof document !== "undefined" ? ((_a = document.querySelector("script#gpu-client-config[src]")) == null ? void 0 : _a.src) ?? ((_b = document.querySelector("script[data-ec-demo-config][src]")) == null ? void 0 : _b.src) : null);
+    if (scriptBase && pathname.startsWith("/")) {
+      return new URL(`${pathname}${search}${hash2}`, scriptBase).href;
+    }
+    return `${pathname}${search}${hash2}`;
+  }
+  let gpuClientConfigScriptUrl = null;
+  function setGpuClientConfigScriptUrl(url) {
+    gpuClientConfigScriptUrl = (url == null ? void 0 : url.trim()) || null;
+  }
+  function getGpuClientConfigScriptUrl() {
+    return gpuClientConfigScriptUrl;
+  }
+  function isAbsoluteUrl$1(value2) {
+    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
+  }
+  function resolveConfigUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed || isAbsoluteUrl$1(trimmed)) return trimmed;
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    if (typeof window === "undefined") return trimmed;
+    const baseHref = gpuClientConfigScriptUrl ?? (typeof document !== "undefined" ? window.location.href : "http://localhost/");
+    return new URL(trimmed, baseHref).href;
+  }
+  function resolveConfigUrlForFetch(raw) {
+    const trimmed = raw.trim();
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
+  }
+  const CONFIG_URL_KEY = /Url$/i;
+  const CONFIG_RELATIVE_RESOURCE_KEYS = /* @__PURE__ */ new Set(["legendImageDetailDirectory"]);
+  function resolveConfigUrlsInRecord(target2) {
+    if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
+      const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
+      if (fallback == null ? void 0 : fallback.src) {
+        gpuClientConfigScriptUrl = fallback.src;
+      }
+    }
+    if (!gpuClientConfigScriptUrl) return;
+    for (const [key2, val] of Object.entries(target2)) {
+      if (typeof val !== "string" || !val.trim()) continue;
+      const isConfigUrlKey = CONFIG_URL_KEY.test(key2);
+      const isResourcePath = CONFIG_RELATIVE_RESOURCE_KEYS.has(key2);
+      if (!isConfigUrlKey && !isResourcePath) continue;
+      if (isAbsoluteUrl$1(val.trim())) continue;
+      if (isGpuDevProxyPath(val.trim())) continue;
+      target2[key2] = resolveConfigUrl(val);
+    }
+  }
   const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
   const GEOMETRY_TYPES = ["pct", "lin", "surf"];
-  function normalizeLayerNameForLegend(layerName) {
+  function normalizeLayerNameForLegend$1(layerName) {
     return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
   }
   function readScaleDependantThreshold(layer) {
@@ -63533,14 +63740,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return out;
   }
+  function resolveLegendImageBaseFromConfig(raw) {
+    const normalized = normalizeLegendImageBaseUrl(raw);
+    if (!normalized) return "";
+    const absolute = resolveConfigUrl(normalized);
+    return rewriteLocalGpuSiteUrl(absolute);
+  }
   function resolveLegendImageDetailDirectory() {
     var _a;
     const fromMerged = typeof config.legendImageDetailDirectory === "string" ? config.legendImageDetailDirectory : "";
-    if (fromMerged) return normalizeLegendImageBaseUrl(fromMerged);
+    if (fromMerged) return resolveLegendImageBaseFromConfig(fromMerged);
     const w = typeof window !== "undefined" ? window : void 0;
     const gpuCfg = (_a = w == null ? void 0 : w.gpu) == null ? void 0 : _a.config;
     const fromGpu = typeof (gpuCfg == null ? void 0 : gpuCfg.legendImageDetailDirectory) === "string" ? gpuCfg.legendImageDetailDirectory : "";
-    return normalizeLegendImageBaseUrl(fromGpu);
+    return resolveLegendImageBaseFromConfig(fromGpu);
   }
   function normalizeLegendImageBaseUrl(raw) {
     const withoutQuery = raw.replace(/\?.*$/i, "");
@@ -63581,20 +63794,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     return bucket[getLegendReferenceRuleKey(layerName, rule, refs)];
   }
   function getImageNameByGpuLayer(layer, rule, subRule, geometryType) {
-    const base = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    const base = normalizeLayerNameForLegend$1((layer.name ?? "").split(",")[0]);
     let imageName = `${base}_${geometryType}/${rule}`;
     if (subRule) imageName += `-${subRule}`;
     return imageName;
   }
   function getImageNameByLegendReferences(layerName, ruleName, type) {
     if (type) return `${type}/${ruleName}`;
-    return `${normalizeLayerNameForLegend(layerName)}/${ruleName}`;
+    return `${normalizeLayerNameForLegend$1(layerName)}/${ruleName}`;
   }
   function getGeometryTypesForLegendWithFilter(layerName, rule, legendConfig) {
     var _a;
     const geometryTypes = [];
     for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      const childLayerName = normalizeLayerNameForLegend$1(entry.name);
       if (childLayerName.split(`${layerName}_`).length <= 1) continue;
       if ((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule)) {
         geometryTypes.push(childLayerName.split(`${layerName}_`)[1]);
@@ -63606,7 +63819,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     var _a, _b, _c;
     const geometryTypes = [];
     for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      const childLayerName = normalizeLayerNameForLegend$1(entry.name);
       const suffix = childLayerName.split(`${layerName}_`)[1];
       if (!suffix || !GEOMETRY_TYPES.includes(suffix)) continue;
       if (!((_a = entry.allowedValues) == null ? void 0 : _a.includes(rule))) continue;
@@ -63620,7 +63833,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     var _a;
     const subRules = [];
     for (const entry of legendConfig) {
-      const entryName = normalizeLayerNameForLegend(entry.name);
+      const entryName = normalizeLayerNameForLegend$1(entry.name);
       for (const geometryType of GEOMETRY_TYPES) {
         if (entryName !== `${layerName}_${geometryType}`) continue;
         const list = (_a = entry.hasfilter2) == null ? void 0 : _a[rule];
@@ -63636,7 +63849,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     var _a;
     const imageNames = [];
     for (const entry of legendConfig) {
-      const childLayerName = normalizeLayerNameForLegend(entry.name);
+      const childLayerName = normalizeLayerNameForLegend$1(entry.name);
       if (childLayerName.split(`${layerName}_`).length <= 1) continue;
       if (entry.other !== true) continue;
       const matchesRule = (_a = entry.allowedValues) == null ? void 0 : _a.some((v) => rules.includes(v));
@@ -63672,7 +63885,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     items.push(item);
   }
   function buildNoFilterLegends(layer, opts) {
-    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    const layerName = normalizeLayerNameForLegend$1((layer.name ?? "").split(",")[0]);
     if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
     const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
     const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
@@ -63710,7 +63923,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function buildFilterLegends(layer, opts) {
     var _a;
-    const layerName = normalizeLayerNameForLegend((layer.name ?? "").split(",")[0]);
+    const layerName = normalizeLayerNameForLegend$1((layer.name ?? "").split(",")[0]);
     if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
     const scaleDependant = isLayerScaleDependant(layer, opts.ancestorLayers);
     const threshold = getScaleDependantThreshold(layer, opts.ancestorLayers);
@@ -63770,7 +63983,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function buildLegendItemsForLeafGpuLayer(layer, opts) {
     if (!layer.name) return [];
-    const layerName = normalizeLayerNameForLegend(layer.name.split(",")[0]);
+    const layerName = normalizeLayerNameForLegend$1(layer.name.split(",")[0]);
     if (isPsmvLayerName(layerName)) return [];
     if (!hasLegendReferences(layerName, opts.legendReferences)) return [];
     if (hasFilterIn(layer)) return buildFilterLegends(layer, opts);
@@ -63779,7 +63992,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function buildHideLayersAggregatedLegendItems(layer, opts) {
     const items = [];
     for (const child of layer.layers ?? []) {
-      const childName = normalizeLayerNameForLegend((child.name ?? "").split(",")[0] ?? "");
+      const childName = normalizeLayerNameForLegend$1((child.name ?? "").split(",")[0] ?? "");
       if (childName === "prescription_psmv") continue;
       items.push(...buildLegendItemsForLeafGpuLayer(child, opts));
     }
@@ -63807,36 +64020,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       ancestorLayers: []
     };
   }
-  const GPU_FORCE_OPACITY_PERCENT = 100;
-  function catalogNodeOpacityPercent(node) {
-    if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
-    if (typeof node.gpuDefaultOpacity === "number") return node.gpuDefaultOpacity;
-    return 70;
-  }
-  function catalogChildNodes(node) {
-    return [...node.children ?? [], ...node.hiddenCatalogChildren ?? []];
-  }
-  function catalogSwitcherDisplayNodes(nodes) {
-    var _a;
-    const out = [];
-    for (const node of nodes) {
-      if (node.gpuOnlyLegend) {
-        out.push(...catalogSwitcherDisplayNodes(catalogChildNodes(node)));
-        continue;
-      }
-      const children = ((_a = node.children) == null ? void 0 : _a.length) ? catalogSwitcherDisplayNodes(node.children) : void 0;
-      out.push({
-        ...node,
-        children: (children == null ? void 0 : children.length) ? children : void 0
-      });
-    }
-    return out;
-  }
   function isCatalogAggregate(node) {
     return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
   }
   function directCatalogChildren(node) {
     return catalogChildNodes(node);
+  }
+  function isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent) {
+    if (!node.gpuOnlyLegend || !(parent == null ? void 0 : parent.gpuVirtual)) return false;
+    const parentId = parent.id.toLowerCase();
+    if (!parentId.includes("scot")) return false;
+    const nodeId = node.id.toLowerCase();
+    if (nodeId.includes("dev-mec") || nodeId.includes("--mec")) return false;
+    return nodeId.includes("--dev-scot") || nodeId.endsWith("--scot");
+  }
+  function catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2) {
+    const node = index2.nodesById.get(nodeId);
+    if (!node) return nodeId;
+    const parent = index2.parentById.get(nodeId) ?? null;
+    if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
+      return parent.id;
+    }
+    return nodeId;
   }
   function isCheckboxSameAsDirectChildren(checked, node) {
     const self2 = Boolean(checked[node.id]);
@@ -63918,15 +64123,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!parent) return;
     let parentChecked = false;
     for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend) continue;
       if (checked[child.id]) {
         parentChecked = true;
         break;
       }
     }
     for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend && Boolean(checked[child.id]) !== parentChecked) {
-        checked[child.id] = parentChecked;
+      if (child.gpuOnlyLegend && !parentChecked) {
+        checked[child.id] = false;
       }
     }
     if (Boolean(checked[parent.id]) !== parentChecked) {
@@ -63935,10 +64139,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     propagateCheckedToAncestors(checked, parent.id, index2);
   }
   function applyUserCatalogToggle(checked, nodeId, value2, index2) {
-    const node = index2.nodesById.get(nodeId);
+    let effectiveId = nodeId;
+    if (!value2) {
+      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
+    }
+    const node = index2.nodesById.get(effectiveId);
     if (!node) return;
-    checked[nodeId] = value2;
-    propagateCheckedToAncestors(checked, nodeId, index2);
+    checked[effectiveId] = value2;
+    propagateCheckedToAncestors(checked, effectiveId, index2);
     propagateCheckedToDescendants(checked, node, value2);
   }
   function computeMapVisibilityById(checked, index2, opacityById, options) {
@@ -64051,68 +64259,39 @@ Expected function or array of functions, received type ${typeof value2}.`
     const legendOpts = readGpuLegendBuildOptions(zoomAtInit);
     return buildTreeLevel(layers, "", [], legendOpts);
   }
-  const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
-  const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
-  function isGpuDevProxyPath(url) {
-    const t = url.trim();
-    return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`);
-  }
-  function normalizeLocalGpuSiteUrl(url) {
-    if (!LOCAL_GPU_SITE.test(url)) return url;
-    try {
-      const u = new URL(url);
-      u.pathname = u.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, "") || "/";
-      return u.href;
-    } catch {
-      return url;
+  const DEFAULT_DEMO_CONFIG = {
+    configScriptUrl: null,
+    document: null,
+    bbox: null,
+    useMinimified: false,
+    gpuConfigOverrides: {},
+    map: {
+      baseLayerId: "carte",
+      zoom: 6,
+      search: null
+    },
+    home: {
+      searchPlaceholder: "Rechercher une adresse, une ville, un lieu...",
+      searchWidget: "search-engine"
     }
+  };
+  function getDemoConfig() {
+    const raw = typeof window !== "undefined" ? window.DEMO_CONFIG : void 0;
+    return mergeDemoConfig(DEFAULT_DEMO_CONFIG, raw ?? {});
   }
-  function rewriteLocalGpuSiteUrl(url) {
-    if (!url || true) return url;
-    if (isGpuDevProxyPath(url)) return url;
-    const normalized = normalizeLocalGpuSiteUrl(url);
-    if (!LOCAL_GPU_SITE.test(normalized)) return url;
-    return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
-  }
-  let gpuClientConfigScriptUrl = null;
-  function setGpuClientConfigScriptUrl(url) {
-    gpuClientConfigScriptUrl = (url == null ? void 0 : url.trim()) || null;
-  }
-  function getGpuClientConfigScriptUrl() {
-    return gpuClientConfigScriptUrl;
-  }
-  function isAbsoluteUrl(value2) {
-    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
-  }
-  function resolveConfigUrl(raw) {
-    const trimmed = raw.trim();
-    if (!trimmed || isAbsoluteUrl(trimmed)) return trimmed;
-    if (isGpuDevProxyPath(trimmed)) return trimmed;
-    if (typeof window === "undefined") return trimmed;
-    const baseHref = gpuClientConfigScriptUrl ?? (typeof document !== "undefined" ? window.location.href : "http://localhost/");
-    return new URL(trimmed, baseHref).href;
-  }
-  function resolveConfigUrlForFetch(raw) {
-    const trimmed = raw.trim();
-    if (isGpuDevProxyPath(trimmed)) return trimmed;
-    return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
-  }
-  const CONFIG_URL_KEY = /Url$/i;
-  function resolveConfigUrlsInRecord(target2) {
-    if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
-      const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
-      if (fallback == null ? void 0 : fallback.src) {
-        gpuClientConfigScriptUrl = fallback.src;
-      }
-    }
-    if (!gpuClientConfigScriptUrl) return;
-    for (const [key2, val] of Object.entries(target2)) {
-      if (typeof val !== "string" || !val.trim()) continue;
-      if (!CONFIG_URL_KEY.test(key2)) continue;
-      if (isAbsoluteUrl(val.trim())) continue;
-      if (isGpuDevProxyPath(val.trim())) continue;
-      target2[key2] = resolveConfigUrl(val);
-    }
+  function mergeDemoConfig(base, patch) {
+    var _a, _b;
+    return {
+      ...base,
+      ...patch,
+      gpuConfigOverrides: { ...base.gpuConfigOverrides, ...patch.gpuConfigOverrides },
+      map: {
+        ...base.map,
+        ...patch.map,
+        layerNodes: ((_a = patch.map) == null ? void 0 : _a.layerNodes) ?? ((_b = base.map) == null ? void 0 : _b.layerNodes)
+      },
+      home: { ...base.home, ...patch.home }
+    };
   }
   function ensureGpuClientStub() {
     const w = window;
@@ -66220,6 +66399,123 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     applyCadastreLowFromFichePayload(raw);
   }
+  const FICHE_CLIENT_STORAGE_KEY = "ec-fiche-info-client-id";
+  let ficheRequestSeq = 0;
+  function getOrCreateFicheClientId() {
+    if (typeof window === "undefined") return "ssr";
+    try {
+      const existing = sessionStorage.getItem(FICHE_CLIENT_STORAGE_KEY);
+      if (existing) return existing;
+      const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `ec-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(FICHE_CLIENT_STORAGE_KEY, id);
+      return id;
+    } catch {
+      return `ec-${Date.now()}`;
+    }
+  }
+  function nextFicheInfoRequestSeq() {
+    ficheRequestSeq += 1;
+    return ficheRequestSeq;
+  }
+  function getActivePreviewDocument() {
+    const fromConfig = config.document;
+    if (fromConfig && typeof fromConfig === "object") {
+      const doc2 = fromConfig;
+      return doc2;
+    }
+    return getDemoConfig().document ?? null;
+  }
+  function appendFicheInfoQueryParams(url, params2) {
+    url.searchParams.set("lon", String(params2.lon));
+    url.searchParams.set("lat", String(params2.lat));
+    url.searchParams.set("zoom", String(Math.round(params2.zoom)));
+    if (!url.pathname.includes("fiche-info-v2")) {
+      url.searchParams.set("includeParcel", "true");
+    }
+    const preview = getActivePreviewDocument();
+    if ((preview == null ? void 0 : preview.status) === "document.preview" && preview.id) {
+      url.searchParams.set("zone", "validation");
+      url.searchParams.set("previewDocumentId", String(preview.id));
+      const partition = preview.partition ?? preview.name;
+      if (typeof partition === "string" && partition.trim()) {
+        url.searchParams.set("partition", partition.trim());
+      }
+    }
+    url.searchParams.set("client", getOrCreateFicheClientId());
+    url.searchParams.set("seq", String(nextFicheInfoRequestSeq()));
+  }
+  function readConfigUrl(key2) {
+    const bag = config;
+    const raw = bag[key2];
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  function normalizeBaseUrl(raw) {
+    return raw.trim().replace(/\/$/, "");
+  }
+  function ficheInfoUsesV2SplitEndpoints(base) {
+    const normalized = normalizeBaseUrl(base);
+    if (normalized.includes("fiche-info-v2")) return true;
+    return Boolean(
+      readConfigUrl("apiFicheInfoTerritoireUrl") || readConfigUrl("apiFicheInfoParcelleUrl")
+    );
+  }
+  function resolveFicheInfoEndpointUrl(kind) {
+    if (kind === "combined") {
+      const combined = readConfigUrl("apiFicheInfoCombinedUrl");
+      if (combined) return combined;
+    }
+    if (kind === "territoire") {
+      const explicit = readConfigUrl("apiFicheInfoTerritoireUrl");
+      if (explicit) return explicit;
+    }
+    if (kind === "parcelle") {
+      const explicit = readConfigUrl("apiFicheInfoParcelleUrl");
+      if (explicit) return explicit;
+    }
+    const base = readConfigUrl("apiFicheInfoUrl");
+    if (!base) return null;
+    const normalized = normalizeBaseUrl(base);
+    if (!normalized.includes("fiche-info-v2")) {
+      return normalized;
+    }
+    if (kind === "combined") {
+      if (normalized.endsWith("/territoire") || normalized.endsWith("/parcelle")) {
+        return normalized.replace(/\/(territoire|parcelle)$/, "");
+      }
+      return normalized;
+    }
+    const suffix = kind === "territoire" ? "territoire" : "parcelle";
+    if (normalized.endsWith("/territoire") || normalized.endsWith("/parcelle")) {
+      return normalized.replace(/\/(territoire|parcelle)$/, `/${suffix}`);
+    }
+    return `${normalized}/${suffix}`;
+  }
+  function resolveFicheInfoFetchUrl(mode2) {
+    const preferCombined = readConfigUrl("apiFicheInfoCombinedUrl");
+    if (preferCombined) return preferCombined;
+    const base = readConfigUrl("apiFicheInfoUrl");
+    if (base && ficheInfoUsesV2SplitEndpoints(base)) {
+      return resolveFicheInfoEndpointUrl("combined");
+    }
+    if (base) return normalizeBaseUrl(base);
+    return resolveFicheInfoEndpointUrl(mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle");
+  }
+  function shouldAppendLegacyFicheModeParam(resolvedUrl) {
+    return !resolvedUrl.includes("fiche-info-v2");
+  }
+  function legacyFicheModeValue(mode2) {
+    return mode2 === MAP_MODE_PARCEL ? String(MAP_MODE_PARCEL) : String(MAP_MODE_TERRITORY);
+  }
+  function coerceDisplayString(value2, fallback = "") {
+    if (value2 == null) return fallback;
+    if (typeof value2 === "string") return value2;
+    if (typeof value2 === "number" || typeof value2 === "boolean" || typeof value2 === "bigint") {
+      return String(value2);
+    }
+    return fallback;
+  }
   function departementFromInsee(codeInsee) {
     if (codeInsee.length >= 2) return codeInsee.slice(0, 2);
     return "";
@@ -66271,73 +66567,866 @@ Expected function or array of functions, received type ${typeof value2}.`
     const idu = coerceDisplayString(parcel.idu).trim();
     return idu;
   }
-  const NON_EXECUTOIRE_MESSAGE = "Certains documents ne sont pas exécutoires ; consultez l’historique du document pour connaître le document en vigueur.";
-  const FICHE_NON_EXECUTOIRE_CALLOUT_HTML = `<aside class="ec-fiche-info__callout" role="note">${escapeHtml(NON_EXECUTOIRE_MESSAGE)}</aside>`;
-  function normalizePartitionsMap$1(value2) {
-    if (!value2) return {};
-    if (Array.isArray(value2)) return {};
-    return value2;
+  const NO_PARCEL_AT_POINT_MESSAGE = "Pas de parcelle à cet emplacement.";
+  function ficheHasParcelAtPoint(data) {
+    if (typeof data.parcelId === "string" && data.parcelId.trim()) return true;
+    if (data.parcelGeometry) return true;
+    const parcel = data.parcel;
+    if (!parcel || typeof parcel !== "object") return false;
+    const p5 = parcel;
+    if (typeof p5.id === "string" && p5.id.trim()) return true;
+    return Boolean(p5.numero ?? p5.section ?? p5.code_com ?? p5.code_insee);
   }
-  function pickProductionDocument$1(documents) {
+  function ficheHasTerritoryAtPoint(data) {
+    const grid = data.grid;
+    if (!grid || typeof grid !== "object") return false;
+    return Boolean(grid.insee || grid.name);
+  }
+  const FICHE_DOCUMENT_FAMILIES = ["du", "psmv", "sup", "scot", "mec"];
+  let catalogFamilyVisibility = null;
+  const ficheCatalogVisibilityRevision = /* @__PURE__ */ shallowRef(0);
+  function setFicheCatalogFamilyVisibility(map2) {
+    catalogFamilyVisibility = map2;
+    ficheCatalogVisibilityRevision.value += 1;
+  }
+  function catalogHaystack(entry) {
+    return `${entry.path}|${entry.id}|${entry.permalinkId ?? ""}`.toLowerCase();
+  }
+  function catalogEntryMatchesFamily(entry, family) {
+    const id = entry.id.toLowerCase();
+    const path = entry.path.toLowerCase();
+    const hay = catalogHaystack(entry);
+    if (family === "scot") {
+      if (id.includes("mec") || path.includes("/mec")) return false;
+      return id.includes("scot") || path.includes("/scot") || hay.includes("dev-scot");
+    }
+    if (family === "sup") {
+      if (id.includes("mec") || path.includes("/mec")) return false;
+      return id === "sup" || id.endsWith("--sup") || /--sup--/.test(id) || path.includes("/sup") || hay.includes("dev-sup");
+    }
+    if (family === "psmv") return hay.includes("psmv");
+    if (family === "mec") return id.includes("mec") || path.includes("/mec") || hay.includes("mec");
+    if (family === "du") {
+      return hay.includes("dev-du") || hay.includes("lowscale") || hay.includes("zone_secteur") || hay.includes("prescription") || hay.includes("dev-info");
+    }
+    return false;
+  }
+  function applyRootCatalogBranches(catalogChecked, roots, result) {
+    for (const root of roots) {
+      const branch = branchForCatalogSubtree(root);
+      if (!branch) continue;
+      if (!catalogChecked[root.id]) continue;
+      if (branch === "sup") result.sup = true;
+      else if (branch === "scot") result.scot = true;
+      else if (branch === "du-overview" || branch === "du-detail") result.du = true;
+    }
+  }
+  function computeFicheCatalogFamilyVisibility(catalogChecked, entries2, catalogRoots = []) {
+    const result = {
+      du: false,
+      psmv: false,
+      sup: false,
+      scot: false,
+      mec: false
+    };
+    applyRootCatalogBranches(catalogChecked, catalogRoots, result);
+    for (const family of FICHE_DOCUMENT_FAMILIES) {
+      const matching = entries2.filter((e) => catalogEntryMatchesFamily(e, family));
+      if (matching.some((e) => Boolean(catalogChecked[e.id]))) {
+        result[family] = true;
+      }
+    }
+    for (const family of FICHE_DOCUMENT_FAMILIES) {
+      const matching = entries2.filter((e) => catalogEntryMatchesFamily(e, family));
+      const rootMapped = family === "du" || family === "sup" || family === "scot" ? catalogRoots.some((root) => {
+        const branch = branchForCatalogSubtree(root);
+        if (family === "sup") return branch === "sup";
+        if (family === "scot") return branch === "scot";
+        return branch === "du-overview" || branch === "du-detail";
+      }) : false;
+      if (!rootMapped && !matching.length) {
+        result[family] = familyVisibleFromPermalink(family);
+      }
+    }
+    return result;
+  }
+  function permalinkLayerEntries() {
+    if (typeof window === "undefined") return [];
+    const params2 = getMapPermalinkParams();
+    const out = [];
+    for (const [key2, raw] of Object.entries(params2)) {
+      if (typeof raw !== "string") continue;
+      const visible = raw.split(":")[0] === "1";
+      out.push({ key: key2.toLowerCase(), visible });
+    }
+    return out;
+  }
+  function familyVisibleFromPermalink(family) {
+    const entries2 = permalinkLayerEntries();
+    if (!entries2.length) return true;
+    const matches2 = entries2.filter(({ key: key2 }) => {
+      if (family === "scot") return key2.includes("dev-scot") || key2.includes("scot");
+      if (family === "sup")
+        return key2.includes("dev-sup") || key2.includes("sup") && !key2.includes("psmv");
+      if (family === "psmv") return key2.includes("psmv");
+      if (family === "mec") return key2.includes("mec");
+      if (family === "du") {
+        return key2.includes("dev-du") || key2.includes("lowscale") || key2.includes("zone_secteur") || key2.includes("prescription") || key2.includes("dev-info");
+      }
+      return false;
+    });
+    if (!matches2.length) return true;
+    return matches2.some((m) => m.visible);
+  }
+  function isFicheDocumentFamilyVisible(family) {
+    if (catalogFamilyVisibility) return catalogFamilyVisibility[family];
+    return familyVisibleFromPermalink(family);
+  }
+  const TAB_FAMILY = {
+    du: "du",
+    psmv: "psmv",
+    sup: "sup",
+    scot: "scot",
+    procedures: "mec"
+  };
+  function filterFicheDocumentTabsByCatalog(tabs) {
+    return tabs.filter((tab) => {
+      const family = TAB_FAMILY[tab.id];
+      if (!family) return true;
+      return isFicheDocumentFamilyVisible(family);
+    });
+  }
+  function filterParcelInfosHtmlByCatalog(html2) {
+    if (!html2.includes("ec-fiche-info__rules-section")) return html2;
+    const sectionFamily = [
+      { pattern: /Schémas de cohérence territoriale/i, family: "scot" },
+      { pattern: /Servitudes d’utilité publique|Servitudes d'utilité publique/i, family: "sup" },
+      { pattern: /Mises en compatibilité/i, family: "mec" },
+      { pattern: /Zonage|Prescriptions|Périmètres|Secteurs|Documents d’urbanisme/i, family: "du" }
+    ];
+    return html2.replace(
+      /<section class="ec-fiche-info__rules-section">[\s\S]*?<\/section>/g,
+      (block) => {
+        for (const { pattern, family } of sectionFamily) {
+          if (pattern.test(block) && !isFicheDocumentFamilyVisible(family)) {
+            return "";
+          }
+        }
+        return block;
+      }
+    );
+  }
+  const PARCEL_DOCUMENTS_SECTIONS = [
+    { titlePattern: /Documents d[\u2019']urbanisme/i, family: "du" },
+    { titlePattern: /Plans de sauvegarde/i, family: "psmv" },
+    { titlePattern: /Servitudes d[\u2019']utilité publique/i, family: "sup" },
+    { titlePattern: /Schémas de cohérence territoriale/i, family: "scot" }
+  ];
+  function familyForDocumentsSectionTitle(title) {
+    for (const { titlePattern, family } of PARCEL_DOCUMENTS_SECTIONS) {
+      if (titlePattern.test(title)) return family;
+    }
+    return null;
+  }
+  function filterParcelDocumentsHtmlByCatalog(html2) {
+    var _a;
+    const sectionRe = /<h3 class="ec-fiche-info__section-title">([\s\S]*?)<\/h3>([\s\S]*?)(?=<h3 class="ec-fiche-info__section-title">|$)/g;
+    const introEnd = html2.search(/<h3 class="ec-fiche-info__section-title">/);
+    const intro = introEnd >= 0 ? html2.slice(0, introEnd) : html2;
+    const keptSections = [];
+    for (const match2 of html2.matchAll(sectionRe)) {
+      const title = ((_a = match2[1]) == null ? void 0 : _a.trim()) ?? "";
+      const body = match2[2] ?? "";
+      const family = familyForDocumentsSectionTitle(title);
+      if (family && !isFicheDocumentFamilyVisible(family)) continue;
+      keptSections.push(`<h3 class="ec-fiche-info__section-title">${title}</h3>${body}`);
+    }
+    if (!keptSections.length) {
+      return intro;
+    }
+    return intro + keptSections.join("");
+  }
+  function applyCatalogVisibilityToFicheSelection(selection) {
+    var _a, _b;
+    if ((_a = selection.documentTabs) == null ? void 0 : _a.length) {
+      selection.documentTabs = filterFicheDocumentTabsByCatalog(selection.documentTabs);
+    }
+    if (selection.parcelInfosHtml) {
+      selection.parcelInfosHtml = filterParcelInfosHtmlByCatalog(selection.parcelInfosHtml);
+    }
+    if (selection.parcelDocumentsHtml) {
+      selection.parcelDocumentsHtml = filterParcelDocumentsHtmlByCatalog(
+        selection.parcelDocumentsHtml
+      );
+    }
+    if (selection.bodyHtml && !((_b = selection.documentTabs) == null ? void 0 : _b.length) && !isFicheDocumentFamilyVisible("du")) {
+      selection.bodyHtml = "";
+    }
+  }
+  function readConfigString(key2) {
+    const raw = config[key2];
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  function placeholders() {
+    const raw = config.urlPlaceholders;
+    if (!raw || typeof raw !== "object") return {};
+    return raw;
+  }
+  function replaceGpuConfigUrlPlaceholder(template, placeholder, value2) {
+    const encoded = encodeURIComponent(value2);
+    if (!placeholder) return template;
+    const trail = `/${placeholder}`;
+    if (template.endsWith(trail)) {
+      return `${template.slice(0, -trail.length)}/${encoded}`;
+    }
+    if (template.endsWith(placeholder)) {
+      const before = template.slice(0, -placeholder.length);
+      if (before.endsWith("/")) {
+        return `${before}${encoded}`;
+      }
+    }
+    if (placeholder.length >= 8) {
+      return template.split(placeholder).join(encoded);
+    }
+    return template;
+  }
+  function gpuNavigationUrlFromConfigTemplate(templateKey, placeholderKey, id) {
+    const template = readConfigString(templateKey);
+    if (!template) return void 0;
+    const value2 = id.trim();
+    if (!value2) return void 0;
+    const ph = placeholders()[placeholderKey];
+    if (!ph) return void 0;
+    const href = replaceGpuConfigUrlPlaceholder(template, ph, value2);
+    return resolveGpuSiteNavigationUrl(href);
+  }
+  function isAbsoluteUrl(value2) {
+    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
+  }
+  function gpuSiteBaseOrigin() {
+    if (typeof window === "undefined") return null;
+    const resolved = resolveConfigUrl("/");
+    try {
+      return new URL(resolved).origin;
+    } catch {
+      return window.location.origin;
+    }
+  }
+  function resolveGpuSiteNavigationUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) return trimmed;
+    if (trimmed.includes("__gpu_dev_proxy__")) {
+      return maybeAbsoluteGpuUrl(gpuSiteNavigationUrlFromProxy(trimmed));
+    }
+    const href = isAbsoluteUrl(trimmed) ? trimmed : resolveConfigUrl(trimmed.startsWith("/") ? trimmed : `/${trimmed}`);
+    return maybeAbsoluteGpuUrl(href);
+  }
+  function resolveGpuDocumentViewUrl(documentId) {
+    const fromConfig = gpuNavigationUrlFromConfigTemplate("documentViewUrl", "documentId", documentId);
+    if (fromConfig) return fromConfig;
+    const id = documentId.trim();
+    return resolveGpuSiteNavigationUrl(`/document/${encodeURIComponent(id)}`);
+  }
+  function resolveGpuProcedureViewUrl(procedureId) {
+    const fromConfig = gpuNavigationUrlFromConfigTemplate(
+      "procedureViewUrl",
+      "procedureId",
+      procedureId
+    );
+    if (fromConfig) return fromConfig;
+    const id = procedureId.trim();
+    return resolveGpuSiteNavigationUrl(`/procedure/view/${encodeURIComponent(id)}`);
+  }
+  function maybeAbsoluteGpuUrl(resolvedHref) {
+    if (typeof window === "undefined") return resolvedHref;
+    try {
+      const target2 = new URL(resolvedHref, window.location.origin);
+      const gpuOrigin = gpuSiteBaseOrigin();
+      if (gpuOrigin && target2.origin !== window.location.origin && target2.origin === gpuOrigin) {
+        return target2.href;
+      }
+      if (target2.origin === window.location.origin) {
+        return `${target2.pathname}${target2.search}${target2.hash}`;
+      }
+      return target2.href;
+    } catch {
+      return resolvedHref;
+    }
+  }
+  function resolveDocumentTileHref(options) {
+    var _a, _b, _c;
+    const view = (_a = options.viewUrl) == null ? void 0 : _a.trim();
+    if (view) return resolveGpuSiteNavigationUrl(view);
+    const archive = (_b = options.archiveUrl) == null ? void 0 : _b.trim();
+    if (archive) return resolveGpuSiteNavigationUrl(archive);
+    const id = (_c = options.documentId) == null ? void 0 : _c.trim();
+    if (id) return resolveGpuDocumentViewUrl(id);
+    return void 0;
+  }
+  function resolveMecDocumentTileHref(options) {
+    var _a, _b;
+    const view = (_a = options.viewUrl) == null ? void 0 : _a.trim();
+    if (view && !/\/download\//i.test(view)) {
+      return resolveGpuSiteNavigationUrl(view);
+    }
+    const id = (_b = options.documentId) == null ? void 0 : _b.trim();
+    if (id && /^[a-f0-9]{32}$/i.test(id)) {
+      return resolveGpuDocumentViewUrl(id);
+    }
+    return void 0;
+  }
+  const LEGAL_STATUS_BADGE = {
+    APPROVED: { className: "ec-fiche-info__badge--approuve", label: "APPROUVÉ" },
+    APPROUVE: { className: "ec-fiche-info__badge--approuve", label: "APPROUVÉ" },
+    PARTIALLY_CANCELLED: {
+      className: "ec-fiche-info__badge--partiel-annule",
+      label: "PARTIELLEMENT ANNULÉ"
+    },
+    PARTIELLEMENT_ANNULE: {
+      className: "ec-fiche-info__badge--partiel-annule",
+      label: "PARTIELLEMENT ANNULÉ"
+    },
+    CANCELLED: { className: "ec-fiche-info__badge--annule", label: "ANNULÉ" },
+    ANNULE: { className: "ec-fiche-info__badge--annule", label: "ANNULÉ" },
+    HISTORICAL: { className: "ec-fiche-info__badge--historique", label: "HISTORIQUE" },
+    HISTORIQUE: { className: "ec-fiche-info__badge--historique", label: "HISTORIQUE" }
+  };
+  function effectiveBadgeHtml(effectiveStatus) {
+    if (documentIsNonExecutoireEffectiveStatus(effectiveStatus)) {
+      return '<span class="ec-fiche-info__badge ec-fiche-info__badge--non-executoire">NON EXÉCUTOIRE</span>';
+    }
+    return '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">EN VIGUEUR</span>';
+  }
+  function legalBadgeHtml(model) {
+    var _a;
+    const raw = (_a = model.legalStatus) == null ? void 0 : _a.trim().toUpperCase().replace(/\s+/g, "_");
+    if (raw && LEGAL_STATUS_BADGE[raw]) {
+      const b = LEGAL_STATUS_BADGE[raw];
+      return `<span class="ec-fiche-info__badge ${b.className}">${escapeHtml(b.label)}</span>`;
+    }
+    const approved = model.status === "document.production" || model.defaultApprovedWhenStatusMissing && !model.status;
+    if (approved) {
+      return '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>';
+    }
+    if (model.status === "document.preview") {
+      return '<span class="ec-fiche-info__badge ec-fiche-info__badge--historique">HISTORIQUE</span>';
+    }
+    return "";
+  }
+  function tileBadgesRow(model, includeEffective) {
+    const parts = [];
+    parts.push(effectiveBadgeHtml(model.effectiveStatus));
+    const legal = legalBadgeHtml(model);
+    if (legal) parts.push(legal);
+    if (model.notInDatabase) {
+      parts.push(
+        '<span class="ec-fiche-info__badge ec-fiche-info__badge--not-in-bdd">NOT IN BDD</span>'
+      );
+    }
+    if (!parts.length) return "";
+    return `<div class="ec-fiche-info__tile-badges">${parts.join("")}</div>`;
+  }
+  function dsfrHorizontalTile(title, href, detail) {
+    const titleInner = escapeHtml(title);
+    const titleBlock = href ? `<h3 class="fr-tile__title"><a class="fr-tile__link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a></h3>` : `<h3 class="fr-tile__title">${titleInner}</h3>`;
+    const detailBlock = detail ? `<p class="fr-tile__detail">${escapeHtml(detail)}</p>` : "";
+    return `<div class="fr-tile fr-tile--horizontal fr-enlarge-link ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`;
+  }
+  function documentUrbanismTileHtml(model) {
+    const detail = lastApprovedProcedureTileDetail(model.datapproLabel, model.procedureNatureLabel);
+    const badges = tileBadgesRow(model);
+    let core = dsfrHorizontalTile(model.title, model.href, detail);
+    if (badges) {
+      core = core.replace('<div class="fr-tile__content">', `<div class="fr-tile__content">${badges}`);
+    }
+    if (model.mecNoticeHtml) {
+      core = core.replace(
+        "</div></div></div>",
+        `<p class="ec-fiche-info__mec-notice">${model.mecNoticeHtml}</p></div></div></div>`
+      );
+    }
+    return core;
+  }
+  function documentSupTileHtml(model) {
+    var _a;
+    const detail = ((_a = model.detail) == null ? void 0 : _a.trim()) || null;
+    return dsfrHorizontalTile(model.title, model.href, detail);
+  }
+  function procedureTileHtml(model) {
+    const inProgress = model.inProgress === true;
+    const statusBadge = inProgress ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--procedure">EN COURS DE PROCÉDURE</span>' : '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">APPROUVÉE</span>';
+    const core = dsfrHorizontalTile(model.title, model.href, model.detailLine ?? null);
+    return core.replace(
+      '<div class="fr-tile__content">',
+      `<div class="fr-tile__content"><div class="ec-fiche-info__tile-badges">${statusBadge}</div>`
+    );
+  }
+  function documentTilesListHtml(tiles) {
+    if (!tiles.length) return "";
+    return `<div class="ec-fiche-info__tile-list">${tiles.join("")}</div>`;
+  }
+  function documentTileHrefFromApiFields(fields) {
+    return resolveDocumentTileHref({
+      documentId: fields.id,
+      viewUrl: fields.viewUrl,
+      archiveUrl: fields.archiveUrl
+    });
+  }
+  function procedureTileHref(procedureId, url) {
+    const id = procedureId == null ? void 0 : procedureId.trim();
+    if (id) return resolveGpuProcedureViewUrl(id);
+    const direct = url == null ? void 0 : url.trim();
+    if (direct) return resolveGpuSiteNavigationUrl(direct);
+    return void 0;
+  }
+  const ATTR_ZONAGE = "typezone";
+  const ATTR_SECTEUR = "typesect";
+  const ATTR_PRESCRIPTION = "typepsc";
+  const ATTR_INFORMATION = "typeinf";
+  const ATTR_SUB_SECTEUR = "stypesect";
+  const ATTR_SUB_PRESCRIPTION = "stypepsc";
+  const ATTR_SUB_INFORMATION = "stypeinf";
+  class ParcelFeatureLabel {
+    constructor(duCategories) {
+      this.duCategories = duCategories;
+    }
+    isZonageFeature(properties) {
+      return ATTR_ZONAGE in properties;
+    }
+    getZonageCode(properties) {
+      return coerceDisplayString(properties.libelle);
+    }
+    getZonageLabel(properties) {
+      const long = coerceDisplayString(properties.libelong);
+      if (long) return long;
+      return this.getLabel("zonage", coerceDisplayString(properties[ATTR_ZONAGE]), null) ?? "";
+    }
+    isSecteurFeature(properties) {
+      return ATTR_SECTEUR in properties;
+    }
+    getSecteurCode(properties) {
+      return coerceDisplayString(properties.libelle);
+    }
+    getSecteurLabel(properties) {
+      const long = coerceDisplayString(properties.libelong);
+      if (long) return long;
+      return this.getLabel(
+        "secteur",
+        coerceDisplayString(properties[ATTR_SECTEUR]),
+        coerceDisplayString(properties[ATTR_SUB_SECTEUR]) || null
+      ) ?? "";
+    }
+    isPrescriptionFeature(properties) {
+      return ATTR_PRESCRIPTION in properties;
+    }
+    getPrescriptionLabel(properties) {
+      const lib = coerceDisplayString(properties.libelle);
+      if (lib) return lib;
+      return this.getLabel(
+        "prescription",
+        coerceDisplayString(properties[ATTR_PRESCRIPTION]),
+        coerceDisplayString(properties[ATTR_SUB_PRESCRIPTION]) || null
+      ) ?? "";
+    }
+    isInformationFeature(properties) {
+      return ATTR_INFORMATION in properties;
+    }
+    getInformationLabel(properties) {
+      const lib = coerceDisplayString(properties.libelle);
+      if (lib) return lib;
+      return this.getLabel(
+        "information",
+        coerceDisplayString(properties[ATTR_INFORMATION]),
+        coerceDisplayString(properties[ATTR_SUB_INFORMATION]) || null
+      ) ?? "";
+    }
+    getLabel(type, code, sousCode) {
+      if (!code) return null;
+      let normalized = code;
+      if (type !== "zonage") {
+        normalized = code.padStart(2, "0");
+      }
+      if (sousCode) {
+        normalized += `-${sousCode.padStart(2, "0")}`;
+      }
+      for (const cat of this.duCategories) {
+        if (type === cat.type && normalized === cat.code) {
+          return cat.libelong;
+        }
+      }
+      return null;
+    }
+  }
+  function formatParcelRuleLabel(label) {
+    const trimmed = label.trim().replace(/[.,]$/, "");
+    if (!trimmed) return "";
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+  function labelsForParcelFeature(featureLabel, properties) {
+    const labels = [];
+    if (featureLabel.isZonageFeature(properties)) {
+      const code = featureLabel.getZonageCode(properties);
+      const long = featureLabel.getZonageLabel(properties);
+      if (code) labels.push(formatParcelRuleLabel(`Parcelle classée ${code}`));
+      if (long && !libelleEqualsLong(code, long)) {
+        labels.push(formatParcelRuleLabel(long));
+      }
+      if (!labels.length) labels.push("Zonage de type inconnu");
+    } else if (featureLabel.isSecteurFeature(properties)) {
+      const code = featureLabel.getSecteurCode(properties);
+      const long = featureLabel.getSecteurLabel(properties);
+      if (code) labels.push(formatParcelRuleLabel(`Parcelle classée ${code}`));
+      if (long && !libelleEqualsLong(code, long)) {
+        labels.push(formatParcelRuleLabel(long));
+      }
+      if (!labels.length) labels.push("Secteur de type inconnu");
+    } else if (featureLabel.isPrescriptionFeature(properties)) {
+      const label = featureLabel.getPrescriptionLabel(properties);
+      labels.push(formatParcelRuleLabel(label || "Prescription de type inconnue"));
+    } else if (featureLabel.isInformationFeature(properties)) {
+      const label = featureLabel.getInformationLabel(properties);
+      labels.push(formatParcelRuleLabel(label || "Information de type inconnue"));
+    }
+    return labels;
+  }
+  function libelleEqualsLong(libelle, libelong) {
+    const a = formatParcelRuleLabel(libelle);
+    const b = formatParcelRuleLabel(libelong);
+    return new RegExp(`^${escapeRegExp(a)}$`, "ui").test(b) && new RegExp(`^${escapeRegExp(b)}$`, "ui").test(a);
+  }
+  function escapeRegExp(value2) {
+    return value2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  const DEFAULT_PARCEL_FICHE_LEGEND_ZOOM = 17;
+  function normalizeLayerNameForLegend(layerName) {
+    return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
+  }
+  function readDuCategories() {
+    const raw = typeof window !== "undefined" ? window.DU_CATEGORIES : void 0;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(
+      (item) => Boolean(item && typeof item === "object" && "type" in item && "code" in item)
+    );
+  }
+  function readSupCategories() {
+    const raw = typeof window !== "undefined" ? window.SUP_CATEGORIES : void 0;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((item) => Boolean(item && typeof item === "object"));
+  }
+  function readParcelLegendConfig() {
+    const w = typeof window !== "undefined" ? window : void 0;
+    return readLegendConfigArray(w == null ? void 0 : w.LEGEND_CONFIG);
+  }
+  function layerPrefixFromFeatureId(featureId) {
+    const dot = featureId.indexOf(".");
+    return dot >= 0 ? featureId.slice(0, dot) : featureId;
+  }
+  function getLegendConfigFromFeature(feature, legendConfig) {
+    const id = feature.id ?? "";
+    if (!id) return null;
+    const layerName = layerPrefixFromFeatureId(id);
+    return legendConfig.find((config2) => config2.name === layerName) ?? null;
+  }
+  function getSubFilterValue(properties, config2, value2) {
+    var _a;
+    if (!config2.filter2 || !((_a = config2.hasfilter2) == null ? void 0 : _a[value2])) return null;
+    const filter2value = properties[config2.filter2];
+    if (typeof filter2value !== "string") return null;
+    const allowed = config2.hasfilter2[value2];
+    if (!allowed.includes(filter2value)) return null;
+    return filter2value.replace(/[^0-9A-Za-z\-_]+/g, "-");
+  }
+  function getScalePart(config2, zoom) {
+    if (!config2.visibility) return "";
+    if (zoom >= (config2.visibility.highscale[0] ?? 16)) return "-highscale";
+    return "-lowscale";
+  }
+  function getScotImage(layer, properties) {
+    if (properties.gpu_id != null) return `${layer}/SCOT_PUBLISHED.png`;
+    if (properties.approved != null) return `${layer}/SCOT_NOT_PUBLISHED.png`;
+    return `${layer}/SCOT_PERIMETER.png`;
+  }
+  function getMecImage(layer) {
+    return `${layer}/MEC.png`;
+  }
+  function getUnavailableImage(name2, config2) {
+    if (config2.other) return `${name2}/other.png`;
+    return null;
+  }
+  function getParcelLegendImageRelativePath(config2, feature, zoom) {
+    var _a;
+    const properties = feature.properties ?? {};
+    const layer = normalizeLayerNameForLegend(config2.name);
+    if (config2.name === "scot") {
+      return getScotImage(layer, properties);
+    }
+    if (config2.name === "mec") {
+      return getMecImage(layer);
+    }
+    const filterKey = config2.filter;
+    if (!filterKey) return getUnavailableImage(layer, config2);
+    const value2 = coerceDisplayString(properties[filterKey]).trim();
+    if (!value2) {
+      return getUnavailableImage(layer, config2);
+    }
+    const allowed = (config2.allowedValues ?? []).map((item) => String(item).toUpperCase());
+    const upper = value2.toUpperCase();
+    if (!allowed.includes(upper)) {
+      return getUnavailableImage(layer, config2);
+    }
+    let legend = `${layer}/${upper}`;
+    if (config2.filter2 && ((_a = config2.hasfilter2) == null ? void 0 : _a[upper])) {
+      const filter2value = getSubFilterValue(properties, config2, upper);
+      if (filter2value) legend += `-${filter2value}`;
+    }
+    legend += getScalePart(config2, zoom);
+    return `${legend}.png`;
+  }
+  function resolveParcelFeatureLegendImageUrl(feature, zoom = DEFAULT_PARCEL_FICHE_LEGEND_ZOOM) {
+    const legendConfig = readParcelLegendConfig();
+    const config2 = getLegendConfigFromFeature(feature, legendConfig);
+    if (!config2 || config2.type === "lowscale") return null;
+    const relative = getParcelLegendImageRelativePath(config2, feature, zoom);
+    if (!relative) return null;
+    const base = resolveLegendImageDetailDirectory();
+    if (!base) return null;
+    return `${base}${relative}`;
+  }
+  function createParcelFeatureLabel() {
+    return new ParcelFeatureLabel(readDuCategories());
+  }
+  function getSupLabelFromProperties(properties, supCategories) {
+    const suptype = properties.suptype;
+    if (typeof suptype !== "string" || !suptype) return "SUP";
+    const category = supCategories.find(
+      (c) => c.name && suptype.toUpperCase() === c.name.toUpperCase()
+    );
+    if (!category) return suptype.toUpperCase();
+    const parts = [];
+    if (category.libelle) parts.push(category.libelle);
+    if (category.name) parts.push(`(${category.name})`);
+    return parts.join(" ");
+  }
+  const EL9_SUP_ALERT_DETAIL = "Les propriétés privées riveraines du domaine public maritime (DPM) sont grevées d'une servitude destinée à assurer exclusivement le passage des piétons sur le littoral, sur une bande de trois mètres de largeur à partir de la limite du DPM. Elle s'applique directement sans qu'une mesure règlementaire soit nécessaire pour son instauration.";
+  function findSupCategoryByName(name2, categories = readSupCategories()) {
+    const key2 = name2.trim().toUpperCase();
+    if (!key2) return null;
+    return categories.find((c) => {
+      var _a;
+      return ((_a = c.name) == null ? void 0 : _a.trim().toUpperCase()) === key2;
+    }) ?? null;
+  }
+  function supCategoryForDocument(doc2, categories) {
+    const typepsc = String(doc2.typepsc ?? doc2.type ?? "").trim();
+    if (typepsc) {
+      const hit = categories.find((c) => c.name === typepsc);
+      if (hit) return hit;
+    }
+    const title = (doc2.title ?? doc2.originalName ?? "").toUpperCase();
+    return categories.find((c) => c.name && title.includes(String(c.name).toUpperCase())) ?? null;
+  }
+  function pickProductionDocument$3(documents) {
     if (!(documents == null ? void 0 : documents.length)) return null;
     const production = documents.filter((d) => d.status === "document.production");
     return production[0] ?? documents[0] ?? null;
   }
-  function formatDatapproFromDocumentName$1(documentName) {
+  function supCategoryUrlFiche(category) {
+    if (!category) return "";
+    const raw = (category.url_fiche ?? category.urlFiche ?? "").trim();
+    if (!raw) return "";
+    return resolveGpuSiteNavigationUrl(raw);
+  }
+  function supCategoryLibelle(category) {
+    return (category == null ? void 0 : category.libelle) ?? (category == null ? void 0 : category.libelle_court) ?? (category == null ? void 0 : category.libelleCourt) ?? (category == null ? void 0 : category.name) ?? "Autres servitudes";
+  }
+  function supCategoryLegalLinkLabel(category, categoryKey) {
+    var _a;
+    const code = ((_a = category == null ? void 0 : category.name) == null ? void 0 : _a.trim()) || (categoryKey !== "_other" ? categoryKey.trim() : "") || "SUP";
+    return `Lien vers la fiche juridique de la SUP (${code})`;
+  }
+  function buildSupCategoryGroupHtml(category, categoryKey, tiles) {
+    if (!tiles.length) return "";
+    const parts = [];
+    const urlFiche = supCategoryUrlFiche(category);
+    if (urlFiche) {
+      const linkLabel = supCategoryLegalLinkLabel(category, categoryKey);
+      parts.push(
+        `<p class="ec-fiche-info__sup-legal-link"><a class="fr-link" href="${escapeHtml(urlFiche)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a></p>`
+      );
+    }
+    parts.push(`<div class="ec-fiche-info__tile-list">${tiles.join("")}</div>`);
+    return parts.join("");
+  }
+  function buildEl9SupGroupHtml(categories = readSupCategories()) {
+    const el9Category = findSupCategoryByName("EL9", categories);
+    const tile = documentSupTileHtml({
+      title: supCategoryLibelle(el9Category),
+      detail: EL9_SUP_ALERT_DETAIL,
+      href: void 0
+    });
+    return buildSupCategoryGroupHtml(el9Category, "EL9", [tile]);
+  }
+  function buildGroupedSupTabHtml(partitions, options) {
+    const categories = readSupCategories();
+    const byCategory = /* @__PURE__ */ new Map();
+    for (const partition of Object.values(partitions)) {
+      const doc2 = pickProductionDocument$3(partition.documents);
+      if (!doc2) continue;
+      const cat = supCategoryForDocument(doc2, categories);
+      const key2 = (cat == null ? void 0 : cat.name) ?? "_other";
+      const bucket = byCategory.get(key2) ?? { category: cat, docs: [] };
+      bucket.docs.push(doc2);
+      byCategory.set(key2, bucket);
+    }
+    const parts = [];
+    if (options == null ? void 0 : options.isEl9Alert) {
+      parts.push(buildEl9SupGroupHtml(categories));
+    }
+    if (!byCategory.size) {
+      return parts.filter(Boolean).join("");
+    }
+    const sortedKeys = [...byCategory.keys()].sort((a, b) => {
+      if (a === "_other") return 1;
+      if (b === "_other") return -1;
+      return a.localeCompare(b);
+    });
+    for (const key2 of sortedKeys) {
+      const bucket = byCategory.get(key2);
+      const categoryTitle = supCategoryLibelle(bucket.category);
+      const tiles = bucket.docs.map((doc2) => {
+        var _a, _b;
+        const documentTitle = ((_a = doc2.title) == null ? void 0 : _a.trim()) || ((_b = doc2.originalName) == null ? void 0 : _b.trim()) || doc2.type || "Servitude";
+        return documentSupTileHtml({
+          title: categoryTitle,
+          detail: documentTitle,
+          href: documentTileHrefFromApiFields(doc2)
+        });
+      });
+      parts.push(buildSupCategoryGroupHtml(bucket.category, key2, tiles));
+    }
+    return parts.join("");
+  }
+  const NON_EXECUTOIRE_MESSAGE = "Certains documents ne sont pas exécutoires ; consultez l’historique du document pour connaître le document en vigueur.";
+  const FICHE_NON_EXECUTOIRE_CALLOUT_HTML = `<aside class="ec-fiche-info__callout" role="note">${escapeHtml(NON_EXECUTOIRE_MESSAGE)}</aside>`;
+  function normalizePartitionsMap$3(value2) {
+    if (!value2) return {};
+    if (Array.isArray(value2)) return {};
+    return value2;
+  }
+  function pickProductionDocument$2(documents) {
+    if (!(documents == null ? void 0 : documents.length)) return null;
+    const production = documents.filter((d) => d.status === "document.production");
+    return production[0] ?? documents[0] ?? null;
+  }
+  function formatDatapproFromDocumentName(documentName) {
     const match2 = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i);
     if (!(match2 == null ? void 0 : match2[3])) return null;
     const date2 = match2[3];
     return `${date2.slice(6, 8)}/${date2.slice(4, 6)}/${date2.slice(0, 4)}`;
   }
+  function resolveLastApprovedProcedureNatureLabel(document2, proceduresByDocument) {
+    var _a, _b, _c, _d;
+    const fromDocument = (_a = document2.typeproc_title) == null ? void 0 : _a.trim();
+    if (fromDocument) return fromDocument;
+    if (!proceduresByDocument) return null;
+    const keys = [document2.originalName, document2.name].filter(
+      (key2) => typeof key2 === "string" && key2.length > 0
+    );
+    for (const key2 of keys) {
+      const procedures = proceduresByDocument[key2];
+      if (!(procedures == null ? void 0 : procedures.length)) continue;
+      const approved = procedures.find((procedure) => procedure.inProgress !== true);
+      if (!approved) continue;
+      const title = ((_c = (_b = approved.procedureType) == null ? void 0 : _b.title) == null ? void 0 : _c.trim()) || ((_d = approved.name) == null ? void 0 : _d.trim()) || null;
+      if (title) return title;
+    }
+    return null;
+  }
+  function procedureNaturePhraseForTileDetail(nature) {
+    const trimmed = nature.trim();
+    if (!trimmed) return trimmed;
+    const lowerFirst = trimmed.charAt(0).toLocaleLowerCase("fr-FR") + trimmed.slice(1);
+    if (/^[aeiouyéèêëàâäùûüîïôöh]/i.test(trimmed)) {
+      return `Procédure d'${lowerFirst}`;
+    }
+    return `Procédure de ${lowerFirst}`;
+  }
+  function lastApprovedProcedureTileDetail(datapproLabel, procedureNatureLabel) {
+    const date2 = datapproLabel == null ? void 0 : datapproLabel.trim();
+    const nature = procedureNatureLabel == null ? void 0 : procedureNatureLabel.trim();
+    if (nature && date2) {
+      return `${procedureNaturePhraseForTileDetail(nature)} approuvée le ${date2}`;
+    }
+    if (date2) return `Dernière procédure approuvée le : ${date2}`;
+    return null;
+  }
+  function documentIsNonExecutoireEffectiveStatus(effectiveStatus) {
+    return effectiveStatus === "NON_EXECUTOIRE";
+  }
   function documentIsNonExecutoire(document2) {
-    return document2.effectiveStatus === "NON_EXECUTOIRE";
+    return documentIsNonExecutoireEffectiveStatus(document2.effectiveStatus);
   }
   function collectProductionDocuments(map2) {
     const out = [];
     for (const partition of Object.values(map2)) {
-      const doc2 = pickProductionDocument$1(partition.documents);
+      const doc2 = pickProductionDocument$2(partition.documents);
       if (doc2) out.push(doc2);
     }
     return out;
   }
+  function partitionMapHasNonExecutoireDocument(map2) {
+    return collectProductionDocuments(map2).some(documentIsNonExecutoire);
+  }
   function fichePayloadHasNonExecutoireDocument(data) {
     const maps = [
-      normalizePartitionsMap$1(data.dus),
-      normalizePartitionsMap$1(data.psmvs),
-      normalizePartitionsMap$1(data.sups),
-      normalizePartitionsMap$1(data.scots)
+      normalizePartitionsMap$3(data.dus),
+      normalizePartitionsMap$3(data.psmvs),
+      normalizePartitionsMap$3(data.sups),
+      normalizePartitionsMap$3(data.scots)
     ];
-    for (const map2 of maps) {
-      if (collectProductionDocuments(map2).some(documentIsNonExecutoire)) return true;
-    }
-    return false;
+    return maps.some(partitionMapHasNonExecutoireDocument);
   }
-  function documentCardHtml(document2, href) {
+  function documentTileFromGpuDocument(document2, kind, proceduresByDocument) {
     var _a;
     const title = ((_a = document2.title) == null ? void 0 : _a.trim()) || document2.type || "Document";
     const name2 = document2.originalName ?? document2.name ?? "";
-    const datappro = name2 ? formatDatapproFromDocumentName$1(name2) : null;
-    const approved = document2.status === "document.production";
-    const inForce = document2.effectiveStatus !== "NON_EXECUTOIRE";
-    const badges = [
-      inForce ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--vigueur">EN VIGUEUR</span>' : "",
-      approved ? '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>' : ""
-    ].filter(Boolean).join("");
-    const titleInner = escapeHtml(title);
-    const titleBlock = href ? `<a class="ec-fiche-info__doc-card-title" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a>` : `<p class="ec-fiche-info__doc-card-title">${titleInner}</p>`;
-    const footer = datappro ? `<p class="ec-fiche-info__doc-card-meta">Dernière procédure approuvée le : ${escapeHtml(datappro)}</p>` : "";
-    return `<article class="ec-fiche-info__doc-card">${badges ? `<div class="ec-fiche-info__doc-card-badges">${badges}</div>` : ""}${titleBlock}${footer}</article>`;
+    const datappro = name2 ? formatDatapproFromDocumentName(name2) : null;
+    const procedureNatureLabel = resolveLastApprovedProcedureNatureLabel(
+      document2,
+      proceduresByDocument
+    );
+    const href = documentTileHrefFromApiFields(document2);
+    if (kind === "sup") {
+      const category = supCategoryForDocument(document2, readSupCategories());
+      return documentSupTileHtml({
+        title: supCategoryLibelle(category),
+        detail: title,
+        href
+      });
+    }
+    return documentUrbanismTileHtml({
+      title,
+      href,
+      effectiveStatus: document2.effectiveStatus,
+      legalStatus: document2.legalStatus,
+      status: document2.status,
+      datapproLabel: datappro,
+      procedureNatureLabel
+    });
   }
-  const SECTION_TITLES = {
+  const SECTION_TITLES$1 = {
     du: "Documents d’urbanisme",
     psmv: "Plans de sauvegarde et de mise en valeur (PSMV)",
     sup: "Servitudes d’utilité publique",
     scot: "Schémas de cohérence territoriale"
   };
-  function sectionBlock(kind, documents) {
+  function sectionBlock(kind, documents, proceduresByDocument) {
     if (!documents.length) return "";
-    const cards = documents.map((d) => documentCardHtml(d, d.archiveUrl)).join("");
-    return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES[kind] ?? kind)}</h3>${cards}`;
+    const tileKind = kind === "sup" ? "sup" : kind === "scot" ? "scot" : kind === "psmv" ? "psmv" : "du";
+    const tiles = documents.map((d) => documentTileFromGpuDocument(d, tileKind, proceduresByDocument));
+    return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES$1[kind] ?? kind)}</h3>${documentTilesListHtml(tiles)}`;
   }
   function buildParcelDocumentsPresentationHtml(data) {
     const parts = [];
@@ -66347,21 +67436,751 @@ Expected function or array of functions, received type ${typeof value2}.`
     parts.push(
       '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>'
     );
-    const dus = collectProductionDocuments(normalizePartitionsMap$1(data.dus));
-    const psmvs = collectProductionDocuments(normalizePartitionsMap$1(data.psmvs));
-    const sups = collectProductionDocuments(normalizePartitionsMap$1(data.sups));
-    const scots = collectProductionDocuments(normalizePartitionsMap$1(data.scots));
-    parts.push(sectionBlock("du", dus));
-    parts.push(sectionBlock("psmv", psmvs));
-    parts.push(sectionBlock("sup", sups));
-    parts.push(sectionBlock("scot", scots));
+    const dus = collectProductionDocuments(normalizePartitionsMap$3(data.dus));
+    const psmvs = collectProductionDocuments(normalizePartitionsMap$3(data.psmvs));
+    const sups = collectProductionDocuments(normalizePartitionsMap$3(data.sups));
+    const scots = collectProductionDocuments(normalizePartitionsMap$3(data.scots));
+    const proceduresByDocument = data.proceduresByDocument;
+    if (isFicheDocumentFamilyVisible("du")) parts.push(sectionBlock("du", dus, proceduresByDocument));
+    if (isFicheDocumentFamilyVisible("psmv")) {
+      parts.push(sectionBlock("psmv", psmvs, proceduresByDocument));
+    }
+    if (isFicheDocumentFamilyVisible("sup"))
+      parts.push(sectionBlock("sup", sups, proceduresByDocument));
+    if (isFicheDocumentFamilyVisible("scot")) {
+      parts.push(sectionBlock("scot", scots, proceduresByDocument));
+    }
     const body = parts.filter(Boolean).join("");
     return body || "<p>Aucun document disponible pour cette parcelle.</p>";
   }
-  function prependNonExecutoireCalloutIfNeeded(bodyHtml, data) {
-    if (!fichePayloadHasNonExecutoireDocument(data)) return bodyHtml;
+  function buildDocumentTypeTabTilesHtml(partitions, kind, proceduresByDocument) {
+    const keys = Object.keys(partitions);
+    if (!keys.length) return "";
+    const documents = collectProductionDocuments(partitions);
+    if (!documents.length) return "";
+    const tiles = documents.map((d) => documentTileFromGpuDocument(d, kind, proceduresByDocument));
+    const list = documentTilesListHtml(tiles);
+    if (keys.length > 1) {
+      return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`;
+    }
+    return list;
+  }
+  function prependNonExecutoireCalloutForPartitionMap(bodyHtml, map2) {
+    if (!partitionMapHasNonExecutoireDocument(map2)) return bodyHtml;
     if (bodyHtml.includes("ec-fiche-info__callout")) return bodyHtml;
     return FICHE_NON_EXECUTOIRE_CALLOUT_HTML + bodyHtml;
+  }
+  const MEC_DOCUMENT_NOTICE = "Une ou plusieurs zones de ce document ont été modifiées par une procédure de mise en compatibilité.";
+  function normalizePartitionsMap$2(value2) {
+    if (!value2 || Array.isArray(value2)) return {};
+    return value2;
+  }
+  function documentPartitionKeyFromMecPartition(mecPartition) {
+    return mecPartition.replace(/^MEC(_\d+)?_/i, "");
+  }
+  function normalizeDocKey(value2) {
+    return value2.trim().toUpperCase().replace(/^(DU|SCOT)_/i, "");
+  }
+  function isGpuSiteDocumentRecord(doc2) {
+    const id = coerceDisplayString(doc2.id).trim();
+    return /^[a-f0-9]{32}$/i.test(id);
+  }
+  function mecPartitionHasGpuSiteDocument(partition) {
+    return (partition.documents ?? []).some(isGpuSiteDocumentRecord);
+  }
+  function documentNameAffectedByMec(data, documentName, documentPartitionName) {
+    const original = documentName.trim();
+    if (!original) return false;
+    const partitionLabel = documentPartitionName == null ? void 0 : documentPartitionName.trim();
+    const originalKey = normalizeDocKey(original);
+    const partitionKey = partitionLabel ? normalizeDocKey(partitionLabel) : "";
+    for (const map2 of [normalizePartitionsMap$2(data.mecsDu), normalizePartitionsMap$2(data.mecsScot)]) {
+      for (const [mecPartitionKey, partition] of Object.entries(map2)) {
+        if (!/^MEC_\d+_/i.test(mecPartitionKey)) continue;
+        if (!mecPartitionHasGpuSiteDocument(partition)) continue;
+        const parentKey = documentPartitionKeyFromMecPartition(mecPartitionKey).trim().toUpperCase();
+        const parentBody = normalizeDocKey(parentKey);
+        if (original.toUpperCase() === parentKey) return true;
+        if (partitionLabel && partitionLabel.toUpperCase() === parentKey) return true;
+        if (originalKey && parentBody && originalKey === parentBody) return true;
+        if (partitionKey && parentBody && partitionKey === parentBody) return true;
+      }
+    }
+    return false;
+  }
+  function mecNoticeHtmlForDocumentName(data, documentName, documentPartitionName) {
+    return documentNameAffectedByMec(data, documentName, documentPartitionName) ? escapeHtml(MEC_DOCUMENT_NOTICE) : void 0;
+  }
+  function pickProductionDocument$1(documents) {
+    if (!(documents == null ? void 0 : documents.length)) return null;
+    const production = documents.filter((d) => d.status === "document.production");
+    return production[0] ?? documents[0] ?? null;
+  }
+  function mecProcedureTileHtmlFromGpuDocument(doc2) {
+    if (!isGpuSiteDocumentRecord(doc2)) return null;
+    const title = coerceDisplayString(doc2.title) || coerceDisplayString(doc2.type) || "Mise en compatibilité";
+    return procedureTileHtml({
+      title,
+      href: resolveMecDocumentTileHref({
+        documentId: coerceDisplayString(doc2.id),
+        viewUrl: typeof doc2.viewUrl === "string" ? doc2.viewUrl : void 0
+      }),
+      inProgress: true,
+      detailLine: MEC_DOCUMENT_NOTICE
+    });
+  }
+  function partitionEntry(map2, partitionKey) {
+    const trimmed = partitionKey.trim();
+    if (!trimmed) return null;
+    if (map2[trimmed]) return map2[trimmed];
+    const found = Object.entries(map2).find(([k]) => k.toLowerCase() === trimmed.toLowerCase());
+    return (found == null ? void 0 : found[1]) ?? null;
+  }
+  function findGpuSiteMecDocument(data, mecPartitionKey) {
+    const trimmed = mecPartitionKey.trim();
+    if (!trimmed) return null;
+    for (const map2 of [normalizePartitionsMap$2(data.mecsDu), normalizePartitionsMap$2(data.mecsScot)]) {
+      const exact = partitionEntry(map2, trimmed);
+      const doc2 = pickProductionDocument$1(exact == null ? void 0 : exact.documents);
+      if (doc2 && isGpuSiteDocumentRecord(doc2)) return doc2;
+    }
+    const parent = documentPartitionKeyFromMecPartition(trimmed).toLowerCase();
+    for (const map2 of [normalizePartitionsMap$2(data.mecsDu), normalizePartitionsMap$2(data.mecsScot)]) {
+      for (const [key2, partition] of Object.entries(map2)) {
+        if (documentPartitionKeyFromMecPartition(key2).toLowerCase() !== parent) continue;
+        const doc2 = pickProductionDocument$1(partition.documents);
+        if (doc2 && isGpuSiteDocumentRecord(doc2)) return doc2;
+      }
+    }
+    return null;
+  }
+  function mecProcedureTileHtmlForParcelFeature(data, options) {
+    var _a, _b;
+    const mecPartitionKey = ((_a = options.mecPartitionKey) == null ? void 0 : _a.trim()) ?? "";
+    if (data && mecPartitionKey) {
+      const doc2 = findGpuSiteMecDocument(data, mecPartitionKey);
+      if (doc2) {
+        const tile = mecProcedureTileHtmlFromGpuDocument(doc2);
+        if (tile) return tile;
+      }
+    }
+    const title = ((_b = options.fallbackTitle) == null ? void 0 : _b.trim()) || "Mise en compatibilité";
+    return procedureTileHtml({
+      title,
+      href: resolveMecDocumentTileHref({
+        documentId: options.fallbackDocumentId
+      }),
+      inProgress: true,
+      detailLine: MEC_DOCUMENT_NOTICE
+    });
+  }
+  function buildMecTerritoryProceduresHtml(data) {
+    var _a, _b, _c, _d, _e, _f;
+    const tiles = [];
+    for (const map2 of [normalizePartitionsMap$2(data.mecsDu), normalizePartitionsMap$2(data.mecsScot)]) {
+      for (const partition of Object.values(map2)) {
+        const doc2 = pickProductionDocument$1(partition.documents);
+        if (!doc2) continue;
+        const tile = mecProcedureTileHtmlFromGpuDocument(doc2);
+        if (tile) tiles.push(tile);
+      }
+    }
+    const pbd = data.proceduresByDocument ?? {};
+    for (const [docName, list] of Object.entries(pbd)) {
+      if (!/^MEC_/i.test(docName)) continue;
+      for (const procedure of list) {
+        const title = ((_a = procedure.name) == null ? void 0 : _a.trim()) || ((_c = (_b = procedure.procedureType) == null ? void 0 : _b.title) == null ? void 0 : _c.trim()) || ((_d = procedure.documentName) == null ? void 0 : _d.trim()) || "Procédure MEC";
+        tiles.push(
+          procedureTileHtml({
+            title,
+            href: documentTileHrefFromApiFields({
+              id: procedure.id,
+              viewUrl: (_f = (_e = procedure.files) == null ? void 0 : _e[0]) == null ? void 0 : _f.url
+            }),
+            inProgress: procedure.inProgress !== false,
+            detailLine: null
+          })
+        );
+      }
+    }
+    if (!tiles.length) return "";
+    return documentTilesListHtml(tiles);
+  }
+  function resolveParcelRuleWrittenPieceHref(properties) {
+    const urlfic = coerceDisplayString(properties.urlfic);
+    if (urlfic) return resolveGpuSiteNavigationUrl(urlfic);
+    const nomfic = coerceDisplayString(properties.nomfic);
+    if (/^https?:\/\//i.test(nomfic)) {
+      return resolveGpuSiteNavigationUrl(nomfic);
+    }
+    return "";
+  }
+  const WRITTEN_PIECE_LABEL = "Ouvrir la pièce écrite (PDF)";
+  function ruleWrittenPieceLinkHtml(href) {
+    const btnClass = "ec-fiche-info__rule-doc fr-btn fr-btn--tertiary fr-btn--sm";
+    const label = escapeHtml(WRITTEN_PIECE_LABEL);
+    if (href) {
+      return `<a class="${btnClass}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${label}"><span class="ri-file-pdf-2-line" aria-hidden="true"></span><span class="fr-sr-only">${label}</span></a>`;
+    }
+    const unavailable = escapeHtml("Pièce écrite indisponible");
+    return `<span class="${btnClass} ec-fiche-info__rule-doc--muted" title="${unavailable}" aria-label="${unavailable}" aria-disabled="true"><span class="ri-file-pdf-2-line" aria-hidden="true"></span><span class="fr-sr-only">${unavailable}</span></span>`;
+  }
+  function isGpuParcelFichePayload(data) {
+    return Boolean(data && typeof data === "object" && "features" in data);
+  }
+  function layerPrefix(featureId) {
+    const dot = featureId.indexOf(".");
+    return dot >= 0 ? featureId.slice(0, dot) : featureId;
+  }
+  const SECTION_TITLES = {
+    zonage: "Zonage(s)",
+    prescription: "Prescriptions",
+    information: "Périmètres d’informations",
+    secteur: "Secteurs",
+    sup: "Servitudes d’utilité publique",
+    scot: "Schémas de cohérence territoriale",
+    mec: "Mises en compatibilité",
+    document: "Documents"
+  };
+  function classifyFeature(feature) {
+    const id = feature.id ?? "";
+    const prefix = layerPrefix(id);
+    if (prefix === "zone_urba") return "zonage";
+    if (prefix.startsWith("prescription")) return "prescription";
+    if (prefix.startsWith("info_")) return "information";
+    if (prefix === "secteur_cc") return "secteur";
+    if (prefix.startsWith("assiette_sup")) return "sup";
+    if (prefix === "scot") return "scot";
+    if (prefix === "mec") return "mec";
+    if (prefix === "document") return "document";
+    return null;
+  }
+  function ruleTextsForFeature(feature, featureLabel, supCategories) {
+    const props = feature.properties ?? {};
+    const section = classifyFeature(feature);
+    if (section === "sup") {
+      const title = getSupLabelFromProperties(props, supCategories);
+      const subtitle = coerceDisplayString(props.nomsuplitt);
+      return { title, subtitle };
+    }
+    if (section === "scot") {
+      return {
+        title: formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT"),
+        subtitle: ""
+      };
+    }
+    if (section === "mec") {
+      return {
+        title: formatParcelRuleLabel(
+          props.libelle ? `Mise en compatibilité - ${coerceDisplayString(props.libelle)}` : "Mise en compatibilité"
+        ),
+        subtitle: ""
+      };
+    }
+    const labels = labelsForParcelFeature(featureLabel, props);
+    if (!labels.length) {
+      return { title: "Règle d’urbanisme", subtitle: "" };
+    }
+    return { title: labels[0], subtitle: labels.slice(1).join(" — ") };
+  }
+  function ruleIconInnerHtml(feature, zoom) {
+    const imageUrl = resolveParcelFeatureLegendImageUrl(feature, zoom);
+    if (imageUrl) {
+      return `<img class="ec-fiche-info__rule-icon-img" src="${escapeHtml(imageUrl)}" alt="" width="40" height="40" loading="lazy" decoding="async" />`;
+    }
+    const props = feature.properties ?? {};
+    const fallback = coerceDisplayString(props.libelle ?? props.typezone ?? props.typepsc ?? props.suptype).slice(0, 4).toUpperCase() || "—";
+    return escapeHtml(fallback);
+  }
+  function ruleRowHtml(feature, zoom, featureLabel, supCategories) {
+    const props = feature.properties ?? {};
+    const { title, subtitle } = ruleTextsForFeature(feature, featureLabel, supCategories);
+    const docLink = ruleWrittenPieceLinkHtml(resolveParcelRuleWrittenPieceHref(props));
+    const subBlock = subtitle ? `<p class="ec-fiche-info__rule-sub">${escapeHtml(subtitle)}</p>` : "";
+    const iconInner = ruleIconInnerHtml(feature, zoom);
+    return `<article class="ec-fiche-info__rule-row"><div class="ec-fiche-info__rule-icon" aria-hidden="true">${iconInner}</div><div class="ec-fiche-info__rule-body"><p class="ec-fiche-info__rule-title">${escapeHtml(title)}</p>${subBlock}</div>${docLink}</article>`;
+  }
+  function normalizePartitionsMap$1(value2) {
+    if (!value2 || Array.isArray(value2)) return {};
+    return value2;
+  }
+  function gpuSiteDocumentRecordFromApiDoc(doc2) {
+    const id = coerceDisplayString(doc2.id);
+    return {
+      id: id && /^[a-f0-9]{32}$/i.test(id) ? id : void 0,
+      name: coerceDisplayString(doc2.name) || void 0,
+      originalName: coerceDisplayString(doc2.originalName) || void 0,
+      effectiveStatus: coerceDisplayString(doc2.effectiveStatus) || void 0,
+      legalStatus: coerceDisplayString(doc2.legalStatus) || void 0,
+      status: coerceDisplayString(doc2.status) || void 0,
+      title: coerceDisplayString(doc2.title) || void 0,
+      viewUrl: coerceDisplayString(doc2.viewUrl) || void 0,
+      archiveUrl: coerceDisplayString(doc2.archiveUrl) || void 0,
+      type: coerceDisplayString(doc2.type) || void 0,
+      typeproc_title: coerceDisplayString(doc2.typeproc_title) || void 0
+    };
+  }
+  function registerGpuSiteDocumentRecord(record, byId, byName) {
+    if (record.id) byId.set(record.id.toLowerCase(), record);
+    if (record.originalName) byName.set(record.originalName.toUpperCase(), record);
+  }
+  function gpuSiteDocumentLookupFromFicheApi(ficheApi) {
+    if (!ficheApi) return null;
+    const byId = /* @__PURE__ */ new Map();
+    const byName = /* @__PURE__ */ new Map();
+    const byPartition = /* @__PURE__ */ new Map();
+    for (const panel of [ficheApi.dus, ficheApi.psmvs, ficheApi.scots, ficheApi.sups]) {
+      for (const [partitionKey, partition] of Object.entries(normalizePartitionsMap$1(panel))) {
+        const partitionNorm = partitionKey.trim().toLowerCase();
+        for (const doc2 of partition.documents ?? []) {
+          const record = gpuSiteDocumentRecordFromApiDoc(doc2);
+          registerGpuSiteDocumentRecord(record, byId, byName);
+          const docName = coerceDisplayString(doc2.name);
+          if (docName) byName.set(docName.toUpperCase(), record);
+          if (partitionNorm && record.id) byPartition.set(partitionNorm, record);
+        }
+      }
+    }
+    return { byId, byName, byPartition };
+  }
+  function parcelFeatureGpuDocumentId(props) {
+    return coerceDisplayString(props.documentId) || coerceDisplayString(props.gpu_id) || coerceDisplayString(props.gpuId) || coerceDisplayString(props.id) || void 0;
+  }
+  function gpuSiteDocumentForFeatureProps(props, lookup, options) {
+    if (!lookup) return null;
+    const docId = parcelFeatureGpuDocumentId(props);
+    if (docId) {
+      const byId = lookup.byId.get(docId.toLowerCase());
+      if (byId) return byId;
+    }
+    const name2 = coerceDisplayString(props.originalName ?? props.name).toUpperCase();
+    if (name2) {
+      const byName = lookup.byName.get(name2);
+      if (byName) return byName;
+    }
+    if (options == null ? void 0 : options.matchPartition) {
+      const partition = coerceDisplayString(props.partition).toLowerCase();
+      if (partition) {
+        const byPartition = lookup.byPartition.get(partition);
+        if (byPartition) return byPartition;
+      }
+    }
+    return null;
+  }
+  function documentFeatureInGpuSite(props, lookup) {
+    if (props.inDatabase === true || props.in_database === true) return true;
+    if (props.inDatabase === false || props.in_database === false) return false;
+    if (gpuSiteDocumentForFeatureProps(props, lookup)) return true;
+    const docId = parcelFeatureGpuDocumentId(props);
+    return Boolean(docId && (lookup == null ? void 0 : lookup.byId.has(docId.toLowerCase())));
+  }
+  function wfsFeatureMatchesGpuSiteRecord(props, record) {
+    const id = parcelFeatureGpuDocumentId(props);
+    if (record.id && id && record.id.toLowerCase() === id.toLowerCase()) return true;
+    const name2 = coerceDisplayString(props.name ?? props.originalName).toUpperCase();
+    if (record.originalName && name2 === record.originalName.toUpperCase()) return true;
+    if (record.name && name2 === record.name.toUpperCase()) return true;
+    return false;
+  }
+  function urbanismTileFromGpuSiteRecord(record, ficheApi, partitionKey) {
+    const documentName = record.originalName ?? record.name ?? "";
+    const partitionName = record.name ?? partitionKey;
+    const datapproLabel = documentName ? formatDatapproFromDocumentName(documentName) : null;
+    return documentUrbanismTileHtml({
+      title: record.title ?? record.type ?? "Document d’urbanisme",
+      href: documentTileHrefFromApiFields({
+        id: record.id,
+        archiveUrl: record.archiveUrl,
+        viewUrl: record.viewUrl
+      }),
+      effectiveStatus: record.effectiveStatus,
+      legalStatus: record.legalStatus,
+      status: record.status,
+      datapproLabel,
+      procedureNatureLabel: resolveLastApprovedProcedureNatureLabel(
+        record,
+        ficheApi == null ? void 0 : ficheApi.proceduresByDocument
+      ),
+      defaultApprovedWhenStatusMissing: true,
+      notInDatabase: false,
+      mecNoticeHtml: ficheApi ? mecNoticeHtmlForDocumentName(ficheApi, documentName, partitionName) : void 0
+    });
+  }
+  function documentCardFromFeature(feature, lookup, ficheApi) {
+    const props = feature.properties ?? {};
+    const gpuSite = gpuSiteDocumentForFeatureProps(props, lookup);
+    const title = coerceDisplayString(props.title) || (gpuSite == null ? void 0 : gpuSite.title) || coerceDisplayString(props.originalName) || coerceDisplayString(props.name) || "Document d’urbanisme";
+    const status = coerceDisplayString(props.status) || (gpuSite == null ? void 0 : gpuSite.status) || void 0;
+    const effective = coerceDisplayString(props.effectiveStatus) || (gpuSite == null ? void 0 : gpuSite.effectiveStatus) || void 0;
+    const legalStatus = coerceDisplayString(props.legalStatus) || (gpuSite == null ? void 0 : gpuSite.legalStatus) || void 0;
+    const name2 = coerceDisplayString(props.originalName ?? props.name);
+    const datapproLabel = name2 ? formatDatapproFromDocumentName(name2) : null;
+    const docId = (gpuSite == null ? void 0 : gpuSite.id) || parcelFeatureGpuDocumentId(props);
+    const partitionName = coerceDisplayString(props.name) || coerceDisplayString(props.partition) || void 0;
+    const href = documentTileHrefFromApiFields({
+      id: docId,
+      archiveUrl: coerceDisplayString(props.archiveUrl ?? props.urlfic) || (gpuSite == null ? void 0 : gpuSite.archiveUrl) || void 0,
+      viewUrl: coerceDisplayString(props.viewUrl) || (gpuSite == null ? void 0 : gpuSite.viewUrl) || void 0
+    }) ?? void 0;
+    const notInDatabase = !documentFeatureInGpuSite(props, lookup);
+    return documentUrbanismTileHtml({
+      title,
+      href,
+      effectiveStatus: effective,
+      legalStatus,
+      status,
+      datapproLabel,
+      procedureNatureLabel: gpuSite ? resolveLastApprovedProcedureNatureLabel(gpuSite, ficheApi == null ? void 0 : ficheApi.proceduresByDocument) : null,
+      defaultApprovedWhenStatusMissing: true,
+      notInDatabase,
+      mecNoticeHtml: ficheApi && !notInDatabase ? mecNoticeHtmlForDocumentName(ficheApi, name2, partitionName) : void 0
+    });
+  }
+  function featureDedupeKey(feature) {
+    const props = feature.properties ?? {};
+    return [
+      feature.id ?? "",
+      coerceDisplayString(props.partition),
+      coerceDisplayString(props.libelle),
+      coerceDisplayString(props.typezone),
+      coerceDisplayString(props.typepsc)
+    ].join("|");
+  }
+  function dedupeFeatures(features) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const feature of features) {
+      const key2 = featureDedupeKey(feature);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(feature);
+    }
+    return out;
+  }
+  function dedupeMecFeaturesByPartition(features) {
+    var _a;
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const feature of features) {
+      const partition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition).toLowerCase();
+      const key2 = partition || featureDedupeKey(feature);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(feature);
+    }
+    return out;
+  }
+  function blockedParentPartitionsFromMecFeatures(mecFeatures) {
+    var _a;
+    const blocked = /* @__PURE__ */ new Set();
+    for (const feature of dedupeMecFeaturesByPartition(mecFeatures)) {
+      const mecPartition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition);
+      if (!mecPartition) continue;
+      blocked.add(documentPartitionKeyFromMecPartition(mecPartition).toLowerCase());
+    }
+    return blocked;
+  }
+  function mecTileFromFeature(feature, ficheApi) {
+    const props = feature.properties ?? {};
+    const libelle = coerceDisplayString(props.libelle);
+    const mecPartition = coerceDisplayString(props.partition);
+    const fallbackTitle = libelle ? `Mise en compatibilité - ${libelle}` : void 0;
+    return mecProcedureTileHtmlForParcelFeature(ficheApi, {
+      mecPartitionKey: mecPartition,
+      fallbackTitle,
+      fallbackDocumentId: parcelFeatureGpuDocumentId(props)
+    });
+  }
+  function buildDuDocumentTiles(documentFeatures, blockedParents, lookup, ficheApi) {
+    var _a;
+    const tiles = [];
+    const byPartition = /* @__PURE__ */ new Map();
+    for (const feature of documentFeatures) {
+      const partition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition).toLowerCase();
+      if (partition && blockedParents.has(partition)) continue;
+      const key2 = partition || "_none";
+      const list = byPartition.get(key2) ?? [];
+      list.push(feature);
+      byPartition.set(key2, list);
+    }
+    for (const [partition, group] of byPartition) {
+      const apiRecord = partition !== "_none" ? (lookup == null ? void 0 : lookup.byPartition.get(partition)) ?? null : null;
+      if (apiRecord == null ? void 0 : apiRecord.id) {
+        tiles.push(urbanismTileFromGpuSiteRecord(apiRecord, ficheApi, partition));
+      }
+      const seenWfs = /* @__PURE__ */ new Set();
+      for (const feature of group) {
+        const props = feature.properties ?? {};
+        if (apiRecord && wfsFeatureMatchesGpuSiteRecord(props, apiRecord)) continue;
+        const nameKey = coerceDisplayString(props.name ?? props.originalName).toUpperCase() || featureDedupeKey(feature);
+        if (seenWfs.has(nameKey)) continue;
+        seenWfs.add(nameKey);
+        tiles.push(documentCardFromFeature(feature, lookup, ficheApi));
+      }
+    }
+    return tiles;
+  }
+  function buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) {
+    var _a;
+    const tiles = [];
+    for (const feature of dedupeMecFeaturesByPartition(mecFeatures)) {
+      const mecPartition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition);
+      if (!mecPartition) continue;
+      const parent = documentPartitionKeyFromMecPartition(mecPartition).toLowerCase();
+      if (!blockedParents.has(parent)) continue;
+      if (parent.startsWith("scot_")) continue;
+      tiles.push(mecTileFromFeature(feature, ficheApi));
+    }
+    return tiles;
+  }
+  function buildSupDocumentTiles(ficheApi, hasSupOnParcel) {
+    if (!hasSupOnParcel || !ficheApi) return [];
+    const categories = readSupCategories();
+    const seen = /* @__PURE__ */ new Set();
+    const tiles = [];
+    for (const partition of Object.values(normalizePartitionsMap$1(ficheApi.sups))) {
+      const docs = partition.documents ?? [];
+      const production = docs.filter((d) => d.status === "document.production");
+      const doc2 = production[0] ?? docs[0];
+      if (!doc2) continue;
+      const id = coerceDisplayString(doc2.id);
+      if (id && seen.has(id.toLowerCase())) continue;
+      if (id) seen.add(id.toLowerCase());
+      const title = coerceDisplayString(doc2.title) || "Servitude d’utilité publique";
+      const category = supCategoryForDocument(
+        {
+          name: coerceDisplayString(doc2.name),
+          originalName: coerceDisplayString(doc2.originalName),
+          typepsc: coerceDisplayString(doc2.typepsc)
+        },
+        categories
+      );
+      tiles.push(
+        documentSupTileHtml({
+          title: supCategoryLibelle(category),
+          detail: title,
+          href: documentTileHrefFromApiFields({
+            id: coerceDisplayString(doc2.id) || void 0,
+            viewUrl: coerceDisplayString(doc2.viewUrl) || void 0,
+            archiveUrl: coerceDisplayString(doc2.archiveUrl) || void 0
+          })
+        })
+      );
+    }
+    return tiles;
+  }
+  function dedupeScotFeaturesByPartition(features) {
+    var _a;
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const feature of features) {
+      const partition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition).toLowerCase();
+      const key2 = partition || featureDedupeKey(feature);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(feature);
+    }
+    return out;
+  }
+  function dedupeRuleFeatures(features, zoom, featureLabel, supCategories) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const feature of features) {
+      const { title, subtitle } = ruleTextsForFeature(feature, featureLabel, supCategories);
+      const key2 = `${title}|${subtitle}|${ruleIconInnerHtml(feature, zoom)}`;
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      out.push(feature);
+    }
+    return out;
+  }
+  function groupFeatures(features, zoom, featureLabel, supCategories) {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const feature of dedupeRuleFeatures(
+      dedupeFeatures(features),
+      zoom,
+      featureLabel,
+      supCategories
+    )) {
+      const section = classifyFeature(feature);
+      if (!section || section === "document") continue;
+      const list = map2.get(section) ?? [];
+      list.push(feature);
+      map2.set(section, list);
+    }
+    return map2;
+  }
+  function scotTileFromFeature(feature, lookup, ficheApi) {
+    const props = feature.properties ?? {};
+    const gpuSite = gpuSiteDocumentForFeatureProps(props, lookup, { matchPartition: true });
+    const title = (gpuSite == null ? void 0 : gpuSite.title) || formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT");
+    const name2 = (gpuSite == null ? void 0 : gpuSite.originalName) || coerceDisplayString(props.originalName ?? props.name);
+    const partitionName = coerceDisplayString(props.name) || coerceDisplayString(props.partition) || void 0;
+    const datapproLabel = name2 ? formatDatapproFromDocumentName(name2) : null;
+    const docId = (gpuSite == null ? void 0 : gpuSite.id) || parcelFeatureGpuDocumentId(props);
+    const status = coerceDisplayString(props.status) || (gpuSite == null ? void 0 : gpuSite.status) || void 0;
+    const effective = coerceDisplayString(props.effectiveStatus) || (gpuSite == null ? void 0 : gpuSite.effectiveStatus) || void 0;
+    const legalStatus = coerceDisplayString(props.legalStatus) || (gpuSite == null ? void 0 : gpuSite.legalStatus) || void 0;
+    return documentUrbanismTileHtml({
+      title,
+      href: documentTileHrefFromApiFields({
+        id: docId,
+        archiveUrl: coerceDisplayString(props.archiveUrl ?? props.urlfic) || (gpuSite == null ? void 0 : gpuSite.archiveUrl) || void 0,
+        viewUrl: coerceDisplayString(props.viewUrl) || (gpuSite == null ? void 0 : gpuSite.viewUrl) || void 0
+      }),
+      effectiveStatus: effective,
+      legalStatus,
+      status,
+      datapproLabel,
+      procedureNatureLabel: gpuSite ? resolveLastApprovedProcedureNatureLabel(gpuSite, ficheApi == null ? void 0 : ficheApi.proceduresByDocument) : null,
+      defaultApprovedWhenStatusMissing: true,
+      notInDatabase: !documentFeatureInGpuSite(props, lookup),
+      mecNoticeHtml: ficheApi ? mecNoticeHtmlForDocumentName(ficheApi, name2, partitionName) : void 0
+    });
+  }
+  function buildParcelInfosHtmlFromFiche(data, zoom = DEFAULT_PARCEL_FICHE_LEGEND_ZOOM) {
+    const features = data.features ?? [];
+    const featureLabel = createParcelFeatureLabel();
+    const supCategories = readSupCategories();
+    const grouped = groupFeatures(features, zoom, featureLabel, supCategories);
+    const sectionFamily = {
+      zonage: "du",
+      prescription: "du",
+      information: "du",
+      secteur: "du",
+      mec: "mec",
+      sup: "sup",
+      scot: "scot"
+    };
+    const order = [
+      "zonage",
+      "prescription",
+      "information",
+      "secteur",
+      "mec",
+      "sup",
+      "scot"
+    ];
+    const parts = [];
+    for (const section of order) {
+      const family = sectionFamily[section];
+      if (family && !isFicheDocumentFamilyVisible(family)) continue;
+      const list = grouped.get(section);
+      if (!(list == null ? void 0 : list.length)) continue;
+      const rows = list.map((f) => ruleRowHtml(f, zoom, featureLabel, supCategories)).join("");
+      parts.push(
+        `<section class="ec-fiche-info__rules-section"><h4 class="ec-fiche-info__rules-section-title">${escapeHtml(SECTION_TITLES[section])}</h4>${rows}</section>`
+      );
+    }
+    if (!parts.length) {
+      return "<p>Aucune règle d’urbanisme intersectant cette parcelle.</p>";
+    }
+    return parts.join("");
+  }
+  function documentFeatureIsNonExecutoire(feature, lookup) {
+    const props = feature.properties ?? {};
+    const gpuSite = gpuSiteDocumentForFeatureProps(props, lookup);
+    const effective = coerceDisplayString(props.effectiveStatus) || (gpuSite == null ? void 0 : gpuSite.effectiveStatus) || void 0;
+    return documentIsNonExecutoireEffectiveStatus(effective);
+  }
+  function buildScotDocumentTiles(scotFeatures, mecFeatures, blockedParents, lookup, ficheApi, mecCatalogVisible) {
+    var _a, _b;
+    const tiles = [];
+    for (const feature of dedupeScotFeaturesByPartition(scotFeatures)) {
+      const partition = coerceDisplayString((_a = feature.properties) == null ? void 0 : _a.partition).toLowerCase();
+      if (mecCatalogVisible && partition && blockedParents.has(partition)) {
+        for (const mec of dedupeMecFeaturesByPartition(mecFeatures)) {
+          const mecParent = documentPartitionKeyFromMecPartition(
+            coerceDisplayString((_b = mec.properties) == null ? void 0 : _b.partition)
+          ).toLowerCase();
+          if (mecParent !== partition) continue;
+          tiles.push(mecTileFromFeature(mec, ficheApi));
+          break;
+        }
+        continue;
+      }
+      tiles.push(scotTileFromFeature(feature, lookup, ficheApi));
+    }
+    return tiles;
+  }
+  function buildParcelDocumentsHtmlFromFiche(data, ficheApi) {
+    const all2 = data.features ?? [];
+    const lookup = gpuSiteDocumentLookupFromFicheApi(ficheApi);
+    const documentFeatures = all2.filter((f) => classifyFeature(f) === "document");
+    const scotFeatures = all2.filter((f) => classifyFeature(f) === "scot");
+    const mecFeatures = all2.filter((f) => classifyFeature(f) === "mec");
+    const hasSupOnParcel = all2.some((f) => classifyFeature(f) === "sup");
+    const mecCatalogVisible = isFicheDocumentFamilyVisible("mec");
+    const blockedParents = mecCatalogVisible ? blockedParentPartitionsFromMecFeatures(mecFeatures) : /* @__PURE__ */ new Set();
+    const parts = [];
+    if (documentFeatures.some((f) => documentFeatureIsNonExecutoire(f, lookup)) || ficheApi && buildParcelDocumentsPresentationHtml(ficheApi).includes("ec-fiche-info__callout")) {
+      parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML);
+    }
+    parts.push(
+      '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>'
+    );
+    const duTiles = isFicheDocumentFamilyVisible("du") ? [
+      ...mecCatalogVisible ? buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) : [],
+      ...buildDuDocumentTiles(documentFeatures, blockedParents, lookup, ficheApi)
+    ] : [];
+    const supTiles = isFicheDocumentFamilyVisible("sup") ? buildSupDocumentTiles(ficheApi, hasSupOnParcel) : [];
+    const scotTiles = isFicheDocumentFamilyVisible("scot") ? buildScotDocumentTiles(
+      scotFeatures,
+      mecFeatures,
+      blockedParents,
+      lookup,
+      ficheApi,
+      mecCatalogVisible
+    ) : [];
+    if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
+      const presentation = buildParcelDocumentsPresentationHtml(ficheApi);
+      const sections = presentation.replace(/^[\s\S]*?<p class="ec-fiche-info__intro">[\s\S]*?<\/p>/, "").trim();
+      if (sections) parts.push(sections);
+      return parts.join("");
+    }
+    if (!duTiles.length && !supTiles.length && !scotTiles.length) {
+      return parts.join("");
+    }
+    if (duTiles.length) {
+      parts.push('<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>');
+      parts.push(documentTilesListHtml(duTiles));
+    }
+    if (supTiles.length) {
+      parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>');
+      parts.push(documentTilesListHtml(supTiles));
+    }
+    if (scotTiles.length) {
+      parts.push('<h3 class="ec-fiche-info__section-title">Schémas de cohérence territoriale</h3>');
+      parts.push(documentTilesListHtml(scotTiles));
+    }
+    return parts.join("");
+  }
+  function resolveApiParcelFicheUrl() {
+    const raw = config.apiParcelFicheUrl;
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  function buildParcelFicheFetchUrl(parcelId) {
+    const template = resolveApiParcelFicheUrl();
+    if (!template) return null;
+    const placeholders2 = config.urlPlaceholders;
+    const ph = (placeholders2 == null ? void 0 : placeholders2.parcelId) ?? "{parcelId}";
+    const replaced = template.replaceAll(ph, encodeURIComponent(parcelId));
+    return resolveConfigUrlForFetch(replaced);
+  }
+  async function fetchGpuParcelFiche(parcelId) {
+    const url = buildParcelFicheFetchUrl(parcelId);
+    if (!url) throw new Error("Service fiche parcelle non configuré (apiParcelFicheUrl).");
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) {
+      throw new Error(`Parcel fiche HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!isGpuParcelFichePayload(data)) {
+      throw new Error("Invalid parcel fiche payload");
+    }
+    return data;
   }
   const TAB_DU = "du";
   const TAB_PSMV = "psmv";
@@ -66398,12 +68217,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       return lower.charAt(0).toUpperCase() + lower.slice(1);
     }).join("-");
   }
-  function formatDatapproFromDocumentName(documentName) {
-    const match2 = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i);
-    if (!(match2 == null ? void 0 : match2[3])) return null;
-    const date2 = match2[3];
-    return `${date2.slice(6, 8)}/${date2.slice(4, 6)}/${date2.slice(0, 4)}`;
-  }
   function pickProductionDocument(documents) {
     if (!(documents == null ? void 0 : documents.length)) return null;
     const production = documents.filter((d) => d.status === "document.production");
@@ -66415,130 +68228,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function mapHasProductionDocument(map2) {
     return Object.values(map2).some(partitionHasProductionDocument);
   }
-  function isPetFeature(feature) {
-    const nomfic = feature.nomfic;
-    return typeof nomfic === "string" && nomfic.includes("_97_00_");
-  }
-  function featureLabelHtml(feature) {
-    if ("typezone" in feature) {
-      const code = coerceDisplayString(feature.libelle);
-      const label = coerceDisplayString(feature.libelong ?? feature.libelle);
-      if (code && label && code !== label) {
-        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
-      }
-      if (label) return `<strong>${escapeHtml(label)}</strong>.`;
-      if (code) return `Zone classée <strong>${escapeHtml(code)}</strong>.`;
-      return "Zonage de type inconnu";
-    }
-    if ("typesect" in feature) {
-      const code = coerceDisplayString(feature.libelle);
-      const label = coerceDisplayString(feature.libelong ?? feature.libelle);
-      if (code && label) {
-        return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`;
-      }
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Secteur de type inconnu";
-    }
-    if ("typepsc" in feature) {
-      const label = coerceDisplayString(feature.libelle);
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Prescription de type inconnue";
-    }
-    if ("typeinf" in feature) {
-      const label = coerceDisplayString(feature.libelle);
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "Information de type inconnue";
-    }
-    if ("libelle" in feature) {
-      const label = coerceDisplayString(feature.libelle);
-      return label ? `<strong>${escapeHtml(label)}</strong>.` : "";
-    }
-    return "";
-  }
-  function featureEntryHtml(feature) {
-    const info = featureLabelHtml(feature);
-    if (!info) return "";
-    const urlfic = feature.urlfic;
-    if (typeof urlfic === "string" && urlfic.trim()) {
-      return `<p><a href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer">${info}</a></p>`;
-    }
-    return `<p>${info}</p>`;
-  }
-  function buildPartitionFeaturesHtml(partition) {
-    const features = partition.features ?? [];
-    const seen = /* @__PURE__ */ new Set();
-    const parts = [];
-    for (const feature of features) {
-      if (isPetFeature(feature)) continue;
-      const info = featureLabelHtml(feature);
-      if (!info) continue;
-      const key2 = `${coerceDisplayString(feature.nomfic)}|${info}`;
-      if (seen.has(key2)) continue;
-      seen.add(key2);
-      parts.push(featureEntryHtml(feature));
-    }
-    return parts.join("");
-  }
-  function documentIntroHtml(document2, kind) {
-    var _a;
-    const title = ((_a = document2.title) == null ? void 0 : _a.trim()) || document2.type || "document";
-    const documentName = document2.originalName ?? document2.name ?? "";
-    if (kind === "sup") {
-      return document2.title ? `<p><strong>${escapeHtml(document2.title)}</strong></p>` : `<p><strong>${escapeHtml(documentName || "Servitude")}</strong></p>`;
-    }
-    if (kind === "scot") {
-      const prefix = "Territoire couvert par ";
-      return `<p>${prefix}<strong>${escapeHtml(title)}</strong>.</p>`;
-    }
-    const article = document2.type === "CC" ? "la " : "le ";
-    let html2 = `<p>Parcelle couverte par ${article}<strong>${escapeHtml(title)}</strong>`;
-    if (documentName) {
-      const datappro = formatDatapproFromDocumentName(documentName);
-      if (datappro) {
-        const proc = typeof document2.typeproc_title === "string" && document2.typeproc_title.trim() ? ` (${document2.typeproc_title.trim()})` : "";
-        html2 += `, dont la dernière procédure${proc} a été approuvée le <strong>${escapeHtml(datappro)}</strong>`;
-      }
-    }
-    html2 += ".</p>";
-    if (document2.effectiveStatus === "NON_EXECUTOIRE") {
-      html2 += "<p><em>Ce document n’est pas exécutable en l’état.</em></p>";
-    }
-    return html2;
-  }
-  function buildNonExecutoireHint(document2, proceduresByDocument) {
-    var _a;
-    const key2 = document2.originalName ?? document2.name;
-    if (!key2 || !((_a = proceduresByDocument == null ? void 0 : proceduresByDocument[key2]) == null ? void 0 : _a.length)) return "";
-    const blocked = proceduresByDocument[key2].some((p5) => p5.documentNotEnforceable === true);
-    if (!blocked) return "";
-    return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`;
-  }
-  function buildPartitionBlockHtml(partitionKey, partition, kind, proceduresByDocument) {
-    const document2 = pickProductionDocument(partition.documents);
-    if (!document2) {
-      return `<p><strong>${escapeHtml(partitionKey)}</strong> — document indisponible.</p>`;
-    }
-    const parts = [documentIntroHtml(document2, kind)];
-    parts.push(buildNonExecutoireHint(document2, proceduresByDocument));
-    parts.push(buildPartitionFeaturesHtml(partition));
-    if (document2.archiveUrl) {
-      parts.push(
-        `<p><a href="${escapeHtml(document2.archiveUrl)}" target="_blank" rel="noopener noreferrer">Télécharger l’archive du document</a></p>`
-      );
-    }
-    return parts.filter(Boolean).join("");
-  }
   function buildDocumentTypeTabHtml(partitions, kind, proceduresByDocument) {
-    const keys = Object.keys(partitions);
-    if (!keys.length) return "";
-    if (keys.length === 1) {
-      return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument);
-    }
-    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
-    for (const key2 of keys) {
-      parts.push(
-        `<li>${buildPartitionBlockHtml(key2, partitions[key2], kind, proceduresByDocument)}</li>`
-      );
-    }
-    parts.push("</ul>");
-    return parts.join("");
+    return buildDocumentTypeTabTilesHtml(partitions, kind, proceduresByDocument);
   }
   function collectInProgressProcedures(proceduresByDocument) {
     if (!proceduresByDocument) return [];
@@ -66550,43 +68241,99 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return out;
   }
-  function buildProceduresTabHtml(procedures) {
-    var _a, _b, _c;
-    if (!procedures.length) return "";
-    const parts = ['<ul class="ec-fiche-info__proc-list">'];
-    for (const procedure of procedures) {
-      const typeLabel = ((_a = procedure.procedureType) == null ? void 0 : _a.title) ?? procedure.documentType ?? "Procédure";
-      const docName = procedure.documentName ?? procedure.name ?? "";
-      const gridTitle = ((_b = procedure.grid) == null ? void 0 : _b.title) ?? ((_c = procedure.grid) == null ? void 0 : _c.name) ?? "";
-      parts.push("<li>");
-      parts.push(
-        `<p><strong>${escapeHtml(typeLabel)}</strong>${docName ? ` — ${escapeHtml(docName)}` : ""}${gridTitle ? ` (${escapeHtml(gridTitle)})` : ""}</p>`
-      );
-      if (procedure.approbationDate) {
-        parts.push(`<p>Date d’approbation : ${escapeHtml(procedure.approbationDate)}</p>`);
-      }
-      const files = procedure.files ?? [];
-      if (files.length) {
-        parts.push("<ul>");
-        for (const file of files) {
-          const label = file.title ?? file.name ?? "Pièce";
-          if (file.url) {
-            parts.push(
-              `<li><a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></li>`
-            );
-          } else {
-            parts.push(`<li>${escapeHtml(label)}</li>`);
-          }
-        }
-        parts.push("</ul>");
-      }
-      parts.push("</li>");
+  function formatProcedureDisplayDate(raw) {
+    if (!(raw == null ? void 0 : raw.trim())) return null;
+    const value2 = raw.trim();
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value2)) return value2;
+    const iso = Date.parse(value2);
+    if (Number.isFinite(iso)) {
+      const d = new Date(iso);
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      return `${dd}/${mm}/${d.getFullYear()}`;
     }
-    parts.push("</ul>");
-    return parts.join("");
+    return value2;
   }
-  function buildCoastlineSupHint() {
-    return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`;
+  function oldestProcedureFileDate(procedure) {
+    const files = procedure.files ?? [];
+    let oldest = null;
+    for (const file of files) {
+      const candidate = file.uploadedAt ?? file.uploadDate;
+      if (!candidate) continue;
+      const ts = Date.parse(candidate);
+      if (!Number.isFinite(ts)) continue;
+      if (oldest == null || ts < oldest) oldest = ts;
+    }
+    if (oldest == null) return null;
+    return formatProcedureDisplayDate(new Date(oldest).toISOString());
+  }
+  function buildProceduresTabHtml(procedures) {
+    if (!procedures.length) return "";
+    const tiles = procedures.map((procedure) => {
+      var _a, _b, _c, _d, _e, _f;
+      const title = ((_a = procedure.name) == null ? void 0 : _a.trim()) || ((_c = (_b = procedure.procedureType) == null ? void 0 : _b.title) == null ? void 0 : _c.trim()) || ((_d = procedure.documentName) == null ? void 0 : _d.trim()) || "Procédure";
+      const inProgress = procedure.inProgress === true;
+      const detail = inProgress ? (() => {
+        const initiated = oldestProcedureFileDate(procedure);
+        return initiated ? `Initié le ${initiated}` : null;
+      })() : (() => {
+        const approved = formatProcedureDisplayDate(procedure.approbationDate);
+        return approved ? `Approuvée le ${approved}` : null;
+      })();
+      return procedureTileHtml({
+        title,
+        href: procedureTileHref(procedure.id, (_f = (_e = procedure.files) == null ? void 0 : _e[0]) == null ? void 0 : _f.url),
+        inProgress,
+        detailLine: detail
+      });
+    });
+    return documentTilesListHtml(tiles);
+  }
+  function collectMecProcedures(proceduresByDocument) {
+    if (!proceduresByDocument) return [];
+    const out = [];
+    for (const [docName, list] of Object.entries(proceduresByDocument)) {
+      if (!/^MEC_/i.test(docName)) continue;
+      for (const procedure of list) {
+        out.push(procedure);
+      }
+    }
+    return out;
+  }
+  function buildDuTabTilesHtml(partitions, data) {
+    var _a;
+    const keys = Object.keys(partitions);
+    if (!keys.length) return "";
+    const tiles = [];
+    for (const partition of Object.values(partitions)) {
+      const doc2 = pickProductionDocument(partition.documents);
+      if (!doc2) continue;
+      const title = ((_a = doc2.title) == null ? void 0 : _a.trim()) || doc2.type || "Document";
+      const name2 = doc2.originalName ?? doc2.name ?? "";
+      const partitionName = typeof doc2.name === "string" ? doc2.name : void 0;
+      const datappro = name2 ? formatDatapproFromDocumentName(name2) : null;
+      tiles.push(
+        documentUrbanismTileHtml({
+          title,
+          href: documentTileHrefFromApiFields(doc2),
+          effectiveStatus: doc2.effectiveStatus,
+          legalStatus: doc2.legalStatus,
+          status: doc2.status,
+          datapproLabel: datappro,
+          procedureNatureLabel: resolveLastApprovedProcedureNatureLabel(
+            doc2,
+            data.proceduresByDocument
+          ),
+          mecNoticeHtml: mecNoticeHtmlForDocumentName(data, name2, partitionName)
+        })
+      );
+    }
+    if (!tiles.length) return "";
+    const list = documentTilesListHtml(tiles);
+    if (keys.length > 1) {
+      return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`;
+    }
+    return list;
   }
   function normalizeLowScaleDocuments(value2) {
     if (!value2) return [];
@@ -66594,17 +68341,25 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (typeof value2 === "object") return Object.values(value2);
     return [];
   }
-  function buildLowScaleDocumentsHtml(documents) {
+  function buildLowScaleDocumentsHtml(documents, proceduresByDocument) {
     if (!documents.length) return "";
-    if (documents.length === 1) {
-      return documentIntroHtml(documents[0], "du");
-    }
-    const parts = ["<p>Zone d’incertitude où se superposent :</p><ul>"];
-    for (const doc2 of documents) {
-      parts.push(`<li>${documentIntroHtml(doc2, "du")}</li>`);
-    }
-    parts.push("</ul>");
-    return parts.join("");
+    const tiles = documents.map((doc2) => {
+      var _a;
+      const title = ((_a = doc2.title) == null ? void 0 : _a.trim()) || doc2.type || "Document";
+      const name2 = doc2.originalName ?? doc2.name ?? "";
+      const datappro = name2 ? formatDatapproFromDocumentName(name2) : null;
+      return documentUrbanismTileHtml({
+        title,
+        href: documentTileHrefFromApiFields(doc2),
+        effectiveStatus: doc2.effectiveStatus,
+        legalStatus: doc2.legalStatus,
+        status: doc2.status,
+        datapproLabel: datappro,
+        procedureNatureLabel: resolveLastApprovedProcedureNatureLabel(doc2, proceduresByDocument)
+      });
+    });
+    if (documents.length === 1) return documentTilesListHtml(tiles);
+    return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${documentTilesListHtml(tiles)}`;
   }
   function territoryDocumentTabLabel(id, defaultLabel) {
     if (id === TAB_DU) return "Documents";
@@ -66612,60 +68367,65 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (id === TAB_PROCEDURES) return "Procédures";
     return defaultLabel;
   }
-  function wrapTerritoryTabBody(data, bodyHtml) {
+  function wrapTerritoryTabBody(bodyHtml, partitions) {
     let html2 = bodyHtml;
     if (html2 && !html2.includes("ec-fiche-info__section-title")) {
       html2 = `<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>${html2}`;
     }
-    return prependNonExecutoireCalloutIfNeeded(html2, data);
+    return prependNonExecutoireCalloutForPartitionMap(html2, partitions);
   }
   function buildDocumentTabs(data, mode2) {
     const tabs = [];
     const proceduresByDocument = data.proceduresByDocument;
     const territory = mode2 === MAP_MODE_TERRITORY;
     const dus = normalizePartitionsMap(data.dus);
-    if (mapHasProductionDocument(dus)) {
-      const bodyHtml = buildDocumentTypeTabHtml(dus, "du", proceduresByDocument);
+    if (mapHasProductionDocument(dus) && isFicheDocumentFamilyVisible("du")) {
+      const bodyHtml = buildDuTabTilesHtml(dus, data);
       tabs.push({
         id: TAB_DU,
         label: territory ? territoryDocumentTabLabel(TAB_DU, "Document d’urbanisme") : "Document d’urbanisme",
-        bodyHtml: territory ? wrapTerritoryTabBody(data, bodyHtml) : bodyHtml
+        bodyHtml: territory ? wrapTerritoryTabBody(bodyHtml, dus) : bodyHtml
       });
     }
     const psmvs = normalizePartitionsMap(data.psmvs);
-    if (mapHasProductionDocument(psmvs)) {
+    if (mapHasProductionDocument(psmvs) && isFicheDocumentFamilyVisible("psmv")) {
       const bodyHtml = buildDocumentTypeTabHtml(psmvs, "psmv", proceduresByDocument);
       tabs.push({
         id: TAB_PSMV,
         label: territory ? territoryDocumentTabLabel(TAB_PSMV, "PSMV") : "PSMV",
-        bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml
+        bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, psmvs) : bodyHtml
       });
     }
     const sups = normalizePartitionsMap(data.sups);
-    if (mapHasProductionDocument(sups)) {
-      let body = buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
-      if (data.is_el9_alert) body += buildCoastlineSupHint();
+    if (isFicheDocumentFamilyVisible("sup") && (mapHasProductionDocument(sups) || data.is_el9_alert)) {
+      const body = buildGroupedSupTabHtml(sups, { isEl9Alert: data.is_el9_alert === true }) || buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
       tabs.push({
         id: TAB_SUP,
         label: territory ? territoryDocumentTabLabel(TAB_SUP, "Servitude") : "Servitude",
-        bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(body, data) : body
+        bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(body, sups) : body
       });
     }
     const scots = normalizePartitionsMap(data.scots);
-    if (mapHasProductionDocument(scots)) {
-      const bodyHtml = buildDocumentTypeTabHtml(scots, "scot", proceduresByDocument);
+    if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible("scot")) {
+      const bodyHtml = buildDuTabTilesHtml(scots, data);
       tabs.push({
         id: TAB_SCOT,
         label: territory ? territoryDocumentTabLabel(TAB_SCOT, "SCoT") : "SCoT",
-        bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml
+        bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, scots) : bodyHtml
       });
     }
     const inProgress = collectInProgressProcedures(proceduresByDocument);
-    if (inProgress.length) {
-      let bodyHtml = buildProceduresTabHtml(inProgress);
+    const mecProcedures = collectMecProcedures(proceduresByDocument);
+    const procedureTiles = [...inProgress];
+    for (const mecProc of mecProcedures) {
+      if (!procedureTiles.some((p5) => p5.id === mecProc.id)) procedureTiles.push(mecProc);
+    }
+    const mecProceduresHtml = buildMecTerritoryProceduresHtml(data);
+    if (isFicheDocumentFamilyVisible("mec") && (procedureTiles.length || mecProceduresHtml)) {
+      let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : "";
+      if (mecProceduresHtml) bodyHtml += mecProceduresHtml;
       if (territory) {
         bodyHtml = `<h3 class="ec-fiche-info__section-title">Procédures en cours</h3>${bodyHtml}`;
-        bodyHtml = prependNonExecutoireCalloutIfNeeded(bodyHtml, data);
       }
       tabs.push({
         id: TAB_PROCEDURES,
@@ -66675,28 +68435,29 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (!tabs.some((t) => t.id === TAB_DU)) {
       const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument);
-      if (lowScaleDocs.length) {
+      if (lowScaleDocs.length && isFicheDocumentFamilyVisible("du")) {
         tabs.unshift({
           id: TAB_DU,
           label: "Document d’urbanisme",
-          bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs)
+          bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs, data.proceduresByDocument)
         });
       }
     }
     return tabs;
   }
-  function buildParcelUrbanismInfosHtml(data) {
-    const dus = normalizePartitionsMap(data.dus);
-    const keys = Object.keys(dus);
-    if (!keys.length) {
-      return "<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>";
-    }
-    const parts = [];
-    for (const key2 of keys) {
-      const block = buildPartitionFeaturesHtml(dus[key2]);
-      if (block) parts.push(block);
-    }
-    return parts.join("") || "<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>";
+  function absorbedMunicipalityHint(data) {
+    var _a, _b;
+    const deleted = data.deletedGrids ?? [];
+    const grid = data.grid;
+    if (!deleted.length || !(grid == null ? void 0 : grid.name)) return "";
+    const absorbed = (_b = (_a = deleted.find((g) => {
+      var _a2;
+      return (_a2 = g.properties) == null ? void 0 : _a2.name;
+    })) == null ? void 0 : _a.properties) == null ? void 0 : _b.name;
+    if (!absorbed) return "";
+    const current = formatMunicipalityName(grid.name.trim());
+    const former = formatMunicipalityName(String(absorbed).trim());
+    return `<p class="ec-fiche-info__absorbed">Zone de ${escapeHtml(former)} (fusionnée au sein de la commune de ${escapeHtml(current)}).</p>`;
   }
   function municipalityTitle(data) {
     const grid = data.grid;
@@ -66710,37 +68471,271 @@ Expected function or array of functions, received type ${typeof value2}.`
     if ((_a = data.grid) == null ? void 0 : _a.is_rnu) {
       return "<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>";
     }
-    const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument));
+    const lowScaleHtml = buildLowScaleDocumentsHtml(
+      normalizeLowScaleDocuments(data.lowScaleDocument),
+      data.proceduresByDocument
+    );
     if (lowScaleHtml) return lowScaleHtml;
     return "<p>Aucun document disponible à cet emplacement.</p>";
   }
+  function extractParcelFichePayload(data) {
+    var _a;
+    if (data.parcelFiche && isGpuParcelFichePayload(data.parcelFiche)) {
+      return data.parcelFiche;
+    }
+    if (((_a = data.features) == null ? void 0 : _a.length) && isGpuParcelFichePayload({ features: data.features })) {
+      return { features: data.features };
+    }
+    return null;
+  }
   function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
+    const hasParcel = ficheHasParcelAtPoint(data);
+    const hasTerritory = ficheHasTerritoryAtPoint(data);
     const parcel = data.parcel ?? null;
-    const territoryTitle = municipalityTitle(data);
-    const parcelLabel = parcelShortLabel(parcel) || "Parcelle";
+    const territoryTitle = hasTerritory ? municipalityTitle(data) : "Territoire";
+    const parcelLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_MESSAGE;
+    const parcelSwitchLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_MESSAGE;
     const documentTabs = mode2 === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode2) : void 0;
     const bodyHtml = mode2 === MAP_MODE_TERRITORY && !(documentTabs == null ? void 0 : documentTabs.length) ? fallbackBodyHtml(data) : void 0;
+    const absorbedHtml = absorbedMunicipalityHint(data);
     const base = {
       title: mode2 === MAP_MODE_PARCEL ? parcelLabel : territoryTitle,
       mapMode: mode2,
       parcelLabel,
       territoryTitle,
-      cadastreReferences: cadastreReferencesFromParcel(parcel),
+      parcelSwitchLabel,
+      parcelMissingAtPoint: !hasParcel,
+      cadastreReferences: hasParcel ? cadastreReferencesFromParcel(parcel) : null,
       documentTabs: (documentTabs == null ? void 0 : documentTabs.length) ? documentTabs : void 0,
-      bodyHtml,
+      bodyHtml: mode2 === MAP_MODE_TERRITORY && absorbedHtml && !(documentTabs == null ? void 0 : documentTabs.length) ? `${absorbedHtml}${fallbackBodyHtml(data)}` : bodyHtml,
+      headerHtml: mode2 === MAP_MODE_TERRITORY && absorbedHtml ? absorbedHtml : void 0,
       raw: { ...data, lon, lat, mode: mode2, source: "gpu-fiche-info-api" }
     };
     if (mode2 === MAP_MODE_PARCEL) {
-      base.parcelInfosHtml = buildParcelUrbanismInfosHtml(data);
-      base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data);
       base.headerHtml = void 0;
-    } else {
-      base.headerHtml = void 0;
+      if (!hasParcel) {
+        const msg = `<p>${escapeHtml(NO_PARCEL_AT_POINT_MESSAGE)}</p>`;
+        base.parcelInfosHtml = msg;
+        base.parcelDocumentsHtml = msg;
+      } else {
+        const parcelFiche = extractParcelFichePayload(data);
+        if (parcelFiche) {
+          base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche);
+          base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data);
+          base.raw = { ...base.raw, _parcelFiche: parcelFiche };
+        } else {
+          base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data);
+          base.parcelInfosHtml = void 0;
+        }
+      }
     }
+    if (mode2 === MAP_MODE_TERRITORY && (documentTabs == null ? void 0 : documentTabs.length) && absorbedHtml) {
+      base.documentTabs = documentTabs.map(
+        (tab, index2) => index2 === 0 ? { ...tab, bodyHtml: `${absorbedHtml}${tab.bodyHtml}` } : tab
+      );
+    }
+    applyCatalogVisibilityToFicheSelection(base);
     return base;
   }
-  const APICARTO_PARCEL$1 = "https://apicarto.ign.fr/api/cadastre/parcelle";
+  function extractGpuFichePayloadFromSelectionRaw(raw) {
+    if (raw.source !== "gpu-fiche-info-api") return null;
+    const copy = { ...raw };
+    delete copy.lon;
+    delete copy.lat;
+    delete copy.mode;
+    delete copy.source;
+    if (!isGpuFicheInfoPayload(copy)) return null;
+    return copy;
+  }
+  function refreshFicheSelectionCatalogVisibility(selection) {
+    var _a;
+    const raw = selection.raw;
+    if (!raw || typeof raw !== "object") return selection;
+    if (selection.loading) return selection;
+    const data = extractGpuFichePayloadFromSelectionRaw(raw);
+    if (!data) {
+      const copy = {
+        ...selection,
+        documentTabs: (_a = selection.documentTabs) == null ? void 0 : _a.map((tab) => ({ ...tab }))
+      };
+      applyCatalogVisibilityToFicheSelection(copy);
+      return copy;
+    }
+    const lon = Number(raw.lon) || 0;
+    const lat = Number(raw.lat) || 0;
+    const mode2 = selection.mapMode ?? raw.mode ?? MAP_MODE_TERRITORY;
+    const rebuilt = ficheSelectionFromGpuApi(data, mode2, lon, lat);
+    return {
+      ...selection,
+      documentTabs: rebuilt.documentTabs,
+      bodyHtml: rebuilt.bodyHtml,
+      headerHtml: rebuilt.headerHtml,
+      parcelInfosHtml: rebuilt.parcelInfosHtml,
+      parcelDocumentsHtml: rebuilt.parcelDocumentsHtml
+    };
+  }
+  const PARCEL_ID_FIELDS = [
+    "code_dep",
+    "code_com",
+    "code_arr",
+    "com_abs",
+    "section",
+    "numero"
+  ];
+  function buildParcelIdFromProperties(properties) {
+    if (!properties) return null;
+    const parts = [];
+    for (const field of PARCEL_ID_FIELDS) {
+      const v = coerceDisplayString(properties[field]).trim();
+      if (!v) return null;
+      parts.push(v);
+    }
+    return parts.join("_");
+  }
+  function resolveParcelIdFromRaw(raw) {
+    var _a;
+    if (!raw) return null;
+    const direct = raw.parcelId;
+    if (typeof direct === "string" && direct.includes("_")) return direct;
+    const parcel = raw.parcel;
+    if (parcel && typeof parcel === "object") {
+      const p5 = parcel;
+      if (typeof p5.id === "string" && p5.id.includes("_")) return p5.id;
+      const fromProps = buildParcelIdFromProperties(p5);
+      if (fromProps) return fromProps;
+      const fc = p5.features;
+      if (Array.isArray(fc) && fc[0] && typeof fc[0] === "object") {
+        const feat = fc[0];
+        const fromFeat = buildParcelIdFromProperties(feat.properties);
+        if (fromFeat) return fromFeat;
+        if (typeof ((_a = feat.properties) == null ? void 0 : _a.id) === "string") return feat.properties.id;
+      }
+    }
+    if (typeof raw.id === "string" && raw.id.includes("_")) return raw.id;
+    return buildParcelIdFromProperties(raw);
+  }
+  function territoryCacheKeyFromPayload(data) {
+    var _a, _b, _c, _d;
+    const insee = (_b = (_a = data.grid) == null ? void 0 : _a.insee) == null ? void 0 : _b.trim();
+    const name2 = (_d = (_c = data.grid) == null ? void 0 : _c.name) == null ? void 0 : _d.trim();
+    if (!insee && !name2) return null;
+    return `${insee ?? ""}|${name2 ?? ""}`;
+  }
+  function parcelCacheKeyFromPayload(data) {
+    const extended = data;
+    return resolveParcelIdFromRaw({
+      parcel: data.parcel ?? void 0,
+      parcelId: extended.parcelId
+    });
+  }
+  const territorySelectionByKey = /* @__PURE__ */ new Map();
+  const parcelSelectionByKey = /* @__PURE__ */ new Map();
+  function rememberFicheSelectionCaches(data, territorySelection, parcelSelection) {
+    const tKey = territoryCacheKeyFromPayload(data);
+    if (tKey && territorySelection) {
+      territorySelectionByKey.set(tKey, territorySelection);
+    }
+    const pKey = parcelCacheKeyFromPayload(data);
+    if (pKey && parcelSelection) {
+      parcelSelectionByKey.set(pKey, parcelSelection);
+    }
+  }
+  let lastKnownParcelCacheKey = null;
+  let lastKnownTerritoryCacheKey = null;
+  const inflightPayloadByPoint = /* @__PURE__ */ new Map();
+  function fichePayloadInflightKey(lon, lat, zoom) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}`;
+  }
+  function rememberFicheInfoCacheKeysFromPayload(data) {
+    lastKnownParcelCacheKey = parcelCacheKeyFromPayload(data);
+    lastKnownTerritoryCacheKey = territoryCacheKeyFromPayload(data);
+  }
+  function appendClientCacheHints(url, mode2) {
+    if (mode2 === MAP_MODE_PARCEL && lastKnownParcelCacheKey) {
+      url.searchParams.set("knownParcelId", lastKnownParcelCacheKey);
+    }
+    if (mode2 === MAP_MODE_TERRITORY && lastKnownTerritoryCacheKey) {
+      url.searchParams.set("knownGridInsee", lastKnownTerritoryCacheKey.split("|")[0] ?? "");
+    }
+  }
+  async function fetchGpuFicheInfoPayload(params2) {
+    if (typeof window === "undefined") return null;
+    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom);
+    const existing = inflightPayloadByPoint.get(inflightKey);
+    if (existing) return existing;
+    const promise = fetchGpuFicheInfoPayloadImpl(params2).finally(() => {
+      inflightPayloadByPoint.delete(inflightKey);
+    });
+    inflightPayloadByPoint.set(inflightKey, promise);
+    return promise;
+  }
+  async function fetchGpuFicheInfoPayloadImpl(params2) {
+    const primary = resolveFicheInfoFetchUrl(params2.mode);
+    const combined = resolveFicheInfoEndpointUrl("combined");
+    const urls = [primary, combined].filter(
+      (u, i, arr) => Boolean(u && arr.indexOf(u) === i)
+    );
+    for (const fetchBase of urls) {
+      const payload = await fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2);
+      if (payload) return payload;
+    }
+    return null;
+  }
+  async function fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2) {
+    const resolved = resolveConfigUrlForFetch(fetchBase);
+    const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
+    appendFicheInfoQueryParams(url, params2);
+    appendClientCacheHints(url, params2.mode);
+    if (shouldAppendLegacyFicheModeParam(resolved)) {
+      url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
+    }
+    const preferCombined = Boolean(
+      "apiFicheInfoPreferCombined" in config && config.apiFicheInfoPreferCombined
+    );
+    if (preferCombined && url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
+      url.searchParams.set("scope", "both");
+    }
+    try {
+      const res = await fetch(url.toString(), { credentials: "same-origin" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!isGpuFicheInfoPayload(data)) return null;
+      rememberFicheInfoCacheKeysFromPayload(data);
+      return data;
+    } catch {
+      return null;
+    }
+  }
+  const parcelDetailById = /* @__PURE__ */ new Map();
+  function parcelIdFromSelection(selection) {
+    if (!(selection == null ? void 0 : selection.raw) || typeof selection.raw !== "object") return null;
+    return resolveParcelIdFromRaw(selection.raw);
+  }
+  function getParcelFicheDetailCache(parcelId) {
+    return parcelDetailById.get(parcelId) ?? null;
+  }
+  function storeParcelFicheDetailCache(entry) {
+    parcelDetailById.set(entry.parcelId, entry);
+  }
+  function applyParcelFicheDetailCache(selection) {
+    const parcelId = parcelIdFromSelection(selection);
+    if (!parcelId) return selection;
+    const cached = getParcelFicheDetailCache(parcelId);
+    if (!cached) return selection;
+    const raw = {
+      ...selection.raw && typeof selection.raw === "object" ? selection.raw : {},
+      parcelId,
+      _parcelFiche: cached.parcelFiche
+    };
+    return {
+      ...selection,
+      raw,
+      parcelInfosHtml: cached.parcelInfosHtml,
+      parcelDocumentsHtml: cached.parcelDocumentsHtml
+    };
+  }
   const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
+  const FICHE_PARCEL_UNAVAILABLE_BODY = "<p>Indisponibilité du service fiche parcelle (API gpu-site requise).</p>";
   let mapPointRequestSeq = 0;
   const FICHE_POINT_EPS = 1e-7;
   let fichePointCache = null;
@@ -66765,7 +68760,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!marker) return;
     const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
     if (cached) {
-      showFiche(cached);
+      showFiche(withParcelDetailCache(cached, mode2));
       return;
     }
     void loadFicheForMapPoint({
@@ -66776,9 +68771,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       markerPlacedAtClick: true,
       skipLocationMarker: true
     });
-  }
-  function pointGeomParam$1(lon, lat) {
-    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
   }
   function resolveApiFicheInfoUrl() {
     const raw = config.apiFicheInfoUrl;
@@ -66838,10 +68830,42 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
     });
   }
+  function shouldFocusFicheTabOnPublish() {
+    const api = tabPanelsApiRef.value;
+    if (!(api == null ? void 0 : api.isOpen.value)) return true;
+    if (api.activeTab.value == null) return true;
+    return api.activeTab.value === TAB_PANEL_IDS.fiche;
+  }
   function showFiche(selection) {
-    var _a;
     syncCadastreLowFromFicheSelectionRaw(selection.raw);
-    (_a = tabPanelsApiRef.value) == null ? void 0 : _a.showSelection(selection);
+    const api = tabPanelsApiRef.value;
+    if (!api) return;
+    if (shouldFocusFicheTabOnPublish()) {
+      api.showSelection(selection);
+    } else {
+      api.updateSelection(selection);
+    }
+  }
+  function refreshFicheForCatalogVisibility() {
+    var _a, _b;
+    const api = tabPanelsApiRef.value;
+    const current = api == null ? void 0 : api.selection.value;
+    if (!(current == null ? void 0 : current.raw) || current.loading) return;
+    const next = refreshFicheSelectionCatalogVisibility(current);
+    syncCadastreLowFromFicheSelectionRaw(next.raw);
+    api == null ? void 0 : api.updateSelection(next);
+    const parcelId = parcelIdFromSelection(next);
+    if (parcelId && ((_a = next.parcelInfosHtml) == null ? void 0 : _a.trim()) && ((_b = next.parcelDocumentsHtml) == null ? void 0 : _b.trim()) && next.raw && typeof next.raw === "object") {
+      const parcelFiche = next.raw._parcelFiche;
+      if (parcelFiche) {
+        storeParcelFicheDetailCache({
+          parcelId,
+          parcelFiche,
+          parcelInfosHtml: next.parcelInfosHtml,
+          parcelDocumentsHtml: next.parcelDocumentsHtml
+        });
+      }
+    }
   }
   function syncFicheLocationMarker(lon, lat) {
     showMapLocationMarker(lon, lat, {
@@ -66850,73 +68874,30 @@ Expected function or array of functions, received type ${typeof value2}.`
       center: false
     });
   }
+  function withParcelDetailCache(selection, mode2) {
+    if (mode2 !== MAP_MODE_PARCEL) return selection;
+    return applyParcelFicheDetailCache(selection);
+  }
   function applyMapPointResult(requestId, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker) {
     if (requestId !== mapPointRequestSeq) return null;
-    storeFicheInCache(mode2, lon, lat, selection);
-    showFiche(selection);
+    const resolved = withParcelDetailCache(selection, mode2);
+    storeFicheInCache(mode2, lon, lat, resolved);
+    showFiche(resolved);
     if (!skipLocationMarker && !markerPlacedAtClick) {
       syncFicheLocationMarker(lon, lat);
     }
-    return selection;
+    return resolved;
   }
-  async function fetchGeoJson(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+  function selectionFromGpuPayload(data, mode2, lon, lat) {
+    return ficheSelectionFromGpuApi(data, mode2, lon, lat);
   }
-  async function tryGpuSiteFiche(apiBase, params2) {
-    if (typeof window === "undefined") return null;
-    const fetchBase = resolveConfigUrlForFetch(apiBase);
-    const url = fetchBase.startsWith("/") ? new URL(fetchBase, window.location.origin) : new URL(fetchBase);
-    url.searchParams.set("lon", String(params2.lon));
-    url.searchParams.set("lat", String(params2.lat));
-    url.searchParams.set("mode", String(params2.mode));
-    url.searchParams.set("zoom", String(Math.round(params2.zoom)));
-    try {
-      const res = await fetch(url.toString(), { credentials: "same-origin" });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (isGpuFicheInfoPayload(data)) {
-        return ficheSelectionFromGpuApi(data, params2.mode, params2.lon, params2.lat);
-      }
-      const record = data;
-      const title = coerceDisplayString(record.title ?? record.name, "Informations");
-      const bodyHtml = coerceDisplayString(
-        record.bodyHtml ?? record.html ?? record.content ?? record.body,
-        "<p>Informations disponibles.</p>"
-      );
-      const raw = record.raw && typeof record.raw === "object" ? record.raw : record;
-      return { title, bodyHtml, raw };
-    } catch {
-      return null;
-    }
-  }
-  function parcelFromApicarto(lon, lat, props) {
-    const parcel = props;
-    const label = parcelShortLabel(parcel) || "Parcelle";
-    return {
-      title: label,
-      mapMode: MAP_MODE_PARCEL,
-      parcelLabel: label,
-      territoryTitle: coerceDisplayString(props.nom_com),
-      cadastreReferences: cadastreReferencesFromParcel(parcel),
-      parcelInfosHtml: "<p>Documents d’urbanisme indisponibles (parcelle APICarto seule).</p>",
-      parcelDocumentsHtml: "<p>Aucun document disponible (API fiche non configurée).</p>",
-      raw: { ...props, lon, lat, mode: MAP_MODE_PARCEL, source: "apicarto-cadastre" }
-    };
-  }
-  async function ficheParcelFromApicarto(lon, lat) {
-    var _a;
-    const geo = await fetchGeoJson(`${APICARTO_PARCEL$1}?geom=${pointGeomParam$1(lon, lat)}`);
-    const feature = (_a = geo.features) == null ? void 0 : _a[0];
-    if (!(feature == null ? void 0 : feature.properties)) {
-      return {
-        title: "Parcelle",
-        bodyHtml: "<p>Aucune parcelle cadastrale à cet emplacement.</p>",
-        raw: { lon, lat, mode: MAP_MODE_PARCEL }
-      };
-    }
-    return parcelFromApicarto(lon, lat, feature.properties);
+  function storeBothModeSelectionsAtPoint(lon, lat, data) {
+    const territory = selectionFromGpuPayload(data, MAP_MODE_TERRITORY, lon, lat);
+    const parcel = selectionFromGpuPayload(data, MAP_MODE_PARCEL, lon, lat);
+    rememberFicheSelectionCaches(data, territory, parcel);
+    storeFicheInCache(MAP_MODE_TERRITORY, lon, lat, territory);
+    storeFicheInCache(MAP_MODE_PARCEL, lon, lat, parcel);
+    return { territory, parcel };
   }
   async function loadFicheForMapPointImpl(params2) {
     const requestId = ++mapPointRequestSeq;
@@ -66926,71 +68907,41 @@ Expected function or array of functions, received type ${typeof value2}.`
     const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
     showLoading(loadingTitle);
     const apiUrl = resolveApiFicheInfoUrl();
-    if (params2.mode === MAP_MODE_TERRITORY) {
-      if (!apiUrl) {
-        return applyMapPointResult(
-          requestId,
-          params2.lon,
-          params2.lat,
-          params2.mode,
-          ficheServiceUnavailableSelection(loadingTitle),
-          markerPlacedAtClick,
-          skipLocationMarker
-        );
-      }
-      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
-      const selection = fromSite ?? ficheServiceUnavailableSelection(loadingTitle);
+    if (!apiUrl) {
+      const body = params2.mode === MAP_MODE_PARCEL ? FICHE_PARCEL_UNAVAILABLE_BODY : FICHE_UNAVAILABLE_BODY;
       return applyMapPointResult(
         requestId,
         params2.lon,
         params2.lat,
         params2.mode,
-        selection,
+        { title: loadingTitle, bodyHtml: body, raw: { source: "fiche-service-unavailable" } },
         markerPlacedAtClick,
         skipLocationMarker
       );
     }
-    if (apiUrl) {
-      const fromSite = await tryGpuSiteFiche(apiUrl, params2);
-      if (fromSite) {
-        return applyMapPointResult(
-          requestId,
-          params2.lon,
-          params2.lat,
-          params2.mode,
-          fromSite,
-          markerPlacedAtClick,
-          skipLocationMarker
-        );
-      }
-    }
-    try {
-      const selection = await ficheParcelFromApicarto(params2.lon, params2.lat);
+    const payload = await fetchGpuFicheInfoPayload(params2);
+    if (!payload) {
       return applyMapPointResult(
         requestId,
         params2.lon,
         params2.lat,
         params2.mode,
-        selection,
-        markerPlacedAtClick,
-        skipLocationMarker
-      );
-    } catch {
-      const fallback = {
-        title: loadingTitle,
-        bodyHtml: `<p>Impossible de charger les informations (${escapeHtml(String(params2.lon))}, ${escapeHtml(String(params2.lat))}).</p>`,
-        raw: { lon: params2.lon, lat: params2.lat, mode: params2.mode }
-      };
-      return applyMapPointResult(
-        requestId,
-        params2.lon,
-        params2.lat,
-        params2.mode,
-        fallback,
+        ficheServiceUnavailableSelection(loadingTitle),
         markerPlacedAtClick,
         skipLocationMarker
       );
     }
+    const { territory, parcel } = storeBothModeSelectionsAtPoint(params2.lon, params2.lat, payload);
+    const selection = params2.mode === MAP_MODE_PARCEL ? parcel : territory;
+    return applyMapPointResult(
+      requestId,
+      params2.lon,
+      params2.lat,
+      params2.mode,
+      selection,
+      markerPlacedAtClick,
+      skipLocationMarker
+    );
   }
   function loadFicheForMapPoint(params2) {
     return new Promise((resolve2) => {
@@ -67038,6 +68989,52 @@ Expected function or array of functions, received type ${typeof value2}.`
       bodyHtml: `<p><strong>${escapeHtml(label)}</strong></p><p>Coordonnées absentes — zoomez et cliquez sur la parcelle.</p>`,
       raw: { fullText: label, mode: mode2 }
     });
+  }
+  async function loadParcelFicheDetail(selection) {
+    const parcelId = parcelIdFromSelection(selection);
+    if (!parcelId) {
+      throw new Error("Identifiant parcelle indisponible");
+    }
+    const cachedDetail = getParcelFicheDetailCache(parcelId);
+    if (cachedDetail) {
+      const next2 = applyParcelFicheDetailCache(selection);
+      showFiche(next2);
+      const marker2 = readMapPermalinkMarker(getMapPermalinkParams());
+      if (marker2) {
+        storeFicheInCache(MAP_MODE_PARCEL, marker2.lon, marker2.lat, next2);
+      }
+      return next2;
+    }
+    const raw = {
+      ...selection.raw && typeof selection.raw === "object" ? selection.raw : {}
+    };
+    let payload = raw._parcelFiche;
+    if (!payload) {
+      payload = await fetchGpuParcelFiche(parcelId);
+      raw._parcelFiche = payload;
+      raw.parcelId = parcelId;
+    }
+    const parcelInfosHtml = buildParcelInfosHtmlFromFiche(payload);
+    const ficheApi = isGpuFicheInfoPayload(raw) ? raw : null;
+    const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload, ficheApi);
+    storeParcelFicheDetailCache({
+      parcelId,
+      parcelFiche: payload,
+      parcelInfosHtml,
+      parcelDocumentsHtml
+    });
+    const next = {
+      ...selection,
+      raw,
+      parcelInfosHtml,
+      parcelDocumentsHtml
+    };
+    showFiche(next);
+    const marker = readMapPermalinkMarker(getMapPermalinkParams());
+    if (marker) {
+      storeFicheInCache(MAP_MODE_PARCEL, marker.lon, marker.lat, next);
+    }
+    return next;
   }
   const LOCATION_SEARCH_ANIMATION_MS = 650;
   function animateViewFit(map2, extent, options = {}) {
@@ -67099,9 +69096,50 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (codeNum >= 69381 && codeNum <= 69389) return "69123";
     return null;
   }
-  const APICARTO_COMMUNE = "https://apicarto.ign.fr/api/cadastre/commune";
-  const APICARTO_PARCEL = "https://apicarto.ign.fr/api/cadastre/parcelle";
-  const GEO_API_COMMUNE = "https://geo.api.gouv.fr/communes";
+  function isMunicipalArrondissementInsee(codeInsee) {
+    return parentCommuneInseeForArrondissement(codeInsee) != null;
+  }
+  function readGeometry$1(value2) {
+    if (!value2 || typeof value2 !== "object") return null;
+    const g = value2;
+    return typeof g.type === "string" ? g : null;
+  }
+  function gridInseeFromPayload(payload) {
+    const grid = payload.grid;
+    if (!grid || typeof grid !== "object") return "";
+    const insee = grid.insee;
+    return typeof insee === "string" ? insee : "";
+  }
+  function parcelGeometryFromPayload(payload) {
+    const direct = readGeometry$1(payload.parcelGeometry);
+    if (direct) return direct;
+    const raw = payload;
+    const parcelFeature = raw.parcelFeature;
+    if (parcelFeature && typeof parcelFeature === "object") {
+      return readGeometry$1(parcelFeature.geometry);
+    }
+    return null;
+  }
+  function modeEmprisePartsFromFichePayload(payload, mode2) {
+    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
+    if (resolvedMode === MAP_MODE_PARCEL) {
+      const geometry = parcelGeometryFromPayload(payload);
+      return geometry ? [{ kind: "parcel", geometry }] : [];
+    }
+    if (resolvedMode !== MAP_MODE_TERRITORY) return [];
+    const insee = gridInseeFromPayload(payload);
+    const parentGeometry = readGeometry$1(payload.parentGridGeometry);
+    const gridGeometry = readGeometry$1(payload.gridGeometry);
+    const parts = [];
+    if (parentGeometry) {
+      parts.push({ kind: "commune", geometry: parentGeometry });
+    }
+    if (gridGeometry) {
+      const kind = parentGeometry && insee && isMunicipalArrondissementInsee(insee) ? "arrondissement" : "commune";
+      parts.push({ kind, geometry: gridGeometry });
+    }
+    return parts;
+  }
   const MODE_EMPRISE_PROP = "ec-mode-emprise";
   const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
   let empriseTargetKey = null;
@@ -67134,9 +69172,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
     const stored = emprisePointCache.byMode[mode2] ?? [];
     return stored.map(cloneEmpriseFeature);
-  }
-  function pointGeomParam(lon, lat) {
-    return encodeURIComponent(JSON.stringify({ type: "Point", coordinates: [lon, lat] }));
   }
   function modeEmpriseStyle(stroke, fill) {
     return new Style({
@@ -67186,60 +69221,48 @@ Expected function or array of functions, received type ${typeof value2}.`
     feature.setStyle(styleForKind(kind));
     return feature;
   }
-  async function fetchCadastreCommuneAtPoint(lon, lat) {
+  function readMapZoom() {
     var _a;
-    const res = await fetch(`${APICARTO_COMMUNE}?geom=${pointGeomParam(lon, lat)}`);
-    if (!res.ok) return null;
-    const geo = await res.json();
-    return ((_a = geo.features) == null ? void 0 : _a[0]) ?? null;
+    const map2 = (_a = searchEngineLayerHostRef.value) == null ? void 0 : _a.getMap();
+    return (map2 == null ? void 0 : map2.getView().getZoom()) ?? 15;
   }
-  async function fetchCommuneContourFromGeoApi(codeInsee) {
-    const res = await fetch(
-      `${GEO_API_COMMUNE}/${encodeURIComponent(codeInsee)}?format=geojson&geometry=contour`
-    );
-    if (!res.ok) return null;
-    const raw = await res.json();
-    return (raw == null ? void 0 : raw.geometry) ? raw : null;
-  }
-  async function fetchParcelFeature(lon, lat) {
-    var _a;
-    const res = await fetch(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`);
-    if (!res.ok) return null;
-    const geo = await res.json();
-    const raw = (_a = geo.features) == null ? void 0 : _a[0];
-    if (!(raw == null ? void 0 : raw.geometry)) return null;
-    return readGeoJsonFeature(raw, "parcel");
-  }
-  async function fetchTerritoryEmpriseFeatures(lon, lat) {
-    var _a;
-    const atPoint = await fetchCadastreCommuneAtPoint(lon, lat);
-    if (!(atPoint == null ? void 0 : atPoint.geometry)) return [];
-    const codeInsee = String(((_a = atPoint.properties) == null ? void 0 : _a.code_insee) ?? "");
-    const parentInsee = parentCommuneInseeForArrondissement(codeInsee);
+  function featuresFromFichePayload(payload, mode2) {
+    const parts = modeEmprisePartsFromFichePayload(payload, mode2);
     const features = [];
-    if (parentInsee) {
-      const parentRaw = await fetchCommuneContourFromGeoApi(parentInsee);
-      const commune2 = parentRaw ? readGeoJsonFeature(parentRaw, "commune") : null;
-      if (commune2) features.push(commune2);
-      const arrondissement = readGeoJsonFeature(atPoint, "arrondissement");
-      if (arrondissement) features.push(arrondissement);
-      return features;
+    for (const part of parts) {
+      const feature = readGeoJsonFeature(
+        { type: "Feature", geometry: part.geometry, properties: {} },
+        part.kind
+      );
+      if (feature) features.push(feature);
     }
-    const commune = readGeoJsonFeature(atPoint, "commune");
-    return commune ? [commune] : [];
+    return features;
   }
-  async function fetchModeEmpriseFeatures(lon, lat, mode2) {
-    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
-    if (resolvedMode === MAP_MODE_PARCEL) {
-      const parcel = await fetchParcelFeature(lon, lat);
-      return parcel ? [parcel] : [];
-    }
-    if (resolvedMode === MAP_MODE_TERRITORY) {
-      return fetchTerritoryEmpriseFeatures(lon, lat);
-    }
-    return [];
+  function cacheBothModeEmprisesFromPayload(lon, lat, payload) {
+    storeEmpriseInCache(lon, lat, MAP_MODE_PARCEL, featuresFromFichePayload(payload, MAP_MODE_PARCEL));
+    storeEmpriseInCache(
+      lon,
+      lat,
+      MAP_MODE_TERRITORY,
+      featuresFromFichePayload(payload, MAP_MODE_TERRITORY)
+    );
   }
-  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey) {
+  async function fetchModeEmpriseFeatures(lon, lat, mode2, zoom) {
+    if (typeof window === "undefined") return [];
+    return new Promise((resolve2) => {
+      whenGpuClientConfigReady(() => {
+        void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode: mode2 }).then((payload) => {
+          if (!payload) {
+            resolve2([]);
+            return;
+          }
+          cacheBothModeEmprisesFromPayload(lon, lat, payload);
+          resolve2(featuresFromFichePayload(payload, mode2));
+        });
+      });
+    });
+  }
+  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey, zoom = readMapZoom()) {
     var _a, _b;
     empriseTargetKey = targetKey;
     removeModeEmpriseFeatures(host);
@@ -67253,9 +69276,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return;
     }
-    const features = await fetchModeEmpriseFeatures(lon, lat, mode2);
+    const features = await fetchModeEmpriseFeatures(lon, lat, mode2, zoom);
     if (empriseTargetKey !== targetKey) return;
-    storeEmpriseInCache(lon, lat, mode2, features);
     const source = (_b = host.layer) == null ? void 0 : _b.getSource();
     if (!source) return;
     for (const feature of features) {
@@ -87854,6 +89876,201 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return 0.7;
   }
+  function wmsUrl() {
+    const url = config.wmsExterneUrl;
+    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
+  }
+  function buildCqlFilter(layer, document2) {
+    var _a;
+    const parts = [];
+    const configuredName = layer.name ?? "";
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
+      parts.push(`(partition like '${document2.name}')`);
+    }
+    if (layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length)) {
+      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
+    } else if (layer.filterAttribute && layer.filterValueLike) {
+      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
+    }
+    return parts.join(" AND ");
+  }
+  function zoomToResolution(zoom) {
+    return 156543.03392804097 / Math.pow(2, zoom);
+  }
+  function createWmsTileLayer(entry, document2) {
+    const layer = entry.config;
+    if (layer.virtual || !layer.name) return null;
+    let layerName = layer.name;
+    let url = wmsUrl();
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
+      const validation = config.wmsValidationUrl;
+      if (typeof validation === "string" && validation.length) {
+        url = validation;
+      }
+      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
+    }
+    const cql = buildCqlFilter(layer, document2);
+    const params2 = {
+      LAYERS: layerName,
+      TRANSPARENT: true,
+      VERSION: "1.1.1",
+      FORMAT: "image/png",
+      TILED: true
+    };
+    if (cql) {
+      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
+    }
+    const minZoom = layer.minZoomLevel ?? 0;
+    const maxZoom = layer.maxZoomLevel ?? 22;
+    return new TileLayer({
+      source: new TileWMS({
+        url,
+        params: params2,
+        crossOrigin: "anonymous",
+        serverType: "geoserver",
+        tileGrid: createXYZ({ tileSize: 512 })
+      }),
+      visible: false,
+      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
+      minResolution: zoomToResolution(maxZoom + 0.5),
+      maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
+      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
+      properties: {
+        ecGpuCatalogId: entry.id,
+        ecGpuLayerName: layerName
+      }
+    });
+  }
+  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
+  function applyWmsLayerGrayscale(layer, grayscale) {
+    const internal = layer;
+    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
+    layer.set("grayscale", grayscale);
+    layer.changed();
+  }
+  class GpuWmsLayerRegistry {
+    constructor() {
+      __publicField(this, "entries", /* @__PURE__ */ new Map());
+      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
+      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
+      __publicField(this, "map", null);
+      __publicField(this, "document", null);
+    }
+    loadFromLayerConfig(layers, document2) {
+      var _a;
+      this.document = document2;
+      for (const layer of this.olLayers.values()) {
+        (_a = this.map) == null ? void 0 : _a.removeLayer(layer);
+      }
+      this.entries.clear();
+      this.olLayers.clear();
+      this.grayscaleById.clear();
+      for (const entry of layerConfigToCatalogEntries(layers)) {
+        this.entries.set(entry.id, entry);
+      }
+    }
+    attachMap(map2) {
+      this.map = map2;
+      for (const layer of this.olLayers.values()) {
+        if (!map2.getLayers().getArray().includes(layer)) {
+          map2.addLayer(layer);
+        }
+      }
+    }
+    detachMap() {
+      if (!this.map) return;
+      for (const layer of this.olLayers.values()) {
+        this.map.removeLayer(layer);
+      }
+      this.map = null;
+    }
+    ensureLayer(catalogId) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) return layer;
+      const entry = this.entries.get(catalogId);
+      if (!entry) return void 0;
+      const created = createWmsTileLayer(entry, this.document);
+      if (!created) return void 0;
+      this.olLayers.set(catalogId, created);
+      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
+      if (this.map && !this.map.getLayers().getArray().includes(created)) {
+        this.map.addLayer(created);
+      }
+      return created;
+    }
+    setVisible(catalogId, visible) {
+      if (visible) {
+        const layer2 = this.ensureLayer(catalogId);
+        if (layer2) layer2.setVisible(true);
+        return;
+      }
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setVisible(false);
+    }
+    setOpacity(catalogId, opacityPercent) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
+    }
+    setGrayscale(catalogId, grayscale) {
+      this.grayscaleById.set(catalogId, grayscale);
+      const layer = this.olLayers.get(catalogId);
+      if (layer) applyWmsLayerGrayscale(layer, grayscale);
+    }
+    hasWmsLayer(catalogId) {
+      return this.entries.has(catalogId);
+    }
+    /**
+     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
+     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
+     */
+    applyStackOrder(catalogIdsBottomToTop) {
+      var _a;
+      const normal = [];
+      const forceInList = [];
+      for (const id of catalogIdsBottomToTop) {
+        if ((_a = this.entries.get(id)) == null ? void 0 : _a.config.forceOpacity) forceInList.push(id);
+        else normal.push(id);
+      }
+      const forcePinned = [...forceInList];
+      for (const [id, entry] of this.entries) {
+        if (!entry.config.forceOpacity) continue;
+        const layer = this.olLayers.get(id);
+        if (!(layer == null ? void 0 : layer.getVisible())) continue;
+        if (!forcePinned.includes(id)) forcePinned.push(id);
+      }
+      const ordered = [...normal, ...forcePinned];
+      const baseZ = 200;
+      ordered.forEach((id, index2) => {
+        const layer = this.olLayers.get(id);
+        if (layer) layer.setZIndex(baseZ + index2);
+      });
+      if (!this.map) return;
+      for (const id of ordered) {
+        const layer = this.olLayers.get(id);
+        if (!layer) continue;
+        this.map.removeLayer(layer);
+        this.map.addLayer(layer);
+      }
+    }
+  }
+  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
+  let layerPermalinkInInitialHash;
+  function captureInitialLayerPermalinkFromLocation() {
+    if (layerPermalinkInInitialHash !== void 0) return;
+    if (typeof window === "undefined") {
+      layerPermalinkInInitialHash = false;
+      return;
+    }
+    initMapPermalinkFromLocation();
+    layerPermalinkInInitialHash = layerPermalinkEntriesFromParams(getMapPermalinkParams()).length > 0;
+  }
+  function initialHashHadLayerPermalinkParams() {
+    if (layerPermalinkInInitialHash === void 0) {
+      captureInitialLayerPermalinkFromLocation();
+    }
+    return layerPermalinkInInitialHash === true;
+  }
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
     const mapZoom = /* @__PURE__ */ ref(6);
@@ -88490,6 +90707,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogChecked.value = { ...catalogChecked.value };
       reapplyCatalogMapState();
     }
+    function syncCatalogCheckedFromTreeVisible() {
+      initCatalogCheckedFromConfig(nodes.value);
+      reapplyCatalogMapState();
+    }
     function setInStack(id, inStack) {
       setCatalogChecked(id, inStack);
     }
@@ -88548,7 +90769,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       setGrayscale(id, !getPanelState(node).grayscale);
     }
     function removeFromStack(id) {
-      setCatalogChecked(id, false);
+      const targetId = catalogIdToUncheckWhenRemovingScotGroup(id, treeIndex);
+      setCatalogChecked(targetId, false);
     }
     function enableAggregateDetail(aggregateId) {
       const node = treeIndex.nodesById.get(aggregateId);
@@ -88652,8 +90874,51 @@ Expected function or array of functions, received type ${typeof value2}.`
       regroupAggregate,
       notifyStackOrder,
       reapplyCatalogMapState,
+      syncCatalogCheckedFromTreeVisible,
       catalogEntryInZoomRange
     };
+  }
+  const LEGEND_ZOOM_DEBOUNCE_MS = 150;
+  function mapZoomForLegend(map2) {
+    const z = map2.getView().getZoom();
+    if (z == null || Number.isNaN(z)) return DEFAULT_PARCEL_FICHE_LEGEND_ZOOM;
+    return Math.round(z);
+  }
+  function useMapLegendZoom(mapRef) {
+    const legendZoom = /* @__PURE__ */ ref(DEFAULT_PARCEL_FICHE_LEGEND_ZOOM);
+    let keys = [];
+    let debounceId = null;
+    function unbind() {
+      for (const key2 of keys) unByKey(key2);
+      keys = [];
+      if (debounceId) {
+        clearTimeout(debounceId);
+        debounceId = null;
+      }
+    }
+    function bindMap(map2) {
+      unbind();
+      legendZoom.value = mapZoomForLegend(map2);
+      const applyZoom = () => {
+        legendZoom.value = mapZoomForLegend(map2);
+      };
+      const applyZoomDebounced = () => {
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = setTimeout(applyZoom, LEGEND_ZOOM_DEBOUNCE_MS);
+      };
+      keys.push(map2.on("moveend", applyZoom));
+      keys.push(map2.getView().on("change:resolution", applyZoomDebounced));
+    }
+    watch(
+      mapRef,
+      (map2) => {
+        unbind();
+        if (map2) bindMap(map2);
+      },
+      { immediate: true }
+    );
+    onUnmounted(unbind);
+    return { legendZoom };
   }
   const _hoisted_1$e = ["innerHTML"];
   const _sfc_main$e = /* @__PURE__ */ defineComponent({
@@ -88787,6 +91052,76 @@ Expected function or array of functions, received type ${typeof value2}.`
     const zoom = map2.getView().getZoom() ?? 6;
     refreshFicheForMapModeChange(mode2, zoom);
   }
+  const LAYER_KEY = "ecFicheGeometryHighlight";
+  const highlightStyle = new Style({
+    stroke: new Stroke({ color: "rgba(0, 0, 145, 0.9)", width: 2 }),
+    fill: new Fill({ color: "rgba(0, 0, 145, 0.12)" })
+  });
+  function readGeometry(value2) {
+    if (!value2 || typeof value2 !== "object") return null;
+    const g = value2;
+    if (typeof g.type === "string") return g;
+    return null;
+  }
+  function readFeatureCollection(value2) {
+    if (!value2 || typeof value2 !== "object") return null;
+    const fc = value2;
+    if (fc.type === "FeatureCollection" && Array.isArray(fc.features)) return fc;
+    return null;
+  }
+  function extractFicheHighlightGeometry(raw) {
+    if (!raw) return { geometry: null };
+    const parcelGeom = readGeometry(raw.parcelGeometry) ?? readGeometry(raw.parcelGeom);
+    if (parcelGeom) return { geometry: parcelGeom };
+    const gridGeom = readGeometry(raw.gridGeometry) ?? readGeometry(raw.territoryGeometry);
+    if (gridGeom) return { geometry: gridGeom };
+    const fc = readFeatureCollection(raw.parcelFeatureCollection) ?? readFeatureCollection(raw.gridFeatureCollection);
+    if (fc) return { geometry: fc };
+    const parcel = raw.parcel;
+    if (parcel && typeof parcel === "object") {
+      const p5 = parcel;
+      const fromParcel = readGeometry(p5.geometry) ?? readFeatureCollection(p5.features);
+      if (fromParcel) return { geometry: fromParcel };
+    }
+    return { geometry: null };
+  }
+  function findHighlightLayer(map2) {
+    for (const layer of map2.getLayers().getArray()) {
+      if (layer.get(LAYER_KEY) === true) {
+        return layer;
+      }
+    }
+    return null;
+  }
+  function syncFicheGeometryHighlight(map2, raw) {
+    if (!map2) return;
+    const { geometry } = extractFicheHighlightGeometry(raw);
+    let layer = findHighlightLayer(map2);
+    if (!geometry) {
+      if (layer) {
+        map2.removeLayer(layer);
+      }
+      return;
+    }
+    const format = new GeoJSON();
+    const features = format.readFeatures(
+      geometry.type === "FeatureCollection" ? geometry : { type: "Feature", geometry, properties: {} },
+      { dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" }
+    );
+    if (!layer) {
+      layer = new VectorLayer({
+        source: new VectorSource({ features }),
+        style: highlightStyle,
+        zIndex: 350
+      });
+      layer.set(LAYER_KEY, true);
+      map2.addLayer(layer);
+      return;
+    }
+    const source = layer.getSource();
+    source == null ? void 0 : source.clear();
+    source == null ? void 0 : source.addFeatures(features);
+  }
   const _hoisted_1$c = {
     key: 1,
     class: "ec-fiche-info__inner"
@@ -88799,52 +91134,58 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_4$9 = { class: "ec-fiche-info__topbar" };
   const _hoisted_5$8 = { class: "ec-fiche-info__mode-tags" };
   const _hoisted_6$7 = { class: "ec-fiche-info__title" };
-  const _hoisted_7$6 = { class: "ec-fiche-info__doc-tabs" };
+  const _hoisted_7$6 = { class: "fr-tabs ec-fiche-info__tabs" };
   const _hoisted_8$5 = {
-    class: "ec-fiche-info__doc-tablist",
+    class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Fiche parcelle"
   };
-  const _hoisted_9$5 = ["aria-selected"];
+  const _hoisted_9$5 = { role: "presentation" };
   const _hoisted_10$5 = ["aria-selected"];
-  const _hoisted_11$5 = {
-    class: "ec-fiche-info__parcel-panel",
-    role: "tabpanel"
-  };
-  const _hoisted_12$5 = {
-    key: 0,
-    class: "ec-fiche-info__load-wrap"
-  };
-  const _hoisted_13$5 = {
-    class: "ec-fiche-info__parcel-panel",
-    role: "tabpanel"
-  };
+  const _hoisted_11$5 = { role: "presentation" };
+  const _hoisted_12$5 = ["aria-selected"];
+  const _hoisted_13$5 = ["tabindex"];
   const _hoisted_14$3 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
   };
   const _hoisted_15$2 = {
+    key: 2,
+    class: "ec-fiche-info__error"
+  };
+  const _hoisted_16$2 = { class: "ec-fiche-info__infos-toolbar" };
+  const _hoisted_17$2 = ["disabled"];
+  const _hoisted_18$2 = ["tabindex"];
+  const _hoisted_19$1 = {
+    key: 0,
+    class: "ec-fiche-info__load-wrap"
+  };
+  const _hoisted_20$1 = {
+    key: 2,
+    class: "ec-fiche-info__error"
+  };
+  const _hoisted_21$1 = {
     key: 3,
     class: "ec-fiche-info__inner ec-fiche-info__inner--territory"
   };
-  const _hoisted_16$2 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_17$2 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_18$2 = { class: "ec-fiche-info__title" };
-  const _hoisted_19$1 = {
+  const _hoisted_22$1 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_23$1 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_24$1 = { class: "ec-fiche-info__title" };
+  const _hoisted_25$1 = {
     key: 1,
-    class: "ec-fiche-info__doc-tabs"
+    class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_20$1 = {
-    class: "ec-fiche-info__doc-tablist",
+  const _hoisted_26$1 = {
+    class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_21$1 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_22$1 = {
+  const _hoisted_27 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_28 = {
     key: 4,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_23$1 = { class: "ec-fiche-info__title" };
+  const _hoisted_29 = { class: "ec-fiche-info__title" };
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -88854,6 +91195,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const mapMode = useMapMode();
       const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+      const { legendZoom } = useMapLegendZoom(mapRef);
       const configLoading = computed(() => gpuClientConfigStatus.value === "loading");
       const dataLoading = computed(() => {
         var _a;
@@ -88866,9 +91208,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       const effectiveMode = computed(() => {
-        var _a;
         if (configLoading.value || dataLoading.value || isEmpty2.value) return null;
-        return ((_a = props.selection) == null ? void 0 : _a.mapMode) ?? mapMode.mode.value;
+        return mapMode.mode.value;
       });
       const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL);
       const showTerritoryLayout = computed(() => effectiveMode.value === MAP_MODE_TERRITORY);
@@ -88876,6 +91217,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         () => {
           var _a, _b;
           return ((_a = props.selection) == null ? void 0 : _a.parcelLabel) ?? ((_b = props.selection) == null ? void 0 : _b.title) ?? "Parcelle";
+        }
+      );
+      const parcelSwitchLabel = computed(
+        () => {
+          var _a, _b;
+          return ((_a = props.selection) == null ? void 0 : _a.parcelSwitchLabel) ?? ((_b = props.selection) == null ? void 0 : _b.parcelLabel) ?? "Parcelle";
         }
       );
       const territoryTitle = computed(
@@ -88891,17 +91238,48 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       const activeParcelTab = /* @__PURE__ */ ref("infos");
-      const infosLoaded = /* @__PURE__ */ ref(false);
-      const documentsLoaded = /* @__PURE__ */ ref(false);
+      const parcelTabLoading = /* @__PURE__ */ ref(false);
+      const parcelTabError = /* @__PURE__ */ ref(null);
       const cadastreModalOpen = /* @__PURE__ */ ref(false);
+      function parcelFicheKey(selection) {
+        if (!selection) return "";
+        const raw = selection.raw && typeof selection.raw === "object" ? selection.raw : null;
+        return resolveParcelIdFromRaw(raw) ?? selection.parcelLabel ?? selection.title ?? "";
+      }
+      const parcelDetailReady = computed(() => {
+        var _a, _b;
+        const s = props.selection;
+        return Boolean(((_a = s == null ? void 0 : s.parcelInfosHtml) == null ? void 0 : _a.trim()) && ((_b = s == null ? void 0 : s.parcelDocumentsHtml) == null ? void 0 : _b.trim()));
+      });
       watch(
-        () => props.selection,
         () => {
+          var _a;
+          return (_a = props.selection) == null ? void 0 : _a.raw;
+        },
+        (raw) => {
+          const record = raw && typeof raw === "object" ? raw : null;
+          syncFicheGeometryHighlight(mapRef.value, record);
+        },
+        { immediate: true, deep: true }
+      );
+      watch(
+        () => parcelFicheKey(props.selection),
+        (next, prev) => {
+          if (next === prev) return;
           activeParcelTab.value = "infos";
-          infosLoaded.value = false;
-          documentsLoaded.value = false;
+          parcelTabLoading.value = false;
+          parcelTabError.value = null;
           cadastreModalOpen.value = false;
         }
+      );
+      watch(
+        () => [parcelFicheKey(props.selection), parcelDetailReady.value, showParcelLayout.value],
+        ([key2, ready, parcelMode]) => {
+          var _a;
+          if (!parcelMode || !key2 || ready || ((_a = props.selection) == null ? void 0 : _a.parcelMissingAtPoint)) return;
+          void loadParcelDetail();
+        },
+        { immediate: true }
       );
       const activeDocTabId = /* @__PURE__ */ ref(null);
       watch(
@@ -88924,27 +91302,78 @@ Expected function or array of functions, received type ${typeof value2}.`
         activeDocTabId.value = id;
       }
       async function activateParcelMode() {
+        const zoom = legendZoom.value;
         if (mapMode.mode.value !== MAP_MODE_PARCEL) {
           mapMode.setMode(MAP_MODE_PARCEL);
+          refreshFicheForMapModeChange(MAP_MODE_PARCEL, zoom);
           return;
         }
         const map2 = mapRef.value;
         if (map2) await focusModeEmpriseOnMap(map2, MAP_MODE_PARCEL);
       }
       async function activateTerritoryMode() {
+        const zoom = legendZoom.value;
         if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
           mapMode.setMode(MAP_MODE_TERRITORY);
+          refreshFicheForMapModeChange(MAP_MODE_TERRITORY, zoom);
           return;
         }
         const map2 = mapRef.value;
         if (map2) await focusModeEmpriseOnMap(map2, MAP_MODE_TERRITORY);
       }
-      function loadParcelInfos() {
-        infosLoaded.value = true;
+      async function loadParcelDetail() {
+        if (!props.selection || parcelDetailReady.value) return;
+        parcelTabError.value = null;
+        parcelTabLoading.value = true;
+        try {
+          await loadParcelFicheDetail(props.selection);
+        } catch (e) {
+          parcelTabError.value = e instanceof Error ? e.message : "Impossible de charger la fiche parcelle.";
+        } finally {
+          parcelTabLoading.value = false;
+        }
       }
-      function loadParcelDocuments() {
-        documentsLoaded.value = true;
+      function printParcelFiche() {
+        const html2 = activeParcelTab.value === "documents" ? parcelDocumentsDisplayHtml.value : parcelInfosDisplayHtml.value;
+        if (!html2 || typeof window === "undefined") return;
+        const w = window.open("", "_blank", "noopener,noreferrer");
+        if (!w) return;
+        w.document.write(
+          `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiche parcelle</title></head><body>${html2}</body></html>`
+        );
+        w.document.close();
+        w.focus();
+        w.print();
       }
+      function parcelFichePayloadFromSelection(selection) {
+        const raw = selection == null ? void 0 : selection.raw;
+        if (!raw || typeof raw !== "object") return null;
+        const payload = raw._parcelFiche;
+        return isGpuParcelFichePayload(payload) ? payload : null;
+      }
+      const parcelDetailCached = computed(() => Boolean(parcelFichePayloadFromSelection(props.selection)));
+      const parcelInfosDisplayHtml = computed(() => {
+        var _a;
+        void ficheCatalogVisibilityRevision.value;
+        if (!parcelDetailReady.value) return "";
+        const payload = parcelFichePayloadFromSelection(props.selection);
+        if (payload) {
+          return buildParcelInfosHtmlFromFiche(payload, legendZoom.value);
+        }
+        return ((_a = props.selection) == null ? void 0 : _a.parcelInfosHtml) ?? "<p>Aucune information.</p>";
+      });
+      const parcelDocumentsDisplayHtml = computed(() => {
+        var _a, _b;
+        void ficheCatalogVisibilityRevision.value;
+        if (!parcelDetailReady.value) return "";
+        const payload = parcelFichePayloadFromSelection(props.selection);
+        if (payload) {
+          const raw = (_a = props.selection) == null ? void 0 : _a.raw;
+          const ficheApi = raw && typeof raw === "object" && isGpuFicheInfoPayload(raw) ? raw : null;
+          return buildParcelDocumentsHtmlFromFiche(payload, ficheApi);
+        }
+        return ((_b = props.selection) == null ? void 0 : _b.parcelDocumentsHtml) ?? "";
+      });
       const emptyBodyHtml = computed(
         () => {
           var _a;
@@ -88952,7 +91381,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       return (_ctx, _cache) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _i;
         return openBlock(), createElementBlock("article", {
           class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }])
         }, [
@@ -89010,101 +91439,120 @@ Expected function or array of functions, received type ${typeof value2}.`
               }, null, -1))
             ])) : createCommentVNode("", true),
             createBaseVNode("div", _hoisted_7$6, [
-              createBaseVNode("div", _hoisted_8$5, [
-                createBaseVNode("button", {
-                  type: "button",
-                  role: "tab",
-                  class: normalizeClass(["ec-fiche-info__doc-tab", { "is-active": activeParcelTab.value === "infos" }]),
-                  "aria-selected": activeParcelTab.value === "infos",
-                  onClick: _cache[1] || (_cache[1] = ($event) => activeParcelTab.value = "infos")
-                }, " Infos ", 10, _hoisted_9$5),
-                createBaseVNode("button", {
-                  type: "button",
-                  role: "tab",
-                  class: normalizeClass(["ec-fiche-info__doc-tab", { "is-active": activeParcelTab.value === "documents" }]),
-                  "aria-selected": activeParcelTab.value === "documents",
-                  onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "documents")
-                }, " Documents ", 10, _hoisted_10$5)
-              ]),
-              withDirectives(createBaseVNode("div", _hoisted_11$5, [
-                !infosLoaded.value ? (openBlock(), createElementBlock("div", _hoisted_12$5, [
+              createBaseVNode("ul", _hoisted_8$5, [
+                createBaseVNode("li", _hoisted_9$5, [
                   createBaseVNode("button", {
+                    id: "ec-fiche-parcel-tab-infos",
                     type: "button",
-                    class: "fr-btn fr-btn--secondary",
-                    onClick: loadParcelInfos
-                  }, [..._cache[7] || (_cache[7] = [
-                    createBaseVNode("span", {
-                      class: "ri-refresh-line",
-                      "aria-hidden": "true"
-                    }, null, -1),
-                    createTextVNode(" Charger les informations ", -1)
-                  ])])
-                ])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                  _cache[8] || (_cache[8] = createBaseVNode("div", { class: "ec-fiche-info__infos-toolbar" }, [
-                    createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme"),
+                    role: "tab",
+                    class: "fr-tabs__tab",
+                    "aria-selected": activeParcelTab.value === "infos",
+                    "aria-controls": "ec-fiche-parcel-panel-infos",
+                    onClick: _cache[1] || (_cache[1] = ($event) => activeParcelTab.value = "infos")
+                  }, " Infos ", 8, _hoisted_10$5)
+                ]),
+                createBaseVNode("li", _hoisted_11$5, [
+                  createBaseVNode("button", {
+                    id: "ec-fiche-parcel-tab-documents",
+                    type: "button",
+                    role: "tab",
+                    class: "fr-tabs__tab",
+                    "aria-selected": activeParcelTab.value === "documents",
+                    "aria-controls": "ec-fiche-parcel-panel-documents",
+                    onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "documents")
+                  }, " Documents ", 8, _hoisted_12$5)
+                ])
+              ]),
+              createBaseVNode("div", {
+                id: "ec-fiche-parcel-panel-infos",
+                class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "infos" }]),
+                role: "tabpanel",
+                "aria-labelledby": "ec-fiche-parcel-tab-infos",
+                tabindex: activeParcelTab.value === "infos" ? 0 : -1
+              }, [
+                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_14$3, [
+                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$e, {
+                    key: 0,
+                    class: "ec-fiche-info__body",
+                    html: unref(FICHE_LOADING_SPINNER_HTML)
+                  }, null, 8, ["html"])) : ((_c = __props.selection) == null ? void 0 : _c.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$e, {
+                    key: 1,
+                    class: "ec-fiche-info__body",
+                    html: __props.selection.parcelInfosHtml
+                  }, null, 8, ["html"])) : createCommentVNode("", true),
+                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_15$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                  createBaseVNode("div", _hoisted_16$2, [
+                    _cache[8] || (_cache[8] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
                     createBaseVNode("button", {
                       type: "button",
                       class: "fr-btn fr-btn--secondary fr-btn--sm",
-                      disabled: "",
-                      title: "Bientôt disponible"
-                    }, [
+                      disabled: !parcelDetailCached.value,
+                      title: "Imprimer la fiche parcelle",
+                      onClick: printParcelFiche
+                    }, [..._cache[7] || (_cache[7] = [
                       createBaseVNode("span", {
                         class: "ri-printer-line",
                         "aria-hidden": "true"
-                      }),
-                      createTextVNode(" Imprimer la fiche parcelle ")
-                    ])
-                  ], -1)),
+                      }, null, -1),
+                      createTextVNode(" Imprimer ", -1)
+                    ])], 8, _hoisted_17$2)
+                  ]),
                   createVNode(_sfc_main$e, {
                     class: "ec-fiche-info__body",
-                    html: ((_c = __props.selection) == null ? void 0 : _c.parcelInfosHtml) ?? "<p>Aucune information.</p>"
+                    html: parcelInfosDisplayHtml.value
                   }, null, 8, ["html"])
-                ], 64))
-              ], 512), [
-                [vShow, activeParcelTab.value === "infos"]
-              ]),
-              withDirectives(createBaseVNode("div", _hoisted_13$5, [
-                !documentsLoaded.value ? (openBlock(), createElementBlock("div", _hoisted_14$3, [
-                  createBaseVNode("button", {
-                    type: "button",
-                    class: "fr-btn fr-btn--secondary",
-                    onClick: loadParcelDocuments
-                  }, [..._cache[9] || (_cache[9] = [
-                    createBaseVNode("span", {
-                      class: "ri-refresh-line",
-                      "aria-hidden": "true"
-                    }, null, -1),
-                    createTextVNode(" Charger les informations ", -1)
-                  ])])
+                ], 64)) : createCommentVNode("", true)
+              ], 10, _hoisted_13$5),
+              createBaseVNode("div", {
+                id: "ec-fiche-parcel-panel-documents",
+                class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
+                role: "tabpanel",
+                "aria-labelledby": "ec-fiche-parcel-tab-documents",
+                tabindex: activeParcelTab.value === "documents" ? 0 : -1
+              }, [
+                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_19$1, [
+                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$e, {
+                    key: 0,
+                    class: "ec-fiche-info__body",
+                    html: unref(FICHE_LOADING_SPINNER_HTML)
+                  }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$e, {
+                    key: 1,
+                    class: "ec-fiche-info__body",
+                    html: parcelDocumentsDisplayHtml.value
+                  }, null, 8, ["html"])) : createCommentVNode("", true),
+                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_20$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
                 ])) : (openBlock(), createBlock(_sfc_main$e, {
                   key: 1,
                   class: "ec-fiche-info__body",
-                  html: ((_d = __props.selection) == null ? void 0 : _d.parcelDocumentsHtml) ?? "<p>Aucun document.</p>"
+                  html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>"
                 }, null, 8, ["html"]))
-              ], 512), [
-                [vShow, activeParcelTab.value === "documents"]
-              ])
+              ], 10, _hoisted_18$2)
             ])
-          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_15$2, [
-            ((_e = __props.selection) == null ? void 0 : _e.parcelLabel) ? (openBlock(), createElementBlock("button", {
+          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_21$1, [
+            ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e = __props.selection) == null ? void 0 : _e.parcelLabel) ? (openBlock(), createElementBlock("button", {
               key: 0,
               type: "button",
               class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
               onClick: activateParcelMode
             }, [
-              _cache[10] || (_cache[10] = createBaseVNode("span", {
+              _cache[9] || (_cache[9] = createBaseVNode("span", {
                 class: "ri-arrow-left-line",
                 "aria-hidden": "true"
               }, null, -1)),
-              createTextVNode(" Parcelle " + toDisplayString(parcelLabel.value), 1)
+              ((_f = __props.selection) == null ? void 0 : _f.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
+              ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
+              ], 64))
             ])) : createCommentVNode("", true),
-            createBaseVNode("header", _hoisted_16$2, [
-              createBaseVNode("div", _hoisted_17$2, [
+            createBaseVNode("header", _hoisted_22$1, [
+              createBaseVNode("div", _hoisted_23$1, [
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
                   onClick: withModifiers(activateTerritoryMode, ["prevent"])
-                }, [..._cache[11] || (_cache[11] = [
+                }, [..._cache[10] || (_cache[10] = [
                   createBaseVNode("span", {
                     class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
                     "aria-hidden": "true"
@@ -89113,47 +91561,55 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ])])
               ])
             ]),
-            createBaseVNode("h2", _hoisted_18$2, toDisplayString(territoryTitle.value), 1),
-            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_19$1, [
-              createBaseVNode("div", _hoisted_20$1, [
+            createBaseVNode("h2", _hoisted_24$1, toDisplayString(territoryTitle.value), 1),
+            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_25$1, [
+              createBaseVNode("ul", _hoisted_26$1, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
-                  var _a2, _b2;
-                  return openBlock(), createElementBlock("button", {
-                    id: `ec-fiche-doc-tab-${tab.id}`,
+                  var _a2;
+                  return openBlock(), createElementBlock("li", {
                     key: tab.id,
-                    type: "button",
-                    role: "tab",
-                    class: normalizeClass(["ec-fiche-info__doc-tab", { "is-active": ((_a2 = activeDocTab.value) == null ? void 0 : _a2.id) === tab.id }]),
-                    "aria-selected": ((_b2 = activeDocTab.value) == null ? void 0 : _b2.id) === tab.id,
-                    "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
-                    onClick: ($event) => selectDocTab(tab.id)
-                  }, toDisplayString(tab.label), 11, _hoisted_21$1);
+                    role: "presentation"
+                  }, [
+                    createBaseVNode("button", {
+                      id: `ec-fiche-doc-tab-${tab.id}`,
+                      type: "button",
+                      role: "tab",
+                      class: "fr-tabs__tab",
+                      "aria-selected": ((_a2 = activeDocTab.value) == null ? void 0 : _a2.id) === tab.id,
+                      "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
+                      onClick: ($event) => selectDocTab(tab.id)
+                    }, toDisplayString(tab.label), 9, _hoisted_27)
+                  ]);
                 }), 128))
               ]),
-              activeDocTab.value ? (openBlock(), createBlock(_sfc_main$e, {
-                id: `ec-fiche-doc-panel-${activeDocTab.value.id}`,
-                key: activeDocTab.value.id,
-                class: "ec-fiche-info__body ec-fiche-info__doc-panel",
-                role: "tabpanel",
-                "aria-labelledby": `ec-fiche-doc-tab-${activeDocTab.value.id}`,
-                html: activeDocTab.value.bodyHtml
-              }, null, 8, ["id", "aria-labelledby", "html"])) : createCommentVNode("", true)
+              (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
+                var _a2, _b2;
+                return openBlock(), createBlock(_sfc_main$e, {
+                  id: `ec-fiche-doc-panel-${tab.id}`,
+                  key: tab.id,
+                  class: normalizeClass(["fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel", { "fr-tabs__panel--selected": ((_a2 = activeDocTab.value) == null ? void 0 : _a2.id) === tab.id }]),
+                  role: "tabpanel",
+                  "aria-labelledby": `ec-fiche-doc-tab-${tab.id}`,
+                  tabindex: ((_b2 = activeDocTab.value) == null ? void 0 : _b2.id) === tab.id ? 0 : -1,
+                  html: tab.bodyHtml
+                }, null, 8, ["id", "class", "aria-labelledby", "tabindex", "html"]);
+              }), 128))
             ])) : (openBlock(), createBlock(_sfc_main$e, {
               key: 2,
               class: "ec-fiche-info__body",
               html: emptyBodyHtml.value
             }, null, 8, ["html"]))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_22$1, [
-            createBaseVNode("h2", _hoisted_23$1, toDisplayString((_f = __props.selection) == null ? void 0 : _f.title), 1),
+          ])) : (openBlock(), createElementBlock("div", _hoisted_28, [
+            createBaseVNode("h2", _hoisted_29, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
             createVNode(_sfc_main$e, {
               class: "ec-fiche-info__body",
-              html: ((_g = __props.selection) == null ? void 0 : _g.bodyHtml) ?? ""
+              html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? ""
             }, null, 8, ["html"])
           ])),
           (openBlock(), createBlock(Teleport, { to: "body" }, [
             createVNode(_sfc_main$d, {
               open: cadastreModalOpen.value,
-              references: ((_h = __props.selection) == null ? void 0 : _h.cadastreReferences) ?? null,
+              references: ((_i = __props.selection) == null ? void 0 : _i.cadastreReferences) ?? null,
               onClose: _cache[3] || (_cache[3] = ($event) => cadastreModalOpen.value = false)
             }, null, 8, ["open", "references"])
           ]))
@@ -90014,14 +92470,14 @@ Expected function or array of functions, received type ${typeof value2}.`
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-data-layers__icon-btn",
-                      title: "Retirer de la pile",
+                      title: "Retirer du catalogue",
                       onClick: ($event) => emit2("remove", layer.id)
                     }, [
                       _cache[4] || (_cache[4] = createBaseVNode("i", {
                         class: "ri-delete-bin-line",
                         "aria-hidden": "true"
                       }, null, -1)),
-                      createBaseVNode("span", _hoisted_19, "Retirer " + toDisplayString(layer.title), 1)
+                      createBaseVNode("span", _hoisted_19, "Retirer du catalogue " + toDisplayString(layer.title), 1)
                     ], 8, _hoisted_18),
                     createBaseVNode("button", {
                       type: "button",
@@ -90727,7 +93183,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         enableAggregateDetail,
         regroupAggregate,
         notifyStackOrder,
-        reapplyCatalogMapState
+        reapplyCatalogMapState,
+        syncCatalogCheckedFromTreeVisible
       } = useManagedLayers(
         layerNodesRef,
         (id, visible) => emit2("toggle-layer", id, visible),
@@ -90791,6 +93248,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         selection.value = next;
         openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP);
       }
+      function updateSelection(next) {
+        selection.value = next;
+      }
       function openLegendForLayer(layerId) {
         legendPanelFocusRef.value = { layerId, at: Date.now() };
         openTab(TAB_PANEL_IDS.legends);
@@ -90809,11 +93269,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           syncSheetCssVars(open ? sheetFractionPercent.value : 0);
         }
       }
+      function syncFicheCatalogFamilyVisibilityFromCatalog() {
+        setFicheCatalogFamilyVisibility(
+          computeFicheCatalogFamilyVisibility(
+            catalogCheckedById.value,
+            catalogEntries.value.map((entry) => ({
+              id: entry.id,
+              path: entry.path,
+              permalinkId: primaryPermalinkIdForEntry(entry)
+            })),
+            layerNodesRef.value
+          )
+        );
+      }
       const api = {
         openTab,
         openLegendForLayer,
         closePanels,
         showSelection,
+        updateSelection,
         clearSelection,
         isOpen,
         activeTab,
@@ -90935,7 +93409,40 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return out;
       }
+      function resolveDocumentForCatalogStartup() {
+        const demoDoc = getDemoConfig().document;
+        if (demoDoc == null ? void 0 : demoDoc.type) return demoDoc;
+        const injected = config.document;
+        if (injected && typeof injected === "object" && "type" in injected) {
+          return injected;
+        }
+        return null;
+      }
+      function wmsDocumentSyncKey() {
+        const doc2 = resolveDocumentForCatalogStartup();
+        if (!doc2) return "";
+        return `${doc2.id ?? ""}|${doc2.status ?? ""}|${doc2.name ?? ""}|${doc2.type ?? ""}`;
+      }
+      function syncGpuWmsRegistryFromLayerConfig() {
+        const layerConfig = resolveLayerConfig();
+        if (!(layerConfig == null ? void 0 : layerConfig.length)) return;
+        gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, resolveDocumentForCatalogStartup());
+        const map2 = mapRef.value;
+        if (map2) gpuWmsLayerRegistry.attachMap(map2);
+        reapplyCatalogMapState();
+      }
+      function applyDocumentCatalogFromStartupConfig() {
+        const doc2 = resolveDocumentForCatalogStartup();
+        if (!(doc2 == null ? void 0 : doc2.type) || !layerNodesRef.value.length) return;
+        applyDocumentCatalogVisibility(layerNodesRef.value, doc2);
+        syncCatalogCheckedFromTreeVisible();
+        replaceLayerPermalinkParams(collectLayerParamsForPermalink());
+      }
       function applyLayerParamsFromPermalink(params2) {
+        const startupDoc = resolveDocumentForCatalogStartup();
+        if ((startupDoc == null ? void 0 : startupDoc.type) && !initialHashHadLayerPermalinkParams()) {
+          return;
+        }
         const items = layerPermalinkEntriesFromParams(params2);
         if (!items.length) return;
         if (!layerNodesRef.value.length) return;
@@ -90961,10 +93468,20 @@ Expected function or array of functions, received type ${typeof value2}.`
           });
         }
         applyStackOrderFromPermalink(stackIndexByNodeId);
+        syncFicheCatalogFamilyVisibilityFromCatalog();
+        refreshFicheForCatalogVisibility();
       }
       function scheduleApplyLayerParamsFromPermalink() {
         void nextTick(() => {
-          applyLayerParamsFromPermalink(getMapPermalinkParams());
+          const params2 = getMapPermalinkParams();
+          const startupDoc = resolveDocumentForCatalogStartup();
+          if ((startupDoc == null ? void 0 : startupDoc.type) && !initialHashHadLayerPermalinkParams()) {
+            applyDocumentCatalogFromStartupConfig();
+            return;
+          }
+          if (layerPermalinkEntriesFromParams(params2).length) {
+            applyLayerParamsFromPermalink(params2);
+          }
         });
       }
       registerMapPermalinkLayersBridge({
@@ -90972,19 +93489,30 @@ Expected function or array of functions, received type ${typeof value2}.`
         collectLayerParamsForPermalink
       });
       watch(
-        () => [catalogEntries.value.length, layerNodesRef.value.length],
+        () => [catalogEntries.value.length, layerNodesRef.value.length, wmsDocumentSyncKey()],
         ([entryLen, nodeLen], prev) => {
-          const [prevEntryLen = 0, prevNodeLen = 0] = prev ?? [0, 0];
+          const [prevEntryLen = 0, prevNodeLen = 0, prevDocKey = ""] = prev ?? [0, 0, ""];
           const becameReady = entryLen > 0 && nodeLen > 0 && (prevEntryLen === 0 || prevNodeLen === 0);
-          if (becameReady) scheduleApplyLayerParamsFromPermalink();
+          const docChanged = entryLen > 0 && nodeLen > 0 && prev != null && wmsDocumentSyncKey() !== prevDocKey;
+          if (becameReady || docChanged) {
+            syncGpuWmsRegistryFromLayerConfig();
+          }
+          if (becameReady) {
+            scheduleApplyLayerParamsFromPermalink();
+            syncFicheCatalogFamilyVisibilityFromCatalog();
+          }
+        }
+      );
+      watch(
+        () => JSON.stringify(catalogCheckedById.value),
+        () => {
+          syncFicheCatalogFamilyVisibilityFromCatalog();
+          refreshFicheForCatalogVisibility();
         }
       );
       let layerPermalinkSyncTimer = null;
       watch(
-        () => [
-          JSON.stringify(catalogCheckedById.value),
-          layers.value.map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`).join("|")
-        ].join(";"),
+        () => layers.value.map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`).join("|"),
         () => {
           if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer);
           layerPermalinkSyncTimer = setTimeout(() => {
@@ -91788,185 +94316,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       env.mainLayers[key2].setVisible(true);
     }
   }
-  function wmsUrl() {
-    const url = config.wmsExterneUrl;
-    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
-  }
-  function buildCqlFilter(layer, document2) {
-    var _a;
-    const parts = [];
-    const configuredName = layer.name ?? "";
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
-      parts.push(`(partition like '${document2.name}')`);
-    }
-    if (layer.filterAttribute && ((_a = layer.filterValue) == null ? void 0 : _a.length)) {
-      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
-    } else if (layer.filterAttribute && layer.filterValueLike) {
-      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
-    }
-    return parts.join(" AND ");
-  }
-  function zoomToResolution(zoom) {
-    return 156543.03392804097 / Math.pow(2, zoom);
-  }
-  function createWmsTileLayer(entry, document2) {
-    const layer = entry.config;
-    if (layer.virtual || !layer.name) return null;
-    let layerName = layer.name;
-    let url = wmsUrl();
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
-      const validation = config.wmsValidationUrl;
-      if (typeof validation === "string" && validation.length) {
-        url = validation;
-      }
-      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
-    }
-    const cql = buildCqlFilter(layer, document2);
-    const params2 = {
-      LAYERS: layerName,
-      TRANSPARENT: true,
-      VERSION: "1.1.1",
-      FORMAT: "image/png",
-      TILED: true
-    };
-    if (cql) {
-      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
-    }
-    const minZoom = layer.minZoomLevel ?? 0;
-    const maxZoom = layer.maxZoomLevel ?? 22;
-    return new TileLayer({
-      source: new TileWMS({
-        url,
-        params: params2,
-        crossOrigin: "anonymous",
-        serverType: "geoserver",
-        tileGrid: createXYZ({ tileSize: 512 })
-      }),
-      visible: false,
-      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
-      minResolution: zoomToResolution(maxZoom + 0.5),
-      maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
-      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
-      properties: {
-        ecGpuCatalogId: entry.id,
-        ecGpuLayerName: layerName
-      }
-    });
-  }
-  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
-  function applyWmsLayerGrayscale(layer, grayscale) {
-    const internal = layer;
-    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
-    layer.set("grayscale", grayscale);
-    layer.changed();
-  }
-  class GpuWmsLayerRegistry {
-    constructor() {
-      __publicField(this, "entries", /* @__PURE__ */ new Map());
-      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
-      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
-      __publicField(this, "map", null);
-      __publicField(this, "document", null);
-    }
-    loadFromLayerConfig(layers, document2) {
-      var _a;
-      this.document = document2;
-      for (const layer of this.olLayers.values()) {
-        (_a = this.map) == null ? void 0 : _a.removeLayer(layer);
-      }
-      this.entries.clear();
-      this.olLayers.clear();
-      this.grayscaleById.clear();
-      for (const entry of layerConfigToCatalogEntries(layers)) {
-        this.entries.set(entry.id, entry);
-      }
-    }
-    attachMap(map2) {
-      this.map = map2;
-      for (const layer of this.olLayers.values()) {
-        if (!map2.getLayers().getArray().includes(layer)) {
-          map2.addLayer(layer);
-        }
-      }
-    }
-    detachMap() {
-      if (!this.map) return;
-      for (const layer of this.olLayers.values()) {
-        this.map.removeLayer(layer);
-      }
-      this.map = null;
-    }
-    ensureLayer(catalogId) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) return layer;
-      const entry = this.entries.get(catalogId);
-      if (!entry) return void 0;
-      const created = createWmsTileLayer(entry, this.document);
-      if (!created) return void 0;
-      this.olLayers.set(catalogId, created);
-      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
-      if (this.map && !this.map.getLayers().getArray().includes(created)) {
-        this.map.addLayer(created);
-      }
-      return created;
-    }
-    setVisible(catalogId, visible) {
-      if (visible) {
-        const layer2 = this.ensureLayer(catalogId);
-        if (layer2) layer2.setVisible(true);
-        return;
-      }
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setVisible(false);
-    }
-    setOpacity(catalogId, opacityPercent) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
-    }
-    setGrayscale(catalogId, grayscale) {
-      this.grayscaleById.set(catalogId, grayscale);
-      const layer = this.olLayers.get(catalogId);
-      if (layer) applyWmsLayerGrayscale(layer, grayscale);
-    }
-    hasWmsLayer(catalogId) {
-      return this.entries.has(catalogId);
-    }
-    /**
-     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
-     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
-     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
-     */
-    applyStackOrder(catalogIdsBottomToTop) {
-      var _a;
-      const normal = [];
-      const forceInList = [];
-      for (const id of catalogIdsBottomToTop) {
-        if ((_a = this.entries.get(id)) == null ? void 0 : _a.config.forceOpacity) forceInList.push(id);
-        else normal.push(id);
-      }
-      const forcePinned = [...forceInList];
-      for (const [id, entry] of this.entries) {
-        if (!entry.config.forceOpacity) continue;
-        const layer = this.olLayers.get(id);
-        if (!(layer == null ? void 0 : layer.getVisible())) continue;
-        if (!forcePinned.includes(id)) forcePinned.push(id);
-      }
-      const ordered = [...normal, ...forcePinned];
-      const baseZ = 200;
-      ordered.forEach((id, index2) => {
-        const layer = this.olLayers.get(id);
-        if (layer) layer.setZIndex(baseZ + index2);
-      });
-      if (!this.map) return;
-      for (const id of ordered) {
-        const layer = this.olLayers.get(id);
-        if (!layer) continue;
-        this.map.removeLayer(layer);
-        this.map.addLayer(layer);
-      }
-    }
-  }
-  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
   const _hoisted_1$1 = {
     class: "ec-embed-viewer gpu-client",
     "data-testid": "embed-map-viewer"
@@ -92662,7 +95011,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   const name = "entree-carto";
-  const version = "0.3.0";
+  const version = "0.4.0";
   const description = "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)";
   const packageJson = {
     name,

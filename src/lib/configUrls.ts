@@ -46,7 +46,10 @@ export function resolveConfigUrlForFetch(raw: string): string {
 
 const CONFIG_URL_KEY = /Url$/i
 
-/** Réécrit les champs `*Url` relatifs après fusion de gpu.config. */
+/** Chemins relatifs fournis par gpu-client-config (hôte du script, pas la page SPA). */
+const CONFIG_RELATIVE_RESOURCE_KEYS = new Set(['legendImageDetailDirectory'])
+
+/** Réécrit les champs `*Url` et ressources relatives connues après fusion de gpu.config. */
 export function resolveConfigUrlsInRecord(target: Record<string, unknown>): void {
   if (
     !gpuClientConfigScriptUrl &&
@@ -63,7 +66,9 @@ export function resolveConfigUrlsInRecord(target: Record<string, unknown>): void
   if (!gpuClientConfigScriptUrl) return
   for (const [key, val] of Object.entries(target)) {
     if (typeof val !== 'string' || !val.trim()) continue
-    if (!CONFIG_URL_KEY.test(key)) continue
+    const isConfigUrlKey = CONFIG_URL_KEY.test(key)
+    const isResourcePath = CONFIG_RELATIVE_RESOURCE_KEYS.has(key)
+    if (!isConfigUrlKey && !isResourcePath) continue
     if (isAbsoluteUrl(val.trim())) continue
     if (isGpuDevProxyPath(val.trim())) continue
     target[key] = resolveConfigUrl(val)

@@ -33,7 +33,7 @@ Without `modelValue`, uses `provideMapMode()` context on the map view.
 
 ## Map behaviour
 
-With a cherry marker (`mlon` / `mlat` or last mode-emprise point), the selector refreshes the red dashed APICarto emprise and animates the view to fit it (place-search padding). Zoom cap: **19** in Parcel mode (tight parcel outline), **15** in Territory mode (commune). The geopf place outline (blue dashed) stays visible alongside it.
+With a cherry marker (`mlon` / `mlat` or last mode-emprise point), the selector refreshes the red dashed mode emprise (fiche-info v2 geometries) and animates the view to fit it (place-search padding). Zoom cap: **19** in Parcel mode (tight parcel outline), **15** in Territory mode (commune). The geopf place outline (blue dashed) stays visible alongside it.
 
 - **Permalink restore** (`MapPermalinkSync`): cherry + emprise + fit once the search layer is ready.
 - **Parcel / Territory switch** (`MapModeSelector`): animated fit + fiche refresh for the new mode.

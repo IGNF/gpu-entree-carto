@@ -1,10 +1,12 @@
 import type { TreeLayerNode } from '@/types/treeLayerNode'
+import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
 import {
   getGpuClientConfigScriptUrl,
+  resolveConfigUrl,
   resolveConfigUrlsInRecord,
   setGpuClientConfigScriptUrl,
 } from '@/lib/configUrls'
@@ -215,10 +217,10 @@ async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
     if (!match?.[1]) return
     const cleaned = match[1].replace(/\\\//g, '/').replace(/\?.*$/i, '')
     const base = cleaned.endsWith('/') ? cleaned : `${cleaned}/`
-    config.legendImageDetailDirectory = base
+    config.legendImageDetailDirectory = resolveConfigUrl(base)
     ensureGpuClientStub()
     const stub = window as Window & { gpu?: { config?: Record<string, unknown> } }
-    if (stub.gpu?.config) stub.gpu.config.legendImageDetailDirectory = base
+    if (stub.gpu?.config) stub.gpu.config.legendImageDetailDirectory = resolveConfigUrl(base)
     applyGpuConfigSyncAndDevRewrite()
   } catch {
     /* ignore */
@@ -282,7 +284,11 @@ export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
   const fromGpu = resolveLayerConfig()
   if (fromGpu?.length) {
     const zoom = cfg.map?.zoom ?? 6
-    return layerConfigToTreeNodes(fromGpu, zoom)
+    const nodes = layerConfigToTreeNodes(fromGpu, zoom)
+    if (cfg.document) {
+      applyDocumentCatalogVisibility(nodes, cfg.document)
+    }
+    return nodes
   }
   if (cfg.configScriptUrl?.trim()) {
     return []

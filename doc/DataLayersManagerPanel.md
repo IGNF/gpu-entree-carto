@@ -50,6 +50,7 @@ Rows **outside** `minZoomLevel` / `maxZoomLevel` (LAYER_CONFIG) are **greyed** l
 
 - Title with **`ri-stack-line`** icon
 - Rows separated by border; right of title (before Legends): **Regroup** (`ri-separator`, children in detail mode) then **Detail** (`ri-list-unordered`, aggregates); **Legends** button (`ri-list-indefinite`); handle **`ri-drag-move-2-fill`**
+- Toolbar: eye, **Remove from catalogue** (`ri-delete-bin-line`, unchecks the entry; for **SCHEMA DE COHERENCE TERRITORIALE**, unchecks the whole virtual `dev-scot` group — SCoT WMS + MEC scot), grayscale, opacity
 
 ## Dependencies
 

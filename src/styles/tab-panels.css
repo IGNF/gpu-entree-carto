@@ -1228,27 +1228,25 @@
  * Panneau latéral (catalogue, couches…) : pas de contour au survol / focus sur les boutons
  * non DSFR. La fiche info a ses propres styles (`fiche-info.css`).
  */
+.ec-tab-panels__panel-body button:not(.fr-btn):not(.fr-accordion__btn):not(.fr-tabs__tab):hover,
+.ec-tab-panels__panel-body button:not(.fr-btn):not(.fr-accordion__btn):not(.fr-tabs__tab):focus,
 .ec-tab-panels__panel-body
-  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):hover,
-.ec-tab-panels__panel-body
-  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus,
-.ec-tab-panels__panel-body
-  button:not(.fr-btn):not(.fr-accordion__btn):not(.ec-fiche-info__doc-tab):focus-visible {
+  button:not(.fr-btn):not(.fr-accordion__btn):not(.fr-tabs__tab):focus-visible {
   outline: none !important;
 }
 
 .ec-tab-panels__panel-body
   button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
     .fr-accordion__btn
-  ):not(.ec-fiche-info__doc-tab):hover,
+  ):not(.fr-tabs__tab):hover,
 .ec-tab-panels__panel-body
   button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
     .fr-accordion__btn
-  ):not(.ec-fiche-info__doc-tab):focus,
+  ):not(.fr-tabs__tab):focus,
 .ec-tab-panels__panel-body
   button:not(.fr-btn):not(.ec-layer-catalogue__tab):not(.ec-data-layers__legend-btn):not(
     .fr-accordion__btn
-  ):not(.ec-fiche-info__doc-tab):focus-visible {
+  ):not(.fr-tabs__tab):focus-visible {
   box-shadow: none !important;
   border: none !important;
 }

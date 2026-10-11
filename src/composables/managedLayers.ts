@@ -19,6 +19,7 @@ import {
 } from '@/lib/layerConfig/catalogDataLayersStack'
 import {
   applyUserCatalogToggle,
+  catalogIdToUncheckWhenRemovingScotGroup,
   computeMapVisibilityById,
   isCatalogAggregate,
   propagateCheckedToAncestors,
@@ -402,6 +403,12 @@ export function useManagedLayers(
     reapplyCatalogMapState()
   }
 
+  /** Recalcule les cases catalogue depuis `node.visible` (ex. document démo sans changer l’arbre). */
+  function syncCatalogCheckedFromTreeVisible(): void {
+    initCatalogCheckedFromConfig(nodes.value)
+    reapplyCatalogMapState()
+  }
+
   function setInStack(id: string, inStack: boolean) {
     setCatalogChecked(id, inStack)
   }
@@ -471,7 +478,8 @@ export function useManagedLayers(
   }
 
   function removeFromStack(id: string) {
-    setCatalogChecked(id, false)
+    const targetId = catalogIdToUncheckWhenRemovingScotGroup(id, treeIndex)
+    setCatalogChecked(targetId, false)
   }
 
   function enableAggregateDetail(aggregateId: string) {
@@ -598,6 +606,7 @@ export function useManagedLayers(
     regroupAggregate,
     notifyStackOrder,
     reapplyCatalogMapState,
+    syncCatalogCheckedFromTreeVisible,
     catalogEntryInZoomRange,
   }
 }

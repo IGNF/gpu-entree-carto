@@ -6,6 +6,27 @@ import { fromLonLat } from 'ol/proj'
 import type { Layer } from 'ol/layer'
 import type BaseLayer from 'ol/layer/Base'
 
+const DISPLAY_ONLY_CONTROL_SELECTOR = '.ol-attribution, .ol-scale-line'
+
+/**
+ * Attribution / échelle : affichage seul.
+ * - OL pose pointer-events:auto inline et les monte dans ol-overlaycontainer-stopevent,
+ *   ce qui bloque pointerdown et singleclick au-dessus de la zone transparente.
+ * - On les déplace dans ol-overlaycontainer et on force pointer-events:none sur la racine.
+ */
+export function configureDisplayOnlyOlControls(map: Map): void {
+  const passiveContainer = map.getOverlayContainer()
+  const stopContainer = map.getOverlayContainerStopEvent()
+  const nodes = map.getViewport().querySelectorAll(DISPLAY_ONLY_CONTROL_SELECTOR)
+  for (const node of nodes) {
+    if (!(node instanceof HTMLElement)) continue
+    node.style.setProperty('pointer-events', 'none')
+    if (node.parentElement === stopContainer) {
+      passiveContainer.appendChild(node)
+    }
+  }
+}
+
 /** Centre approximatif de la France métropolitaine (comme gpu-client). */
 export const FRANCE_CENTER = fromLonLat([2.424722, 46.763056])
 
@@ -35,7 +56,7 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
     const el = options.target.value
     if (!el) return
 
-    map.value = new Map({
+    const mapInstance = new Map({
       target: el,
       layers: (options.layers ?? []) as Layer[],
       controls: defaultControls({
@@ -52,6 +73,9 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
         projection: 'EPSG:3857',
       }),
     })
+    configureDisplayOnlyOlControls(mapInstance)
+    mapInstance.getControls().on('add', () => configureDisplayOnlyOlControls(mapInstance))
+    map.value = mapInstance
   })
 
   onUnmounted(() => {

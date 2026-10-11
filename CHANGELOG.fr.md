@@ -12,6 +12,14 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Fiche info v2 (client)** — routes `fiche-info-v2` territoire / parcelle / combinée (`ficheInfoApiUrls`, `ficheInfoFetch`), tuiles DSFR documents et procédures, badges légaux, surbrillance GeoJSON parcelle/territoire, cache sélections par mode au point cerise, doc [FicheInfoApi](./doc/FicheInfoApi.fr.md) ; fin du repli APICarto parcelle côté navigateur.
+
+### Modifié
+
+- **API fiche info v2 (gpu-site)** — JSON v2 réduit aux champs utilisés par la fiche entree-carto (`FicheInfoV2PayloadOptimizer` : clés racine inutiles supprimées, listes blanches documents/procédures/grid/parcelle, `parcelFiche` selon le scope) ; voir [FicheInfoApi](./doc/FicheInfoApi.fr.md).
+- **Emprise mode (carte)** — contours parcelle / territoire rouge et orange uniquement via le JSON fiche-info v2 (`searchResultGraphics`, `modeEmpriseFromFiche`) ; plus d’APICarto ni geo.api dans le navigateur ; appel v2 combiné privilégié quand il est configuré.
+- **Liens documents / procédures (démo)** — résolution via le script gpu-client-config (`ficheGpuSiteUrls`) ; repli document/procédure sur les modèles **`documentViewUrl` / `procedureViewUrl`** (routes Symfony dans la config gpu-site), sans chemins codés en dur dans entree-carto.
+- **Fiche info P0–P2** — chargement différé **`gpu_api_parcel_fiche`** (Infos / Documents), params **`/api/fiche-info`** (`includeParcel`, preview, `client`/`seq`), communes absorbées (`deletedGrids`), preview démo (emprise + couches WMS + rechargement fiche), styles règles d’urbanisme, impression parcelle ; modules `parcelId`, `ficheInfoQuery`, `parcelFicheFromGpuApi` ; tests Vitest associés.
 - **Démo croquis** — option `showSettings` sur `mountSketch` (roue crantée, réglages à chaud) ; `setOptions` / `resetOptions` sur le handle ; route `/sketch` activée.
 
 - **TabPanelsControl (mobile)** — bottom sheet (snaps 0 / 35 / 70 / 98 %), barre horizontale (onglets + zoom / plein écran), poignée, safe areas et décalage en-tête site ; composables `useTabPanelsLayout` / `useTabPanelsMobileSheet`, `useMapViewportControls`.
@@ -26,6 +34,10 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Notice MEC (fiche territoire)** — la mention de mise en compatibilité sur la tuile document n’apparaît que si une MEC est enregistrée dans gpu-site (identifiant document 32 car.), pas pour une simple clé de partition WFS.
+- **Fiche info / catalogue** — cocher ou décocher les couches Données met à jour la fiche ouverte (onglets territoire, Infos/Documents parcelle) à partir du JSON déjà chargé, sans nouvel appel API.
+- **Lien tuile MEC** — ouverture de la fiche document gpu-site (`/document/{id}`), pas du ZIP `archiveUrl`.
+- **Onglet Documents (fiche parcelle)** — liste unifiée : dédoublonnage WFS ; une tuile production gpu-site par partition DU + **NOT IN BDD** pour les versions couche absentes de la BDD ; section **SUP** depuis gpu-site si assiette sur la parcelle ; **MEC** parcelle à la place du document parent (tuile procédure identique au territoire : badge **EN COURS DE PROCÉDURE**, notice en détail, lien document) ; badges/liens gpu-site, notice MEC SCoT inchangées.
 - **Permalink carte** — validation des noms de paramètres du hash avant écriture (`js/remote-property-injection` / CodeQL).
 
 ### Modifié

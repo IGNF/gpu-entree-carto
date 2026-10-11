@@ -11,6 +11,36 @@ function directCatalogChildren(node: TreeLayerNode): TreeLayerNode[] {
   return catalogChildNodes(node)
 }
 
+/** Tuile WFS SCoT (`onlyLegend`) sous le groupe virtual gpu-client `dev-scot` (pas MEC scot). */
+function isScotWmsOnlyLegendUnderScotVirtualGroup(
+  node: TreeLayerNode,
+  parent: TreeLayerNode | null | undefined,
+): boolean {
+  if (!node.gpuOnlyLegend || !parent?.gpuVirtual) return false
+  const parentId = parent.id.toLowerCase()
+  if (!parentId.includes('scot')) return false
+  const nodeId = node.id.toLowerCase()
+  if (nodeId.includes('dev-mec') || nodeId.includes('--mec')) return false
+  return nodeId.includes('--dev-scot') || nodeId.endsWith('--scot')
+}
+
+/**
+ * Retrait Couches de données ou décocher la tuile SCoT WFS :
+ * décocher le groupe virtual parent (SCoT + MEC scot, cf. LAYER_CONFIG).
+ */
+export function catalogIdToUncheckWhenRemovingScotGroup(
+  nodeId: string,
+  index: CatalogTreeIndex,
+): string {
+  const node = index.nodesById.get(nodeId)
+  if (!node) return nodeId
+  const parent = index.parentById.get(nodeId) ?? null
+  if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
+    return parent!.id
+  }
+  return nodeId
+}
+
 export function isCheckboxSameAsDirectChildren(
   checked: Record<string, boolean>,
   node: TreeLayerNode,
@@ -143,7 +173,7 @@ export function propagateCheckedToDescendants(
   }
 }
 
-/** gpu-client setParentCheckbox (OR sur enfants, hors onlyLegend) */
+/** gpu-client setParentCheckbox (OR sur enfants ; onlyLegend compte pour l’état parent). */
 export function propagateCheckedToAncestors(
   checked: Record<string, boolean>,
   nodeId: string,
@@ -154,16 +184,16 @@ export function propagateCheckedToAncestors(
 
   let parentChecked = false
   for (const child of directCatalogChildren(parent)) {
-    if (child.gpuOnlyLegend) continue
     if (checked[child.id]) {
       parentChecked = true
       break
     }
   }
 
+  // Ne pas recocher les frères onlyLegend (ex. SCoT vs MEC sous `dev-scot`) quand un seul enfant reste actif.
   for (const child of directCatalogChildren(parent)) {
-    if (child.gpuOnlyLegend && Boolean(checked[child.id]) !== parentChecked) {
-      checked[child.id] = parentChecked
+    if (child.gpuOnlyLegend && !parentChecked) {
+      checked[child.id] = false
     }
   }
 
@@ -184,11 +214,15 @@ export function applyUserCatalogToggle(
   value: boolean,
   index: CatalogTreeIndex,
 ): void {
-  const node = index.nodesById.get(nodeId)
+  let effectiveId = nodeId
+  if (!value) {
+    effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index)
+  }
+  const node = index.nodesById.get(effectiveId)
   if (!node) return
 
-  checked[nodeId] = value
-  propagateCheckedToAncestors(checked, nodeId, index)
+  checked[effectiveId] = value
+  propagateCheckedToAncestors(checked, effectiveId, index)
   propagateCheckedToDescendants(checked, node, value)
 }
 

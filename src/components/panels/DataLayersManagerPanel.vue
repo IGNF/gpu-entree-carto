@@ -205,11 +205,11 @@ function showDropMarkerBefore(index: number): boolean {
             <button
               type="button"
               class="ec-data-layers__icon-btn"
-              title="Retirer de la pile"
+              title="Retirer du catalogue"
               @click="emit('remove', layer.id)"
             >
               <i class="ri-delete-bin-line" aria-hidden="true" />
-              <span class="fr-sr-only">Retirer {{ layer.title }}</span>
+              <span class="fr-sr-only">Retirer du catalogue {{ layer.title }}</span>
             </button>
 
             <button

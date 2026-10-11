@@ -17,6 +17,9 @@ export interface FicheInfoSelection {
   mapMode?: MapModeId
   /** Ex. AY 0050 (mode Parcelle). */
   parcelLabel?: string
+  /** Libellé bouton retour parcelle (mode Territoire) — ou message d’absence de parcelle. */
+  parcelSwitchLabel?: string
+  parcelMissingAtPoint?: boolean
   /** Ex. Paris 1er arrondissement (75101) — bouton territoire / titre mode Territoire. */
   territoryTitle?: string
   /** Modal références cadastrales (mode Parcelle). */
@@ -51,6 +54,8 @@ export interface TabPanelsApi {
   closePanels: () => void
   /** Met à jour la fiche info (+ raw optionnel) et ouvre l’onglet 0. */
   showSelection: (selection: FicheInfoSelection) => void
+  /** Met à jour la fiche sans changer l’onglet actif (ex. refresh catalogue). */
+  updateSelection: (selection: FicheInfoSelection) => void
   /** Remet l’état « Aucune sélection ». */
   clearSelection: () => void
   isOpen: Ref<boolean>

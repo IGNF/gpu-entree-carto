@@ -15,8 +15,10 @@
   font-size: 0.9375rem;
 }
 
-.ec-fiche-info__doc-tabs {
-  margin-top: 0.5rem;
+/* Onglets DSFR (`fr-tabs`) — pleine largeur du panneau TabPanels */
+.ec-fiche-info__tabs.fr-tabs {
+  width: calc(100% + 2.5rem);
+  margin: 0.5rem -1.25rem 0;
 }
 
 .ec-fiche-info__loading {
@@ -40,15 +42,6 @@
   }
 }
 
-.ec-fiche-info__doc-tablist {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-default-grey, #ddd);
-  padding-bottom: 0.35rem;
-}
-
 .ec-fiche-info .ec-fiche-info__territory-cta.fr-btn {
   display: flex;
   width: 100%;
@@ -69,40 +62,52 @@
   margin-left: auto;
 }
 
-.ec-fiche-info button.ec-fiche-info__doc-tab {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  height: auto;
-  margin: 0;
-  padding: 0.4rem 0.55rem;
+/* Neutralise `.ol-control button` sans écraser `.fr-tabs__tab` DSFR */
+.ec-fiche-info button.fr-tabs__tab {
+  display: inline-flex !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 2.5rem;
+  margin: 0 0.25rem;
   border: none;
-  border-radius: 0.25rem 0.25rem 0 0;
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  color: var(--text-default-grey, #3a3a3a);
-  cursor: pointer;
+  border-radius: 0;
+  box-sizing: border-box;
   font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.35;
+  cursor: pointer;
   text-align: center;
-  white-space: normal;
 }
 
-.ec-fiche-info button.ec-fiche-info__doc-tab:hover,
-.ec-fiche-info button.ec-fiche-info__doc-tab:focus-visible {
-  background: var(--background-contrast-grey, #f6f6f6);
-  outline: 2px solid var(--border-active-blue-france, #000091);
-  outline-offset: 1px;
+/*
+ * DSFR `fr-tabs__panel` : carousel (`left: -100%`) + JS officiel.
+ * Ici onglets pilotés par Vue : panneau sélectionné en flux normal.
+ */
+.ec-fiche-info__tabs.fr-tabs {
+  overflow: visible;
+  height: auto !important;
 }
 
-.ec-fiche-info button.ec-fiche-info__doc-tab.is-active {
-  color: var(--text-active-blue-france, #000091);
-  box-shadow: inset 0 -2px 0 var(--border-active-blue-france, #000091);
+.ec-fiche-info__tabs .fr-tabs__panel {
+  left: 0;
+  margin-right: 0;
+  flex: none;
+  width: 100%;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  transform: none !important;
+}
+
+.ec-fiche-info__tabs .fr-tabs__panel:not(.fr-tabs__panel--selected) {
+  display: none;
+  visibility: hidden;
+}
+
+.ec-fiche-info__tabs .fr-tabs__panel.fr-tabs__panel--selected {
+  display: block;
+  visibility: visible;
+}
+
+.ec-fiche-info .ec-fiche-info__load-btn.fr-btn--icon-left .ri-refresh-line {
+  margin-right: 0.35rem;
 }
 
 .ec-fiche-info__warn {
@@ -241,6 +246,91 @@
   margin-left: auto;
 }
 
+.ec-fiche-info__error {
+  margin: 0.75rem 0 0;
+  color: var(--text-default-error, #ce0500);
+  font-size: 0.875rem;
+}
+
+.ec-fiche-info__rules-section {
+  margin: 0 0 1rem;
+}
+
+.ec-fiche-info__rules-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.ec-fiche-info__rule-row {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  gap: 0.5rem 0.65rem;
+  align-items: start;
+  margin: 0 0 0.65rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border-default-grey, #eee);
+}
+
+.ec-fiche-info__rule-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ec-fiche-info__rule-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.25rem;
+  background: var(--background-contrast-grey, #f6f6f6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.ec-fiche-info__rule-icon-img {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.ec-fiche-info__rule-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ec-fiche-info__rule-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+  line-height: 1.4;
+}
+
+.ec-fiche-info__rule-doc {
+  flex-shrink: 0;
+  justify-self: end;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.25rem;
+}
+
+.ec-fiche-info__rule-doc .ri-file-pdf-2-line {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.ec-fiche-info__rule-doc--muted {
+  pointer-events: none;
+  cursor: default;
+}
+
 .ec-fiche-info__load-wrap {
   display: flex;
   justify-content: center;
@@ -275,6 +365,65 @@
   line-height: 1.45;
 }
 
+.ec-fiche-info__tile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.ec-fiche-info__tile.fr-tile {
+  margin: 0;
+}
+
+.ec-fiche-info__tile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.ec-fiche-info__badge--partiel-annule {
+  background: var(--background-contrast-warning, #ffe9e6);
+  color: var(--text-default-warning, #b34000);
+}
+
+.ec-fiche-info__badge--annule {
+  background: #ffe9e9;
+  color: #ce0500;
+}
+
+.ec-fiche-info__badge--historique {
+  background: #eee;
+  color: #3a3a3a;
+}
+
+.ec-fiche-info__badge--not-in-bdd {
+  background: #eee;
+  color: #666;
+}
+
+.ec-fiche-info__mec-notice {
+  color: #c0102e;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+
+.ec-fiche-info__sup-legal-link {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.ec-fiche-info__sup-group-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+}
+
+.ec-fiche-info__badge--procedure {
+  background: #e8edff;
+  color: #000091;
+}
+
 .ec-fiche-info__doc-card {
   margin: 0 0 0.75rem;
   padding: 0.75rem;
@@ -301,6 +450,11 @@
 .ec-fiche-info__badge--vigueur {
   background: #ccefd9;
   color: #18753c;
+}
+
+.ec-fiche-info__badge--non-executoire {
+  background: var(--background-contrast-warning, #ffe9e6);
+  color: var(--text-default-warning, #b34000);
 }
 
 .ec-fiche-info__badge--approuve {

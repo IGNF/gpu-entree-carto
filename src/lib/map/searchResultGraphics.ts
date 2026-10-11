@@ -5,18 +5,11 @@ import { createEmpty, extend, isEmpty } from 'ol/extent'
 import type { Extent } from 'ol/extent'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Map from 'ol/Map'
-import type { Feature as GeoJsonFeature, FeatureCollection } from 'geojson'
-import {
-  MAP_MODE_PARCEL,
-  MAP_MODE_TERRITORY,
-  normalizeMapMode,
-  type MapModeId,
-} from '@/lib/map/mapMode'
-import { parentCommuneInseeForArrondissement } from '@/lib/map/municipalArrondissement'
-
-const APICARTO_COMMUNE = 'https://apicarto.ign.fr/api/cadastre/commune'
-const APICARTO_PARCEL = 'https://apicarto.ign.fr/api/cadastre/parcelle'
-const GEO_API_COMMUNE = 'https://geo.api.gouv.fr/communes'
+import type { Feature as GeoJsonFeature } from 'geojson'
+import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import { fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
+import { modeEmprisePartsFromFichePayload } from '@/lib/map/modeEmpriseFromFiche'
+import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
 
 /** Propriété OL : emprise mode parcelle / territoire (distincte de l’emprise lieu geopf). */
 export const MODE_EMPRISE_PROP = 'ec-mode-emprise'
@@ -50,7 +43,7 @@ type EmprisePointCache = {
   byMode: Partial<Record<MapModeId, Feature[]>>
 }
 
-/** Emprises mode déjà chargées au point cerise (évite APICarto au changement de mode). */
+/** Emprises mode déjà chargées au point cerise (évite un second appel fiche-info au changement de mode). */
 let emprisePointCache: EmprisePointCache | null = null
 
 const geoJson = new GeoJSON()
@@ -90,10 +83,6 @@ function cachedEmpriseForMode(lon: number, lat: number, mode: MapModeId): Featur
   if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode)) return null
   const stored = emprisePointCache.byMode[mode] ?? []
   return stored.map(cloneEmpriseFeature)
-}
-
-function pointGeomParam(lon: number, lat: number): string {
-  return encodeURIComponent(JSON.stringify({ type: 'Point', coordinates: [lon, lat] }))
 }
 
 function modeEmpriseStyle(stroke: string, fill: string): Style {
@@ -158,73 +147,65 @@ function readGeoJsonFeature(raw: GeoJsonFeature, kind: ModeEmpriseKind): Feature
   return feature
 }
 
-async function fetchCadastreCommuneAtPoint(
+function readMapZoom(): number {
+  const map = searchEngineLayerHostRef.value?.getMap()
+  return map?.getView().getZoom() ?? 15
+}
+
+function featuresFromFichePayload(
+  payload: Parameters<typeof modeEmprisePartsFromFichePayload>[0],
+  mode: MapModeId,
+): Feature[] {
+  const parts = modeEmprisePartsFromFichePayload(payload, mode)
+  const features: Feature[] = []
+  for (const part of parts) {
+    const feature = readGeoJsonFeature(
+      { type: 'Feature', geometry: part.geometry, properties: {} },
+      part.kind,
+    )
+    if (feature) features.push(feature)
+  }
+  return features
+}
+
+function cacheBothModeEmprisesFromPayload(
   lon: number,
   lat: number,
-): Promise<GeoJsonFeature | null> {
-  const res = await fetch(`${APICARTO_COMMUNE}?geom=${pointGeomParam(lon, lat)}`)
-  if (!res.ok) return null
-  const geo = (await res.json()) as FeatureCollection
-  return geo.features?.[0] ?? null
-}
-
-async function fetchCommuneContourFromGeoApi(codeInsee: string): Promise<GeoJsonFeature | null> {
-  const res = await fetch(
-    `${GEO_API_COMMUNE}/${encodeURIComponent(codeInsee)}?format=geojson&geometry=contour`,
+  payload: Parameters<typeof modeEmprisePartsFromFichePayload>[0],
+): void {
+  storeEmpriseInCache(lon, lat, MAP_MODE_PARCEL, featuresFromFichePayload(payload, MAP_MODE_PARCEL))
+  storeEmpriseInCache(
+    lon,
+    lat,
+    MAP_MODE_TERRITORY,
+    featuresFromFichePayload(payload, MAP_MODE_TERRITORY),
   )
-  if (!res.ok) return null
-  const raw = (await res.json()) as GeoJsonFeature
-  return raw?.geometry ? raw : null
-}
-
-async function fetchParcelFeature(lon: number, lat: number): Promise<Feature | null> {
-  const res = await fetch(`${APICARTO_PARCEL}?geom=${pointGeomParam(lon, lat)}`)
-  if (!res.ok) return null
-  const geo = (await res.json()) as FeatureCollection
-  const raw = geo.features?.[0]
-  if (!raw?.geometry) return null
-  return readGeoJsonFeature(raw, 'parcel')
-}
-
-async function fetchTerritoryEmpriseFeatures(lon: number, lat: number): Promise<Feature[]> {
-  const atPoint = await fetchCadastreCommuneAtPoint(lon, lat)
-  if (!atPoint?.geometry) return []
-
-  const codeInsee = String(atPoint.properties?.code_insee ?? '')
-  const parentInsee = parentCommuneInseeForArrondissement(codeInsee)
-  const features: Feature[] = []
-
-  if (parentInsee) {
-    const parentRaw = await fetchCommuneContourFromGeoApi(parentInsee)
-    const commune = parentRaw ? readGeoJsonFeature(parentRaw, 'commune') : null
-    if (commune) features.push(commune)
-    const arrondissement = readGeoJsonFeature(atPoint, 'arrondissement')
-    if (arrondissement) features.push(arrondissement)
-    return features
-  }
-
-  const commune = readGeoJsonFeature(atPoint, 'commune')
-  return commune ? [commune] : []
 }
 
 async function fetchModeEmpriseFeatures(
   lon: number,
   lat: number,
   mode: MapModeId,
+  zoom: number,
 ): Promise<Feature[]> {
-  const resolvedMode = normalizeMapMode(mode) ?? MAP_MODE_TERRITORY
-  if (resolvedMode === MAP_MODE_PARCEL) {
-    const parcel = await fetchParcelFeature(lon, lat)
-    return parcel ? [parcel] : []
-  }
-  if (resolvedMode === MAP_MODE_TERRITORY) {
-    return fetchTerritoryEmpriseFeatures(lon, lat)
-  }
-  return []
+  if (typeof window === 'undefined') return []
+
+  return new Promise((resolve) => {
+    whenGpuClientConfigReady(() => {
+      void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode }).then((payload) => {
+        if (!payload) {
+          resolve([])
+          return
+        }
+        cacheBothModeEmprisesFromPayload(lon, lat, payload)
+        resolve(featuresFromFichePayload(payload, mode))
+      })
+    })
+  })
 }
 
 /**
- * Emprise communale ou parcellaire selon le mode (APICarto), sur la couche SearchEngine.
+ * Emprise communale ou parcellaire selon le mode (géométries fiche-info v2), sur la couche SearchEngine.
  * @param targetKey identifiant du clic / recherche courante (ignore les réponses obsolètes).
  */
 export async function ensureModeEmpriseOnSearchLayer(
@@ -233,6 +214,7 @@ export async function ensureModeEmpriseOnSearchLayer(
   lat: number,
   mode: MapModeId,
   targetKey: string,
+  zoom = readMapZoom(),
 ): Promise<void> {
   empriseTargetKey = targetKey
   removeModeEmpriseFeatures(host)
@@ -248,10 +230,8 @@ export async function ensureModeEmpriseOnSearchLayer(
     return
   }
 
-  const features = await fetchModeEmpriseFeatures(lon, lat, mode)
+  const features = await fetchModeEmpriseFeatures(lon, lat, mode, zoom)
   if (empriseTargetKey !== targetKey) return
-
-  storeEmpriseInCache(lon, lat, mode, features)
 
   const source = host.layer?.getSource()
   if (!source) return

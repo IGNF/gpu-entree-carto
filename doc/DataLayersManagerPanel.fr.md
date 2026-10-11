@@ -50,6 +50,7 @@ Les lignes **hors plage** `minZoomLevel` / `maxZoomLevel` (LAYER_CONFIG) sont **
 
 - Titre avec icône **`ri-stack-line`**
 - Lignes séparées par bordure ; à droite du titre (avant Légendes) : **Regrouper** (`ri-separator`, enfants en mode détaillé) puis **Détailler** (`ri-list-unordered`, agrégats) ; bouton **Légendes** (`ri-list-indefinite`) ; poignée **`ri-drag-move-2-fill`**
+- Barre d’outils : œil, **Retirer du catalogue** (`ri-delete-bin-line`, décoche l’entrée ; pour la tuile **SCHEMA DE COHERENCE TERRITORIALE**, décoche le groupe virtual `dev-scot` entier — SCoT WFS + MEC scot), niveaux de gris, opacité
 
 ## Dépendances
 

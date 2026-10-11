@@ -892,6 +892,26 @@ dialog[id^='GPterritoriesPanel-'] {
   bottom: var(--ec-widget-gap);
   background-color: transparent;
   max-width: none;
+  /*
+   * OL pose element.style.pointerEvents = "auto" inline sur .ol-control :
+   * !important requis pour laisser passer ClickInfo / pan sous la zone transparente.
+   */
+  pointer-events: none !important;
+}
+
+#gpu-map .ol-attribution ul,
+#gpu-map .ol-attribution li {
+  pointer-events: none !important;
+}
+
+#gpu-map .ol-attribution a,
+#gpu-map .ol-attribution button {
+  pointer-events: auto !important;
+}
+
+/* Barre d’échelle : affichage seul, pas de capture des clics. */
+#gpu-map .ol-control.ol-scale-line {
+  pointer-events: none !important;
 }
 
 #gpu-map .ol-attribution.ol-uncollapsible {

@@ -1,16 +1,44 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import {
+  ficheHasParcelAtPoint,
+  ficheHasTerritoryAtPoint,
+  NO_PARCEL_AT_POINT_MESSAGE,
+} from '@/lib/fiche/ficheAvailability'
+import {
+  buildDocumentTypeTabTilesHtml,
   buildParcelDocumentsPresentationHtml,
-  prependNonExecutoireCalloutIfNeeded,
+  formatDatapproFromDocumentName,
+  prependNonExecutoireCalloutForPartitionMap,
+  resolveLastApprovedProcedureNatureLabel,
 } from '@/lib/fiche/ficheDocumentPresentation'
+import { mecNoticeHtmlForDocumentName } from '@/lib/fiche/ficheMecPresentation'
+import { buildGroupedSupTabHtml } from '@/lib/fiche/ficheSupGroupedPresentation'
+import { buildMecTerritoryProceduresHtml } from '@/lib/fiche/ficheMecPresentation'
+import {
+  applyCatalogVisibilityToFicheSelection,
+  isFicheDocumentFamilyVisible,
+} from '@/lib/fiche/ficheCatalogVisibilityFilter'
+import {
+  documentTileHrefFromApiFields,
+  documentTilesListHtml,
+  documentUrbanismTileHtml,
+  procedureTileHtml,
+  procedureTileHref,
+} from '@/lib/fiche/ficheDocumentTiles'
+import {
+  buildParcelDocumentsHtmlFromFiche,
+  buildParcelInfosHtmlFromFiche,
+  isGpuParcelFichePayload,
+  type GpuParcelFichePayload,
+} from '@/lib/fiche/parcelFicheFromGpuApi'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
-import { coerceDisplayString } from '@/lib/coerceDisplayString'
 
 type GpuFicheFeature = Record<string, unknown>
 
 type GpuFicheDocument = {
+  id?: string
   title?: string
   name?: string
   originalName?: string
@@ -18,6 +46,8 @@ type GpuFicheDocument = {
   status?: string
   typeref?: string | null
   archiveUrl?: string
+  viewUrl?: string
+  legalStatus?: string
   typeproc_title?: string
   effectiveStatus?: string
 }
@@ -41,9 +71,23 @@ type GpuFicheProcedure = {
   grid?: { title?: string; name?: string }
 }
 
+export type GpuFicheDeletedGrid = {
+  id?: string
+  properties?: { insee?: string; name?: string; is_rnu?: boolean }
+}
+
 export type GpuFicheInfoPayload = {
   parcel?: Record<string, unknown> | null
-  grid?: { name?: string; insee?: string; is_rnu?: boolean } | null
+  parcelId?: string
+  parcelFiche?: GpuParcelFichePayload
+  features?: GpuParcelFichePayload['features']
+  parcelGeometry?: unknown
+  gridGeometry?: unknown
+  /** Contour commune « ville » (Paris / Lyon / Marseille) lorsque le point est dans un arrondissement. */
+  parentGridGeometry?: unknown
+  territoryParcelId?: string
+  grid?: { name?: string; insee?: string; is_rnu?: boolean; viewUrl?: string } | null
+  deletedGrids?: GpuFicheDeletedGrid[]
   /** Référentiel cadastral (CNIG), renvoyé par `/api/fiche-info` — pilote la couche cadastre basse. */
   typeref?: string | null
   dus?: Record<string, GpuFichePartition> | GpuFichePartition[]
@@ -52,6 +96,9 @@ export type GpuFicheInfoPayload = {
   scots?: Record<string, GpuFichePartition> | GpuFichePartition[]
   lowScaleDocument?: Record<string, GpuFicheDocument> | GpuFicheDocument[] | null
   proceduresByDocument?: Record<string, GpuFicheProcedure[]>
+  notUnforceableByDocument?: Record<string, boolean>
+  mecsDu?: Record<string, GpuFichePartition> | GpuFichePartition[]
+  mecsScot?: Record<string, GpuFichePartition> | GpuFichePartition[]
   is_el9_alert?: boolean
 }
 
@@ -100,13 +147,6 @@ function formatMunicipalityName(raw: string): string {
     .join('-')
 }
 
-function formatDatapproFromDocumentName(documentName: string): string | null {
-  const match = documentName.match(/^([A-Z0-9]{5}|[0-9]{9})_([A-Z]+)(?:_MEC\d)?_(\d{8})/i)
-  if (!match?.[3]) return null
-  const date = match[3]
-  return `${date.slice(6, 8)}/${date.slice(4, 6)}/${date.slice(0, 4)}`
-}
-
 function pickProductionDocument(
   documents: GpuFicheDocument[] | undefined,
 ): GpuFicheDocument | null {
@@ -123,155 +163,12 @@ function mapHasProductionDocument(map: Record<string, GpuFichePartition>): boole
   return Object.values(map).some(partitionHasProductionDocument)
 }
 
-function isPetFeature(feature: GpuFicheFeature): boolean {
-  const nomfic = feature.nomfic
-  return typeof nomfic === 'string' && nomfic.includes('_97_00_')
-}
-
-function featureLabelHtml(feature: GpuFicheFeature): string {
-  if ('typezone' in feature) {
-    const code = coerceDisplayString(feature.libelle)
-    const label = coerceDisplayString(feature.libelong ?? feature.libelle)
-    if (code && label && code !== label) {
-      return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`
-    }
-    if (label) return `<strong>${escapeHtml(label)}</strong>.`
-    if (code) return `Zone classée <strong>${escapeHtml(code)}</strong>.`
-    return 'Zonage de type inconnu'
-  }
-  if ('typesect' in feature) {
-    const code = coerceDisplayString(feature.libelle)
-    const label = coerceDisplayString(feature.libelong ?? feature.libelle)
-    if (code && label) {
-      return `Zone classée <strong>${escapeHtml(code)}</strong>, <strong>${escapeHtml(label)}</strong>.`
-    }
-    return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Secteur de type inconnu'
-  }
-  if ('typepsc' in feature) {
-    const label = coerceDisplayString(feature.libelle)
-    return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Prescription de type inconnue'
-  }
-  if ('typeinf' in feature) {
-    const label = coerceDisplayString(feature.libelle)
-    return label ? `<strong>${escapeHtml(label)}</strong>.` : 'Information de type inconnue'
-  }
-  if ('libelle' in feature) {
-    const label = coerceDisplayString(feature.libelle)
-    return label ? `<strong>${escapeHtml(label)}</strong>.` : ''
-  }
-  return ''
-}
-
-function featureEntryHtml(feature: GpuFicheFeature): string {
-  const info = featureLabelHtml(feature)
-  if (!info) return ''
-  const urlfic = feature.urlfic
-  if (typeof urlfic === 'string' && urlfic.trim()) {
-    return `<p><a href="${escapeHtml(urlfic)}" target="_blank" rel="noopener noreferrer">${info}</a></p>`
-  }
-  return `<p>${info}</p>`
-}
-
-function buildPartitionFeaturesHtml(partition: GpuFichePartition): string {
-  const features = partition.features ?? []
-  const seen = new Set<string>()
-  const parts: string[] = []
-  for (const feature of features) {
-    if (isPetFeature(feature)) continue
-    const info = featureLabelHtml(feature)
-    if (!info) continue
-    const key = `${coerceDisplayString(feature.nomfic)}|${info}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    parts.push(featureEntryHtml(feature))
-  }
-  return parts.join('')
-}
-
-function documentIntroHtml(
-  document: GpuFicheDocument,
-  kind: 'du' | 'psmv' | 'scot' | 'sup',
-): string {
-  const title = document.title?.trim() || document.type || 'document'
-  const documentName = document.originalName ?? document.name ?? ''
-  if (kind === 'sup') {
-    return document.title
-      ? `<p><strong>${escapeHtml(document.title)}</strong></p>`
-      : `<p><strong>${escapeHtml(documentName || 'Servitude')}</strong></p>`
-  }
-  if (kind === 'scot') {
-    const prefix = 'Territoire couvert par '
-    return `<p>${prefix}<strong>${escapeHtml(title)}</strong>.</p>`
-  }
-  const article = document.type === 'CC' ? 'la ' : 'le '
-  let html = `<p>Parcelle couverte par ${article}<strong>${escapeHtml(title)}</strong>`
-  if (documentName) {
-    const datappro = formatDatapproFromDocumentName(documentName)
-    if (datappro) {
-      const proc =
-        typeof document.typeproc_title === 'string' && document.typeproc_title.trim()
-          ? ` (${document.typeproc_title.trim()})`
-          : ''
-      html += `, dont la dernière procédure${proc} a été approuvée le <strong>${escapeHtml(datappro)}</strong>`
-    }
-  }
-  html += '.</p>'
-  if (document.effectiveStatus === 'NON_EXECUTOIRE') {
-    html += '<p><em>Ce document n’est pas exécutable en l’état.</em></p>'
-  }
-  return html
-}
-
-function buildNonExecutoireHint(
-  document: GpuFicheDocument,
-  proceduresByDocument: Record<string, GpuFicheProcedure[]> | undefined,
-): string {
-  const key = document.originalName ?? document.name
-  if (!key || !proceduresByDocument?.[key]?.length) return ''
-  const blocked = proceduresByDocument[key].some((p) => p.documentNotEnforceable === true)
-  if (!blocked) return ''
-  return `<p class="ec-fiche-info__warn"><strong>Ce document d’urbanisme n’est pas encore exécutable.</strong></p>`
-}
-
-function buildPartitionBlockHtml(
-  partitionKey: string,
-  partition: GpuFichePartition,
-  kind: 'du' | 'psmv' | 'scot' | 'sup',
-  proceduresByDocument?: Record<string, GpuFicheProcedure[]>,
-): string {
-  const document = pickProductionDocument(partition.documents)
-  if (!document) {
-    return `<p><strong>${escapeHtml(partitionKey)}</strong> — document indisponible.</p>`
-  }
-  const parts = [documentIntroHtml(document, kind)]
-  parts.push(buildNonExecutoireHint(document, proceduresByDocument))
-  parts.push(buildPartitionFeaturesHtml(partition))
-  if (document.archiveUrl) {
-    parts.push(
-      `<p><a href="${escapeHtml(document.archiveUrl)}" target="_blank" rel="noopener noreferrer">Télécharger l’archive du document</a></p>`,
-    )
-  }
-  return parts.filter(Boolean).join('')
-}
-
 function buildDocumentTypeTabHtml(
   partitions: Record<string, GpuFichePartition>,
   kind: 'du' | 'psmv' | 'scot' | 'sup',
-  proceduresByDocument?: Record<string, GpuFicheProcedure[]>,
+  proceduresByDocument?: GpuFicheInfoPayload['proceduresByDocument'],
 ): string {
-  const keys = Object.keys(partitions)
-  if (!keys.length) return ''
-  if (keys.length === 1) {
-    return buildPartitionBlockHtml(keys[0], partitions[keys[0]], kind, proceduresByDocument)
-  }
-  const parts = ['<p>Zone d’incertitude où se superposent :</p><ul>']
-  for (const key of keys) {
-    parts.push(
-      `<li>${buildPartitionBlockHtml(key, partitions[key], kind, proceduresByDocument)}</li>`,
-    )
-  }
-  parts.push('</ul>')
-  return parts.join('')
+  return buildDocumentTypeTabTilesHtml(partitions, kind, proceduresByDocument)
 }
 
 function collectInProgressProcedures(
@@ -287,43 +184,114 @@ function collectInProgressProcedures(
   return out
 }
 
-function buildProceduresTabHtml(procedures: GpuFicheProcedure[]): string {
-  if (!procedures.length) return ''
-  const parts = ['<ul class="ec-fiche-info__proc-list">']
-  for (const procedure of procedures) {
-    const typeLabel = procedure.procedureType?.title ?? procedure.documentType ?? 'Procédure'
-    const docName = procedure.documentName ?? procedure.name ?? ''
-    const gridTitle = procedure.grid?.title ?? procedure.grid?.name ?? ''
-    parts.push('<li>')
-    parts.push(
-      `<p><strong>${escapeHtml(typeLabel)}</strong>${docName ? ` — ${escapeHtml(docName)}` : ''}${gridTitle ? ` (${escapeHtml(gridTitle)})` : ''}</p>`,
-    )
-    if (procedure.approbationDate) {
-      parts.push(`<p>Date d’approbation : ${escapeHtml(procedure.approbationDate)}</p>`)
-    }
-    const files = procedure.files ?? []
-    if (files.length) {
-      parts.push('<ul>')
-      for (const file of files) {
-        const label = file.title ?? file.name ?? 'Pièce'
-        if (file.url) {
-          parts.push(
-            `<li><a href="${escapeHtml(file.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></li>`,
-          )
-        } else {
-          parts.push(`<li>${escapeHtml(label)}</li>`)
-        }
-      }
-      parts.push('</ul>')
-    }
-    parts.push('</li>')
+function formatProcedureDisplayDate(raw: string | undefined): string | null {
+  if (!raw?.trim()) return null
+  const value = raw.trim()
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value
+  const iso = Date.parse(value)
+  if (Number.isFinite(iso)) {
+    const d = new Date(iso)
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    return `${dd}/${mm}/${d.getFullYear()}`
   }
-  parts.push('</ul>')
-  return parts.join('')
+  return value
 }
 
-function buildCoastlineSupHint(): string {
-  return `<p class="ec-fiche-info__warn"><strong>SUP EL9</strong> — servitude longitudinale littoral (domaine public maritime).</p>`
+function oldestProcedureFileDate(procedure: GpuFicheProcedure): string | null {
+  const files = procedure.files ?? []
+  let oldest: number | null = null
+  for (const file of files) {
+    const candidate =
+      (file as { uploadedAt?: string; uploadDate?: string }).uploadedAt ??
+      (file as { uploadDate?: string }).uploadDate
+    if (!candidate) continue
+    const ts = Date.parse(candidate)
+    if (!Number.isFinite(ts)) continue
+    if (oldest == null || ts < oldest) oldest = ts
+  }
+  if (oldest == null) return null
+  return formatProcedureDisplayDate(new Date(oldest).toISOString())
+}
+
+function buildProceduresTabHtml(procedures: GpuFicheProcedure[]): string {
+  if (!procedures.length) return ''
+  const tiles = procedures.map((procedure) => {
+    const title =
+      procedure.name?.trim() ||
+      procedure.procedureType?.title?.trim() ||
+      procedure.documentName?.trim() ||
+      'Procédure'
+    const inProgress = procedure.inProgress === true
+    const detail = inProgress
+      ? (() => {
+          const initiated = oldestProcedureFileDate(procedure)
+          return initiated ? `Initié le ${initiated}` : null
+        })()
+      : (() => {
+          const approved = formatProcedureDisplayDate(procedure.approbationDate)
+          return approved ? `Approuvée le ${approved}` : null
+        })()
+    return procedureTileHtml({
+      title,
+      href: procedureTileHref(procedure.id, procedure.files?.[0]?.url),
+      inProgress,
+      detailLine: detail,
+    })
+  })
+  return documentTilesListHtml(tiles)
+}
+
+function collectMecProcedures(
+  proceduresByDocument: Record<string, GpuFicheProcedure[]> | undefined,
+): GpuFicheProcedure[] {
+  if (!proceduresByDocument) return []
+  const out: GpuFicheProcedure[] = []
+  for (const [docName, list] of Object.entries(proceduresByDocument)) {
+    if (!/^MEC_/i.test(docName)) continue
+    for (const procedure of list) {
+      out.push(procedure)
+    }
+  }
+  return out
+}
+
+function buildDuTabTilesHtml(
+  partitions: Record<string, GpuFichePartition>,
+  data: GpuFicheInfoPayload,
+): string {
+  const keys = Object.keys(partitions)
+  if (!keys.length) return ''
+  const tiles: string[] = []
+  for (const partition of Object.values(partitions)) {
+    const doc = pickProductionDocument(partition.documents)
+    if (!doc) continue
+    const title = doc.title?.trim() || doc.type || 'Document'
+    const name = doc.originalName ?? doc.name ?? ''
+    const partitionName = typeof doc.name === 'string' ? doc.name : undefined
+    const datappro = name ? formatDatapproFromDocumentName(name) : null
+    tiles.push(
+      documentUrbanismTileHtml({
+        title,
+        href: documentTileHrefFromApiFields(doc),
+        effectiveStatus: doc.effectiveStatus,
+        legalStatus: doc.legalStatus,
+        status: doc.status,
+        datapproLabel: datappro,
+        procedureNatureLabel: resolveLastApprovedProcedureNatureLabel(
+          doc,
+          data.proceduresByDocument,
+        ),
+        mecNoticeHtml: mecNoticeHtmlForDocumentName(data, name, partitionName),
+      }),
+    )
+  }
+  if (!tiles.length) return ''
+  const list = documentTilesListHtml(tiles)
+  if (keys.length > 1) {
+    return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`
+  }
+  return list
 }
 
 function normalizeLowScaleDocuments(
@@ -335,17 +303,27 @@ function normalizeLowScaleDocuments(
   return []
 }
 
-function buildLowScaleDocumentsHtml(documents: GpuFicheDocument[]): string {
+function buildLowScaleDocumentsHtml(
+  documents: GpuFicheDocument[],
+  proceduresByDocument?: GpuFicheInfoPayload['proceduresByDocument'],
+): string {
   if (!documents.length) return ''
-  if (documents.length === 1) {
-    return documentIntroHtml(documents[0], 'du')
-  }
-  const parts = ['<p>Zone d’incertitude où se superposent :</p><ul>']
-  for (const doc of documents) {
-    parts.push(`<li>${documentIntroHtml(doc, 'du')}</li>`)
-  }
-  parts.push('</ul>')
-  return parts.join('')
+  const tiles = documents.map((doc) => {
+    const title = doc.title?.trim() || doc.type || 'Document'
+    const name = doc.originalName ?? doc.name ?? ''
+    const datappro = name ? formatDatapproFromDocumentName(name) : null
+    return documentUrbanismTileHtml({
+      title,
+      href: documentTileHrefFromApiFields(doc),
+      effectiveStatus: doc.effectiveStatus,
+      legalStatus: doc.legalStatus,
+      status: doc.status,
+      datapproLabel: datappro,
+      procedureNatureLabel: resolveLastApprovedProcedureNatureLabel(doc, proceduresByDocument),
+    })
+  })
+  if (documents.length === 1) return documentTilesListHtml(tiles)
+  return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${documentTilesListHtml(tiles)}`
 }
 
 function territoryDocumentTabLabel(id: string, defaultLabel: string): string {
@@ -355,12 +333,15 @@ function territoryDocumentTabLabel(id: string, defaultLabel: string): string {
   return defaultLabel
 }
 
-function wrapTerritoryTabBody(data: GpuFicheInfoPayload, bodyHtml: string): string {
+function wrapTerritoryTabBody(
+  bodyHtml: string,
+  partitions: Record<string, GpuFichePartition>,
+): string {
   let html = bodyHtml
   if (html && !html.includes('ec-fiche-info__section-title')) {
     html = `<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>${html}`
   }
-  return prependNonExecutoireCalloutIfNeeded(html, data)
+  return prependNonExecutoireCalloutForPartitionMap(html, partitions)
 }
 
 function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInfoDocumentTab[] {
@@ -369,54 +350,64 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   const territory = mode === MAP_MODE_TERRITORY
 
   const dus = normalizePartitionsMap(data.dus)
-  if (mapHasProductionDocument(dus)) {
-    const bodyHtml = buildDocumentTypeTabHtml(dus, 'du', proceduresByDocument)
+  if (mapHasProductionDocument(dus) && isFicheDocumentFamilyVisible('du')) {
+    const bodyHtml = buildDuTabTilesHtml(dus, data)
     tabs.push({
       id: TAB_DU,
       label: territory
         ? territoryDocumentTabLabel(TAB_DU, 'Document d’urbanisme')
         : 'Document d’urbanisme',
-      bodyHtml: territory ? wrapTerritoryTabBody(data, bodyHtml) : bodyHtml,
+      bodyHtml: territory ? wrapTerritoryTabBody(bodyHtml, dus) : bodyHtml,
     })
   }
 
   const psmvs = normalizePartitionsMap(data.psmvs)
-  if (mapHasProductionDocument(psmvs)) {
+  if (mapHasProductionDocument(psmvs) && isFicheDocumentFamilyVisible('psmv')) {
     const bodyHtml = buildDocumentTypeTabHtml(psmvs, 'psmv', proceduresByDocument)
     tabs.push({
       id: TAB_PSMV,
       label: territory ? territoryDocumentTabLabel(TAB_PSMV, 'PSMV') : 'PSMV',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, psmvs) : bodyHtml,
     })
   }
 
   const sups = normalizePartitionsMap(data.sups)
-  if (mapHasProductionDocument(sups)) {
-    let body = buildDocumentTypeTabHtml(sups, 'sup', proceduresByDocument)
-    if (data.is_el9_alert) body += buildCoastlineSupHint()
+  if (
+    isFicheDocumentFamilyVisible('sup') &&
+    (mapHasProductionDocument(sups) || data.is_el9_alert)
+  ) {
+    const body =
+      buildGroupedSupTabHtml(sups, { isEl9Alert: data.is_el9_alert === true }) ||
+      buildDocumentTypeTabHtml(sups, 'sup', proceduresByDocument)
     tabs.push({
       id: TAB_SUP,
       label: territory ? territoryDocumentTabLabel(TAB_SUP, 'Servitude') : 'Servitude',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(body, data) : body,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(body, sups) : body,
     })
   }
 
   const scots = normalizePartitionsMap(data.scots)
-  if (mapHasProductionDocument(scots)) {
-    const bodyHtml = buildDocumentTypeTabHtml(scots, 'scot', proceduresByDocument)
+  if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible('scot')) {
+    const bodyHtml = buildDuTabTilesHtml(scots, data)
     tabs.push({
       id: TAB_SCOT,
       label: territory ? territoryDocumentTabLabel(TAB_SCOT, 'SCoT') : 'SCoT',
-      bodyHtml: territory ? prependNonExecutoireCalloutIfNeeded(bodyHtml, data) : bodyHtml,
+      bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(bodyHtml, scots) : bodyHtml,
     })
   }
 
   const inProgress = collectInProgressProcedures(proceduresByDocument)
-  if (inProgress.length) {
-    let bodyHtml = buildProceduresTabHtml(inProgress)
+  const mecProcedures = collectMecProcedures(proceduresByDocument)
+  const procedureTiles = [...inProgress]
+  for (const mecProc of mecProcedures) {
+    if (!procedureTiles.some((p) => p.id === mecProc.id)) procedureTiles.push(mecProc)
+  }
+  const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
+  if (isFicheDocumentFamilyVisible('mec') && (procedureTiles.length || mecProceduresHtml)) {
+    let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : ''
+    if (mecProceduresHtml) bodyHtml += mecProceduresHtml
     if (territory) {
       bodyHtml = `<h3 class="ec-fiche-info__section-title">Procédures en cours</h3>${bodyHtml}`
-      bodyHtml = prependNonExecutoireCalloutIfNeeded(bodyHtml, data)
     }
     tabs.push({
       id: TAB_PROCEDURES,
@@ -429,11 +420,11 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
 
   if (!tabs.some((t) => t.id === TAB_DU)) {
     const lowScaleDocs = normalizeLowScaleDocuments(data.lowScaleDocument)
-    if (lowScaleDocs.length) {
+    if (lowScaleDocs.length && isFicheDocumentFamilyVisible('du')) {
       tabs.unshift({
         id: TAB_DU,
         label: 'Document d’urbanisme',
-        bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs),
+        bodyHtml: buildLowScaleDocumentsHtml(lowScaleDocs, data.proceduresByDocument),
       })
     }
   }
@@ -441,18 +432,15 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   return tabs
 }
 
-function buildParcelUrbanismInfosHtml(data: GpuFicheInfoPayload): string {
-  const dus = normalizePartitionsMap(data.dus)
-  const keys = Object.keys(dus)
-  if (!keys.length) {
-    return '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
-  }
-  const parts: string[] = []
-  for (const key of keys) {
-    const block = buildPartitionFeaturesHtml(dus[key])
-    if (block) parts.push(block)
-  }
-  return parts.join('') || '<p>Aucune règle d’urbanisme disponible pour cette parcelle.</p>'
+function absorbedMunicipalityHint(data: GpuFicheInfoPayload): string {
+  const deleted = data.deletedGrids ?? []
+  const grid = data.grid
+  if (!deleted.length || !grid?.name) return ''
+  const absorbed = deleted.find((g) => g.properties?.name)?.properties?.name
+  if (!absorbed) return ''
+  const current = formatMunicipalityName(grid.name.trim())
+  const former = formatMunicipalityName(String(absorbed).trim())
+  return `<p class="ec-fiche-info__absorbed">Zone de ${escapeHtml(former)} (fusionnée au sein de la commune de ${escapeHtml(current)}).</p>`
 }
 
 function municipalityTitle(data: GpuFicheInfoPayload): string {
@@ -467,9 +455,22 @@ function fallbackBodyHtml(data: GpuFicheInfoPayload): string {
   if (data.grid?.is_rnu) {
     return '<p>Cette commune est couverte par le Règlement National d’Urbanisme (RNU).</p>'
   }
-  const lowScaleHtml = buildLowScaleDocumentsHtml(normalizeLowScaleDocuments(data.lowScaleDocument))
+  const lowScaleHtml = buildLowScaleDocumentsHtml(
+    normalizeLowScaleDocuments(data.lowScaleDocument),
+    data.proceduresByDocument,
+  )
   if (lowScaleHtml) return lowScaleHtml
   return '<p>Aucun document disponible à cet emplacement.</p>'
+}
+
+export function extractParcelFichePayload(data: GpuFicheInfoPayload): GpuParcelFichePayload | null {
+  if (data.parcelFiche && isGpuParcelFichePayload(data.parcelFiche)) {
+    return data.parcelFiche
+  }
+  if (data.features?.length && isGpuParcelFichePayload({ features: data.features })) {
+    return { features: data.features }
+  }
+  return null
 }
 
 export function ficheSelectionFromGpuApi(
@@ -478,31 +479,110 @@ export function ficheSelectionFromGpuApi(
   lon: number,
   lat: number,
 ): FicheInfoSelection {
+  const hasParcel = ficheHasParcelAtPoint(data)
+  const hasTerritory = ficheHasTerritoryAtPoint(data)
   const parcel = data.parcel ?? null
-  const territoryTitle = municipalityTitle(data)
-  const parcelLabel = parcelShortLabel(parcel) || 'Parcelle'
+  const territoryTitle = hasTerritory ? municipalityTitle(data) : 'Territoire'
+  const parcelLabel = hasParcel
+    ? parcelShortLabel(parcel) || 'Parcelle'
+    : NO_PARCEL_AT_POINT_MESSAGE
+  const parcelSwitchLabel = hasParcel
+    ? parcelShortLabel(parcel) || 'Parcelle'
+    : NO_PARCEL_AT_POINT_MESSAGE
   const documentTabs = mode === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode) : undefined
   const bodyHtml =
     mode === MAP_MODE_TERRITORY && !documentTabs?.length ? fallbackBodyHtml(data) : undefined
+
+  const absorbedHtml = absorbedMunicipalityHint(data)
 
   const base: FicheInfoSelection = {
     title: mode === MAP_MODE_PARCEL ? parcelLabel : territoryTitle,
     mapMode: mode,
     parcelLabel,
     territoryTitle,
-    cadastreReferences: cadastreReferencesFromParcel(parcel),
+    parcelSwitchLabel,
+    parcelMissingAtPoint: !hasParcel,
+    cadastreReferences: hasParcel ? cadastreReferencesFromParcel(parcel) : null,
     documentTabs: documentTabs?.length ? documentTabs : undefined,
-    bodyHtml,
+    bodyHtml:
+      mode === MAP_MODE_TERRITORY && absorbedHtml && !documentTabs?.length
+        ? `${absorbedHtml}${fallbackBodyHtml(data)}`
+        : bodyHtml,
+    headerHtml: mode === MAP_MODE_TERRITORY && absorbedHtml ? absorbedHtml : undefined,
     raw: { ...data, lon, lat, mode, source: 'gpu-fiche-info-api' },
   }
 
   if (mode === MAP_MODE_PARCEL) {
-    base.parcelInfosHtml = buildParcelUrbanismInfosHtml(data)
-    base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)
     base.headerHtml = undefined
-  } else {
-    base.headerHtml = undefined
+    if (!hasParcel) {
+      const msg = `<p>${escapeHtml(NO_PARCEL_AT_POINT_MESSAGE)}</p>`
+      base.parcelInfosHtml = msg
+      base.parcelDocumentsHtml = msg
+    } else {
+      const parcelFiche = extractParcelFichePayload(data)
+      if (parcelFiche) {
+        base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche)
+        base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data)
+        base.raw = { ...base.raw, _parcelFiche: parcelFiche }
+      } else {
+        base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)
+        base.parcelInfosHtml = undefined
+      }
+    }
   }
 
+  if (mode === MAP_MODE_TERRITORY && documentTabs?.length && absorbedHtml) {
+    base.documentTabs = documentTabs.map((tab, index) =>
+      index === 0 ? { ...tab, bodyHtml: `${absorbedHtml}${tab.bodyHtml}` } : tab,
+    )
+  }
+
+  applyCatalogVisibilityToFicheSelection(base)
   return base
+}
+
+function extractGpuFichePayloadFromSelectionRaw(
+  raw: Record<string, unknown>,
+): GpuFicheInfoPayload | null {
+  if (raw.source !== 'gpu-fiche-info-api') return null
+  const copy: Record<string, unknown> = { ...raw }
+  delete copy.lon
+  delete copy.lat
+  delete copy.mode
+  delete copy.source
+  if (!isGpuFicheInfoPayload(copy)) return null
+  return copy
+}
+
+/** Recalcule Infos / Documents / onglets territoire selon les cases catalogue (hash permalink). */
+export function refreshFicheSelectionCatalogVisibility(
+  selection: FicheInfoSelection,
+): FicheInfoSelection {
+  const raw = selection.raw
+  if (!raw || typeof raw !== 'object') return selection
+  if (selection.loading) return selection
+
+  const data = extractGpuFichePayloadFromSelectionRaw(raw)
+  if (!data) {
+    const copy: FicheInfoSelection = {
+      ...selection,
+      documentTabs: selection.documentTabs?.map((tab) => ({ ...tab })),
+    }
+    applyCatalogVisibilityToFicheSelection(copy)
+    return copy
+  }
+
+  const lon = Number(raw.lon) || 0
+  const lat = Number(raw.lat) || 0
+  const mode = selection.mapMode ?? (raw.mode as MapModeId) ?? MAP_MODE_TERRITORY
+  const rebuilt = ficheSelectionFromGpuApi(data, mode, lon, lat)
+
+  return {
+    ...selection,
+    documentTabs: rebuilt.documentTabs,
+    bodyHtml: rebuilt.bodyHtml,
+    headerHtml: rebuilt.headerHtml,
+    parcelInfosHtml: rebuilt.parcelInfosHtml,
+    parcelDocumentsHtml: rebuilt.parcelDocumentsHtml,
+  }
 }
