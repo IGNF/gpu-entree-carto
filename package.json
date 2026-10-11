@@ -72,7 +72,7 @@
     "jsdom": "^30.1.0",
     "prettier": "^3.9.9",
     "typescript": "~5.7.2",
-    "typescript-eslint": "^8.71.0",
+    "typescript-eslint": "^8.71.1",
     "vue-eslint-parser": "^10.4.0",
     "vite": "^6.0.7",
     "vitest": "^4.1.11",
