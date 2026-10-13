@@ -38,8 +38,8 @@ describe('ficheGpuSiteUrls', () => {
       value: new URL('http://localhost:5173/map'),
       writable: true,
     })
-    config.procedureViewUrl = 'http://127.0.0.1:8000/procedure/view/__GPU_PROCEDURE_ID__'
-    config.urlPlaceholders = { procedureId: '__GPU_PROCEDURE_ID__' }
+    config.procedureViewUrl = 'http://127.0.0.1:8000/procedure/view/00000000000000000000000000000000'
+    config.urlPlaceholders = { procedureId: '00000000000000000000000000000000' }
 
     expect(resolveGpuProcedureViewUrl('1060')).toBe('http://127.0.0.1:8000/procedure/view/1060')
   })
@@ -71,8 +71,8 @@ describe('ficheGpuSiteUrls', () => {
       value: new URL('http://localhost:5173/map'),
       writable: true,
     })
-    config.procedureViewUrl = '/__gpu_dev_proxy__/procedure/view/__GPU_PROCEDURE_ID__'
-    config.urlPlaceholders = { procedureId: '__GPU_PROCEDURE_ID__' }
+    config.procedureViewUrl = '/__gpu_dev_proxy__/procedure/view/00000000000000000000000000000000'
+    config.urlPlaceholders = { procedureId: '00000000000000000000000000000000' }
 
     expect(resolveGpuProcedureViewUrl('1115')).toBe('http://127.0.0.1:8000/procedure/view/1115')
   })
