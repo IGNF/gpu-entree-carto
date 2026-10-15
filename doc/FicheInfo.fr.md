@@ -104,16 +104,17 @@ Côté gpu-client, **ParcelLegend** + présentation documents transforment `feat
    - construire `parcelId` depuis `selection.raw.parcel` ou propriétés cadastre ;
    - `GET apiParcelFicheUrl` ;
    - **Infos :** HTML type légende gpu-client (zonage, prescriptions, infos, MEC) ;
-   - **Documents :** cartes documents intersectant la parcelle (badges **EN VIGUEUR** ou **NON EXÉCUTOIRE** + **APPROUVÉ** selon `effectiveStatus` / `status`) ; encart « Certains documents ne sont pas exécutoires… » **uniquement** si au moins une carte est non exécutoire.
+   - **Documents :** cartes documents intersectant la parcelle (badges **EN VIGUEUR** ou **NON EXÉCUTOIRE** + **APPROUVÉ** selon `effectiveStatus` / `status` ; statut **`document.preview`** → badge unique **PRÉVISUALISATION** bleu) ; encart « Certains documents ne sont pas exécutoires… » **uniquement** si au moins une carte est non exécutoire.
 3. **Imprimer** : fenêtre d’impression navigateur une fois la fiche parcelle chargée (`gpu_api_parcel_fiche`).
 
 ### Preview document (`documentId`)
 
 Hors fiche seule : au chargement carte en mode preview gpu-site :
 
-- passer `previewDocumentId` / `zone=validation` à fiche-info ;
-- **recentrer** sur l’emprise du document ;
-- activer les entrées catalogue correspondantes.
+- passer `previewDocumentId` / `zone=validation` à fiche-info au clic ;
+- **recentrer** sur l’emprise du document (sans ouvrir la fiche ni placer la cerise au démarrage) ;
+- activer les entrées catalogue correspondantes ;
+- onglet **Documents** (territoire et parcelle) : tuile du document en **PRÉVISUALISATION** uniquement (pas EN VIGUEUR / HISTORIQUE).
 
 Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `MapPermalinkSync`, service fiche (nouveaux query params).
 

@@ -68729,12 +68729,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (approved) {
       return '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>';
     }
-    if (model.status === "document.preview") {
-      return '<span class="ec-fiche-info__badge ec-fiche-info__badge--historique">HISTORIQUE</span>';
-    }
     return "";
   }
   function tileBadgesRow(model, includeEffective) {
+    if (documentIsPreviewStatus(model.status)) {
+      const parts2 = [DOCUMENT_PREVIEW_BADGE_HTML];
+      if (model.notInDatabase) {
+        parts2.push(
+          '<span class="ec-fiche-info__badge ec-fiche-info__badge--not-in-bdd">NOT IN BDD</span>'
+        );
+      }
+      return `<div class="ec-fiche-info__tile-badges">${parts2.join("")}</div>`;
+    }
     const parts = [];
     parts.push(effectiveBadgeHtml(model.effectiveStatus));
     const legal = legalBadgeHtml(model);
@@ -69181,6 +69187,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (date2) return `Dernière procédure approuvée le : ${date2}`;
     return null;
   }
+  const DOCUMENT_PREVIEW_STATUS = "document.preview";
+  function documentIsPreviewStatus(status) {
+    return status === DOCUMENT_PREVIEW_STATUS;
+  }
+  const DOCUMENT_PREVIEW_BADGE_HTML = '<span class="ec-fiche-info__badge ec-fiche-info__badge--preview">PRÉVISUALISATION</span>';
   function documentIsNonExecutoireEffectiveStatus(effectiveStatus) {
     return effectiveStatus === "NON_EXECUTOIRE";
   }
@@ -95844,12 +95855,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         return out;
       }
       function resolveDocumentForCatalogStartup() {
-        const demoDoc = getDemoConfig().document;
-        if (demoDoc == null ? void 0 : demoDoc.type) return demoDoc;
         const injected = config.document;
         if (injected && typeof injected === "object" && "type" in injected) {
           return injected;
         }
+        const demoDoc = getDemoConfig().document;
+        if (demoDoc == null ? void 0 : demoDoc.type) return demoDoc;
         return null;
       }
       function wmsDocumentSyncKey() {
@@ -97018,6 +97029,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       embedApp = null;
     }
     container.innerHTML = "";
+    if (params2 == null ? void 0 : params2.document) {
+      config.document = params2.document;
+    }
     if (typeof window !== "undefined" && locationHashLooksLikeMapPermalink()) {
       bootstrapMapPermalinkFromLocation();
     }

@@ -2204,6 +2204,11 @@ span.ec-icon-parcelle::before {
   color: #000091;
 }
 
+.ec-fiche-info__badge--preview {
+  background: #e8edff;
+  color: #000091;
+}
+
 .ec-fiche-info__doc-card {
   margin: 0 0 0.75rem;
   padding: 0.75rem;

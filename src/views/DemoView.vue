@@ -15,13 +15,12 @@ import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
 import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
 import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
 import { provideMapMode } from '@/composables/mapMode'
-import { MAP_MODE_TERRITORY, normalizeMapMode } from '@/lib/map/mapMode'
+import { normalizeMapMode } from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
 import { pushRandomLifeNotification } from '@/lib/notifications/cartoNotifications'
 import {
-  documentToFicheSelection,
   fitMapToBbox,
   getDemoConfig,
   isValidBbox,
@@ -30,12 +29,7 @@ import {
   resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
 import { markGpuClientConfigLoading } from '@/lib/demo/gpuClientConfigState'
-import {
-  isFicheInfoApiConfigured,
-  loadFicheForCherryFromPermalink,
-  loadFicheForMapPoint,
-  scheduleFicheLoadForCherryWhenReady,
-} from '@/lib/fiche/ficheInfoService'
+import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import { parseDocumentBbox } from '@/lib/fiche/ficheInfoQuery'
 import config from '@/lib/config'
 import {
@@ -58,9 +52,7 @@ import '@/styles/map-mode-selector.css'
 import '@/styles/click-info.css'
 import {
   bootstrapMapPermalinkFromLocation,
-  getMapPermalinkParams,
   locationHashLooksLikeMapPermalink,
-  readMapPermalinkMarker,
 } from '@/lib/map/mapPermalink'
 import { captureInitialLayerPermalinkFromLocation } from '@/lib/layerConfig/documentCatalogStartup'
 
@@ -100,8 +92,6 @@ const pendingBbox = ref<number[] | null>(
   !handoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
 )
 const gpuDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
-/** Évite double fetch fiche au démarrage démo. */
-let demoStartupFicheRequested = false
 
 if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
   setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value)
@@ -160,37 +150,6 @@ function resolveDemoStartupBbox(cfg = getDemoConfig()): [number, number, number,
   return isValidBbox(cfg.bbox) ? cfg.bbox : null
 }
 
-function applyDemoStartupFiche(
-  doc: StandardViewerDocument,
-  bbox: [number, number, number, number] | null,
-): void {
-  if (demoStartupFicheRequested || !tabPanelsApiRef.value) return
-  demoStartupFicheRequested = true
-  if (readMapPermalinkMarker(getMapPermalinkParams())) {
-    loadFicheForCherryFromPermalink()
-    return
-  }
-  if (
-    doc.status === 'document.preview' &&
-    bbox &&
-    isFicheInfoApiConfigured() &&
-    !locationHashLooksLikeMapPermalink()
-  ) {
-    const [minLon, minLat, maxLon, maxLat] = bbox
-    const map = mapShellRef.value?.map ?? null
-    const zoom = map?.getView().getZoom() ?? getDemoConfig().map?.zoom ?? 14
-    void loadFicheForMapPoint({
-      lon: (minLon + maxLon) / 2,
-      lat: (minLat + maxLat) / 2,
-      mode: MAP_MODE_TERRITORY,
-      zoom,
-      loadingTitle: doc.name ?? doc.type ?? 'Document',
-    })
-    return
-  }
-  tabPanelsApiRef.value.showSelection(documentToFicheSelection(doc))
-}
-
 function tryApplyDemoDocumentAndBboxStartup(): void {
   const cfg = getDemoConfig()
   const doc = cfg.document ?? null
@@ -215,10 +174,6 @@ function tryApplyDemoDocumentAndBboxStartup(): void {
     } else if (!pendingBbox.value) {
       pendingBbox.value = bbox
     }
-  }
-
-  if (doc) {
-    applyDemoStartupFiche(doc, bbox)
   }
 }
 

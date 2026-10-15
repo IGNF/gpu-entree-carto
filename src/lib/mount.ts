@@ -1,5 +1,6 @@
 import { createApp, type App } from 'vue'
 import EmbedMapViewer from '@/embed/EmbedMapViewer.vue'
+import config from '@/lib/config'
 import type { StandardViewerParams } from '@/lib/types'
 import { bootstrapGpuSiteMapEmbed } from '@/lib/demo/demoConfig'
 import {
@@ -25,6 +26,9 @@ export function mountMapViewer(
   }
 
   container.innerHTML = ''
+  if (params?.document) {
+    config.document = params.document
+  }
   if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
     bootstrapMapPermalinkFromLocation()
   }

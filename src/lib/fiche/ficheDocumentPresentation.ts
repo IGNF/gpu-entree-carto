@@ -110,6 +110,15 @@ export function lastApprovedProcedureTileDetail(
   return null
 }
 
+export const DOCUMENT_PREVIEW_STATUS = 'document.preview'
+
+export function documentIsPreviewStatus(status: string | undefined): boolean {
+  return status === DOCUMENT_PREVIEW_STATUS
+}
+
+export const DOCUMENT_PREVIEW_BADGE_HTML =
+  '<span class="ec-fiche-info__badge ec-fiche-info__badge--preview">PRÉVISUALISATION</span>'
+
 export function documentIsNonExecutoireEffectiveStatus(
   effectiveStatus: string | undefined,
 ): boolean {
@@ -128,6 +137,9 @@ export function documentCardBadgesHtml(options: {
   defaultApprovedWhenStatusMissing?: boolean
 }): string {
   const { effectiveStatus, status, defaultApprovedWhenStatusMissing } = options
+  if (documentIsPreviewStatus(status)) {
+    return DOCUMENT_PREVIEW_BADGE_HTML
+  }
   const nonExecutoire = documentIsNonExecutoireEffectiveStatus(effectiveStatus)
   const approved = status === 'document.production' || (defaultApprovedWhenStatusMissing && !status)
   const badges = [

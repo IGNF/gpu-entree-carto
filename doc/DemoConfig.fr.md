@@ -20,7 +20,7 @@ Modifier l’environnement ou le jeu de test **sans recompiler** ni toucher au c
 | `useMinimified`          | `false` (défaut) : démos via sources Vite (imports ES). `true` : charge les bundles `dist/` (suffixe `.min` si minifiés) — accueil (`search-engine` / `location-search`), carte (`entree-carto` + `createStandardViewer`), `/geometry-editor`, `/sketch`. Prérequis : `npm run build` (ou cibles `build:*` concernées). En dev / preview, Vite sert `/dist/` via middleware. |
 | `configScriptUrl`        | URL optionnelle de `/map/gpu-client-config.js` (prod, dev, local). Charge les globals `LAYER_CONFIG`, `LEGEND_CONFIG`, … |
 | _(GitHub Pages)_         | Build `npm run build:demo:pages` : `dist/js/demo-config.js` pointe automatiquement vers `https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js` (fichier source `public/js/demo-config.js` reste en local `127.0.0.1:8000` pour le dev). |
-| `document`               | Document GPU `{ id, type, status, name, bbox? }` — preview WMS + fiche au chargement de **`/map`** (après `gpu-client-config`) |
+| `document`               | Document GPU `{ id, type, status, name, bbox? }` — preview WMS + branches catalogue au chargement de **`/map`** (après `gpu-client-config`) ; fiche fermée jusqu’au clic ou cerise permalink (`mlon`/`mlat`) |
 | `bbox`                   | `[minLon, minLat, maxLon, maxLat]` (EPSG:4326) si pas de handoff recherche depuis `/` ; ignorée si le hash URL contient déjà `lon`/`lat` (permalink) |
 | `gpuConfigOverrides`     | Objet fusionné dans `gpu.config` / `config` entree-carto                                                                 |
 | `map.baseLayerId`        | `carte` \| `carte-nb` \| `photo` \| `mixte` \| `cadastre` \| `blank` (presets gpu)                                       |
@@ -38,7 +38,7 @@ Voir les blocs commentés en bas de `public/js/demo-config.js` (environnements g
 
 1. Ouvrir **`http://localhost:5173/map`** (pas seulement `/`).
 2. **`configScriptUrl`** doit répondre (ex. gpu-site local `127.0.0.1:8000`) : sans `LAYER_CONFIG` / URLs WMS, pas de couches `_previsu` ni fiche API complète.
-3. Au démarrage : emprise `bbox` (ou `document.bbox`), couches WMS filtrées sur `document.name` (partition), fiche territoire au centre de l’emprise si `apiFicheInfoUrl` est présent dans la config GPU.
+3. Au démarrage : emprise `bbox` (ou `document.bbox`), couches WMS filtrées sur `document.name` (partition). Comme l’embed gpu-site : **pas** d’ouverture auto de la fiche ni de cerise (clic carte ou permalink `#mlon`/`#mlat`).
 4. **`document.type`** (et `name` pour les MEC) coche le catalogue comme gpu-client : PLU/POS/CC/PLUi/PSMV → vues d’ensemble + détaillée DU ; SUP → servitudes ; SCoT → schéma de cohérence ; MEC → selon `_DU_` / `_scot_` dans le nom. Prioritaire sur les clés `dev-*` écrites ensuite dans le hash par la carte ; **ignoré** seulement si le hash **à l’ouverture de la page** contenait déjà des paramètres de couches.
 4. Vider le hash `#lon=…` dans l’URL ou ouvrir un onglet neuf si l’emprise ne bouge pas (le permalink carte prime sur `bbox`).
 

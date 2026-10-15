@@ -2,6 +2,8 @@ import { lastApprovedProcedureTileDetail } from '@/lib/fiche/ficheDocumentPresen
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import {
   documentIsNonExecutoireEffectiveStatus,
+  documentIsPreviewStatus,
+  DOCUMENT_PREVIEW_BADGE_HTML,
   FICHE_NON_EXECUTOIRE_CALLOUT_HTML,
 } from '@/lib/fiche/ficheDocumentPresentation'
 import {
@@ -69,13 +71,19 @@ function legalBadgeHtml(model: FicheDocumentTileModel): string {
   if (approved) {
     return '<span class="ec-fiche-info__badge ec-fiche-info__badge--approuve">APPROUVÉ</span>'
   }
-  if (model.status === 'document.preview') {
-    return '<span class="ec-fiche-info__badge ec-fiche-info__badge--historique">HISTORIQUE</span>'
-  }
   return ''
 }
 
 function tileBadgesRow(model: FicheDocumentTileModel, includeEffective: boolean): string {
+  if (documentIsPreviewStatus(model.status)) {
+    const parts = [DOCUMENT_PREVIEW_BADGE_HTML]
+    if (model.notInDatabase) {
+      parts.push(
+        '<span class="ec-fiche-info__badge ec-fiche-info__badge--not-in-bdd">NOT IN BDD</span>',
+      )
+    }
+    return `<div class="ec-fiche-info__tile-badges">${parts.join('')}</div>`
+  }
   const parts: string[] = []
   if (includeEffective) parts.push(effectiveBadgeHtml(model.effectiveStatus))
   const legal = legalBadgeHtml(model)

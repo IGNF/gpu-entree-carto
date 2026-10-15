@@ -411,12 +411,12 @@ function collectLayerParamsForPermalink(): MapPermalinkParams {
 }
 
 function resolveDocumentForCatalogStartup(): StandardViewerDocument | null {
-  const demoDoc = getDemoConfig().document
-  if (demoDoc?.type) return demoDoc
   const injected = config.document
   if (injected && typeof injected === 'object' && 'type' in injected) {
     return injected as StandardViewerDocument
   }
+  const demoDoc = getDemoConfig().document
+  if (demoDoc?.type) return demoDoc
   return null
 }
 
