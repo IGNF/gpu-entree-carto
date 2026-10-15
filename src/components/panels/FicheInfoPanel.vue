@@ -236,11 +236,12 @@ const emptyBodyHtml = computed(
       class="ec-fiche-info__body"
       :html="FICHE_LOADING_SPINNER_HTML"
       aria-live="polite"
+      link-target-blank
     />
 
     <div v-else-if="isEmpty" class="ec-fiche-info__inner">
       <h2 class="ec-fiche-info__title">{{ DEFAULT_FICHE_EMPTY.title }}</h2>
-      <SanitizedHtml class="ec-fiche-info__body" :html="emptyBodyHtml" />
+      <SanitizedHtml class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
     </div>
 
     <!-- Mode Parcelle -->
@@ -326,11 +327,13 @@ const emptyBodyHtml = computed(
               v-if="parcelTabLoading"
               class="ec-fiche-info__body"
               :html="FICHE_LOADING_SPINNER_HTML"
+              link-target-blank
             />
             <SanitizedHtml
               v-else-if="selection?.parcelInfosHtml"
               class="ec-fiche-info__body"
               :html="selection.parcelInfosHtml"
+              link-target-blank
             />
             <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
@@ -348,7 +351,11 @@ const emptyBodyHtml = computed(
                 Imprimer
               </button>
             </div>
-            <SanitizedHtml class="ec-fiche-info__body" :html="parcelInfosDisplayHtml" />
+            <SanitizedHtml
+              class="ec-fiche-info__body"
+              :html="parcelInfosDisplayHtml"
+              link-target-blank
+            />
           </template>
         </div>
 
@@ -368,11 +375,13 @@ const emptyBodyHtml = computed(
               v-if="parcelTabLoading"
               class="ec-fiche-info__body"
               :html="FICHE_LOADING_SPINNER_HTML"
+              link-target-blank
             />
             <SanitizedHtml
               v-else-if="parcelDocumentsDisplayHtml"
               class="ec-fiche-info__body"
               :html="parcelDocumentsDisplayHtml"
+              link-target-blank
             />
             <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
@@ -380,6 +389,7 @@ const emptyBodyHtml = computed(
             v-else
             class="ec-fiche-info__body"
             :html="parcelDocumentsDisplayHtml || '<p>Aucun document.</p>'"
+            link-target-blank
           />
         </div>
       </div>
@@ -445,14 +455,19 @@ const emptyBodyHtml = computed(
           :aria-labelledby="`ec-fiche-doc-tab-${tab.id}`"
           :tabindex="activeDocTab?.id === tab.id ? 0 : -1"
           :html="tab.bodyHtml"
+          link-target-blank
         />
       </div>
-      <SanitizedHtml v-else class="ec-fiche-info__body" :html="emptyBodyHtml" />
+      <SanitizedHtml v-else class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
     </div>
 
     <div v-else class="ec-fiche-info__inner">
       <h2 class="ec-fiche-info__title">{{ selection?.title }}</h2>
-      <SanitizedHtml class="ec-fiche-info__body" :html="selection?.bodyHtml ?? ''" />
+      <SanitizedHtml
+        class="ec-fiche-info__body"
+        :html="selection?.bodyHtml ?? ''"
+        link-target-blank
+      />
     </div>
 
     <Teleport to="body">

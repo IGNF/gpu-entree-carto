@@ -8413,7 +8413,10 @@ Expected function or array of functions, received type ${typeof value}.`
      * @api
      */
     getExtent() {
-      return this.extent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.extent_
+      );
     }
     /**
      * Get the units of this projection.
@@ -8439,7 +8442,10 @@ Expected function or array of functions, received type ${typeof value}.`
      * @api
      */
     getWorldExtent() {
-      return this.worldExtent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.worldExtent_
+      );
     }
     /**
      * Get the axis orientation of this projection.
@@ -8473,7 +8479,7 @@ Expected function or array of functions, received type ${typeof value}.`
       this.canWrapX_ = !!(global2 && this.extent_);
     }
     /**
-     * @return {import("../tilegrid/TileGrid.js").default} The default tile grid.
+     * @return {import("../tilegrid/TileGrid.js").default|null} The default tile grid.
      */
     getDefaultTileGrid() {
       return this.defaultTileGrid_;
@@ -8552,7 +8558,7 @@ Expected function or array of functions, received type ${typeof value}.`
   ];
   function fromEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {
@@ -8575,7 +8581,7 @@ Expected function or array of functions, received type ${typeof value}.`
   }
   function toEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {

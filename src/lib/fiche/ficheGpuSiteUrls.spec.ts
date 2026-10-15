@@ -11,6 +11,11 @@ import {
   resolveGpuProcedureViewUrl,
 } from '@/lib/fiche/ficheGpuSiteUrls'
 
+/** Évite les lignes > 100 car. (Prettier) après fusion avec `main`. */
+const PROCEDURE_ID_PLACEHOLDER = '__GPU_PROCEDURE_ID__'
+const GPU_SITE_PROCEDURE_VIEW_URL = `http://127.0.0.1:8000/procedure/view/${PROCEDURE_ID_PLACEHOLDER}`
+const PROXY_PROCEDURE_VIEW_URL = `/__gpu_dev_proxy__/procedure/view/${PROCEDURE_ID_PLACEHOLDER}`
+
 describe('ficheGpuSiteUrls', () => {
   afterEach(() => {
     setGpuClientConfigScriptUrl(null)
@@ -38,8 +43,8 @@ describe('ficheGpuSiteUrls', () => {
       value: new URL('http://localhost:5173/map'),
       writable: true,
     })
-    config.procedureViewUrl = 'http://127.0.0.1:8000/procedure/view/00000000000000000000000000000000'
-    config.urlPlaceholders = { procedureId: '00000000000000000000000000000000' }
+    config.procedureViewUrl = GPU_SITE_PROCEDURE_VIEW_URL
+    config.urlPlaceholders = { procedureId: PROCEDURE_ID_PLACEHOLDER }
 
     expect(resolveGpuProcedureViewUrl('1060')).toBe('http://127.0.0.1:8000/procedure/view/1060')
   })
@@ -71,8 +76,8 @@ describe('ficheGpuSiteUrls', () => {
       value: new URL('http://localhost:5173/map'),
       writable: true,
     })
-    config.procedureViewUrl = '/__gpu_dev_proxy__/procedure/view/00000000000000000000000000000000'
-    config.urlPlaceholders = { procedureId: '00000000000000000000000000000000' }
+    config.procedureViewUrl = PROXY_PROCEDURE_VIEW_URL
+    config.urlPlaceholders = { procedureId: PROCEDURE_ID_PLACEHOLDER }
 
     expect(resolveGpuProcedureViewUrl('1115')).toBe('http://127.0.0.1:8000/procedure/view/1115')
   })

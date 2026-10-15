@@ -90,6 +90,10 @@ Checked catalogue entries (permalink hash keys such as `dev-du`, `dev-sup`, `dev
 - **Territory:** hide document tabs (DU, SUP, SCoT, procedures/MEC) when the family is unchecked; content rebuilt via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
 - **Parcel:** **Infos** sections and **Documents** blocks (DU, SUP, SCoT, MEC replacement tiles) filtered or rebuilt on catalogue change (`TabPanelsControl`).
 
+### External links (tiles, procedures, PDF)
+
+DSFR tiles (`fr-tile__link`), SUP legal links, and written-rule PDF buttons are emitted with `target="_blank"` and `rel="noopener noreferrer"`. `FicheInfoPanel` renders them through `SanitizedHtml` with `link-target-blank` so DOMPurify keeps the `target` attribute.
+
 ## Remaining gaps (after P0–P2)
 
 | Priority | Topic | Notes |
