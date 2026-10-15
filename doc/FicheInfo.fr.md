@@ -129,6 +129,10 @@ Les cases cochées dans le catalogue (état reflété dans le **permalink** hash
 - **Territoire** : onglets Documents / SUP / SCoT / Procédures (MEC) masqués si la famille est décochée ; contenu recalculé via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
 - **Parcelle** : sections **Infos** (zonage, prescriptions, SUP, MEC, SCoT…) et **Documents** (DU, SUP, SCoT, tuiles MEC de remplacement) filtrées ou reconstruites au changement catalogue (`TabPanelsControl`).
 
+### Liens externes (tuiles, procédures, PDF)
+
+Les tuiles DSFR (`fr-tile__link`), liens SUP légaux et boutons pièce écrite PDF sont générés avec `target="_blank"` et `rel="noopener noreferrer"`. Le rendu passe par `SanitizedHtml` avec la prop `link-target-blank` pour que DOMPurify conserve l’attribut `target`.
+
 ## Écarts restants (après P0–P2)
 
 | Priorité | Sujet | Fichiers / notes |
