@@ -179,7 +179,7 @@ Optional later rename to `map_config.js.twig`.
 
 Gradually adapt selectors tied to legacy gpu-client controls (`.ol-control`, panels, etc.).
 
-**Icons:** gpu-site already loads DSFR (`dsfr.min.css` + `utility/utility.min.css`). entree-carto **`dist/css/*.css` no longer embeds `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Keep site utility CSS **before** entree-carto styles. If icons are missing on a custom host, serve `public/external/dsfr/utility/icons/icons.min.css` or call `ensureEmbedSharedStylesheets()` (see [DemoExternal.md](./DemoExternal.md)). geopf buttons with `fr-icon-*` used to paint twice (`::before` DSFR + geopf `::after`); neutralised in `map-controls.css`.
+**Icons:** gpu-site already loads DSFR (`dsfr.min.css` + `utility/utility.min.css`). entree-carto **`dist/css/*.css` no longer embeds `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Keep site utility CSS **before** entree-carto styles. **Remix Icon (`ri-*`):** serve `build/vendor/remixicon/remixicon.css` + `remixicon.woff2` next to the entree-carto bundle (gpu-site template helper), or rely on `ensureEmbedSharedStylesheets()` which resolves `../remixicon/remixicon.css` from the script URL, then falls back to `public/external/` for standalone demos. geopf buttons with `fr-icon-*` used to paint twice (`::before` DSFR + geopf `::after`); neutralised in `map-controls.css`.
 
 ### Webpack — do not re-minify vendor CSS
 

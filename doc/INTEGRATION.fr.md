@@ -179,7 +179,7 @@ Renommage optionnel ultérieur en `map_config.js.twig`.
 
 Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-client (`.ol-control`, panneaux, etc.).
 
-**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Les **`dist/css/*.css` n’embarquent plus `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Conserver l’utility DSFR **avant** les styles entree-carto. Hôte custom sans icônes : servir `public/external/dsfr/utility/icons/icons.min.css` ou `ensureEmbedSharedStylesheets()` ([DemoExternal.fr.md](./DemoExternal.fr.md)). Boutons geopf `fr-icon-*` : double picto neutralisé dans `map-controls.css`.
+**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Les **`dist/css/*.css` n’embarquent plus `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Conserver l’utility DSFR **avant** les styles entree-carto. **Remix Icon (`ri-*`) :** servir `build/vendor/remixicon/remixicon.css` + `remixicon.woff2` à côté du bundle (helper Twig gpu-site), ou laisser `ensureEmbedSharedStylesheets()` résoudre `../remixicon/remixicon.css` depuis l’URL du script, puis repli `public/external/` en démo. Hôte sans utility DSFR : `public/external/dsfr/utility/icons/icons.min.css` ou `ensureEmbedSharedStylesheets()` ([DemoExternal.fr.md](./DemoExternal.fr.md)). Boutons geopf `fr-icon-*` : double picto neutralisé dans `map-controls.css`.
 
 ### Webpack — ne pas re-minifier le CSS vendeur
 

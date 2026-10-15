@@ -15,6 +15,29 @@ export function demoExternalStylesheet(pathFromExternalRoot: string): string {
   return `${demoExternalBaseUrl()}${normalized}`
 }
 
+/** Chemin sibling du script entree-carto (ex. gpu-site `build/vendor/remixicon/`). */
+export function embedVendorSiblingStylesheet(relativeToEntreeCartoScript: string): string | null {
+  if (typeof document === 'undefined') return null
+  const scripts = document.getElementsByTagName('script')
+  for (let i = scripts.length - 1; i >= 0; i--) {
+    const src = scripts[i]?.src
+    if (!src || !/entree-carto[^/]*\.min\.js/i.test(src)) continue
+    try {
+      return new URL(relativeToEntreeCartoScript, src).href
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+export function remixIconStylesheetUrl(): string {
+  return (
+    embedVendorSiblingStylesheet('../remixicon/remixicon.css') ??
+    demoExternalStylesheet('remixicon/remixicon.css')
+  )
+}
+
 /** Feuilles attendues sur gpu-site (dsfr + utility) — pas de rechargement icons.min.css. */
 export function hostPageProvidesDsfrIcons(): boolean {
   if (typeof document === 'undefined') return false
@@ -64,6 +87,6 @@ export async function ensureEmbedSharedStylesheets(): Promise<void> {
     await loadStylesheet(demoExternalStylesheet('dsfr/utility/icons/icons.min.css'))
   }
   if (!hostPageProvidesRemixIcon()) {
-    await loadStylesheet(demoExternalStylesheet('remixicon/remixicon.css'))
+    await loadStylesheet(remixIconStylesheetUrl())
   }
 }
