@@ -3,7 +3,6 @@
  */
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
-import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 import '@/styles/search-engine-standalone.css'
 import { mountSearchEngine } from '@/lib/mountSearchEngine'

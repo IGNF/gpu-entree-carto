@@ -15,7 +15,9 @@ Les builds **lib** (intégration gpu-site) produisent un fichier CSS par bundle 
 | `entree-carto-geometry-editor.css` / `.min.css` | `entree-carto-geometry-editor.js` | Formulaires géométrie |
 | `entree-carto-sketch.css` / `.min.css` | `entree-carto-sketch.js` | Croquis standalone |
 
-Build : `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (voir [INTEGRATION.md](./INTEGRATION.fr.md)).
+Build : `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (voir [INTEGRATION.fr.md](./INTEGRATION.fr.md)).
+
+**Icônes DSFR :** les bundles CSS **n’embarquent plus** `@gouvfr/dsfr/dist/utility/icons/icons.min.css` (audit gpu-site 4.2). La page hôte doit charger l’utility DSFR (ou `public/external/…` pour la démo autonome — [DemoExternal.fr.md](./DemoExternal.fr.md)).
 
 ## Accueil — CSS minimal
 

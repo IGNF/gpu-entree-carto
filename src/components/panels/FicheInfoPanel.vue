@@ -23,12 +23,10 @@ import {
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
-import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@gouvfr/dsfr/dist/component/tab/tab.min.css'
 import '@gouvfr/dsfr/dist/component/button/button.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
-import 'remixicon/fonts/remixicon.css'
 import '@gouvfr/dsfr/dist/component/tile/tile.min.css'
 import { syncFicheGeometryHighlight } from '@/lib/fiche/ficheGeometryHighlight'
 

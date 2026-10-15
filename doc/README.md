@@ -13,6 +13,7 @@ When adding or changing a control: **update the associated page** (description, 
 - [gpu-client ↔ IGNF equivalents](./GPU_CLIENT_EQUIVALENTS.md) — feature matrix / vue-components / geopf / entree-carto IGNF
 - [Demo](./Demo.md) — routes `/` (location), `/map` (map), `/geometry-editor`, `/sketch` + DSFR nav
 - [Demo configuration](./DemoConfig.md) — `public/js/demo-config.js` (gpu-client `exemple-config.js` equivalent)
+- [Demo external assets](./DemoExternal.md) — `public/external/` (DSFR + Remix for standalone demo, no icon CSS in lib bundles)
 - [Notifications](./Notifications.md) — Notivue toasts in cartes.gouv.fr style
 - [Icon reference](./icone-references.md) — DSFR / Remix classes and catalog URLs used in the app
 

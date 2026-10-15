@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 import { patchGeopfSearchEval } from './vite.geopfPlugins'
+import { stubDsfrIconsCss } from './vite/stubDsfrIconsCss'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
 
 const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
-  plugins: [patchGeopfSearchEval()],
+  plugins: [patchGeopfSearchEval(), stubDsfrIconsCss()],
   esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {

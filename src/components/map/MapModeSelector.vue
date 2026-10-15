@@ -10,7 +10,6 @@ import { tryUseMapMode } from '@/composables/mapMode'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import { readCherryOrModeEmprisePoint } from '@/lib/map/searchResultGraphics'
-import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 
 const props = withDefaults(

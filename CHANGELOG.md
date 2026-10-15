@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Demo external assets** — `public/external/` (DSFR + Remix synced via `npm run sync:demo-external`), [DemoExternal.md](./doc/DemoExternal.md); standalone demo loads them from `index.html`; gpu-site embed uses `stubDsfrIconsCss` (no embedded `icons.min.css` in `dist/css/`).
+
 - **Fiche info v2 (client)** — `fiche-info-v2` territory / parcel / combined routes (`ficheInfoApiUrls`, `ficheInfoFetch`), DSFR document and procedure tiles, legal status badges, parcel/territory GeoJSON highlight, dual-mode cherry cache, [FicheInfoApi](./doc/FicheInfoApi.md) contract doc; removed browser APICarto parcel fallback.
 
 ### Changed
@@ -34,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Demo DSFR assets** — `sync:demo-external` copies Marianne/Spectral (`dsfr/fonts/`) and icon SVG masks (`dsfr/icons/`) so `dsfr.min.css` and `icons.min.css` URLs resolve (avoids Vite HTML fallback, missing `fr-icon-*`, and “rejected by sanitizer”).
 - **Fiche info MEC notice** — territory document tiles show the MEC compatibility notice only when a MEC record exists in gpu-site (32-char document id), not from WFS-only partition keys.
 - **Fiche info vs catalogue** — toggling _Data_ layer checkboxes refreshes the open fiche (territory tabs, parcel Infos/Documents) from cached API payload; no extra fetch.
 - **MEC document tile link** — parcel and territory MEC tiles open the gpu-site document page (`/document/{id}`), not the ZIP `archiveUrl`.

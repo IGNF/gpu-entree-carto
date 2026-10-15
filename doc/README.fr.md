@@ -13,6 +13,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.fr.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
 - [Démonstration](./Demo.fr.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
 - [Configuration démo](./DemoConfig.fr.md) — `public/js/demo-config.js` (équivalent gpu-client `exemple-config.js`)
+- [Assets externes démo](./DemoExternal.fr.md) — `public/external/` (DSFR + Remix pour la démo autonome, pas d’icônes DSFR dans les bundles lib)
 - [Notifications](./Notifications.fr.md) — toasts Notivue style cartes.gouv.fr
 - [Référence des icônes](./icone-references.fr.md) — classes DSFR / Remix et URLs catalogue utilisées dans l’app
 

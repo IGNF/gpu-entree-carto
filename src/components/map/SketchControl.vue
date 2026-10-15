@@ -10,7 +10,6 @@ import { SketchControl, type SketchExtraTool } from '@/geometry-editor/SketchCon
 import { setSketchToolEngaged } from '@/composables/sketchToolEngaged'
 import type { GeometryTypeOption } from '@/geometry-editor/types'
 import type { StyleLike } from 'ol/style/Style'
-import 'remixicon/fonts/remixicon.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 

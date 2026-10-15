@@ -12,6 +12,8 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Assets externes démo** — `public/external/` (DSFR + Remix via `npm run sync:demo-external`), [DemoExternal.fr.md](./doc/DemoExternal.fr.md) ; démo autonome via `index.html` ; intégration gpu-site avec `stubDsfrIconsCss` (plus de `icons.min.css` dans `dist/css/`).
+
 - **Fiche info v2 (client)** — routes `fiche-info-v2` territoire / parcelle / combinée (`ficheInfoApiUrls`, `ficheInfoFetch`), tuiles DSFR documents et procédures, badges légaux, surbrillance GeoJSON parcelle/territoire, cache sélections par mode au point cerise, doc [FicheInfoApi](./doc/FicheInfoApi.fr.md) ; fin du repli APICarto parcelle côté navigateur.
 
 ### Modifié
@@ -34,6 +36,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Assets DSFR (démo)** — `sync:demo-external` copie Marianne/Spectral (`dsfr/fonts/`) et les SVG masques (`dsfr/icons/`) pour que `dsfr.min.css` et `icons.min.css` résolvent leurs URLs (plus de repli HTML Vite, `fr-icon-*` absents ni « rejected by sanitizer »).
 - **Notice MEC (fiche territoire)** — la mention de mise en compatibilité sur la tuile document n’apparaît que si une MEC est enregistrée dans gpu-site (identifiant document 32 car.), pas pour une simple clé de partition WFS.
 - **Fiche info / catalogue** — cocher ou décocher les couches Données met à jour la fiche ouverte (onglets territoire, Infos/Documents parcelle) à partir du JSON déjà chargé, sans nouvel appel API.
 - **Lien tuile MEC** — ouverture de la fiche document gpu-site (`/document/{id}`), pas du ZIP `archiveUrl`.
