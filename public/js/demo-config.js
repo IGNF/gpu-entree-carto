@@ -18,8 +18,15 @@ window.DEMO_CONFIG = {
   configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
   // configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
 
-  document: null,
-  bbox: null,
+  //document: null,
+  //bbox: null,
+
+  document: { id: "7d74cc6961c2a12233e0e536af7e940d", status: "document.production", type: "DU", name: "DU_31526" },
+  bbox: [ 1.2375699, 43.566067, 1.293466, 43.5875781 ],
+
+
+
+
   // /** Document GPU à ouvrir au chargement (optionnel). */
   // document: { id: "89866a4198db08c8b6c0077e0aa3407a", status: "document.preview", type: "PLU", name: "DU_62193" },
   // /** Bbox initiale [minLon, minLat, maxLon, maxLat] (EPSG:4326), si pas de handoff recherche. */

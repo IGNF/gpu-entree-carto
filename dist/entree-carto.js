@@ -66070,6 +66070,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     finalizeGpuClientConfigStateIfInjected();
   }
+  function isValidBbox(bbox) {
+    return Array.isArray(bbox) && bbox.length === 4 && bbox.every((v) => typeof v === "number" && Number.isFinite(v));
+  }
+  function fitMapToBbox(map2, bbox, padding = 48) {
+    if (!isValidBbox(bbox)) return;
+    const extent = transformExtent(bbox, "EPSG:4326", "EPSG:3857");
+    map2.getView().fit(extent, { padding: [padding, padding, padding, padding], maxZoom: 18 });
+  }
   function appendParams(uri, params2) {
     const keyParams = [];
     Object.keys(params2).forEach(function(k) {
@@ -68240,6 +68248,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     url.searchParams.set("client", getOrCreateFicheClientId());
     url.searchParams.set("seq", String(nextFicheInfoRequestSeq()));
+  }
+  function parseDocumentBbox(doc2) {
+    const raw = doc2.bbox;
+    if (!raw) return null;
+    if (Array.isArray(raw) && raw.length === 4) {
+      return raw.every((n) => typeof n === "number" && Number.isFinite(n)) ? raw : null;
+    }
+    if (typeof raw === "string") {
+      const parts = raw.split(/[,;\s]+/).map((s) => Number.parseFloat(s.trim()));
+      if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+        return [parts[0], parts[1], parts[2], parts[3]];
+      }
+    }
+    return null;
   }
   function readConfigUrl(key2) {
     const bag = config;
@@ -96728,6 +96750,23 @@ Expected function or array of functions, received type ${typeof value2}.`
       env.mainLayers[key2].setVisible(true);
     }
   }
+  function resolveStandardViewerStartupBbox(params2, options) {
+    var _a, _b;
+    if ((_b = (_a = params2 == null ? void 0 : params2.search) == null ? void 0 : _a.fullText) == null ? void 0 : _b.trim()) {
+      return null;
+    }
+    if (locationHashLooksLikeMapPermalink()) {
+      return null;
+    }
+    if (isValidBbox(params2 == null ? void 0 : params2.bbox)) {
+      return params2.bbox;
+    }
+    const doc2 = params2 == null ? void 0 : params2.document;
+    if (doc2) {
+      return parseDocumentBbox(doc2);
+    }
+    return null;
+  }
   const _hoisted_1$1 = {
     class: "ec-embed-viewer gpu-client",
     "data-testid": "embed-map-viewer"
@@ -96763,6 +96802,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       const mapShellRef = /* @__PURE__ */ ref(null);
       const layerNodes = /* @__PURE__ */ ref([]);
+      const pendingStartupBbox = /* @__PURE__ */ ref(null);
       const layerMapHooks = {
         onVisible: (id, visible) => gpuWmsLayerRegistry.setVisible(id, visible),
         onOpacity: (id, opacity) => gpuWmsLayerRegistry.setOpacity(id, opacity),
@@ -96790,8 +96830,21 @@ Expected function or array of functions, received type ${typeof value2}.`
           gpuWmsLayerRegistry.attachMap(map2);
         }
       }
+      function tryApplyEmbedStartupBbox() {
+        var _a2;
+        const bbox = pendingStartupBbox.value ?? resolveStandardViewerStartupBbox(props.params ?? void 0);
+        if (!bbox) return;
+        const map2 = ((_a2 = mapShellRef.value) == null ? void 0 : _a2.map) ?? null;
+        if (!map2) {
+          pendingStartupBbox.value = bbox;
+          return;
+        }
+        fitMapToBbox(map2, bbox);
+        pendingStartupBbox.value = null;
+      }
       onMounted(() => {
         initLayerStack();
+        tryApplyEmbedStartupBbox();
       });
       onUnmounted(() => {
         gpuWmsLayerRegistry.detachMap();
@@ -96806,7 +96859,15 @@ Expected function or array of functions, received type ${typeof value2}.`
           if (map2 && ((_b = resolveLayerConfig((_a2 = props.params) == null ? void 0 : _a2.layerConfig)) == null ? void 0 : _b.length)) {
             gpuWmsLayerRegistry.attachMap(map2);
           }
+          if (map2) tryApplyEmbedStartupBbox();
         }
+      );
+      watch(
+        () => {
+          var _a2, _b, _c;
+          return [(_a2 = props.params) == null ? void 0 : _a2.bbox, (_b = props.params) == null ? void 0 : _b.document, (_c = props.params) == null ? void 0 : _c.search];
+        },
+        () => tryApplyEmbedStartupBbox()
       );
       watch(
         () => {
@@ -96875,7 +96936,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-db009f24"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-29c19b2d"]]);
   const LOADED = /* @__PURE__ */ new Set();
   function demoExternalBaseUrl() {
     const base = "/";
