@@ -179,7 +179,7 @@ Renommage optionnel ultérieur en `map_config.js.twig`.
 
 Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-client (`.ol-control`, panneaux, etc.).
 
-**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Le bundle entree-carto inclut aussi geopf DSFR + `icons.min.css`. Les boutons geopf avec `fr-icon-*` (fermer, supprimer…) peignaient l’icône deux fois (`::before` DSFR + `::after` geopf à 100 % du bouton). Corrigé dans `map-controls.css` (neutralisation de `::after` si `fr-icon-*` est présent).
+**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Les **`dist/css/*.css` n’embarquent plus `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Conserver l’utility DSFR **avant** les styles entree-carto. Hôte custom sans icônes : servir `public/external/dsfr/utility/icons/icons.min.css` ou `ensureEmbedSharedStylesheets()` ([DemoExternal.fr.md](./DemoExternal.fr.md)). Boutons geopf `fr-icon-*` : double picto neutralisé dans `map-controls.css`.
 
 ### Webpack — ne pas re-minifier le CSS vendeur
 

@@ -96875,7 +96875,63 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-6f9913eb"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-db009f24"]]);
+  const LOADED = /* @__PURE__ */ new Set();
+  function demoExternalBaseUrl() {
+    const base = "/";
+    return `${base.endsWith("/") ? base : `${base}/`}external/`;
+  }
+  function demoExternalStylesheet(pathFromExternalRoot) {
+    const normalized = pathFromExternalRoot.replace(/^\//, "");
+    return `${demoExternalBaseUrl()}${normalized}`;
+  }
+  function hostPageProvidesDsfrIcons() {
+    if (typeof document === "undefined") return false;
+    for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
+      const href = link.href;
+      if (!href) continue;
+      if (/utility(\.main|\/icons)/i.test(href)) return true;
+      if (/dsfr.*\.min\.css/i.test(href) && /utility|icons/i.test(href)) return true;
+    }
+    return false;
+  }
+  function hostPageProvidesRemixIcon() {
+    if (typeof document === "undefined") return false;
+    for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
+      const href = link.href;
+      if (href && /remixicon/i.test(href)) return true;
+    }
+    return false;
+  }
+  function loadStylesheet(href) {
+    if (LOADED.has(href)) return Promise.resolve();
+    const existing = document.querySelector(`link[data-ec-external-css="${href}"]`);
+    if (existing) {
+      LOADED.add(href);
+      return Promise.resolve();
+    }
+    return new Promise((resolve2, reject) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.dataset.ecExternalCss = href;
+      link.onload = () => {
+        LOADED.add(href);
+        resolve2();
+      };
+      link.onerror = () => reject(new Error(`Feuille de style externe introuvable : ${href}`));
+      document.head.appendChild(link);
+    });
+  }
+  async function ensureEmbedSharedStylesheets() {
+    if (typeof document === "undefined") return;
+    if (!hostPageProvidesDsfrIcons()) {
+      await loadStylesheet(demoExternalStylesheet("dsfr/utility/icons/icons.min.css"));
+    }
+    if (!hostPageProvidesRemixIcon()) {
+      await loadStylesheet(demoExternalStylesheet("remixicon/remixicon.css"));
+    }
+  }
   let embedApp = null;
   function mountMapViewer(container, params2) {
     if (embedApp) {
@@ -96886,6 +96942,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (typeof window !== "undefined" && locationHashLooksLikeMapPermalink()) {
       bootstrapMapPermalinkFromLocation();
     }
+    void ensureEmbedSharedStylesheets();
     embedApp = createApp(EmbedMapViewer, { params: params2 });
     embedApp.mount(container);
     queueMicrotask(() => {

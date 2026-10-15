@@ -12,9 +12,10 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run sync:demo-external && vite",
     "build": "npm run build:demo && npm run build:lib && npm run build:location-search && npm run build:search-engine && npm run build:geometry-editor && npm run build:sketch",
-    "build:demo": "vue-tsc --noEmit && vite build",
+    "sync:demo-external": "node scripts/sync-demo-external.mjs",
+    "build:demo": "npm run sync:demo-external && vue-tsc --noEmit && vite build",
     "build:demo:pages": "ENTREE_CARTO_DEMO_PAGES=1 GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run build:demo",
     "build:lib": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.lib.config.ts && LIB_MINIFY=1 vite build --config vite.lib.config.ts",
     "build:location-search": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.location-search.config.ts && LIB_MINIFY=1 vite build --config vite.location-search.config.ts",

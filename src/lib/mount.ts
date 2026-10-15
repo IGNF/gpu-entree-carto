@@ -7,6 +7,7 @@ import {
   locationHashLooksLikeMapPermalink,
 } from '@/lib/map/mapPermalink'
 import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
+import { ensureEmbedSharedStylesheets } from '@/lib/demo/demoExternalAssets'
 
 let embedApp: App | null = null
 
@@ -27,6 +28,7 @@ export function mountMapViewer(
   if (typeof window !== 'undefined' && locationHashLooksLikeMapPermalink()) {
     bootstrapMapPermalinkFromLocation()
   }
+  void ensureEmbedSharedStylesheets()
   embedApp = createApp(EmbedMapViewer, { params })
   embedApp.mount(container)
 

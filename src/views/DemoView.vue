@@ -53,7 +53,6 @@ import {
 } from '@/ol/gpuBaseLayerPresets'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
-import '@gouvfr/dsfr/dist/utility/icons/icons.min.css'
 import '@/styles/map-controls.css'
 import '@/styles/map-mode-selector.css'
 import '@/styles/click-info.css'

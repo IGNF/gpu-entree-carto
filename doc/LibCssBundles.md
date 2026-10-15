@@ -17,6 +17,8 @@
 
 Build: `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (see [INTEGRATION.md](./INTEGRATION.md)).
 
+**DSFR icons:** lib CSS bundles do **not** include `@gouvfr/dsfr/dist/utility/icons/icons.min.css` (gpu-site audit 4.2). The host page must load DSFR utility (or `public/external/…` for standalone demos — [DemoExternal.md](./DemoExternal.md)).
+
 ## Home — minimal CSS
 
 **Autocomplete only** (no geopf SearchEngine):

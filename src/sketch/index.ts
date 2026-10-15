@@ -3,7 +3,6 @@
  * API globale : window.EntreeCartoSketch
  */
 import 'ol/ol.css'
-import 'remixicon/fonts/remixicon.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/geometry-editor/styles/geometry-editor.css'
 import { SketchControl } from '@/geometry-editor/SketchControl'
