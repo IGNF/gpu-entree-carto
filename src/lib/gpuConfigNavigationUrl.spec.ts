@@ -27,9 +27,9 @@ describe('gpuConfigNavigationUrl', () => {
     expect(resolveGpuProcedureViewUrl('1115')).toBe('http://127.0.0.1:8000/procedure/view/1115')
   })
 
-  it('substitue le placeholder __GPU_PROCEDURE_ID__', () => {
-    config.procedureViewUrl = '/procedure/view/__GPU_PROCEDURE_ID__'
-    config.urlPlaceholders = { procedureId: '__GPU_PROCEDURE_ID__' }
+  it('substitue le placeholder procedureId', () => {
+    config.procedureViewUrl = '/procedure/view/00000000000000000000000000000000'
+    config.urlPlaceholders = { procedureId: '00000000000000000000000000000000' }
 
     expect(gpuNavigationUrlFromConfigTemplate('procedureViewUrl', 'procedureId', '1115')).toContain(
       '/procedure/view/1115',
