@@ -36,9 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Demo document startup** — `/map` with `DEMO_CONFIG.document` only fits extent and WMS preview (aligned with gpu-site embed); no automatic fiche tab or location cherry at bbox center.
+- **Document preview (gpu-site embed)** — `createStandardViewer` now copies `params.document` into shared `config.document` so WMS validation layers (`_previsu`, partition CQL) stay active after `TabPanelsControl` reloads the GPU WMS registry (previously production tiles were shown on the host site while the Vite demo worked).
 - **Demo DSFR assets** — `sync:demo-external` copies Marianne/Spectral (`dsfr/fonts/`) and icon SVG masks (`dsfr/icons/`) so `dsfr.min.css` and `icons.min.css` URLs resolve (avoids Vite HTML fallback, missing `fr-icon-*`, and “rejected by sanitizer”).
 - **Embed Remix on gpu-site** — `ensureEmbedSharedStylesheets()` loads `../remixicon/remixicon.css` relative to the entree-carto script URL before falling back to `public/external/` (fixes 404 on `/external/remixicon/` when the host does not preload Remix).
 - **Embed map startup bbox** — `createStandardViewer` / `EmbedMapViewer` fits the view to `params.bbox` (gpu-site `BBOX` + `documentId`), matching demo `/map` behavior; skipped when permalink hash or initial `search.fullText` is set.
+- **Fiche preview document badges** — `document.preview` tiles show a single blue **PRÉVISUALISATION** badge (no EN VIGUEUR / HISTORIQUE) on territory and parcel Documents tabs.
 - **Fiche info MEC notice** — territory document tiles show the MEC compatibility notice only when a MEC record exists in gpu-site (32-char document id), not from WFS-only partition keys.
 - **Fiche info vs catalogue** — toggling _Data_ layer checkboxes refreshes the open fiche (territory tabs, parcel Infos/Documents) from cached API payload; no extra fetch.
 - **MEC document tile link** — parcel and territory MEC tiles open the gpu-site document page (`/document/{id}`), not the ZIP `archiveUrl`.

@@ -72,12 +72,12 @@ Response: `{ parcel, features, typeref }`. gpu-client **ParcelLegend** builds In
 ### Parcel mode
 
 1. **Map click:** light header (parcel + territory CTA + cadastre modal).
-2. **“Load information”:** resolve `parcelId` → `gpu_api_parcel_fiche` → **Infos** (urbanism rules intersecting parcel) and **Documents** (document cards with **IN FORCE** or **NON-ENFORCEABLE** + **APPROVED** badges from `effectiveStatus` / `status`; non-enforceable callout only when at least one listed document is non-enforceable).
+2. **“Load information”:** resolve `parcelId` → `gpu_api_parcel_fiche` → **Infos** (urbanism rules intersecting parcel) and **Documents** (document cards with **IN FORCE** or **NON-ENFORCEABLE** + **APPROVED** badges from `effectiveStatus` / `status`; **`document.preview`** → single blue **PRÉVISUALISATION** badge); non-enforceable callout only when at least one listed document is non-enforceable).
 3. **Print:** browser print dialog after parcel fiche load (`gpu_api_parcel_fiche`).
 
 ### Document preview
 
-On embed load with preview document: pass `previewDocumentId` / validation zone, **fit map to document extent**, activate catalog entries — touches permalink, demo config, layers, fiche service.
+On embed or demo load with preview document: pass `previewDocumentId` / validation zone, **fit map to document extent**, activate catalog entries; fiche panel **closed** and **no location cherry** until map click or permalink `mlon`/`mlat`. **Documents** tab tiles use the **PRÉVISUALISATION** badge only (not in force / historical) — touches permalink, demo config, layers, fiche service.
 
 ### Absorbed municipalities (`deletedGrids`)
 
