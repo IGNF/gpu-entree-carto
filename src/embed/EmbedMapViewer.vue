@@ -22,7 +22,8 @@ import {
   type GpuBaseLayerId,
 } from '@/ol/gpuBaseLayerPresets'
 import type { StandardViewerParams } from '@/lib/types'
-import { syncEntreeConfigFromGpuScript } from '@/lib/demo/demoConfig'
+import { fitMapToBbox, syncEntreeConfigFromGpuScript } from '@/lib/demo/demoConfig'
+import { resolveStandardViewerStartupBbox } from '@/lib/map/viewerStartupBbox'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
@@ -60,6 +61,7 @@ const initialSearch = computed(() => props.params?.search ?? null)
 
 const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const layerNodes = ref<TreeLayerNode[]>([])
+const pendingStartupBbox = ref<[number, number, number, number] | null>(null)
 
 const layerMapHooks = {
   onVisible: (id: string, visible: boolean) => gpuWmsLayerRegistry.setVisible(id, visible),
@@ -89,8 +91,22 @@ function initLayerStack(): void {
   }
 }
 
+function tryApplyEmbedStartupBbox(): void {
+  const bbox =
+    pendingStartupBbox.value ?? resolveStandardViewerStartupBbox(props.params ?? undefined)
+  if (!bbox) return
+  const map = mapShellRef.value?.map ?? null
+  if (!map) {
+    pendingStartupBbox.value = bbox
+    return
+  }
+  fitMapToBbox(map, bbox)
+  pendingStartupBbox.value = null
+}
+
 onMounted(() => {
   initLayerStack()
+  tryApplyEmbedStartupBbox()
 })
 
 onUnmounted(() => {
@@ -103,7 +119,13 @@ watch(
     if (map && resolveLayerConfig(props.params?.layerConfig)?.length) {
       gpuWmsLayerRegistry.attachMap(map)
     }
+    if (map) tryApplyEmbedStartupBbox()
   },
+)
+
+watch(
+  () => [props.params?.bbox, props.params?.document, props.params?.search] as const,
+  () => tryApplyEmbedStartupBbox(),
 )
 
 watch(

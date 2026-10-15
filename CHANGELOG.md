@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Demo DSFR assets** — `sync:demo-external` copies Marianne/Spectral (`dsfr/fonts/`) and icon SVG masks (`dsfr/icons/`) so `dsfr.min.css` and `icons.min.css` URLs resolve (avoids Vite HTML fallback, missing `fr-icon-*`, and “rejected by sanitizer”).
 - **Embed Remix on gpu-site** — `ensureEmbedSharedStylesheets()` loads `../remixicon/remixicon.css` relative to the entree-carto script URL before falling back to `public/external/` (fixes 404 on `/external/remixicon/` when the host does not preload Remix).
+- **Embed map startup bbox** — `createStandardViewer` / `EmbedMapViewer` fits the view to `params.bbox` (gpu-site `BBOX` + `documentId`), matching demo `/map` behavior; skipped when permalink hash or initial `search.fullText` is set.
 - **Fiche info MEC notice** — territory document tiles show the MEC compatibility notice only when a MEC record exists in gpu-site (32-char document id), not from WFS-only partition keys.
 - **Fiche info vs catalogue** — toggling _Data_ layer checkboxes refreshes the open fiche (territory tabs, parcel Infos/Documents) from cached API payload; no extra fetch.
 - **MEC document tile link** — parcel and territory MEC tiles open the gpu-site document page (`/document/{id}`), not the ZIP `archiveUrl`.
