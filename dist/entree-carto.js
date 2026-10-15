@@ -96885,6 +96885,24 @@ Expected function or array of functions, received type ${typeof value2}.`
     const normalized = pathFromExternalRoot.replace(/^\//, "");
     return `${demoExternalBaseUrl()}${normalized}`;
   }
+  function embedVendorSiblingStylesheet(relativeToEntreeCartoScript) {
+    var _a;
+    if (typeof document === "undefined") return null;
+    const scripts = document.getElementsByTagName("script");
+    for (let i = scripts.length - 1; i >= 0; i--) {
+      const src = (_a = scripts[i]) == null ? void 0 : _a.src;
+      if (!src || !/entree-carto[^/]*\.min\.js/i.test(src)) continue;
+      try {
+        return new URL(relativeToEntreeCartoScript, src).href;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+  function remixIconStylesheetUrl() {
+    return embedVendorSiblingStylesheet("../remixicon/remixicon.css") ?? demoExternalStylesheet("remixicon/remixicon.css");
+  }
   function hostPageProvidesDsfrIcons() {
     if (typeof document === "undefined") return false;
     for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
@@ -96929,7 +96947,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       await loadStylesheet(demoExternalStylesheet("dsfr/utility/icons/icons.min.css"));
     }
     if (!hostPageProvidesRemixIcon()) {
-      await loadStylesheet(demoExternalStylesheet("remixicon/remixicon.css"));
+      await loadStylesheet(remixIconStylesheetUrl());
     }
   }
   let embedApp = null;

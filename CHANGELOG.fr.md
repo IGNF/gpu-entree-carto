@@ -37,6 +37,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Corrigé
 
 - **Assets DSFR (démo)** — `sync:demo-external` copie Marianne/Spectral (`dsfr/fonts/`) et les SVG masques (`dsfr/icons/`) pour que `dsfr.min.css` et `icons.min.css` résolvent leurs URLs (plus de repli HTML Vite, `fr-icon-*` absents ni « rejected by sanitizer »).
+- **Remix en embed gpu-site** — `ensureEmbedSharedStylesheets()` charge `../remixicon/remixicon.css` à partir de l’URL du script entree-carto avant le repli `public/external/` (plus de 404 sur `/external/remixicon/` si le site hôte ne précharge pas Remix).
 - **Notice MEC (fiche territoire)** — la mention de mise en compatibilité sur la tuile document n’apparaît que si une MEC est enregistrée dans gpu-site (identifiant document 32 car.), pas pour une simple clé de partition WFS.
 - **Fiche info / catalogue** — cocher ou décocher les couches Données met à jour la fiche ouverte (onglets territoire, Infos/Documents parcelle) à partir du JSON déjà chargé, sans nouvel appel API.
 - **Lien tuile MEC** — ouverture de la fiche document gpu-site (`/document/{id}`), pas du ZIP `archiveUrl`.
