@@ -83,6 +83,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     DBLCLICK: "dblclick",
     KEYDOWN: "keydown",
     KEYPRESS: "keypress",
+    KEYUP: "keyup",
     TOUCHMOVE: "touchmove",
     WHEEL: "wheel"
   };
@@ -210,6 +211,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return true;
   }
+  function abstract() {
+    throw new Error("Unimplemented abstract method.");
+  }
+  let uidCounter_$1 = 0;
+  function getUid(obj) {
+    const uidObj = (
+      /** @type {{ol_uid: (string|undefined)}} */
+      /** @type {unknown} */
+      obj
+    );
+    return uidObj.ol_uid || (uidObj.ol_uid = String(++uidCounter_$1));
+  }
+  function isThenable(value2) {
+    return !!value2 && typeof value2.then === "function" && typeof value2.catch === "function";
+  }
   function TRUE() {
     return true;
   }
@@ -227,7 +243,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!lastArgs || this !== lastThis || !equals$2(nextArgs, lastArgs)) {
         lastThis = this;
         lastArgs = nextArgs;
-        lastResult = fn.apply(this, arguments);
+        lastResult = fn.apply(this, nextArgs);
       }
       return lastResult;
     };
@@ -240,7 +256,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       } catch (err) {
         return Promise.reject(err);
       }
-      if (value2 instanceof Promise) {
+      if (isThenable(value2)) {
         return value2;
       }
       return Promise.resolve(value2);
@@ -351,7 +367,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         delete dispatching[type];
       }
-      return propagate;
+      return (
+        /** @type {boolean|undefined} */
+        propagate
+      );
     }
     /**
      * Clean up.
@@ -490,7 +509,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     unInternal(type, listener) {
       const key2 = (
-        /** @type {Object} */
+        /** @type {ListenerWithKey} */
         listener.ol_key
       );
       if (key2) {
@@ -518,13 +537,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         key2
       );
     }
-  }
-  function abstract() {
-    throw new Error("Unimplemented abstract method.");
-  }
-  let uidCounter_$1 = 0;
-  function getUid(obj) {
-    return obj.ol_uid || (obj.ol_uid = String(++uidCounter_$1));
   }
   class ObjectEvent extends BaseEvent {
     /**
@@ -635,7 +647,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     set(key2, value2, silent) {
-      const values = this.values_ || (this.values_ = {});
+      const values = (
+        /** @type {Object<string, *>} */
+        this.values_ || (this.values_ = /** @type {Partial<NoInfer<Properties>>} */
+        {})
+      );
       if (silent) {
         values[key2] = value2;
       } else {
@@ -938,6 +954,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.coordinate_ = null;
       this.dragging = dragging !== void 0 ? dragging : false;
       this.activePointers = activePointers;
+      this.ctrlKey = false;
     }
     /**
      * The map pixel relative to the viewport corresponding to the original event.
@@ -1075,12 +1092,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.moveTolerance_ = moveTolerance === void 0 ? 1 : moveTolerance;
       this.down_ = null;
       const element = this.map_.getViewport();
+      if (!element) {
+        throw new Error("Map viewport is required");
+      }
       this.activePointers_ = [];
       this.trackedTouches_ = {};
       this.element_ = element;
       this.pointerdownListenerKey_ = listen(
         element,
         PointerEventType.POINTERDOWN,
+        /** @type {import("./events.js").ListenerFunction} */
         this.handlePointerDown_,
         this
       );
@@ -1088,12 +1109,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.relayedListenerKey_ = listen(
         element,
         PointerEventType.POINTERMOVE,
+        /** @type {import("./events.js").ListenerFunction} */
         this.relayMoveEvent_,
         this
       );
       this.boundHandleTouchMove_ = this.handleTouchMove_.bind(this);
       this.element_.addEventListener(
         EventType.TOUCHMOVE,
+        /** @type {EventListener} */
         this.boundHandleTouchMove_,
         PASSIVE_EVENT_LISTENERS ? { passive: false } : false
       );
@@ -1171,7 +1194,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       this.dispatchEvent(newEvent);
       if (this.emulateClicks_ && !newEvent.defaultPrevented && !this.dragging_ && this.isMouseActionButton_(pointerEvent)) {
-        this.emulateClick_(this.down_);
+        if (this.down_) {
+          this.emulateClick_(this.down_);
+        }
       }
       if (this.activePointers_.length === 0) {
         this.dragListenerKeys_.forEach(unlistenByKey);
@@ -1213,14 +1238,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       });
       if (this.dragListenerKeys_.length === 0) {
         const doc = this.map_.getOwnerDocument();
+        const element = this.element_;
+        if (!element) {
+          return;
+        }
         this.dragListenerKeys_.push(
           listen(
             doc,
             MapBrowserEventType.POINTERMOVE,
+            /** @type {import("./events.js").ListenerFunction} */
             this.handlePointerMove_,
             this
           ),
-          listen(doc, MapBrowserEventType.POINTERUP, this.handlePointerUp_, this),
+          listen(
+            doc,
+            MapBrowserEventType.POINTERUP,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handlePointerUp_,
+            this
+          ),
           /* Note that the listener for `pointercancel is set up on
            * `pointerEventHandler_` and not `documentPointerEventHandler_` like
            * the `pointerup` and `pointermove` listeners.
@@ -1235,17 +1271,23 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
            * only registered there.
            */
           listen(
-            this.element_,
+            element,
             MapBrowserEventType.POINTERCANCEL,
+            /** @type {import("./events.js").ListenerFunction} */
             this.handlePointerUp_,
             this
           )
         );
-        if (this.element_.getRootNode && this.element_.getRootNode() !== doc) {
+        if (element.getRootNode && element.getRootNode() !== doc) {
+          const rootNode = (
+            /** @type {import("./events/Target.js").EventTargetLike} */
+            element.getRootNode()
+          );
           this.dragListenerKeys_.push(
             listen(
-              this.element_.getRootNode(),
+              rootNode,
               MapBrowserEventType.POINTERUP,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handlePointerUp_,
               this
             )
@@ -1312,28 +1354,34 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @private
      */
     isMoving_(pointerEvent) {
-      return this.dragging_ || Math.abs(pointerEvent.clientX - this.down_.clientX) > this.moveTolerance_ || Math.abs(pointerEvent.clientY - this.down_.clientY) > this.moveTolerance_;
+      const down = this.down_;
+      return this.dragging_ || down !== null && (Math.abs(pointerEvent.clientX - down.clientX) > this.moveTolerance_ || Math.abs(pointerEvent.clientY - down.clientY) > this.moveTolerance_);
     }
     /**
      * Clean up.
      * @override
      */
     disposeInternal() {
+      const element = this.element_;
       if (this.relayedListenerKey_) {
         unlistenByKey(this.relayedListenerKey_);
-        this.relayedListenerKey_ = null;
+        this.relayedListenerKey_ = void 0;
       }
-      this.element_.removeEventListener(
-        EventType.TOUCHMOVE,
-        this.boundHandleTouchMove_
-      );
+      if (element) {
+        element.removeEventListener(
+          EventType.TOUCHMOVE,
+          /** @type {EventListener} */
+          this.boundHandleTouchMove_
+        );
+      }
       if (this.pointerdownListenerKey_) {
         unlistenByKey(this.pointerdownListenerKey_);
-        this.pointerdownListenerKey_ = null;
+        this.pointerdownListenerKey_ = void 0;
       }
       this.dragListenerKeys_.forEach(unlistenByKey);
       this.dragListenerKeys_.length = 0;
-      this.element_ = null;
+      this.element_ = /** @type {HTMLElement|undefined} */
+      void 0;
       super.disposeInternal();
     }
   }
@@ -1611,7 +1659,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const added = super.enqueue(element);
       if (added) {
         const tile = element[0];
-        tile.addEventListener(EventType.CHANGE, this.boundHandleTileChange_);
+        tile.addEventListener(
+          EventType.CHANGE,
+          /** @type {import("./events.js").ListenerFunction} */
+          this.boundHandleTileChange_
+        );
       }
       return added;
     }
@@ -1633,7 +1685,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const state = tile.getState();
       if (state === TileState.LOADED || state === TileState.ERROR || state === TileState.EMPTY) {
         if (state !== TileState.ERROR) {
-          tile.removeEventListener(EventType.CHANGE, this.boundHandleTileChange_);
+          tile.removeEventListener(
+            EventType.CHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.boundHandleTileChange_
+          );
         }
         const tileKey = tile.getKey();
         if (tileKey in this.tilesLoadingKeys_) {
@@ -1747,8 +1803,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (!resolution && !onlyCenter) {
           return center;
         }
-        const viewWidth = onlyCenter ? 0 : size[0] * resolution;
-        const viewHeight = onlyCenter ? 0 : size[1] * resolution;
+        const viewWidth = onlyCenter ? 0 : size[0] * (resolution ?? 0);
+        const viewHeight = onlyCenter ? 0 : size[1] * (resolution ?? 0);
         const shiftX = centerShift ? centerShift[0] : 0;
         const shiftY = centerShift ? centerShift[1] : 0;
         let minX = extent[0] + viewWidth / 2 + shiftX;
@@ -2228,6 +2284,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return coordinate;
   }
+  function wrapXNearest(coordinate, projection, referenceX) {
+    if (projection.canWrapX()) {
+      const worldWidth = getWidth(projection.getExtent());
+      const n = Math.round((referenceX - coordinate[0]) / worldWidth);
+      if (n !== 0) {
+        coordinate[0] += n * worldWidth;
+      }
+    }
+    return coordinate;
+  }
   function getWorldsAway(coordinate, projection, sourceExtentWidth) {
     const projectionExtent = projection.getExtent();
     let worldsAway = 0;
@@ -2331,7 +2397,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getExtent() {
-      return this.extent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.extent_
+      );
     }
     /**
      * Get the units of this projection.
@@ -2357,7 +2426,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getWorldExtent() {
-      return this.worldExtent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.worldExtent_
+      );
     }
     /**
      * Get the axis orientation of this projection.
@@ -2391,7 +2463,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.canWrapX_ = !!(global2 && this.extent_);
     }
     /**
-     * @return {import("../tilegrid/TileGrid.js").default} The default tile grid.
+     * @return {import("../tilegrid/TileGrid.js").default|null} The default tile grid.
      */
     getDefaultTileGrid() {
       return this.defaultTileGrid_;
@@ -2470,7 +2542,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   ];
   function fromEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {
@@ -2493,7 +2565,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   function toEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {
@@ -2684,7 +2756,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function makeTransformFunction(transformer2, zone) {
     return function(input, output, dimension, stride) {
       const length = input.length;
-      dimension = dimension > 1 ? dimension : 2;
+      dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
       stride = stride ?? dimension;
       if (!output) {
         if (dimension > 2) {
@@ -2755,7 +2827,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   function get$2(projectionLike) {
     if (!(typeof projectionLike === "string")) {
-      return projectionLike;
+      return projectionLike !== void 0 ? projectionLike : null;
     }
     const projection = get$4(projectionLike);
     if (projection) {
@@ -2827,6 +2899,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function addCoordinateTransforms(source, destination, forward2, inverse2) {
     const sourceProj = get$2(source);
     const destProj = get$2(destination);
+    if (!sourceProj || !destProj) {
+      return;
+    }
     add$1(
       sourceProj,
       destProj,
@@ -2870,6 +2945,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return transformFunc === cloneTransform && equalUnits;
   }
   function getTransformFromProjections(source, destination) {
+    if (!source || !destination) {
+      return null;
+    }
     const sourceCode = source.getCode();
     const destinationCode = destination.getCode();
     let transformFunc = get$3(sourceCode, destinationCode);
@@ -2890,7 +2968,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return null;
     }
     const intermediateCode = "EPSG:4326";
-    if (!destinationTransforms) {
+    if (!destinationTransforms && sourceTransforms) {
       const toDestination = get$3(intermediateCode, destinationCode);
       if (toDestination) {
         transformFunc = composeTransformFuncs(
@@ -2898,7 +2976,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           toDestination
         );
       }
-    } else if (!sourceTransforms) {
+    } else if (!sourceTransforms && destinationTransforms) {
       const fromSource = get$3(sourceCode, intermediateCode);
       if (fromSource) {
         transformFunc = composeTransformFuncs(
@@ -2906,7 +2984,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           destinationTransforms.forward
         );
       }
-    } else {
+    } else if (sourceTransforms && destinationTransforms) {
       transformFunc = composeTransformFuncs(
         sourceTransforms.inverse,
         destinationTransforms.forward
@@ -2931,10 +3009,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return getTransformFromProjections(sourceProjection, destinationProjection);
   }
   function transform$1(coordinate, source, destination) {
+    var _a, _b;
     const transformFunc = getTransform(source, destination);
     if (!transformFunc) {
-      const sourceCode = get$2(source).getCode();
-      const destinationCode = get$2(destination).getCode();
+      const sourceCode = ((_a = get$2(source)) == null ? void 0 : _a.getCode()) ?? String(source);
+      const destinationCode = ((_b = get$2(destination)) == null ? void 0 : _b.getCode()) ?? String(destination);
       throw new Error(
         `No transform available between ${sourceCode} and ${destinationCode}`
       );
@@ -3335,35 +3414,51 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     transform(source, destination) {
       const sourceProj = get$2(source);
-      const transformFn = sourceProj.getUnits() == "tile-pixels" ? function(inCoordinates, outCoordinates, stride) {
-        const pixelExtent = sourceProj.getExtent();
-        const projectedExtent = sourceProj.getWorldExtent();
-        const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
-        compose(
-          tmpTransform$1,
-          projectedExtent[0],
-          projectedExtent[3],
-          scale2,
-          -scale2,
-          0,
-          0,
-          0
-        );
-        const transformed = transform2D(
-          inCoordinates,
-          0,
-          inCoordinates.length,
-          stride,
-          tmpTransform$1,
-          outCoordinates
-        );
-        const projTransform = getTransform(sourceProj, destination);
-        if (projTransform) {
-          return projTransform(transformed, transformed, stride);
+      if (!sourceProj) {
+        return this;
+      }
+      const transformFn = sourceProj.getUnits() == "tile-pixels" ? (
+        /**
+         * @param {Array<number>} inCoordinates Input coordinates.
+         * @param {Array<number>} outCoordinates Output coordinates.
+         * @param {number} stride Stride.
+         * @return {Array<number>} Output coordinates.
+         */
+        function(inCoordinates, outCoordinates, stride) {
+          const pixelExtent = sourceProj.getExtent();
+          const projectedExtent = sourceProj.getWorldExtent();
+          const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
+          compose(
+            tmpTransform$1,
+            projectedExtent[0],
+            projectedExtent[3],
+            scale2,
+            -scale2,
+            0,
+            0,
+            0
+          );
+          const transformed = transform2D(
+            inCoordinates,
+            0,
+            inCoordinates.length,
+            stride,
+            tmpTransform$1,
+            outCoordinates
+          );
+          const projTransform = getTransform(sourceProj, destination);
+          if (projTransform) {
+            return projTransform(transformed, transformed, stride);
+          }
+          return transformed;
         }
-        return transformed;
-      } : getTransform(sourceProj, destination);
-      this.applyTransform(transformFn);
+      ) : getTransform(sourceProj, destination);
+      if (transformFn) {
+        this.applyTransform(
+          /** @type {import("../proj.js").TransformFunction} */
+          transformFn
+        );
+      }
       return this;
     }
   }
@@ -3860,7 +3955,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return minSquaredDistance;
   }
   function deflateCoordinate(flatCoordinates, offset2, coordinate, stride) {
-    for (let i = 0, ii = coordinate.length; i < ii; ++i) {
+    for (let i = 0; i < stride; ++i) {
       flatCoordinates[offset2++] = coordinate[i];
     }
     return offset2;
@@ -4165,8 +4260,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const stack = [offset2, end - stride];
     let index = 0;
     while (stack.length > 0) {
-      const last = stack.pop();
-      const first = stack.pop();
+      const last = (
+        /** @type {number} */
+        stack.pop()
+      );
+      const first = (
+        /** @type {number} */
+        stack.pop()
+      );
       let maxSquaredDistance = 0;
       const x1 = flatCoordinates[first];
       const y1 = flatCoordinates[first + 1];
@@ -5150,7 +5251,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
@@ -5190,7 +5291,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
@@ -5235,7 +5336,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (!smooth || !isMoving) {
             return clamp(resolution, minResolution, cappedMaxRes);
@@ -5329,10 +5430,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         disableCoordinateWarning();
       }
       if (options.center) {
-        options.center = fromUserCoordinate(options.center, this.projection_);
+        options.center = fromUserCoordinate(
+          options.center,
+          /** @type {import("./proj.js").ProjectionLike} */
+          this.projection_
+        );
       }
       if (options.extent) {
-        options.extent = fromUserExtent(options.extent, this.projection_);
+        options.extent = fromUserExtent(
+          options.extent,
+          /** @type {import("./proj.js").ProjectionLike} */
+          this.projection_
+        );
       }
       this.applyOptions_(options);
     }
@@ -5341,7 +5450,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {ViewOptions} options View options.
      */
     applyOptions_(options) {
-      const properties = Object.assign({}, options);
+      const properties = (
+        /** @type {Object<string, *>} */
+        Object.assign({}, options)
+      );
       for (const key2 in ViewProperty) {
         delete properties[key2];
       }
@@ -5390,7 +5502,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (center) {
         const newPadding = padding || [0, 0, 0, 0];
         oldPadding = oldPadding || [0, 0, 0, 0];
-        const resolution = this.getResolution();
+        const resolution = (
+          /** @type {number} */
+          this.getResolution()
+        );
         const offsetX = resolution / 2 * (newPadding[3] - oldPadding[3] + oldPadding[1] - newPadding[1]);
         const offsetY = resolution / 2 * (newPadding[0] - oldPadding[0] + oldPadding[2] - newPadding[2]);
         this.setCenterInternal([center[0] + offsetX, center[1] - offsetY]);
@@ -5505,23 +5620,33 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       let start2 = Date.now();
-      let center = this.targetCenter_.slice();
+      let center = (
+        /** @type {import("./coordinate.js").Coordinate} */
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_.slice()
+      );
       let resolution = this.targetResolution_;
-      let rotation = this.targetRotation_;
+      let rotation = (
+        /** @type {number} */
+        this.targetRotation_
+      );
       const series = [];
       for (; i < animationCount; ++i) {
         const options = (
           /** @type {AnimationOptions} */
           arguments[i]
         );
-        const animation = {
-          start: start2,
-          complete: false,
-          anchor: options.anchor,
-          duration: options.duration !== void 0 ? options.duration : 1e3,
-          easing: options.easing || inAndOut,
-          callback
-        };
+        const animation = (
+          /** @type {Animation} */
+          {
+            start: start2,
+            complete: false,
+            anchor: options.anchor,
+            duration: options.duration !== void 0 ? options.duration : 1e3,
+            easing: options.easing || inAndOut,
+            callback
+          }
+        );
         if (options.center) {
           animation.sourceCenter = center;
           animation.targetCenter = options.center.slice();
@@ -5577,9 +5702,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.setHint(ViewHint.ANIMATING, -this.hints_[ViewHint.ANIMATING]);
       let anchor;
       for (let i = 0, ii = this.animations_.length; i < ii; ++i) {
-        const series = this.animations_[i];
-        if (series[0].callback) {
-          animationCallback(series[0].callback, false);
+        const series = (
+          /** @type {Array<Animation>} */
+          this.animations_[i]
+        );
+        if (
+          /** @type {Animation} */
+          series[0].callback
+        ) {
+          animationCallback(
+            /** @type {Animation} */
+            series[0].callback,
+            false
+          );
         }
         if (!anchor) {
           for (let j = 0, jj = series.length; j < jj; ++j) {
@@ -5611,7 +5746,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const now = Date.now();
       let more = false;
       for (let i = this.animations_.length - 1; i >= 0; --i) {
-        const series = this.animations_[i];
+        const series = (
+          /** @type {Array<Animation>} */
+          this.animations_[i]
+        );
         let seriesComplete = true;
         for (let j = 0, jj = series.length; j < jj; ++j) {
           const animation = series[j];
@@ -5630,9 +5768,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           if (animation.sourceCenter) {
             const x0 = animation.sourceCenter[0];
             const y0 = animation.sourceCenter[1];
-            const x1 = animation.targetCenter[0];
-            const y1 = animation.targetCenter[1];
-            this.nextCenter_ = animation.targetCenter;
+            const x1 = (
+              /** @type {import("./coordinate.js").Coordinate} */
+              animation.targetCenter[0]
+            );
+            const y1 = (
+              /** @type {import("./coordinate.js").Coordinate} */
+              animation.targetCenter[1]
+            );
+            this.nextCenter_ = /** @type {import("./coordinate.js").Coordinate} */
+            animation.targetCenter;
             const x = x0 + progress * (x1 - x0);
             const y = y0 + progress * (y1 - y0);
             this.targetCenter_ = [x, y];
@@ -5641,14 +5786,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             const resolution = progress === 1 ? animation.targetResolution : animation.sourceResolution + progress * (animation.targetResolution - animation.sourceResolution);
             if (animation.anchor) {
               const size = this.getViewportSize_(this.getRotation());
-              const constrainedResolution = this.constraints_.resolution(
-                resolution,
-                0,
-                size,
-                true
+              const constrainedResolution = (
+                /** @type {Constraints} */
+                this.constraints_.resolution(resolution, 0, size, true)
               );
               this.targetCenter_ = this.calculateCenterZoom(
+                /** @type {number} */
                 constrainedResolution,
+                /** @type {import("./coordinate.js").Coordinate} */
                 animation.anchor
               );
             }
@@ -5659,12 +5804,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           if (animation.sourceRotation !== void 0 && animation.targetRotation !== void 0) {
             const rotation = progress === 1 ? modulo(animation.targetRotation + Math.PI, 2 * Math.PI) - Math.PI : animation.sourceRotation + progress * (animation.targetRotation - animation.sourceRotation);
             if (animation.anchor) {
-              const constrainedRotation = this.constraints_.rotation(
-                rotation,
-                true
+              const constrainedRotation = (
+                /** @type {Constraints} */
+                this.constraints_.rotation(rotation, true)
               );
               this.targetCenter_ = this.calculateCenterRotate(
+                /** @type {number} */
                 constrainedRotation,
+                /** @type {import("./coordinate.js").Coordinate} */
                 animation.anchor
               );
             }
@@ -5785,7 +5932,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {Constraints} Constraints.
      */
     getConstraints() {
-      return this.constraints_;
+      return (
+        /** @type {Constraints} */
+        this.constraints_
+      );
     }
     /**
      * @return {boolean} Resolution constraint is set
@@ -5849,7 +5999,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getMaxResolution() {
-      return this.maxResolution_;
+      return (
+        /** @type {number} */
+        this.maxResolution_
+      );
     }
     /**
      * Get the minimum resolution of the view.
@@ -5857,7 +6010,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getMinResolution() {
-      return this.minResolution_;
+      return (
+        /** @type {number} */
+        this.minResolution_
+      );
     }
     /**
      * Get the maximum zoom level for the view.
@@ -5867,7 +6023,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     getMaxZoom() {
       return (
         /** @type {number} */
-        this.getZoomForResolution(this.minResolution_)
+        this.getZoomForResolution(
+          /** @type {number} */
+          this.minResolution_
+        )
       );
     }
     /**
@@ -5886,7 +6045,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     getMinZoom() {
       return (
         /** @type {number} */
-        this.getZoomForResolution(this.maxResolution_)
+        this.getZoomForResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
       );
     }
     /**
@@ -5911,7 +6073,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getProjection() {
-      return this.projection_;
+      return (
+        /** @type {import("./proj/Projection.js").default} */
+        this.projection_
+      );
     }
     /**
      * Get the view resolution.
@@ -5969,8 +6134,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     getResolutionForValueFunction(power) {
       power = power || 2;
-      const maxResolution = this.getConstrainedResolution(this.maxResolution_);
-      const minResolution = this.minResolution_;
+      const maxResolution = (
+        /** @type {number} */
+        this.getConstrainedResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
+      );
+      const minResolution = (
+        /** @type {number} */
+        this.minResolution_
+      );
       const max = Math.log(maxResolution / minResolution) / Math.log(power);
       return (
         /**
@@ -6003,8 +6177,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     getValueForResolutionFunction(power) {
       const logPower = Math.log(power || 2);
-      const maxResolution = this.getConstrainedResolution(this.maxResolution_);
-      const minResolution = this.minResolution_;
+      const maxResolution = (
+        /** @type {number} */
+        this.getConstrainedResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
+      );
+      const minResolution = (
+        /** @type {number} */
+        this.minResolution_
+      );
       const max = Math.log(maxResolution / minResolution) / logPower;
       return (
         /**
@@ -6052,19 +6235,33 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           center,
           this.getViewportSize_(),
           [reducedSize[0] / 2 + padding[3], reducedSize[1] / 2 + padding[0]],
+          /** @type {number} */
           resolution,
           rotation
         );
       }
       return {
         center: center.slice(0),
-        projection: projection !== void 0 ? projection : null,
-        resolution,
-        nextCenter: this.nextCenter_,
+        projection: (
+          /** @type {import("./proj/Projection.js").default} */
+          projection !== void 0 ? projection : null
+        ),
+        resolution: (
+          /** @type {number} */
+          resolution
+        ),
+        nextCenter: (
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
+          /** @type {unknown} */
+          this.nextCenter_
+        ),
         nextResolution: this.nextResolution_,
         nextRotation: this.nextRotation_,
         rotation,
-        zoom: this.getZoom()
+        zoom: (
+          /** @type {number} */
+          this.getZoom()
+        )
       };
     }
     /**
@@ -6110,10 +6307,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           zoomFactor = max / this.resolutions_[nearest + 1];
         }
       } else {
-        max = this.maxResolution_;
-        zoomFactor = this.zoomFactor_;
+        max = /** @type {number} */
+        this.maxResolution_;
+        zoomFactor = /** @type {number} */
+        this.zoomFactor_;
       }
-      return offset2 + Math.log(max / resolution) / Math.log(zoomFactor);
+      return offset2 + Math.log(
+        /** @type {number} */
+        max / resolution
+      ) / Math.log(
+        /** @type {number} */
+        zoomFactor
+      );
     }
     /**
      * Get the resolution for a zoom level.
@@ -6135,7 +6340,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         const zoomFactor = this.resolutions_[baseLevel] / this.resolutions_[baseLevel + 1];
         return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp(zoom - baseLevel, 0, 1));
       }
-      return this.maxResolution_ / Math.pow(this.zoomFactor_, zoom - this.minZoom_);
+      return (
+        /** @type {number} */
+        this.maxResolution_ / Math.pow(
+          /** @type {number} */
+          this.zoomFactor_,
+          zoom - /** @type {number} */
+          this.minZoom_
+        )
+      );
     }
     /**
      * Fit the given geometry or extent based on the given map size and border.
@@ -6226,7 +6439,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         size[1] - padding[0] - padding[2]
       ]);
       resolution = isNaN(resolution) ? minResolution : Math.max(resolution, minResolution);
-      resolution = this.getConstrainedResolution(resolution, nearest ? 0 : 1);
+      resolution = /** @type {number} */
+      this.getConstrainedResolution(resolution, nearest ? 0 : 1);
       const rotation = this.getRotation();
       const sinAngle = Math.sin(rotation);
       const cosAngle = Math.cos(rotation);
@@ -6279,6 +6493,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           coordinate,
           size,
           position,
+          /** @type {number} */
           this.getResolution(),
           this.getRotation()
         )
@@ -6323,7 +6538,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     adjustCenter(deltaCoordinates) {
-      const center = toUserCoordinate(this.targetCenter_, this.getProjection());
+      const center = toUserCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_,
+        this.getProjection()
+      );
       this.setCenter([
         center[0] + deltaCoordinates[0],
         center[1] + deltaCoordinates[1]
@@ -6334,7 +6553,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {import("./coordinate.js").Coordinate} deltaCoordinates Relative value to add.
      */
     adjustCenterInternal(deltaCoordinates) {
-      const center = this.targetCenter_;
+      const center = (
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_
+      );
       this.setCenterInternal([
         center[0] + deltaCoordinates[0],
         center[1] + deltaCoordinates[1]
@@ -6360,16 +6582,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     adjustResolutionInternal(ratio, anchor) {
       const isMoving = this.getAnimating() || this.getInteracting();
       const size = this.getViewportSize_(this.getRotation());
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_ * ratio,
-        0,
-        size,
-        isMoving
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_ * ratio,
+          0,
+          size,
+          isMoving
+        )
       );
       if (anchor) {
-        this.targetCenter_ = this.calculateCenterZoom(newResolution, anchor);
+        this.targetCenter_ = this.calculateCenterZoom(
+          /** @type {number} */
+          newResolution,
+          anchor
+        );
       }
-      this.targetResolution_ *= ratio;
+      this.targetResolution_ = /** @type {number} */
+      this.targetResolution_ * ratio;
       this.applyTargetState_();
     }
     /**
@@ -6380,7 +6611,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     adjustZoom(delta, anchor) {
-      this.adjustResolution(Math.pow(this.zoomFactor_, -delta), anchor);
+      this.adjustResolution(
+        Math.pow(
+          /** @type {number} */
+          this.zoomFactor_,
+          -delta
+        ),
+        anchor
+      );
     }
     /**
      * Adds a value to the view rotation, optionally using an anchor. Any rotation
@@ -6401,14 +6639,23 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     adjustRotationInternal(delta, anchor) {
       const isMoving = this.getAnimating() || this.getInteracting();
-      const newRotation = this.constraints_.rotation(
-        this.targetRotation_ + delta,
-        isMoving
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_ + delta,
+          isMoving
+        )
       );
       if (anchor) {
-        this.targetCenter_ = this.calculateCenterRotate(newRotation, anchor);
+        this.targetCenter_ = this.calculateCenterRotate(
+          /** @type {number} */
+          newRotation,
+          anchor
+        );
       }
-      this.targetRotation_ += delta;
+      this.targetRotation_ = /** @type {number} */
+      this.targetRotation_ + delta;
       this.applyTargetState_();
     }
     /**
@@ -6424,7 +6671,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Set the center using the view projection (not the user projection).
-     * @param {import("./coordinate.js").Coordinate|undefined} center The center of the view.
+     * @param {import("./coordinate.js").Coordinate|null|undefined} center The center of the view.
      */
     setCenterInternal(center) {
       this.targetCenter_ = center;
@@ -6478,27 +6725,44 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     applyTargetState_(doNotCancelAnims, forceMoving) {
       const isMoving = this.getAnimating() || this.getInteracting() || forceMoving;
-      const newRotation = this.constraints_.rotation(
-        this.targetRotation_,
-        isMoving
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_,
+          isMoving
+        )
       );
       const size = this.getViewportSize_(newRotation);
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_,
-        0,
-        size,
-        isMoving
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_,
+          0,
+          size,
+          isMoving
+        )
       );
-      const newCenter = this.constraints_.center(
-        this.targetCenter_,
-        newResolution,
-        size,
-        isMoving,
-        this.calculateCenterShift(
+      const newCenter = (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
           this.targetCenter_,
+          /** @type {number} */
           newResolution,
-          newRotation,
-          size
+          size,
+          isMoving,
+          /** @type {import("./coordinate.js").Coordinate} */
+          this.calculateCenterShift(
+            /** @type {import("./coordinate.js").Coordinate} */
+            this.targetCenter_,
+            /** @type {number} */
+            newResolution,
+            /** @type {number} */
+            newRotation,
+            size
+          )
         )
       );
       if (this.get(ViewProperty.ROTATION) !== newRotation) {
@@ -6528,23 +6792,42 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     resolveConstraints(duration, resolutionDirection, anchor) {
       duration = duration !== void 0 ? duration : 200;
       const direction = resolutionDirection || 0;
-      const newRotation = this.constraints_.rotation(this.targetRotation_);
-      const size = this.getViewportSize_(newRotation);
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_,
-        direction,
-        size
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_
+        )
       );
-      const newCenter = this.constraints_.center(
-        this.targetCenter_,
-        newResolution,
-        size,
-        false,
-        this.calculateCenterShift(
-          this.targetCenter_,
-          newResolution,
-          newRotation,
+      const size = this.getViewportSize_(newRotation);
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_,
+          direction,
           size
+        )
+      );
+      const newCenter = (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
+          this.targetCenter_,
+          /** @type {number} */
+          newResolution,
+          size,
+          false,
+          /** @type {import("./coordinate.js").Coordinate} */
+          this.calculateCenterShift(
+            /** @type {import("./coordinate.js").Coordinate} */
+            this.targetCenter_,
+            /** @type {number} */
+            newResolution,
+            /** @type {number} */
+            newRotation,
+            size
+          )
         )
       );
       if (duration === 0 && !this.cancelAnchor_) {
@@ -6556,7 +6839,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       anchor = anchor || (duration === 0 ? this.cancelAnchor_ : void 0);
       this.cancelAnchor_ = void 0;
-      if (this.getResolution() !== newResolution || this.getRotation() !== newRotation || !this.getCenterInternal() || !equals(this.getCenterInternal(), newCenter)) {
+      if (this.getResolution() !== newResolution || this.getRotation() !== newRotation || !this.getCenterInternal() || !equals(
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.getCenterInternal(),
+        /** @type {import("./coordinate.js").Coordinate} */
+        newCenter
+      )) {
         if (this.getAnimating()) {
           this.cancelAnimations();
         }
@@ -6615,10 +6903,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     getConstrainedCenter(targetCenter, targetResolution) {
       const size = this.getViewportSize_(this.getRotation());
-      return this.constraints_.center(
-        targetCenter,
-        targetResolution || this.getResolution(),
-        size
+      return (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          targetCenter,
+          targetResolution || /** @type {number} */
+          this.getResolution(),
+          size
+        )
       );
     }
     /**
@@ -6631,8 +6923,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {number|undefined} Valid zoom level.
      */
     getConstrainedZoom(targetZoom, direction) {
-      const targetRes = this.getResolutionForZoom(targetZoom);
+      const targetRes = this.getResolutionForZoom(
+        /** @type {number} */
+        targetZoom
+      );
       return this.getZoomForResolution(
+        /** @type {number} */
         this.getConstrainedResolution(targetRes, direction)
       );
     }
@@ -6648,7 +6944,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     getConstrainedResolution(targetResolution, direction) {
       direction = direction || 0;
       const size = this.getViewportSize_(this.getRotation());
-      return this.constraints_.resolution(targetResolution, direction, size);
+      return (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          targetResolution,
+          direction,
+          size
+        )
+      );
     }
   }
   function animationCallback(callback, returnValue) {
@@ -6659,9 +6962,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function createCenterConstraint(options) {
     if (options.extent !== void 0) {
       const smooth = options.smoothExtentConstraint !== void 0 ? options.smoothExtentConstraint : true;
-      return createExtent(options.extent, options.constrainOnlyCenter, smooth);
+      return createExtent(
+        options.extent,
+        /** @type {boolean} */
+        options.constrainOnlyCenter,
+        smooth
+      );
     }
-    const projection = createProjection(options.projection, "EPSG:3857");
+    const projection = (
+      /** @type {import("./proj/Projection.js").default} */
+      createProjection(options.projection, "EPSG:3857")
+    );
     if (options.multiWorld !== true && projection.isGlobal()) {
       const extent = projection.getExtent().slice();
       extent[0] = -Infinity;
@@ -6682,7 +6993,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const multiWorld = options.multiWorld !== void 0 ? options.multiWorld : false;
     const smooth = options.smoothResolutionConstraint !== void 0 ? options.smoothResolutionConstraint : true;
     const showFullExtent = options.showFullExtent !== void 0 ? options.showFullExtent : false;
-    const projection = createProjection(options.projection, "EPSG:3857");
+    const projection = (
+      /** @type {import("./proj/Projection.js").default} */
+      createProjection(options.projection, "EPSG:3857")
+    );
     const projExtent = projection.getExtent();
     let constrainOnlyCenter = options.constrainOnlyCenter;
     let extent = options.extent;
@@ -6698,6 +7012,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         resolutionConstraint = createSnapToResolutions(
           resolutions,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -6706,6 +7021,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -6713,7 +7029,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     } else {
       const size = !projExtent ? (
         // use an extent that can fit the whole world if need be
-        360 * METERS_PER_UNIT$1.degrees / projection.getMetersPerUnit()
+        360 * /** @type {number} */
+        METERS_PER_UNIT$1.degrees / /** @type {number} */
+        projection.getMetersPerUnit()
       ) : Math.max(getWidth(projExtent), getHeight(projExtent));
       const defaultMaxResolution = size / DEFAULT_TILE_SIZE / Math.pow(defaultZoomFactor, DEFAULT_MIN_ZOOM);
       const defaultMinResolution = defaultMaxResolution / Math.pow(defaultZoomFactor, defaultMaxZoom - DEFAULT_MIN_ZOOM);
@@ -6745,6 +7063,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -6753,6 +7072,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -7073,12 +7393,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.map_ = map;
       if (map) {
         const target2 = this.target_ ?? map.getOverlayContainerStopEvent();
-        if (this.element) {
+        if (this.element && target2) {
           target2.appendChild(this.element);
         }
         if (this.render !== VOID) {
           this.listenerKeys.push(
-            listen(map, MapEventType.POSTRENDER, this.render, this)
+            listen(
+              map,
+              MapEventType.POSTRENDER,
+              /** @type {import("../events.js").ListenerFunction} */
+              this.render,
+              this
+            )
           );
         }
         map.render();
@@ -7152,11 +7478,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.toggleButton_.appendChild(activeLabel);
       this.toggleButton_.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL + (this.collapsed_ && this.collapsible_ ? " " + CLASS_COLLAPSED : "") + (this.collapsible_ ? "" : " ol-uncollapsible");
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(this.toggleButton_);
       element.appendChild(this.ulElement_);
@@ -7170,9 +7500,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @private
      */
     collectSourceAttributions_(frameState) {
-      const layers = this.getMap().getAllLayers();
+      const map = this.getMap();
+      if (!map) {
+        return [];
+      }
+      const layers = map.getAllLayers();
       const visibleAttributions = new Set(
-        layers.flatMap((layer) => layer.getAttributions(frameState))
+        layers.flatMap(
+          (layer) => layer.getAttributions(
+            /** @type {import("../View.js").ViewStateLayerStateExtent} */
+            frameState
+          )
+        )
       );
       if (this.attributions_ !== void 0) {
         Array.isArray(this.attributions_) ? this.attributions_.forEach((item) => visibleAttributions.add(item)) : visibleAttributions.add(this.attributions_);
@@ -7193,9 +7532,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {?import("../Map.js").FrameState} frameState Frame state.
      */
     async updateElement_(frameState) {
+      const element = this.element;
+      if (!element) {
+        return;
+      }
       if (!frameState) {
         if (this.renderedVisible_) {
-          this.element.style.display = "none";
+          element.style.display = "none";
           this.renderedVisible_ = false;
         }
         return;
@@ -7207,7 +7550,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       const visible = attributions.length > 0;
       if (this.renderedVisible_ != visible) {
-        this.element.style.display = visible ? "" : "none";
+        element.style.display = visible ? "" : "none";
         this.renderedVisible_ = visible;
       }
       if (equals$2(attributions, this.renderedAttributions_)) {
@@ -7215,9 +7558,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       removeChildren(this.ulElement_);
       for (let i = 0, ii = attributions.length; i < ii; ++i) {
-        const element = document.createElement("li");
-        element.innerHTML = attributions[i];
-        this.ulElement_.appendChild(element);
+        const listItem = document.createElement("li");
+        listItem.innerHTML = attributions[i];
+        this.ulElement_.appendChild(listItem);
       }
       this.renderedAttributions_ = attributions;
     }
@@ -7234,7 +7577,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @private
      */
     handleToggle_() {
-      this.element.classList.toggle(CLASS_COLLAPSED);
+      const element = this.element;
+      if (!element) {
+        return;
+      }
+      element.classList.toggle(CLASS_COLLAPSED);
       if (this.collapsed_) {
         replaceNode(this.collapseLabel_, this.label_);
       } else {
@@ -7261,7 +7608,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.collapsible_ = collapsible;
-      this.element.classList.toggle("ol-uncollapsible");
+      const element = this.element;
+      if (!element) {
+        return;
+      }
+      element.classList.toggle("ol-uncollapsible");
       if (this.userCollapsed_) {
         this.handleToggle_();
       }
@@ -7312,7 +7663,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const className = options.className !== void 0 ? options.className : "ol-rotate";
       const label = options.label !== void 0 ? options.label : "⇧";
       const compassClassName = options.compassClassName !== void 0 ? options.compassClassName : "ol-compass";
-      this.label_ = null;
+      this.label_;
       if (typeof label === "string") {
         this.label_ = document.createElement("span");
         this.label_.className = compassClassName;
@@ -7329,11 +7680,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       button.appendChild(this.label_);
       button.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL;
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(button);
       this.callResetNorth_ = options.resetNorth ? options.resetNorth : void 0;
@@ -7361,6 +7716,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     resetNorth_() {
       const map = this.getMap();
+      if (!map) {
+        return;
+      }
       const view = map.getView();
       if (!view) {
         return;
@@ -7391,12 +7749,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const rotation = frameState.viewState.rotation;
       if (rotation != this.rotation_) {
         const transform2 = "rotate(" + rotation + "rad)";
-        if (this.autoHide_) {
-          const contains2 = this.element.classList.contains(CLASS_HIDDEN);
+        const element = this.element;
+        if (this.autoHide_ && element) {
+          const contains2 = element.classList.contains(CLASS_HIDDEN);
           if (!contains2 && rotation === 0) {
-            this.element.classList.add(CLASS_HIDDEN);
+            element.classList.add(CLASS_HIDDEN);
           } else if (contains2 && rotation !== 0) {
-            this.element.classList.remove(CLASS_HIDDEN);
+            element.classList.remove(CLASS_HIDDEN);
           }
         }
         this.label_.style.transform = transform2;
@@ -7431,6 +7790,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       inElement.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this, delta),
         false
       );
@@ -7443,11 +7803,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       outElement.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this, -delta),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL;
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(inElement);
       element.appendChild(outElement);
@@ -7468,6 +7832,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     zoomByDelta_(delta) {
       const map = this.getMap();
+      if (!map) {
+        return;
+      }
       const view = map.getView();
       if (!view) {
         return;
@@ -7475,6 +7842,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const currentZoom = view.getZoom();
       if (currentZoom !== void 0) {
         const newZoom = view.getConstrainedZoom(currentZoom + delta);
+        if (newZoom === void 0) {
+          return;
+        }
         if (this.duration_ > 0) {
           if (view.getAnimating()) {
             view.cancelAnimations();
@@ -7659,7 +8029,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return;
     }
     const newZoom = view.getConstrainedZoom(currentZoom + delta);
+    if (newZoom === void 0) {
+      return;
+    }
     const newResolution = view.getResolutionForZoom(newZoom);
+    if (newResolution === void 0) {
+      return;
+    }
     if (view.getAnimating()) {
       view.cancelAnimations();
     }
@@ -7724,12 +8100,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   };
   const focus = function(event) {
     const targetElement = event.map.getTargetElement();
+    if (!targetElement) {
+      return false;
+    }
     const rootNode = targetElement.getRootNode();
     const activeElement = event.map.getOwnerDocument().activeElement;
     return rootNode instanceof ShadowRoot ? rootNode.host.contains(activeElement) : targetElement.contains(activeElement);
   };
   const focusWithTabindex = function(event) {
     const targetElement = event.map.getTargetElement();
+    if (!targetElement) {
+      return true;
+    }
     const rootNode = targetElement.getRootNode();
     const tabIndexCandidate = rootNode instanceof ShadowRoot ? rootNode.host : targetElement;
     return tabIndexCandidate.hasAttribute("tabindex") ? focus(event) : true;
@@ -7950,9 +8332,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           ];
           const map2 = mapBrowserEvent.map;
           const view = map2.getView();
-          scale$1(delta, view.getResolution());
-          rotate$1(delta, view.getRotation());
-          view.adjustCenterInternal(delta);
+          const resolution = view.getResolution();
+          if (resolution !== void 0) {
+            scale$1(delta, resolution);
+            rotate$1(delta, view.getRotation());
+            view.adjustCenterInternal(delta);
+          }
         }
       } else if (this.kinetic_) {
         this.kinetic_.begin();
@@ -7975,16 +8360,24 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           const distance = this.kinetic_.getDistance();
           const angle = this.kinetic_.getAngle();
           const center = view.getCenterInternal();
-          const centerpx = map.getPixelFromCoordinateInternal(center);
-          const dest = map.getCoordinateFromPixelInternal([
-            centerpx[0] - distance * Math.cos(angle),
-            centerpx[1] - distance * Math.sin(angle)
-          ]);
-          view.animateInternal({
-            center: view.getConstrainedCenter(dest),
-            duration: 500,
-            easing: easeOut
-          });
+          if (center) {
+            const centerpx = (
+              /** @type {import("../pixel.js").Pixel} */
+              map.getPixelFromCoordinateInternal(center)
+            );
+            const dest = map.getCoordinateFromPixelInternal([
+              centerpx[0] - distance * Math.cos(angle),
+              centerpx[1] - distance * Math.sin(angle)
+            ]);
+            view.animateInternal({
+              center: view.getConstrainedCenter(
+                /** @type {import("../coordinate.js").Coordinate} */
+                dest
+              ),
+              duration: 500,
+              easing: easeOut
+            });
+          }
         }
         if (this.panning_) {
           this.panning_ = false;
@@ -8049,6 +8442,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       const size = map.getSize();
+      if (!size) {
+        return;
+      }
       const offset2 = mapBrowserEvent.pixel;
       const theta = Math.atan2(size[1] / 2 - offset2[1], offset2[0] - size[0] / 2);
       if (this.lastAngle_ !== void 0) {
@@ -8119,6 +8515,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     render_() {
       const startPixel = this.startPixel_;
       const endPixel = this.endPixel_;
+      if (!startPixel || !endPixel) {
+        return;
+      }
       const px = "px";
       const style = this.element_.style;
       style.left = Math.min(startPixel[0], endPixel[0]) + px;
@@ -8131,7 +8530,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     setMap(map) {
       if (this.map_) {
-        this.map_.getOverlayContainer().removeChild(this.element_);
+        const container = this.map_.getOverlayContainer();
+        if (container) {
+          container.removeChild(this.element_);
+        }
         const style = this.element_.style;
         style.left = "inherit";
         style.top = "inherit";
@@ -8140,7 +8542,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.map_ = map;
       if (this.map_) {
-        this.map_.getOverlayContainer().appendChild(this.element_);
+        const container = this.map_.getOverlayContainer();
+        if (container) {
+          container.appendChild(this.element_);
+        }
       }
     }
     /**
@@ -8162,28 +8567,42 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       const startPixel = this.startPixel_;
       const endPixel = this.endPixel_;
+      if (!startPixel || !endPixel) {
+        return;
+      }
       const pixels = [
         startPixel,
         [startPixel[0], endPixel[1]],
         endPixel,
         [endPixel[0], startPixel[1]]
       ];
+      const map = this.map_;
       const coordinates2 = pixels.map(
-        this.map_.getCoordinateFromPixelInternal,
-        this.map_
+        (pixel) => map.getCoordinateFromPixelInternal(pixel)
       );
-      coordinates2[4] = coordinates2[0].slice();
+      const first = coordinates2[0];
+      if (!first) {
+        return;
+      }
+      coordinates2[4] = first.slice();
+      const ring = (
+        /** @type {Array<import("../coordinate.js").Coordinate>} */
+        coordinates2
+      );
       if (!this.geometry_) {
-        this.geometry_ = new Polygon([coordinates2]);
+        this.geometry_ = new Polygon([ring]);
       } else {
-        this.geometry_.setCoordinates([coordinates2]);
+        this.geometry_.setCoordinates([ring]);
       }
     }
     /**
      * @return {import("../geom/Polygon.js").default} Geometry.
      */
     getGeometry() {
-      return this.geometry_;
+      return (
+        /** @type {import("../geom/Polygon.js").default} */
+        this.geometry_
+      );
     }
   }
   const DragBoxEventType = {
@@ -8216,7 +8635,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * @param {string} type The event type.
      * @param {import("../coordinate.js").Coordinate} coordinate The event coordinate.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Originating event.
+     * @param {import("../MapBrowserEvent.js").default|null} mapBrowserEvent Originating event.
      */
     constructor(type, coordinate, mapBrowserEvent) {
       super(type);
@@ -8399,15 +8818,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     onBoxEnd(event) {
       const map = this.getMap();
-      const view = (
-        /** @type {!import("../View.js").default} */
-        map.getView()
-      );
+      if (!map) {
+        return;
+      }
+      const view = map.getView();
       let geometry = this.getGeometry();
       if (this.out_) {
         const rotatedExtent = view.rotatedExtentForGeometry(geometry);
         const resolution = view.getResolutionForExtentInternal(rotatedExtent);
-        const factor = view.getResolution() / resolution;
+        const currentResolution = view.getResolution();
+        if (resolution === void 0 || currentResolution === void 0) {
+          return;
+        }
+        const factor = currentResolution / resolution;
         geometry = geometry.clone();
         geometry.scale(factor * factor);
       }
@@ -8456,7 +8879,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (this.condition_(mapBrowserEvent) && (key2 == Key.DOWN || key2 == Key.LEFT || key2 == Key.RIGHT || key2 == Key.UP)) {
           const map = mapBrowserEvent.map;
           const view = map.getView();
-          const mapUnitsDelta = view.getResolution() * this.pixelDelta_;
+          const resolution = view.getResolution();
+          if (resolution === void 0) {
+            return true;
+          }
+          const mapUnitsDelta = resolution * this.pixelDelta_;
           let deltaX = 0, deltaY = 0;
           if (key2 == Key.DOWN) {
             deltaY = -mapUnitsDelta;
@@ -8547,33 +8974,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.trackpadEventGap_ = 400;
       this.trackpadTimeoutId_;
       this.deltaPerZoom_ = 300;
-      this.ctrlKeyPressed_ = false;
-      this.ctrlKeyListenerKeys_ = [];
-    }
-    /**
-     * @param {import('../Map.js').default|null} map Map.
-     * @override
-     */
-    setMap(map) {
-      this.ctrlKeyListenerKeys_.forEach(unlistenByKey);
-      this.ctrlKeyListenerKeys_.length = 0;
-      this.ctrlKeyPressed_ = false;
-      super.setMap(map);
-      if (map) {
-        const doc = map.getOwnerDocument();
-        this.ctrlKeyListenerKeys_.push(
-          listen(doc, "keydown", (e) => {
-            if (e.key === "Control") {
-              this.ctrlKeyPressed_ = true;
-            }
-          }),
-          listen(doc, "keyup", (e) => {
-            if (e.key === "Control") {
-              this.ctrlKeyPressed_ = false;
-            }
-          })
-        );
-      }
     }
     /**
      * @private
@@ -8589,7 +8989,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       view.endInteraction(
         this.constrainResolution_ || view.getConstrainResolution() ? 100 : void 0,
         direction,
-        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null
+        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0
       );
     }
     /**
@@ -8613,10 +9013,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         mapBrowserEvent.originalEvent
       );
       wheelEvent.preventDefault();
-      const isPinchToZoom = wheelEvent.ctrlKey && !this.ctrlKeyPressed_;
-      if (!wheelEvent.ctrlKey) {
-        this.ctrlKeyPressed_ = false;
-      }
+      const isPinchToZoom = wheelEvent.ctrlKey && !mapBrowserEvent.ctrlKey;
       if (this.useAnchor_) {
         this.lastAnchor_ = mapBrowserEvent.pixel;
       }
@@ -8659,7 +9056,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         view.adjustZoom(
           -delta / this.deltaPerZoom_,
-          this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null
+          this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0
         );
         this.startTime_ = now;
         return false;
@@ -8693,7 +9090,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       zoomByDelta(
         view,
         delta,
-        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null,
+        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0,
         this.duration_
       );
       this.mode_ = void 0;
@@ -8765,10 +9162,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.anchor_ = map.getCoordinateFromPixelInternal(
         map.getEventPixel(centroid(this.targetPointers))
-      );
+      ) ?? null;
       if (this.rotating_) {
         map.render();
-        view.adjustRotationInternal(rotationDelta, this.anchor_);
+        view.adjustRotationInternal(rotationDelta, this.anchor_ ?? void 0);
       }
     }
     /**
@@ -8849,9 +9246,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.anchor_ = map.getCoordinateFromPixelInternal(
         map.getEventPixel(centroid(this.targetPointers))
-      );
+      ) ?? null;
       map.render();
-      view.adjustResolutionInternal(scaleDelta, this.anchor_);
+      view.adjustResolutionInternal(scaleDelta, this.anchor_ ?? void 0);
     }
     /**
      * Handle pointer up events.
@@ -9001,7 +9398,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the background for this layer.
-     * @return {BackgroundColor|false} Layer background.
+     * @return {BackgroundColor|false|undefined} Layer background.
      */
     getBackground() {
       return this.background_;
@@ -9167,7 +9564,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Sets the background color.
-     * @param {BackgroundColor} [background] Background color.
+     * @param {BackgroundColor|undefined} [background] Background color.
      */
     setBackground(background) {
       this.background_ = background;
@@ -9258,7 +9655,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     disposeInternal() {
       if (this.state_) {
-        this.state_.layer = null;
+        this.state_.layer = /** @type {?} */
+        null;
         this.state_ = null;
       }
       super.disposeInternal();
@@ -9339,10 +9737,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.layersListenerKeys_.length = 0;
       const layers = this.getLayers();
       this.layersListenerKeys_.push(
-        listen(layers, CollectionEventType.ADD, this.handleLayersAdd_, this),
+        listen(
+          layers,
+          CollectionEventType.ADD,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.handleLayersAdd_,
+          this
+        ),
         listen(
           layers,
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handleLayersRemove_,
           this
         )
@@ -9374,10 +9779,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       ];
       if (layer instanceof LayerGroup) {
         listenerKeys.push(
-          listen(layer, GroupEventType.ADDLAYER, this.handleLayerGroupAdd_, this),
+          listen(
+            layer,
+            GroupEventType.ADDLAYER,
+            /** @type {import("../events.js").ListenerFunction} */
+            this.handleLayerGroupAdd_,
+            this
+          ),
           listen(
             layer,
             GroupEventType.REMOVELAYER,
+            /** @type {import("../events.js").ListenerFunction} */
             this.handleLayerGroupRemove_,
             this
           )
@@ -9646,7 +10058,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     handleSourceChange_() {
       this.changed();
-      if (this.sourceReady_ || this.getSource().getState() !== "ready") {
+      const source = this.getSource();
+      if (!source || this.sourceReady_ || source.getState() !== "ready") {
         return;
       }
       this.sourceReady_ = true;
@@ -9722,12 +10135,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       } else {
         frameState = view;
       }
-      if (!frameState.layerStatesArray && map) {
-        frameState.layerStatesArray = map.getLayerGroup().getLayerStatesArray();
+      const state = (
+        /** @type {import("../View.js").ViewStateLayerStateExtent} */
+        frameState
+      );
+      if (!state.layerStatesArray && map) {
+        state.layerStatesArray = map.getLayerGroup().getLayerStatesArray();
       }
       let layerState;
-      if (frameState.layerStatesArray) {
-        layerState = frameState.layerStatesArray.find(
+      if (state.layerStatesArray) {
+        layerState = state.layerStatesArray.find(
           (layerState2) => layerState2.layer === this
         );
         if (!layerState) {
@@ -9737,7 +10154,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         layerState = this.getLayerState();
       }
       const layerExtent = this.getExtent();
-      return inView(layerState, frameState.viewState) && (!layerExtent || intersects$1(layerExtent, frameState.extent));
+      return inView(layerState, state.viewState) && (!layerExtent || intersects$1(layerExtent, state.extent));
     }
     /**
      * Get the attributions of the source of this layer for the given view.
@@ -9756,7 +10173,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return [];
       }
       const frameState = view instanceof View ? view.getViewStateAndExtent() : view;
-      let attributions = getAttributions(frameState);
+      let attributions = getAttributions(
+        /** @type {import("../View.js").ViewStateLayerStateExtent} */
+        frameState
+      );
       if (!Array.isArray(attributions)) {
         attributions = [attributions];
       }
@@ -9771,10 +10191,20 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {HTMLElement|null} The rendered element.
      */
     render(frameState, target2) {
-      const layerRenderer = this.getRenderer();
-      if (layerRenderer.prepareFrame(frameState)) {
+      const layerRenderer = (
+        /** @type {RendererType} */
+        this.getRenderer()
+      );
+      if (layerRenderer.prepareFrame(
+        /** @type {import("../Map.js").FrameState} */
+        frameState
+      )) {
         this.rendered = true;
-        return layerRenderer.renderFrame(frameState, target2);
+        return layerRenderer.renderFrame(
+          /** @type {import("../Map.js").FrameState} */
+          frameState,
+          target2
+        );
       }
       return null;
     }
@@ -9784,7 +10214,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     unrender() {
       this.rendered = false;
     }
-    /** @return {string} Declutter */
+    /** @return {string|undefined} Declutter */
     getDeclutter() {
       return void 0;
     }
@@ -9849,6 +10279,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.mapPrecomposeKey_ = listen(
           map,
           RenderEventType.PRECOMPOSE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handlePrecompose_,
           this
         );
@@ -9861,10 +10292,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @private
      */
     handlePrecompose_(renderEvent) {
+      var _a;
       const layerStatesArray = (
         /** @type {import("../render/Event.js").default} */
-        renderEvent.frameState.layerStatesArray
+        (_a = renderEvent.frameState) == null ? void 0 : _a.layerStatesArray
       );
+      if (!layerStatesArray) {
+        return;
+      }
       const layerState = this.getLayerState(false);
       assert(
         !layerStatesArray.some(
@@ -9905,7 +10340,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @protected
      */
     createRenderer() {
-      return null;
+      return (
+        /** @type {RendererType} */
+        /** @type {unknown} */
+        null
+      );
     }
     /**
      * This will clear the renderer so that a new one can be created next time it is needed
@@ -10599,6 +11038,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function isType(type, expected) {
     return type === expected;
   }
+  function getErrorMessage(err) {
+    return err instanceof Error ? err.message : String(err);
+  }
   class LiteralExpression {
     /**
      * @param {ValueType} type The value type.
@@ -10754,6 +11196,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     Match: "match",
     Between: "between",
     Interpolate: "interpolate",
+    InterpolateHcl: "interpolate-hcl",
     Coalesce: "coalesce",
     Case: "case",
     In: "in",
@@ -10895,6 +11338,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       hasEvenArgs,
       withInterpolateArgs
     ),
+    [Ops.InterpolateHcl]: createCallExpressionParser(
+      hasArgsCount(6, Infinity),
+      hasEvenArgs,
+      returnsColor,
+      withInterpolateArgs
+    ),
     [Ops.Case]: createCallExpressionParser(
       hasArgsCount(3, Infinity),
       hasOddArgs,
@@ -10986,7 +11435,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       }
       if (context.variables.has(name)) {
-        const existingType = context.variables.get(name);
+        const existingType = (
+          /** @type {number} */
+          context.variables.get(name)
+        );
         type &= existingType;
         if (type === NoneType) {
           throw new Error(
@@ -11110,8 +11562,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         const match2 = parse$1(encoded[i + 2], inputType, context);
         inputType &= match2.type;
       } catch (err) {
+        const message = getErrorMessage(err);
         throw new Error(
-          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+          `failed to parse argument ${i + 1} of match expression: ${message}`
         );
       }
       if (inputType === NoneType) {
@@ -11125,8 +11578,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         const match2 = parse$1(encoded[i + 2], inputType, context);
         args[i] = match2;
       } catch (err) {
+        const message = getErrorMessage(err);
         throw new Error(
-          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+          `failed to parse argument ${i + 1} of match expression: ${message}`
         );
       }
       try {
@@ -11134,15 +11588,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 2} of match expression: ${err.message}`
+          `failed to parse argument ${i + 2} of match expression: ${getErrorMessage(err)}`
         );
       }
     }
     const input = parse$1(encoded[1], inputType, context);
     return [input, ...args, fallback];
   }
+  function returnsColor(encoded, returnType, context) {
+    if (!includesType(returnType, ColorType)) {
+      throw new Error(
+        `the ${encoded[0]} operator can only return a color, got ${typeName(returnType)}`
+      );
+    }
+  }
   function withInterpolateArgs(encoded, returnType, context) {
-    const interpolationType = encoded[1];
+    const interpolationType = (
+      /** @type {Array<*>} */
+      encoded[1]
+    );
     let base;
     switch (interpolationType[0]) {
       case "linear":
@@ -11168,7 +11632,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       input = parse$1(encoded[2], NumberType, context);
     } catch (err) {
       throw new Error(
-        `failed to parse argument 1 in interpolate expression: ${err.message}`
+        `failed to parse argument 1 in interpolate expression: ${getErrorMessage(err)}`
       );
     }
     const args = new Array(encoded.length - 3);
@@ -11178,7 +11642,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i] = stop;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 2} for interpolate expression: ${err.message}`
+          `failed to parse argument ${i + 2} for interpolate expression: ${getErrorMessage(err)}`
         );
       }
       try {
@@ -11186,7 +11650,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 3} for interpolate expression: ${err.message}`
+          `failed to parse argument ${i + 3} for interpolate expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11201,7 +11665,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i] = condition;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i} of case expression: ${err.message}`
+          `failed to parse argument ${i} of case expression: ${getErrorMessage(err)}`
         );
       }
       try {
@@ -11209,7 +11673,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 1} of case expression: ${err.message}`
+          `failed to parse argument ${i + 1} of case expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11248,7 +11712,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         args[i] = arg;
       } catch (err) {
         throw new Error(
-          `failed to parse haystack item ${i} for "in" expression: ${err.message}`
+          `failed to parse haystack item ${i} for "in" expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11261,7 +11725,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       index = parse$1(encoded[1], NumberType, context);
     } catch (err) {
       throw new Error(
-        `failed to parse first argument in palette expression: ${err.message}`
+        `failed to parse first argument in palette expression: ${getErrorMessage(err)}`
       );
     }
     const colors = encoded[2];
@@ -11275,7 +11739,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         color = parse$1(colors[i], ColorType, context);
       } catch (err) {
         throw new Error(
-          `failed to parse color at index ${i} in palette expression: ${err.message}`
+          `failed to parse color at index ${i} in palette expression: ${getErrorMessage(err)}`
         );
       }
       if (!(color instanceof LiteralExpression)) {
@@ -11290,7 +11754,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function createCallExpressionParser(...validators) {
     return function(encoded, returnType, context) {
       const operator = encoded[0];
-      let args;
+      let args = [];
       for (let i = 0; i < validators.length; i++) {
         const parsed = validators[i](encoded, returnType, context);
         if (i == validators.length - 1) {
@@ -11302,7 +11766,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           args = parsed;
         }
       }
-      return new CallExpression(returnType, operator, ...args);
+      return new CallExpression(
+        returnType,
+        operator,
+        .../** @type {Array<Expression>} */
+        args
+      );
     };
   }
   function parseCallExpression(encoded, returnType, context) {
@@ -11379,14 +11848,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return compileAccessorExpression(expression);
       }
       case Ops.Id: {
-        return (context2) => context2.featureId;
+        return (context2) => context2.featureId ?? "";
       }
       case Ops.GeometryType: {
         return (context2) => context2.geometryType;
       }
       case Ops.Concat: {
         const args = expression.args.map((e) => compileExpression(e));
-        return (context2) => "".concat(...args.map((arg) => arg(context2).toString()));
+        return (context2) => "".concat(...args.map((arg) => (arg(context2) ?? "").toString()));
       }
       case Ops.Resolution: {
         return (context2) => context2.resolution;
@@ -11429,16 +11898,73 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       case Ops.Match: {
         return compileMatchExpression(expression);
       }
-      case Ops.Interpolate: {
+      case Ops.Interpolate:
+      case Ops.InterpolateHcl: {
         return compileInterpolateExpression(expression);
       }
       case Ops.ToString: {
         return compileConvertExpression(expression);
       }
+      case Ops.Array: {
+        return compileArrayExpression(expression);
+      }
+      case Ops.Color: {
+        return compileColorExpression(expression);
+      }
       default: {
         throw new Error(`Unsupported operator ${operator}`);
       }
     }
+  }
+  function compileArrayExpression(expression, context) {
+    const length = expression.args.length;
+    const args = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      args[i] = compileExpression(expression.args[i]);
+    }
+    if (expression.type === ColorType && (length === 3 || length === 4)) {
+      const alpha = length === 4 ? args[3] : null;
+      return (context2) => [
+        /** @type {number} */
+        args[0](context2) * 255,
+        /** @type {number} */
+        args[1](context2) * 255,
+        /** @type {number} */
+        args[2](context2) * 255,
+        alpha ? (
+          /** @type {number} */
+          alpha(context2)
+        ) : 1
+      ];
+    }
+    return (context2) => {
+      const values = new Array(length);
+      for (let i = 0; i < length; ++i) {
+        values[i] = args[i](context2);
+      }
+      return values;
+    };
+  }
+  function compileColorExpression(expression, context) {
+    const length = expression.args.length;
+    const args = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      args[i] = compileExpression(expression.args[i]);
+    }
+    if (length < 3) {
+      const alpha2 = length === 2 ? args[1] : null;
+      return (context2) => {
+        const gray = args[0](context2);
+        return [gray, gray, gray, alpha2 ? alpha2(context2) : 1];
+      };
+    }
+    const alpha = length === 4 ? args[3] : null;
+    return (context2) => [
+      args[0](context2),
+      args[1](context2),
+      args[2](context2),
+      alpha ? alpha(context2) : 1
+    ];
   }
   function compileAssertionExpression(expression, context) {
     const type = expression.operator;
@@ -11741,6 +12267,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     for (let i = 0; i < length; ++i) {
       args[i] = compileExpression(expression.args[i]);
     }
+    const interpolateColorFn = expression.operator === Ops.InterpolateHcl ? (
+      // perceptual interpolation
+      interpolateHclColor
+    ) : (
+      // sRGB interpolation, equivalent to GLSL `mix()` in `gpu.js`
+      interpolateRgbColor
+    );
     return (context2) => {
       const base = args[0](context2);
       const value2 = args[1](context2);
@@ -11758,7 +12291,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             return output;
           }
           if (isColor) {
-            return interpolateColor(
+            return interpolateColorFn(
               base,
               value2,
               previousInput,
@@ -11813,7 +12346,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const factor = base === 1 ? along / delta : (Math.pow(base, along) - 1) / (Math.pow(base, delta) - 1);
     return output1 + factor * (output2 - output1);
   }
-  function interpolateColor(base, value2, input1, rgba1, input2, rgba2) {
+  function interpolateRgbColor(base, value2, input1, rgba1, input2, rgba2) {
+    const delta = input2 - input1;
+    if (delta === 0) {
+      return rgba1;
+    }
+    return [
+      interpolateNumber(base, value2, input1, rgba1[0], input2, rgba2[0]),
+      interpolateNumber(base, value2, input1, rgba1[1], input2, rgba2[1]),
+      interpolateNumber(base, value2, input1, rgba1[2], input2, rgba2[2]),
+      interpolateNumber(base, value2, input1, rgba1[3], input2, rgba2[3])
+    ];
+  }
+  function interpolateHclColor(base, value2, input1, rgba1, input2, rgba2) {
     const delta = input2 - input1;
     if (delta === 0) {
       return rgba1;
@@ -11908,7 +12453,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * @param {string} src Src.
      * @param {import("../color.js").Color|string|null} color Color.
-     * @return {import("./IconImage.js").default} Icon image.
+     * @return {import("./IconImage.js").default|null} Icon image.
      */
     get(src, color) {
       const key2 = getCacheKey(src, color);
@@ -11918,7 +12463,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * @param {string} src Src.
      * @param {import("../color.js").Color|string|null} color Color.
-     * @return {CanvasPattern} Icon image.
+     * @return {CanvasPattern|null} Icon image.
      */
     getPattern(src, color) {
       const key2 = getCacheKey(src, color);
@@ -11933,23 +12478,31 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     set(src, color, iconImage, pattern) {
       const key2 = getCacheKey(src, color);
       const update = key2 in this.cache_;
-      this.cache_[key2] = iconImage;
-      if (pattern) {
+      if (iconImage) {
+        this.cache_[key2] = iconImage;
+      }
+      if (pattern && iconImage) {
         if (iconImage.getImageState() === ImageState.IDLE) {
           iconImage.load();
         }
         if (iconImage.getImageState() === ImageState.LOADING) {
           iconImage.ready().then(() => {
-            this.patternCache_[key2] = getSharedCanvasContext2D().createPattern(
+            const patternFill = getSharedCanvasContext2D().createPattern(
               iconImage.getImage(1),
               "repeat"
             );
+            if (patternFill) {
+              this.patternCache_[key2] = patternFill;
+            }
           });
         } else {
-          this.patternCache_[key2] = getSharedCanvasContext2D().createPattern(
+          const patternFill = getSharedCanvasContext2D().createPattern(
             iconImage.getImage(1),
             "repeat"
           );
+          if (patternFill) {
+            this.patternCache_[key2] = patternFill;
+          }
         }
       }
       if (!update) {
@@ -11986,7 +12539,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       super();
       this.hitDetectionImage_ = null;
       this.image_ = image;
-      this.crossOrigin_ = imageAttributes == null ? void 0 : imageAttributes.crossOrigin;
+      this.crossOrigin_ = (imageAttributes == null ? void 0 : imageAttributes.crossOrigin) ?? null;
       this.referrerPolicy_ = imageAttributes == null ? void 0 : imageAttributes.referrerPolicy;
       this.canvas_ = {};
       this.color_ = color;
@@ -12014,12 +12567,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     isTainted_() {
       if (this.tainted_ === void 0 && this.imageState_ === ImageState.LOADED) {
+        const image = this.image_;
+        if (!image) {
+          return false;
+        }
         if (!taintedTestContext) {
           taintedTestContext = createCanvasContext2D(1, 1, void 0, {
             willReadFrequently: true
           });
         }
-        taintedTestContext.drawImage(this.image_, 0, 0);
+        taintedTestContext.drawImage(
+          /** @type {CanvasImageSource} */
+          image,
+          0,
+          0
+        );
         try {
           taintedTestContext.getImageData(0, 0, 1, 1);
           this.tainted_ = false;
@@ -12048,7 +12610,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     handleImageLoad_() {
       this.imageState_ = ImageState.LOADED;
-      this.size_ = [this.image_.width, this.image_.height];
+      const image = this.image_;
+      if (image && "width" in image && "height" in image) {
+        this.size_ = [image.width, image.height];
+      }
       this.dispatchChangeEvent_();
     }
     /**
@@ -12060,7 +12625,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.initializeImage_();
       }
       this.replaceColor_(pixelRatio);
-      return this.canvas_[pixelRatio] ? this.canvas_[pixelRatio] : this.image_;
+      const image = this.image_;
+      return this.canvas_[pixelRatio] ? this.canvas_[pixelRatio] : (
+        /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+        image
+      );
     }
     /**
      * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image Image.
@@ -12091,8 +12660,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       if (!this.hitDetectionImage_) {
         if (this.isTainted_()) {
-          const width = this.size_[0];
-          const height = this.size_[1];
+          const size = this.size_;
+          if (!size) {
+            return (
+              /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+              this.image_
+            );
+          }
+          const width = size[0];
+          const height = size[1];
           const context = createCanvasContext2D(width, height);
           context.fillRect(0, 0, width, height);
           this.hitDetectionImage_ = context.canvas;
@@ -12100,11 +12676,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           this.hitDetectionImage_ = this.image_;
         }
       }
-      return this.hitDetectionImage_;
+      return (
+        /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+        this.hitDetectionImage_
+      );
     }
     /**
      * Get the size of the icon (in pixels).
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      */
     getSize() {
       return this.size_;
@@ -12149,18 +12728,31 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       const image = this.image_;
+      if (!image) {
+        return;
+      }
       const ctx = createCanvasContext2D(
         Math.ceil(image.width * pixelRatio),
         Math.ceil(image.height * pixelRatio)
       );
       const canvas = ctx.canvas;
       ctx.scale(pixelRatio, pixelRatio);
-      ctx.drawImage(image, 0, 0);
+      ctx.drawImage(
+        /** @type {CanvasImageSource} */
+        image,
+        0,
+        0
+      );
       ctx.globalCompositeOperation = "multiply";
       ctx.fillStyle = asString(this.color_);
       ctx.fillRect(0, 0, canvas.width / pixelRatio, canvas.height / pixelRatio);
       ctx.globalCompositeOperation = "destination-in";
-      ctx.drawImage(image, 0, 0);
+      ctx.drawImage(
+        /** @type {CanvasImageSource} */
+        image,
+        0,
+        0
+      );
       this.canvas_[pixelRatio] = canvas;
     }
     /**
@@ -12195,9 +12787,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         imageState,
         color
       );
-      shared.set(src, color, iconImage, pattern);
+      if (src !== void 0) {
+        shared.set(src, color, iconImage, pattern);
+      }
     }
-    if (pattern && iconImage && !shared.getPattern(src, color)) {
+    if (pattern && iconImage && src !== void 0 && !shared.getPattern(src, color)) {
       shared.set(src, color, iconImage, pattern);
     }
     return iconImage;
@@ -12216,15 +12810,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   function asCanvasPattern(pattern) {
     if (!pattern.offset || !pattern.size) {
-      return shared.getPattern(pattern.src, pattern.color);
+      return shared.getPattern(pattern.src, pattern.color ?? null);
     }
     const cacheKey = pattern.src + ":" + pattern.offset;
-    const canvasPattern = shared.getPattern(cacheKey, pattern.color);
+    const canvasPattern = shared.getPattern(cacheKey, pattern.color ?? null);
     if (canvasPattern) {
       return canvasPattern;
     }
     const iconImage = shared.get(pattern.src, null);
-    if (iconImage.getImageState() !== ImageState.LOADED) {
+    if (!iconImage || iconImage.getImageState() !== ImageState.LOADED) {
       return null;
     }
     const patternCanvasContext = createCanvasContext2D(
@@ -12245,12 +12839,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     get$1(
       patternCanvasContext.canvas,
       cacheKey,
-      void 0,
+      {},
       ImageState.LOADED,
-      pattern.color,
+      pattern.color ?? null,
       true
     );
-    return shared.getPattern(cacheKey, pattern.color);
+    return shared.getPattern(cacheKey, pattern.color ?? null);
   }
   const defaultFont = "10px sans-serif";
   const defaultFillStyle = "#000";
@@ -12289,12 +12883,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   const registerFont = /* @__PURE__ */ (function() {
     const retries = 100;
-    let timeout, fontFaceSet;
+    let timeout;
+    let fontFaceSet;
     async function isAvailable(fontSpec) {
       await fontFaceSet.ready;
-      const font = getFontParameters(fontSpec);
-      const checkFamily = font.families[0].toLowerCase();
-      const checkWeight = font.weight;
+      const fontParams = getFontParameters(fontSpec);
+      if (!fontParams) {
+        return false;
+      }
+      const checkFamily = fontParams.families[0].toLowerCase();
+      const checkWeight = fontParams.weight;
       const matching = [];
       fontFaceSet.forEach(
         /**
@@ -12303,7 +12901,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         (f) => {
           const family = f.family.replace(/^['"]|['"]$/g, "").toLowerCase();
           const weight = fontWeights[f.weight] || f.weight;
-          if (family === checkFamily && f.style === font.style && weight == checkWeight) {
+          if (family === checkFamily && f.style === fontParams.style && weight == checkWeight) {
             matching.push(f);
           }
         }
@@ -12355,17 +12953,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!fontFaceSet) {
         fontFaceSet = WORKER_OFFSCREEN_CANVAS ? self.fonts : document.fonts;
       }
-      const font = getFontParameters(fontSpec);
-      if (!font) {
+      const fontParams = getFontParameters(fontSpec);
+      if (!fontParams) {
         return;
       }
-      const families = font.families;
+      const families = fontParams.families;
       let needCheck = false;
       for (const family of families) {
         if (genericFontFamilies.has(family)) {
           continue;
         }
-        const key2 = getFontKey(font.style, font.weight, family);
+        const key2 = getFontKey(fontParams.style, fontParams.weight, family);
         if (checkedFonts.get(key2) !== void 0) {
           continue;
         }
@@ -12384,9 +12982,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let height = textHeights[fontSpec];
       if (height == void 0) {
         if (WORKER_OFFSCREEN_CANVAS) {
-          const font = getFontParameters(fontSpec);
+          const fontParams = getFontParameters(fontSpec);
           const metrics = measureText(fontSpec, "Žg");
-          const lineHeight = isNaN(Number(font.lineHeight)) ? 1.2 : Number(font.lineHeight);
+          const lineHeight = !fontParams || isNaN(Number(fontParams.lineHeight)) ? 1.2 : Number(fontParams.lineHeight);
           height = lineHeight * (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
         } else {
           if (!measureElement) {
@@ -12464,13 +13062,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     context.save();
     if (opacity !== 1) {
       if (context.globalAlpha === void 0) {
-        context.globalAlpha = (context2) => context2.globalAlpha *= opacity;
+        context.globalAlpha = function(ctx) {
+          return ctx.globalAlpha *= opacity;
+        };
       } else {
         context.globalAlpha *= opacity;
       }
     }
     if (transform2) {
-      context.transform.apply(context, transform2);
+      context.transform.apply(
+        context,
+        /** @type {[number, number, number, number, number, number]} */
+        transform2
+      );
     }
     if (
       /** @type {*} */
@@ -12515,15 +13119,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     context.restore();
   }
   function executeLabelInstructions(label, context) {
+    const ctx = (
+      /** @type {CanvasRenderingContext2D} */
+      context
+    );
     const contextInstructions = label.contextInstructions;
     for (let i = 0, ii = contextInstructions.length; i < ii; i += 2) {
       if (Array.isArray(contextInstructions[i + 1])) {
-        context[contextInstructions[i]].apply(
-          context,
-          contextInstructions[i + 1]
+        const method = (
+          /** @type {string} */
+          contextInstructions[i]
         );
+        /** @type {Object<string, *>} */
+        ctx[method].apply(ctx, contextInstructions[i + 1]);
       } else {
-        context[contextInstructions[i]] = contextInstructions[i + 1];
+        const property = (
+          /** @type {string} */
+          contextInstructions[i]
+        );
+        ctx[property] = contextInstructions[i + 1];
       }
     }
   }
@@ -12605,7 +13219,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the declutter mode of the shape
-     * @return {import("./Style.js").DeclutterMode} Shape's declutter mode
+     * @return {import("./Style.js").DeclutterMode|undefined} Shape's declutter mode
      * @api
      */
     getDeclutterMode() {
@@ -12615,7 +13229,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Get the anchor point in pixels. The anchor determines the center point for the
      * symbolizer.
      * @abstract
-     * @return {Array<number>} Anchor.
+     * @return {Array<number>|null} Anchor.
      */
     getAnchor() {
       return abstract();
@@ -12653,7 +13267,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * @abstract
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      */
     getImageSize() {
       return abstract();
@@ -12661,7 +13275,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Get the origin of the symbolizer.
      * @abstract
-     * @return {Array<number>} Origin.
+     * @return {Array<number>|null} Origin.
      */
     getOrigin() {
       return abstract();
@@ -12669,7 +13283,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Get the size of the symbolizer (in pixels).
      * @abstract
-     * @return {import("../size.js").Size} Size.
+     * @return {import("../size.js").Size|null} Size.
      */
     getSize() {
       return abstract();
@@ -12784,14 +13398,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     clone() {
+      var _a, _b;
       const scale2 = this.getScale();
       const style = new RegularShape({
-        fill: this.getFill() ? this.getFill().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
         points: this.getPoints(),
         radius: this.getRadius(),
         radius2: this.getRadius2(),
         angle: this.getAngle(),
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        stroke: (_b = this.getStroke()) == null ? void 0 : _b.clone(),
         rotation: this.getRotation(),
         rotateWithView: this.getRotateWithView(),
         scale: Array.isArray(scale2) ? scale2.slice() : scale2,
@@ -12878,7 +13493,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         const iconImage = new IconImage(
           image,
           void 0,
-          null,
+          {},
           ImageState.LOADED,
           null
         );
@@ -13119,7 +13734,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (color === null) {
           color = defaultFillStyle;
         }
-        context.fillStyle = asColorLike(color);
+        context.fillStyle = /** @type {string|CanvasGradient|CanvasPattern} */
+        asColorLike(color);
         context.fill();
       }
       if (renderOptions.strokeStyle) {
@@ -13238,10 +13854,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     clone() {
+      var _a, _b;
       const scale2 = this.getScale();
       const style = new CircleStyle({
-        fill: this.getFill() ? this.getFill().clone() : void 0,
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
+        stroke: (_b = this.getStroke()) == null ? void 0 : _b.clone(),
         radius: this.getRadius(),
         scale: Array.isArray(scale2) ? scale2.slice() : scale2,
         rotation: this.getRotation(),
@@ -13320,7 +13937,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!fill) {
         return "";
       }
-      return fill instanceof CanvasPattern || fill instanceof CanvasGradient ? getUid(fill) : typeof fill === "object" && "src" in fill ? fill.src + ":" + fill.offset : asArray(fill).toString();
+      return fill instanceof CanvasPattern || fill instanceof CanvasGradient ? getUid(
+        /** @type {Object} */
+        fill
+      ) : typeof fill === "object" && "src" in fill ? fill.src + ":" + fill.offset : asArray(fill).toString();
     }
     /**
      * @return {boolean} The fill style is loading an image pattern.
@@ -13380,7 +14000,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       if ((cacheKey === void 0 || cacheKey.length === 0) && image) {
         cacheKey = /** @type {HTMLImageElement} */
-        image.src || getUid(image);
+        image.src || getUid(
+          /** @type {Object} */
+          image
+        );
       }
       assert(
         cacheKey !== void 0 && cacheKey.length > 0,
@@ -13394,9 +14017,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (options.src !== void 0) {
         imageState = ImageState.IDLE;
       } else if (image !== void 0) {
-        if ("complete" in image) {
-          if (image.complete) {
-            imageState = image.src ? ImageState.LOADED : ImageState.IDLE;
+        if ("complete" in /** @type {HTMLImageElement} */
+        image) {
+          if (
+            /** @type {HTMLImageElement} */
+            image.complete
+          ) {
+            imageState = /** @type {HTMLImageElement} */
+            image.src ? ImageState.LOADED : ImageState.IDLE;
           } else {
             imageState = ImageState.LOADING;
           }
@@ -13438,6 +14066,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 return;
               }
               const imageSize = this.iconImage_.getSize();
+              if (!imageSize) {
+                return;
+              }
               this.setScale(
                 calculateScale(
                   imageSize[0],
@@ -13453,7 +14084,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         if (width !== void 0) {
           this.setScale(
-            calculateScale(width, height, options.width, options.height)
+            calculateScale(
+              width,
+              /** @type {number} */
+              height,
+              options.width,
+              options.height
+            )
           );
         }
       }
@@ -13498,7 +14135,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Get the anchor point in pixels. The anchor determines the center point for the
      * symbolizer.
-     * @return {Array<number>} Anchor.
+     * @return {Array<number>|null} Anchor.
      * @api
      * @override
      */
@@ -13555,7 +14192,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the icon color.
-     * @return {import("../color.js").Color} Color.
+     * @return {import("../color.js").Color|null} Color.
      * @api
      */
     getColor() {
@@ -13612,7 +14249,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return this.iconImage_.getPixelRatio(pixelRatio);
     }
     /**
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      * @override
      */
     getImageSize() {
@@ -13634,7 +14271,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the origin of the symbolizer.
-     * @return {Array<number>} Origin.
+     * @return {Array<number>|null} Origin.
      * @api
      * @override
      */
@@ -13687,7 +14324,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the size of the icon (in pixels).
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      * @api
      * @override
      */
@@ -13696,7 +14333,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the width of the icon (in pixels). Will return undefined when the icon image is not yet loaded.
-     * @return {number} Icon width (in pixels).
+     * @return {number|undefined} Icon width (in pixels).
      * @api
      */
     getWidth() {
@@ -13705,13 +14342,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return this.size_[0] * scale2[0];
       }
       if (this.iconImage_.getImageState() == ImageState.LOADED) {
-        return this.iconImage_.getSize()[0] * scale2[0];
+        const size = this.iconImage_.getSize();
+        if (size) {
+          return size[0] * scale2[0];
+        }
       }
       return void 0;
     }
     /**
      * Get the height of the icon (in pixels). Will return undefined when the icon image is not yet loaded.
-     * @return {number} Icon height (in pixels).
+     * @return {number|undefined} Icon height (in pixels).
      * @api
      */
     getHeight() {
@@ -13720,7 +14360,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return this.size_[1] * scale2[1];
       }
       if (this.iconImage_.getImageState() == ImageState.LOADED) {
-        return this.iconImage_.getSize()[1] * scale2[1];
+        const size = this.iconImage_.getSize();
+        if (size) {
+          return size[1] * scale2[1];
+        }
       }
       return void 0;
     }
@@ -13740,7 +14383,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     listenImageChange(listener) {
-      this.iconImage_.addEventListener(EventType.CHANGE, listener);
+      this.iconImage_.addEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").ListenerFunction} */
+        listener
+      );
     }
     /**
      * Load not yet loaded URI.
@@ -13758,7 +14405,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     unlistenImageChange(listener) {
-      this.iconImage_.removeEventListener(EventType.CHANGE, listener);
+      this.iconImage_.removeEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").ListenerFunction} */
+        listener
+      );
     }
     /**
      * @override
@@ -13788,11 +14439,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     clone() {
+      var _a;
       const color = this.getColor();
       return new Stroke({
         color: Array.isArray(color) ? color.slice() : color || void 0,
         lineCap: this.getLineCap(),
-        lineDash: this.getLineDash() ? this.getLineDash().slice() : void 0,
+        lineDash: (_a = this.getLineDash()) == null ? void 0 : _a.slice(),
         lineDashOffset: this.getLineDashOffset(),
         lineJoin: this.getLineJoin(),
         miterLimit: this.getMiterLimit(),
@@ -13802,7 +14454,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the stroke color.
-     * @return {import("../color.js").Color|import("../colorlike.js").ColorLike} Color.
+     * @return {import("../color.js").Color|import("../colorlike.js").ColorLike|null} Color.
      * @api
      */
     getColor() {
@@ -13962,6 +14614,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     clone() {
+      var _a, _b, _c, _d;
       let geometry = this.getGeometry();
       if (geometry && typeof geometry === "object") {
         geometry = /** @type {import("../geom/Geometry.js").default} */
@@ -13969,11 +14622,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       return new Style({
         geometry: geometry ?? void 0,
-        fill: this.getFill() ? this.getFill().clone() : void 0,
-        image: this.getImage() ? this.getImage().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
+        image: (_b = this.getImage()) == null ? void 0 : _b.clone(),
         renderer: this.getRenderer() ?? void 0,
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
-        text: this.getText() ? this.getText().clone() : void 0,
+        stroke: (_c = this.getStroke()) == null ? void 0 : _c.clone(),
+        text: (_d = this.getText()) == null ? void 0 : _d.clone(),
         zIndex: this.getZIndex()
       });
     }
@@ -14090,7 +14743,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Set the text style.
-     * @param {import("./Text.js").default} text Text style.
+     * @param {import("./Text.js").default|null} text Text style.
      * @api
      */
     setText(text2) {
@@ -14284,6 +14937,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     clone() {
+      var _a, _b, _c;
       const scale2 = this.getScale();
       return new Text({
         font: this.getFont(),
@@ -14299,12 +14953,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         textAlign: this.getTextAlign(),
         justify: this.getJustify(),
         textBaseline: this.getTextBaseline(),
-        fill: this.getFill() instanceof Fill ? this.getFill().clone() : this.getFill(),
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        fill: this.getFill() instanceof Fill ? (
+          /** @type {Fill} */
+          this.getFill().clone()
+        ) : this.getFill(),
+        stroke: (_a = this.getStroke()) == null ? void 0 : _a.clone(),
         offsetX: this.getOffsetX(),
         offsetY: this.getOffsetY(),
-        backgroundFill: this.getBackgroundFill() ? this.getBackgroundFill().clone() : void 0,
-        backgroundStroke: this.getBackgroundStroke() ? this.getBackgroundStroke().clone() : void 0,
+        backgroundFill: (_b = this.getBackgroundFill()) == null ? void 0 : _b.clone(),
+        backgroundStroke: (_c = this.getBackgroundStroke()) == null ? void 0 : _c.clone(),
         padding: this.getPadding() || void 0,
         declutterMode: this.getDeclutterMode()
       });
@@ -14478,7 +15135,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the declutter mode of the shape
-     * @return {import("./Style.js").DeclutterMode} Shape's declutter mode
+     * @return {import("./Style.js").DeclutterMode|undefined} Shape's declutter mode
      * @api
      */
     getDeclutterMode() {
@@ -14673,7 +15330,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const evaluator = buildRuleSet(rules, parsingContext);
     const evaluationContext = newEvaluationContext();
     return function(feature, resolution) {
-      evaluationContext.properties = feature.getPropertiesInternal();
+      evaluationContext.properties = feature.getPropertiesInternal() ?? {};
       evaluationContext.resolution = resolution;
       if (parsingContext.featureId) {
         const id = feature.getId();
@@ -14684,9 +15341,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       }
       if (parsingContext.geometryType) {
-        evaluationContext.geometryType = computeGeometryType(
-          feature.getGeometry()
-        );
+        const geometry = feature.getGeometry();
+        if (geometry) {
+          evaluationContext.geometryType = computeGeometryType(geometry);
+        }
       }
       return evaluator(evaluationContext);
     };
@@ -14701,7 +15359,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const evaluationContext = newEvaluationContext();
     const styles = new Array(length);
     return function(feature, resolution) {
-      evaluationContext.properties = feature.getPropertiesInternal();
+      evaluationContext.properties = feature.getPropertiesInternal() ?? {};
       evaluationContext.resolution = resolution;
       if (parsingContext.featureId) {
         const id = feature.getId();
@@ -14712,9 +15370,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       }
       if (parsingContext.geometryType) {
-        evaluationContext.geometryType = computeGeometryType(
-          feature.getGeometry()
-        );
+        const geometry = feature.getGeometry();
+        if (geometry) {
+          evaluationContext.geometryType = computeGeometryType(geometry);
+        }
       }
       let nonNullCount = 0;
       for (let i = 0; i < length; ++i) {
@@ -14757,7 +15416,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const compiledRules = new Array(length);
     for (let i = 0; i < length; ++i) {
       const rule = rules[i];
-      const filter = "filter" in rule ? buildExpression(rule.filter, BooleanType, context) : always;
+      const filter = "filter" in rule && rule.filter !== void 0 ? buildExpression(
+        /** @type {EncodedExpression} */
+        rule.filter,
+        BooleanType,
+        context
+      ) : always;
       let styles;
       if (Array.isArray(rule.style)) {
         const styleLength = rule.style.length;
@@ -14849,7 +15513,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (prefix + "fill-pattern-src" in flatStyle) {
       evaluateColor = patternEvaluator(flatStyle, prefix + "fill-", context);
     } else {
-      if (flatStyle[prefix + "fill-color"] === "none") {
+      if (getExpressionValue(flatStyle, prefix + "fill-color") === "none") {
         return (context2) => null;
       }
       evaluateColor = colorLikeEvaluator(
@@ -14867,7 +15531,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (color === NO_COLOR) {
         return null;
       }
-      fill.setColor(color);
+      fill.setColor(
+        /** @type {import('../../colorlike.js').ColorLike} */
+        color
+      );
       return fill;
     };
   }
@@ -15135,7 +15802,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function buildIcon(flatStyle, context) {
     const prefix = "icon-";
     const srcName = prefix + "src";
-    const src = requireString(flatStyle[srcName], srcName);
+    const src = requireString(getExpressionValue(flatStyle, srcName), srcName);
     const evaluateAnchor = coordinateEvaluator(
       flatStyle,
       prefix + "anchor",
@@ -15179,7 +15846,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (isColorExpression) {
         evaluateColor = colorLikeEvaluator(flatStyle, prefix + "color", context);
       } else {
-        color = requireColorLike(colorValue, prefix + "color");
+        color = /** @type {import('../../colorlike.js').ColorLike} */
+        requireColorLike(colorValue, prefix + "color");
       }
     }
     const crossOrigin = optionalString(flatStyle, prefix + "cross-origin");
@@ -15240,15 +15908,20 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const prefix = "shape-";
     const pointsName = prefix + "points";
     const radiusName = prefix + "radius";
-    const points = requireNumber(flatStyle[pointsName], pointsName);
+    const points = requireNumber(
+      getExpressionValue(flatStyle, pointsName),
+      pointsName
+    );
     if (!(radiusName in flatStyle)) {
       throw new Error(`Expected a number for ${radiusName}`);
     }
     const evaluateRadius = numberEvaluator(flatStyle, radiusName, context);
-    const initialRadius = typeof flatStyle[radiusName] === "number" ? flatStyle[radiusName] : 5;
+    const radiusValue = getExpressionValue(flatStyle, radiusName);
+    const initialRadius = typeof radiusValue === "number" ? radiusValue : 5;
     const radius2Name = prefix + "radius2";
     const evaluateRadius2 = numberEvaluator(flatStyle, radius2Name, context);
-    const initialRadius2 = typeof flatStyle[radius2Name] === "number" ? flatStyle[radius2Name] : void 0;
+    const radius2Value = getExpressionValue(flatStyle, radius2Name);
+    const initialRadius2 = typeof radius2Value === "number" ? radius2Value : void 0;
     const evaluateFill = buildFill(flatStyle, prefix, context);
     const evaluateStroke = buildStroke(flatStyle, prefix, context);
     const evaluateScale = sizeLikeEvaluator(flatStyle, prefix + "scale", context);
@@ -15366,7 +16039,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (!(name in flatStyle)) {
       return void 0;
     }
-    const value2 = flatStyle[name];
+    const value2 = (
+      /** @type {Record<string, *>} */
+      flatStyle[name]
+    );
     return value2 === void 0 ? void 0 : value2;
   }
   function numberEvaluator(flatStyle, name, context) {
@@ -15410,12 +16086,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       prefix + "color",
       context
     );
-    return function(context2) {
+    return function(evalContext) {
+      if (!srcEvaluator) {
+        return null;
+      }
       return {
-        src: srcEvaluator(context2),
-        offset: offsetEvaluator && offsetEvaluator(context2),
-        size: patternSizeEvaluator && patternSizeEvaluator(context2),
-        color: colorEvaluator && colorEvaluator(context2)
+        src: srcEvaluator(evalContext),
+        offset: offsetEvaluator ? offsetEvaluator(evalContext) : null,
+        size: patternSizeEvaluator ? patternSizeEvaluator(evalContext) : null,
+        color: colorEvaluator ? colorEvaluator(evalContext) : null
       };
     };
   }
@@ -15510,7 +16189,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
   }
   function optionalNumber(flatStyle, property) {
-    const value2 = flatStyle[property];
+    const value2 = getExpressionValue(flatStyle, property);
     if (value2 === void 0) {
       return void 0;
     }
@@ -15520,7 +16199,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return value2;
   }
   function optionalSize(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15536,7 +16215,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return encoded;
   }
   function optionalString(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15546,7 +16225,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return encoded;
   }
   function optionalIconOrigin(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15558,7 +16237,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return encoded;
   }
   function optionalIconAnchorUnits(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15568,14 +16247,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return encoded;
   }
   function optionalNumberArray(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
     return requireNumberArray(encoded, property);
   }
   function optionalDeclutterMode(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15659,7 +16338,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.updateWhileInteracting_ = options.updateWhileInteracting !== void 0 ? options.updateWhileInteracting : false;
     }
     /**
-     * @return {string} Declutter group.
+     * @return {string|undefined} Declutter group.
      * @override
      */
     getDeclutter() {
@@ -15737,10 +16416,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     renderDeclutter(frameState, layerState) {
       const declutterGroup = this.getDeclutter();
+      if (!declutterGroup) {
+        return;
+      }
+      if (!frameState.declutter) {
+        frameState.declutter = {};
+      }
       if (declutterGroup in frameState.declutter === false) {
         frameState.declutter[declutterGroup] = new RBush$1(9);
       }
-      this.getRenderer().renderDeclutter(frameState, layerState);
+      const renderer = this.getRenderer();
+      if (renderer) {
+        renderer.renderDeclutter(frameState, layerState);
+      }
     }
     /**
      * @param {import("../render.js").OrderFunction|null|undefined} renderOrder
@@ -15771,9 +16459,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     setStyle(style) {
-      this.style_ = style === void 0 ? createDefaultStyle : style;
+      this.style_ = style === void 0 ? createDefaultStyle : style ?? null;
       const styleLike = toStyleLike(style);
-      this.styleFunction_ = style === null ? void 0 : toFunction(styleLike);
+      this.styleFunction_ = style === null || styleLike === null ? void 0 : toFunction(styleLike);
       this.changed();
     }
     /**
@@ -15831,7 +16519,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       super(type);
       this.inversePixelTransform = inversePixelTransform;
       this.frameState = frameState;
-      this.context = context;
+      this.context = context ?? void 0;
     }
   }
   class MapRenderer extends Disposable {
@@ -15889,7 +16577,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let result;
       const viewState = frameState.viewState;
       function forEachFeatureAtCoordinate(managed, feature, layer, geometry) {
-        return callback.call(thisArg, feature, managed ? layer : null, geometry);
+        return callback.call(
+          thisArg,
+          feature,
+          managed ? layer : (
+            /** @type {import("../layer/Layer.js").default} */
+            /** @type {unknown} */
+            null
+          ),
+          /** @type {import("../geom/SimpleGeometry.js").default} */
+          geometry
+        );
       }
       const projection = viewState.projection;
       const translatedCoordinate = wrapX(coordinate.slice(), projection);
@@ -15909,7 +16607,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       for (let i = 0; i < offsets.length; i++) {
         for (let j = numLayers - 1; j >= 0; --j) {
           const layerState = layerStates[j];
-          const layer = layerState.layer;
+          const layer = (
+            /** @type {import("../layer/Layer.js").default} */
+            layerState.layer
+          );
           if (layer.hasRenderer() && inView(layerState, viewState) && layerFilter.call(thisArg2, layer)) {
             const layerRenderer = layer.getRenderer();
             const source = layer.getSource();
@@ -16061,7 +16762,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.calculateMatrices2D(frameState);
       this.dispatchRenderEvent(RenderEventType.PRECOMPOSE, frameState);
       const layerStatesArray = frameState.layerStatesArray.sort(
-        (a, b) => a.zIndex - b.zIndex
+        (a, b) => (
+          /** @type {number} */
+          a.zIndex - /** @type {number} */
+          b.zIndex
+        )
       );
       const declutter = layerStatesArray.some(
         (layerState) => layerState.layer instanceof BaseVectorLayer && layerState.layer.getDeclutter()
@@ -16091,7 +16796,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           layer.unrender();
           continue;
         }
-        const element = layer.render(frameState, previousElement);
+        const element = layer.render(
+          frameState,
+          /** @type {HTMLElement} */
+          previousElement
+        );
         if (!element) {
           continue;
         }
@@ -16103,37 +16812,39 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.declutter(frameState, renderedLayerStates);
       replaceChildren(this.element_, this.children_);
-      for (const container of mapContext ? this.children_ : []) {
-        const canvas = container.firstElementChild || container;
-        const backgroundColor = container.style.backgroundColor;
-        if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
-          mapContext.fillStyle = backgroundColor;
-          mapContext.fillRect(
-            0,
-            0,
-            mapContext.canvas.width,
-            mapContext.canvas.height
-          );
+      if (mapContext) {
+        for (const container of this.children_) {
+          const canvas = container.firstElementChild || container;
+          const backgroundColor = container.style.backgroundColor;
+          if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
+            mapContext.fillStyle = backgroundColor;
+            mapContext.fillRect(
+              0,
+              0,
+              mapContext.canvas.width,
+              mapContext.canvas.height
+            );
+          }
+          if (!isCanvas(canvas) || canvas.width === 0) {
+            continue;
+          }
+          mapContext.save();
+          const opacity = container.style.opacity || canvas.style.opacity;
+          mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
+          const transform2 = canvas.style.transform;
+          if (transform2) {
+            mapContext.transform(
+              .../** @type {[number, number, number, number, number, number]} */
+              fromString$1(transform2)
+            );
+          } else {
+            const w = parseFloat(canvas.style.width) / canvas.width;
+            const h = parseFloat(canvas.style.height) / canvas.height;
+            mapContext.transform(w, 0, 0, h, 0, 0);
+          }
+          mapContext.drawImage(canvas, 0, 0);
+          mapContext.restore();
         }
-        if (!isCanvas(canvas) || canvas.width === 0) {
-          continue;
-        }
-        mapContext.save();
-        const opacity = container.style.opacity || canvas.style.opacity;
-        mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
-        const transform2 = canvas.style.transform;
-        if (transform2) {
-          mapContext.transform(
-            .../** @type {[number, number, number, number, number, number]} */
-            fromString$1(transform2)
-          );
-        } else {
-          const w = parseFloat(canvas.style.width) / canvas.width;
-          const h = parseFloat(canvas.style.height) / canvas.height;
-          mapContext.transform(w, 0, 0, h, 0, 0);
-        }
-        mapContext.drawImage(canvas, 0, 0);
-        mapContext.restore();
       }
       this.dispatchRenderEvent(RenderEventType.POSTCOMPOSE, frameState);
       if (!this.renderedVisible_) {
@@ -16158,7 +16869,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       }
       layerStates.forEach(
-        (layerState) => layerState.layer.renderDeferred(frameState)
+        (layerState) => {
+          var _a;
+          return (_a = layerState.layer) == null ? void 0 : _a.renderDeferred(frameState);
+        }
       );
     }
   }
@@ -16197,6 +16911,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.renderComplete_ = false;
       this.loaded_ = true;
       this.boundHandleBrowserEvent_ = this.handleBrowserEvent.bind(this);
+      this.ctrlKey_ = false;
+      this.boundHandleCtrlKey_ = this.handleCtrlKey_.bind(this);
       this.maxTilesLoading_ = options.maxTilesLoading !== void 0 ? options.maxTilesLoading : 16;
       this.pixelRatio_ = options.pixelRatio !== void 0 ? options.pixelRatio : DEVICE_PIXEL_RATIO;
       this.postRenderTimeoutHandle_;
@@ -16210,6 +16926,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.viewPropertyListenerKey_ = null;
       this.viewChangeListenerKey_ = null;
       this.layerGroupPropertyListenerKeys_ = null;
+      this.viewport_;
+      this.overlayContainer_;
+      this.overlayContainerStopEvent_;
       if (!WORKER_OFFSCREEN_CANVAS) {
         this.viewport_ = document.createElement("div");
         this.viewport_.className = "ol-viewport" + ("ontouchstart" in window ? " ol-touch" : "");
@@ -16270,61 +16989,67 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.controls.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./control/Control.js").default>} event CollectionEvent
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(this);
-        }
+        })
       );
       this.controls.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./control/Control.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(null);
-        }
+        })
       );
       this.interactions.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./interaction/Interaction.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(this);
-        }
+        })
       );
       this.interactions.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./interaction/Interaction.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(null);
-        }
+        })
       );
       this.overlays_.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./Overlay.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           this.addOverlayInternal_(event.element);
-        }
+        })
       );
       this.overlays_.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./Overlay.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           const id = event.element.getId();
           if (id !== void 0) {
             delete this.overlayIdIndex_[id.toString()];
           }
           event.element.setMap(null);
-        }
+        })
       );
       this.controls.forEach(
         /**
@@ -16447,6 +17172,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const layerFilter = options.layerFilter !== void 0 ? options.layerFilter : TRUE;
       const checkWrapped = options.checkWrapped !== false;
       return this.renderer_.forEachFeatureAtCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         coordinate,
         this.frameState_,
         hitTolerance,
@@ -16491,7 +17217,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           if (layer instanceof LayerGroup) {
             addLayersFrom(layer.getLayers());
           } else {
-            layers.push(layer);
+            layers.push(
+              /** @type {import("./layer/Layer.js").default} */
+              layer
+            );
           }
         });
       }
@@ -16519,6 +17248,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const hitTolerance = options.hitTolerance !== void 0 ? options.hitTolerance : 0;
       const checkWrapped = options.checkWrapped !== false;
       return this.renderer_.hasFeatureAtCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         coordinate,
         this.frameState_,
         hitTolerance,
@@ -16542,7 +17272,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {import("./coordinate.js").Coordinate} Coordinate.
      */
     getEventCoordinateInternal(event) {
-      return this.getCoordinateFromPixelInternal(this.getEventPixel(event));
+      return (
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.getCoordinateFromPixelInternal(this.getEventPixel(event))
+      );
     }
     /**
      * Returns the map pixel position for a browser event relative to the viewport.
@@ -16551,9 +17284,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @api
      */
     getEventPixel(event) {
-      const viewport = this.viewport_;
+      const viewport = (
+        /** @type {!HTMLElement} */
+        this.viewport_
+      );
       const viewportPosition = viewport.getBoundingClientRect();
-      const viewportSize = this.getSize();
+      const viewportSize = (
+        /** @type {import("./size.js").Size} */
+        this.getSize()
+      );
       const scaleX = viewportPosition.width / viewportSize[0];
       const scaleY = viewportPosition.height / viewportSize[1];
       const eventPosition = (
@@ -16590,7 +17329,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Get the DOM element into which this map is rendered. In contrast to
      * `getTarget` this method always return an `Element`, or `null` if the
      * map has no target.
-     * @return {HTMLElement} The element that the map is rendered in.
+     * @return {HTMLElement|null|undefined} The element that the map is rendered in.
      * @api
      */
     getTargetElement() {
@@ -16600,20 +17339,27 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Get the coordinate for a given pixel.  This returns a coordinate in the
      * user projection.
      * @param {import("./pixel.js").Pixel} pixel Pixel position in the map viewport.
+     * @param {PixelToCoordinateOptions} [options] Options.
      * @return {import("./coordinate.js").Coordinate} The coordinate for the pixel position.
      * @api
      */
-    getCoordinateFromPixel(pixel) {
-      return toUserCoordinate(
+    getCoordinateFromPixel(pixel, options) {
+      const coordinate = toUserCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         this.getCoordinateFromPixelInternal(pixel),
         this.getView().getProjection()
       );
+      if ((options == null ? void 0 : options.wrapX) && coordinate) {
+        const projection = this.getView().getProjection();
+        wrapX(coordinate, projection);
+      }
+      return coordinate;
     }
     /**
      * Get the coordinate for a given pixel.  This returns a coordinate in the
      * map view projection.
      * @param {import("./pixel.js").Pixel} pixel Pixel position in the map viewport.
-     * @return {import("./coordinate.js").Coordinate} The coordinate for the pixel position.
+     * @return {import("./coordinate.js").Coordinate|null} The coordinate for the pixel position.
      */
     getCoordinateFromPixelInternal(pixel) {
       const frameState = this.frameState_;
@@ -16700,6 +17446,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return layers;
     }
     /**
+     * Determine whether the last rendered frame shows everything the map wants to
+     * show. Only relevant when something is listening for the map to finish
+     * loading, so the check is skipped otherwise.
+     * @private
+     */
+    updateRenderComplete_() {
+      this.renderComplete_ = (this.hasListener(MapEventType.LOADSTART) || this.hasListener(MapEventType.LOADEND) || this.hasListener(RenderEventType.RENDERCOMPLETE)) && !this.tileQueue_.getTilesLoading() && !this.tileQueue_.getCount() && !this.getLoadingOrNotReady();
+    }
+    /**
      * @return {boolean} Layers have sources that are still loading.
      */
     getLoadingOrNotReady() {
@@ -16724,21 +17479,31 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Get the pixel for a coordinate.  This takes a coordinate in the user
      * projection and returns the corresponding pixel.
      * @param {import("./coordinate.js").Coordinate} coordinate A map coordinate.
+     * @param {CoordinateToPixelOptions} [options] Options.
      * @return {import("./pixel.js").Pixel} A pixel position in the map viewport.
      * @api
      */
-    getPixelFromCoordinate(coordinate) {
-      const viewCoordinate = fromUserCoordinate(
-        coordinate,
-        this.getView().getProjection()
+    getPixelFromCoordinate(coordinate, options) {
+      const view = this.getView();
+      const projection = view.getProjection();
+      let viewCoordinate = fromUserCoordinate(coordinate);
+      if ((options == null ? void 0 : options.wrapX) && this.frameState_) {
+        viewCoordinate = wrapXNearest(
+          viewCoordinate.slice(),
+          projection,
+          this.frameState_.viewState.center[0]
+        );
+      }
+      return (
+        /** @type {import("./pixel.js").Pixel} */
+        this.getPixelFromCoordinateInternal(viewCoordinate)
       );
-      return this.getPixelFromCoordinateInternal(viewCoordinate);
     }
     /**
      * Get the pixel for a coordinate.  This takes a coordinate in the map view
      * projection and returns the corresponding pixel.
      * @param {import("./coordinate.js").Coordinate} coordinate A map coordinate.
-     * @return {import("./pixel.js").Pixel} A pixel position in the map viewport.
+     * @return {import("./pixel.js").Pixel|null} A pixel position in the map viewport.
      */
     getPixelFromCoordinateInternal(coordinate) {
       const frameState = this.frameState_;
@@ -16804,7 +17569,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get the element that serves as the map viewport.
-     * @return {HTMLElement} Viewport.
+     * @return {HTMLElement|undefined} Viewport.
      * @api
      */
     getViewport() {
@@ -16815,7 +17580,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * this container will let mousedown and touchstart events through to the map,
      * so clicks and gestures on an overlay will trigger {@link module:ol/MapBrowserEvent~MapBrowserEvent}
      * events.
-     * @return {!HTMLElement} The map's overlay container.
+     * @return {HTMLElement|undefined} The map's overlay container.
      */
     getOverlayContainer() {
       return this.overlayContainer_;
@@ -16825,7 +17590,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * event propagation. Elements added to this container won't let mousedown and
      * touchstart events through to the map, so clicks and gestures on an overlay
      * don't trigger any {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
-     * @return {!HTMLElement} The map's overlay container that stops events.
+     * @return {HTMLElement|undefined} The map's overlay container that stops events.
      */
     getOverlayContainerStopEvent() {
       return this.overlayContainerStopEvent_;
@@ -16846,6 +17611,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     getTilePriority(tile, tileSourceKey, tileCenter, tileResolution) {
       return getTilePriority(
+        /** @type {FrameState} */
         this.frameState_,
         tile,
         tileSourceKey,
@@ -16863,9 +17629,24 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.handleMapBrowserEvent(mapBrowserEvent);
     }
     /**
+     * @param {Event} event Key event.
+     * @private
+     */
+    handleCtrlKey_(event) {
+      const keyEvent = (
+        /** @type {KeyboardEvent} */
+        event
+      );
+      this.ctrlKey_ = keyEvent.key === "Control" ? keyEvent.type === EventType.KEYDOWN : keyEvent.ctrlKey;
+    }
+    /**
      * @param {MapBrowserEvent} mapBrowserEvent The event to handle.
      */
     handleMapBrowserEvent(mapBrowserEvent) {
+      if (mapBrowserEvent.originalEvent.ctrlKey === false) {
+        this.ctrlKey_ = false;
+      }
+      mapBrowserEvent.ctrlKey = this.ctrlKey_;
       if (!this.frameState_) {
         return;
       }
@@ -16873,7 +17654,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const eventType = originalEvent.type;
       if (eventType === PointerEventType.POINTERDOWN || eventType === EventType.WHEEL || eventType === EventType.KEYDOWN) {
         const doc = this.getOwnerDocument();
-        const rootNode = this.viewport_.getRootNode ? this.viewport_.getRootNode() : doc;
+        const rootNode = (
+          /** @type {!HTMLElement} */
+          this.viewport_.getRootNode ? (
+            /** @type {!HTMLElement} */
+            this.viewport_.getRootNode()
+          ) : doc
+        );
         const target2 = (
           /** @type {Node} */
           originalEvent.target
@@ -16882,7 +17669,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (
           // Abort if the target is a child of the container for elements whose events are not meant
           // to be handled by map interactions.
-          this.overlayContainerStopEvent_.contains(target2) || // Abort if the event target is a child of the container that is no longer in the page.
+          /** @type {!HTMLElement} */
+          this.overlayContainerStopEvent_.contains(
+            target2
+          ) || // Abort if the event target is a child of the container that is no longer in the page.
           // It's possible for the target to no longer be in the page if it has been removed in an
           // event listener, this might happen in a Control that recreates it's content based on
           // user interaction either manually or via a render in something like https://reactjs.org/
@@ -16918,13 +17708,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         const hints = frameState ? frameState.viewHints : void 0;
         const animatingOrInteracting = hints ? hints[ViewHint.ANIMATING] || hints[ViewHint.INTERACTING] : false;
         if (animatingOrInteracting) {
-          const lowOnFrameBudget = Date.now() - frameState.time > 8;
+          const lowOnFrameBudget = Date.now() - /** @type {FrameState} */
+          frameState.time > 8;
           maxTotalLoading = lowOnFrameBudget ? 0 : 8;
           maxNewLoads = lowOnFrameBudget ? 0 : 2;
         }
         if (tileQueue.getTilesLoading() < maxTotalLoading) {
-          if (animatingOrInteracting) {
-            tileQueue.reprioritize();
+          const count = tileQueue.getCount();
+          tileQueue.reprioritize();
+          if (tileQueue.getCount() < count) {
+            this.updateRenderComplete_();
           }
           tileQueue.loadMoreTiles(maxTotalLoading, maxNewLoads);
         }
@@ -16973,16 +17766,30 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     handleTargetChanged_() {
       var _a, _b;
       if (this.mapBrowserEventHandler_) {
-        for (let i = 0, ii = this.targetChangeHandlerKeys_.length; i < ii; ++i) {
-          unlistenByKey(this.targetChangeHandlerKeys_[i]);
+        const targetChangeHandlerKeys = (
+          /** @type {!Array<import("./events.js").EventsKey>} */
+          this.targetChangeHandlerKeys_
+        );
+        for (let i = 0, ii = targetChangeHandlerKeys.length; i < ii; ++i) {
+          unlistenByKey(targetChangeHandlerKeys[i]);
         }
         this.targetChangeHandlerKeys_ = null;
+        const doc = this.getOwnerDocument();
+        doc.removeEventListener(
+          EventType.KEYDOWN,
+          this.boundHandleCtrlKey_,
+          true
+        );
+        doc.removeEventListener(EventType.KEYUP, this.boundHandleCtrlKey_, true);
+        this.ctrlKey_ = false;
         this.viewport_.removeEventListener(
           EventType.CONTEXTMENU,
+          /** @type {EventListener} */
           this.boundHandleBrowserEvent_
         );
         this.viewport_.removeEventListener(
           EventType.WHEEL,
+          /** @type {EventListener} */
           this.boundHandleBrowserEvent_
         );
         this.mapBrowserEventHandler_.dispose();
@@ -17014,7 +17821,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       } else {
         if (!isCanvas(targetElement)) {
-          targetElement.appendChild(this.viewport_);
+          targetElement.appendChild(
+            /** @type {!HTMLElement} */
+            this.viewport_
+          );
         }
         if (!this.renderer_) {
           this.renderer_ = new CompositeMapRenderer(this);
@@ -17026,20 +17836,28 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           );
           for (const key2 in MapBrowserEventType) {
             this.mapBrowserEventHandler_.addEventListener(
+              /** @type {import("./MapBrowserEventType.js").Types} */
+              /** @type {Object<string, string>} */
               MapBrowserEventType[key2],
+              /** @type {import("./events.js").Listener} */
               this.handleMapBrowserEvent.bind(this)
             );
           }
           this.viewport_.addEventListener(
             EventType.CONTEXTMENU,
+            /** @type {EventListener} */
             this.boundHandleBrowserEvent_,
             false
           );
           this.viewport_.addEventListener(
             EventType.WHEEL,
+            /** @type {EventListener} */
             this.boundHandleBrowserEvent_,
             PASSIVE_EVENT_LISTENERS ? { passive: false } : false
           );
+          const doc = this.getOwnerDocument();
+          doc.addEventListener(EventType.KEYDOWN, this.boundHandleCtrlKey_, true);
+          doc.addEventListener(EventType.KEYUP, this.boundHandleCtrlKey_, true);
           let keyboardEventTarget;
           if (!this.keyboardEventTarget_) {
             const targetRoot = targetElement.getRootNode();
@@ -17052,12 +17870,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             listen(
               keyboardEventTarget,
               EventType.KEYDOWN,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handleBrowserEvent,
               this
             ),
             listen(
               keyboardEventTarget,
               EventType.KEYPRESS,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handleBrowserEvent,
               this
             )
@@ -17128,10 +17948,34 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (layerGroup) {
         this.handleLayerAdd_(new GroupEvent("addlayer", layerGroup));
         this.layerGroupPropertyListenerKeys_ = [
-          listen(layerGroup, ObjectEventType.PROPERTYCHANGE, this.render, this),
-          listen(layerGroup, EventType.CHANGE, this.render, this),
-          listen(layerGroup, "addlayer", this.handleLayerAdd_, this),
-          listen(layerGroup, "removelayer", this.handleLayerRemove_, this)
+          listen(
+            layerGroup,
+            ObjectEventType.PROPERTYCHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.render,
+            this
+          ),
+          listen(
+            layerGroup,
+            EventType.CHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.render,
+            this
+          ),
+          listen(
+            layerGroup,
+            "addlayer",
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handleLayerAdd_,
+            this
+          ),
+          listen(
+            layerGroup,
+            "removelayer",
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handleLayerRemove_,
+            this
+          )
         ];
       }
       this.render();
@@ -17272,9 +18116,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           renderTargets: {}
         };
         if (viewState.nextCenter && viewState.nextResolution) {
-          const rotation = isNaN(viewState.nextRotation) ? viewState.rotation : viewState.nextRotation;
+          const rotation = isNaN(
+            /** @type {number} */
+            viewState.nextRotation
+          ) ? viewState.rotation : (
+            /** @type {number} */
+            viewState.nextRotation
+          );
           frameState.nextExtent = getForViewAndSize(
             viewState.nextCenter,
+            /** @type {number} */
             viewState.nextResolution,
             rotation,
             size
@@ -17292,24 +18143,45 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           frameState.postRenderFunctions
         );
         if (previousFrameState) {
-          const moveStart = !this.previousExtent_ || !isEmpty(this.previousExtent_) && !equals$1(frameState.extent, this.previousExtent_);
+          const moveStart = !this.previousExtent_ || !isEmpty(
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          ) && !equals$1(
+            /** @type {import("./extent.js").Extent} */
+            frameState.extent,
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          );
           if (moveStart) {
             this.dispatchEvent(
               new MapEvent(MapEventType.MOVESTART, this, previousFrameState)
             );
-            this.previousExtent_ = createOrUpdateEmpty(this.previousExtent_);
+            this.previousExtent_ = createOrUpdateEmpty(
+              /** @type {import("./extent.js").Extent|undefined} */
+              this.previousExtent_
+            );
           }
         }
-        const idle = this.previousExtent_ && !frameState.viewHints[ViewHint.ANIMATING] && !frameState.viewHints[ViewHint.INTERACTING] && !equals$1(frameState.extent, this.previousExtent_);
+        const idle = this.previousExtent_ && !frameState.viewHints[ViewHint.ANIMATING] && !frameState.viewHints[ViewHint.INTERACTING] && !equals$1(
+          /** @type {import("./extent.js").Extent} */
+          frameState.extent,
+          /** @type {import("./extent.js").Extent} */
+          this.previousExtent_
+        );
         if (idle) {
           this.dispatchEvent(
             new MapEvent(MapEventType.MOVEEND, this, frameState)
           );
-          clone$1(frameState.extent, this.previousExtent_);
+          clone$1(
+            /** @type {import("./extent.js").Extent} */
+            frameState.extent,
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          );
         }
       }
       this.dispatchEvent(new MapEvent(MapEventType.POSTRENDER, this, frameState));
-      this.renderComplete_ = (this.hasListener(MapEventType.LOADSTART) || this.hasListener(MapEventType.LOADEND) || this.hasListener(RenderEventType.RENDERCOMPLETE)) && !this.tileQueue_.getTilesLoading() && !this.tileQueue_.getCount() && !this.getLoadingOrNotReady();
+      this.updateRenderComplete_();
       if (!this.postRenderTimeoutHandle_) {
         this.postRenderTimeoutHandle_ = setTimeout(() => {
           this.postRenderTimeoutHandle_ = void 0;
@@ -17344,7 +18216,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * For accessibility (focus and keyboard events for map navigation), the `target` element must have a
      *  properly configured `tabindex` attribute. If the `target` element is inside a Shadow DOM, the
      *  `tabindex` atribute must be set on the custom element's host element.
-     * @param {HTMLElement|string} [target] The Element or id of the Element
+     * @param {HTMLElement|string|null|undefined} [target] The Element or id of the Element
      *     that the map is rendered in.
      * @observable
      * @api
@@ -17383,7 +18255,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (targetElement) {
         let width, height;
         if (isCanvas(targetElement)) {
-          const transform2 = targetElement.getContext("2d").getTransform();
+          const transform2 = (
+            /** @type {CanvasRenderingContext2D} */
+            targetElement.getContext("2d").getTransform()
+          );
           width = targetElement.width / transform2.a;
           height = targetElement.height / transform2.d;
         } else {
@@ -17631,10 +18506,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         );
         this.updatePixelPosition();
         const container = this.stopEvent ? map.getOverlayContainerStopEvent() : map.getOverlayContainer();
-        if (this.insertFirst) {
-          container.insertBefore(this.element, container.childNodes[0] || null);
-        } else {
-          container.appendChild(this.element);
+        if (container) {
+          if (this.insertFirst) {
+            container.insertBefore(this.element, container.childNodes[0] || null);
+          } else {
+            container.appendChild(this.element);
+          }
         }
         this.performAutoPan();
       }
@@ -17724,8 +18601,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!map || !map.getTargetElement() || !this.get(Property$1.POSITION)) {
         return;
       }
-      const mapRect = this.getRect(map.getTargetElement(), map.getSize());
+      const mapSize = map.getSize();
       const element = this.getElement();
+      if (!mapSize || !element) {
+        return;
+      }
+      const targetElement = map.getTargetElement();
+      if (!targetElement) {
+        return;
+      }
+      const mapRect = this.getRect(targetElement, mapSize);
       const overlayRect = this.getRect(element, [
         outerWidth(element),
         outerHeight(element)
@@ -17760,7 +18645,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           const newCenterPx = [centerPx[0] + delta[0], centerPx[1] + delta[1]];
           const panOptions = panIntoViewOptions.animation || {};
           map.getView().animateInternal({
-            center: map.getCoordinateFromPixelInternal(newCenterPx),
+            center: (
+              /** @type {import("./coordinate.js").Coordinate} */
+              map.getCoordinateFromPixelInternal(newCenterPx)
+            ),
             duration: panOptions.duration,
             easing: panOptions.easing
           });
@@ -17812,7 +18700,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.setVisible(false);
         return;
       }
-      const pixel = map.getPixelFromCoordinate(position);
+      const pixel = map.getPixelFromCoordinate(position, { wrapX: true });
       const mapSize = map.getSize();
       this.updateRenderedPosition(pixel, mapSize);
     }
@@ -18127,13 +19015,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     handleProjectionChanged_() {
       const projection = this.getProjection();
-      if (projection) {
-        this.transform_ = getTransformFromProjections(
-          get$2("EPSG:4326"),
+      const sourceProjection = get$2("EPSG:4326");
+      if (projection && sourceProjection) {
+        const transform2 = getTransformFromProjections(
+          sourceProjection,
           projection
         );
-        if (this.position_) {
-          this.set(Property.POSITION, this.transform_(this.position_));
+        if (transform2) {
+          this.transform_ = transform2;
+          if (this.position_) {
+            this.set(Property.POSITION, this.transform_(this.position_));
+          }
         }
       }
     }
@@ -18457,7 +19349,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Get the feature's style. Will return what was provided to the
      * {@link module:ol/Feature~Feature#setStyle} method.
-     * @return {import("./style/Style.js").StyleLike|undefined} The feature style.
+     * @return {import("./style/Style.js").StyleLike|null|undefined} The feature style.
      * @api
      */
     getStyle() {
@@ -18500,7 +19392,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Set the default geometry for the feature.  This will update the property
      * with the name returned by {@link module:ol/Feature~Feature#getGeometryName}.
-     * @param {Geometry|undefined} geometry The new geometry.
+     * @param {Geometry|null|undefined} geometry The new geometry.
      * @api
      * @observable
      */
@@ -18512,12 +19404,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * single style object, an array of styles, or a function that takes a
      * resolution and returns an array of styles. To unset the feature style, call
      * `setStyle()` without arguments or a falsey value.
-     * @param {import("./style/Style.js").StyleLike} [style] Style for this feature.
+     * @param {import("./style/Style.js").StyleLike|null|undefined} [style] Style for this feature.
      * @api
      * @fires module:ol/events/Event~BaseEvent#event:change
      */
     setStyle(style) {
-      this.style_ = style;
+      this.style_ = style ?? null;
       this.styleFunction_ = !style ? void 0 : createStyleFunction(style);
       this.changed();
     }
@@ -19757,7 +20649,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         o = offset2 + index * stride;
       }
     }
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     dest = dest ? dest : new Array(dimension);
     for (let i = 0; i < dimension; ++i) {
       dest[i] = o === void 0 ? NaN : t === void 0 ? flatCoordinates[o + i] : lerp(flatCoordinates[o + i], flatCoordinates[o + stride + i], t);
@@ -20310,7 +21202,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Return the linestring at the specified index.
      * @param {number} index Index.
-     * @return {LineString} LineString.
+     * @return {LineString|null} LineString.
      * @api
      */
     getLineString(index) {
@@ -20552,7 +21444,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Return the point at the specified index.
      * @param {number} index Index.
-     * @return {Point} Point.
+     * @return {Point|null} Point.
      * @api
      */
     getPoint(index) {
@@ -20932,7 +21824,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     /**
      * Return the polygon at the specified index.
      * @param {number} index Index.
-     * @return {Polygon} Polygon.
+     * @return {Polygon|null} Polygon.
      * @api
      */
     getPolygon(index) {
@@ -21100,6 +21992,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.flatInteriorPoints_ = getInteriorPointOfArray(
           this.flatCoordinates_,
           0,
+          /** @type {Array<number>} */
           this.ends_,
           this.stride_,
           flatCenter,
@@ -21113,7 +22006,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     getFlatInteriorPoints() {
       if (!this.flatInteriorPoints_) {
-        const ends = inflateEnds(this.flatCoordinates_, this.ends_);
+        const ends = inflateEnds(
+          this.flatCoordinates_,
+          /** @type {Array<number>} */
+          this.ends_
+        );
         const flatCenters = linearRingss(
           this.flatCoordinates_,
           0,
@@ -21254,7 +22151,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {import("../proj.js").ProjectionLike} projection The data projection
      */
     transform(projection) {
-      projection = get$2(projection);
+      projection = /** @type {import("../proj/Projection.js").default} */
+      get$2(projection);
       const pixelExtent = projection.getExtent();
       const projectedExtent = projection.getWorldExtent();
       if (pixelExtent && projectedExtent) {
@@ -21297,6 +22195,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return new RenderFeature(
         this.type_,
         this.flatCoordinates_.slice(),
+        /** @type {Array<number>} */
         (_a = this.ends_) == null ? void 0 : _a.slice(),
         this.stride_,
         Object.assign({}, this.properties_),
@@ -21342,6 +22241,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             simplifiedFlatCoordinates.length = douglasPeuckerArray(
               simplifiedFlatCoordinates,
               0,
+              /** @type {Array<number>} */
               this.simplifiedGeometry_.ends_,
               this.simplifiedGeometry_.stride_,
               squaredTolerance,
@@ -21355,6 +22255,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             simplifiedFlatCoordinates.length = quantizeArray(
               simplifiedFlatCoordinates,
               0,
+              /** @type {Array<number>} */
               this.simplifiedGeometry_.ends_,
               this.simplifiedGeometry_.stride_,
               Math.sqrt(squaredTolerance),
@@ -21674,7 +22575,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.defaultFeatureProjection = void 0;
       this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
       Feature;
-      this.supportedMediaTypes = null;
+      this.supportedMediaTypes = void 0;
     }
     /**
      * Adds the data projection to the read options.
@@ -21687,11 +22588,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (options) {
         let dataProjection = options.dataProjection ? get$2(options.dataProjection) : this.readProjection(source);
         if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
-          dataProjection = get$2(dataProjection);
-          dataProjection.setWorldExtent(options.extent);
+          const tileProjection = get$2(dataProjection);
+          if (tileProjection) {
+            tileProjection.setWorldExtent(options.extent);
+            dataProjection = tileProjection;
+          }
         }
         options = {
-          dataProjection,
+          dataProjection: dataProjection ?? void 0,
           featureProjection: options.featureProjection
         };
       }
@@ -21729,7 +22633,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @abstract
      * @param {Document|Element|Object|string} source Source.
      * @param {ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @return {FeatureType|Array<FeatureType>|null} Feature.
      */
     readFeature(source, options) {
       return abstract();
@@ -21751,7 +22655,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @abstract
      * @param {Document|Element|Object|string} source Source.
      * @param {ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometry(source, options) {
       return abstract();
@@ -21814,7 +22718,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (fromProjection.getUnits() === "tile-pixels") {
         transformed.transform(fromProjection, toProjection);
       } else {
-        transformed.applyTransform(getTransform(fromProjection, toProjection));
+        const transformFn = getTransform(fromProjection, toProjection);
+        if (transformFn) {
+          transformed.applyTransform(transformFn);
+        }
       }
     }
     if (write && options && /** @type {WriteOptions} */
@@ -21838,25 +22745,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return transformed;
   }
-  const GeometryConstructor = {
-    Point: Point$1,
-    LineString,
-    Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon
-  };
   function orientFlatCoordinates(flatCoordinates, ends, stride) {
     if (Array.isArray(ends[0])) {
-      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
+      const endss = (
+        /** @type {Array<Array<number>>} */
+        ends
+      );
+      if (!linearRingssAreOriented(flatCoordinates, 0, endss, stride)) {
         flatCoordinates = flatCoordinates.slice();
-        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
+        orientLinearRingsArray(flatCoordinates, 0, endss, stride);
       }
       return flatCoordinates;
     }
-    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
+    const endsArray = (
+      /** @type {Array<number>} */
+      ends
+    );
+    if (!linearRingsAreOriented(flatCoordinates, 0, endsArray, stride)) {
       flatCoordinates = flatCoordinates.slice();
-      orientLinearRings(flatCoordinates, 0, ends, stride);
+      orientLinearRings(flatCoordinates, 0, endsArray, stride);
     }
     return flatCoordinates;
   }
@@ -21873,12 +22780,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (geometryType === "GeometryCollection" || geometryType === "Circle") {
       throw new Error("Unsupported geometry type: " + geometryType);
     }
-    const stride = geometry.layout.length;
+    const stride = (geometry.layout ?? "XY").length;
     return transformGeometryWithOptions(
       new RenderFeature(
         geometryType,
-        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
-        (_a = geometry.ends) == null ? void 0 : _a.flat(),
+        geometryType === "Polygon" ? orientFlatCoordinates(
+          geometry.flatCoordinates,
+          /** @type {Array<number>} */
+          geometry.ends,
+          stride
+        ) : geometry.flatCoordinates,
+        ((_a = geometry.ends) == null ? void 0 : _a.flat()) ?? [],
         stride,
         object.properties || {},
         object.id
@@ -21893,16 +22805,57 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     if (Array.isArray(object)) {
       const geometries = object.map(
-        (geometry) => createGeometry(geometry, options)
+        (geometry2) => createGeometry(geometry2, options)
       );
-      return new GeometryCollection(geometries);
+      return new GeometryCollection(
+        /** @type {Array<import("../geom/Geometry.js").default>} */
+        geometries
+      );
     }
-    const Geometry2 = GeometryConstructor[object.type];
-    return transformGeometryWithOptions(
-      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
-      false,
-      options
+    const type = (
+      /** @type {'Point'|'LineString'|'Polygon'|'MultiPoint'|'MultiLineString'|'MultiPolygon'} */
+      object.type
     );
+    const layout = object.layout || "XY";
+    let geometry;
+    switch (type) {
+      case "Point":
+        geometry = new Point$1(object.flatCoordinates, layout);
+        break;
+      case "LineString":
+        geometry = new LineString(object.flatCoordinates, layout);
+        break;
+      case "Polygon":
+        geometry = new Polygon(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<number>} */
+          object.ends
+        );
+        break;
+      case "MultiPoint":
+        geometry = new MultiPoint(object.flatCoordinates, layout);
+        break;
+      case "MultiLineString":
+        geometry = new MultiLineString(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<number>} */
+          object.ends
+        );
+        break;
+      case "MultiPolygon":
+        geometry = new MultiPolygon(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<Array<number>>} */
+          object.ends
+        );
+        break;
+      default:
+        throw new Error("Unsupported geometry type: " + type);
+    }
+    return transformGeometryWithOptions(geometry, false, options);
   }
   class JSONFeature extends FeatureFormat {
     constructor() {
@@ -21926,8 +22879,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     readFeature(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        return (
+          /** @type {FeatureType} */
+          /** @type {unknown} */
+          []
+        );
+      }
       return this.readFeatureFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -21942,8 +22903,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     readFeatures(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        return [];
+      }
       return this.readFeaturesFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -21972,13 +22937,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      *
      * @param {ArrayBuffer|Document|Element|Object|string} source Source.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      * @api
      * @override
      */
     readGeometry(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        throw new Error("Expected a JSON object");
+      }
       return this.readGeometryFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -21987,7 +22956,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {Object} object Object.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometryFromObject(object, options) {
       return abstract();
@@ -22001,7 +22970,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     readProjection(source) {
-      return this.readProjectionFromObject(getObject(source));
+      const object = getObject(source);
+      if (!object) {
+        throw new Error("Expected a JSON object");
+      }
+      return this.readProjectionFromObject(object);
     }
     /**
      * @abstract
@@ -22098,9 +23071,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       super();
       this.dataProjection = get$2(
         options.dataProjection ? options.dataProjection : "EPSG:4326"
-      );
+      ) ?? void 0;
       if (options.featureProjection) {
-        this.defaultFeatureProjection = get$2(options.featureProjection);
+        this.defaultFeatureProjection = get$2(options.featureProjection) ?? void 0;
       }
       if (options.featureClass) {
         this.featureClass = options.featureClass;
@@ -22120,10 +23093,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     readFeatureFromObject(object, options) {
-      let geoJSONFeature = null;
-      if (object["type"] === "Feature") {
+      const geoJSONObject = (
+        /** @type {GeoJSONObject} */
+        object
+      );
+      let geoJSONFeature;
+      if (geoJSONObject["type"] === "Feature") {
         geoJSONFeature = /** @type {GeoJSONFeature} */
-        object;
+        geoJSONObject;
       } else {
         geoJSONFeature = {
           "type": "Feature",
@@ -22134,15 +23111,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           "properties": null
         };
       }
-      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
+      const geometryObject = readGeometryInternal(
+        geoJSONFeature["geometry"]
+      );
       if (this.featureClass === RenderFeature) {
         return (
           /** @type {FeatureType|Array<FeatureType>} */
           createRenderFeature(
             {
-              geometry,
+              geometry: geometryObject ?? void 0,
               id: geoJSONFeature["id"],
-              properties: geoJSONFeature["properties"]
+              properties: geoJSONFeature["properties"] ?? void 0
             },
             options
           )
@@ -22155,10 +23134,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const feature = new FeatureClass();
       if (this.geometryName_) {
         feature.setGeometryName(this.geometryName_);
-      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
-        feature.setGeometryName(geoJSONFeature["geometry_name"]);
+      } else if (this.extractGeometryName_ && "geometry_name" in geoJSONFeature && geoJSONFeature["geometry_name"]) {
+        feature.setGeometryName(
+          /** @type {string} */
+          geoJSONFeature["geometry_name"]
+        );
       }
-      feature.setGeometry(createGeometry(geometry, options));
+      feature.setGeometry(createGeometry(geometryObject, options));
       if ("id" in geoJSONFeature) {
         feature.setId(geoJSONFeature["id"]);
       }
@@ -22212,7 +23194,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {GeoJSONGeometry} object Object.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      * @override
      */
     readGeometryFromObject(object, options) {
@@ -22225,7 +23207,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     readProjectionFromObject(object) {
-      const crs = object["crs"];
+      const geoJSONObject = (
+        /** @type {GeoJSONObject & {crs: ({type: string, properties: Object<string, *>}|undefined)}} */
+        object
+      );
+      const crs = geoJSONObject["crs"];
       let projection;
       if (crs) {
         if (crs["type"] == "name") {
@@ -22254,11 +23240,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     writeFeatureObject(feature, options) {
       options = this.adaptOptions(options);
-      const object = {
-        "type": "Feature",
-        geometry: null,
-        properties: null
-      };
+      const object = (
+        /** @type {GeoJSONFeature} */
+        /** @type {unknown} */
+        {
+          "type": "Feature",
+          "geometry": null,
+          "properties": null
+        }
+      );
       const id = feature.getId();
       if (id !== void 0) {
         object.id = id;
@@ -22270,7 +23260,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const geometry = feature.getGeometry();
       if (geometry) {
         object.geometry = writeGeometry(geometry, options);
-        delete properties[feature.getGeometryName()];
+        delete /** @type {Object<string, *>} */
+        properties[feature.getGeometryName()];
       }
       if (!isEmpty$1(properties)) {
         object.properties = properties;
@@ -22311,7 +23302,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
   }
   function readGeometryInternal(object, options) {
-    if (!object) {
+    if (!object || object.type !== "GeometryCollection" && Array.isArray(object.coordinates) && !object.coordinates.length) {
       return null;
     }
     let geometry;
@@ -22373,18 +23364,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   function readGeometry(object, options) {
     const geometryObject = readGeometryInternal(object);
+    if (!geometryObject) {
+      return null;
+    }
     return createGeometry(geometryObject, options);
   }
   function readGeometryCollectionGeometry(object, options) {
-    const geometries = object["geometries"].map(
-      /**
-       * @param {GeoJSONGeometry} geometry Geometry.
-       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
-       */
-      function(geometry) {
-        return readGeometryInternal(geometry);
+    const geometryObjects = object["geometries"];
+    const geometries = [];
+    for (const geometry of geometryObjects) {
+      const geom = readGeometryInternal(geometry);
+      if (!geom) {
+        continue;
       }
-    );
+      geometries.push(geom);
+    }
     return geometries;
   }
   function readPointGeometry(object) {
@@ -22410,7 +23404,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     var _a, _b;
     const coordinates2 = object["coordinates"];
     const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
     return {
       type: "MultiLineString",
@@ -22431,7 +23428,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function readMultiPolygonGeometry(object) {
     var _a, _b;
     const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
     const endss = deflateMultiCoordinatesArray(
       flatCoordinates,
@@ -22449,7 +23449,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function readPolygonGeometry(object) {
     var _a, _b;
     const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
     const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
     return {
@@ -31342,13 +32345,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     drawText(geometry, feature, index) {
     }
     /**
-     * @param {import("../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../style/Stroke.js").default|null} strokeStyle Stroke style.
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
     }
     /**
-     * @param {import("../style/Image.js").default} imageStyle Image style.
+     * @param {import("../style/Image.js").default|null} imageStyle Image style.
      * @param {import("../render/canvas.js").DeclutterImageWithText} [declutterImageWithText] Shared data for combined decluttering with a text style.
      */
     setImageStyle(imageStyle, declutterImageWithText) {
@@ -31519,11 +32522,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     drawCustom(geometry, feature, renderer, hitDetectionRenderer, index) {
-      this.beginGeometry(geometry, feature, index);
+      this.beginGeometry(
+        geometry,
+        feature,
+        /** @type {number} */
+        index
+      );
       const type = geometry.getType();
       const stride = geometry.getStride();
       const builderBegin = this.coordinates.length;
-      let flatCoordinates, builderEnd, builderEnds, builderEndss;
+      let flatCoordinates, builderEnd, builderEndss;
+      let builderEnds;
       let offset2;
       switch (type) {
         case "MultiPolygon":
@@ -31738,7 +32747,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
     }
     /**
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
      * @param {import('../canvas.js').FillStrokeState} [state] State.
      * @return {import('../canvas.js').FillStrokeState} State.
      */
@@ -31756,7 +32765,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return state;
     }
     /**
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @param {import("../canvas.js").FillStrokeState} state State.
      * @return {import("../canvas.js").FillStrokeState} State.
      */
@@ -31766,9 +32775,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     )) {
       if (strokeStyle) {
         const strokeStyleColor = strokeStyle.getColor();
-        state.strokeStyle = asColorLike(
-          strokeStyleColor ? strokeStyleColor : defaultStrokeStyle
-        );
+        state.strokeStyle = asColorLike(strokeStyleColor ? strokeStyleColor : defaultStrokeStyle) ?? void 0;
         const strokeStyleLineCap = strokeStyle.getLineCap();
         state.lineCap = strokeStyleLineCap !== void 0 ? strokeStyleLineCap : defaultLineCap;
         const strokeStyleLineDash = strokeStyle.getLineDash();
@@ -31800,12 +32807,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return state;
     }
     /**
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @override
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
       this.fillStyleToState(fillStyle, state);
       this.strokeStyleToState(strokeStyle, state);
     }
@@ -31835,11 +32845,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return [
         Instruction.SET_STROKE_STYLE,
         state.strokeStyle,
+        /** @type {number} */
         state.lineWidth * this.pixelRatio,
         state.lineCap,
         state.lineJoin,
         state.miterLimit,
         state.lineDash ? this.applyPixelRatio(state.lineDash) : null,
+        /** @type {number} */
         state.lineDashOffset * this.pixelRatio
       ];
     }
@@ -31867,7 +32879,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const lineWidth = state.lineWidth;
       const miterLimit = state.miterLimit;
       const strokeOffset = state.strokeOffset;
-      if (state.currentStrokeStyle != strokeStyle || state.currentLineCap != lineCap || lineDash != state.currentLineDash && !equals$2(state.currentLineDash, lineDash) || state.currentLineDashOffset != lineDashOffset || state.currentLineJoin != lineJoin || state.currentLineWidth != lineWidth || state.currentMiterLimit != miterLimit || state.currentStrokeOffset != strokeOffset) {
+      if (state.currentStrokeStyle != strokeStyle || state.currentLineCap != lineCap || lineDash != state.currentLineDash && (!lineDash || !state.currentLineDash || !equals$2(state.currentLineDash, lineDash)) || state.currentLineDashOffset != lineDashOffset || state.currentLineJoin != lineJoin || state.currentLineWidth != lineWidth || state.currentMiterLimit != miterLimit || state.currentStrokeOffset != strokeOffset) {
         applyStroke.call(this, state);
         state.currentStrokeStyle = strokeStyle;
         state.currentLineCap = lineCap;
@@ -31944,30 +32956,38 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!this.image_ || this.maxExtent && !containsCoordinate(this.maxExtent, pointGeometry.getFlatCoordinates())) {
         return;
       }
-      this.beginGeometry(pointGeometry, feature, index);
+      this.beginGeometry(pointGeometry, feature, index ?? 0);
       const flatCoordinates = pointGeometry.getFlatCoordinates();
       const stride = pointGeometry.getStride();
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatPointCoordinates(flatCoordinates, stride);
+      const imagePixelRatio = this.imagePixelRatio_ ?? 1;
+      const anchorX = this.anchorX_ ?? 0;
+      const anchorY = this.anchorY_ ?? 0;
+      const height = this.height_ ?? 0;
+      const originX = this.originX_ ?? 0;
+      const originY = this.originY_ ?? 0;
+      const scale2 = this.scale_ ?? [1, 1];
+      const width = this.width_ ?? 0;
       this.instructions.push([
         Instruction.DRAW_IMAGE,
         myBegin,
         myEnd,
         this.image_,
         // Remaining arguments to DRAW_IMAGE are in alphabetical order
-        this.anchorX_ * this.imagePixelRatio_,
-        this.anchorY_ * this.imagePixelRatio_,
-        Math.ceil(this.height_ * this.imagePixelRatio_),
+        anchorX * imagePixelRatio,
+        anchorY * imagePixelRatio,
+        Math.ceil(height * imagePixelRatio),
         this.opacity_,
-        this.originX_ * this.imagePixelRatio_,
-        this.originY_ * this.imagePixelRatio_,
+        originX * imagePixelRatio,
+        originY * imagePixelRatio,
         this.rotateWithView_,
         this.rotation_,
         [
-          this.scale_[0] * this.pixelRatio / this.imagePixelRatio_,
-          this.scale_[1] * this.pixelRatio / this.imagePixelRatio_
+          scale2[0] * this.pixelRatio / imagePixelRatio,
+          scale2[1] * this.pixelRatio / imagePixelRatio
         ],
-        Math.ceil(this.width_ * this.imagePixelRatio_),
+        Math.ceil(width * imagePixelRatio),
         this.declutterMode_,
         this.declutterImageWithText_
       ]);
@@ -32002,7 +33022,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!this.image_) {
         return;
       }
-      this.beginGeometry(multiPointGeometry, feature, index);
+      this.beginGeometry(multiPointGeometry, feature, index ?? 0);
       const flatCoordinates = multiPointGeometry.getFlatCoordinates();
       const filteredFlatCoordinates = [];
       for (let i = 0, ii = flatCoordinates.length; i < ii; i += multiPointGeometry.getStride()) {
@@ -32015,25 +33035,33 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatPointCoordinates(filteredFlatCoordinates, 2);
+      const imagePixelRatio = this.imagePixelRatio_ ?? 1;
+      const anchorX = this.anchorX_ ?? 0;
+      const anchorY = this.anchorY_ ?? 0;
+      const height = this.height_ ?? 0;
+      const originX = this.originX_ ?? 0;
+      const originY = this.originY_ ?? 0;
+      const scale2 = this.scale_ ?? [1, 1];
+      const width = this.width_ ?? 0;
       this.instructions.push([
         Instruction.DRAW_IMAGE,
         myBegin,
         myEnd,
         this.image_,
         // Remaining arguments to DRAW_IMAGE are in alphabetical order
-        this.anchorX_ * this.imagePixelRatio_,
-        this.anchorY_ * this.imagePixelRatio_,
-        Math.ceil(this.height_ * this.imagePixelRatio_),
+        anchorX * imagePixelRatio,
+        anchorY * imagePixelRatio,
+        Math.ceil(height * imagePixelRatio),
         this.opacity_,
-        this.originX_ * this.imagePixelRatio_,
-        this.originY_ * this.imagePixelRatio_,
+        originX * imagePixelRatio,
+        originY * imagePixelRatio,
         this.rotateWithView_,
         this.rotation_,
         [
-          this.scale_[0] * this.pixelRatio / this.imagePixelRatio_,
-          this.scale_[1] * this.pixelRatio / this.imagePixelRatio_
+          scale2[0] * this.pixelRatio / imagePixelRatio,
+          scale2[1] * this.pixelRatio / imagePixelRatio
         ],
-        Math.ceil(this.width_ * this.imagePixelRatio_),
+        Math.ceil(width * imagePixelRatio),
         this.declutterMode_,
         this.declutterImageWithText_
       ]);
@@ -32088,6 +33116,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const anchor = imageStyle.getAnchor();
       const size = imageStyle.getSize();
       const origin = imageStyle.getOrigin();
+      if (!anchor || !size || !origin) {
+        return;
+      }
       this.imagePixelRatio_ = imageStyle.getPixelRatio(this.pixelRatio);
       this.anchorX_ = anchor[0];
       this.anchorY_ = anchor[1];
@@ -32102,7 +33133,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.scale_ = imageStyle.getScaleArray();
       this.width_ = size[0];
       this.declutterMode_ = imageStyle.getDeclutterMode();
-      this.declutterImageWithText_ = sharedData;
+      this.declutterImageWithText_ = /** @type {import("../canvas.js").DeclutterImageWithText|undefined} */
+      sharedData;
     }
   }
   class CanvasLineStringBuilder extends CanvasBuilder {
@@ -32125,6 +33157,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {number} end.
      */
     drawFlatCoordinates_(flatCoordinates, offset2, end, stride, strokeOffset) {
+      const strokeOffsetValue = (strokeOffset ?? defaultStrokeOffset) * this.pixelRatio;
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatLineCoordinates(
         flatCoordinates,
@@ -32138,13 +33171,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         Instruction.MOVE_TO_LINE_TO,
         myBegin,
         myEnd,
-        strokeOffset * this.pixelRatio
+        strokeOffsetValue
       ]);
       this.hitDetectionInstructions.push([
         Instruction.MOVE_TO_LINE_TO,
         myBegin,
         myEnd,
-        strokeOffset
+        strokeOffset ?? defaultStrokeOffset
       ]);
       return end;
     }
@@ -32156,6 +33189,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     drawLineString(lineStringGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const strokeStyle = state.strokeStyle;
       const lineWidth = state.lineWidth;
       const strokeOffset = state.strokeOffset;
@@ -32163,7 +33199,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.updateStrokeStyle(state, this.applyStroke);
-      this.beginGeometry(lineStringGeometry, feature, index);
+      this.beginGeometry(lineStringGeometry, feature, index ?? 0);
       this.hitDetectionInstructions.push(
         [
           Instruction.SET_STROKE_STYLE,
@@ -32197,6 +33233,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     drawMultiLineString(multiLineStringGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const strokeStyle = state.strokeStyle;
       const lineWidth = state.lineWidth;
       const strokeOffset = state.strokeOffset;
@@ -32204,7 +33243,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.updateStrokeStyle(state, this.applyStroke);
-      this.beginGeometry(multiLineStringGeometry, feature, index);
+      this.beginGeometry(multiLineStringGeometry, feature, index ?? 0);
       this.hitDetectionInstructions.push(
         [
           Instruction.SET_STROKE_STYLE,
@@ -32218,7 +33257,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         ],
         beginPathInstruction
       );
-      const ends = multiLineStringGeometry.getEnds();
+      const ends = multiLineStringGeometry.getEnds() ?? [];
       const flatCoordinates = multiLineStringGeometry.getFlatCoordinates();
       const stride = multiLineStringGeometry.getStride();
       let offset2 = 0;
@@ -32241,7 +33280,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     finish() {
       const state = this.state;
-      if (state.lastStroke != void 0 && state.lastStroke != this.coordinates.length) {
+      if (state && state.lastStroke != void 0 && state.lastStroke != this.coordinates.length) {
         this.instructions.push(strokeInstruction);
       }
       this.reverseHitDetectionInstructions();
@@ -32282,7 +33321,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {number} End.
      */
     drawFlatCoordinatess_(flatCoordinates, offset2, ends, stride, strokeOffset) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
+      const strokeOffsetValue = strokeOffset ?? defaultStrokeOffset;
       const fill = state.fillStyle !== void 0;
       const stroke = state.strokeStyle !== void 0;
       const numEnds = ends.length;
@@ -32303,14 +33346,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           Instruction.MOVE_TO_LINE_TO,
           myBegin,
           myEnd,
-          strokeOffset * this.pixelRatio,
+          strokeOffsetValue * this.pixelRatio,
           true
         ]);
         this.hitDetectionInstructions.push([
           Instruction.MOVE_TO_LINE_TO,
           myBegin,
           myEnd,
-          strokeOffset,
+          strokeOffsetValue,
           true
         ]);
         if (stroke) {
@@ -32337,6 +33380,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     drawCircle(circleGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -32349,7 +33395,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(circleGeometry, feature, index);
+      this.beginGeometry(circleGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -32400,6 +33446,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     drawPolygon(polygonGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -32412,7 +33461,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(polygonGeometry, feature, index);
+      this.beginGeometry(polygonGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -32452,6 +33501,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     drawMultiPolygon(multiPolygonGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -32464,7 +33516,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(multiPolygonGeometry, feature, index);
+      this.beginGeometry(multiPolygonGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -32519,14 +33571,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     setFillStrokeStyles_() {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       this.updateFillStyle(state, this.createFill);
       this.updateStrokeStyle(state, this.applyStroke);
     }
+    /**
+     * @private
+     * @param {function(): void} drawGeometryCallback Draw callback.
+     * @return {boolean} Whether the stroke was drawn with an offset.
+     */
     handleStrokeOffset_(drawGeometryCallback) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
-      const strokeOffset = state.strokeOffset;
+      const strokeOffset = state.strokeOffset ?? defaultStrokeOffset;
       if (Math.abs(strokeOffset) > 0 && fillStyle !== void 0 && strokeStyle !== void 0) {
         state.strokeStyle = void 0;
         state.strokeOffset = 0;
@@ -32700,11 +33763,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     for (i = offset2; i < end; i += stride) {
       const x2 = flatCoordinates[i];
       const y2 = flatCoordinates[i + 1];
-      if (x1 !== void 0) {
+      if (x1 !== void 0 && y1 !== void 0) {
         x23 = x2 - x1;
         y23 = y2 - y1;
         m23 = Math.sqrt(x23 * x23 + y23 * y23);
-        if (x12 !== void 0) {
+        if (x12 !== void 0 && y12 !== void 0 && m12 !== void 0) {
           m += m12;
           acos = Math.acos((x12 * x23 + y12 * y23) / (m12 * m23));
           if (acos > maxAngle) {
@@ -32724,7 +33787,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       x1 = x2;
       y1 = y2;
     }
-    m += m23;
+    m += m23 || 0;
     return m > chunkM ? [start2, i] : [chunkStart, chunkEnd];
   }
   const TEXT_ALIGN = {
@@ -32802,7 +33865,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (!intersects$1(this.maxExtent, geometryExtent)) {
           return;
         }
-        let ends;
+        let ends = [];
         flatCoordinates = geometry.getFlatCoordinates();
         if (geometryType == "LineString") {
           ends = [flatCoordinates.length];
@@ -32822,7 +33885,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             ends.push(endss[i][0]);
           }
         }
-        if ((geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
+        if (textState.textAlign === void 0 && (geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
           const clipped = clipFlatLineStrings(
             flatCoordinates,
             ends,
@@ -32836,7 +33899,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             return;
           }
         }
-        this.beginGeometry(geometry, feature, index);
+        this.beginGeometry(geometry, feature, index ?? 0);
         const repeat = textState.repeat;
         const textAlign = repeat ? void 0 : textState.textAlign;
         let flatOffset = 0;
@@ -32859,7 +33922,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             let chunkEnd = chunk.length;
             if (textAlign == void 0) {
               const range = matchingChunk(
-                textState.maxAngle,
+                textState.maxAngle ?? Math.PI / 4,
                 chunk,
                 0,
                 chunk.length,
@@ -32902,7 +33965,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           case "Polygon":
             flatCoordinates = /** @type {import("../../geom/Polygon.js").default} */
             geometry.getFlatInteriorPoint();
-            if (!textState.overflow) {
+            if (!textState.overflow && geometryWidths) {
               geometryWidths.push(flatCoordinates[2] / this.resolution);
             }
             stride = 3;
@@ -32914,7 +33977,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             );
             flatCoordinates = [];
             for (let i = 0, ii = interiorPoints.length; i < ii; i += 3) {
-              if (!textState.overflow) {
+              if (!textState.overflow && geometryWidths) {
                 geometryWidths.push(interiorPoints[i + 2] / this.resolution);
               }
               flatCoordinates.push(interiorPoints[i], interiorPoints[i + 1]);
@@ -32924,15 +33987,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             }
             stride = 2;
             break;
+          default:
+            return;
+        }
+        if (!flatCoordinates) {
+          return;
         }
         const end = this.appendFlatPointCoordinates(flatCoordinates, stride);
         if (end === begin) {
           return;
         }
         if (geometryWidths && (end - begin) / 2 !== flatCoordinates.length / stride) {
+          const flatCoords = flatCoordinates;
           let beg = begin / 2;
           geometryWidths = geometryWidths.filter((w, i) => {
-            const keep = coordinates2[(beg + i) * 2] === flatCoordinates[i * stride] && coordinates2[(beg + i) * 2 + 1] === flatCoordinates[i * stride + 1];
+            const keep = coordinates2[(beg + i) * 2] === flatCoords[i * stride] && coordinates2[(beg + i) * 2 + 1] === flatCoords[i * stride + 1];
             if (!keep) {
               --beg;
             }
@@ -32942,18 +34011,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.saveTextStates_();
         const backgroundFill = textState.backgroundFill ? this.createFill(this.fillStyleToState(textState.backgroundFill)) : null;
         const backgroundStroke = textState.backgroundStroke ? this.createStroke(this.strokeStyleToState(textState.backgroundStroke)) : null;
-        this.beginGeometry(geometry, feature, index);
-        let padding = textState.padding;
-        if (padding != defaultPadding && (textState.scale[0] < 0 || textState.scale[1] < 0)) {
-          let p0 = textState.padding[0];
-          let p12 = textState.padding[1];
-          let p22 = textState.padding[2];
-          let p32 = textState.padding[3];
-          if (textState.scale[0] < 0) {
+        this.beginGeometry(geometry, feature, index ?? 0);
+        const textScale = textState.scale ?? [1, 1];
+        let padding = textState.padding ?? defaultPadding;
+        if (padding != defaultPadding && (textScale[0] < 0 || textScale[1] < 0)) {
+          let p0 = padding[0];
+          let p12 = padding[1];
+          let p22 = padding[2];
+          let p32 = padding[3];
+          if (textScale[0] < 0) {
             p12 = -p12;
             p32 = -p32;
           }
-          if (textState.scale[1] < 0) {
+          if (textScale[1] < 0) {
             p0 = -p0;
             p22 = -p22;
           }
@@ -33079,11 +34149,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const fillKey = this.fillKey_;
       this.saveTextStates_();
       const pixelRatio = this.pixelRatio;
-      const baseline = TEXT_ALIGN[textState.textBaseline];
+      const baseline = TEXT_ALIGN[textState.textBaseline || defaultTextBaseline];
       const offsetX = this.textOffsetX_ * pixelRatio;
       const offsetY = this.textOffsetY_ * pixelRatio;
       const text2 = this.text_;
-      const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textState.scale[0]) / 2 : 0;
+      const textScale = textState.scale ?? [1, 1];
+      const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textScale[0]) / 2 : 0;
       this.instructions.push([
         Instruction.DRAW_CHARS,
         begin,
@@ -33144,9 +34215,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             {};
             this.textFillState_ = fillState;
           }
-          fillState.fillStyle = asColorLike(
-            textFillStyle.getColor() || defaultFillStyle
-          );
+          fillState.fillStyle = asColorLike(textFillStyle.getColor() || defaultFillStyle) || defaultFillStyle;
         }
         const textStrokeStyle = textStyle.getStroke();
         if (!textStrokeStyle) {
@@ -33169,9 +34238,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           strokeState.lineJoin = textStrokeStyle.getLineJoin() || defaultLineJoin;
           strokeState.lineWidth = lineWidth === void 0 ? defaultLineWidth : lineWidth;
           strokeState.miterLimit = miterLimit === void 0 ? defaultMiterLimit : miterLimit;
-          strokeState.strokeStyle = asColorLike(
-            textStrokeStyle.getColor() || defaultStrokeStyle
-          );
+          strokeState.strokeStyle = asColorLike(textStrokeStyle.getColor() || defaultStrokeStyle) || defaultStrokeStyle;
         }
         textState = this.textState_;
         const font = textStyle.getFont() || defaultFont;
@@ -33185,8 +34252,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         textState.repeat = textStyle.getRepeat();
         textState.justify = textStyle.getJustify();
         textState.textBaseline = textStyle.getTextBaseline() || defaultTextBaseline;
-        textState.backgroundFill = textStyle.getBackgroundFill();
-        textState.backgroundStroke = textStyle.getBackgroundStroke();
+        textState.backgroundFill = textStyle.getBackgroundFill() ?? void 0;
+        textState.backgroundStroke = textStyle.getBackgroundStroke() ?? void 0;
         textState.padding = textStyle.getPadding() || defaultPadding;
         textState.scale = textScale === void 0 ? [1, 1] : textScale;
         const textOffsetX = textStyle.getOffsetX();
@@ -33204,8 +34271,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.textKey_ = textState.font + textState.scale + (textState.textAlign || "?") + (textState.repeat || "?") + (textState.justify || "?") + (textState.textBaseline || "?");
         this.fillKey_ = fillState && fillState.fillStyle ? typeof fillState.fillStyle == "string" ? fillState.fillStyle : "|" + getUid(fillState.fillStyle) : "";
       }
-      this.declutterMode_ = textStyle.getDeclutterMode();
-      this.declutterImageWithText_ = sharedData;
+      this.declutterMode_ = textStyle ? textStyle.getDeclutterMode() : void 0;
+      this.declutterImageWithText_ = /** @type {import("../canvas.js").DeclutterImageWithText|undefined} */
+      sharedData;
     }
   }
   const BATCH_CONSTRUCTORS = {
@@ -33231,7 +34299,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.buildersByZIndex_ = {};
     }
     /**
-     * @return {!Object<string, !Object<import("../canvas.js").BuilderType, import("./Builder.js").SerializableInstructions>>} The serializable instructions
+     * @return {!Object<string, !Object<import("../canvas.js").BuilderType, import("../canvas.js").SerializableInstructions>>} The serializable instructions
      */
     finish() {
       const builderInstructions = {};
@@ -33239,8 +34307,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         builderInstructions[zKey] = builderInstructions[zKey] || {};
         const builders = this.buildersByZIndex_[zKey];
         for (const builderKey in builders) {
-          const builderInstruction = builders[builderKey].finish();
-          builderInstructions[zKey][builderKey] = builderInstruction;
+          const builderInstruction = builders[
+            /** @type {import("../canvas.js").BuilderType} */
+            builderKey
+          ].finish();
+          builderInstructions[zKey][
+            /** @type {import("../canvas.js").BuilderType} */
+            builderKey
+          ] = builderInstruction;
         }
       }
       return builderInstructions;
@@ -33385,6 +34459,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return coords;
   }
   let segmenter;
+  const rtlRegEx = new RegExp(
+    /* eslint-disable prettier/prettier */
+    "[" + String.fromCharCode(1425) + "-" + String.fromCharCode(2303) + String.fromCharCode(64285) + "-" + String.fromCharCode(65023) + String.fromCharCode(65136) + "-" + String.fromCharCode(65276) + String.fromCharCode(67584) + "-" + String.fromCharCode(69631) + String.fromCharCode(124928) + "-" + String.fromCharCode(126975) + "]"
+    /* eslint-enable prettier/prettier */
+  );
   function getSegmenter() {
     if (!segmenter) {
       segmenter = new Intl.Segmenter(void 0, { granularity: "grapheme" });
@@ -33454,6 +34533,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     text2 = text2.replace(/\n/g, " ");
     const segments = Array.from(getSegmenter().segment(text2), (s) => s.segment);
+    const reverseChunks = reverse !== rtlRegEx.test(text2);
     for (let i = 0, ii = segments.length; i < ii; ) {
       advance();
       let angle = Math.atan2(y2 - y1, x2 - x1);
@@ -33471,7 +34551,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const iStart = i;
       let charLength = 0;
       for (; i < ii; ++i) {
-        const index = reverse ? ii - i - 1 : i;
+        const index = reverseChunks ? ii - i - 1 : i;
         const len = scale2 * measureAndCacheTextWidth2(font, segments[index], cache2);
         if (offset2 + stride < end && segmentM + segmentLength < startM + charLength + len / 2) {
           break;
@@ -33481,7 +34561,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (i === iStart) {
         continue;
       }
-      const chars = (reverse ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
+      const chars = (reverseChunks ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
       interpolate = segmentLength === 0 ? 0 : (startM + charLength / 2 - segmentM) / segmentLength;
       const x = lerp(x1, x2, interpolate);
       const y = lerp(y1, y2, interpolate);
@@ -33595,11 +34675,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function getDeclutterBox(replayImageOrLabelArgs) {
     return replayImageOrLabelArgs[3].declutterBox;
   }
-  const rtlRegEx = new RegExp(
-    /* eslint-disable prettier/prettier */
-    "[" + String.fromCharCode(1425) + "-" + String.fromCharCode(2303) + String.fromCharCode(64285) + "-" + String.fromCharCode(65023) + String.fromCharCode(65136) + "-" + String.fromCharCode(65276) + String.fromCharCode(67584) + "-" + String.fromCharCode(69631) + String.fromCharCode(124928) + "-" + String.fromCharCode(126975) + "]"
-    /* eslint-enable prettier/prettier */
-  );
   function horizontalTextAlign(text2, align) {
     if (align === "start") {
       align = rtlRegEx.test(text2) ? "right" : "left";
@@ -33649,7 +34724,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.zIndexContext_ = deferredRendering ? new ZIndexContext() : null;
     }
     /**
-     * @return {ZIndexContext} ZIndex context.
+     * @return {import("../canvas/ZIndexContext.js").default|null} ZIndex context.
      */
     getZIndexContext() {
       return this.zIndexContext_;
@@ -33671,14 +34746,20 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const textState = this.textStates[textKey];
       const pixelRatio = this.pixelRatio;
       const scale2 = [
+        /** @type {Array<number>} */
         textState.scale[0] * pixelRatio,
+        /** @type {Array<number>} */
         textState.scale[1] * pixelRatio
       ];
       const align = textState.justify ? TEXT_ALIGN[textState.justify] : horizontalTextAlign(
         Array.isArray(text2) ? text2[0] : text2,
         textState.textAlign || defaultTextAlign
       );
-      const strokeWidth = strokeKey && strokeState.lineWidth ? strokeState.lineWidth : 0;
+      const strokeWidth = strokeKey && /** @type {import("../canvas.js").StrokeState} */
+      strokeState.lineWidth ? (
+        /** @type {import("../canvas.js").StrokeState} */
+        strokeState.lineWidth
+      ) : 0;
       const chunks = Array.isArray(text2) ? text2 : String(text2).split("\n").reduce(createTextChunks, []);
       const { width, height, widths, heights, lineWidths } = getTextDimensions(
         textState,
@@ -33696,7 +34777,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (scale2[0] != 1 || scale2[1] != 1) {
         contextInstructions.push("scale", scale2);
       }
-      if (strokeKey) {
+      if (strokeKey && strokeState) {
         contextInstructions.push("strokeStyle", strokeState.strokeStyle);
         contextInstructions.push("lineWidth", strokeWidth);
         contextInstructions.push("lineCap", strokeState.lineCap);
@@ -33705,7 +34786,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         contextInstructions.push("setLineDash", [strokeState.lineDash]);
         contextInstructions.push("lineDashOffset", strokeState.lineDashOffset);
       }
-      if (fillKey) {
+      if (fillKey && fillState) {
         contextInstructions.push("fillStyle", fillState.fillStyle);
       }
       contextInstructions.push("textBaseline", "middle");
@@ -33759,21 +34840,41 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return label;
     }
     /**
-     * @param {CanvasRenderingContext2D} context Context.
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import("../../coordinate.js").Coordinate} p1 1st point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p2 2nd point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p3 3rd point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p4 4th point of the background box.
-     * @param {Array<*>} fillInstruction Fill instruction.
-     * @param {Array<*>} strokeInstruction Stroke instruction.
+     * @param {Array<*>|null} fillInstruction Fill instruction.
+     * @param {Array<*>|null} strokeInstruction Stroke instruction.
      */
     replayTextBackground_(context, p12, p22, p32, p42, fillInstruction2, strokeInstruction2) {
       context.beginPath();
-      context.moveTo.apply(context, p12);
-      context.lineTo.apply(context, p22);
-      context.lineTo.apply(context, p32);
-      context.lineTo.apply(context, p42);
-      context.lineTo.apply(context, p12);
+      context.moveTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p12
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p22
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p32
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p42
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p12
+      );
       if (fillInstruction2) {
         this.alignAndScaleFill_ = /** @type {number} */
         fillInstruction2[2];
@@ -33887,13 +34988,29 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * @private
-     * @param {CanvasRenderingContext2D} context Context.
+     * @param {ReplayImageOrLabelArgs} replayArgs Arguments.
+     * @return {boolean} The image or label was rendered.
+     */
+    replayImageOrLabelArgs_(replayArgs) {
+      return this.replayImageOrLabel_(
+        replayArgs[0],
+        replayArgs[1],
+        replayArgs[2],
+        replayArgs[3],
+        replayArgs[4],
+        replayArgs[5],
+        replayArgs[6]
+      );
+    }
+    /**
+     * @private
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import('../../size.js').Size} scaledCanvasSize Scaled canvas size.
      * @param {import("../canvas.js").Label|HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} imageOrLabel Image.
      * @param {ImageOrLabelDimensions} dimensions Dimensions.
      * @param {number} opacity Opacity.
-     * @param {Array<*>} fillInstruction Fill instruction.
-     * @param {Array<*>} strokeInstruction Stroke instruction.
+     * @param {Array<*>|null} fillInstruction Fill instruction.
+     * @param {Array<*>|null} strokeInstruction Stroke instruction.
      * @return {boolean} The image or label was rendered.
      */
     replayImageOrLabel_(context, scaledCanvasSize, imageOrLabel, dimensions, opacity, fillInstruction2, strokeInstruction2) {
@@ -33917,6 +35034,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         drawImageOrLabel(
           context,
+          /** @type {?} */
           dimensions.canvasTransform,
           opacity,
           imageOrLabel,
@@ -33996,7 +35114,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       const baseline = TEXT_ALIGN[textState.textBaseline || defaultTextBaseline];
       const strokeWidth = strokeState && strokeState.lineWidth ? strokeState.lineWidth : 0;
-      const width = label.width / pixelRatio - 2 * textState.scale[0];
+      const width = label.width / pixelRatio - 2 * /** @type {Array<number>} */
+      textState.scale[0];
       const anchorX = align * width + 2 * (0.5 - align) * strokeWidth;
       const anchorY = baseline * label.height / pixelRatio + 2 * (0.5 - baseline) * strokeWidth;
       return {
@@ -34042,7 +35161,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const ii = instructions.length;
       let d = 0;
       let dd;
-      const offsetCoords = [];
+      const offsetCoords = (
+        /** @type {Array<number>} */
+        []
+      );
       let anchorX, anchorY, lineOffsetPx, declutterMode, prevX, prevY, roundX, roundY, image, text2, textKey, strokeKey, fillKey;
       let pendingFill = 0;
       let pendingStroke = 0;
@@ -34132,7 +35254,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             const renderer = instruction[4];
             const fn = instruction[5];
             state.geometry = geometry;
-            state.feature = feature;
+            state.feature = /** @type {import("../../Feature.js").FeatureLike} */
+            feature;
             if (!(i in coordinateCache)) {
               coordinateCache[i] = [];
             }
@@ -34195,7 +35318,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             );
             declutterMode = instruction[14] || "declutter";
             const declutterImageWithText = (
-              /** @type {{args: import("../canvas.js").DeclutterImageWithText, declutterMode: import('../../style/Style.js').DeclutterMode}} */
+              /** @type {DeclutterImageWithTextMap|undefined} */
               instruction[15]
             );
             if (!image && instruction.length >= 20) {
@@ -34234,7 +35357,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             }
             let geometryWidths;
             if (instruction.length > 25) {
-              geometryWidths = /** @type {number} */
+              geometryWidths = /** @type {Array<number>|undefined} */
               instruction[25];
             }
             let padding, backgroundFillInstruction, backgroundStrokeInstruction;
@@ -34276,6 +35399,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 snapToPixel,
                 padding,
                 !!backgroundFillInstruction || !!backgroundStrokeInstruction,
+                /** @type {import("../../Feature.js").FeatureLike} */
                 feature
               );
               const args = [
@@ -34292,7 +35416,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 if (declutterImageWithText) {
                   const index = dd - d;
                   if (!declutterImageWithText[index]) {
-                    declutterImageWithText[index] = { args, declutterMode };
+                    declutterImageWithText[index] = {
+                      args,
+                      declutterMode: (
+                        /** @type {import('../../style/Style.js').DeclutterMode} */
+                        declutterMode
+                      )
+                    };
                     continue;
                   }
                   const imageDeclutter = declutterImageWithText[index];
@@ -34301,8 +35431,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                   delete declutterImageWithText[index];
                   imageDeclutterBox = getDeclutterBox(imageArgs);
                 }
-                let renderImage, renderText;
-                if (imageArgs && (imageDeclutterMode !== "declutter" || !declutterTree.collides(imageDeclutterBox))) {
+                let renderImage;
+                let renderText;
+                if (imageArgs && (imageDeclutterMode !== "declutter" || !declutterTree.collides(
+                  /** @type {?} */
+                  imageDeclutterBox
+                ))) {
                   renderImage = true;
                 }
                 if (declutterMode !== "declutter" || !declutterTree.collides(dimensions.declutterBox)) {
@@ -34315,18 +35449,24 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 }
                 if (renderImage) {
                   if (imageDeclutterMode !== "none") {
-                    declutterTree.insert(imageDeclutterBox);
+                    declutterTree.insert(
+                      /** @type {?} */
+                      imageDeclutterBox
+                    );
                   }
-                  this.replayImageOrLabel_.apply(this, imageArgs);
+                  this.replayImageOrLabelArgs_(
+                    /** @type {ReplayImageOrLabelArgs} */
+                    imageArgs
+                  );
                 }
                 if (renderText) {
                   if (declutterMode !== "none") {
                     declutterTree.insert(dimensions.declutterBox);
                   }
-                  this.replayImageOrLabel_.apply(this, args);
+                  this.replayImageOrLabelArgs_(args);
                 }
               } else {
-                this.replayImageOrLabel_.apply(this, args);
+                this.replayImageOrLabelArgs_(args);
               }
             }
             ++i;
@@ -34393,7 +35533,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             const textState = this.textStates[textKey];
             const font = textState.font;
             const textScale = [
+              /** @type {Array<number>} */
               textState.scale[0] * measurePixelRatio,
+              /** @type {Array<number>} */
               textState.scale[1] * measurePixelRatio
             ];
             let cachedWidths;
@@ -34407,7 +35549,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             const textLength = Math.abs(textScale[0]) * measureAndCacheTextWidth(font, text2, cachedWidths);
             if (overflow || textLength <= pathLength) {
               const textAlign = this.textStates[textKey].textAlign;
-              const startM = (pathLength - textLength) * horizontalTextAlign(text2, textAlign);
+              const startM = (pathLength - textLength) * horizontalTextAlign(
+                text2,
+                /** @type {CanvasTextAlign} */
+                textAlign
+              );
               const parts = drawTextOnPath(
                 pixelCoordinates,
                 begin,
@@ -34451,6 +35597,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                       false,
                       defaultPadding,
                       false,
+                      /** @type {import("../../Feature.js").FeatureLike} */
                       feature
                     );
                     if (declutterTree && declutterMode === "declutter" && declutterTree.collides(dimensions.declutterBox)) {
@@ -34462,7 +35609,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                       label,
                       dimensions,
                       1,
+                      /** @type {Array<*>|null} */
                       null,
+                      /** @type {Array<*>|null} */
                       null
                     ]);
                   }
@@ -34492,6 +35641,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                       false,
                       defaultPadding,
                       false,
+                      /** @type {import("../../Feature.js").FeatureLike} */
                       feature
                     );
                     if (declutterTree && declutterMode === "declutter" && declutterTree.collides(dimensions.declutterBox)) {
@@ -34503,7 +35653,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                       label,
                       dimensions,
                       1,
+                      /** @type {Array<*>|null} */
                       null,
+                      /** @type {Array<*>|null} */
                       null
                     ]);
                   }
@@ -34512,7 +35664,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                   declutterTree.load(replayImageOrLabelArgs.map(getDeclutterBox));
                 }
                 for (let i2 = 0, ii2 = replayImageOrLabelArgs.length; i2 < ii2; ++i2) {
-                  this.replayImageOrLabel_.apply(this, replayImageOrLabelArgs[i2]);
+                  this.replayImageOrLabelArgs_(replayImageOrLabelArgs[i2]);
                 }
               }
             }
@@ -34525,6 +35677,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               const result = featureCallback(
                 feature,
                 currentGeometry,
+                /** @type {import('../../style/Style.js').DeclutterMode} */
                 declutterMode
               );
               if (result) {
@@ -34705,7 +35858,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function benchmarkCanvasReads() {
     let bestResult = 0;
     const measure = (willReadFrequently2) => {
-      const context = createCanvasContext2D(1, 1, null, { willReadFrequently: willReadFrequently2 });
+      const context = createCanvasContext2D(
+        1,
+        1,
+        /** @type {?} */
+        null,
+        {
+          willReadFrequently: willReadFrequently2
+        }
+      );
       let count = 0;
       const start2 = performance.now();
       for (; performance.now() - start2 < 50; ++count) {
@@ -34726,10 +35887,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   class ExecutorGroup {
     /**
-     * @param {import("../../extent.js").Extent} maxExtent Max extent for clipping. When a
+     * @param {import("../../extent.js").Extent|null} maxExtent Max extent for clipping. When a
      * `maxExtent` was set on the Builder for this executor group, the same `maxExtent`
      * should be set here, unless the target context does not exceed that extent (which
-     * can be the case when rendering to tiles).
+     * can be the case when rendering to tiles). Pass `null` to disable clipping.
      * @param {number} resolution Resolution.
      * @param {number} pixelRatio Pixel ratio.
      * @param {boolean} overlaps The executor group can have overlapping geometries.
@@ -34749,14 +35910,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.hitDetectionTransform_ = create$1();
       this.renderedContext_ = null;
       this.deferredZIndexContexts_ = {};
-      this.createExecutors_(allInstructions, deferredRendering);
+      this.createExecutors_(allInstructions, !!deferredRendering);
     }
     /**
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import("../../transform.js").Transform} transform Transform.
      */
     clip(context, transform2) {
-      const flatClipCoords = this.getClipCoords(transform2);
+      const flatClipCoords = (
+        /** @type {Array<number>} */
+        this.getClipCoords(transform2)
+      );
       context.beginPath();
       context.moveTo(flatClipCoords[0], flatClipCoords[1]);
       context.lineTo(flatClipCoords[2], flatClipCoords[3]);
@@ -34836,11 +36000,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.hitDetectionContext_ = createCanvasContext2D(
           contextSize,
           contextSize,
+          /** @type {?} */
           null,
           { willReadFrequently }
         );
       }
-      const context = this.hitDetectionContext_;
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.hitDetectionContext_
+      );
       if (context.canvas.width !== contextSize || context.canvas.height !== contextSize) {
         context.canvas.width = contextSize;
         context.canvas.height = contextSize;
@@ -34859,8 +36027,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       const indexes = getPixelIndexArray(hitTolerance);
       let builderType;
+      const hitContext = context;
       function featureCallback(feature, geometry, declutterMode) {
-        const imageData = context.getImageData(
+        const imageData = hitContext.getImageData(
           0,
           0,
           contextSize,
@@ -34877,7 +36046,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 return result2;
               }
             }
-            context.clearRect(0, 0, contextSize, contextSize);
+            hitContext.clearRect(0, 0, contextSize, contextSize);
             break;
           }
         }
@@ -34967,7 +36136,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                 scaledCanvasSize,
                 transform2,
                 viewRotation,
+                /** @type {boolean} */
                 snapToPixel,
+                /** @type {?} */
                 declutterTree
               );
             } else {
@@ -34977,7 +36148,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
                   scaledCanvasSize,
                   transform2,
                   viewRotation,
+                  /** @type {boolean} */
                   snapToPixel,
+                  /** @type {?} */
                   declutterTree
                 )
               );
@@ -35009,7 +36182,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const zs = Object.keys(deferredZIndexContexts).map(Number).sort(ascending);
       for (let i = 0, ii = zs.length; i < ii; ++i) {
         deferredZIndexContexts[zs[i]].forEach((zIndexContext) => {
-          zIndexContext.draw(this.renderedContext_);
+          zIndexContext.draw(
+            /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+            this.renderedContext_
+          );
           zIndexContext.clear();
         });
         deferredZIndexContexts[zs[i]].length = 0;
@@ -35153,7 +36329,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             -centerY
           );
           context.save();
-          context.transform.apply(context, localTransform);
+          context.transform.apply(
+            context,
+            /** @type {[number, number, number, number, number, number]} */
+            localTransform
+          );
           context.translate(centerX, centerY);
           context.scale(this.imageScale_[0], this.imageScale_[1]);
           context.drawImage(
@@ -35258,6 +36438,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     moveToLineTo_(flatCoordinates, offset2, end, stride, close, strokeOffset) {
       const context = this.context_;
+      const strokeOffsetPx = strokeOffset ?? 0;
       let pixelCoordinates = transform2D(
         flatCoordinates,
         offset2,
@@ -35266,7 +36447,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.transform_,
         this.pixelCoordinates_
       );
-      if (Math.abs(strokeOffset) > 0) {
+      if (Math.abs(strokeOffsetPx) > 0) {
         const n = pixelCoordinates.length;
         const isClosedLine = close || Math.abs(pixelCoordinates[0] - pixelCoordinates[n - 2]) < 1e-6 && Math.abs(pixelCoordinates[1] - pixelCoordinates[n - 1]) < 1e-6;
         pixelCoordinates = offsetLineString(
@@ -35274,7 +36455,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           0,
           n,
           2,
-          strokeOffset,
+          strokeOffsetPx,
           isClosedLine,
           pixelCoordinates
         );
@@ -35346,6 +36527,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           this.transform_,
           this.pixelCoordinates_
         );
+        if (!pixelCoordinates) {
+          return;
+        }
         const dx = pixelCoordinates[2] - pixelCoordinates[0];
         const dy = pixelCoordinates[3] - pixelCoordinates[1];
         const radius = Math.sqrt(dx * dx + dy * dy);
@@ -35378,9 +36562,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     setStyle(style) {
-      this.setFillStrokeStyle(style.getFill(), style.getStroke());
-      this.setImageStyle(style.getImage());
-      this.setTextStyle(style.getText());
+      this.setFillStrokeStyle(style.getFill() ?? null, style.getStroke() ?? null);
+      this.setImageStyle(style.getImage() ?? null);
+      this.setTextStyle(style.getText() ?? null);
     }
     /**
      * @param {import("../../transform.js").Transform} transform Transform.
@@ -35826,8 +37010,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Set the fill and stroke style for subsequent draw operations.  To clear
      * either fill or stroke styles, pass null for the appropriate parameter.
      *
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @override
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
@@ -35836,9 +37020,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       } else {
         const fillStyleColor = fillStyle.getColor();
         this.fillState_ = {
-          fillStyle: asColorLike(
-            fillStyleColor ? fillStyleColor : defaultFillStyle
-          )
+          fillStyle: asColorLike(fillStyleColor ? fillStyleColor : defaultFillStyle) || defaultFillStyle
         };
       }
       if (!strokeStyle) {
@@ -35862,7 +37044,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           miterLimit: strokeStyleMiterLimit !== void 0 ? strokeStyleMiterLimit : defaultMiterLimit,
           strokeStyle: asColorLike(
             strokeStyleColor ? strokeStyleColor : defaultStrokeStyle
-          ),
+          ) || defaultStrokeStyle,
           strokeOffset: (strokeOffset ?? 0) * this.pixelRatio_
         };
       }
@@ -35871,7 +37053,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Set the image style for subsequent draw operations.  Pass null to remove
      * the image style.
      *
-     * @param {import("../../style/Image.js").default} imageStyle Image style.
+     * @param {import("../../style/Image.js").default|null} imageStyle Image style.
      * @override
      */
     setImageStyle(imageStyle) {
@@ -35883,6 +37065,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const imagePixelRatio = imageStyle.getPixelRatio(this.pixelRatio_);
       const imageAnchor = imageStyle.getAnchor();
       const imageOrigin = imageStyle.getOrigin();
+      if (!imageAnchor || !imageOrigin) {
+        this.image_ = null;
+        return;
+      }
       this.image_ = imageStyle.getImage(this.pixelRatio_);
       this.imageAnchorX_ = imageAnchor[0] * imagePixelRatio;
       this.imageAnchorY_ = imageAnchor[1] * imagePixelRatio;
@@ -35903,7 +37089,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * Set the text style for subsequent draw operations.  Pass null to
      * remove the text style.
      *
-     * @param {import("../../style/Text.js").default} textStyle Text style.
+     * @param {import("../../style/Text.js").default|null} textStyle Text style.
      * @override
      */
     setTextStyle(textStyle) {
@@ -35918,7 +37104,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           this.textFillState_ = {
             fillStyle: asColorLike(
               textFillStyleColor ? textFillStyleColor : defaultFillStyle
-            )
+            ) || defaultFillStyle
           };
         }
         const textStrokeStyle = textStyle.getStroke();
@@ -35941,7 +37127,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             miterLimit: textStrokeStyleMiterLimit !== void 0 ? textStrokeStyleMiterLimit : defaultMiterLimit,
             strokeStyle: asColorLike(
               textStrokeStyleColor ? textStrokeStyleColor : defaultStrokeStyle
-            )
+            ) || defaultStrokeStyle
           };
         }
         const textFont = textStyle.getFont();
@@ -35982,10 +37168,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       context,
       HIT_DETECT_RESOLUTION,
       extent,
-      null,
+      [1, 0, 0, 1, 0, 0],
       rotation,
-      squaredTolerance,
-      null
+      squaredTolerance ?? 0,
+      void 0
     );
     const featureCount = features.length;
     const indexFactor = Math.floor((256 * 256 * 256 - 1) / featureCount);
@@ -36021,7 +37207,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           stroke.setColor(color);
           stroke.setLineDash(null);
         }
-        style.setText(void 0);
+        style.setText(
+          /** @type {import("../../style/Text.js").default|null} */
+          null
+        );
         const image = originalStyle.getImage();
         if (image) {
           const imgSize = image.getImageSize();
@@ -36040,12 +37229,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           style.setImage(
             new Icon({
               img,
-              anchor: image.getAnchor(),
+              anchor: image.getAnchor() ?? void 0,
               anchorXUnits: "pixels",
               anchorYUnits: "pixels",
-              offset: image.getOrigin(),
+              offset: image.getOrigin() ?? void 0,
               opacity: 1,
-              size: image.getSize(),
+              size: image.getSize() ?? void 0,
               scale: image.getScale(),
               rotation: image.getRotation(),
               rotateWithView: image.getRotateWithView()
@@ -36172,7 +37361,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     const loading = loadingPromises.length > 0;
     if (loading) {
-      Promise.all(loadingPromises).then(() => listener(null));
+      Promise.all(loadingPromises).then(
+        () => listener(
+          /** @type {import("../events/Event.js").default} */
+          /** @type {unknown} */
+          null
+        )
+      );
     }
     renderFeatureInternal(
       replayGroup,
@@ -36225,7 +37420,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       /** @type {import("../geom/SimpleGeometry.js").default} */
       geometry,
       feature,
+      /** @type {Function} */
       style.getRenderer(),
+      /** @type {Function} */
       style.getHitDetectionRenderer(),
       index
     );
@@ -36298,7 +37495,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const imageStyle = style.getImage();
     const textStyle = style.getText();
     const hasText = textStyle && textStyle.getText();
-    const declutterImageWithText = declutter && imageStyle && hasText ? {} : void 0;
+    const declutterImageWithText = declutter && imageStyle && hasText ? (
+      /** @type {import("../render/canvas.js").DeclutterImageWithText} */
+      {}
+    ) : void 0;
     if (imageStyle) {
       if (imageStyle.getImageState() != ImageState.LOADED) {
         return;
@@ -36318,7 +37518,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const hasImage = imageStyle && imageStyle.getOpacity() !== 0;
     const textStyle = style.getText();
     const hasText = textStyle && textStyle.getText();
-    const declutterImageWithText = declutter && hasImage && hasText ? {} : void 0;
+    const declutterImageWithText = declutter && hasImage && hasText ? (
+      /** @type {import("../render/canvas.js").DeclutterImageWithText} */
+      {}
+    ) : void 0;
     if (hasImage) {
       if (imageStyle.getImageState() != ImageState.LOADED) {
         return;
@@ -36442,7 +37645,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @return {LayerType} Layer.
      */
     getLayer() {
-      return this.layer_;
+      return (
+        /** @type {LayerType} */
+        this.layer_
+      );
     }
     /**
      * Perform action necessary to get the layer rendered after new fonts have loaded
@@ -36474,7 +37680,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     loadImage(image) {
       let imageState = image.getState();
       if (imageState != ImageState.LOADED && imageState != ImageState.ERROR) {
-        image.addEventListener(EventType.CHANGE, this.boundHandleImageChange_);
+        image.addEventListener(
+          EventType.CHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.boundHandleImageChange_
+        );
       }
       if (imageState == ImageState.IDLE) {
         image.load();
@@ -36501,7 +37711,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @override
      */
     disposeInternal() {
-      delete this.layer_;
+      this.layer_ = void 0;
       super.disposeInternal();
     }
   }
@@ -36518,6 +37728,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     constructor(layer) {
       super(layer);
+      this.wantRotation = false;
       this.container = null;
       this.renderedResolution;
       this.tempTransform = create$1();
@@ -36538,11 +37749,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!pixelContext) {
         createPixelContext();
       }
-      pixelContext.clearRect(0, 0, 1, 1);
+      const ctx = pixelContext;
+      if (!ctx) {
+        return null;
+      }
+      ctx.clearRect(0, 0, 1, 1);
       let data;
       try {
-        pixelContext.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
-        data = pixelContext.getImageData(0, 0, 1, 1).data;
+        ctx.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
+        data = ctx.getImageData(0, 0, 1, 1).data;
       } catch {
         pixelContext = null;
         return null;
@@ -36551,7 +37766,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * @param {import('../../Map.js').FrameState} frameState Frame state.
-     * @return {string} Background color.
+     * @return {string|undefined} Background color.
      */
     getBackground(frameState) {
       const layer = this.getLayer();
@@ -36563,8 +37778,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * Get a rendering container from an existing target, if compatible.
-     * @param {HTMLElement} target Potential render target.
-     * @param {string} transform CSS transform matrix.
+     * @param {HTMLElement|null} target Potential render target.
+     * @param {string|null} transform CSS transform matrix.
      * @param {string} [backgroundColor] Background color.
      * @param {number} [width] Physical pixel width of the rendering canvas.
      * @param {number} [height] Physical pixel height of the rendering canvas.
@@ -36598,7 +37813,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           context = canvas.getContext("2d");
         }
       }
-      if (context && equivalent(context.canvas.style.transform, transform2)) {
+      if (context && equivalent(
+        context.canvas.style.transform,
+        /** @type {string} */
+        /** @type {unknown} */
+        transform2
+      )) {
         this.container = target2;
         this.context = context;
         this.containerReused = true;
@@ -36607,7 +37827,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.context = null;
         this.containerReused = false;
       } else if (this.container) {
-        this.container.style.backgroundColor = null;
+        this.container.style.backgroundColor = /** @type {?} */
+        null;
       }
       if (!this.container) {
         container = WORKER_OFFSCREEN_CANVAS ? createMockDiv() : document.createElement("div");
@@ -36667,12 +37888,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @protected
      */
     prepareContainer(frameState, target2) {
-      const extent = frameState.extent;
+      const extent = (
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      );
       const resolution = frameState.viewState.resolution;
-      const rotation = frameState.viewState.rotation;
+      const sourceRotates = this.sourceRotates();
+      const rotation = sourceRotates ? 0 : frameState.viewState.rotation;
       const pixelRatio = frameState.pixelRatio;
-      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
-      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
+      const width = sourceRotates ? Math.round(frameState.size[0] * pixelRatio) : Math.round(getWidth(extent) / resolution * pixelRatio);
+      const height = sourceRotates ? Math.round(frameState.size[1] * pixelRatio) : Math.round(getHeight(extent) / resolution * pixelRatio);
       compose(
         this.pixelTransform,
         frameState.size[0] / 2,
@@ -36688,7 +37913,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const backgroundColor = this.getBackground(frameState);
       this.useContainer(target2, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
-        const canvas = this.context.canvas;
+        const canvas = (
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas
+        );
         if (canvas.width != width || canvas.height != height) {
           canvas.width = width;
           canvas.height = height;
@@ -36755,7 +37983,36 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (frameState.declutter && !this.deferredContext_) {
         this.deferredContext_ = new ZIndexContext();
       }
-      return frameState.declutter ? this.deferredContext_.getContext() : this.context;
+      return frameState.declutter ? (
+        /** @type {ZIndexContext} */
+        this.deferredContext_.getContext()
+      ) : (
+        /** @type {import("../../render/canvas/ZIndexContext.js").ZIndexContextProxy} */
+        /** @type {unknown} */
+        this.context
+      );
+    }
+    /**
+     * @protected
+     * @return {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} Canvas rendering context.
+     */
+    getCanvasContext() {
+      const context = this.context;
+      if (!context) {
+        throw new Error("Canvas context not initialized");
+      }
+      return context;
+    }
+    /**
+     * @protected
+     * @return {HTMLElement} Canvas container element.
+     */
+    getContainerElement() {
+      const container = this.container;
+      if (!container) {
+        throw new Error("Canvas container not initialized");
+      }
+      return container;
     }
     /**
      * @param {import("../../Map.js").FrameState} frameState Frame state.
@@ -36767,16 +38024,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       this.dispatchRenderEvent_(
         RenderEventType.PRERENDER,
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
         this.context,
         frameState
       );
       if (frameState.declutter && this.deferredContext_) {
-        this.deferredContext_.draw(this.context);
+        this.deferredContext_.draw(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context
+        );
         this.deferredContext_.clear();
       }
       this.renderDeferredInternal(frameState);
       this.dispatchRenderEvent_(
         RenderEventType.POSTRENDER,
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
         this.context,
         frameState
       );
@@ -36812,6 +38074,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
     }
     /**
+     * @protected
+     * @return {boolean} Request rotation from the source.
+     */
+    sourceRotates() {
+      var _a;
+      return this.wantRotation && !!((_a = this.getLayer().getSource()) == null ? void 0 : _a.canRotate);
+    }
+    /**
      * Clean up.
      * @override
      */
@@ -36822,9 +38092,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   class CanvasVectorLayerRenderer extends CanvasLayerRenderer {
     /**
-     * @param {import("../../layer/BaseVector.js").default} vectorLayer Vector layer.
+     * @param {import("../../layer/Vector.js").default} vectorLayer Vector layer.
+     * @param {VectorLayerRendererOptions} [options] Options.
      */
-    constructor(vectorLayer) {
+    constructor(vectorLayer, options) {
       super(vectorLayer);
       this.boundHandleStyleImageChange_ = this.handleStyleImageChange_.bind(this);
       this.animatingOrInteracting_;
@@ -36847,6 +38118,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.clipping = true;
       this.targetContext_ = null;
       this.opacity_ = 1;
+      if ((options == null ? void 0 : options.wantRotation) !== void 0) {
+        this.wantRotation = options.wantRotation;
+      }
     }
     /**
      * @param {ExecutorGroup} executorGroup Executor group.
@@ -36867,22 +38141,39 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const pixelRatio = frameState.pixelRatio;
       const viewHints = frameState.viewHints;
       const snapToPixel = !(viewHints[ViewHint.ANIMATING] || viewHints[ViewHint.INTERACTING]);
-      const context = this.context;
-      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
-      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
-      const multiWorld = vectorSource.getWrapX() && projection.canWrapX();
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context
+      );
+      const width = context.canvas.width;
+      const height = context.canvas.height;
+      const multiWorld = (
+        /** @type {NonNullable<ReturnType<import("../../layer/Vector.js").default["getSource"]>>} */
+        vectorSource.getWrapX() && projection.canWrapX()
+      );
       const worldWidth = multiWorld ? getWidth(projectionExtent) : null;
-      const endWorld = multiWorld ? Math.ceil((extent[2] - projectionExtent[2]) / worldWidth) + (this.extendX_ ? 2 : 1) : 1;
-      let world = multiWorld ? Math.floor((extent[0] - projectionExtent[0]) / worldWidth) - (this.extendX_ ? 1 : 0) : 0;
+      const viewExtent = (
+        /** @type {import("../../extent.js").Extent} */
+        extent
+      );
+      const endWorld = multiWorld ? Math.ceil(
+        (viewExtent[2] - projectionExtent[2]) / /** @type {number} */
+        worldWidth
+      ) + (this.extendX_ ? 2 : 1) : 1;
+      let world = multiWorld ? Math.floor(
+        (viewExtent[0] - projectionExtent[0]) / /** @type {number} */
+        worldWidth
+      ) - (this.extendX_ ? 1 : 0) : 0;
       do {
         let transform2 = this.getRenderTransform(
           center,
           resolution,
-          0,
+          this.sourceRotates() ? rotation : 0,
           pixelRatio,
           width,
           height,
-          world * worldWidth
+          world * /** @type {number} */
+          worldWidth
         );
         if (frameState.declutter) {
           transform2 = transform2.slice(0);
@@ -36894,7 +38185,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           rotation,
           snapToPixel,
           declutterable === void 0 ? ALL : declutterable ? DECLUTTER : NON_DECLUTTER,
-          declutterable ? declutter && frameState.declutter[declutter] : void 0
+          declutterable ? (
+            /** @type {import("rbush").default<import("../../render/canvas/Executor.js").DeclutterEntry>|null|undefined} */
+            declutter && /** @type {NonNullable<typeof frameState.declutter>} */
+            frameState.declutter[declutter]
+          ) : void 0
         );
       } while (++world < endWorld);
     }
@@ -36903,9 +38198,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     setDrawContext_() {
       if (this.opacity_ !== 1) {
-        this.targetContext_ = this.context;
+        this.targetContext_ = /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context;
         this.context = createCanvasContext2D(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.context.canvas.width,
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.context.canvas.height,
           canvasPool
         );
@@ -36918,10 +38216,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (this.opacity_ !== 1 && this.targetContext_) {
         const alpha = this.targetContext_.globalAlpha;
         this.targetContext_.globalAlpha = this.opacity_;
-        this.targetContext_.drawImage(this.context.canvas, 0, 0);
+        this.targetContext_.drawImage(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas,
+          0,
+          0
+        );
         this.targetContext_.globalAlpha = alpha;
-        releaseCanvas(this.context);
-        canvasPool.push(this.context.canvas);
+        releaseCanvas(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context
+        );
+        canvasPool.push(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas
+        );
         this.context = this.targetContext_;
         this.targetContext_ = null;
       }
@@ -36946,7 +38255,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       if (this.clipExtent_) {
-        this.clipUnrotated(this.context, frameState, this.clipExtent_);
+        this.clipUnrotated(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context,
+          frameState,
+          this.clipExtent_
+        );
       }
       this.replayGroup_.renderDeferred();
       if (this.clipExtent_) {
@@ -36966,14 +38280,24 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const layerState = frameState.layerStatesArray[frameState.layerIndex];
       this.opacity_ = layerState.opacity;
       const viewState = frameState.viewState;
-      this.prepareContainer(frameState, target2);
-      const context = this.context;
+      this.prepareContainer(
+        frameState,
+        /** @type {HTMLElement} */
+        target2
+      );
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context
+      );
       const replayGroup = this.replayGroup_;
       let render = replayGroup && !replayGroup.isEmpty();
       if (!render) {
         const hasRenderListeners = this.getLayer().hasListener(RenderEventType.PRERENDER) || this.getLayer().hasListener(RenderEventType.POSTRENDER);
         if (!hasRenderListeners) {
-          return this.container;
+          return (
+            /** @type {HTMLElement} */
+            this.container
+          );
         }
       }
       this.setDrawContext_();
@@ -36983,8 +38307,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let clipped = false;
       if (render && layerState.extent && this.clipping) {
         const layerExtent = fromUserExtent(layerState.extent);
-        render = intersects$1(layerExtent, frameState.extent);
-        const needsClip = render && !containsExtent(layerExtent, frameState.extent);
+        render = intersects$1(
+          layerExtent,
+          /** @type {import("../../extent.js").Extent} */
+          frameState.extent
+        );
+        const needsClip = render && !containsExtent(
+          layerExtent,
+          /** @type {import("../../extent.js").Extent} */
+          frameState.extent
+        );
         if (needsClip) {
           if (frameState.declutter) {
             this.clipExtent_ = layerExtent;
@@ -36996,6 +38328,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       if (render) {
         this.renderWorlds(
+          /** @type {ExecutorGroup} */
           replayGroup,
           frameState,
           this.getLayer().getDeclutter() ? false : void 0
@@ -37012,7 +38345,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!frameState.declutter) {
         this.resetDrawContext_();
       }
-      return this.container;
+      return (
+        /** @type {HTMLElement} */
+        this.container
+      );
     }
     /**
      * Asynchronous layer level hit detection.
@@ -37036,6 +38372,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           const height = size[1] * HIT_DETECT_RESOLUTION;
           transforms2.push(
             this.getRenderTransform(
+              /** @type {import("../../coordinate.js").Coordinate} */
               center,
               resolution,
               rotation,
@@ -37045,9 +38382,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               0
             ).slice()
           );
-          const source = layer.getSource();
-          const projectionExtent = projection.getExtent();
-          if (source.getWrapX() && projection.canWrapX() && !containsExtent(projectionExtent, extent)) {
+          const source = (
+            /** @type {NonNullable<ReturnType<import("../../layer/Vector.js").default["getSource"]>>} */
+            layer.getSource()
+          );
+          const projectionExtent = (
+            /** @type {import("../../proj/Projection.js").default} */
+            projection.getExtent()
+          );
+          if (source.getWrapX() && /** @type {import("../../proj/Projection.js").default} */
+          projection.canWrapX() && !containsExtent(projectionExtent, extent)) {
             let startX = extent[0];
             const worldWidth = getWidth(projectionExtent);
             let world = 0;
@@ -37057,6 +38401,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               offsetX = worldWidth * world;
               transforms2.push(
                 this.getRenderTransform(
+                  /** @type {import("../../coordinate.js").Coordinate} */
                   center,
                   resolution,
                   rotation,
@@ -37075,6 +38420,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               offsetX = worldWidth * world;
               transforms2.push(
                 this.getRenderTransform(
+                  /** @type {import("../../coordinate.js").Coordinate} */
                   center,
                   resolution,
                   rotation,
@@ -37090,6 +38436,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           this.hitDetectionImageData_ = createHitDetectionImageData(
             size,
             transforms2,
+            /** @type {Array<import("../../Feature.js").default>} */
             this.renderedFeatures_,
             layer.getStyleFunction(),
             extent,
@@ -37099,7 +38446,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           );
         }
         resolve(
-          hitDetect(pixel, this.renderedFeatures_, this.hitDetectionImageData_)
+          hitDetect(
+            pixel,
+            /** @type {Array<import("../../Feature.js").default>} */
+            this.renderedFeatures_,
+            /** @type {ImageData} */
+            this.hitDetectionImageData_
+          )
         );
       });
     }
@@ -37157,7 +38510,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         rotation,
         hitTolerance,
         featureCallback,
-        declutter ? (_b = (_a = frameState.declutter) == null ? void 0 : _a[declutter]) == null ? void 0 : _b.all().map((item) => item.value) : null
+        /** @type {Array<import("../../Feature.js").FeatureLike>} */
+        declutter ? (_b = (_a = frameState.declutter) == null ? void 0 : _a[declutter]) == null ? void 0 : _b.all().map((item) => item.value) : (
+          /** @type {unknown} */
+          null
+        )
       );
     }
     /**
@@ -37212,7 +38569,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
       const center = viewState.center.slice();
       const extent = buffer(
+        /** @type {import("../../extent.js").Extent} */
         frameStateExtent,
+        /** @type {number} */
         vectorLayerRenderBuffer * resolution
       );
       const renderedExtent = extent.slice();
@@ -37226,7 +38585,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           this.extendX_ = sourceExtent[0] < projectionExtent[0] || sourceExtent[2] > projectionExtent[2];
         }
       }
-      if (canWrapX && (!containsExtent(projectionExtent, frameState.extent) || this.extendX_)) {
+      if (canWrapX && (!containsExtent(
+        projectionExtent,
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      ) || this.extendX_)) {
         const worldWidth = getWidth(projectionExtent);
         const gutter = Math.max(getWidth(extent) / 2, worldWidth);
         let projMinX = projectionExtent[0];
@@ -37297,6 +38660,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               styles,
               replayGroup,
               userTransform,
+              /** @type {boolean|undefined} */
+              /** @type {unknown} */
               this.getLayer().getDeclutter(),
               index
             );
@@ -37408,7 +38773,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @param {SelectEventType} type The event type.
      * @param {Array<import("../Feature.js").default>} selected Selected features.
      * @param {Array<import("../Feature.js").default>} deselected Deselected features.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Associated
+     * @param {import("../MapBrowserEvent.js").default|undefined} mapBrowserEvent Associated
      *     {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
      */
     constructor(type, selected, deselected, mapBrowserEvent) {
@@ -37518,10 +38883,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (map) {
         this.features_.addEventListener(
           CollectionEventType.ADD,
+          /** @type {import("../events.js").Listener} */
           this.boundAddFeature_
         );
         this.features_.addEventListener(
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").Listener} */
           this.boundRemoveFeature_
         );
         if (this.style_) {
@@ -37530,10 +38897,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       } else {
         this.features_.removeEventListener(
           CollectionEventType.ADD,
+          /** @type {import("../events.js").Listener} */
           this.boundAddFeature_
         );
         this.features_.removeEventListener(
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").Listener} */
           this.boundRemoveFeature_
         );
       }
@@ -37566,13 +38935,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     /**
      * @param {Feature} feature Feature of which to get the layer
-     * @return {VectorLayer} layer, if one was found.
+     * @return {VectorLayer|undefined} layer, if one was found.
      * @private
      */
     findLayerOfFeature_(feature) {
+      const map = this.getMap();
+      if (!map) {
+        return void 0;
+      }
       const layer = (
-        /** @type {VectorLayer} */
-        this.getMap().getAllLayers().find(function(layer2) {
+        /** @type {VectorLayer|undefined} */
+        map.getAllLayers().find(function(layer2) {
           if (layer2 instanceof VectorLayer && layer2.getSource() && layer2.getSource().hasFeature(feature)) {
             return layer2;
           }
@@ -37602,7 +38975,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      * @private
      */
     restorePreviousStyle_(feature) {
-      const interactions = this.getMap().getInteractions().getArray();
+      const map = this.getMap();
+      if (!map) {
+        return;
+      }
+      const interactions = map.getInteractions().getArray();
       for (let i = interactions.length - 1; i >= 0; --i) {
         const interaction = interactions[i];
         if (interaction !== this && interaction instanceof Select && interaction.getStyle() && interaction.getFeatures().getArray().lastIndexOf(feature) !== -1) {
@@ -37631,7 +39008,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
      */
     selectFeature(feature) {
       const layer = this.findLayerOfFeature_(feature);
-      if (!this.layerFilter_(layer) || !this.filter_(feature, layer)) {
+      if (!layer || !this.layerFilter_(layer) || !this.filter_(feature, layer)) {
         return false;
       }
       const features = this.getFeatures();
@@ -37785,10 +39162,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     extend$3(styles["Polygon"], styles["LineString"]);
     extend$3(styles["GeometryCollection"], styles["LineString"]);
     return function(feature) {
-      if (!feature.getGeometry()) {
+      const geometry = feature.getGeometry();
+      if (!geometry) {
         return null;
       }
-      return styles[feature.getGeometry().getType()];
+      return styles[geometry.getType()];
     };
   }
   let withCredentials = false;
@@ -37848,7 +39226,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         projection,
         /**
          * @param {Array<FeatureType>} features The loaded features.
-         * @param {import("./proj/Projection.js").default} dataProjection Data
+         * @param {import("./proj/Projection.js").default|undefined} dataProjection Data
          * projection.
          */
         (features, dataProjection) => {
@@ -38045,6 +39423,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.attributions_ = adaptAttributions(options.attributions);
       this.attributionsCollapsible_ = options.attributionsCollapsible ?? true;
       this.loading = false;
+      this.canRotate = false;
       this.state_ = options.state !== void 0 ? options.state : "ready";
       this.wrapX_ = options.wrapX !== void 0 ? options.wrapX : false;
       this.interpolate_ = !!options.interpolate;
@@ -38251,6 +39630,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         state: "ready",
         wrapX: options.wrapX !== void 0 ? options.wrapX : true
       });
+      this.canRotate = true;
       this.on;
       this.once;
       this.un;
@@ -38262,7 +39642,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.loader_ = options.loader;
       } else if (this.url_ !== void 0) {
         assert(this.format_, "`format` must be set when `url` is set");
-        this.loader_ = xhr(this.url_, this.format_);
+        this.loader_ = xhr(
+          this.url_,
+          /** @type {import("../format/Feature.js").default<FeatureType>} */
+          this.format_
+        );
       }
       this.strategy_ = options.strategy !== void 0 ? options.strategy : all;
       const useSpatialIndex = options.useSpatialIndex !== void 0 ? options.useSpatialIndex : true;
@@ -38344,10 +39728,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return;
       }
       this.featureChangeKeys_[featureKey] = [
-        listen(feature, EventType.CHANGE, this.handleFeatureChange_, this),
+        listen(
+          feature,
+          EventType.CHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.handleFeatureChange_,
+          this
+        ),
         listen(
           feature,
           ObjectEventType.PROPERTYCHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handleFeatureChange_,
           this
         )
@@ -38445,55 +39836,59 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let modifyingCollection = false;
       this.addEventListener(
         VectorEventType.ADDFEATURE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {VectorSourceEvent<FeatureType>} evt The vector source event
          */
-        function(evt) {
-          if (!modifyingCollection) {
+        (function(evt) {
+          if (!modifyingCollection && evt.feature) {
             modifyingCollection = true;
             collection.push(evt.feature);
             modifyingCollection = false;
           }
-        }
+        })
       );
       this.addEventListener(
         VectorEventType.REMOVEFEATURE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {VectorSourceEvent<FeatureType>} evt The vector source event
          */
-        function(evt) {
-          if (!modifyingCollection) {
+        (function(evt) {
+          if (!modifyingCollection && evt.feature) {
             modifyingCollection = true;
             collection.remove(evt.feature);
             modifyingCollection = false;
           }
-        }
+        })
       );
       collection.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {import("../Collection.js").CollectionEvent<FeatureType>} evt The collection event
          */
-        (evt) => {
+        ((evt) => {
           if (!modifyingCollection) {
             modifyingCollection = true;
             this.addFeature(evt.element);
             modifyingCollection = false;
           }
-        }
+        })
       );
       collection.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {import("../Collection.js").CollectionEvent<FeatureType>} evt The collection event
          */
-        (evt) => {
+        ((evt) => {
           if (!modifyingCollection) {
             modifyingCollection = true;
             this.removeFeature(evt.element);
             modifyingCollection = false;
           }
-        }
+        })
       );
       this.featuresCollection_ = collection;
     }
@@ -38573,7 +39968,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const extent = [coordinate[0], coordinate[1], coordinate[0], coordinate[1]];
       return this.forEachFeatureInExtent(extent, function(feature) {
         const geometry = feature.getGeometry();
-        if (geometry instanceof RenderFeature || geometry.intersectsCoordinate(coordinate)) {
+        if (geometry instanceof RenderFeature || geometry && geometry.intersectsCoordinate(coordinate)) {
           return callback(feature);
         }
         return void 0;
@@ -38630,7 +40025,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
          */
         function(feature) {
           const geometry = feature.getGeometry();
-          if (geometry instanceof RenderFeature || geometry.intersectsExtent(extent)) {
+          if (geometry instanceof RenderFeature || geometry && geometry.intersectsExtent(extent)) {
             const result = callback(feature);
             if (result) {
               return result;
@@ -38665,7 +40060,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           extend$3(features, Object.values(this.nullGeometryFeatures_));
         }
       }
-      return features;
+      return features || [];
     }
     /**
      * Get all features whose geometry intersects the provided coordinate.
@@ -38700,10 +40095,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (!multiWorld) {
           return this.featuresRtree_.getInExtent(extent);
         }
-        const extents = wrapAndSliceX(extent, projection);
-        return [].concat(
-          ...extents.map((anExtent) => this.featuresRtree_.getInExtent(anExtent))
+        const rtree = this.featuresRtree_;
+        const extents = wrapAndSliceX(
+          extent,
+          /** @type {import("../proj/Projection.js").default} */
+          projection
         );
+        return extents.flatMap((anExtent) => rtree.getInExtent(anExtent));
       }
       if (this.featuresCollection_) {
         return this.featuresCollection_.getArray().slice(0);
@@ -38731,7 +40129,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let minSquaredDistance = Infinity;
       const extent = [-Infinity, -Infinity, Infinity, Infinity];
       filter = filter ? filter : TRUE;
-      this.featuresRtree_.forEachInExtent(
+      const rtree = this.featuresRtree_;
+      if (!rtree) {
+        return null;
+      }
+      rtree.forEachInExtent(
         extent,
         /**
          * @param {FeatureType} feature Feature.
@@ -38739,6 +40141,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         function(feature) {
           if (filter(feature)) {
             const geometry = feature.getGeometry();
+            if (!geometry) {
+              return;
+            }
             const previousMinSquaredDistance = minSquaredDistance;
             minSquaredDistance = geometry instanceof RenderFeature ? 0 : geometry.closestPointXY(x, y, closestPoint, minSquaredDistance);
             if (minSquaredDistance < previousMinSquaredDistance) {
@@ -38945,14 +40350,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             extentToLoad,
             resolution,
             projection,
-            (features) => disableCallbacks || success(features),
+            (features) => disableCallbacks || success(
+              /** @type {Array<FeatureType>} */
+              features
+            ),
             () => disableCallbacks || failure()
           );
-          if (loaded instanceof Promise) {
+          if (isThenable(loaded)) {
             disableCallbacks = true;
             loaded.then((features) => {
-              this.addFeatures(features);
-              success(features);
+              const typedFeatures = (
+                /** @type {Array<FeatureType>} */
+                features
+              );
+              this.addFeatures(typedFeatures);
+              success(typedFeatures);
             }).catch(failure);
           } else if (this.loader_.length < 4) {
             this.loading = false;
@@ -39098,7 +40510,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     setUrl(url) {
       assert(this.format_, "`format` must be set when `url` is set");
       this.url_ = url;
-      this.setLoader(xhr(url, this.format_));
+      this.setLoader(
+        xhr(
+          url,
+          /** @type {import("../format/Feature.js").default<FeatureType>} */
+          this.format_
+        )
+      );
     }
     /**
      * @param {boolean} overlaps The source can have overlapping geometries.

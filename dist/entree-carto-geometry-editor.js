@@ -82,6 +82,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     DBLCLICK: "dblclick",
     KEYDOWN: "keydown",
     KEYPRESS: "keypress",
+    KEYUP: "keyup",
     LOAD: "load",
     TOUCHMOVE: "touchmove",
     WHEEL: "wheel"
@@ -220,6 +221,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return !(res > 0 || res === 0);
     });
   }
+  function abstract() {
+    throw new Error("Unimplemented abstract method.");
+  }
+  let uidCounter_ = 0;
+  function getUid(obj) {
+    const uidObj = (
+      /** @type {{ol_uid: (string|undefined)}} */
+      /** @type {unknown} */
+      obj
+    );
+    return uidObj.ol_uid || (uidObj.ol_uid = String(++uidCounter_));
+  }
+  function isThenable(value) {
+    return !!value && typeof value.then === "function" && typeof value.catch === "function";
+  }
   function TRUE() {
     return true;
   }
@@ -237,7 +253,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!lastArgs || this !== lastThis || !equals$2(nextArgs, lastArgs)) {
         lastThis = this;
         lastArgs = nextArgs;
-        lastResult = fn.apply(this, arguments);
+        lastResult = fn.apply(this, nextArgs);
       }
       return lastResult;
     };
@@ -250,7 +266,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } catch (err) {
         return Promise.reject(err);
       }
-      if (value instanceof Promise) {
+      if (isThenable(value)) {
         return value;
       }
       return Promise.resolve(value);
@@ -361,7 +377,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         delete dispatching[type];
       }
-      return propagate;
+      return (
+        /** @type {boolean|undefined} */
+        propagate
+      );
     }
     /**
      * Clean up.
@@ -500,7 +519,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     unInternal(type, listener) {
       const key = (
-        /** @type {Object} */
+        /** @type {ListenerWithKey} */
         listener.ol_key
       );
       if (key) {
@@ -528,13 +547,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         key
       );
     }
-  }
-  function abstract() {
-    throw new Error("Unimplemented abstract method.");
-  }
-  let uidCounter_ = 0;
-  function getUid(obj) {
-    return obj.ol_uid || (obj.ol_uid = String(++uidCounter_));
   }
   class ObjectEvent extends BaseEvent {
     /**
@@ -645,7 +657,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     set(key, value, silent) {
-      const values = this.values_ || (this.values_ = {});
+      const values = (
+        /** @type {Object<string, *>} */
+        this.values_ || (this.values_ = /** @type {Partial<NoInfer<Properties>>} */
+        {})
+      );
       if (silent) {
         values[key] = value;
       } else {
@@ -948,6 +964,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.coordinate_ = null;
       this.dragging = dragging !== void 0 ? dragging : false;
       this.activePointers = activePointers;
+      this.ctrlKey = false;
     }
     /**
      * The map pixel relative to the viewport corresponding to the original event.
@@ -1085,12 +1102,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.moveTolerance_ = moveTolerance === void 0 ? 1 : moveTolerance;
       this.down_ = null;
       const element = this.map_.getViewport();
+      if (!element) {
+        throw new Error("Map viewport is required");
+      }
       this.activePointers_ = [];
       this.trackedTouches_ = {};
       this.element_ = element;
       this.pointerdownListenerKey_ = listen(
         element,
         PointerEventType.POINTERDOWN,
+        /** @type {import("./events.js").ListenerFunction} */
         this.handlePointerDown_,
         this
       );
@@ -1098,12 +1119,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.relayedListenerKey_ = listen(
         element,
         PointerEventType.POINTERMOVE,
+        /** @type {import("./events.js").ListenerFunction} */
         this.relayMoveEvent_,
         this
       );
       this.boundHandleTouchMove_ = this.handleTouchMove_.bind(this);
       this.element_.addEventListener(
         EventType.TOUCHMOVE,
+        /** @type {EventListener} */
         this.boundHandleTouchMove_,
         PASSIVE_EVENT_LISTENERS ? { passive: false } : false
       );
@@ -1181,7 +1204,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       this.dispatchEvent(newEvent);
       if (this.emulateClicks_ && !newEvent.defaultPrevented && !this.dragging_ && this.isMouseActionButton_(pointerEvent)) {
-        this.emulateClick_(this.down_);
+        if (this.down_) {
+          this.emulateClick_(this.down_);
+        }
       }
       if (this.activePointers_.length === 0) {
         this.dragListenerKeys_.forEach(unlistenByKey);
@@ -1223,14 +1248,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
       if (this.dragListenerKeys_.length === 0) {
         const doc = this.map_.getOwnerDocument();
+        const element = this.element_;
+        if (!element) {
+          return;
+        }
         this.dragListenerKeys_.push(
           listen(
             doc,
             MapBrowserEventType.POINTERMOVE,
+            /** @type {import("./events.js").ListenerFunction} */
             this.handlePointerMove_,
             this
           ),
-          listen(doc, MapBrowserEventType.POINTERUP, this.handlePointerUp_, this),
+          listen(
+            doc,
+            MapBrowserEventType.POINTERUP,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handlePointerUp_,
+            this
+          ),
           /* Note that the listener for `pointercancel is set up on
            * `pointerEventHandler_` and not `documentPointerEventHandler_` like
            * the `pointerup` and `pointermove` listeners.
@@ -1245,17 +1281,23 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
            * only registered there.
            */
           listen(
-            this.element_,
+            element,
             MapBrowserEventType.POINTERCANCEL,
+            /** @type {import("./events.js").ListenerFunction} */
             this.handlePointerUp_,
             this
           )
         );
-        if (this.element_.getRootNode && this.element_.getRootNode() !== doc) {
+        if (element.getRootNode && element.getRootNode() !== doc) {
+          const rootNode = (
+            /** @type {import("./events/Target.js").EventTargetLike} */
+            element.getRootNode()
+          );
           this.dragListenerKeys_.push(
             listen(
-              this.element_.getRootNode(),
+              rootNode,
               MapBrowserEventType.POINTERUP,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handlePointerUp_,
               this
             )
@@ -1322,28 +1364,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     isMoving_(pointerEvent) {
-      return this.dragging_ || Math.abs(pointerEvent.clientX - this.down_.clientX) > this.moveTolerance_ || Math.abs(pointerEvent.clientY - this.down_.clientY) > this.moveTolerance_;
+      const down = this.down_;
+      return this.dragging_ || down !== null && (Math.abs(pointerEvent.clientX - down.clientX) > this.moveTolerance_ || Math.abs(pointerEvent.clientY - down.clientY) > this.moveTolerance_);
     }
     /**
      * Clean up.
      * @override
      */
     disposeInternal() {
+      const element = this.element_;
       if (this.relayedListenerKey_) {
         unlistenByKey(this.relayedListenerKey_);
-        this.relayedListenerKey_ = null;
+        this.relayedListenerKey_ = void 0;
       }
-      this.element_.removeEventListener(
-        EventType.TOUCHMOVE,
-        this.boundHandleTouchMove_
-      );
+      if (element) {
+        element.removeEventListener(
+          EventType.TOUCHMOVE,
+          /** @type {EventListener} */
+          this.boundHandleTouchMove_
+        );
+      }
       if (this.pointerdownListenerKey_) {
         unlistenByKey(this.pointerdownListenerKey_);
-        this.pointerdownListenerKey_ = null;
+        this.pointerdownListenerKey_ = void 0;
       }
       this.dragListenerKeys_.forEach(unlistenByKey);
       this.dragListenerKeys_.length = 0;
-      this.element_ = null;
+      this.element_ = /** @type {HTMLElement|undefined} */
+      void 0;
       super.disposeInternal();
     }
   }
@@ -1622,7 +1670,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const added = super.enqueue(element);
       if (added) {
         const tile = element[0];
-        tile.addEventListener(EventType.CHANGE, this.boundHandleTileChange_);
+        tile.addEventListener(
+          EventType.CHANGE,
+          /** @type {import("./events.js").ListenerFunction} */
+          this.boundHandleTileChange_
+        );
       }
       return added;
     }
@@ -1644,7 +1696,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const state = tile.getState();
       if (state === TileState.LOADED || state === TileState.ERROR || state === TileState.EMPTY) {
         if (state !== TileState.ERROR) {
-          tile.removeEventListener(EventType.CHANGE, this.boundHandleTileChange_);
+          tile.removeEventListener(
+            EventType.CHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.boundHandleTileChange_
+          );
         }
         const tileKey = tile.getKey();
         if (tileKey in this.tilesLoadingKeys_) {
@@ -1802,8 +1858,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (!resolution && !onlyCenter) {
           return center;
         }
-        const viewWidth = onlyCenter ? 0 : size[0] * resolution;
-        const viewHeight = onlyCenter ? 0 : size[1] * resolution;
+        const viewWidth = onlyCenter ? 0 : size[0] * (resolution ?? 0);
+        const viewHeight = onlyCenter ? 0 : size[1] * (resolution ?? 0);
         const shiftX = centerShift ? centerShift[0] : 0;
         const shiftY = centerShift ? centerShift[1] : 0;
         let minX = extent[0] + viewWidth / 2 + shiftX;
@@ -2343,6 +2399,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return coordinate;
   }
+  function wrapXNearest(coordinate, projection, referenceX) {
+    if (projection.canWrapX()) {
+      const worldWidth = getWidth(projection.getExtent());
+      const n = Math.round((referenceX - coordinate[0]) / worldWidth);
+      if (n !== 0) {
+        coordinate[0] += n * worldWidth;
+      }
+    }
+    return coordinate;
+  }
   function getWorldsAway(coordinate, projection, sourceExtentWidth) {
     const projectionExtent = projection.getExtent();
     let worldsAway = 0;
@@ -2419,25 +2485,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       case "LinearRing": {
         coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
         geometry.getCoordinates();
-        length = getLengthInternal(coordinates2, radius);
+        if (coordinates2) {
+          length = getLengthInternal(coordinates2, radius);
+        }
         break;
       }
       case "MultiLineString":
       case "Polygon": {
         coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
         geometry.getCoordinates();
-        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
-          length += getLengthInternal(coordinates2[i], radius);
+        if (coordinates2) {
+          for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+            length += getLengthInternal(coordinates2[i], radius);
+          }
         }
         break;
       }
       case "MultiPolygon": {
         coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
         geometry.getCoordinates();
-        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
-          coords = coordinates2[i];
-          for (j = 0, jj = coords.length; j < jj; ++j) {
-            length += getLengthInternal(coords[j], radius);
+        if (coordinates2) {
+          for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+            coords = coordinates2[i];
+            for (j = 0, jj = coords.length; j < jj; ++j) {
+              length += getLengthInternal(coords[j], radius);
+            }
           }
         }
         break;
@@ -2502,11 +2574,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       case "MultiPolygon": {
         coordinates2 = /** @type {import("./geom/SimpleGeometry.js").default} */
         geometry.getCoordinates();
-        for (i = 0, ii = coordinates2.length; i < ii; ++i) {
-          coords = coordinates2[i];
-          area += Math.abs(getAreaInternal(coords[0], radius));
-          for (j = 1, jj = coords.length; j < jj; ++j) {
-            area -= Math.abs(getAreaInternal(coords[j], radius));
+        if (coordinates2) {
+          for (i = 0, ii = coordinates2.length; i < ii; ++i) {
+            coords = coordinates2[i];
+            area += Math.abs(getAreaInternal(coords[0], radius));
+            for (j = 1, jj = coords.length; j < jj; ++j) {
+              area -= Math.abs(getAreaInternal(coords[j], radius));
+            }
           }
         }
         break;
@@ -2575,7 +2649,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getExtent() {
-      return this.extent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.extent_
+      );
     }
     /**
      * Get the units of this projection.
@@ -2601,7 +2678,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getWorldExtent() {
-      return this.worldExtent_;
+      return (
+        /** @type {import("../extent.js").Extent} */
+        this.worldExtent_
+      );
     }
     /**
      * Get the axis orientation of this projection.
@@ -2635,7 +2715,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.canWrapX_ = !!(global && this.extent_);
     }
     /**
-     * @return {import("../tilegrid/TileGrid.js").default} The default tile grid.
+     * @return {import("../tilegrid/TileGrid.js").default|null} The default tile grid.
      */
     getDefaultTileGrid() {
       return this.defaultTileGrid_;
@@ -2714,7 +2794,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   ];
   function fromEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {
@@ -2737,7 +2817,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function toEPSG4326(input, output, dimension, stride) {
     const length = input.length;
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     stride = stride ?? dimension;
     if (output === void 0) {
       if (dimension > 2) {
@@ -2928,7 +3008,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function makeTransformFunction(transformer, zone) {
     return function(input, output, dimension, stride) {
       const length = input.length;
-      dimension = dimension > 1 ? dimension : 2;
+      dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
       stride = stride ?? dimension;
       if (!output) {
         if (dimension > 2) {
@@ -2990,7 +3070,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function get$1(projectionLike) {
     if (!(typeof projectionLike === "string")) {
-      return projectionLike;
+      return projectionLike !== void 0 ? projectionLike : null;
     }
     const projection = get$3(projectionLike);
     if (projection) {
@@ -3005,22 +3085,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return null;
   }
   function getPointResolution(projection, resolution, point, units) {
-    projection = get$1(projection);
+    const projectionObj = get$1(projection);
+    if (!projectionObj) {
+      return resolution;
+    }
     let pointResolution;
-    const getter = projection.getPointResolutionFunc();
+    const getter = projectionObj.getPointResolutionFunc();
     if (getter) {
       pointResolution = getter(resolution, point);
     } else {
-      const projUnits = projection.getUnits();
+      const projUnits = projectionObj.getUnits();
       if (projUnits == "degrees" && !units || units == "degrees") {
         pointResolution = resolution;
       } else {
         const toEPSG43262 = getTransformFromProjections(
-          projection,
+          projectionObj,
           get$1("EPSG:4326")
         );
         if (!toEPSG43262 && projUnits !== "degrees") {
-          pointResolution = resolution * projection.getMetersPerUnit();
+          pointResolution = resolution * (projectionObj.getMetersPerUnit() ?? 1);
         } else {
           let vertices = [
             point[0] - resolution / 2,
@@ -3032,12 +3115,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             point[0],
             point[1] + resolution / 2
           ];
-          vertices = toEPSG43262(vertices, vertices, 2);
+          if (toEPSG43262) {
+            vertices = toEPSG43262(vertices, vertices, 2);
+          }
           const width = getDistance(vertices.slice(0, 2), vertices.slice(2, 4));
           const height = getDistance(vertices.slice(4, 6), vertices.slice(6, 8));
           pointResolution = (width + height) / 2;
         }
-        const metersPerUnit = projection.getMetersPerUnit();
+        const metersPerUnit = projectionObj.getMetersPerUnit();
         if (metersPerUnit !== void 0) {
           pointResolution /= metersPerUnit;
         }
@@ -3132,6 +3217,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return transformFunc === cloneTransform && equalUnits;
   }
   function getTransformFromProjections(source, destination) {
+    if (!source || !destination) {
+      return null;
+    }
     const sourceCode = source.getCode();
     const destinationCode = destination.getCode();
     let transformFunc = get$2(sourceCode, destinationCode);
@@ -3152,7 +3240,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return null;
     }
     const intermediateCode = "EPSG:4326";
-    if (!destinationTransforms) {
+    if (!destinationTransforms && sourceTransforms) {
       const toDestination = get$2(intermediateCode, destinationCode);
       if (toDestination) {
         transformFunc = composeTransformFuncs(
@@ -3160,7 +3248,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           toDestination
         );
       }
-    } else if (!sourceTransforms) {
+    } else if (!sourceTransforms && destinationTransforms) {
       const fromSource = get$2(sourceCode, intermediateCode);
       if (fromSource) {
         transformFunc = composeTransformFuncs(
@@ -3168,7 +3256,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           destinationTransforms.forward
         );
       }
-    } else {
+    } else if (sourceTransforms && destinationTransforms) {
       transformFunc = composeTransformFuncs(
         sourceTransforms.inverse,
         destinationTransforms.forward
@@ -3193,10 +3281,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return getTransformFromProjections(sourceProjection, destinationProjection);
   }
   function transform(coordinate, source, destination) {
+    var _a, _b;
     const transformFunc = getTransform(source, destination);
     if (!transformFunc) {
-      const sourceCode = get$1(source).getCode();
-      const destinationCode = get$1(destination).getCode();
+      const sourceCode = ((_a = get$1(source)) == null ? void 0 : _a.getCode()) ?? String(source);
+      const destinationCode = ((_b = get$1(destination)) == null ? void 0 : _b.getCode()) ?? String(destination);
       throw new Error(
         `No transform available between ${sourceCode} and ${destinationCode}`
       );
@@ -3597,35 +3686,51 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     transform(source, destination) {
       const sourceProj = get$1(source);
-      const transformFn = sourceProj.getUnits() == "tile-pixels" ? function(inCoordinates, outCoordinates, stride) {
-        const pixelExtent = sourceProj.getExtent();
-        const projectedExtent = sourceProj.getWorldExtent();
-        const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
-        compose(
-          tmpTransform$1,
-          projectedExtent[0],
-          projectedExtent[3],
-          scale2,
-          -scale2,
-          0,
-          0,
-          0
-        );
-        const transformed = transform2D(
-          inCoordinates,
-          0,
-          inCoordinates.length,
-          stride,
-          tmpTransform$1,
-          outCoordinates
-        );
-        const projTransform = getTransform(sourceProj, destination);
-        if (projTransform) {
-          return projTransform(transformed, transformed, stride);
+      if (!sourceProj) {
+        return this;
+      }
+      const transformFn = sourceProj.getUnits() == "tile-pixels" ? (
+        /**
+         * @param {Array<number>} inCoordinates Input coordinates.
+         * @param {Array<number>} outCoordinates Output coordinates.
+         * @param {number} stride Stride.
+         * @return {Array<number>} Output coordinates.
+         */
+        function(inCoordinates, outCoordinates, stride) {
+          const pixelExtent = sourceProj.getExtent();
+          const projectedExtent = sourceProj.getWorldExtent();
+          const scale2 = getHeight(projectedExtent) / getHeight(pixelExtent);
+          compose(
+            tmpTransform$1,
+            projectedExtent[0],
+            projectedExtent[3],
+            scale2,
+            -scale2,
+            0,
+            0,
+            0
+          );
+          const transformed = transform2D(
+            inCoordinates,
+            0,
+            inCoordinates.length,
+            stride,
+            tmpTransform$1,
+            outCoordinates
+          );
+          const projTransform = getTransform(sourceProj, destination);
+          if (projTransform) {
+            return projTransform(transformed, transformed, stride);
+          }
+          return transformed;
         }
-        return transformed;
-      } : getTransform(sourceProj, destination);
-      this.applyTransform(transformFn);
+      ) : getTransform(sourceProj, destination);
+      if (transformFn) {
+        this.applyTransform(
+          /** @type {import("../proj.js").TransformFunction} */
+          transformFn
+        );
+      }
       return this;
     }
   }
@@ -4122,7 +4227,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return minSquaredDistance;
   }
   function deflateCoordinate(flatCoordinates, offset, coordinate, stride) {
-    for (let i = 0, ii = coordinate.length; i < ii; ++i) {
+    for (let i = 0; i < stride; ++i) {
       flatCoordinates[offset++] = coordinate[i];
     }
     return offset;
@@ -4437,8 +4542,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const stack = [offset, end - stride];
     let index = 0;
     while (stack.length > 0) {
-      const last = stack.pop();
-      const first = stack.pop();
+      const last = (
+        /** @type {number} */
+        stack.pop()
+      );
+      const first = (
+        /** @type {number} */
+        stack.pop()
+      );
       let maxSquaredDistance = 0;
       const x1 = flatCoordinates[first];
       const y1 = flatCoordinates[first + 1];
@@ -5442,7 +5553,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
@@ -5482,7 +5593,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (isMoving) {
             if (!smooth) {
@@ -5527,7 +5638,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             maxResolution,
             maxExtent,
             size,
-            showFullExtent
+            !!showFullExtent
           ) : maxResolution;
           if (!smooth || !isMoving) {
             return clamp$1(resolution, minResolution, cappedMaxRes);
@@ -5622,10 +5733,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         disableCoordinateWarning();
       }
       if (options.center) {
-        options.center = fromUserCoordinate(options.center, this.projection_);
+        options.center = fromUserCoordinate(
+          options.center,
+          /** @type {import("./proj.js").ProjectionLike} */
+          this.projection_
+        );
       }
       if (options.extent) {
-        options.extent = fromUserExtent(options.extent, this.projection_);
+        options.extent = fromUserExtent(
+          options.extent,
+          /** @type {import("./proj.js").ProjectionLike} */
+          this.projection_
+        );
       }
       this.applyOptions_(options);
     }
@@ -5634,7 +5753,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {ViewOptions} options View options.
      */
     applyOptions_(options) {
-      const properties = Object.assign({}, options);
+      const properties = (
+        /** @type {Object<string, *>} */
+        Object.assign({}, options)
+      );
       for (const key in ViewProperty) {
         delete properties[key];
       }
@@ -5683,7 +5805,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (center) {
         const newPadding = padding || [0, 0, 0, 0];
         oldPadding = oldPadding || [0, 0, 0, 0];
-        const resolution = this.getResolution();
+        const resolution = (
+          /** @type {number} */
+          this.getResolution()
+        );
         const offsetX = resolution / 2 * (newPadding[3] - oldPadding[3] + oldPadding[1] - newPadding[1]);
         const offsetY = resolution / 2 * (newPadding[0] - oldPadding[0] + oldPadding[2] - newPadding[2]);
         this.setCenterInternal([center[0] + offsetX, center[1] - offsetY]);
@@ -5798,23 +5923,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       let start = Date.now();
-      let center = this.targetCenter_.slice();
+      let center = (
+        /** @type {import("./coordinate.js").Coordinate} */
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_.slice()
+      );
       let resolution = this.targetResolution_;
-      let rotation = this.targetRotation_;
+      let rotation = (
+        /** @type {number} */
+        this.targetRotation_
+      );
       const series = [];
       for (; i < animationCount; ++i) {
         const options = (
           /** @type {AnimationOptions} */
           arguments[i]
         );
-        const animation = {
-          start,
-          complete: false,
-          anchor: options.anchor,
-          duration: options.duration !== void 0 ? options.duration : 1e3,
-          easing: options.easing || inAndOut,
-          callback
-        };
+        const animation = (
+          /** @type {Animation} */
+          {
+            start,
+            complete: false,
+            anchor: options.anchor,
+            duration: options.duration !== void 0 ? options.duration : 1e3,
+            easing: options.easing || inAndOut,
+            callback
+          }
+        );
         if (options.center) {
           animation.sourceCenter = center;
           animation.targetCenter = options.center.slice();
@@ -5870,9 +6005,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.setHint(ViewHint.ANIMATING, -this.hints_[ViewHint.ANIMATING]);
       let anchor;
       for (let i = 0, ii = this.animations_.length; i < ii; ++i) {
-        const series = this.animations_[i];
-        if (series[0].callback) {
-          animationCallback(series[0].callback, false);
+        const series = (
+          /** @type {Array<Animation>} */
+          this.animations_[i]
+        );
+        if (
+          /** @type {Animation} */
+          series[0].callback
+        ) {
+          animationCallback(
+            /** @type {Animation} */
+            series[0].callback,
+            false
+          );
         }
         if (!anchor) {
           for (let j = 0, jj = series.length; j < jj; ++j) {
@@ -5904,7 +6049,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const now = Date.now();
       let more = false;
       for (let i = this.animations_.length - 1; i >= 0; --i) {
-        const series = this.animations_[i];
+        const series = (
+          /** @type {Array<Animation>} */
+          this.animations_[i]
+        );
         let seriesComplete = true;
         for (let j = 0, jj = series.length; j < jj; ++j) {
           const animation = series[j];
@@ -5923,9 +6071,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           if (animation.sourceCenter) {
             const x0 = animation.sourceCenter[0];
             const y0 = animation.sourceCenter[1];
-            const x1 = animation.targetCenter[0];
-            const y1 = animation.targetCenter[1];
-            this.nextCenter_ = animation.targetCenter;
+            const x1 = (
+              /** @type {import("./coordinate.js").Coordinate} */
+              animation.targetCenter[0]
+            );
+            const y1 = (
+              /** @type {import("./coordinate.js").Coordinate} */
+              animation.targetCenter[1]
+            );
+            this.nextCenter_ = /** @type {import("./coordinate.js").Coordinate} */
+            animation.targetCenter;
             const x = x0 + progress * (x1 - x0);
             const y = y0 + progress * (y1 - y0);
             this.targetCenter_ = [x, y];
@@ -5934,14 +6089,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const resolution = progress === 1 ? animation.targetResolution : animation.sourceResolution + progress * (animation.targetResolution - animation.sourceResolution);
             if (animation.anchor) {
               const size = this.getViewportSize_(this.getRotation());
-              const constrainedResolution = this.constraints_.resolution(
-                resolution,
-                0,
-                size,
-                true
+              const constrainedResolution = (
+                /** @type {Constraints} */
+                this.constraints_.resolution(resolution, 0, size, true)
               );
               this.targetCenter_ = this.calculateCenterZoom(
+                /** @type {number} */
                 constrainedResolution,
+                /** @type {import("./coordinate.js").Coordinate} */
                 animation.anchor
               );
             }
@@ -5952,12 +6107,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           if (animation.sourceRotation !== void 0 && animation.targetRotation !== void 0) {
             const rotation = progress === 1 ? modulo(animation.targetRotation + Math.PI, 2 * Math.PI) - Math.PI : animation.sourceRotation + progress * (animation.targetRotation - animation.sourceRotation);
             if (animation.anchor) {
-              const constrainedRotation = this.constraints_.rotation(
-                rotation,
-                true
+              const constrainedRotation = (
+                /** @type {Constraints} */
+                this.constraints_.rotation(rotation, true)
               );
               this.targetCenter_ = this.calculateCenterRotate(
+                /** @type {number} */
                 constrainedRotation,
+                /** @type {import("./coordinate.js").Coordinate} */
                 animation.anchor
               );
             }
@@ -6078,7 +6235,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {Constraints} Constraints.
      */
     getConstraints() {
-      return this.constraints_;
+      return (
+        /** @type {Constraints} */
+        this.constraints_
+      );
     }
     /**
      * @return {boolean} Resolution constraint is set
@@ -6142,7 +6302,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getMaxResolution() {
-      return this.maxResolution_;
+      return (
+        /** @type {number} */
+        this.maxResolution_
+      );
     }
     /**
      * Get the minimum resolution of the view.
@@ -6150,7 +6313,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getMinResolution() {
-      return this.minResolution_;
+      return (
+        /** @type {number} */
+        this.minResolution_
+      );
     }
     /**
      * Get the maximum zoom level for the view.
@@ -6160,7 +6326,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     getMaxZoom() {
       return (
         /** @type {number} */
-        this.getZoomForResolution(this.minResolution_)
+        this.getZoomForResolution(
+          /** @type {number} */
+          this.minResolution_
+        )
       );
     }
     /**
@@ -6179,7 +6348,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     getMinZoom() {
       return (
         /** @type {number} */
-        this.getZoomForResolution(this.maxResolution_)
+        this.getZoomForResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
       );
     }
     /**
@@ -6204,7 +6376,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getProjection() {
-      return this.projection_;
+      return (
+        /** @type {import("./proj/Projection.js").default} */
+        this.projection_
+      );
     }
     /**
      * Get the view resolution.
@@ -6262,8 +6437,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getResolutionForValueFunction(power) {
       power = power || 2;
-      const maxResolution = this.getConstrainedResolution(this.maxResolution_);
-      const minResolution = this.minResolution_;
+      const maxResolution = (
+        /** @type {number} */
+        this.getConstrainedResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
+      );
+      const minResolution = (
+        /** @type {number} */
+        this.minResolution_
+      );
       const max = Math.log(maxResolution / minResolution) / Math.log(power);
       return (
         /**
@@ -6296,8 +6480,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getValueForResolutionFunction(power) {
       const logPower = Math.log(power || 2);
-      const maxResolution = this.getConstrainedResolution(this.maxResolution_);
-      const minResolution = this.minResolution_;
+      const maxResolution = (
+        /** @type {number} */
+        this.getConstrainedResolution(
+          /** @type {number} */
+          this.maxResolution_
+        )
+      );
+      const minResolution = (
+        /** @type {number} */
+        this.minResolution_
+      );
       const max = Math.log(maxResolution / minResolution) / logPower;
       return (
         /**
@@ -6345,19 +6538,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           center,
           this.getViewportSize_(),
           [reducedSize[0] / 2 + padding[3], reducedSize[1] / 2 + padding[0]],
+          /** @type {number} */
           resolution,
           rotation
         );
       }
       return {
         center: center.slice(0),
-        projection: projection !== void 0 ? projection : null,
-        resolution,
-        nextCenter: this.nextCenter_,
+        projection: (
+          /** @type {import("./proj/Projection.js").default} */
+          projection !== void 0 ? projection : null
+        ),
+        resolution: (
+          /** @type {number} */
+          resolution
+        ),
+        nextCenter: (
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
+          /** @type {unknown} */
+          this.nextCenter_
+        ),
         nextResolution: this.nextResolution_,
         nextRotation: this.nextRotation_,
         rotation,
-        zoom: this.getZoom()
+        zoom: (
+          /** @type {number} */
+          this.getZoom()
+        )
       };
     }
     /**
@@ -6403,10 +6610,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           zoomFactor = max / this.resolutions_[nearest + 1];
         }
       } else {
-        max = this.maxResolution_;
-        zoomFactor = this.zoomFactor_;
+        max = /** @type {number} */
+        this.maxResolution_;
+        zoomFactor = /** @type {number} */
+        this.zoomFactor_;
       }
-      return offset + Math.log(max / resolution) / Math.log(zoomFactor);
+      return offset + Math.log(
+        /** @type {number} */
+        max / resolution
+      ) / Math.log(
+        /** @type {number} */
+        zoomFactor
+      );
     }
     /**
      * Get the resolution for a zoom level.
@@ -6428,7 +6643,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const zoomFactor = this.resolutions_[baseLevel] / this.resolutions_[baseLevel + 1];
         return this.resolutions_[baseLevel] / Math.pow(zoomFactor, clamp$1(zoom - baseLevel, 0, 1));
       }
-      return this.maxResolution_ / Math.pow(this.zoomFactor_, zoom - this.minZoom_);
+      return (
+        /** @type {number} */
+        this.maxResolution_ / Math.pow(
+          /** @type {number} */
+          this.zoomFactor_,
+          zoom - /** @type {number} */
+          this.minZoom_
+        )
+      );
     }
     /**
      * Fit the given geometry or extent based on the given map size and border.
@@ -6519,7 +6742,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         size[1] - padding[0] - padding[2]
       ]);
       resolution = isNaN(resolution) ? minResolution : Math.max(resolution, minResolution);
-      resolution = this.getConstrainedResolution(resolution, nearest ? 0 : 1);
+      resolution = /** @type {number} */
+      this.getConstrainedResolution(resolution, nearest ? 0 : 1);
       const rotation = this.getRotation();
       const sinAngle = Math.sin(rotation);
       const cosAngle = Math.cos(rotation);
@@ -6572,6 +6796,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           coordinate,
           size,
           position,
+          /** @type {number} */
           this.getResolution(),
           this.getRotation()
         )
@@ -6616,7 +6841,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     adjustCenter(deltaCoordinates) {
-      const center = toUserCoordinate(this.targetCenter_, this.getProjection());
+      const center = toUserCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_,
+        this.getProjection()
+      );
       this.setCenter([
         center[0] + deltaCoordinates[0],
         center[1] + deltaCoordinates[1]
@@ -6627,7 +6856,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {import("./coordinate.js").Coordinate} deltaCoordinates Relative value to add.
      */
     adjustCenterInternal(deltaCoordinates) {
-      const center = this.targetCenter_;
+      const center = (
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.targetCenter_
+      );
       this.setCenterInternal([
         center[0] + deltaCoordinates[0],
         center[1] + deltaCoordinates[1]
@@ -6653,16 +6885,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     adjustResolutionInternal(ratio, anchor) {
       const isMoving = this.getAnimating() || this.getInteracting();
       const size = this.getViewportSize_(this.getRotation());
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_ * ratio,
-        0,
-        size,
-        isMoving
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_ * ratio,
+          0,
+          size,
+          isMoving
+        )
       );
       if (anchor) {
-        this.targetCenter_ = this.calculateCenterZoom(newResolution, anchor);
+        this.targetCenter_ = this.calculateCenterZoom(
+          /** @type {number} */
+          newResolution,
+          anchor
+        );
       }
-      this.targetResolution_ *= ratio;
+      this.targetResolution_ = /** @type {number} */
+      this.targetResolution_ * ratio;
       this.applyTargetState_();
     }
     /**
@@ -6673,7 +6914,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     adjustZoom(delta, anchor) {
-      this.adjustResolution(Math.pow(this.zoomFactor_, -delta), anchor);
+      this.adjustResolution(
+        Math.pow(
+          /** @type {number} */
+          this.zoomFactor_,
+          -delta
+        ),
+        anchor
+      );
     }
     /**
      * Adds a value to the view rotation, optionally using an anchor. Any rotation
@@ -6694,14 +6942,23 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     adjustRotationInternal(delta, anchor) {
       const isMoving = this.getAnimating() || this.getInteracting();
-      const newRotation = this.constraints_.rotation(
-        this.targetRotation_ + delta,
-        isMoving
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_ + delta,
+          isMoving
+        )
       );
       if (anchor) {
-        this.targetCenter_ = this.calculateCenterRotate(newRotation, anchor);
+        this.targetCenter_ = this.calculateCenterRotate(
+          /** @type {number} */
+          newRotation,
+          anchor
+        );
       }
-      this.targetRotation_ += delta;
+      this.targetRotation_ = /** @type {number} */
+      this.targetRotation_ + delta;
       this.applyTargetState_();
     }
     /**
@@ -6717,7 +6974,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Set the center using the view projection (not the user projection).
-     * @param {import("./coordinate.js").Coordinate|undefined} center The center of the view.
+     * @param {import("./coordinate.js").Coordinate|null|undefined} center The center of the view.
      */
     setCenterInternal(center) {
       this.targetCenter_ = center;
@@ -6771,27 +7028,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     applyTargetState_(doNotCancelAnims, forceMoving) {
       const isMoving = this.getAnimating() || this.getInteracting() || forceMoving;
-      const newRotation = this.constraints_.rotation(
-        this.targetRotation_,
-        isMoving
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_,
+          isMoving
+        )
       );
       const size = this.getViewportSize_(newRotation);
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_,
-        0,
-        size,
-        isMoving
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_,
+          0,
+          size,
+          isMoving
+        )
       );
-      const newCenter = this.constraints_.center(
-        this.targetCenter_,
-        newResolution,
-        size,
-        isMoving,
-        this.calculateCenterShift(
+      const newCenter = (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
           this.targetCenter_,
+          /** @type {number} */
           newResolution,
-          newRotation,
-          size
+          size,
+          isMoving,
+          /** @type {import("./coordinate.js").Coordinate} */
+          this.calculateCenterShift(
+            /** @type {import("./coordinate.js").Coordinate} */
+            this.targetCenter_,
+            /** @type {number} */
+            newResolution,
+            /** @type {number} */
+            newRotation,
+            size
+          )
         )
       );
       if (this.get(ViewProperty.ROTATION) !== newRotation) {
@@ -6821,23 +7095,42 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     resolveConstraints(duration, resolutionDirection, anchor) {
       duration = duration !== void 0 ? duration : 200;
       const direction = resolutionDirection || 0;
-      const newRotation = this.constraints_.rotation(this.targetRotation_);
-      const size = this.getViewportSize_(newRotation);
-      const newResolution = this.constraints_.resolution(
-        this.targetResolution_,
-        direction,
-        size
+      const newRotation = (
+        /** @type {Constraints} */
+        this.constraints_.rotation(
+          /** @type {number} */
+          this.targetRotation_
+        )
       );
-      const newCenter = this.constraints_.center(
-        this.targetCenter_,
-        newResolution,
-        size,
-        false,
-        this.calculateCenterShift(
-          this.targetCenter_,
-          newResolution,
-          newRotation,
+      const size = this.getViewportSize_(newRotation);
+      const newResolution = (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          /** @type {number} */
+          this.targetResolution_,
+          direction,
           size
+        )
+      );
+      const newCenter = (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          /** @type {import("./coordinate.js").Coordinate|undefined} */
+          this.targetCenter_,
+          /** @type {number} */
+          newResolution,
+          size,
+          false,
+          /** @type {import("./coordinate.js").Coordinate} */
+          this.calculateCenterShift(
+            /** @type {import("./coordinate.js").Coordinate} */
+            this.targetCenter_,
+            /** @type {number} */
+            newResolution,
+            /** @type {number} */
+            newRotation,
+            size
+          )
         )
       );
       if (duration === 0 && !this.cancelAnchor_) {
@@ -6849,7 +7142,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       anchor = anchor || (duration === 0 ? this.cancelAnchor_ : void 0);
       this.cancelAnchor_ = void 0;
-      if (this.getResolution() !== newResolution || this.getRotation() !== newRotation || !this.getCenterInternal() || !equals(this.getCenterInternal(), newCenter)) {
+      if (this.getResolution() !== newResolution || this.getRotation() !== newRotation || !this.getCenterInternal() || !equals(
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.getCenterInternal(),
+        /** @type {import("./coordinate.js").Coordinate} */
+        newCenter
+      )) {
         if (this.getAnimating()) {
           this.cancelAnimations();
         }
@@ -6908,10 +7206,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getConstrainedCenter(targetCenter, targetResolution) {
       const size = this.getViewportSize_(this.getRotation());
-      return this.constraints_.center(
-        targetCenter,
-        targetResolution || this.getResolution(),
-        size
+      return (
+        /** @type {Constraints} */
+        this.constraints_.center(
+          targetCenter,
+          targetResolution || /** @type {number} */
+          this.getResolution(),
+          size
+        )
       );
     }
     /**
@@ -6924,8 +7226,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {number|undefined} Valid zoom level.
      */
     getConstrainedZoom(targetZoom, direction) {
-      const targetRes = this.getResolutionForZoom(targetZoom);
+      const targetRes = this.getResolutionForZoom(
+        /** @type {number} */
+        targetZoom
+      );
       return this.getZoomForResolution(
+        /** @type {number} */
         this.getConstrainedResolution(targetRes, direction)
       );
     }
@@ -6941,7 +7247,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     getConstrainedResolution(targetResolution, direction) {
       direction = direction || 0;
       const size = this.getViewportSize_(this.getRotation());
-      return this.constraints_.resolution(targetResolution, direction, size);
+      return (
+        /** @type {Constraints} */
+        this.constraints_.resolution(
+          targetResolution,
+          direction,
+          size
+        )
+      );
     }
   }
   function animationCallback(callback, returnValue) {
@@ -6952,9 +7265,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function createCenterConstraint(options) {
     if (options.extent !== void 0) {
       const smooth = options.smoothExtentConstraint !== void 0 ? options.smoothExtentConstraint : true;
-      return createExtent(options.extent, options.constrainOnlyCenter, smooth);
+      return createExtent(
+        options.extent,
+        /** @type {boolean} */
+        options.constrainOnlyCenter,
+        smooth
+      );
     }
-    const projection = createProjection(options.projection, "EPSG:3857");
+    const projection = (
+      /** @type {import("./proj/Projection.js").default} */
+      createProjection(options.projection, "EPSG:3857")
+    );
     if (options.multiWorld !== true && projection.isGlobal()) {
       const extent = projection.getExtent().slice();
       extent[0] = -Infinity;
@@ -6975,7 +7296,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const multiWorld = options.multiWorld !== void 0 ? options.multiWorld : false;
     const smooth = options.smoothResolutionConstraint !== void 0 ? options.smoothResolutionConstraint : true;
     const showFullExtent = options.showFullExtent !== void 0 ? options.showFullExtent : false;
-    const projection = createProjection(options.projection, "EPSG:3857");
+    const projection = (
+      /** @type {import("./proj/Projection.js").default} */
+      createProjection(options.projection, "EPSG:3857")
+    );
     const projExtent = projection.getExtent();
     let constrainOnlyCenter = options.constrainOnlyCenter;
     let extent = options.extent;
@@ -6991,6 +7315,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         resolutionConstraint = createSnapToResolutions(
           resolutions,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -6999,6 +7324,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -7006,7 +7332,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     } else {
       const size = !projExtent ? (
         // use an extent that can fit the whole world if need be
-        360 * METERS_PER_UNIT$1.degrees / projection.getMetersPerUnit()
+        360 * /** @type {number} */
+        METERS_PER_UNIT$1.degrees / /** @type {number} */
+        projection.getMetersPerUnit()
       ) : Math.max(getWidth(projExtent), getHeight(projExtent));
       const defaultMaxResolution = size / DEFAULT_TILE_SIZE / Math.pow(defaultZoomFactor, DEFAULT_MIN_ZOOM);
       const defaultMinResolution = defaultMaxResolution / Math.pow(defaultZoomFactor, defaultMaxZoom - DEFAULT_MIN_ZOOM);
@@ -7038,6 +7366,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -7046,6 +7375,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           maxResolution,
           minResolution,
           smooth,
+          /** @type {import("./extent.js").Extent|undefined} */
           !constrainOnlyCenter && extent,
           showFullExtent
         );
@@ -7366,12 +7696,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.map_ = map;
       if (map) {
         const target = this.target_ ?? map.getOverlayContainerStopEvent();
-        if (this.element) {
+        if (this.element && target) {
           target.appendChild(this.element);
         }
         if (this.render !== VOID) {
           this.listenerKeys.push(
-            listen(map, MapEventType.POSTRENDER, this.render, this)
+            listen(
+              map,
+              MapEventType.POSTRENDER,
+              /** @type {import("../events.js").ListenerFunction} */
+              this.render,
+              this
+            )
           );
         }
         map.render();
@@ -7445,11 +7781,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.toggleButton_.appendChild(activeLabel);
       this.toggleButton_.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL + (this.collapsed_ && this.collapsible_ ? " " + CLASS_COLLAPSED : "") + (this.collapsible_ ? "" : " ol-uncollapsible");
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(this.toggleButton_);
       element.appendChild(this.ulElement_);
@@ -7463,9 +7803,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     collectSourceAttributions_(frameState) {
-      const layers = this.getMap().getAllLayers();
+      const map = this.getMap();
+      if (!map) {
+        return [];
+      }
+      const layers = map.getAllLayers();
       const visibleAttributions = new Set(
-        layers.flatMap((layer) => layer.getAttributions(frameState))
+        layers.flatMap(
+          (layer) => layer.getAttributions(
+            /** @type {import("../View.js").ViewStateLayerStateExtent} */
+            frameState
+          )
+        )
       );
       if (this.attributions_ !== void 0) {
         Array.isArray(this.attributions_) ? this.attributions_.forEach((item) => visibleAttributions.add(item)) : visibleAttributions.add(this.attributions_);
@@ -7486,9 +7835,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {?import("../Map.js").FrameState} frameState Frame state.
      */
     async updateElement_(frameState) {
+      const element = this.element;
+      if (!element) {
+        return;
+      }
       if (!frameState) {
         if (this.renderedVisible_) {
-          this.element.style.display = "none";
+          element.style.display = "none";
           this.renderedVisible_ = false;
         }
         return;
@@ -7500,7 +7853,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       const visible = attributions.length > 0;
       if (this.renderedVisible_ != visible) {
-        this.element.style.display = visible ? "" : "none";
+        element.style.display = visible ? "" : "none";
         this.renderedVisible_ = visible;
       }
       if (equals$2(attributions, this.renderedAttributions_)) {
@@ -7508,9 +7861,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       removeChildren(this.ulElement_);
       for (let i = 0, ii = attributions.length; i < ii; ++i) {
-        const element = document.createElement("li");
-        element.innerHTML = attributions[i];
-        this.ulElement_.appendChild(element);
+        const listItem = document.createElement("li");
+        listItem.innerHTML = attributions[i];
+        this.ulElement_.appendChild(listItem);
       }
       this.renderedAttributions_ = attributions;
     }
@@ -7527,7 +7880,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     handleToggle_() {
-      this.element.classList.toggle(CLASS_COLLAPSED);
+      const element = this.element;
+      if (!element) {
+        return;
+      }
+      element.classList.toggle(CLASS_COLLAPSED);
       if (this.collapsed_) {
         replaceNode(this.collapseLabel_, this.label_);
       } else {
@@ -7554,7 +7911,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.collapsible_ = collapsible;
-      this.element.classList.toggle("ol-uncollapsible");
+      const element = this.element;
+      if (!element) {
+        return;
+      }
+      element.classList.toggle("ol-uncollapsible");
       if (this.userCollapsed_) {
         this.handleToggle_();
       }
@@ -7605,7 +7966,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const className = options.className !== void 0 ? options.className : "ol-rotate";
       const label = options.label !== void 0 ? options.label : "⇧";
       const compassClassName = options.compassClassName !== void 0 ? options.compassClassName : "ol-compass";
-      this.label_ = null;
+      this.label_;
       if (typeof label === "string") {
         this.label_ = document.createElement("span");
         this.label_.className = compassClassName;
@@ -7622,11 +7983,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       button.appendChild(this.label_);
       button.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL;
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(button);
       this.callResetNorth_ = options.resetNorth ? options.resetNorth : void 0;
@@ -7654,6 +8019,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     resetNorth_() {
       const map = this.getMap();
+      if (!map) {
+        return;
+      }
       const view = map.getView();
       if (!view) {
         return;
@@ -7684,12 +8052,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const rotation = frameState.viewState.rotation;
       if (rotation != this.rotation_) {
         const transform2 = "rotate(" + rotation + "rad)";
-        if (this.autoHide_) {
-          const contains2 = this.element.classList.contains(CLASS_HIDDEN);
+        const element = this.element;
+        if (this.autoHide_ && element) {
+          const contains2 = element.classList.contains(CLASS_HIDDEN);
           if (!contains2 && rotation === 0) {
-            this.element.classList.add(CLASS_HIDDEN);
+            element.classList.add(CLASS_HIDDEN);
           } else if (contains2 && rotation !== 0) {
-            this.element.classList.remove(CLASS_HIDDEN);
+            element.classList.remove(CLASS_HIDDEN);
           }
         }
         this.label_.style.transform = transform2;
@@ -7724,6 +8093,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       inElement.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this, delta),
         false
       );
@@ -7736,11 +8106,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       outElement.addEventListener(
         EventType.CLICK,
+        /** @type {EventListener} */
         this.handleClick_.bind(this, -delta),
         false
       );
       const cssClasses = className + " " + CLASS_UNSELECTABLE + " " + CLASS_CONTROL;
-      const element = this.element;
+      const element = (
+        /** @type {!HTMLElement} */
+        this.element
+      );
       element.className = cssClasses;
       element.appendChild(inElement);
       element.appendChild(outElement);
@@ -7761,6 +8135,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     zoomByDelta_(delta) {
       const map = this.getMap();
+      if (!map) {
+        return;
+      }
       const view = map.getView();
       if (!view) {
         return;
@@ -7768,6 +8145,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const currentZoom = view.getZoom();
       if (currentZoom !== void 0) {
         const newZoom = view.getConstrainedZoom(currentZoom + delta);
+        if (newZoom === void 0) {
+          return;
+        }
         if (this.duration_ > 0) {
           if (view.getAnimating()) {
             view.cancelAnimations();
@@ -7952,7 +8332,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return;
     }
     const newZoom = view.getConstrainedZoom(currentZoom + delta);
+    if (newZoom === void 0) {
+      return;
+    }
     const newResolution = view.getResolutionForZoom(newZoom);
+    if (newResolution === void 0) {
+      return;
+    }
     if (view.getAnimating()) {
       view.cancelAnimations();
     }
@@ -8021,12 +8407,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   };
   const focus = function(event) {
     const targetElement = event.map.getTargetElement();
+    if (!targetElement) {
+      return false;
+    }
     const rootNode = targetElement.getRootNode();
     const activeElement = event.map.getOwnerDocument().activeElement;
     return rootNode instanceof ShadowRoot ? rootNode.host.contains(activeElement) : targetElement.contains(activeElement);
   };
   const focusWithTabindex = function(event) {
     const targetElement = event.map.getTargetElement();
+    if (!targetElement) {
+      return true;
+    }
     const rootNode = targetElement.getRootNode();
     const tabIndexCandidate = rootNode instanceof ShadowRoot ? rootNode.host : targetElement;
     return tabIndexCandidate.hasAttribute("tabindex") ? focus(event) : true;
@@ -8247,9 +8639,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           ];
           const map2 = mapBrowserEvent.map;
           const view = map2.getView();
-          scale$2(delta, view.getResolution());
-          rotate$1(delta, view.getRotation());
-          view.adjustCenterInternal(delta);
+          const resolution = view.getResolution();
+          if (resolution !== void 0) {
+            scale$2(delta, resolution);
+            rotate$1(delta, view.getRotation());
+            view.adjustCenterInternal(delta);
+          }
         }
       } else if (this.kinetic_) {
         this.kinetic_.begin();
@@ -8272,16 +8667,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const distance2 = this.kinetic_.getDistance();
           const angle = this.kinetic_.getAngle();
           const center = view.getCenterInternal();
-          const centerpx = map.getPixelFromCoordinateInternal(center);
-          const dest = map.getCoordinateFromPixelInternal([
-            centerpx[0] - distance2 * Math.cos(angle),
-            centerpx[1] - distance2 * Math.sin(angle)
-          ]);
-          view.animateInternal({
-            center: view.getConstrainedCenter(dest),
-            duration: 500,
-            easing: easeOut
-          });
+          if (center) {
+            const centerpx = (
+              /** @type {import("../pixel.js").Pixel} */
+              map.getPixelFromCoordinateInternal(center)
+            );
+            const dest = map.getCoordinateFromPixelInternal([
+              centerpx[0] - distance2 * Math.cos(angle),
+              centerpx[1] - distance2 * Math.sin(angle)
+            ]);
+            view.animateInternal({
+              center: view.getConstrainedCenter(
+                /** @type {import("../coordinate.js").Coordinate} */
+                dest
+              ),
+              duration: 500,
+              easing: easeOut
+            });
+          }
         }
         if (this.panning_) {
           this.panning_ = false;
@@ -8346,6 +8749,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       const size = map.getSize();
+      if (!size) {
+        return;
+      }
       const offset = mapBrowserEvent.pixel;
       const theta = Math.atan2(size[1] / 2 - offset[1], offset[0] - size[0] / 2);
       if (this.lastAngle_ !== void 0) {
@@ -8416,6 +8822,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     render_() {
       const startPixel = this.startPixel_;
       const endPixel = this.endPixel_;
+      if (!startPixel || !endPixel) {
+        return;
+      }
       const px = "px";
       const style = this.element_.style;
       style.left = Math.min(startPixel[0], endPixel[0]) + px;
@@ -8428,7 +8837,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     setMap(map) {
       if (this.map_) {
-        this.map_.getOverlayContainer().removeChild(this.element_);
+        const container = this.map_.getOverlayContainer();
+        if (container) {
+          container.removeChild(this.element_);
+        }
         const style = this.element_.style;
         style.left = "inherit";
         style.top = "inherit";
@@ -8437,7 +8849,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.map_ = map;
       if (this.map_) {
-        this.map_.getOverlayContainer().appendChild(this.element_);
+        const container = this.map_.getOverlayContainer();
+        if (container) {
+          container.appendChild(this.element_);
+        }
       }
     }
     /**
@@ -8459,28 +8874,42 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const startPixel = this.startPixel_;
       const endPixel = this.endPixel_;
+      if (!startPixel || !endPixel) {
+        return;
+      }
       const pixels = [
         startPixel,
         [startPixel[0], endPixel[1]],
         endPixel,
         [endPixel[0], startPixel[1]]
       ];
+      const map = this.map_;
       const coordinates2 = pixels.map(
-        this.map_.getCoordinateFromPixelInternal,
-        this.map_
+        (pixel) => map.getCoordinateFromPixelInternal(pixel)
       );
-      coordinates2[4] = coordinates2[0].slice();
+      const first = coordinates2[0];
+      if (!first) {
+        return;
+      }
+      coordinates2[4] = first.slice();
+      const ring = (
+        /** @type {Array<import("../coordinate.js").Coordinate>} */
+        coordinates2
+      );
       if (!this.geometry_) {
-        this.geometry_ = new Polygon([coordinates2]);
+        this.geometry_ = new Polygon([ring]);
       } else {
-        this.geometry_.setCoordinates([coordinates2]);
+        this.geometry_.setCoordinates([ring]);
       }
     }
     /**
      * @return {import("../geom/Polygon.js").default} Geometry.
      */
     getGeometry() {
-      return this.geometry_;
+      return (
+        /** @type {import("../geom/Polygon.js").default} */
+        this.geometry_
+      );
     }
   }
   const DragBoxEventType = {
@@ -8513,7 +8942,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {string} type The event type.
      * @param {import("../coordinate.js").Coordinate} coordinate The event coordinate.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent Originating event.
+     * @param {import("../MapBrowserEvent.js").default|null} mapBrowserEvent Originating event.
      */
     constructor(type, coordinate, mapBrowserEvent) {
       super(type);
@@ -8696,15 +9125,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     onBoxEnd(event) {
       const map = this.getMap();
-      const view = (
-        /** @type {!import("../View.js").default} */
-        map.getView()
-      );
+      if (!map) {
+        return;
+      }
+      const view = map.getView();
       let geometry = this.getGeometry();
       if (this.out_) {
         const rotatedExtent = view.rotatedExtentForGeometry(geometry);
         const resolution = view.getResolutionForExtentInternal(rotatedExtent);
-        const factor = view.getResolution() / resolution;
+        const currentResolution = view.getResolution();
+        if (resolution === void 0 || currentResolution === void 0) {
+          return;
+        }
+        const factor = currentResolution / resolution;
         geometry = geometry.clone();
         geometry.scale(factor * factor);
       }
@@ -8753,7 +9186,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (this.condition_(mapBrowserEvent) && (key == Key.DOWN || key == Key.LEFT || key == Key.RIGHT || key == Key.UP)) {
           const map = mapBrowserEvent.map;
           const view = map.getView();
-          const mapUnitsDelta = view.getResolution() * this.pixelDelta_;
+          const resolution = view.getResolution();
+          if (resolution === void 0) {
+            return true;
+          }
+          const mapUnitsDelta = resolution * this.pixelDelta_;
           let deltaX = 0, deltaY = 0;
           if (key == Key.DOWN) {
             deltaY = -mapUnitsDelta;
@@ -8844,33 +9281,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.trackpadEventGap_ = 400;
       this.trackpadTimeoutId_;
       this.deltaPerZoom_ = 300;
-      this.ctrlKeyPressed_ = false;
-      this.ctrlKeyListenerKeys_ = [];
-    }
-    /**
-     * @param {import('../Map.js').default|null} map Map.
-     * @override
-     */
-    setMap(map) {
-      this.ctrlKeyListenerKeys_.forEach(unlistenByKey);
-      this.ctrlKeyListenerKeys_.length = 0;
-      this.ctrlKeyPressed_ = false;
-      super.setMap(map);
-      if (map) {
-        const doc = map.getOwnerDocument();
-        this.ctrlKeyListenerKeys_.push(
-          listen(doc, "keydown", (e) => {
-            if (e.key === "Control") {
-              this.ctrlKeyPressed_ = true;
-            }
-          }),
-          listen(doc, "keyup", (e) => {
-            if (e.key === "Control") {
-              this.ctrlKeyPressed_ = false;
-            }
-          })
-        );
-      }
     }
     /**
      * @private
@@ -8886,7 +9296,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       view.endInteraction(
         this.constrainResolution_ || view.getConstrainResolution() ? 100 : void 0,
         direction,
-        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null
+        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0
       );
     }
     /**
@@ -8910,10 +9320,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         mapBrowserEvent.originalEvent
       );
       wheelEvent.preventDefault();
-      const isPinchToZoom = wheelEvent.ctrlKey && !this.ctrlKeyPressed_;
-      if (!wheelEvent.ctrlKey) {
-        this.ctrlKeyPressed_ = false;
-      }
+      const isPinchToZoom = wheelEvent.ctrlKey && !mapBrowserEvent.ctrlKey;
       if (this.useAnchor_) {
         this.lastAnchor_ = mapBrowserEvent.pixel;
       }
@@ -8956,7 +9363,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         view.adjustZoom(
           -delta / this.deltaPerZoom_,
-          this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null
+          this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0
         );
         this.startTime_ = now;
         return false;
@@ -8990,7 +9397,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       zoomByDelta(
         view,
         delta,
-        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : null,
+        this.lastAnchor_ ? map.getCoordinateFromPixel(this.lastAnchor_) : void 0,
         this.duration_
       );
       this.mode_ = void 0;
@@ -9062,10 +9469,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.anchor_ = map.getCoordinateFromPixelInternal(
         map.getEventPixel(centroid(this.targetPointers))
-      );
+      ) ?? null;
       if (this.rotating_) {
         map.render();
-        view.adjustRotationInternal(rotationDelta, this.anchor_);
+        view.adjustRotationInternal(rotationDelta, this.anchor_ ?? void 0);
       }
     }
     /**
@@ -9146,9 +9553,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.anchor_ = map.getCoordinateFromPixelInternal(
         map.getEventPixel(centroid(this.targetPointers))
-      );
+      ) ?? null;
       map.render();
-      view.adjustResolutionInternal(scaleDelta, this.anchor_);
+      view.adjustResolutionInternal(scaleDelta, this.anchor_ ?? void 0);
     }
     /**
      * Handle pointer up events.
@@ -9298,7 +9705,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the background for this layer.
-     * @return {BackgroundColor|false} Layer background.
+     * @return {BackgroundColor|false|undefined} Layer background.
      */
     getBackground() {
       return this.background_;
@@ -9464,7 +9871,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Sets the background color.
-     * @param {BackgroundColor} [background] Background color.
+     * @param {BackgroundColor|undefined} [background] Background color.
      */
     setBackground(background) {
       this.background_ = background;
@@ -9555,7 +9962,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     disposeInternal() {
       if (this.state_) {
-        this.state_.layer = null;
+        this.state_.layer = /** @type {?} */
+        null;
         this.state_ = null;
       }
       super.disposeInternal();
@@ -9636,10 +10044,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.layersListenerKeys_.length = 0;
       const layers = this.getLayers();
       this.layersListenerKeys_.push(
-        listen(layers, CollectionEventType.ADD, this.handleLayersAdd_, this),
+        listen(
+          layers,
+          CollectionEventType.ADD,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.handleLayersAdd_,
+          this
+        ),
         listen(
           layers,
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handleLayersRemove_,
           this
         )
@@ -9671,10 +10086,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       ];
       if (layer instanceof LayerGroup) {
         listenerKeys.push(
-          listen(layer, GroupEventType.ADDLAYER, this.handleLayerGroupAdd_, this),
+          listen(
+            layer,
+            GroupEventType.ADDLAYER,
+            /** @type {import("../events.js").ListenerFunction} */
+            this.handleLayerGroupAdd_,
+            this
+          ),
           listen(
             layer,
             GroupEventType.REMOVELAYER,
+            /** @type {import("../events.js").ListenerFunction} */
             this.handleLayerGroupRemove_,
             this
           )
@@ -9943,7 +10365,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     handleSourceChange_() {
       this.changed();
-      if (this.sourceReady_ || this.getSource().getState() !== "ready") {
+      const source = this.getSource();
+      if (!source || this.sourceReady_ || source.getState() !== "ready") {
         return;
       }
       this.sourceReady_ = true;
@@ -10019,12 +10442,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else {
         frameState = view;
       }
-      if (!frameState.layerStatesArray && map) {
-        frameState.layerStatesArray = map.getLayerGroup().getLayerStatesArray();
+      const state = (
+        /** @type {import("../View.js").ViewStateLayerStateExtent} */
+        frameState
+      );
+      if (!state.layerStatesArray && map) {
+        state.layerStatesArray = map.getLayerGroup().getLayerStatesArray();
       }
       let layerState;
-      if (frameState.layerStatesArray) {
-        layerState = frameState.layerStatesArray.find(
+      if (state.layerStatesArray) {
+        layerState = state.layerStatesArray.find(
           (layerState2) => layerState2.layer === this
         );
         if (!layerState) {
@@ -10034,7 +10461,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         layerState = this.getLayerState();
       }
       const layerExtent = this.getExtent();
-      return inView(layerState, frameState.viewState) && (!layerExtent || intersects$1(layerExtent, frameState.extent));
+      return inView(layerState, state.viewState) && (!layerExtent || intersects$1(layerExtent, state.extent));
     }
     /**
      * Get the attributions of the source of this layer for the given view.
@@ -10053,7 +10480,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return [];
       }
       const frameState = view instanceof View ? view.getViewStateAndExtent() : view;
-      let attributions = getAttributions(frameState);
+      let attributions = getAttributions(
+        /** @type {import("../View.js").ViewStateLayerStateExtent} */
+        frameState
+      );
       if (!Array.isArray(attributions)) {
         attributions = [attributions];
       }
@@ -10068,10 +10498,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {HTMLElement|null} The rendered element.
      */
     render(frameState, target) {
-      const layerRenderer = this.getRenderer();
-      if (layerRenderer.prepareFrame(frameState)) {
+      const layerRenderer = (
+        /** @type {RendererType} */
+        this.getRenderer()
+      );
+      if (layerRenderer.prepareFrame(
+        /** @type {import("../Map.js").FrameState} */
+        frameState
+      )) {
         this.rendered = true;
-        return layerRenderer.renderFrame(frameState, target);
+        return layerRenderer.renderFrame(
+          /** @type {import("../Map.js").FrameState} */
+          frameState,
+          target
+        );
       }
       return null;
     }
@@ -10081,7 +10521,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     unrender() {
       this.rendered = false;
     }
-    /** @return {string} Declutter */
+    /** @return {string|undefined} Declutter */
     getDeclutter() {
       return void 0;
     }
@@ -10146,6 +10586,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.mapPrecomposeKey_ = listen(
           map,
           RenderEventType.PRECOMPOSE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handlePrecompose_,
           this
         );
@@ -10158,10 +10599,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     handlePrecompose_(renderEvent) {
+      var _a;
       const layerStatesArray = (
         /** @type {import("../render/Event.js").default} */
-        renderEvent.frameState.layerStatesArray
+        (_a = renderEvent.frameState) == null ? void 0 : _a.layerStatesArray
       );
+      if (!layerStatesArray) {
+        return;
+      }
       const layerState = this.getLayerState(false);
       assert(
         !layerStatesArray.some(
@@ -10202,7 +10647,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @protected
      */
     createRenderer() {
-      return null;
+      return (
+        /** @type {RendererType} */
+        /** @type {unknown} */
+        null
+      );
     }
     /**
      * This will clear the renderer so that a new one can be created next time it is needed
@@ -10904,6 +11353,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function isType(type, expected) {
     return type === expected;
   }
+  function getErrorMessage(err) {
+    return err instanceof Error ? err.message : String(err);
+  }
   class LiteralExpression {
     /**
      * @param {ValueType} type The value type.
@@ -11059,6 +11511,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Match: "match",
     Between: "between",
     Interpolate: "interpolate",
+    InterpolateHcl: "interpolate-hcl",
     Coalesce: "coalesce",
     Case: "case",
     In: "in",
@@ -11200,6 +11653,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       hasEvenArgs,
       withInterpolateArgs
     ),
+    [Ops.InterpolateHcl]: createCallExpressionParser(
+      hasArgsCount(6, Infinity),
+      hasEvenArgs,
+      returnsColor,
+      withInterpolateArgs
+    ),
     [Ops.Case]: createCallExpressionParser(
       hasArgsCount(3, Infinity),
       hasOddArgs,
@@ -11291,7 +11750,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (context.variables.has(name)) {
-        const existingType = context.variables.get(name);
+        const existingType = (
+          /** @type {number} */
+          context.variables.get(name)
+        );
         type &= existingType;
         if (type === NoneType) {
           throw new Error(
@@ -11415,8 +11877,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const match = parse$1(encoded[i + 2], inputType, context);
         inputType &= match.type;
       } catch (err) {
+        const message = getErrorMessage(err);
         throw new Error(
-          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+          `failed to parse argument ${i + 1} of match expression: ${message}`
         );
       }
       if (inputType === NoneType) {
@@ -11430,8 +11893,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const match = parse$1(encoded[i + 2], inputType, context);
         args[i] = match;
       } catch (err) {
+        const message = getErrorMessage(err);
         throw new Error(
-          `failed to parse argument ${i + 1} of match expression: ${err.message}`
+          `failed to parse argument ${i + 1} of match expression: ${message}`
         );
       }
       try {
@@ -11439,15 +11903,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 2} of match expression: ${err.message}`
+          `failed to parse argument ${i + 2} of match expression: ${getErrorMessage(err)}`
         );
       }
     }
     const input = parse$1(encoded[1], inputType, context);
     return [input, ...args, fallback];
   }
+  function returnsColor(encoded, returnType, context) {
+    if (!includesType(returnType, ColorType)) {
+      throw new Error(
+        `the ${encoded[0]} operator can only return a color, got ${typeName(returnType)}`
+      );
+    }
+  }
   function withInterpolateArgs(encoded, returnType, context) {
-    const interpolationType = encoded[1];
+    const interpolationType = (
+      /** @type {Array<*>} */
+      encoded[1]
+    );
     let base;
     switch (interpolationType[0]) {
       case "linear":
@@ -11473,7 +11947,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       input = parse$1(encoded[2], NumberType, context);
     } catch (err) {
       throw new Error(
-        `failed to parse argument 1 in interpolate expression: ${err.message}`
+        `failed to parse argument 1 in interpolate expression: ${getErrorMessage(err)}`
       );
     }
     const args = new Array(encoded.length - 3);
@@ -11483,7 +11957,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i] = stop;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 2} for interpolate expression: ${err.message}`
+          `failed to parse argument ${i + 2} for interpolate expression: ${getErrorMessage(err)}`
         );
       }
       try {
@@ -11491,7 +11965,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 3} for interpolate expression: ${err.message}`
+          `failed to parse argument ${i + 3} for interpolate expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11506,7 +11980,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i] = condition;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i} of case expression: ${err.message}`
+          `failed to parse argument ${i} of case expression: ${getErrorMessage(err)}`
         );
       }
       try {
@@ -11514,7 +11988,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i + 1] = output;
       } catch (err) {
         throw new Error(
-          `failed to parse argument ${i + 1} of case expression: ${err.message}`
+          `failed to parse argument ${i + 1} of case expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11553,7 +12027,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         args[i] = arg;
       } catch (err) {
         throw new Error(
-          `failed to parse haystack item ${i} for "in" expression: ${err.message}`
+          `failed to parse haystack item ${i} for "in" expression: ${getErrorMessage(err)}`
         );
       }
     }
@@ -11566,7 +12040,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       index = parse$1(encoded[1], NumberType, context);
     } catch (err) {
       throw new Error(
-        `failed to parse first argument in palette expression: ${err.message}`
+        `failed to parse first argument in palette expression: ${getErrorMessage(err)}`
       );
     }
     const colors = encoded[2];
@@ -11580,7 +12054,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         color = parse$1(colors[i], ColorType, context);
       } catch (err) {
         throw new Error(
-          `failed to parse color at index ${i} in palette expression: ${err.message}`
+          `failed to parse color at index ${i} in palette expression: ${getErrorMessage(err)}`
         );
       }
       if (!(color instanceof LiteralExpression)) {
@@ -11595,7 +12069,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function createCallExpressionParser(...validators) {
     return function(encoded, returnType, context) {
       const operator = encoded[0];
-      let args;
+      let args = [];
       for (let i = 0; i < validators.length; i++) {
         const parsed = validators[i](encoded, returnType, context);
         if (i == validators.length - 1) {
@@ -11607,7 +12081,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           args = parsed;
         }
       }
-      return new CallExpression(returnType, operator, ...args);
+      return new CallExpression(
+        returnType,
+        operator,
+        .../** @type {Array<Expression>} */
+        args
+      );
     };
   }
   function parseCallExpression(encoded, returnType, context) {
@@ -11684,14 +12163,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return compileAccessorExpression(expression);
       }
       case Ops.Id: {
-        return (context2) => context2.featureId;
+        return (context2) => context2.featureId ?? "";
       }
       case Ops.GeometryType: {
         return (context2) => context2.geometryType;
       }
       case Ops.Concat: {
         const args = expression.args.map((e) => compileExpression(e));
-        return (context2) => "".concat(...args.map((arg) => arg(context2).toString()));
+        return (context2) => "".concat(...args.map((arg) => (arg(context2) ?? "").toString()));
       }
       case Ops.Resolution: {
         return (context2) => context2.resolution;
@@ -11734,16 +12213,73 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       case Ops.Match: {
         return compileMatchExpression(expression);
       }
-      case Ops.Interpolate: {
+      case Ops.Interpolate:
+      case Ops.InterpolateHcl: {
         return compileInterpolateExpression(expression);
       }
       case Ops.ToString: {
         return compileConvertExpression(expression);
       }
+      case Ops.Array: {
+        return compileArrayExpression(expression);
+      }
+      case Ops.Color: {
+        return compileColorExpression(expression);
+      }
       default: {
         throw new Error(`Unsupported operator ${operator}`);
       }
     }
+  }
+  function compileArrayExpression(expression, context) {
+    const length = expression.args.length;
+    const args = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      args[i] = compileExpression(expression.args[i]);
+    }
+    if (expression.type === ColorType && (length === 3 || length === 4)) {
+      const alpha = length === 4 ? args[3] : null;
+      return (context2) => [
+        /** @type {number} */
+        args[0](context2) * 255,
+        /** @type {number} */
+        args[1](context2) * 255,
+        /** @type {number} */
+        args[2](context2) * 255,
+        alpha ? (
+          /** @type {number} */
+          alpha(context2)
+        ) : 1
+      ];
+    }
+    return (context2) => {
+      const values = new Array(length);
+      for (let i = 0; i < length; ++i) {
+        values[i] = args[i](context2);
+      }
+      return values;
+    };
+  }
+  function compileColorExpression(expression, context) {
+    const length = expression.args.length;
+    const args = new Array(length);
+    for (let i = 0; i < length; ++i) {
+      args[i] = compileExpression(expression.args[i]);
+    }
+    if (length < 3) {
+      const alpha2 = length === 2 ? args[1] : null;
+      return (context2) => {
+        const gray = args[0](context2);
+        return [gray, gray, gray, alpha2 ? alpha2(context2) : 1];
+      };
+    }
+    const alpha = length === 4 ? args[3] : null;
+    return (context2) => [
+      args[0](context2),
+      args[1](context2),
+      args[2](context2),
+      alpha ? alpha(context2) : 1
+    ];
   }
   function compileAssertionExpression(expression, context) {
     const type = expression.operator;
@@ -12046,6 +12582,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     for (let i = 0; i < length; ++i) {
       args[i] = compileExpression(expression.args[i]);
     }
+    const interpolateColorFn = expression.operator === Ops.InterpolateHcl ? (
+      // perceptual interpolation
+      interpolateHclColor
+    ) : (
+      // sRGB interpolation, equivalent to GLSL `mix()` in `gpu.js`
+      interpolateRgbColor
+    );
     return (context2) => {
       const base = args[0](context2);
       const value = args[1](context2);
@@ -12063,7 +12606,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             return output;
           }
           if (isColor) {
-            return interpolateColor(
+            return interpolateColorFn(
               base,
               value,
               previousInput,
@@ -12118,7 +12661,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const factor = base === 1 ? along / delta : (Math.pow(base, along) - 1) / (Math.pow(base, delta) - 1);
     return output1 + factor * (output2 - output1);
   }
-  function interpolateColor(base, value, input1, rgba1, input2, rgba2) {
+  function interpolateRgbColor(base, value, input1, rgba1, input2, rgba2) {
+    const delta = input2 - input1;
+    if (delta === 0) {
+      return rgba1;
+    }
+    return [
+      interpolateNumber(base, value, input1, rgba1[0], input2, rgba2[0]),
+      interpolateNumber(base, value, input1, rgba1[1], input2, rgba2[1]),
+      interpolateNumber(base, value, input1, rgba1[2], input2, rgba2[2]),
+      interpolateNumber(base, value, input1, rgba1[3], input2, rgba2[3])
+    ];
+  }
+  function interpolateHclColor(base, value, input1, rgba1, input2, rgba2) {
     const delta = input2 - input1;
     if (delta === 0) {
       return rgba1;
@@ -12252,7 +12807,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {string} src Src.
      * @param {import("../color.js").Color|string|null} color Color.
-     * @return {import("./IconImage.js").default} Icon image.
+     * @return {import("./IconImage.js").default|null} Icon image.
      */
     get(src, color) {
       const key = getCacheKey$1(src, color);
@@ -12262,7 +12817,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {string} src Src.
      * @param {import("../color.js").Color|string|null} color Color.
-     * @return {CanvasPattern} Icon image.
+     * @return {CanvasPattern|null} Icon image.
      */
     getPattern(src, color) {
       const key = getCacheKey$1(src, color);
@@ -12277,23 +12832,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     set(src, color, iconImage, pattern) {
       const key = getCacheKey$1(src, color);
       const update = key in this.cache_;
-      this.cache_[key] = iconImage;
-      if (pattern) {
+      if (iconImage) {
+        this.cache_[key] = iconImage;
+      }
+      if (pattern && iconImage) {
         if (iconImage.getImageState() === ImageState.IDLE) {
           iconImage.load();
         }
         if (iconImage.getImageState() === ImageState.LOADING) {
           iconImage.ready().then(() => {
-            this.patternCache_[key] = getSharedCanvasContext2D().createPattern(
+            const patternFill = getSharedCanvasContext2D().createPattern(
               iconImage.getImage(1),
               "repeat"
             );
+            if (patternFill) {
+              this.patternCache_[key] = patternFill;
+            }
           });
         } else {
-          this.patternCache_[key] = getSharedCanvasContext2D().createPattern(
+          const patternFill = getSharedCanvasContext2D().createPattern(
             iconImage.getImage(1),
             "repeat"
           );
+          if (patternFill) {
+            this.patternCache_[key] = patternFill;
+          }
         }
       }
       if (!update) {
@@ -12330,7 +12893,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super();
       this.hitDetectionImage_ = null;
       this.image_ = image;
-      this.crossOrigin_ = imageAttributes == null ? void 0 : imageAttributes.crossOrigin;
+      this.crossOrigin_ = (imageAttributes == null ? void 0 : imageAttributes.crossOrigin) ?? null;
       this.referrerPolicy_ = imageAttributes == null ? void 0 : imageAttributes.referrerPolicy;
       this.canvas_ = {};
       this.color_ = color;
@@ -12358,12 +12921,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     isTainted_() {
       if (this.tainted_ === void 0 && this.imageState_ === ImageState.LOADED) {
+        const image = this.image_;
+        if (!image) {
+          return false;
+        }
         if (!taintedTestContext) {
           taintedTestContext = createCanvasContext2D(1, 1, void 0, {
             willReadFrequently: true
           });
         }
-        taintedTestContext.drawImage(this.image_, 0, 0);
+        taintedTestContext.drawImage(
+          /** @type {CanvasImageSource} */
+          image,
+          0,
+          0
+        );
         try {
           taintedTestContext.getImageData(0, 0, 1, 1);
           this.tainted_ = false;
@@ -12392,7 +12964,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     handleImageLoad_() {
       this.imageState_ = ImageState.LOADED;
-      this.size_ = [this.image_.width, this.image_.height];
+      const image = this.image_;
+      if (image && "width" in image && "height" in image) {
+        this.size_ = [image.width, image.height];
+      }
       this.dispatchChangeEvent_();
     }
     /**
@@ -12404,7 +12979,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.initializeImage_();
       }
       this.replaceColor_(pixelRatio);
-      return this.canvas_[pixelRatio] ? this.canvas_[pixelRatio] : this.image_;
+      const image = this.image_;
+      return this.canvas_[pixelRatio] ? this.canvas_[pixelRatio] : (
+        /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+        image
+      );
     }
     /**
      * @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image Image.
@@ -12435,8 +13014,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (!this.hitDetectionImage_) {
         if (this.isTainted_()) {
-          const width = this.size_[0];
-          const height = this.size_[1];
+          const size = this.size_;
+          if (!size) {
+            return (
+              /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+              this.image_
+            );
+          }
+          const width = size[0];
+          const height = size[1];
           const context = createCanvasContext2D(width, height);
           context.fillRect(0, 0, width, height);
           this.hitDetectionImage_ = context.canvas;
@@ -12444,11 +13030,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.hitDetectionImage_ = this.image_;
         }
       }
-      return this.hitDetectionImage_;
+      return (
+        /** @type {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} */
+        this.hitDetectionImage_
+      );
     }
     /**
      * Get the size of the icon (in pixels).
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      */
     getSize() {
       return this.size_;
@@ -12493,18 +13082,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       const image = this.image_;
+      if (!image) {
+        return;
+      }
       const ctx = createCanvasContext2D(
         Math.ceil(image.width * pixelRatio),
         Math.ceil(image.height * pixelRatio)
       );
       const canvas = ctx.canvas;
       ctx.scale(pixelRatio, pixelRatio);
-      ctx.drawImage(image, 0, 0);
+      ctx.drawImage(
+        /** @type {CanvasImageSource} */
+        image,
+        0,
+        0
+      );
       ctx.globalCompositeOperation = "multiply";
       ctx.fillStyle = asString(this.color_);
       ctx.fillRect(0, 0, canvas.width / pixelRatio, canvas.height / pixelRatio);
       ctx.globalCompositeOperation = "destination-in";
-      ctx.drawImage(image, 0, 0);
+      ctx.drawImage(
+        /** @type {CanvasImageSource} */
+        image,
+        0,
+        0
+      );
       this.canvas_[pixelRatio] = canvas;
     }
     /**
@@ -12539,9 +13141,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         imageState,
         color
       );
-      shared.set(src, color, iconImage, pattern);
+      if (src !== void 0) {
+        shared.set(src, color, iconImage, pattern);
+      }
     }
-    if (pattern && iconImage && !shared.getPattern(src, color)) {
+    if (pattern && iconImage && src !== void 0 && !shared.getPattern(src, color)) {
       shared.set(src, color, iconImage, pattern);
     }
     return iconImage;
@@ -12560,15 +13164,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function asCanvasPattern(pattern) {
     if (!pattern.offset || !pattern.size) {
-      return shared.getPattern(pattern.src, pattern.color);
+      return shared.getPattern(pattern.src, pattern.color ?? null);
     }
     const cacheKey = pattern.src + ":" + pattern.offset;
-    const canvasPattern = shared.getPattern(cacheKey, pattern.color);
+    const canvasPattern = shared.getPattern(cacheKey, pattern.color ?? null);
     if (canvasPattern) {
       return canvasPattern;
     }
     const iconImage = shared.get(pattern.src, null);
-    if (iconImage.getImageState() !== ImageState.LOADED) {
+    if (!iconImage || iconImage.getImageState() !== ImageState.LOADED) {
       return null;
     }
     const patternCanvasContext = createCanvasContext2D(
@@ -12589,12 +13193,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     get(
       patternCanvasContext.canvas,
       cacheKey,
-      void 0,
+      {},
       ImageState.LOADED,
-      pattern.color,
+      pattern.color ?? null,
       true
     );
-    return shared.getPattern(cacheKey, pattern.color);
+    return shared.getPattern(cacheKey, pattern.color ?? null);
   }
   const defaultFont = "10px sans-serif";
   const defaultFillStyle = "#000";
@@ -12633,12 +13237,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   const registerFont = /* @__PURE__ */ (function() {
     const retries = 100;
-    let timeout, fontFaceSet;
+    let timeout;
+    let fontFaceSet;
     async function isAvailable(fontSpec) {
       await fontFaceSet.ready;
-      const font = getFontParameters(fontSpec);
-      const checkFamily = font.families[0].toLowerCase();
-      const checkWeight = font.weight;
+      const fontParams = getFontParameters(fontSpec);
+      if (!fontParams) {
+        return false;
+      }
+      const checkFamily = fontParams.families[0].toLowerCase();
+      const checkWeight = fontParams.weight;
       const matching = [];
       fontFaceSet.forEach(
         /**
@@ -12647,7 +13255,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         (f) => {
           const family = f.family.replace(/^['"]|['"]$/g, "").toLowerCase();
           const weight = fontWeights[f.weight] || f.weight;
-          if (family === checkFamily && f.style === font.style && weight == checkWeight) {
+          if (family === checkFamily && f.style === fontParams.style && weight == checkWeight) {
             matching.push(f);
           }
         }
@@ -12699,17 +13307,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!fontFaceSet) {
         fontFaceSet = WORKER_OFFSCREEN_CANVAS ? self.fonts : document.fonts;
       }
-      const font = getFontParameters(fontSpec);
-      if (!font) {
+      const fontParams = getFontParameters(fontSpec);
+      if (!fontParams) {
         return;
       }
-      const families = font.families;
+      const families = fontParams.families;
       let needCheck = false;
       for (const family of families) {
         if (genericFontFamilies.has(family)) {
           continue;
         }
-        const key = getFontKey(font.style, font.weight, family);
+        const key = getFontKey(fontParams.style, fontParams.weight, family);
         if (checkedFonts.get(key) !== void 0) {
           continue;
         }
@@ -12728,9 +13336,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let height = textHeights[fontSpec];
       if (height == void 0) {
         if (WORKER_OFFSCREEN_CANVAS) {
-          const font = getFontParameters(fontSpec);
+          const fontParams = getFontParameters(fontSpec);
           const metrics = measureText(fontSpec, "Žg");
-          const lineHeight = isNaN(Number(font.lineHeight)) ? 1.2 : Number(font.lineHeight);
+          const lineHeight = !fontParams || isNaN(Number(fontParams.lineHeight)) ? 1.2 : Number(fontParams.lineHeight);
           height = lineHeight * (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
         } else {
           if (!measureElement) {
@@ -12808,13 +13416,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     context.save();
     if (opacity !== 1) {
       if (context.globalAlpha === void 0) {
-        context.globalAlpha = (context2) => context2.globalAlpha *= opacity;
+        context.globalAlpha = function(ctx) {
+          return ctx.globalAlpha *= opacity;
+        };
       } else {
         context.globalAlpha *= opacity;
       }
     }
     if (transform2) {
-      context.transform.apply(context, transform2);
+      context.transform.apply(
+        context,
+        /** @type {[number, number, number, number, number, number]} */
+        transform2
+      );
     }
     if (
       /** @type {*} */
@@ -12859,15 +13473,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     context.restore();
   }
   function executeLabelInstructions(label, context) {
+    const ctx = (
+      /** @type {CanvasRenderingContext2D} */
+      context
+    );
     const contextInstructions = label.contextInstructions;
     for (let i = 0, ii = contextInstructions.length; i < ii; i += 2) {
       if (Array.isArray(contextInstructions[i + 1])) {
-        context[contextInstructions[i]].apply(
-          context,
-          contextInstructions[i + 1]
+        const method = (
+          /** @type {string} */
+          contextInstructions[i]
         );
+        /** @type {Object<string, *>} */
+        ctx[method].apply(ctx, contextInstructions[i + 1]);
       } else {
-        context[contextInstructions[i]] = contextInstructions[i + 1];
+        const property = (
+          /** @type {string} */
+          contextInstructions[i]
+        );
+        ctx[property] = contextInstructions[i + 1];
       }
     }
   }
@@ -12949,7 +13573,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the declutter mode of the shape
-     * @return {import("./Style.js").DeclutterMode} Shape's declutter mode
+     * @return {import("./Style.js").DeclutterMode|undefined} Shape's declutter mode
      * @api
      */
     getDeclutterMode() {
@@ -12959,7 +13583,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Get the anchor point in pixels. The anchor determines the center point for the
      * symbolizer.
      * @abstract
-     * @return {Array<number>} Anchor.
+     * @return {Array<number>|null} Anchor.
      */
     getAnchor() {
       return abstract();
@@ -12997,7 +13621,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * @abstract
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      */
     getImageSize() {
       return abstract();
@@ -13005,7 +13629,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Get the origin of the symbolizer.
      * @abstract
-     * @return {Array<number>} Origin.
+     * @return {Array<number>|null} Origin.
      */
     getOrigin() {
       return abstract();
@@ -13013,7 +13637,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Get the size of the symbolizer (in pixels).
      * @abstract
-     * @return {import("../size.js").Size} Size.
+     * @return {import("../size.js").Size|null} Size.
      */
     getSize() {
       return abstract();
@@ -13128,14 +13752,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     clone() {
+      var _a, _b;
       const scale2 = this.getScale();
       const style = new RegularShape({
-        fill: this.getFill() ? this.getFill().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
         points: this.getPoints(),
         radius: this.getRadius(),
         radius2: this.getRadius2(),
         angle: this.getAngle(),
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        stroke: (_b = this.getStroke()) == null ? void 0 : _b.clone(),
         rotation: this.getRotation(),
         rotateWithView: this.getRotateWithView(),
         scale: Array.isArray(scale2) ? scale2.slice() : scale2,
@@ -13222,7 +13847,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const iconImage = new IconImage(
           image,
           void 0,
-          null,
+          {},
           ImageState.LOADED,
           null
         );
@@ -13463,7 +14088,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (color === null) {
           color = defaultFillStyle;
         }
-        context.fillStyle = asColorLike(color);
+        context.fillStyle = /** @type {string|CanvasGradient|CanvasPattern} */
+        asColorLike(color);
         context.fill();
       }
       if (renderOptions.strokeStyle) {
@@ -13582,10 +14208,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     clone() {
+      var _a, _b;
       const scale2 = this.getScale();
       const style = new CircleStyle({
-        fill: this.getFill() ? this.getFill().clone() : void 0,
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
+        stroke: (_b = this.getStroke()) == null ? void 0 : _b.clone(),
         radius: this.getRadius(),
         scale: Array.isArray(scale2) ? scale2.slice() : scale2,
         rotation: this.getRotation(),
@@ -13664,7 +14291,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!fill) {
         return "";
       }
-      return fill instanceof CanvasPattern || fill instanceof CanvasGradient ? getUid(fill) : typeof fill === "object" && "src" in fill ? fill.src + ":" + fill.offset : asArray(fill).toString();
+      return fill instanceof CanvasPattern || fill instanceof CanvasGradient ? getUid(
+        /** @type {Object} */
+        fill
+      ) : typeof fill === "object" && "src" in fill ? fill.src + ":" + fill.offset : asArray(fill).toString();
     }
     /**
      * @return {boolean} The fill style is loading an image pattern.
@@ -13724,7 +14354,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       if ((cacheKey === void 0 || cacheKey.length === 0) && image) {
         cacheKey = /** @type {HTMLImageElement} */
-        image.src || getUid(image);
+        image.src || getUid(
+          /** @type {Object} */
+          image
+        );
       }
       assert(
         cacheKey !== void 0 && cacheKey.length > 0,
@@ -13738,9 +14371,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (options.src !== void 0) {
         imageState = ImageState.IDLE;
       } else if (image !== void 0) {
-        if ("complete" in image) {
-          if (image.complete) {
-            imageState = image.src ? ImageState.LOADED : ImageState.IDLE;
+        if ("complete" in /** @type {HTMLImageElement} */
+        image) {
+          if (
+            /** @type {HTMLImageElement} */
+            image.complete
+          ) {
+            imageState = /** @type {HTMLImageElement} */
+            image.src ? ImageState.LOADED : ImageState.IDLE;
           } else {
             imageState = ImageState.LOADING;
           }
@@ -13782,6 +14420,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 return;
               }
               const imageSize = this.iconImage_.getSize();
+              if (!imageSize) {
+                return;
+              }
               this.setScale(
                 calculateScale(
                   imageSize[0],
@@ -13797,7 +14438,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         if (width !== void 0) {
           this.setScale(
-            calculateScale(width, height, options.width, options.height)
+            calculateScale(
+              width,
+              /** @type {number} */
+              height,
+              options.width,
+              options.height
+            )
           );
         }
       }
@@ -13842,7 +14489,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Get the anchor point in pixels. The anchor determines the center point for the
      * symbolizer.
-     * @return {Array<number>} Anchor.
+     * @return {Array<number>|null} Anchor.
      * @api
      * @override
      */
@@ -13899,7 +14546,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the icon color.
-     * @return {import("../color.js").Color} Color.
+     * @return {import("../color.js").Color|null} Color.
      * @api
      */
     getColor() {
@@ -13956,7 +14603,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.iconImage_.getPixelRatio(pixelRatio);
     }
     /**
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      * @override
      */
     getImageSize() {
@@ -13978,7 +14625,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the origin of the symbolizer.
-     * @return {Array<number>} Origin.
+     * @return {Array<number>|null} Origin.
      * @api
      * @override
      */
@@ -14031,7 +14678,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the size of the icon (in pixels).
-     * @return {import("../size.js").Size} Image size.
+     * @return {import("../size.js").Size|null} Image size.
      * @api
      * @override
      */
@@ -14040,7 +14687,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the width of the icon (in pixels). Will return undefined when the icon image is not yet loaded.
-     * @return {number} Icon width (in pixels).
+     * @return {number|undefined} Icon width (in pixels).
      * @api
      */
     getWidth() {
@@ -14049,13 +14696,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return this.size_[0] * scale2[0];
       }
       if (this.iconImage_.getImageState() == ImageState.LOADED) {
-        return this.iconImage_.getSize()[0] * scale2[0];
+        const size = this.iconImage_.getSize();
+        if (size) {
+          return size[0] * scale2[0];
+        }
       }
       return void 0;
     }
     /**
      * Get the height of the icon (in pixels). Will return undefined when the icon image is not yet loaded.
-     * @return {number} Icon height (in pixels).
+     * @return {number|undefined} Icon height (in pixels).
      * @api
      */
     getHeight() {
@@ -14064,7 +14714,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return this.size_[1] * scale2[1];
       }
       if (this.iconImage_.getImageState() == ImageState.LOADED) {
-        return this.iconImage_.getSize()[1] * scale2[1];
+        const size = this.iconImage_.getSize();
+        if (size) {
+          return size[1] * scale2[1];
+        }
       }
       return void 0;
     }
@@ -14084,7 +14737,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     listenImageChange(listener) {
-      this.iconImage_.addEventListener(EventType.CHANGE, listener);
+      this.iconImage_.addEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").ListenerFunction} */
+        listener
+      );
     }
     /**
      * Load not yet loaded URI.
@@ -14102,7 +14759,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     unlistenImageChange(listener) {
-      this.iconImage_.removeEventListener(EventType.CHANGE, listener);
+      this.iconImage_.removeEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").ListenerFunction} */
+        listener
+      );
     }
     /**
      * @override
@@ -14132,11 +14793,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     clone() {
+      var _a;
       const color = this.getColor();
       return new Stroke({
         color: Array.isArray(color) ? color.slice() : color || void 0,
         lineCap: this.getLineCap(),
-        lineDash: this.getLineDash() ? this.getLineDash().slice() : void 0,
+        lineDash: (_a = this.getLineDash()) == null ? void 0 : _a.slice(),
         lineDashOffset: this.getLineDashOffset(),
         lineJoin: this.getLineJoin(),
         miterLimit: this.getMiterLimit(),
@@ -14146,7 +14808,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the stroke color.
-     * @return {import("../color.js").Color|import("../colorlike.js").ColorLike} Color.
+     * @return {import("../color.js").Color|import("../colorlike.js").ColorLike|null} Color.
      * @api
      */
     getColor() {
@@ -14306,6 +14968,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     clone() {
+      var _a, _b, _c, _d;
       let geometry = this.getGeometry();
       if (geometry && typeof geometry === "object") {
         geometry = /** @type {import("../geom/Geometry.js").default} */
@@ -14313,11 +14976,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return new Style({
         geometry: geometry ?? void 0,
-        fill: this.getFill() ? this.getFill().clone() : void 0,
-        image: this.getImage() ? this.getImage().clone() : void 0,
+        fill: (_a = this.getFill()) == null ? void 0 : _a.clone(),
+        image: (_b = this.getImage()) == null ? void 0 : _b.clone(),
         renderer: this.getRenderer() ?? void 0,
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
-        text: this.getText() ? this.getText().clone() : void 0,
+        stroke: (_c = this.getStroke()) == null ? void 0 : _c.clone(),
+        text: (_d = this.getText()) == null ? void 0 : _d.clone(),
         zIndex: this.getZIndex()
       });
     }
@@ -14434,7 +15097,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Set the text style.
-     * @param {import("./Text.js").default} text Text style.
+     * @param {import("./Text.js").default|null} text Text style.
      * @api
      */
     setText(text) {
@@ -14628,6 +15291,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     clone() {
+      var _a, _b, _c;
       const scale2 = this.getScale();
       return new Text({
         font: this.getFont(),
@@ -14643,12 +15307,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textAlign: this.getTextAlign(),
         justify: this.getJustify(),
         textBaseline: this.getTextBaseline(),
-        fill: this.getFill() instanceof Fill ? this.getFill().clone() : this.getFill(),
-        stroke: this.getStroke() ? this.getStroke().clone() : void 0,
+        fill: this.getFill() instanceof Fill ? (
+          /** @type {Fill} */
+          this.getFill().clone()
+        ) : this.getFill(),
+        stroke: (_a = this.getStroke()) == null ? void 0 : _a.clone(),
         offsetX: this.getOffsetX(),
         offsetY: this.getOffsetY(),
-        backgroundFill: this.getBackgroundFill() ? this.getBackgroundFill().clone() : void 0,
-        backgroundStroke: this.getBackgroundStroke() ? this.getBackgroundStroke().clone() : void 0,
+        backgroundFill: (_b = this.getBackgroundFill()) == null ? void 0 : _b.clone(),
+        backgroundStroke: (_c = this.getBackgroundStroke()) == null ? void 0 : _c.clone(),
         padding: this.getPadding() || void 0,
         declutterMode: this.getDeclutterMode()
       });
@@ -14822,7 +15489,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the declutter mode of the shape
-     * @return {import("./Style.js").DeclutterMode} Shape's declutter mode
+     * @return {import("./Style.js").DeclutterMode|undefined} Shape's declutter mode
      * @api
      */
     getDeclutterMode() {
@@ -15017,7 +15684,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const evaluator = buildRuleSet(rules, parsingContext);
     const evaluationContext = newEvaluationContext();
     return function(feature, resolution) {
-      evaluationContext.properties = feature.getPropertiesInternal();
+      evaluationContext.properties = feature.getPropertiesInternal() ?? {};
       evaluationContext.resolution = resolution;
       if (parsingContext.featureId) {
         const id = feature.getId();
@@ -15028,9 +15695,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (parsingContext.geometryType) {
-        evaluationContext.geometryType = computeGeometryType(
-          feature.getGeometry()
-        );
+        const geometry = feature.getGeometry();
+        if (geometry) {
+          evaluationContext.geometryType = computeGeometryType(geometry);
+        }
       }
       return evaluator(evaluationContext);
     };
@@ -15045,7 +15713,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const evaluationContext = newEvaluationContext();
     const styles = new Array(length);
     return function(feature, resolution) {
-      evaluationContext.properties = feature.getPropertiesInternal();
+      evaluationContext.properties = feature.getPropertiesInternal() ?? {};
       evaluationContext.resolution = resolution;
       if (parsingContext.featureId) {
         const id = feature.getId();
@@ -15056,9 +15724,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (parsingContext.geometryType) {
-        evaluationContext.geometryType = computeGeometryType(
-          feature.getGeometry()
-        );
+        const geometry = feature.getGeometry();
+        if (geometry) {
+          evaluationContext.geometryType = computeGeometryType(geometry);
+        }
       }
       let nonNullCount = 0;
       for (let i = 0; i < length; ++i) {
@@ -15101,7 +15770,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const compiledRules = new Array(length);
     for (let i = 0; i < length; ++i) {
       const rule = rules[i];
-      const filter = "filter" in rule ? buildExpression(rule.filter, BooleanType, context) : always;
+      const filter = "filter" in rule && rule.filter !== void 0 ? buildExpression(
+        /** @type {EncodedExpression} */
+        rule.filter,
+        BooleanType,
+        context
+      ) : always;
       let styles;
       if (Array.isArray(rule.style)) {
         const styleLength = rule.style.length;
@@ -15193,7 +15867,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (prefix + "fill-pattern-src" in flatStyle) {
       evaluateColor = patternEvaluator(flatStyle, prefix + "fill-", context);
     } else {
-      if (flatStyle[prefix + "fill-color"] === "none") {
+      if (getExpressionValue(flatStyle, prefix + "fill-color") === "none") {
         return (context2) => null;
       }
       evaluateColor = colorLikeEvaluator(
@@ -15211,7 +15885,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (color === NO_COLOR) {
         return null;
       }
-      fill.setColor(color);
+      fill.setColor(
+        /** @type {import('../../colorlike.js').ColorLike} */
+        color
+      );
       return fill;
     };
   }
@@ -15479,7 +16156,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function buildIcon(flatStyle, context) {
     const prefix = "icon-";
     const srcName = prefix + "src";
-    const src = requireString(flatStyle[srcName], srcName);
+    const src = requireString(getExpressionValue(flatStyle, srcName), srcName);
     const evaluateAnchor = coordinateEvaluator(
       flatStyle,
       prefix + "anchor",
@@ -15523,7 +16200,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (isColorExpression) {
         evaluateColor = colorLikeEvaluator(flatStyle, prefix + "color", context);
       } else {
-        color = requireColorLike(colorValue, prefix + "color");
+        color = /** @type {import('../../colorlike.js').ColorLike} */
+        requireColorLike(colorValue, prefix + "color");
       }
     }
     const crossOrigin = optionalString(flatStyle, prefix + "cross-origin");
@@ -15584,15 +16262,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const prefix = "shape-";
     const pointsName = prefix + "points";
     const radiusName = prefix + "radius";
-    const points = requireNumber(flatStyle[pointsName], pointsName);
+    const points = requireNumber(
+      getExpressionValue(flatStyle, pointsName),
+      pointsName
+    );
     if (!(radiusName in flatStyle)) {
       throw new Error(`Expected a number for ${radiusName}`);
     }
     const evaluateRadius = numberEvaluator(flatStyle, radiusName, context);
-    const initialRadius = typeof flatStyle[radiusName] === "number" ? flatStyle[radiusName] : 5;
+    const radiusValue = getExpressionValue(flatStyle, radiusName);
+    const initialRadius = typeof radiusValue === "number" ? radiusValue : 5;
     const radius2Name = prefix + "radius2";
     const evaluateRadius2 = numberEvaluator(flatStyle, radius2Name, context);
-    const initialRadius2 = typeof flatStyle[radius2Name] === "number" ? flatStyle[radius2Name] : void 0;
+    const radius2Value = getExpressionValue(flatStyle, radius2Name);
+    const initialRadius2 = typeof radius2Value === "number" ? radius2Value : void 0;
     const evaluateFill = buildFill(flatStyle, prefix, context);
     const evaluateStroke = buildStroke(flatStyle, prefix, context);
     const evaluateScale = sizeLikeEvaluator(flatStyle, prefix + "scale", context);
@@ -15710,7 +16393,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (!(name in flatStyle)) {
       return void 0;
     }
-    const value = flatStyle[name];
+    const value = (
+      /** @type {Record<string, *>} */
+      flatStyle[name]
+    );
     return value === void 0 ? void 0 : value;
   }
   function numberEvaluator(flatStyle, name, context) {
@@ -15754,12 +16440,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       prefix + "color",
       context
     );
-    return function(context2) {
+    return function(evalContext) {
+      if (!srcEvaluator) {
+        return null;
+      }
       return {
-        src: srcEvaluator(context2),
-        offset: offsetEvaluator && offsetEvaluator(context2),
-        size: patternSizeEvaluator && patternSizeEvaluator(context2),
-        color: colorEvaluator && colorEvaluator(context2)
+        src: srcEvaluator(evalContext),
+        offset: offsetEvaluator ? offsetEvaluator(evalContext) : null,
+        size: patternSizeEvaluator ? patternSizeEvaluator(evalContext) : null,
+        color: colorEvaluator ? colorEvaluator(evalContext) : null
       };
     };
   }
@@ -15854,7 +16543,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     };
   }
   function optionalNumber(flatStyle, property) {
-    const value = flatStyle[property];
+    const value = getExpressionValue(flatStyle, property);
     if (value === void 0) {
       return void 0;
     }
@@ -15864,7 +16553,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return value;
   }
   function optionalSize(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15880,7 +16569,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return encoded;
   }
   function optionalString(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15890,7 +16579,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return encoded;
   }
   function optionalIconOrigin(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15902,7 +16591,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return encoded;
   }
   function optionalIconAnchorUnits(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -15912,14 +16601,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return encoded;
   }
   function optionalNumberArray(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
     return requireNumberArray(encoded, property);
   }
   function optionalDeclutterMode(flatStyle, property) {
-    const encoded = flatStyle[property];
+    const encoded = getExpressionValue(flatStyle, property);
     if (encoded === void 0) {
       return void 0;
     }
@@ -16003,7 +16692,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.updateWhileInteracting_ = options.updateWhileInteracting !== void 0 ? options.updateWhileInteracting : false;
     }
     /**
-     * @return {string} Declutter group.
+     * @return {string|undefined} Declutter group.
      * @override
      */
     getDeclutter() {
@@ -16081,10 +16770,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     renderDeclutter(frameState, layerState) {
       const declutterGroup = this.getDeclutter();
+      if (!declutterGroup) {
+        return;
+      }
+      if (!frameState.declutter) {
+        frameState.declutter = {};
+      }
       if (declutterGroup in frameState.declutter === false) {
         frameState.declutter[declutterGroup] = new RBush$1(9);
       }
-      this.getRenderer().renderDeclutter(frameState, layerState);
+      const renderer = this.getRenderer();
+      if (renderer) {
+        renderer.renderDeclutter(frameState, layerState);
+      }
     }
     /**
      * @param {import("../render.js").OrderFunction|null|undefined} renderOrder
@@ -16115,9 +16813,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     setStyle(style) {
-      this.style_ = style === void 0 ? createDefaultStyle : style;
+      this.style_ = style === void 0 ? createDefaultStyle : style ?? null;
       const styleLike = toStyleLike(style);
-      this.styleFunction_ = style === null ? void 0 : toFunction(styleLike);
+      this.styleFunction_ = style === null || styleLike === null ? void 0 : toFunction(styleLike);
       this.changed();
     }
     /**
@@ -16175,7 +16873,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super(type);
       this.inversePixelTransform = inversePixelTransform;
       this.frameState = frameState;
-      this.context = context;
+      this.context = context ?? void 0;
     }
   }
   class MapRenderer extends Disposable {
@@ -16233,7 +16931,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let result;
       const viewState = frameState.viewState;
       function forEachFeatureAtCoordinate(managed, feature, layer, geometry) {
-        return callback.call(thisArg, feature, managed ? layer : null, geometry);
+        return callback.call(
+          thisArg,
+          feature,
+          managed ? layer : (
+            /** @type {import("../layer/Layer.js").default} */
+            /** @type {unknown} */
+            null
+          ),
+          /** @type {import("../geom/SimpleGeometry.js").default} */
+          geometry
+        );
       }
       const projection = viewState.projection;
       const translatedCoordinate = wrapX$1(coordinate.slice(), projection);
@@ -16253,7 +16961,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       for (let i = 0; i < offsets.length; i++) {
         for (let j = numLayers - 1; j >= 0; --j) {
           const layerState = layerStates[j];
-          const layer = layerState.layer;
+          const layer = (
+            /** @type {import("../layer/Layer.js").default} */
+            layerState.layer
+          );
           if (layer.hasRenderer() && inView(layerState, viewState) && layerFilter.call(thisArg2, layer)) {
             const layerRenderer = layer.getRenderer();
             const source = layer.getSource();
@@ -16405,7 +17116,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.calculateMatrices2D(frameState);
       this.dispatchRenderEvent(RenderEventType.PRECOMPOSE, frameState);
       const layerStatesArray = frameState.layerStatesArray.sort(
-        (a, b) => a.zIndex - b.zIndex
+        (a, b) => (
+          /** @type {number} */
+          a.zIndex - /** @type {number} */
+          b.zIndex
+        )
       );
       const declutter = layerStatesArray.some(
         (layerState) => layerState.layer instanceof BaseVectorLayer && layerState.layer.getDeclutter()
@@ -16435,7 +17150,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           layer.unrender();
           continue;
         }
-        const element = layer.render(frameState, previousElement);
+        const element = layer.render(
+          frameState,
+          /** @type {HTMLElement} */
+          previousElement
+        );
         if (!element) {
           continue;
         }
@@ -16447,37 +17166,39 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.declutter(frameState, renderedLayerStates);
       replaceChildren(this.element_, this.children_);
-      for (const container of mapContext ? this.children_ : []) {
-        const canvas = container.firstElementChild || container;
-        const backgroundColor = container.style.backgroundColor;
-        if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
-          mapContext.fillStyle = backgroundColor;
-          mapContext.fillRect(
-            0,
-            0,
-            mapContext.canvas.width,
-            mapContext.canvas.height
-          );
+      if (mapContext) {
+        for (const container of this.children_) {
+          const canvas = container.firstElementChild || container;
+          const backgroundColor = container.style.backgroundColor;
+          if (backgroundColor && (!isCanvas(canvas) || canvas.width > 0)) {
+            mapContext.fillStyle = backgroundColor;
+            mapContext.fillRect(
+              0,
+              0,
+              mapContext.canvas.width,
+              mapContext.canvas.height
+            );
+          }
+          if (!isCanvas(canvas) || canvas.width === 0) {
+            continue;
+          }
+          mapContext.save();
+          const opacity = container.style.opacity || canvas.style.opacity;
+          mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
+          const transform2 = canvas.style.transform;
+          if (transform2) {
+            mapContext.transform(
+              .../** @type {[number, number, number, number, number, number]} */
+              fromString$1(transform2)
+            );
+          } else {
+            const w = parseFloat(canvas.style.width) / canvas.width;
+            const h = parseFloat(canvas.style.height) / canvas.height;
+            mapContext.transform(w, 0, 0, h, 0, 0);
+          }
+          mapContext.drawImage(canvas, 0, 0);
+          mapContext.restore();
         }
-        if (!isCanvas(canvas) || canvas.width === 0) {
-          continue;
-        }
-        mapContext.save();
-        const opacity = container.style.opacity || canvas.style.opacity;
-        mapContext.globalAlpha = opacity === "" ? 1 : Number(opacity);
-        const transform2 = canvas.style.transform;
-        if (transform2) {
-          mapContext.transform(
-            .../** @type {[number, number, number, number, number, number]} */
-            fromString$1(transform2)
-          );
-        } else {
-          const w = parseFloat(canvas.style.width) / canvas.width;
-          const h = parseFloat(canvas.style.height) / canvas.height;
-          mapContext.transform(w, 0, 0, h, 0, 0);
-        }
-        mapContext.drawImage(canvas, 0, 0);
-        mapContext.restore();
       }
       this.dispatchRenderEvent(RenderEventType.POSTCOMPOSE, frameState);
       if (!this.renderedVisible_) {
@@ -16502,7 +17223,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       layerStates.forEach(
-        (layerState) => layerState.layer.renderDeferred(frameState)
+        (layerState) => {
+          var _a;
+          return (_a = layerState.layer) == null ? void 0 : _a.renderDeferred(frameState);
+        }
       );
     }
   }
@@ -16541,6 +17265,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.renderComplete_ = false;
       this.loaded_ = true;
       this.boundHandleBrowserEvent_ = this.handleBrowserEvent.bind(this);
+      this.ctrlKey_ = false;
+      this.boundHandleCtrlKey_ = this.handleCtrlKey_.bind(this);
       this.maxTilesLoading_ = options.maxTilesLoading !== void 0 ? options.maxTilesLoading : 16;
       this.pixelRatio_ = options.pixelRatio !== void 0 ? options.pixelRatio : DEVICE_PIXEL_RATIO;
       this.postRenderTimeoutHandle_;
@@ -16554,6 +17280,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.viewPropertyListenerKey_ = null;
       this.viewChangeListenerKey_ = null;
       this.layerGroupPropertyListenerKeys_ = null;
+      this.viewport_;
+      this.overlayContainer_;
+      this.overlayContainerStopEvent_;
       if (!WORKER_OFFSCREEN_CANVAS) {
         this.viewport_ = document.createElement("div");
         this.viewport_.className = "ol-viewport" + ("ontouchstart" in window ? " ol-touch" : "");
@@ -16614,61 +17343,67 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.controls.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./control/Control.js").default>} event CollectionEvent
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(this);
-        }
+        })
       );
       this.controls.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./control/Control.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(null);
-        }
+        })
       );
       this.interactions.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./interaction/Interaction.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(this);
-        }
+        })
       );
       this.interactions.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./interaction/Interaction.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           event.element.setMap(null);
-        }
+        })
       );
       this.overlays_.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./Overlay.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           this.addOverlayInternal_(event.element);
-        }
+        })
       );
       this.overlays_.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("./events.js").Listener} */
         /**
          * @param {import("./Collection.js").CollectionEvent<import("./Overlay.js").default>} event CollectionEvent.
          */
-        (event) => {
+        ((event) => {
           const id = event.element.getId();
           if (id !== void 0) {
             delete this.overlayIdIndex_[id.toString()];
           }
           event.element.setMap(null);
-        }
+        })
       );
       this.controls.forEach(
         /**
@@ -16791,6 +17526,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const layerFilter = options.layerFilter !== void 0 ? options.layerFilter : TRUE;
       const checkWrapped = options.checkWrapped !== false;
       return this.renderer_.forEachFeatureAtCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         coordinate,
         this.frameState_,
         hitTolerance,
@@ -16835,7 +17571,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           if (layer instanceof LayerGroup) {
             addLayersFrom(layer.getLayers());
           } else {
-            layers.push(layer);
+            layers.push(
+              /** @type {import("./layer/Layer.js").default} */
+              layer
+            );
           }
         });
       }
@@ -16863,6 +17602,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const hitTolerance = options.hitTolerance !== void 0 ? options.hitTolerance : 0;
       const checkWrapped = options.checkWrapped !== false;
       return this.renderer_.hasFeatureAtCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         coordinate,
         this.frameState_,
         hitTolerance,
@@ -16886,7 +17626,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {import("./coordinate.js").Coordinate} Coordinate.
      */
     getEventCoordinateInternal(event) {
-      return this.getCoordinateFromPixelInternal(this.getEventPixel(event));
+      return (
+        /** @type {import("./coordinate.js").Coordinate} */
+        this.getCoordinateFromPixelInternal(this.getEventPixel(event))
+      );
     }
     /**
      * Returns the map pixel position for a browser event relative to the viewport.
@@ -16895,9 +17638,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @api
      */
     getEventPixel(event) {
-      const viewport = this.viewport_;
+      const viewport = (
+        /** @type {!HTMLElement} */
+        this.viewport_
+      );
       const viewportPosition = viewport.getBoundingClientRect();
-      const viewportSize = this.getSize();
+      const viewportSize = (
+        /** @type {import("./size.js").Size} */
+        this.getSize()
+      );
       const scaleX = viewportPosition.width / viewportSize[0];
       const scaleY = viewportPosition.height / viewportSize[1];
       const eventPosition = (
@@ -16934,7 +17683,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Get the DOM element into which this map is rendered. In contrast to
      * `getTarget` this method always return an `Element`, or `null` if the
      * map has no target.
-     * @return {HTMLElement} The element that the map is rendered in.
+     * @return {HTMLElement|null|undefined} The element that the map is rendered in.
      * @api
      */
     getTargetElement() {
@@ -16944,20 +17693,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Get the coordinate for a given pixel.  This returns a coordinate in the
      * user projection.
      * @param {import("./pixel.js").Pixel} pixel Pixel position in the map viewport.
+     * @param {PixelToCoordinateOptions} [options] Options.
      * @return {import("./coordinate.js").Coordinate} The coordinate for the pixel position.
      * @api
      */
-    getCoordinateFromPixel(pixel) {
-      return toUserCoordinate(
+    getCoordinateFromPixel(pixel, options) {
+      const coordinate = toUserCoordinate(
+        /** @type {import("./coordinate.js").Coordinate} */
         this.getCoordinateFromPixelInternal(pixel),
         this.getView().getProjection()
       );
+      if ((options == null ? void 0 : options.wrapX) && coordinate) {
+        const projection = this.getView().getProjection();
+        wrapX$1(coordinate, projection);
+      }
+      return coordinate;
     }
     /**
      * Get the coordinate for a given pixel.  This returns a coordinate in the
      * map view projection.
      * @param {import("./pixel.js").Pixel} pixel Pixel position in the map viewport.
-     * @return {import("./coordinate.js").Coordinate} The coordinate for the pixel position.
+     * @return {import("./coordinate.js").Coordinate|null} The coordinate for the pixel position.
      */
     getCoordinateFromPixelInternal(pixel) {
       const frameState = this.frameState_;
@@ -17044,6 +17800,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return layers;
     }
     /**
+     * Determine whether the last rendered frame shows everything the map wants to
+     * show. Only relevant when something is listening for the map to finish
+     * loading, so the check is skipped otherwise.
+     * @private
+     */
+    updateRenderComplete_() {
+      this.renderComplete_ = (this.hasListener(MapEventType.LOADSTART) || this.hasListener(MapEventType.LOADEND) || this.hasListener(RenderEventType.RENDERCOMPLETE)) && !this.tileQueue_.getTilesLoading() && !this.tileQueue_.getCount() && !this.getLoadingOrNotReady();
+    }
+    /**
      * @return {boolean} Layers have sources that are still loading.
      */
     getLoadingOrNotReady() {
@@ -17068,21 +17833,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Get the pixel for a coordinate.  This takes a coordinate in the user
      * projection and returns the corresponding pixel.
      * @param {import("./coordinate.js").Coordinate} coordinate A map coordinate.
+     * @param {CoordinateToPixelOptions} [options] Options.
      * @return {import("./pixel.js").Pixel} A pixel position in the map viewport.
      * @api
      */
-    getPixelFromCoordinate(coordinate) {
-      const viewCoordinate = fromUserCoordinate(
-        coordinate,
-        this.getView().getProjection()
+    getPixelFromCoordinate(coordinate, options) {
+      const view = this.getView();
+      const projection = view.getProjection();
+      let viewCoordinate = fromUserCoordinate(coordinate);
+      if ((options == null ? void 0 : options.wrapX) && this.frameState_) {
+        viewCoordinate = wrapXNearest(
+          viewCoordinate.slice(),
+          projection,
+          this.frameState_.viewState.center[0]
+        );
+      }
+      return (
+        /** @type {import("./pixel.js").Pixel} */
+        this.getPixelFromCoordinateInternal(viewCoordinate)
       );
-      return this.getPixelFromCoordinateInternal(viewCoordinate);
     }
     /**
      * Get the pixel for a coordinate.  This takes a coordinate in the map view
      * projection and returns the corresponding pixel.
      * @param {import("./coordinate.js").Coordinate} coordinate A map coordinate.
-     * @return {import("./pixel.js").Pixel} A pixel position in the map viewport.
+     * @return {import("./pixel.js").Pixel|null} A pixel position in the map viewport.
      */
     getPixelFromCoordinateInternal(coordinate) {
       const frameState = this.frameState_;
@@ -17148,7 +17923,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the element that serves as the map viewport.
-     * @return {HTMLElement} Viewport.
+     * @return {HTMLElement|undefined} Viewport.
      * @api
      */
     getViewport() {
@@ -17159,7 +17934,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * this container will let mousedown and touchstart events through to the map,
      * so clicks and gestures on an overlay will trigger {@link module:ol/MapBrowserEvent~MapBrowserEvent}
      * events.
-     * @return {!HTMLElement} The map's overlay container.
+     * @return {HTMLElement|undefined} The map's overlay container.
      */
     getOverlayContainer() {
       return this.overlayContainer_;
@@ -17169,7 +17944,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * event propagation. Elements added to this container won't let mousedown and
      * touchstart events through to the map, so clicks and gestures on an overlay
      * don't trigger any {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
-     * @return {!HTMLElement} The map's overlay container that stops events.
+     * @return {HTMLElement|undefined} The map's overlay container that stops events.
      */
     getOverlayContainerStopEvent() {
       return this.overlayContainerStopEvent_;
@@ -17190,6 +17965,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getTilePriority(tile, tileSourceKey, tileCenter, tileResolution) {
       return getTilePriority(
+        /** @type {FrameState} */
         this.frameState_,
         tile,
         tileSourceKey,
@@ -17207,9 +17983,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.handleMapBrowserEvent(mapBrowserEvent);
     }
     /**
+     * @param {Event} event Key event.
+     * @private
+     */
+    handleCtrlKey_(event) {
+      const keyEvent = (
+        /** @type {KeyboardEvent} */
+        event
+      );
+      this.ctrlKey_ = keyEvent.key === "Control" ? keyEvent.type === EventType.KEYDOWN : keyEvent.ctrlKey;
+    }
+    /**
      * @param {MapBrowserEvent} mapBrowserEvent The event to handle.
      */
     handleMapBrowserEvent(mapBrowserEvent) {
+      if (mapBrowserEvent.originalEvent.ctrlKey === false) {
+        this.ctrlKey_ = false;
+      }
+      mapBrowserEvent.ctrlKey = this.ctrlKey_;
       if (!this.frameState_) {
         return;
       }
@@ -17217,7 +18008,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const eventType = originalEvent.type;
       if (eventType === PointerEventType.POINTERDOWN || eventType === EventType.WHEEL || eventType === EventType.KEYDOWN) {
         const doc = this.getOwnerDocument();
-        const rootNode = this.viewport_.getRootNode ? this.viewport_.getRootNode() : doc;
+        const rootNode = (
+          /** @type {!HTMLElement} */
+          this.viewport_.getRootNode ? (
+            /** @type {!HTMLElement} */
+            this.viewport_.getRootNode()
+          ) : doc
+        );
         const target = (
           /** @type {Node} */
           originalEvent.target
@@ -17226,7 +18023,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (
           // Abort if the target is a child of the container for elements whose events are not meant
           // to be handled by map interactions.
-          this.overlayContainerStopEvent_.contains(target) || // Abort if the event target is a child of the container that is no longer in the page.
+          /** @type {!HTMLElement} */
+          this.overlayContainerStopEvent_.contains(
+            target
+          ) || // Abort if the event target is a child of the container that is no longer in the page.
           // It's possible for the target to no longer be in the page if it has been removed in an
           // event listener, this might happen in a Control that recreates it's content based on
           // user interaction either manually or via a render in something like https://reactjs.org/
@@ -17262,13 +18062,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const hints = frameState ? frameState.viewHints : void 0;
         const animatingOrInteracting = hints ? hints[ViewHint.ANIMATING] || hints[ViewHint.INTERACTING] : false;
         if (animatingOrInteracting) {
-          const lowOnFrameBudget = Date.now() - frameState.time > 8;
+          const lowOnFrameBudget = Date.now() - /** @type {FrameState} */
+          frameState.time > 8;
           maxTotalLoading = lowOnFrameBudget ? 0 : 8;
           maxNewLoads = lowOnFrameBudget ? 0 : 2;
         }
         if (tileQueue.getTilesLoading() < maxTotalLoading) {
-          if (animatingOrInteracting) {
-            tileQueue.reprioritize();
+          const count = tileQueue.getCount();
+          tileQueue.reprioritize();
+          if (tileQueue.getCount() < count) {
+            this.updateRenderComplete_();
           }
           tileQueue.loadMoreTiles(maxTotalLoading, maxNewLoads);
         }
@@ -17317,16 +18120,30 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     handleTargetChanged_() {
       var _a, _b;
       if (this.mapBrowserEventHandler_) {
-        for (let i = 0, ii = this.targetChangeHandlerKeys_.length; i < ii; ++i) {
-          unlistenByKey(this.targetChangeHandlerKeys_[i]);
+        const targetChangeHandlerKeys = (
+          /** @type {!Array<import("./events.js").EventsKey>} */
+          this.targetChangeHandlerKeys_
+        );
+        for (let i = 0, ii = targetChangeHandlerKeys.length; i < ii; ++i) {
+          unlistenByKey(targetChangeHandlerKeys[i]);
         }
         this.targetChangeHandlerKeys_ = null;
+        const doc = this.getOwnerDocument();
+        doc.removeEventListener(
+          EventType.KEYDOWN,
+          this.boundHandleCtrlKey_,
+          true
+        );
+        doc.removeEventListener(EventType.KEYUP, this.boundHandleCtrlKey_, true);
+        this.ctrlKey_ = false;
         this.viewport_.removeEventListener(
           EventType.CONTEXTMENU,
+          /** @type {EventListener} */
           this.boundHandleBrowserEvent_
         );
         this.viewport_.removeEventListener(
           EventType.WHEEL,
+          /** @type {EventListener} */
           this.boundHandleBrowserEvent_
         );
         this.mapBrowserEventHandler_.dispose();
@@ -17358,7 +18175,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       } else {
         if (!isCanvas(targetElement)) {
-          targetElement.appendChild(this.viewport_);
+          targetElement.appendChild(
+            /** @type {!HTMLElement} */
+            this.viewport_
+          );
         }
         if (!this.renderer_) {
           this.renderer_ = new CompositeMapRenderer(this);
@@ -17370,20 +18190,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
           for (const key in MapBrowserEventType) {
             this.mapBrowserEventHandler_.addEventListener(
+              /** @type {import("./MapBrowserEventType.js").Types} */
+              /** @type {Object<string, string>} */
               MapBrowserEventType[key],
+              /** @type {import("./events.js").Listener} */
               this.handleMapBrowserEvent.bind(this)
             );
           }
           this.viewport_.addEventListener(
             EventType.CONTEXTMENU,
+            /** @type {EventListener} */
             this.boundHandleBrowserEvent_,
             false
           );
           this.viewport_.addEventListener(
             EventType.WHEEL,
+            /** @type {EventListener} */
             this.boundHandleBrowserEvent_,
             PASSIVE_EVENT_LISTENERS ? { passive: false } : false
           );
+          const doc = this.getOwnerDocument();
+          doc.addEventListener(EventType.KEYDOWN, this.boundHandleCtrlKey_, true);
+          doc.addEventListener(EventType.KEYUP, this.boundHandleCtrlKey_, true);
           let keyboardEventTarget;
           if (!this.keyboardEventTarget_) {
             const targetRoot = targetElement.getRootNode();
@@ -17396,12 +18224,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             listen(
               keyboardEventTarget,
               EventType.KEYDOWN,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handleBrowserEvent,
               this
             ),
             listen(
               keyboardEventTarget,
               EventType.KEYPRESS,
+              /** @type {import("./events.js").ListenerFunction} */
               this.handleBrowserEvent,
               this
             )
@@ -17472,10 +18302,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (layerGroup) {
         this.handleLayerAdd_(new GroupEvent("addlayer", layerGroup));
         this.layerGroupPropertyListenerKeys_ = [
-          listen(layerGroup, ObjectEventType.PROPERTYCHANGE, this.render, this),
-          listen(layerGroup, EventType.CHANGE, this.render, this),
-          listen(layerGroup, "addlayer", this.handleLayerAdd_, this),
-          listen(layerGroup, "removelayer", this.handleLayerRemove_, this)
+          listen(
+            layerGroup,
+            ObjectEventType.PROPERTYCHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.render,
+            this
+          ),
+          listen(
+            layerGroup,
+            EventType.CHANGE,
+            /** @type {import("./events.js").ListenerFunction} */
+            this.render,
+            this
+          ),
+          listen(
+            layerGroup,
+            "addlayer",
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handleLayerAdd_,
+            this
+          ),
+          listen(
+            layerGroup,
+            "removelayer",
+            /** @type {import("./events.js").ListenerFunction} */
+            this.handleLayerRemove_,
+            this
+          )
         ];
       }
       this.render();
@@ -17616,9 +18470,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           renderTargets: {}
         };
         if (viewState.nextCenter && viewState.nextResolution) {
-          const rotation = isNaN(viewState.nextRotation) ? viewState.rotation : viewState.nextRotation;
+          const rotation = isNaN(
+            /** @type {number} */
+            viewState.nextRotation
+          ) ? viewState.rotation : (
+            /** @type {number} */
+            viewState.nextRotation
+          );
           frameState.nextExtent = getForViewAndSize(
             viewState.nextCenter,
+            /** @type {number} */
             viewState.nextResolution,
             rotation,
             size
@@ -17636,24 +18497,45 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           frameState.postRenderFunctions
         );
         if (previousFrameState) {
-          const moveStart = !this.previousExtent_ || !isEmpty(this.previousExtent_) && !equals$1(frameState.extent, this.previousExtent_);
+          const moveStart = !this.previousExtent_ || !isEmpty(
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          ) && !equals$1(
+            /** @type {import("./extent.js").Extent} */
+            frameState.extent,
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          );
           if (moveStart) {
             this.dispatchEvent(
               new MapEvent(MapEventType.MOVESTART, this, previousFrameState)
             );
-            this.previousExtent_ = createOrUpdateEmpty(this.previousExtent_);
+            this.previousExtent_ = createOrUpdateEmpty(
+              /** @type {import("./extent.js").Extent|undefined} */
+              this.previousExtent_
+            );
           }
         }
-        const idle = this.previousExtent_ && !frameState.viewHints[ViewHint.ANIMATING] && !frameState.viewHints[ViewHint.INTERACTING] && !equals$1(frameState.extent, this.previousExtent_);
+        const idle = this.previousExtent_ && !frameState.viewHints[ViewHint.ANIMATING] && !frameState.viewHints[ViewHint.INTERACTING] && !equals$1(
+          /** @type {import("./extent.js").Extent} */
+          frameState.extent,
+          /** @type {import("./extent.js").Extent} */
+          this.previousExtent_
+        );
         if (idle) {
           this.dispatchEvent(
             new MapEvent(MapEventType.MOVEEND, this, frameState)
           );
-          clone(frameState.extent, this.previousExtent_);
+          clone(
+            /** @type {import("./extent.js").Extent} */
+            frameState.extent,
+            /** @type {import("./extent.js").Extent} */
+            this.previousExtent_
+          );
         }
       }
       this.dispatchEvent(new MapEvent(MapEventType.POSTRENDER, this, frameState));
-      this.renderComplete_ = (this.hasListener(MapEventType.LOADSTART) || this.hasListener(MapEventType.LOADEND) || this.hasListener(RenderEventType.RENDERCOMPLETE)) && !this.tileQueue_.getTilesLoading() && !this.tileQueue_.getCount() && !this.getLoadingOrNotReady();
+      this.updateRenderComplete_();
       if (!this.postRenderTimeoutHandle_) {
         this.postRenderTimeoutHandle_ = setTimeout(() => {
           this.postRenderTimeoutHandle_ = void 0;
@@ -17688,7 +18570,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * For accessibility (focus and keyboard events for map navigation), the `target` element must have a
      *  properly configured `tabindex` attribute. If the `target` element is inside a Shadow DOM, the
      *  `tabindex` atribute must be set on the custom element's host element.
-     * @param {HTMLElement|string} [target] The Element or id of the Element
+     * @param {HTMLElement|string|null|undefined} [target] The Element or id of the Element
      *     that the map is rendered in.
      * @observable
      * @api
@@ -17727,7 +18609,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (targetElement) {
         let width, height;
         if (isCanvas(targetElement)) {
-          const transform2 = targetElement.getContext("2d").getTransform();
+          const transform2 = (
+            /** @type {CanvasRenderingContext2D} */
+            targetElement.getContext("2d").getTransform()
+          );
           width = targetElement.width / transform2.a;
           height = targetElement.height / transform2.d;
         } else {
@@ -17975,10 +18860,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         );
         this.updatePixelPosition();
         const container = this.stopEvent ? map.getOverlayContainerStopEvent() : map.getOverlayContainer();
-        if (this.insertFirst) {
-          container.insertBefore(this.element, container.childNodes[0] || null);
-        } else {
-          container.appendChild(this.element);
+        if (container) {
+          if (this.insertFirst) {
+            container.insertBefore(this.element, container.childNodes[0] || null);
+          } else {
+            container.appendChild(this.element);
+          }
         }
         this.performAutoPan();
       }
@@ -18068,8 +18955,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!map || !map.getTargetElement() || !this.get(Property.POSITION)) {
         return;
       }
-      const mapRect = this.getRect(map.getTargetElement(), map.getSize());
+      const mapSize = map.getSize();
       const element = this.getElement();
+      if (!mapSize || !element) {
+        return;
+      }
+      const targetElement = map.getTargetElement();
+      if (!targetElement) {
+        return;
+      }
+      const mapRect = this.getRect(targetElement, mapSize);
       const overlayRect = this.getRect(element, [
         outerWidth(element),
         outerHeight(element)
@@ -18104,7 +18999,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const newCenterPx = [centerPx[0] + delta[0], centerPx[1] + delta[1]];
           const panOptions = panIntoViewOptions.animation || {};
           map.getView().animateInternal({
-            center: map.getCoordinateFromPixelInternal(newCenterPx),
+            center: (
+              /** @type {import("./coordinate.js").Coordinate} */
+              map.getCoordinateFromPixelInternal(newCenterPx)
+            ),
             duration: panOptions.duration,
             easing: panOptions.easing
           });
@@ -18156,7 +19054,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.setVisible(false);
         return;
       }
-      const pixel = map.getPixelFromCoordinate(position);
+      const pixel = map.getPixelFromCoordinate(position, { wrapX: true });
       const mapSize = map.getSize();
       this.updateRenderedPosition(pixel, mapSize);
     }
@@ -18297,7 +19195,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Get the feature's style. Will return what was provided to the
      * {@link module:ol/Feature~Feature#setStyle} method.
-     * @return {import("./style/Style.js").StyleLike|undefined} The feature style.
+     * @return {import("./style/Style.js").StyleLike|null|undefined} The feature style.
      * @api
      */
     getStyle() {
@@ -18340,7 +19238,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Set the default geometry for the feature.  This will update the property
      * with the name returned by {@link module:ol/Feature~Feature#getGeometryName}.
-     * @param {Geometry|undefined} geometry The new geometry.
+     * @param {Geometry|null|undefined} geometry The new geometry.
      * @api
      * @observable
      */
@@ -18352,12 +19250,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * single style object, an array of styles, or a function that takes a
      * resolution and returns an array of styles. To unset the feature style, call
      * `setStyle()` without arguments or a falsey value.
-     * @param {import("./style/Style.js").StyleLike} [style] Style for this feature.
+     * @param {import("./style/Style.js").StyleLike|null|undefined} [style] Style for this feature.
      * @api
      * @fires module:ol/events/Event~BaseEvent#event:change
      */
     setStyle(style) {
-      this.style_ = style;
+      this.style_ = style ?? null;
       this.styleFunction_ = !style ? void 0 : createStyleFunction(style);
       this.changed();
     }
@@ -18606,6 +19504,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return null;
     }
     /**
+     * @param {import("../coordinate.js").Coordinate} coordinates Coordinates.
+     * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
      * @override
      */
     setCoordinates(coordinates2, layout) {
@@ -18636,7 +19536,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.changed();
     }
   }
-  Circle.prototype.transform;
   function interpolatePoint(flatCoordinates, offset, end, stride, fraction, dest, dimension) {
     let o, t;
     const n = (end - offset) / stride;
@@ -18667,7 +19566,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         o = offset + index * stride;
       }
     }
-    dimension = dimension > 1 ? dimension : 2;
+    dimension = dimension !== void 0 && dimension > 1 ? dimension : 2;
     dest = dest ? dest : new Array(dimension);
     for (let i = 0; i < dimension; ++i) {
       dest[i] = o === void 0 ? NaN : t === void 0 ? flatCoordinates[o + i] : lerp(flatCoordinates[o + i], flatCoordinates[o + stride + i], t);
@@ -19220,7 +20119,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Return the linestring at the specified index.
      * @param {number} index Index.
-     * @return {LineString} LineString.
+     * @return {LineString|null} LineString.
      * @api
      */
     getLineString(index) {
@@ -19462,7 +20361,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Return the point at the specified index.
      * @param {number} index Index.
-     * @return {Point} Point.
+     * @return {Point|null} Point.
      * @api
      */
     getPoint(index) {
@@ -19842,7 +20741,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * Return the polygon at the specified index.
      * @param {number} index Index.
-     * @return {Polygon} Polygon.
+     * @return {Polygon|null} Polygon.
      * @api
      */
     getPolygon(index) {
@@ -20048,13 +20947,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     drawText(geometry, feature, index) {
     }
     /**
-     * @param {import("../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../style/Stroke.js").default|null} strokeStyle Stroke style.
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
     }
     /**
-     * @param {import("../style/Image.js").default} imageStyle Image style.
+     * @param {import("../style/Image.js").default|null} imageStyle Image style.
      * @param {import("../render/canvas.js").DeclutterImageWithText} [declutterImageWithText] Shared data for combined decluttering with a text style.
      */
     setImageStyle(imageStyle, declutterImageWithText) {
@@ -20225,11 +21124,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     drawCustom(geometry, feature, renderer, hitDetectionRenderer, index) {
-      this.beginGeometry(geometry, feature, index);
+      this.beginGeometry(
+        geometry,
+        feature,
+        /** @type {number} */
+        index
+      );
       const type = geometry.getType();
       const stride = geometry.getStride();
       const builderBegin = this.coordinates.length;
-      let flatCoordinates, builderEnd, builderEnds, builderEndss;
+      let flatCoordinates, builderEnd, builderEndss;
+      let builderEnds;
       let offset;
       switch (type) {
         case "MultiPolygon":
@@ -20444,7 +21349,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
      * @param {import('../canvas.js').FillStrokeState} [state] State.
      * @return {import('../canvas.js').FillStrokeState} State.
      */
@@ -20462,7 +21367,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return state;
     }
     /**
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @param {import("../canvas.js").FillStrokeState} state State.
      * @return {import("../canvas.js").FillStrokeState} State.
      */
@@ -20472,9 +21377,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     )) {
       if (strokeStyle) {
         const strokeStyleColor = strokeStyle.getColor();
-        state.strokeStyle = asColorLike(
-          strokeStyleColor ? strokeStyleColor : defaultStrokeStyle
-        );
+        state.strokeStyle = asColorLike(strokeStyleColor ? strokeStyleColor : defaultStrokeStyle) ?? void 0;
         const strokeStyleLineCap = strokeStyle.getLineCap();
         state.lineCap = strokeStyleLineCap !== void 0 ? strokeStyleLineCap : defaultLineCap;
         const strokeStyleLineDash = strokeStyle.getLineDash();
@@ -20506,12 +21409,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return state;
     }
     /**
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @override
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
       this.fillStyleToState(fillStyle, state);
       this.strokeStyleToState(strokeStyle, state);
     }
@@ -20541,11 +21447,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return [
         Instruction.SET_STROKE_STYLE,
         state.strokeStyle,
+        /** @type {number} */
         state.lineWidth * this.pixelRatio,
         state.lineCap,
         state.lineJoin,
         state.miterLimit,
         state.lineDash ? this.applyPixelRatio(state.lineDash) : null,
+        /** @type {number} */
         state.lineDashOffset * this.pixelRatio
       ];
     }
@@ -20573,7 +21481,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const lineWidth = state.lineWidth;
       const miterLimit = state.miterLimit;
       const strokeOffset = state.strokeOffset;
-      if (state.currentStrokeStyle != strokeStyle || state.currentLineCap != lineCap || lineDash != state.currentLineDash && !equals$2(state.currentLineDash, lineDash) || state.currentLineDashOffset != lineDashOffset || state.currentLineJoin != lineJoin || state.currentLineWidth != lineWidth || state.currentMiterLimit != miterLimit || state.currentStrokeOffset != strokeOffset) {
+      if (state.currentStrokeStyle != strokeStyle || state.currentLineCap != lineCap || lineDash != state.currentLineDash && (!lineDash || !state.currentLineDash || !equals$2(state.currentLineDash, lineDash)) || state.currentLineDashOffset != lineDashOffset || state.currentLineJoin != lineJoin || state.currentLineWidth != lineWidth || state.currentMiterLimit != miterLimit || state.currentStrokeOffset != strokeOffset) {
         applyStroke.call(this, state);
         state.currentStrokeStyle = strokeStyle;
         state.currentLineCap = lineCap;
@@ -20650,30 +21558,38 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.image_ || this.maxExtent && !containsCoordinate(this.maxExtent, pointGeometry.getFlatCoordinates())) {
         return;
       }
-      this.beginGeometry(pointGeometry, feature, index);
+      this.beginGeometry(pointGeometry, feature, index ?? 0);
       const flatCoordinates = pointGeometry.getFlatCoordinates();
       const stride = pointGeometry.getStride();
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatPointCoordinates(flatCoordinates, stride);
+      const imagePixelRatio = this.imagePixelRatio_ ?? 1;
+      const anchorX = this.anchorX_ ?? 0;
+      const anchorY = this.anchorY_ ?? 0;
+      const height = this.height_ ?? 0;
+      const originX = this.originX_ ?? 0;
+      const originY = this.originY_ ?? 0;
+      const scale2 = this.scale_ ?? [1, 1];
+      const width = this.width_ ?? 0;
       this.instructions.push([
         Instruction.DRAW_IMAGE,
         myBegin,
         myEnd,
         this.image_,
         // Remaining arguments to DRAW_IMAGE are in alphabetical order
-        this.anchorX_ * this.imagePixelRatio_,
-        this.anchorY_ * this.imagePixelRatio_,
-        Math.ceil(this.height_ * this.imagePixelRatio_),
+        anchorX * imagePixelRatio,
+        anchorY * imagePixelRatio,
+        Math.ceil(height * imagePixelRatio),
         this.opacity_,
-        this.originX_ * this.imagePixelRatio_,
-        this.originY_ * this.imagePixelRatio_,
+        originX * imagePixelRatio,
+        originY * imagePixelRatio,
         this.rotateWithView_,
         this.rotation_,
         [
-          this.scale_[0] * this.pixelRatio / this.imagePixelRatio_,
-          this.scale_[1] * this.pixelRatio / this.imagePixelRatio_
+          scale2[0] * this.pixelRatio / imagePixelRatio,
+          scale2[1] * this.pixelRatio / imagePixelRatio
         ],
-        Math.ceil(this.width_ * this.imagePixelRatio_),
+        Math.ceil(width * imagePixelRatio),
         this.declutterMode_,
         this.declutterImageWithText_
       ]);
@@ -20708,7 +21624,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.image_) {
         return;
       }
-      this.beginGeometry(multiPointGeometry, feature, index);
+      this.beginGeometry(multiPointGeometry, feature, index ?? 0);
       const flatCoordinates = multiPointGeometry.getFlatCoordinates();
       const filteredFlatCoordinates = [];
       for (let i = 0, ii = flatCoordinates.length; i < ii; i += multiPointGeometry.getStride()) {
@@ -20721,25 +21637,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatPointCoordinates(filteredFlatCoordinates, 2);
+      const imagePixelRatio = this.imagePixelRatio_ ?? 1;
+      const anchorX = this.anchorX_ ?? 0;
+      const anchorY = this.anchorY_ ?? 0;
+      const height = this.height_ ?? 0;
+      const originX = this.originX_ ?? 0;
+      const originY = this.originY_ ?? 0;
+      const scale2 = this.scale_ ?? [1, 1];
+      const width = this.width_ ?? 0;
       this.instructions.push([
         Instruction.DRAW_IMAGE,
         myBegin,
         myEnd,
         this.image_,
         // Remaining arguments to DRAW_IMAGE are in alphabetical order
-        this.anchorX_ * this.imagePixelRatio_,
-        this.anchorY_ * this.imagePixelRatio_,
-        Math.ceil(this.height_ * this.imagePixelRatio_),
+        anchorX * imagePixelRatio,
+        anchorY * imagePixelRatio,
+        Math.ceil(height * imagePixelRatio),
         this.opacity_,
-        this.originX_ * this.imagePixelRatio_,
-        this.originY_ * this.imagePixelRatio_,
+        originX * imagePixelRatio,
+        originY * imagePixelRatio,
         this.rotateWithView_,
         this.rotation_,
         [
-          this.scale_[0] * this.pixelRatio / this.imagePixelRatio_,
-          this.scale_[1] * this.pixelRatio / this.imagePixelRatio_
+          scale2[0] * this.pixelRatio / imagePixelRatio,
+          scale2[1] * this.pixelRatio / imagePixelRatio
         ],
-        Math.ceil(this.width_ * this.imagePixelRatio_),
+        Math.ceil(width * imagePixelRatio),
         this.declutterMode_,
         this.declutterImageWithText_
       ]);
@@ -20794,6 +21718,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const anchor = imageStyle.getAnchor();
       const size = imageStyle.getSize();
       const origin = imageStyle.getOrigin();
+      if (!anchor || !size || !origin) {
+        return;
+      }
       this.imagePixelRatio_ = imageStyle.getPixelRatio(this.pixelRatio);
       this.anchorX_ = anchor[0];
       this.anchorY_ = anchor[1];
@@ -20808,7 +21735,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.scale_ = imageStyle.getScaleArray();
       this.width_ = size[0];
       this.declutterMode_ = imageStyle.getDeclutterMode();
-      this.declutterImageWithText_ = sharedData;
+      this.declutterImageWithText_ = /** @type {import("../canvas.js").DeclutterImageWithText|undefined} */
+      sharedData;
     }
   }
   class CanvasLineStringBuilder extends CanvasBuilder {
@@ -20831,6 +21759,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {number} end.
      */
     drawFlatCoordinates_(flatCoordinates, offset, end, stride, strokeOffset) {
+      const strokeOffsetValue = (strokeOffset ?? defaultStrokeOffset) * this.pixelRatio;
       const myBegin = this.coordinates.length;
       const myEnd = this.appendFlatLineCoordinates(
         flatCoordinates,
@@ -20844,13 +21773,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         Instruction.MOVE_TO_LINE_TO,
         myBegin,
         myEnd,
-        strokeOffset * this.pixelRatio
+        strokeOffsetValue
       ]);
       this.hitDetectionInstructions.push([
         Instruction.MOVE_TO_LINE_TO,
         myBegin,
         myEnd,
-        strokeOffset
+        strokeOffset ?? defaultStrokeOffset
       ]);
       return end;
     }
@@ -20862,6 +21791,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     drawLineString(lineStringGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const strokeStyle = state.strokeStyle;
       const lineWidth = state.lineWidth;
       const strokeOffset = state.strokeOffset;
@@ -20869,7 +21801,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.updateStrokeStyle(state, this.applyStroke);
-      this.beginGeometry(lineStringGeometry, feature, index);
+      this.beginGeometry(lineStringGeometry, feature, index ?? 0);
       this.hitDetectionInstructions.push(
         [
           Instruction.SET_STROKE_STYLE,
@@ -20903,6 +21835,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     drawMultiLineString(multiLineStringGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const strokeStyle = state.strokeStyle;
       const lineWidth = state.lineWidth;
       const strokeOffset = state.strokeOffset;
@@ -20910,7 +21845,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.updateStrokeStyle(state, this.applyStroke);
-      this.beginGeometry(multiLineStringGeometry, feature, index);
+      this.beginGeometry(multiLineStringGeometry, feature, index ?? 0);
       this.hitDetectionInstructions.push(
         [
           Instruction.SET_STROKE_STYLE,
@@ -20924,7 +21859,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         ],
         beginPathInstruction
       );
-      const ends = multiLineStringGeometry.getEnds();
+      const ends = multiLineStringGeometry.getEnds() ?? [];
       const flatCoordinates = multiLineStringGeometry.getFlatCoordinates();
       const stride = multiLineStringGeometry.getStride();
       let offset = 0;
@@ -20947,7 +21882,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     finish() {
       const state = this.state;
-      if (state.lastStroke != void 0 && state.lastStroke != this.coordinates.length) {
+      if (state && state.lastStroke != void 0 && state.lastStroke != this.coordinates.length) {
         this.instructions.push(strokeInstruction);
       }
       this.reverseHitDetectionInstructions();
@@ -20988,7 +21923,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {number} End.
      */
     drawFlatCoordinatess_(flatCoordinates, offset, ends, stride, strokeOffset) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
+      const strokeOffsetValue = strokeOffset ?? defaultStrokeOffset;
       const fill = state.fillStyle !== void 0;
       const stroke = state.strokeStyle !== void 0;
       const numEnds = ends.length;
@@ -21009,14 +21948,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           Instruction.MOVE_TO_LINE_TO,
           myBegin,
           myEnd,
-          strokeOffset * this.pixelRatio,
+          strokeOffsetValue * this.pixelRatio,
           true
         ]);
         this.hitDetectionInstructions.push([
           Instruction.MOVE_TO_LINE_TO,
           myBegin,
           myEnd,
-          strokeOffset,
+          strokeOffsetValue,
           true
         ]);
         if (stroke) {
@@ -21043,6 +21982,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     drawCircle(circleGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -21055,7 +21997,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(circleGeometry, feature, index);
+      this.beginGeometry(circleGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -21106,6 +22048,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     drawPolygon(polygonGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -21118,7 +22063,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(polygonGeometry, feature, index);
+      this.beginGeometry(polygonGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -21158,6 +22103,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     drawMultiPolygon(multiPolygonGeometry, feature, index) {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
       const strokeOffset = state.strokeOffset;
@@ -21170,7 +22118,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.setFillStrokeStyles_();
-      this.beginGeometry(multiPolygonGeometry, feature, index);
+      this.beginGeometry(multiPolygonGeometry, feature, index ?? 0);
       if (state.fillStyle !== void 0) {
         this.hitDetectionInstructions.push([
           Instruction.SET_FILL_STYLE,
@@ -21225,14 +22173,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     setFillStrokeStyles_() {
       const state = this.state;
+      if (!state) {
+        return;
+      }
       this.updateFillStyle(state, this.createFill);
       this.updateStrokeStyle(state, this.applyStroke);
     }
+    /**
+     * @private
+     * @param {function(): void} drawGeometryCallback Draw callback.
+     * @return {boolean} Whether the stroke was drawn with an offset.
+     */
     handleStrokeOffset_(drawGeometryCallback) {
-      const state = this.state;
+      const state = (
+        /** @type {import("../canvas.js").FillStrokeState} */
+        this.state
+      );
       const fillStyle = state.fillStyle;
       const strokeStyle = state.strokeStyle;
-      const strokeOffset = state.strokeOffset;
+      const strokeOffset = state.strokeOffset ?? defaultStrokeOffset;
       if (Math.abs(strokeOffset) > 0 && fillStyle !== void 0 && strokeStyle !== void 0) {
         state.strokeStyle = void 0;
         state.strokeOffset = 0;
@@ -21406,11 +22365,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     for (i = offset; i < end; i += stride) {
       const x2 = flatCoordinates[i];
       const y2 = flatCoordinates[i + 1];
-      if (x1 !== void 0) {
+      if (x1 !== void 0 && y1 !== void 0) {
         x23 = x2 - x1;
         y23 = y2 - y1;
         m23 = Math.sqrt(x23 * x23 + y23 * y23);
-        if (x12 !== void 0) {
+        if (x12 !== void 0 && y12 !== void 0 && m12 !== void 0) {
           m += m12;
           acos = Math.acos((x12 * x23 + y12 * y23) / (m12 * m23));
           if (acos > maxAngle) {
@@ -21430,7 +22389,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       x1 = x2;
       y1 = y2;
     }
-    m += m23;
+    m += m23 || 0;
     return m > chunkM ? [start, i] : [chunkStart, chunkEnd];
   }
   const TEXT_ALIGN = {
@@ -21508,7 +22467,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (!intersects$1(this.maxExtent, geometryExtent)) {
           return;
         }
-        let ends;
+        let ends = [];
         flatCoordinates = geometry.getFlatCoordinates();
         if (geometryType == "LineString") {
           ends = [flatCoordinates.length];
@@ -21528,7 +22487,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             ends.push(endss[i][0]);
           }
         }
-        if ((geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
+        if (textState.textAlign === void 0 && (geometryType == "LineString" || geometryType == "MultiLineString") && !containsExtent(this.getBufferedMaxExtent(), geometryExtent)) {
           const clipped = clipFlatLineStrings(
             flatCoordinates,
             ends,
@@ -21542,7 +22501,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             return;
           }
         }
-        this.beginGeometry(geometry, feature, index);
+        this.beginGeometry(geometry, feature, index ?? 0);
         const repeat = textState.repeat;
         const textAlign = repeat ? void 0 : textState.textAlign;
         let flatOffset = 0;
@@ -21565,7 +22524,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             let chunkEnd = chunk.length;
             if (textAlign == void 0) {
               const range = matchingChunk(
-                textState.maxAngle,
+                textState.maxAngle ?? Math.PI / 4,
                 chunk,
                 0,
                 chunk.length,
@@ -21608,7 +22567,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           case "Polygon":
             flatCoordinates = /** @type {import("../../geom/Polygon.js").default} */
             geometry.getFlatInteriorPoint();
-            if (!textState.overflow) {
+            if (!textState.overflow && geometryWidths) {
               geometryWidths.push(flatCoordinates[2] / this.resolution);
             }
             stride = 3;
@@ -21620,7 +22579,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             );
             flatCoordinates = [];
             for (let i = 0, ii = interiorPoints.length; i < ii; i += 3) {
-              if (!textState.overflow) {
+              if (!textState.overflow && geometryWidths) {
                 geometryWidths.push(interiorPoints[i + 2] / this.resolution);
               }
               flatCoordinates.push(interiorPoints[i], interiorPoints[i + 1]);
@@ -21630,15 +22589,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             }
             stride = 2;
             break;
+          default:
+            return;
+        }
+        if (!flatCoordinates) {
+          return;
         }
         const end = this.appendFlatPointCoordinates(flatCoordinates, stride);
         if (end === begin) {
           return;
         }
         if (geometryWidths && (end - begin) / 2 !== flatCoordinates.length / stride) {
+          const flatCoords = flatCoordinates;
           let beg = begin / 2;
           geometryWidths = geometryWidths.filter((w, i) => {
-            const keep = coordinates2[(beg + i) * 2] === flatCoordinates[i * stride] && coordinates2[(beg + i) * 2 + 1] === flatCoordinates[i * stride + 1];
+            const keep = coordinates2[(beg + i) * 2] === flatCoords[i * stride] && coordinates2[(beg + i) * 2 + 1] === flatCoords[i * stride + 1];
             if (!keep) {
               --beg;
             }
@@ -21648,18 +22613,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.saveTextStates_();
         const backgroundFill = textState.backgroundFill ? this.createFill(this.fillStyleToState(textState.backgroundFill)) : null;
         const backgroundStroke = textState.backgroundStroke ? this.createStroke(this.strokeStyleToState(textState.backgroundStroke)) : null;
-        this.beginGeometry(geometry, feature, index);
-        let padding = textState.padding;
-        if (padding != defaultPadding && (textState.scale[0] < 0 || textState.scale[1] < 0)) {
-          let p0 = textState.padding[0];
-          let p12 = textState.padding[1];
-          let p22 = textState.padding[2];
-          let p32 = textState.padding[3];
-          if (textState.scale[0] < 0) {
+        this.beginGeometry(geometry, feature, index ?? 0);
+        const textScale = textState.scale ?? [1, 1];
+        let padding = textState.padding ?? defaultPadding;
+        if (padding != defaultPadding && (textScale[0] < 0 || textScale[1] < 0)) {
+          let p0 = padding[0];
+          let p12 = padding[1];
+          let p22 = padding[2];
+          let p32 = padding[3];
+          if (textScale[0] < 0) {
             p12 = -p12;
             p32 = -p32;
           }
-          if (textState.scale[1] < 0) {
+          if (textScale[1] < 0) {
             p0 = -p0;
             p22 = -p22;
           }
@@ -21785,11 +22751,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const fillKey = this.fillKey_;
       this.saveTextStates_();
       const pixelRatio = this.pixelRatio;
-      const baseline = TEXT_ALIGN[textState.textBaseline];
+      const baseline = TEXT_ALIGN[textState.textBaseline || defaultTextBaseline];
       const offsetX = this.textOffsetX_ * pixelRatio;
       const offsetY = this.textOffsetY_ * pixelRatio;
       const text = this.text_;
-      const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textState.scale[0]) / 2 : 0;
+      const textScale = textState.scale ?? [1, 1];
+      const strokeWidth = strokeState ? strokeState.lineWidth * Math.abs(textScale[0]) / 2 : 0;
       this.instructions.push([
         Instruction.DRAW_CHARS,
         begin,
@@ -21850,9 +22817,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             {};
             this.textFillState_ = fillState;
           }
-          fillState.fillStyle = asColorLike(
-            textFillStyle.getColor() || defaultFillStyle
-          );
+          fillState.fillStyle = asColorLike(textFillStyle.getColor() || defaultFillStyle) || defaultFillStyle;
         }
         const textStrokeStyle = textStyle.getStroke();
         if (!textStrokeStyle) {
@@ -21875,9 +22840,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           strokeState.lineJoin = textStrokeStyle.getLineJoin() || defaultLineJoin;
           strokeState.lineWidth = lineWidth === void 0 ? defaultLineWidth : lineWidth;
           strokeState.miterLimit = miterLimit === void 0 ? defaultMiterLimit : miterLimit;
-          strokeState.strokeStyle = asColorLike(
-            textStrokeStyle.getColor() || defaultStrokeStyle
-          );
+          strokeState.strokeStyle = asColorLike(textStrokeStyle.getColor() || defaultStrokeStyle) || defaultStrokeStyle;
         }
         textState = this.textState_;
         const font = textStyle.getFont() || defaultFont;
@@ -21891,8 +22854,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         textState.repeat = textStyle.getRepeat();
         textState.justify = textStyle.getJustify();
         textState.textBaseline = textStyle.getTextBaseline() || defaultTextBaseline;
-        textState.backgroundFill = textStyle.getBackgroundFill();
-        textState.backgroundStroke = textStyle.getBackgroundStroke();
+        textState.backgroundFill = textStyle.getBackgroundFill() ?? void 0;
+        textState.backgroundStroke = textStyle.getBackgroundStroke() ?? void 0;
         textState.padding = textStyle.getPadding() || defaultPadding;
         textState.scale = textScale === void 0 ? [1, 1] : textScale;
         const textOffsetX = textStyle.getOffsetX();
@@ -21910,8 +22873,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.textKey_ = textState.font + textState.scale + (textState.textAlign || "?") + (textState.repeat || "?") + (textState.justify || "?") + (textState.textBaseline || "?");
         this.fillKey_ = fillState && fillState.fillStyle ? typeof fillState.fillStyle == "string" ? fillState.fillStyle : "|" + getUid(fillState.fillStyle) : "";
       }
-      this.declutterMode_ = textStyle.getDeclutterMode();
-      this.declutterImageWithText_ = sharedData;
+      this.declutterMode_ = textStyle ? textStyle.getDeclutterMode() : void 0;
+      this.declutterImageWithText_ = /** @type {import("../canvas.js").DeclutterImageWithText|undefined} */
+      sharedData;
     }
   }
   const BATCH_CONSTRUCTORS = {
@@ -21937,7 +22901,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.buildersByZIndex_ = {};
     }
     /**
-     * @return {!Object<string, !Object<import("../canvas.js").BuilderType, import("./Builder.js").SerializableInstructions>>} The serializable instructions
+     * @return {!Object<string, !Object<import("../canvas.js").BuilderType, import("../canvas.js").SerializableInstructions>>} The serializable instructions
      */
     finish() {
       const builderInstructions = {};
@@ -21945,8 +22909,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         builderInstructions[zKey] = builderInstructions[zKey] || {};
         const builders = this.buildersByZIndex_[zKey];
         for (const builderKey in builders) {
-          const builderInstruction = builders[builderKey].finish();
-          builderInstructions[zKey][builderKey] = builderInstruction;
+          const builderInstruction = builders[
+            /** @type {import("../canvas.js").BuilderType} */
+            builderKey
+          ].finish();
+          builderInstructions[zKey][
+            /** @type {import("../canvas.js").BuilderType} */
+            builderKey
+          ] = builderInstruction;
         }
       }
       return builderInstructions;
@@ -22091,6 +23061,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return coords;
   }
   let segmenter;
+  const rtlRegEx = new RegExp(
+    /* eslint-disable prettier/prettier */
+    "[" + String.fromCharCode(1425) + "-" + String.fromCharCode(2303) + String.fromCharCode(64285) + "-" + String.fromCharCode(65023) + String.fromCharCode(65136) + "-" + String.fromCharCode(65276) + String.fromCharCode(67584) + "-" + String.fromCharCode(69631) + String.fromCharCode(124928) + "-" + String.fromCharCode(126975) + "]"
+    /* eslint-enable prettier/prettier */
+  );
   function getSegmenter() {
     if (!segmenter) {
       segmenter = new Intl.Segmenter(void 0, { granularity: "grapheme" });
@@ -22160,6 +23135,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     text = text.replace(/\n/g, " ");
     const segments = Array.from(getSegmenter().segment(text), (s) => s.segment);
+    const reverseChunks = reverse !== rtlRegEx.test(text);
     for (let i = 0, ii = segments.length; i < ii; ) {
       advance();
       let angle = Math.atan2(y2 - y1, x2 - x1);
@@ -22177,7 +23153,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const iStart = i;
       let charLength = 0;
       for (; i < ii; ++i) {
-        const index = reverse ? ii - i - 1 : i;
+        const index = reverseChunks ? ii - i - 1 : i;
         const len = scale2 * measureAndCacheTextWidth2(font, segments[index], cache2);
         if (offset + stride < end && segmentM + segmentLength < startM + charLength + len / 2) {
           break;
@@ -22187,7 +23163,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (i === iStart) {
         continue;
       }
-      const chars = (reverse ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
+      const chars = (reverseChunks ? segments.slice(ii - i, ii - iStart) : segments.slice(iStart, i)).join("");
       interpolate = segmentLength === 0 ? 0 : (startM + charLength / 2 - segmentM) / segmentLength;
       const x = lerp(x1, x2, interpolate);
       const y = lerp(y1, y2, interpolate);
@@ -22301,11 +23277,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function getDeclutterBox(replayImageOrLabelArgs) {
     return replayImageOrLabelArgs[3].declutterBox;
   }
-  const rtlRegEx = new RegExp(
-    /* eslint-disable prettier/prettier */
-    "[" + String.fromCharCode(1425) + "-" + String.fromCharCode(2303) + String.fromCharCode(64285) + "-" + String.fromCharCode(65023) + String.fromCharCode(65136) + "-" + String.fromCharCode(65276) + String.fromCharCode(67584) + "-" + String.fromCharCode(69631) + String.fromCharCode(124928) + "-" + String.fromCharCode(126975) + "]"
-    /* eslint-enable prettier/prettier */
-  );
   function horizontalTextAlign(text, align) {
     if (align === "start") {
       align = rtlRegEx.test(text) ? "right" : "left";
@@ -22355,7 +23326,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.zIndexContext_ = deferredRendering ? new ZIndexContext() : null;
     }
     /**
-     * @return {ZIndexContext} ZIndex context.
+     * @return {import("../canvas/ZIndexContext.js").default|null} ZIndex context.
      */
     getZIndexContext() {
       return this.zIndexContext_;
@@ -22377,14 +23348,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const textState = this.textStates[textKey];
       const pixelRatio = this.pixelRatio;
       const scale2 = [
+        /** @type {Array<number>} */
         textState.scale[0] * pixelRatio,
+        /** @type {Array<number>} */
         textState.scale[1] * pixelRatio
       ];
       const align = textState.justify ? TEXT_ALIGN[textState.justify] : horizontalTextAlign(
         Array.isArray(text) ? text[0] : text,
         textState.textAlign || defaultTextAlign
       );
-      const strokeWidth = strokeKey && strokeState.lineWidth ? strokeState.lineWidth : 0;
+      const strokeWidth = strokeKey && /** @type {import("../canvas.js").StrokeState} */
+      strokeState.lineWidth ? (
+        /** @type {import("../canvas.js").StrokeState} */
+        strokeState.lineWidth
+      ) : 0;
       const chunks = Array.isArray(text) ? text : String(text).split("\n").reduce(createTextChunks, []);
       const { width, height, widths, heights, lineWidths } = getTextDimensions(
         textState,
@@ -22402,7 +23379,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (scale2[0] != 1 || scale2[1] != 1) {
         contextInstructions.push("scale", scale2);
       }
-      if (strokeKey) {
+      if (strokeKey && strokeState) {
         contextInstructions.push("strokeStyle", strokeState.strokeStyle);
         contextInstructions.push("lineWidth", strokeWidth);
         contextInstructions.push("lineCap", strokeState.lineCap);
@@ -22411,7 +23388,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         contextInstructions.push("setLineDash", [strokeState.lineDash]);
         contextInstructions.push("lineDashOffset", strokeState.lineDashOffset);
       }
-      if (fillKey) {
+      if (fillKey && fillState) {
         contextInstructions.push("fillStyle", fillState.fillStyle);
       }
       contextInstructions.push("textBaseline", "middle");
@@ -22465,21 +23442,41 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return label;
     }
     /**
-     * @param {CanvasRenderingContext2D} context Context.
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import("../../coordinate.js").Coordinate} p1 1st point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p2 2nd point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p3 3rd point of the background box.
      * @param {import("../../coordinate.js").Coordinate} p4 4th point of the background box.
-     * @param {Array<*>} fillInstruction Fill instruction.
-     * @param {Array<*>} strokeInstruction Stroke instruction.
+     * @param {Array<*>|null} fillInstruction Fill instruction.
+     * @param {Array<*>|null} strokeInstruction Stroke instruction.
      */
     replayTextBackground_(context, p12, p22, p32, p42, fillInstruction2, strokeInstruction2) {
       context.beginPath();
-      context.moveTo.apply(context, p12);
-      context.lineTo.apply(context, p22);
-      context.lineTo.apply(context, p32);
-      context.lineTo.apply(context, p42);
-      context.lineTo.apply(context, p12);
+      context.moveTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p12
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p22
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p32
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p42
+      );
+      context.lineTo.apply(
+        context,
+        /** @type {[number, number]} */
+        p12
+      );
       if (fillInstruction2) {
         this.alignAndScaleFill_ = /** @type {number} */
         fillInstruction2[2];
@@ -22593,13 +23590,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * @private
-     * @param {CanvasRenderingContext2D} context Context.
+     * @param {ReplayImageOrLabelArgs} replayArgs Arguments.
+     * @return {boolean} The image or label was rendered.
+     */
+    replayImageOrLabelArgs_(replayArgs) {
+      return this.replayImageOrLabel_(
+        replayArgs[0],
+        replayArgs[1],
+        replayArgs[2],
+        replayArgs[3],
+        replayArgs[4],
+        replayArgs[5],
+        replayArgs[6]
+      );
+    }
+    /**
+     * @private
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import('../../size.js').Size} scaledCanvasSize Scaled canvas size.
      * @param {import("../canvas.js").Label|HTMLImageElement|HTMLCanvasElement|HTMLVideoElement} imageOrLabel Image.
      * @param {ImageOrLabelDimensions} dimensions Dimensions.
      * @param {number} opacity Opacity.
-     * @param {Array<*>} fillInstruction Fill instruction.
-     * @param {Array<*>} strokeInstruction Stroke instruction.
+     * @param {Array<*>|null} fillInstruction Fill instruction.
+     * @param {Array<*>|null} strokeInstruction Stroke instruction.
      * @return {boolean} The image or label was rendered.
      */
     replayImageOrLabel_(context, scaledCanvasSize, imageOrLabel, dimensions, opacity, fillInstruction2, strokeInstruction2) {
@@ -22623,6 +23636,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         drawImageOrLabel(
           context,
+          /** @type {?} */
           dimensions.canvasTransform,
           opacity,
           imageOrLabel,
@@ -22702,7 +23716,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
       const baseline = TEXT_ALIGN[textState.textBaseline || defaultTextBaseline];
       const strokeWidth = strokeState && strokeState.lineWidth ? strokeState.lineWidth : 0;
-      const width = label.width / pixelRatio - 2 * textState.scale[0];
+      const width = label.width / pixelRatio - 2 * /** @type {Array<number>} */
+      textState.scale[0];
       const anchorX = align * width + 2 * (0.5 - align) * strokeWidth;
       const anchorY = baseline * label.height / pixelRatio + 2 * (0.5 - baseline) * strokeWidth;
       return {
@@ -22748,7 +23763,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const ii = instructions.length;
       let d = 0;
       let dd;
-      const offsetCoords = [];
+      const offsetCoords = (
+        /** @type {Array<number>} */
+        []
+      );
       let anchorX, anchorY, lineOffsetPx, declutterMode, prevX, prevY, roundX, roundY, image, text, textKey, strokeKey, fillKey;
       let pendingFill = 0;
       let pendingStroke = 0;
@@ -22838,7 +23856,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const renderer = instruction[4];
             const fn = instruction[5];
             state.geometry = geometry;
-            state.feature = feature;
+            state.feature = /** @type {import("../../Feature.js").FeatureLike} */
+            feature;
             if (!(i in coordinateCache)) {
               coordinateCache[i] = [];
             }
@@ -22901,7 +23920,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             );
             declutterMode = instruction[14] || "declutter";
             const declutterImageWithText = (
-              /** @type {{args: import("../canvas.js").DeclutterImageWithText, declutterMode: import('../../style/Style.js').DeclutterMode}} */
+              /** @type {DeclutterImageWithTextMap|undefined} */
               instruction[15]
             );
             if (!image && instruction.length >= 20) {
@@ -22940,7 +23959,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             }
             let geometryWidths;
             if (instruction.length > 25) {
-              geometryWidths = /** @type {number} */
+              geometryWidths = /** @type {Array<number>|undefined} */
               instruction[25];
             }
             let padding, backgroundFillInstruction, backgroundStrokeInstruction;
@@ -22982,6 +24001,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 snapToPixel,
                 padding,
                 !!backgroundFillInstruction || !!backgroundStrokeInstruction,
+                /** @type {import("../../Feature.js").FeatureLike} */
                 feature
               );
               const args = [
@@ -22998,7 +24018,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 if (declutterImageWithText) {
                   const index = dd - d;
                   if (!declutterImageWithText[index]) {
-                    declutterImageWithText[index] = { args, declutterMode };
+                    declutterImageWithText[index] = {
+                      args,
+                      declutterMode: (
+                        /** @type {import('../../style/Style.js').DeclutterMode} */
+                        declutterMode
+                      )
+                    };
                     continue;
                   }
                   const imageDeclutter = declutterImageWithText[index];
@@ -23007,8 +24033,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   delete declutterImageWithText[index];
                   imageDeclutterBox = getDeclutterBox(imageArgs);
                 }
-                let renderImage, renderText;
-                if (imageArgs && (imageDeclutterMode !== "declutter" || !declutterTree.collides(imageDeclutterBox))) {
+                let renderImage;
+                let renderText;
+                if (imageArgs && (imageDeclutterMode !== "declutter" || !declutterTree.collides(
+                  /** @type {?} */
+                  imageDeclutterBox
+                ))) {
                   renderImage = true;
                 }
                 if (declutterMode !== "declutter" || !declutterTree.collides(dimensions.declutterBox)) {
@@ -23021,18 +24051,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 }
                 if (renderImage) {
                   if (imageDeclutterMode !== "none") {
-                    declutterTree.insert(imageDeclutterBox);
+                    declutterTree.insert(
+                      /** @type {?} */
+                      imageDeclutterBox
+                    );
                   }
-                  this.replayImageOrLabel_.apply(this, imageArgs);
+                  this.replayImageOrLabelArgs_(
+                    /** @type {ReplayImageOrLabelArgs} */
+                    imageArgs
+                  );
                 }
                 if (renderText) {
                   if (declutterMode !== "none") {
                     declutterTree.insert(dimensions.declutterBox);
                   }
-                  this.replayImageOrLabel_.apply(this, args);
+                  this.replayImageOrLabelArgs_(args);
                 }
               } else {
-                this.replayImageOrLabel_.apply(this, args);
+                this.replayImageOrLabelArgs_(args);
               }
             }
             ++i;
@@ -23099,7 +24135,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const textState = this.textStates[textKey];
             const font = textState.font;
             const textScale = [
+              /** @type {Array<number>} */
               textState.scale[0] * measurePixelRatio,
+              /** @type {Array<number>} */
               textState.scale[1] * measurePixelRatio
             ];
             let cachedWidths;
@@ -23113,7 +24151,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const textLength = Math.abs(textScale[0]) * measureAndCacheTextWidth(font, text, cachedWidths);
             if (overflow || textLength <= pathLength) {
               const textAlign = this.textStates[textKey].textAlign;
-              const startM = (pathLength - textLength) * horizontalTextAlign(text, textAlign);
+              const startM = (pathLength - textLength) * horizontalTextAlign(
+                text,
+                /** @type {CanvasTextAlign} */
+                textAlign
+              );
               const parts = drawTextOnPath(
                 pixelCoordinates,
                 begin,
@@ -23157,6 +24199,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       false,
                       defaultPadding,
                       false,
+                      /** @type {import("../../Feature.js").FeatureLike} */
                       feature
                     );
                     if (declutterTree && declutterMode === "declutter" && declutterTree.collides(dimensions.declutterBox)) {
@@ -23168,7 +24211,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       label,
                       dimensions,
                       1,
+                      /** @type {Array<*>|null} */
                       null,
+                      /** @type {Array<*>|null} */
                       null
                     ]);
                   }
@@ -23198,6 +24243,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       false,
                       defaultPadding,
                       false,
+                      /** @type {import("../../Feature.js").FeatureLike} */
                       feature
                     );
                     if (declutterTree && declutterMode === "declutter" && declutterTree.collides(dimensions.declutterBox)) {
@@ -23209,7 +24255,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                       label,
                       dimensions,
                       1,
+                      /** @type {Array<*>|null} */
                       null,
+                      /** @type {Array<*>|null} */
                       null
                     ]);
                   }
@@ -23218,7 +24266,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   declutterTree.load(replayImageOrLabelArgs.map(getDeclutterBox));
                 }
                 for (let i2 = 0, ii2 = replayImageOrLabelArgs.length; i2 < ii2; ++i2) {
-                  this.replayImageOrLabel_.apply(this, replayImageOrLabelArgs[i2]);
+                  this.replayImageOrLabelArgs_(replayImageOrLabelArgs[i2]);
                 }
               }
             }
@@ -23231,6 +24279,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               const result = featureCallback(
                 feature,
                 currentGeometry,
+                /** @type {import('../../style/Style.js').DeclutterMode} */
                 declutterMode
               );
               if (result) {
@@ -23411,7 +24460,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function benchmarkCanvasReads() {
     let bestResult = 0;
     const measure = (willReadFrequently2) => {
-      const context = createCanvasContext2D(1, 1, null, { willReadFrequently: willReadFrequently2 });
+      const context = createCanvasContext2D(
+        1,
+        1,
+        /** @type {?} */
+        null,
+        {
+          willReadFrequently: willReadFrequently2
+        }
+      );
       let count = 0;
       const start = performance.now();
       for (; performance.now() - start < 50; ++count) {
@@ -23432,10 +24489,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   class ExecutorGroup {
     /**
-     * @param {import("../../extent.js").Extent} maxExtent Max extent for clipping. When a
+     * @param {import("../../extent.js").Extent|null} maxExtent Max extent for clipping. When a
      * `maxExtent` was set on the Builder for this executor group, the same `maxExtent`
      * should be set here, unless the target context does not exceed that extent (which
-     * can be the case when rendering to tiles).
+     * can be the case when rendering to tiles). Pass `null` to disable clipping.
      * @param {number} resolution Resolution.
      * @param {number} pixelRatio Pixel ratio.
      * @param {boolean} overlaps The executor group can have overlapping geometries.
@@ -23455,14 +24512,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.hitDetectionTransform_ = create();
       this.renderedContext_ = null;
       this.deferredZIndexContexts_ = {};
-      this.createExecutors_(allInstructions, deferredRendering);
+      this.createExecutors_(allInstructions, !!deferredRendering);
     }
     /**
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context Context.
      * @param {import("../../transform.js").Transform} transform Transform.
      */
     clip(context, transform2) {
-      const flatClipCoords = this.getClipCoords(transform2);
+      const flatClipCoords = (
+        /** @type {Array<number>} */
+        this.getClipCoords(transform2)
+      );
       context.beginPath();
       context.moveTo(flatClipCoords[0], flatClipCoords[1]);
       context.lineTo(flatClipCoords[2], flatClipCoords[3]);
@@ -23542,11 +24602,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.hitDetectionContext_ = createCanvasContext2D(
           contextSize,
           contextSize,
+          /** @type {?} */
           null,
           { willReadFrequently }
         );
       }
-      const context = this.hitDetectionContext_;
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.hitDetectionContext_
+      );
       if (context.canvas.width !== contextSize || context.canvas.height !== contextSize) {
         context.canvas.width = contextSize;
         context.canvas.height = contextSize;
@@ -23565,8 +24629,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const indexes = getPixelIndexArray(hitTolerance);
       let builderType;
+      const hitContext = context;
       function featureCallback(feature, geometry, declutterMode) {
-        const imageData = context.getImageData(
+        const imageData = hitContext.getImageData(
           0,
           0,
           contextSize,
@@ -23583,7 +24648,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 return result2;
               }
             }
-            context.clearRect(0, 0, contextSize, contextSize);
+            hitContext.clearRect(0, 0, contextSize, contextSize);
             break;
           }
         }
@@ -23673,7 +24738,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                 scaledCanvasSize,
                 transform2,
                 viewRotation,
+                /** @type {boolean} */
                 snapToPixel,
+                /** @type {?} */
                 declutterTree
               );
             } else {
@@ -23683,7 +24750,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
                   scaledCanvasSize,
                   transform2,
                   viewRotation,
+                  /** @type {boolean} */
                   snapToPixel,
+                  /** @type {?} */
                   declutterTree
                 )
               );
@@ -23715,7 +24784,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const zs = Object.keys(deferredZIndexContexts).map(Number).sort(ascending);
       for (let i = 0, ii = zs.length; i < ii; ++i) {
         deferredZIndexContexts[zs[i]].forEach((zIndexContext) => {
-          zIndexContext.draw(this.renderedContext_);
+          zIndexContext.draw(
+            /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+            this.renderedContext_
+          );
           zIndexContext.clear();
         });
         deferredZIndexContexts[zs[i]].length = 0;
@@ -23859,7 +24931,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             -centerY
           );
           context.save();
-          context.transform.apply(context, localTransform);
+          context.transform.apply(
+            context,
+            /** @type {[number, number, number, number, number, number]} */
+            localTransform
+          );
           context.translate(centerX, centerY);
           context.scale(this.imageScale_[0], this.imageScale_[1]);
           context.drawImage(
@@ -23964,6 +25040,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     moveToLineTo_(flatCoordinates, offset, end, stride, close, strokeOffset) {
       const context = this.context_;
+      const strokeOffsetPx = strokeOffset ?? 0;
       let pixelCoordinates = transform2D(
         flatCoordinates,
         offset,
@@ -23972,7 +25049,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.transform_,
         this.pixelCoordinates_
       );
-      if (Math.abs(strokeOffset) > 0) {
+      if (Math.abs(strokeOffsetPx) > 0) {
         const n = pixelCoordinates.length;
         const isClosedLine = close || Math.abs(pixelCoordinates[0] - pixelCoordinates[n - 2]) < 1e-6 && Math.abs(pixelCoordinates[1] - pixelCoordinates[n - 1]) < 1e-6;
         pixelCoordinates = offsetLineString(
@@ -23980,7 +25057,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           0,
           n,
           2,
-          strokeOffset,
+          strokeOffsetPx,
           isClosedLine,
           pixelCoordinates
         );
@@ -24052,6 +25129,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.transform_,
           this.pixelCoordinates_
         );
+        if (!pixelCoordinates) {
+          return;
+        }
         const dx = pixelCoordinates[2] - pixelCoordinates[0];
         const dy = pixelCoordinates[3] - pixelCoordinates[1];
         const radius = Math.sqrt(dx * dx + dy * dy);
@@ -24084,9 +25164,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     setStyle(style) {
-      this.setFillStrokeStyle(style.getFill(), style.getStroke());
-      this.setImageStyle(style.getImage());
-      this.setTextStyle(style.getText());
+      this.setFillStrokeStyle(style.getFill() ?? null, style.getStroke() ?? null);
+      this.setImageStyle(style.getImage() ?? null);
+      this.setTextStyle(style.getText() ?? null);
     }
     /**
      * @param {import("../../transform.js").Transform} transform Transform.
@@ -24532,8 +25612,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Set the fill and stroke style for subsequent draw operations.  To clear
      * either fill or stroke styles, pass null for the appropriate parameter.
      *
-     * @param {import("../../style/Fill.js").default} fillStyle Fill style.
-     * @param {import("../../style/Stroke.js").default} strokeStyle Stroke style.
+     * @param {import("../../style/Fill.js").default|null} fillStyle Fill style.
+     * @param {import("../../style/Stroke.js").default|null} strokeStyle Stroke style.
      * @override
      */
     setFillStrokeStyle(fillStyle, strokeStyle) {
@@ -24542,9 +25622,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else {
         const fillStyleColor = fillStyle.getColor();
         this.fillState_ = {
-          fillStyle: asColorLike(
-            fillStyleColor ? fillStyleColor : defaultFillStyle
-          )
+          fillStyle: asColorLike(fillStyleColor ? fillStyleColor : defaultFillStyle) || defaultFillStyle
         };
       }
       if (!strokeStyle) {
@@ -24568,7 +25646,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           miterLimit: strokeStyleMiterLimit !== void 0 ? strokeStyleMiterLimit : defaultMiterLimit,
           strokeStyle: asColorLike(
             strokeStyleColor ? strokeStyleColor : defaultStrokeStyle
-          ),
+          ) || defaultStrokeStyle,
           strokeOffset: (strokeOffset ?? 0) * this.pixelRatio_
         };
       }
@@ -24577,7 +25655,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Set the image style for subsequent draw operations.  Pass null to remove
      * the image style.
      *
-     * @param {import("../../style/Image.js").default} imageStyle Image style.
+     * @param {import("../../style/Image.js").default|null} imageStyle Image style.
      * @override
      */
     setImageStyle(imageStyle) {
@@ -24589,6 +25667,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const imagePixelRatio = imageStyle.getPixelRatio(this.pixelRatio_);
       const imageAnchor = imageStyle.getAnchor();
       const imageOrigin = imageStyle.getOrigin();
+      if (!imageAnchor || !imageOrigin) {
+        this.image_ = null;
+        return;
+      }
       this.image_ = imageStyle.getImage(this.pixelRatio_);
       this.imageAnchorX_ = imageAnchor[0] * imagePixelRatio;
       this.imageAnchorY_ = imageAnchor[1] * imagePixelRatio;
@@ -24609,7 +25691,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Set the text style for subsequent draw operations.  Pass null to
      * remove the text style.
      *
-     * @param {import("../../style/Text.js").default} textStyle Text style.
+     * @param {import("../../style/Text.js").default|null} textStyle Text style.
      * @override
      */
     setTextStyle(textStyle) {
@@ -24624,7 +25706,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.textFillState_ = {
             fillStyle: asColorLike(
               textFillStyleColor ? textFillStyleColor : defaultFillStyle
-            )
+            ) || defaultFillStyle
           };
         }
         const textStrokeStyle = textStyle.getStroke();
@@ -24647,7 +25729,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             miterLimit: textStrokeStyleMiterLimit !== void 0 ? textStrokeStyleMiterLimit : defaultMiterLimit,
             strokeStyle: asColorLike(
               textStrokeStyleColor ? textStrokeStyleColor : defaultStrokeStyle
-            )
+            ) || defaultStrokeStyle
           };
         }
         const textFont = textStyle.getFont();
@@ -24688,10 +25770,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       context,
       HIT_DETECT_RESOLUTION,
       extent,
-      null,
+      [1, 0, 0, 1, 0, 0],
       rotation,
-      squaredTolerance,
-      null
+      squaredTolerance ?? 0,
+      void 0
     );
     const featureCount = features.length;
     const indexFactor = Math.floor((256 * 256 * 256 - 1) / featureCount);
@@ -24727,7 +25809,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           stroke.setColor(color);
           stroke.setLineDash(null);
         }
-        style.setText(void 0);
+        style.setText(
+          /** @type {import("../../style/Text.js").default|null} */
+          null
+        );
         const image = originalStyle.getImage();
         if (image) {
           const imgSize = image.getImageSize();
@@ -24746,12 +25831,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           style.setImage(
             new Icon({
               img,
-              anchor: image.getAnchor(),
+              anchor: image.getAnchor() ?? void 0,
               anchorXUnits: "pixels",
               anchorYUnits: "pixels",
-              offset: image.getOrigin(),
+              offset: image.getOrigin() ?? void 0,
               opacity: 1,
-              size: image.getSize(),
+              size: image.getSize() ?? void 0,
               scale: image.getScale(),
               rotation: image.getRotation(),
               rotateWithView: image.getRotateWithView()
@@ -24878,7 +25963,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     const loading = loadingPromises.length > 0;
     if (loading) {
-      Promise.all(loadingPromises).then(() => listener(null));
+      Promise.all(loadingPromises).then(
+        () => listener(
+          /** @type {import("../events/Event.js").default} */
+          /** @type {unknown} */
+          null
+        )
+      );
     }
     renderFeatureInternal(
       replayGroup,
@@ -24931,7 +26022,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       /** @type {import("../geom/SimpleGeometry.js").default} */
       geometry,
       feature,
+      /** @type {Function} */
       style.getRenderer(),
+      /** @type {Function} */
       style.getHitDetectionRenderer(),
       index
     );
@@ -25004,7 +26097,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const imageStyle = style.getImage();
     const textStyle = style.getText();
     const hasText = textStyle && textStyle.getText();
-    const declutterImageWithText = declutter && imageStyle && hasText ? {} : void 0;
+    const declutterImageWithText = declutter && imageStyle && hasText ? (
+      /** @type {import("../render/canvas.js").DeclutterImageWithText} */
+      {}
+    ) : void 0;
     if (imageStyle) {
       if (imageStyle.getImageState() != ImageState.LOADED) {
         return;
@@ -25024,7 +26120,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const hasImage = imageStyle && imageStyle.getOpacity() !== 0;
     const textStyle = style.getText();
     const hasText = textStyle && textStyle.getText();
-    const declutterImageWithText = declutter && hasImage && hasText ? {} : void 0;
+    const declutterImageWithText = declutter && hasImage && hasText ? (
+      /** @type {import("../render/canvas.js").DeclutterImageWithText} */
+      {}
+    ) : void 0;
     if (hasImage) {
       if (imageStyle.getImageState() != ImageState.LOADED) {
         return;
@@ -25148,7 +26247,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {LayerType} Layer.
      */
     getLayer() {
-      return this.layer_;
+      return (
+        /** @type {LayerType} */
+        this.layer_
+      );
     }
     /**
      * Perform action necessary to get the layer rendered after new fonts have loaded
@@ -25180,7 +26282,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     loadImage(image) {
       let imageState = image.getState();
       if (imageState != ImageState.LOADED && imageState != ImageState.ERROR) {
-        image.addEventListener(EventType.CHANGE, this.boundHandleImageChange_);
+        image.addEventListener(
+          EventType.CHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.boundHandleImageChange_
+        );
       }
       if (imageState == ImageState.IDLE) {
         image.load();
@@ -25207,7 +26313,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     disposeInternal() {
-      delete this.layer_;
+      this.layer_ = void 0;
       super.disposeInternal();
     }
   }
@@ -25224,6 +26330,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     constructor(layer) {
       super(layer);
+      this.wantRotation = false;
       this.container = null;
       this.renderedResolution;
       this.tempTransform = create();
@@ -25244,11 +26351,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!pixelContext) {
         createPixelContext();
       }
-      pixelContext.clearRect(0, 0, 1, 1);
+      const ctx = pixelContext;
+      if (!ctx) {
+        return null;
+      }
+      ctx.clearRect(0, 0, 1, 1);
       let data;
       try {
-        pixelContext.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
-        data = pixelContext.getImageData(0, 0, 1, 1).data;
+        ctx.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
+        data = ctx.getImageData(0, 0, 1, 1).data;
       } catch {
         pixelContext = null;
         return null;
@@ -25257,7 +26368,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * @param {import('../../Map.js').FrameState} frameState Frame state.
-     * @return {string} Background color.
+     * @return {string|undefined} Background color.
      */
     getBackground(frameState) {
       const layer = this.getLayer();
@@ -25269,8 +26380,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get a rendering container from an existing target, if compatible.
-     * @param {HTMLElement} target Potential render target.
-     * @param {string} transform CSS transform matrix.
+     * @param {HTMLElement|null} target Potential render target.
+     * @param {string|null} transform CSS transform matrix.
      * @param {string} [backgroundColor] Background color.
      * @param {number} [width] Physical pixel width of the rendering canvas.
      * @param {number} [height] Physical pixel height of the rendering canvas.
@@ -25304,7 +26415,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           context = canvas.getContext("2d");
         }
       }
-      if (context && equivalent(context.canvas.style.transform, transform2)) {
+      if (context && equivalent(
+        context.canvas.style.transform,
+        /** @type {string} */
+        /** @type {unknown} */
+        transform2
+      )) {
         this.container = target;
         this.context = context;
         this.containerReused = true;
@@ -25313,7 +26429,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.context = null;
         this.containerReused = false;
       } else if (this.container) {
-        this.container.style.backgroundColor = null;
+        this.container.style.backgroundColor = /** @type {?} */
+        null;
       }
       if (!this.container) {
         container = WORKER_OFFSCREEN_CANVAS ? createMockDiv() : document.createElement("div");
@@ -25373,12 +26490,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @protected
      */
     prepareContainer(frameState, target) {
-      const extent = frameState.extent;
+      const extent = (
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      );
       const resolution = frameState.viewState.resolution;
-      const rotation = frameState.viewState.rotation;
+      const sourceRotates = this.sourceRotates();
+      const rotation = sourceRotates ? 0 : frameState.viewState.rotation;
       const pixelRatio = frameState.pixelRatio;
-      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
-      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
+      const width = sourceRotates ? Math.round(frameState.size[0] * pixelRatio) : Math.round(getWidth(extent) / resolution * pixelRatio);
+      const height = sourceRotates ? Math.round(frameState.size[1] * pixelRatio) : Math.round(getHeight(extent) / resolution * pixelRatio);
       compose(
         this.pixelTransform,
         frameState.size[0] / 2,
@@ -25394,7 +26515,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const backgroundColor = this.getBackground(frameState);
       this.useContainer(target, canvasTransform, backgroundColor, width, height);
       if (!this.containerReused) {
-        const canvas = this.context.canvas;
+        const canvas = (
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas
+        );
         if (canvas.width != width || canvas.height != height) {
           canvas.width = width;
           canvas.height = height;
@@ -25461,7 +26585,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (frameState.declutter && !this.deferredContext_) {
         this.deferredContext_ = new ZIndexContext();
       }
-      return frameState.declutter ? this.deferredContext_.getContext() : this.context;
+      return frameState.declutter ? (
+        /** @type {ZIndexContext} */
+        this.deferredContext_.getContext()
+      ) : (
+        /** @type {import("../../render/canvas/ZIndexContext.js").ZIndexContextProxy} */
+        /** @type {unknown} */
+        this.context
+      );
+    }
+    /**
+     * @protected
+     * @return {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} Canvas rendering context.
+     */
+    getCanvasContext() {
+      const context = this.context;
+      if (!context) {
+        throw new Error("Canvas context not initialized");
+      }
+      return context;
+    }
+    /**
+     * @protected
+     * @return {HTMLElement} Canvas container element.
+     */
+    getContainerElement() {
+      const container = this.container;
+      if (!container) {
+        throw new Error("Canvas container not initialized");
+      }
+      return container;
     }
     /**
      * @param {import("../../Map.js").FrameState} frameState Frame state.
@@ -25473,16 +26626,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.dispatchRenderEvent_(
         RenderEventType.PRERENDER,
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
         this.context,
         frameState
       );
       if (frameState.declutter && this.deferredContext_) {
-        this.deferredContext_.draw(this.context);
+        this.deferredContext_.draw(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context
+        );
         this.deferredContext_.clear();
       }
       this.renderDeferredInternal(frameState);
       this.dispatchRenderEvent_(
         RenderEventType.POSTRENDER,
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
         this.context,
         frameState
       );
@@ -25518,6 +26676,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
     }
     /**
+     * @protected
+     * @return {boolean} Request rotation from the source.
+     */
+    sourceRotates() {
+      var _a;
+      return this.wantRotation && !!((_a = this.getLayer().getSource()) == null ? void 0 : _a.canRotate);
+    }
+    /**
      * Clean up.
      * @override
      */
@@ -25528,9 +26694,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   class CanvasVectorLayerRenderer extends CanvasLayerRenderer {
     /**
-     * @param {import("../../layer/BaseVector.js").default} vectorLayer Vector layer.
+     * @param {import("../../layer/Vector.js").default} vectorLayer Vector layer.
+     * @param {VectorLayerRendererOptions} [options] Options.
      */
-    constructor(vectorLayer) {
+    constructor(vectorLayer, options) {
       super(vectorLayer);
       this.boundHandleStyleImageChange_ = this.handleStyleImageChange_.bind(this);
       this.animatingOrInteracting_;
@@ -25553,6 +26720,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.clipping = true;
       this.targetContext_ = null;
       this.opacity_ = 1;
+      if ((options == null ? void 0 : options.wantRotation) !== void 0) {
+        this.wantRotation = options.wantRotation;
+      }
     }
     /**
      * @param {ExecutorGroup} executorGroup Executor group.
@@ -25573,22 +26743,39 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const pixelRatio = frameState.pixelRatio;
       const viewHints = frameState.viewHints;
       const snapToPixel = !(viewHints[ViewHint.ANIMATING] || viewHints[ViewHint.INTERACTING]);
-      const context = this.context;
-      const width = Math.round(getWidth(extent) / resolution * pixelRatio);
-      const height = Math.round(getHeight(extent) / resolution * pixelRatio);
-      const multiWorld = vectorSource.getWrapX() && projection.canWrapX();
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context
+      );
+      const width = context.canvas.width;
+      const height = context.canvas.height;
+      const multiWorld = (
+        /** @type {NonNullable<ReturnType<import("../../layer/Vector.js").default["getSource"]>>} */
+        vectorSource.getWrapX() && projection.canWrapX()
+      );
       const worldWidth = multiWorld ? getWidth(projectionExtent) : null;
-      const endWorld = multiWorld ? Math.ceil((extent[2] - projectionExtent[2]) / worldWidth) + (this.extendX_ ? 2 : 1) : 1;
-      let world = multiWorld ? Math.floor((extent[0] - projectionExtent[0]) / worldWidth) - (this.extendX_ ? 1 : 0) : 0;
+      const viewExtent = (
+        /** @type {import("../../extent.js").Extent} */
+        extent
+      );
+      const endWorld = multiWorld ? Math.ceil(
+        (viewExtent[2] - projectionExtent[2]) / /** @type {number} */
+        worldWidth
+      ) + (this.extendX_ ? 2 : 1) : 1;
+      let world = multiWorld ? Math.floor(
+        (viewExtent[0] - projectionExtent[0]) / /** @type {number} */
+        worldWidth
+      ) - (this.extendX_ ? 1 : 0) : 0;
       do {
         let transform2 = this.getRenderTransform(
           center,
           resolution,
-          0,
+          this.sourceRotates() ? rotation : 0,
           pixelRatio,
           width,
           height,
-          world * worldWidth
+          world * /** @type {number} */
+          worldWidth
         );
         if (frameState.declutter) {
           transform2 = transform2.slice(0);
@@ -25600,7 +26787,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           rotation,
           snapToPixel,
           declutterable === void 0 ? ALL : declutterable ? DECLUTTER : NON_DECLUTTER,
-          declutterable ? declutter && frameState.declutter[declutter] : void 0
+          declutterable ? (
+            /** @type {import("rbush").default<import("../../render/canvas/Executor.js").DeclutterEntry>|null|undefined} */
+            declutter && /** @type {NonNullable<typeof frameState.declutter>} */
+            frameState.declutter[declutter]
+          ) : void 0
         );
       } while (++world < endWorld);
     }
@@ -25609,9 +26800,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     setDrawContext_() {
       if (this.opacity_ !== 1) {
-        this.targetContext_ = this.context;
+        this.targetContext_ = /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context;
         this.context = createCanvasContext2D(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.context.canvas.width,
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.context.canvas.height,
           canvasPool$1
         );
@@ -25624,10 +26818,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.opacity_ !== 1 && this.targetContext_) {
         const alpha = this.targetContext_.globalAlpha;
         this.targetContext_.globalAlpha = this.opacity_;
-        this.targetContext_.drawImage(this.context.canvas, 0, 0);
+        this.targetContext_.drawImage(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas,
+          0,
+          0
+        );
         this.targetContext_.globalAlpha = alpha;
-        releaseCanvas(this.context);
-        canvasPool$1.push(this.context.canvas);
+        releaseCanvas(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context
+        );
+        canvasPool$1.push(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context.canvas
+        );
         this.context = this.targetContext_;
         this.targetContext_ = null;
       }
@@ -25652,7 +26857,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (this.clipExtent_) {
-        this.clipUnrotated(this.context, frameState, this.clipExtent_);
+        this.clipUnrotated(
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          this.context,
+          frameState,
+          this.clipExtent_
+        );
       }
       this.replayGroup_.renderDeferred();
       if (this.clipExtent_) {
@@ -25672,14 +26882,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const layerState = frameState.layerStatesArray[frameState.layerIndex];
       this.opacity_ = layerState.opacity;
       const viewState = frameState.viewState;
-      this.prepareContainer(frameState, target);
-      const context = this.context;
+      this.prepareContainer(
+        frameState,
+        /** @type {HTMLElement} */
+        target
+      );
+      const context = (
+        /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+        this.context
+      );
       const replayGroup = this.replayGroup_;
       let render2 = replayGroup && !replayGroup.isEmpty();
       if (!render2) {
         const hasRenderListeners = this.getLayer().hasListener(RenderEventType.PRERENDER) || this.getLayer().hasListener(RenderEventType.POSTRENDER);
         if (!hasRenderListeners) {
-          return this.container;
+          return (
+            /** @type {HTMLElement} */
+            this.container
+          );
         }
       }
       this.setDrawContext_();
@@ -25689,8 +26909,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let clipped = false;
       if (render2 && layerState.extent && this.clipping) {
         const layerExtent = fromUserExtent(layerState.extent);
-        render2 = intersects$1(layerExtent, frameState.extent);
-        const needsClip = render2 && !containsExtent(layerExtent, frameState.extent);
+        render2 = intersects$1(
+          layerExtent,
+          /** @type {import("../../extent.js").Extent} */
+          frameState.extent
+        );
+        const needsClip = render2 && !containsExtent(
+          layerExtent,
+          /** @type {import("../../extent.js").Extent} */
+          frameState.extent
+        );
         if (needsClip) {
           if (frameState.declutter) {
             this.clipExtent_ = layerExtent;
@@ -25702,6 +26930,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (render2) {
         this.renderWorlds(
+          /** @type {ExecutorGroup} */
           replayGroup,
           frameState,
           this.getLayer().getDeclutter() ? false : void 0
@@ -25718,7 +26947,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!frameState.declutter) {
         this.resetDrawContext_();
       }
-      return this.container;
+      return (
+        /** @type {HTMLElement} */
+        this.container
+      );
     }
     /**
      * Asynchronous layer level hit detection.
@@ -25742,6 +26974,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const height = size[1] * HIT_DETECT_RESOLUTION;
           transforms2.push(
             this.getRenderTransform(
+              /** @type {import("../../coordinate.js").Coordinate} */
               center,
               resolution,
               rotation,
@@ -25751,9 +26984,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               0
             ).slice()
           );
-          const source = layer.getSource();
-          const projectionExtent = projection.getExtent();
-          if (source.getWrapX() && projection.canWrapX() && !containsExtent(projectionExtent, extent)) {
+          const source = (
+            /** @type {NonNullable<ReturnType<import("../../layer/Vector.js").default["getSource"]>>} */
+            layer.getSource()
+          );
+          const projectionExtent = (
+            /** @type {import("../../proj/Projection.js").default} */
+            projection.getExtent()
+          );
+          if (source.getWrapX() && /** @type {import("../../proj/Projection.js").default} */
+          projection.canWrapX() && !containsExtent(projectionExtent, extent)) {
             let startX = extent[0];
             const worldWidth = getWidth(projectionExtent);
             let world = 0;
@@ -25763,6 +27003,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               offsetX = worldWidth * world;
               transforms2.push(
                 this.getRenderTransform(
+                  /** @type {import("../../coordinate.js").Coordinate} */
                   center,
                   resolution,
                   rotation,
@@ -25781,6 +27022,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               offsetX = worldWidth * world;
               transforms2.push(
                 this.getRenderTransform(
+                  /** @type {import("../../coordinate.js").Coordinate} */
                   center,
                   resolution,
                   rotation,
@@ -25796,6 +27038,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.hitDetectionImageData_ = createHitDetectionImageData(
             size,
             transforms2,
+            /** @type {Array<import("../../Feature.js").default>} */
             this.renderedFeatures_,
             layer.getStyleFunction(),
             extent,
@@ -25805,7 +27048,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           );
         }
         resolve(
-          hitDetect(pixel, this.renderedFeatures_, this.hitDetectionImageData_)
+          hitDetect(
+            pixel,
+            /** @type {Array<import("../../Feature.js").default>} */
+            this.renderedFeatures_,
+            /** @type {ImageData} */
+            this.hitDetectionImageData_
+          )
         );
       });
     }
@@ -25863,7 +27112,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         rotation,
         hitTolerance,
         featureCallback,
-        declutter ? (_b = (_a = frameState.declutter) == null ? void 0 : _a[declutter]) == null ? void 0 : _b.all().map((item) => item.value) : null
+        /** @type {Array<import("../../Feature.js").FeatureLike>} */
+        declutter ? (_b = (_a = frameState.declutter) == null ? void 0 : _a[declutter]) == null ? void 0 : _b.all().map((item) => item.value) : (
+          /** @type {unknown} */
+          null
+        )
       );
     }
     /**
@@ -25918,7 +27171,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const center = viewState.center.slice();
       const extent = buffer(
+        /** @type {import("../../extent.js").Extent} */
         frameStateExtent,
+        /** @type {number} */
         vectorLayerRenderBuffer * resolution
       );
       const renderedExtent = extent.slice();
@@ -25932,7 +27187,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           this.extendX_ = sourceExtent[0] < projectionExtent[0] || sourceExtent[2] > projectionExtent[2];
         }
       }
-      if (canWrapX && (!containsExtent(projectionExtent, frameState.extent) || this.extendX_)) {
+      if (canWrapX && (!containsExtent(
+        projectionExtent,
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      ) || this.extendX_)) {
         const worldWidth = getWidth(projectionExtent);
         const gutter = Math.max(getWidth(extent) / 2, worldWidth);
         let projMinX = projectionExtent[0];
@@ -26003,6 +27262,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               styles,
               replayGroup,
               userTransform,
+              /** @type {boolean|undefined} */
+              /** @type {unknown} */
               this.getLayer().getDeclutter(),
               index
             );
@@ -26158,7 +27419,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         projection,
         /**
          * @param {Array<FeatureType>} features The loaded features.
-         * @param {import("./proj/Projection.js").default} dataProjection Data
+         * @param {import("./proj/Projection.js").default|undefined} dataProjection Data
          * projection.
          */
         (features, dataProjection) => {
@@ -26238,6 +27499,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.flatInteriorPoints_ = getInteriorPointOfArray(
           this.flatCoordinates_,
           0,
+          /** @type {Array<number>} */
           this.ends_,
           this.stride_,
           flatCenter,
@@ -26251,7 +27513,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getFlatInteriorPoints() {
       if (!this.flatInteriorPoints_) {
-        const ends = inflateEnds(this.flatCoordinates_, this.ends_);
+        const ends = inflateEnds(
+          this.flatCoordinates_,
+          /** @type {Array<number>} */
+          this.ends_
+        );
         const flatCenters = linearRingss(
           this.flatCoordinates_,
           0,
@@ -26392,7 +27658,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {import("../proj.js").ProjectionLike} projection The data projection
      */
     transform(projection) {
-      projection = get$1(projection);
+      projection = /** @type {import("../proj/Projection.js").default} */
+      get$1(projection);
       const pixelExtent = projection.getExtent();
       const projectedExtent = projection.getWorldExtent();
       if (pixelExtent && projectedExtent) {
@@ -26435,6 +27702,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return new RenderFeature(
         this.type_,
         this.flatCoordinates_.slice(),
+        /** @type {Array<number>} */
         (_a = this.ends_) == null ? void 0 : _a.slice(),
         this.stride_,
         Object.assign({}, this.properties_),
@@ -26480,6 +27748,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             simplifiedFlatCoordinates.length = douglasPeuckerArray(
               simplifiedFlatCoordinates,
               0,
+              /** @type {Array<number>} */
               this.simplifiedGeometry_.ends_,
               this.simplifiedGeometry_.stride_,
               squaredTolerance,
@@ -26493,6 +27762,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             simplifiedFlatCoordinates.length = quantizeArray(
               simplifiedFlatCoordinates,
               0,
+              /** @type {Array<number>} */
               this.simplifiedGeometry_.ends_,
               this.simplifiedGeometry_.stride_,
               Math.sqrt(squaredTolerance),
@@ -26695,6 +27965,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.attributions_ = adaptAttributions(options.attributions);
       this.attributionsCollapsible_ = options.attributionsCollapsible ?? true;
       this.loading = false;
+      this.canRotate = false;
       this.state_ = options.state !== void 0 ? options.state : "ready";
       this.wrapX_ = options.wrapX !== void 0 ? options.wrapX : false;
       this.interpolate_ = !!options.interpolate;
@@ -26901,6 +28172,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         state: "ready",
         wrapX: options.wrapX !== void 0 ? options.wrapX : true
       });
+      this.canRotate = true;
       this.on;
       this.once;
       this.un;
@@ -26912,7 +28184,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.loader_ = options.loader;
       } else if (this.url_ !== void 0) {
         assert(this.format_, "`format` must be set when `url` is set");
-        this.loader_ = xhr(this.url_, this.format_);
+        this.loader_ = xhr(
+          this.url_,
+          /** @type {import("../format/Feature.js").default<FeatureType>} */
+          this.format_
+        );
       }
       this.strategy_ = options.strategy !== void 0 ? options.strategy : all;
       const useSpatialIndex = options.useSpatialIndex !== void 0 ? options.useSpatialIndex : true;
@@ -26994,10 +28270,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       this.featureChangeKeys_[featureKey] = [
-        listen(feature, EventType.CHANGE, this.handleFeatureChange_, this),
+        listen(
+          feature,
+          EventType.CHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
+          this.handleFeatureChange_,
+          this
+        ),
         listen(
           feature,
           ObjectEventType.PROPERTYCHANGE,
+          /** @type {import("../events.js").ListenerFunction} */
           this.handleFeatureChange_,
           this
         )
@@ -27095,55 +28378,59 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let modifyingCollection = false;
       this.addEventListener(
         VectorEventType.ADDFEATURE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {VectorSourceEvent<FeatureType>} evt The vector source event
          */
-        function(evt) {
-          if (!modifyingCollection) {
+        (function(evt) {
+          if (!modifyingCollection && evt.feature) {
             modifyingCollection = true;
             collection.push(evt.feature);
             modifyingCollection = false;
           }
-        }
+        })
       );
       this.addEventListener(
         VectorEventType.REMOVEFEATURE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {VectorSourceEvent<FeatureType>} evt The vector source event
          */
-        function(evt) {
-          if (!modifyingCollection) {
+        (function(evt) {
+          if (!modifyingCollection && evt.feature) {
             modifyingCollection = true;
             collection.remove(evt.feature);
             modifyingCollection = false;
           }
-        }
+        })
       );
       collection.addEventListener(
         CollectionEventType.ADD,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {import("../Collection.js").CollectionEvent<FeatureType>} evt The collection event
          */
-        (evt) => {
+        ((evt) => {
           if (!modifyingCollection) {
             modifyingCollection = true;
             this.addFeature(evt.element);
             modifyingCollection = false;
           }
-        }
+        })
       );
       collection.addEventListener(
         CollectionEventType.REMOVE,
+        /** @type {import("../events.js").ListenerFunction} */
         /**
          * @param {import("../Collection.js").CollectionEvent<FeatureType>} evt The collection event
          */
-        (evt) => {
+        ((evt) => {
           if (!modifyingCollection) {
             modifyingCollection = true;
             this.removeFeature(evt.element);
             modifyingCollection = false;
           }
-        }
+        })
       );
       this.featuresCollection_ = collection;
     }
@@ -27223,7 +28510,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const extent = [coordinate[0], coordinate[1], coordinate[0], coordinate[1]];
       return this.forEachFeatureInExtent(extent, function(feature) {
         const geometry = feature.getGeometry();
-        if (geometry instanceof RenderFeature || geometry.intersectsCoordinate(coordinate)) {
+        if (geometry instanceof RenderFeature || geometry && geometry.intersectsCoordinate(coordinate)) {
           return callback(feature);
         }
         return void 0;
@@ -27280,7 +28567,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
          */
         function(feature) {
           const geometry = feature.getGeometry();
-          if (geometry instanceof RenderFeature || geometry.intersectsExtent(extent)) {
+          if (geometry instanceof RenderFeature || geometry && geometry.intersectsExtent(extent)) {
             const result = callback(feature);
             if (result) {
               return result;
@@ -27315,7 +28602,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           extend$2(features, Object.values(this.nullGeometryFeatures_));
         }
       }
-      return features;
+      return features || [];
     }
     /**
      * Get all features whose geometry intersects the provided coordinate.
@@ -27350,10 +28637,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (!multiWorld) {
           return this.featuresRtree_.getInExtent(extent);
         }
-        const extents = wrapAndSliceX(extent, projection);
-        return [].concat(
-          ...extents.map((anExtent) => this.featuresRtree_.getInExtent(anExtent))
+        const rtree = this.featuresRtree_;
+        const extents = wrapAndSliceX(
+          extent,
+          /** @type {import("../proj/Projection.js").default} */
+          projection
         );
+        return extents.flatMap((anExtent) => rtree.getInExtent(anExtent));
       }
       if (this.featuresCollection_) {
         return this.featuresCollection_.getArray().slice(0);
@@ -27381,7 +28671,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let minSquaredDistance = Infinity;
       const extent = [-Infinity, -Infinity, Infinity, Infinity];
       filter = filter ? filter : TRUE;
-      this.featuresRtree_.forEachInExtent(
+      const rtree = this.featuresRtree_;
+      if (!rtree) {
+        return null;
+      }
+      rtree.forEachInExtent(
         extent,
         /**
          * @param {FeatureType} feature Feature.
@@ -27389,6 +28683,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         function(feature) {
           if (filter(feature)) {
             const geometry = feature.getGeometry();
+            if (!geometry) {
+              return;
+            }
             const previousMinSquaredDistance = minSquaredDistance;
             minSquaredDistance = geometry instanceof RenderFeature ? 0 : geometry.closestPointXY(x, y, closestPoint, minSquaredDistance);
             if (minSquaredDistance < previousMinSquaredDistance) {
@@ -27595,14 +28892,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             extentToLoad,
             resolution,
             projection,
-            (features) => disableCallbacks || success(features),
+            (features) => disableCallbacks || success(
+              /** @type {Array<FeatureType>} */
+              features
+            ),
             () => disableCallbacks || failure()
           );
-          if (loaded instanceof Promise) {
+          if (isThenable(loaded)) {
             disableCallbacks = true;
             loaded.then((features) => {
-              this.addFeatures(features);
-              success(features);
+              const typedFeatures = (
+                /** @type {Array<FeatureType>} */
+                features
+              );
+              this.addFeatures(typedFeatures);
+              success(typedFeatures);
             }).catch(failure);
           } else if (this.loader_.length < 4) {
             this.loading = false;
@@ -27748,7 +29052,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     setUrl(url) {
       assert(this.format_, "`format` must be set when `url` is set");
       this.url_ = url;
-      this.setLoader(xhr(url, this.format_));
+      this.setLoader(
+        xhr(
+          url,
+          /** @type {import("../format/Feature.js").default<FeatureType>} */
+          this.format_
+        )
+      );
     }
     /**
      * @param {boolean} overlaps The source can have overlapping geometries.
@@ -28087,8 +29397,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     let closestTargetDistance = Infinity;
     let newTargetIndex = -1;
     let newEndIndex = NaN;
-    for (let targetIndex = 0; targetIndex < traceState.targets.length; ++targetIndex) {
-      const target = traceState.targets[targetIndex];
+    const targets = traceState.targets;
+    if (!targets) {
+      sharedUpdateInfo.index = newTargetIndex;
+      sharedUpdateInfo.endIndex = newEndIndex;
+      sharedUpdateInfo.closestTargetDistance = closestTargetDistance;
+      return sharedUpdateInfo;
+    }
+    for (let targetIndex = 0; targetIndex < targets.length; ++targetIndex) {
+      const target = targets[targetIndex];
       const coordinates2 = target.coordinates;
       let minSegmentDistance = Infinity;
       let endIndex;
@@ -28105,20 +29422,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         closestTargetDistance = minSegmentDistance;
         if (target.ring && traceState.targetIndex === targetIndex) {
           if (target.endIndex > target.startIndex) {
-            if (endIndex < target.startIndex) {
+            if (endIndex !== void 0 && endIndex < target.startIndex) {
               endIndex += coordinates2.length;
             }
           } else if (target.endIndex < target.startIndex) {
-            if (endIndex > target.startIndex) {
+            if (endIndex !== void 0 && endIndex > target.startIndex) {
               endIndex -= coordinates2.length;
             }
           }
         }
-        newEndIndex = endIndex;
-        newTargetIndex = targetIndex;
+        if (endIndex !== void 0) {
+          newEndIndex = endIndex;
+          newTargetIndex = targetIndex;
+        }
       }
     }
-    const newTarget = traceState.targets[newTargetIndex];
+    if (newTargetIndex < 0) {
+      sharedUpdateInfo.index = newTargetIndex;
+      sharedUpdateInfo.endIndex = newEndIndex;
+      sharedUpdateInfo.closestTargetDistance = closestTargetDistance;
+      return sharedUpdateInfo;
+    }
+    const newTarget = targets[newTargetIndex];
     let considerBothDirections = newTarget.ring;
     if (traceState.targetIndex === newTargetIndex && considerBothDirections) {
       const newCoordinate = interpolateCoordinate(
@@ -28126,8 +29451,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         newEndIndex
       );
       const pixel = map.getPixelFromCoordinate(newCoordinate);
-      const startPx = map.getPixelFromCoordinate(traceState.startCoord);
-      if (distance(pixel, startPx) > snapTolerance) {
+      const startCoord = traceState.startCoord;
+      if (startCoord && distance(pixel, map.getPixelFromCoordinate(startCoord)) > snapTolerance) {
         considerBothDirections = false;
       }
     }
@@ -28176,7 +29501,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     for (let i = 0; i < features.length; ++i) {
       const feature = features[i];
       const geometry = feature.getGeometry();
-      appendGeometryTraceTargets(coordinate, geometry, targets);
+      if (geometry) {
+        appendGeometryTraceTargets(coordinate, geometry, targets);
+      }
     }
     return targets;
   }
@@ -28362,15 +29689,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!geometryFunction) {
         const mode = this.mode_;
         if (mode === "Circle") {
-          geometryFunction = (coordinates2, geometry, projection) => {
+          geometryFunction = /** @type {GeometryFunction} */
+          ((coordinates2, geometry, projection) => {
             const circle = geometry ? (
               /** @type {Circle} */
               geometry
             ) : new Circle([NaN, NaN]);
-            const center = fromUserCoordinate(coordinates2[0]);
+            const lineCoords = (
+              /** @type {LineCoordType} */
+              coordinates2
+            );
+            const center = fromUserCoordinate(lineCoords[0]);
             const squaredLength = squaredDistance(
               center,
-              fromUserCoordinate(coordinates2[coordinates2.length - 1])
+              fromUserCoordinate(lineCoords[lineCoords.length - 1])
             );
             circle.setCenterAndRadius(
               center,
@@ -28378,22 +29710,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               this.geometryLayout_
             );
             return circle;
-          };
+          });
         } else {
-          let Constructor;
-          if (mode === "Point") {
-            Constructor = Point;
-          } else if (mode === "LineString") {
-            Constructor = LineString;
-          } else if (mode === "Polygon") {
-            Constructor = Polygon;
-          }
           geometryFunction = (coordinates2, geometry, projection) => {
             if (geometry) {
               if (mode === "Polygon") {
-                if (coordinates2[0].length) {
+                const polyCoords = (
+                  /** @type {PolyCoordType} */
+                  coordinates2
+                );
+                if (polyCoords[0].length) {
                   geometry.setCoordinates(
-                    [coordinates2[0].concat([coordinates2[0][0]])],
+                    [polyCoords[0].concat([polyCoords[0][0]])],
                     this.geometryLayout_
                   );
                 } else {
@@ -28402,14 +29730,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               } else {
                 geometry.setCoordinates(coordinates2, this.geometryLayout_);
               }
+            } else if (mode === "Point") {
+              geometry = new Point(
+                /** @type {PointCoordType} */
+                coordinates2,
+                this.geometryLayout_
+              );
+            } else if (mode === "LineString") {
+              geometry = new LineString(
+                /** @type {LineCoordType} */
+                coordinates2,
+                this.geometryLayout_
+              );
             } else {
-              geometry = new Constructor(coordinates2, this.geometryLayout_);
+              geometry = new Polygon(
+                /** @type {PolyCoordType} */
+                coordinates2,
+                this.geometryLayout_
+              );
             }
             return geometry;
           };
         }
       }
-      this.geometryFunction_ = geometryFunction;
+      this.geometryFunction_ = /** @type {GeometryFunction} */
+      geometryFunction;
       this.dragVertexDelay_ = options.dragVertexDelay !== void 0 ? options.dragVertexDelay : 500;
       this.finishCoordinate_ = null;
       this.sketchFeature_ = null;
@@ -28573,7 +29918,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             event.map,
             event.originalEvent,
             false,
-            event.frameState
+            event.frameState ?? void 0
           )
         );
       }, this.dragVertexDelay_);
@@ -28600,6 +29945,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       const map = this.getMap();
+      if (!map) {
+        return;
+      }
       const lowerLeft = map.getCoordinateFromPixel([
         event.pixel[0] - this.snapTolerance_,
         event.pixel[1] + this.snapTolerance_
@@ -28712,11 +30060,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     updateTrace_(event) {
       const traceState = this.traceState_;
-      if (!traceState.active) {
+      const targets = traceState.targets;
+      const startCoord = traceState.startCoord;
+      const map = this.getMap();
+      if (!traceState.active || !targets || !startCoord || !map) {
         return;
       }
       if (traceState.targetIndex === -1) {
-        const startPx = event.map.getPixelFromCoordinate(traceState.startCoord);
+        const startPx = event.map.getPixelFromCoordinate(startCoord);
         if (distance(startPx, event.pixel) < this.snapTolerance_) {
           return;
         }
@@ -28724,32 +30075,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const updatedTraceTarget = getTraceTargetUpdate(
         event.coordinate,
         traceState,
-        this.getMap(),
+        map,
         this.snapTolerance_
       );
+      if (updatedTraceTarget.index < 0) {
+        return;
+      }
       if (traceState.targetIndex !== updatedTraceTarget.index) {
-        if (traceState.targetIndex !== -1) {
-          const oldTarget = traceState.targets[traceState.targetIndex];
+        const previousTargetIndex = traceState.targetIndex;
+        if (previousTargetIndex !== void 0 && previousTargetIndex !== -1) {
+          const oldTarget = targets[previousTargetIndex];
           this.removeTracedCoordinates_(oldTarget.startIndex, oldTarget.endIndex);
         }
-        const newTarget = traceState.targets[updatedTraceTarget.index];
+        const newTarget = targets[updatedTraceTarget.index];
         this.addTracedCoordinates_(
           newTarget,
           newTarget.startIndex,
           updatedTraceTarget.endIndex
         );
       } else {
-        const target2 = traceState.targets[traceState.targetIndex];
+        const target2 = targets[traceState.targetIndex];
         this.addOrRemoveTracedCoordinates_(target2, updatedTraceTarget.endIndex);
       }
       traceState.targetIndex = updatedTraceTarget.index;
-      const target = traceState.targets[traceState.targetIndex];
+      const target = targets[traceState.targetIndex];
       target.endIndex = updatedTraceTarget.endIndex;
       const coordinate = interpolateCoordinate(
         target.coordinates,
         target.endIndex
       );
-      const pixel = this.getMap().getPixelFromCoordinate(coordinate);
+      const pixel = map.getPixelFromCoordinate(coordinate);
       event.coordinate = coordinate;
       event.pixel = [Math.round(pixel[0]), Math.round(pixel[1])];
     }
@@ -28841,47 +30196,49 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     atFinish_(pixel, tracing) {
       let at = false;
-      if (this.sketchFeature_) {
+      const sketchCoords = this.sketchCoords_;
+      const finishCoordinate = this.finishCoordinate_;
+      if (this.sketchFeature_ && sketchCoords && finishCoordinate) {
         let potentiallyDone = false;
-        let potentiallyFinishCoordinates = [this.finishCoordinate_];
+        let potentiallyFinishCoordinates = [finishCoordinate];
         const mode = this.mode_;
         if (mode === "Point") {
           at = true;
         } else if (mode === "Circle") {
-          at = this.sketchCoords_.length === 2;
+          at = /** @type {LineCoordType} */
+          sketchCoords.length === 2;
         } else if (mode === "LineString") {
-          potentiallyDone = !tracing && this.sketchCoords_.length > this.minPoints_;
+          potentiallyDone = !tracing && /** @type {LineCoordType} */
+          sketchCoords.length > this.minPoints_;
         } else if (mode === "Polygon") {
-          const sketchCoords = (
+          const sketchCoordsPoly = (
             /** @type {PolyCoordType} */
-            this.sketchCoords_
+            sketchCoords
           );
-          potentiallyDone = sketchCoords[0].length > this.minPoints_;
-          potentiallyFinishCoordinates = [
-            sketchCoords[0][0],
-            sketchCoords[0][sketchCoords[0].length - 2]
-          ];
+          potentiallyDone = sketchCoordsPoly[0].length > this.minPoints_;
           if (tracing) {
-            potentiallyFinishCoordinates = [sketchCoords[0][0]];
+            potentiallyFinishCoordinates = [sketchCoordsPoly[0][0]];
           } else {
             potentiallyFinishCoordinates = [
-              sketchCoords[0][0],
-              sketchCoords[0][sketchCoords[0].length - 2]
+              sketchCoordsPoly[0][0],
+              sketchCoordsPoly[0][sketchCoordsPoly[0].length - 2]
             ];
           }
         }
         if (potentiallyDone) {
           const map = this.getMap();
-          for (let i = 0, ii = potentiallyFinishCoordinates.length; i < ii; i++) {
-            const finishCoordinate = potentiallyFinishCoordinates[i];
-            const finishPixel = map.getPixelFromCoordinate(finishCoordinate);
-            const dx = pixel[0] - finishPixel[0];
-            const dy = pixel[1] - finishPixel[1];
-            const snapTolerance = this.freehand_ ? 1 : this.snapTolerance_;
-            at = Math.sqrt(dx * dx + dy * dy) <= snapTolerance;
-            if (at) {
-              this.finishCoordinate_ = finishCoordinate;
-              break;
+          if (map) {
+            for (let i = 0, ii = potentiallyFinishCoordinates.length; i < ii; i++) {
+              const finishCoord = potentiallyFinishCoordinates[i];
+              const finishPixel = map.getPixelFromCoordinate(finishCoord);
+              const dx = pixel[0] - finishPixel[0];
+              const dy = pixel[1] - finishPixel[1];
+              const snapTolerance = this.freehand_ ? 1 : this.snapTolerance_;
+              at = Math.sqrt(dx * dx + dy * dy) <= snapTolerance;
+              if (at) {
+                this.finishCoordinate_ = finishCoord;
+                break;
+              }
             }
           }
         }
@@ -28898,7 +30255,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.updateSketchFeatures_();
       } else {
         const sketchPointGeom = this.sketchPoint_.getGeometry();
-        sketchPointGeom.setCoordinates(coordinates2);
+        if (sketchPointGeom) {
+          sketchPointGeom.setCoordinates(coordinates2);
+        }
       }
     }
     /**
@@ -28910,6 +30269,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.sketchLine_ = new Feature();
       }
       const ring = geometry.getLinearRing(0);
+      if (!ring) {
+        return;
+      }
       let sketchLineGeom = this.sketchLine_.getGeometry();
       if (!sketchLineGeom) {
         sketchLineGeom = new LineString(
@@ -28931,7 +30293,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     startDrawing_(start) {
-      const projection = this.getMap().getView().getProjection();
+      const map = this.getMap();
+      if (!map) {
+        return;
+      }
+      const projection = map.getView().getProjection();
       const stride = getStrideForLayout(this.geometryLayout_);
       while (start.length < stride) {
         start.push(0);
@@ -28970,65 +30336,93 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     modifyDrawing_(coordinate) {
       const map = this.getMap();
-      const geometry = this.sketchFeature_.getGeometry();
+      const sketchFeature = this.sketchFeature_;
+      const sketchCoords = this.sketchCoords_;
+      if (!map || !sketchFeature || !sketchCoords) {
+        return;
+      }
+      const geometry = sketchFeature.getGeometry();
+      if (!geometry) {
+        return;
+      }
       const projection = map.getView().getProjection();
       const stride = getStrideForLayout(this.geometryLayout_);
-      let coordinates2, last;
+      let coordinates2;
+      let last;
       while (coordinate.length < stride) {
         coordinate.push(0);
       }
+      const finishCoordinate = this.finishCoordinate_;
       if (this.mode_ === "Point") {
-        last = this.sketchCoords_;
+        last = /** @type {PointCoordType} */
+        sketchCoords;
       } else if (this.mode_ === "Polygon") {
         coordinates2 = /** @type {PolyCoordType} */
-        this.sketchCoords_[0];
+        sketchCoords[0];
         last = coordinates2[coordinates2.length - 1];
-        if (this.atFinish_(map.getPixelFromCoordinate(coordinate))) {
-          coordinate = this.finishCoordinate_.slice();
+        if (finishCoordinate && this.atFinish_(map.getPixelFromCoordinate(coordinate))) {
+          coordinate = finishCoordinate.slice();
         }
       } else {
-        coordinates2 = this.sketchCoords_;
+        coordinates2 = /** @type {LineCoordType} */
+        sketchCoords;
         last = coordinates2[coordinates2.length - 1];
       }
       last[0] = coordinate[0];
       last[1] = coordinate[1];
       this.geometryFunction_(
-        /** @type {!LineCoordType} */
-        this.sketchCoords_,
+        /** @type {!SketchCoordType} */
+        sketchCoords,
         geometry,
         projection
       );
       if (this.sketchPoint_) {
         const sketchPointGeom = this.sketchPoint_.getGeometry();
-        sketchPointGeom.setCoordinates(coordinate);
+        if (sketchPointGeom) {
+          sketchPointGeom.setCoordinates(coordinate);
+        }
       }
       if (geometry.getType() === "Polygon" && this.mode_ !== "Polygon") {
         this.createOrUpdateCustomSketchLine_(
           /** @type {Polygon} */
           geometry
         );
-      } else if (this.sketchLineCoords_) {
+      } else if (this.sketchLineCoords_ && this.sketchLine_) {
         const sketchLineGeom = this.sketchLine_.getGeometry();
-        sketchLineGeom.setCoordinates(this.sketchLineCoords_);
+        if (sketchLineGeom) {
+          sketchLineGeom.setCoordinates(this.sketchLineCoords_);
+        }
       }
       this.updateSketchFeatures_();
     }
     /**
      * Add a new coordinate to the drawing.
      * @param {!PointCoordType} coordinate Coordinate
-     * @return {Feature<import("../geom/SimpleGeometry.js").default>} The sketch feature.
+     * @return {Feature<import("../geom/SimpleGeometry.js").default>|null} The sketch feature.
      * @private
      */
     addToDrawing_(coordinate) {
-      const geometry = this.sketchFeature_.getGeometry();
-      const projection = this.getMap().getView().getProjection();
+      const sketchFeature = this.sketchFeature_;
+      const sketchCoords = this.sketchCoords_;
+      if (!sketchFeature || !sketchCoords) {
+        return null;
+      }
+      const geometry = sketchFeature.getGeometry();
+      if (!geometry) {
+        return null;
+      }
+      const map = this.getMap();
+      if (!map) {
+        return null;
+      }
+      const projection = map.getView().getProjection();
       let done;
       let coordinates2;
       const mode = this.mode_;
       if (mode === "LineString" || mode === "Circle") {
         this.finishCoordinate_ = coordinate.slice();
         coordinates2 = /** @type {LineCoordType} */
-        this.sketchCoords_;
+        sketchCoords;
         if (coordinates2.length >= this.maxPoints_) {
           if (this.freehand_) {
             coordinates2.pop();
@@ -29040,7 +30434,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.geometryFunction_(coordinates2, geometry, projection);
       } else if (mode === "Polygon") {
         coordinates2 = /** @type {PolyCoordType} */
-        this.sketchCoords_[0];
+        sketchCoords[0];
         if (coordinates2.length >= this.maxPoints_) {
           if (this.freehand_) {
             coordinates2.pop();
@@ -29052,24 +30446,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (done) {
           this.finishCoordinate_ = coordinates2[0];
         }
-        this.geometryFunction_(this.sketchCoords_, geometry, projection);
+        this.geometryFunction_(sketchCoords, geometry, projection);
       }
       this.createOrUpdateSketchPoint_(coordinate.slice());
       this.updateSketchFeatures_();
       if (done) {
         return this.finishDrawing();
       }
-      return this.sketchFeature_;
+      return (
+        /** @type {Feature<import("../geom/SimpleGeometry.js").default>} */
+        this.sketchFeature_
+      );
     }
     /**
      * @param {number} n The number of points to remove.
      */
     removeLastPoints_(n) {
-      if (!this.sketchFeature_) {
+      if (!this.sketchFeature_ || !this.sketchCoords_) {
         return;
       }
       const geometry = this.sketchFeature_.getGeometry();
-      const projection = this.getMap().getView().getProjection();
+      if (!geometry) {
+        return;
+      }
+      const map = this.getMap();
+      if (!map) {
+        return;
+      }
+      const projection = map.getView().getProjection();
       const mode = this.mode_;
       for (let i = 0; i < n; ++i) {
         let coordinates2;
@@ -29094,16 +30498,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           coordinates2 = /** @type {PolyCoordType} */
           this.sketchCoords_[0];
           coordinates2.splice(-2, 1);
-          const sketchLineGeom = this.sketchLine_.getGeometry();
-          if (coordinates2.length >= 2) {
-            const finishCoordinate = coordinates2[coordinates2.length - 2].slice();
-            coordinates2[coordinates2.length - 1] = finishCoordinate;
-            this.createOrUpdateSketchPoint_(finishCoordinate);
+          if (this.sketchLine_) {
+            const sketchLineGeom = this.sketchLine_.getGeometry();
+            if (sketchLineGeom) {
+              if (coordinates2.length >= 2) {
+                const finishCoordinate = coordinates2[coordinates2.length - 2].slice();
+                coordinates2[coordinates2.length - 1] = finishCoordinate;
+                this.createOrUpdateSketchPoint_(finishCoordinate);
+              }
+              sketchLineGeom.setCoordinates(coordinates2);
+            }
           }
-          sketchLineGeom.setCoordinates(coordinates2);
           this.geometryFunction_(this.sketchCoords_, geometry, projection);
         }
-        if (coordinates2.length === 1) {
+        if (coordinates2 && coordinates2.length === 1) {
           this.abortDrawing();
           break;
         }
@@ -29132,7 +30540,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       let coordinates2 = this.sketchCoords_;
       const geometry = sketchFeature.getGeometry();
-      const projection = this.getMap().getView().getProjection();
+      const map = this.getMap();
+      if (!coordinates2 || !geometry || !map) {
+        return sketchFeature;
+      }
+      const projection = map.getView().getProjection();
       if (this.mode_ === "LineString") {
         coordinates2.pop();
         this.geometryFunction_(coordinates2, geometry, projection);
@@ -29178,12 +30590,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     abortDrawing_() {
+      var _a;
       this.finishCoordinate_ = null;
       const sketchFeature = this.sketchFeature_;
       this.sketchFeature_ = null;
       this.sketchPoint_ = null;
       this.sketchLine_ = null;
-      this.overlay_.getSource().clear(true);
+      (_a = this.overlay_.getSource()) == null ? void 0 : _a.clear(true);
       this.deactivateTrace_();
       return sketchFeature;
     }
@@ -29249,6 +30662,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     extend(feature) {
       const geometry = feature.getGeometry();
+      if (!(geometry instanceof LineString)) {
+        return;
+      }
       const lineString = geometry;
       this.sketchFeature_ = feature;
       this.sketchCoords_ = lineString.getCoordinates();
@@ -29277,6 +30693,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         sketchFeatures.push(this.sketchPoint_);
       }
       const overlaySource = this.overlay_.getSource();
+      if (!overlaySource) {
+        return;
+      }
       overlaySource.clear(true);
       overlaySource.addFeatures(sketchFeatures);
     }
@@ -29294,8 +30713,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function getDefaultStyleFunction$1() {
     const styles = createEditingStyle();
-    return function(feature, resolution) {
-      return styles[feature.getGeometry().getType()];
+    return function(feature) {
+      const geometry = feature.getGeometry();
+      if (!geometry) {
+        return null;
+      }
+      return styles[geometry.getType()];
     };
   }
   function createBox() {
@@ -29369,10 +30792,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         break;
       case "MultiLineString":
       case "Polygon":
-        coordinatesArray = coordinates2[depth[0]];
+        coordinatesArray = coordinates2[
+          /** @type {Array<number>} */
+          depth[0]
+        ];
         break;
       case "MultiPolygon":
-        coordinatesArray = coordinates2[depth[1]][depth[0]];
+        coordinatesArray = coordinates2[
+          /** @type {Array<number>} */
+          depth[1]
+        ][
+          /** @type {Array<number>} */
+          depth[0]
+        ];
         break;
     }
     return coordinatesArray;
@@ -29382,7 +30814,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {ModifyEventType} type Type.
      * @param {Collection<Feature>} features
      * The features modified.
-     * @param {import("../MapBrowserEvent.js").default} mapBrowserEvent
+     * @param {import("../MapBrowserEvent.js").default|null} mapBrowserEvent
      * Associated {@link module:ol/MapBrowserEvent~MapBrowserEvent}.
      */
     constructor(type, features, mapBrowserEvent) {
@@ -29433,7 +30865,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         updateWhileAnimating: true,
         updateWhileInteracting: true
       });
-      this.SEGMENT_WRITERS_ = {
+      this.SEGMENT_WRITERS_ = /** @type {!Object<string, function(Feature, import("../geom/Geometry.js").default): void>} */
+      /** @type {unknown} */
+      {
         Point: this.writePointGeometry_.bind(this),
         LineString: this.writeLineStringGeometry_.bind(this),
         LinearRing: this.writeLineStringGeometry_.bind(this),
@@ -29464,30 +30898,43 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         features = options.features.getArray();
         options.features.addEventListener(
           CollectionEventType.ADD,
+          /** @type {import("../events.js").Listener} */
           this.handleExternalCollectionAdd_
         );
         options.features.addEventListener(
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").Listener} */
           this.handleExternalCollectionRemove_
         );
         this.featuresCollection_ = options.features;
-      } else if (options.source) {
-        features = options.source.getFeatures();
-        options.source.addEventListener(
+      } else {
+        const source = (
+          /** @type {VectorSource} */
+          options.source
+        );
+        features = source.getFeatures();
+        source.addEventListener(
           VectorEventType.ADDFEATURE,
+          /** @type {import("../events.js").Listener} */
           this.handleSourceAdd_
         );
-        options.source.addEventListener(
+        source.addEventListener(
           VectorEventType.REMOVEFEATURE,
+          /** @type {import("../events.js").Listener} */
           this.handleSourceRemove_
         );
-        this.source_ = options.source;
+        this.source_ = source;
       }
       features.forEach((feature) => {
-        feature.addEventListener(EventType.CHANGE, this.handleFeatureChange_);
+        feature.addEventListener(
+          EventType.CHANGE,
+          /** @type {import("../events.js").Listener} */
+          this.handleFeatureChange_
+        );
         if (this.filterFunctionWasSupplied_) {
           feature.addEventListener(
             ObjectEventType.PROPERTYCHANGE,
+            /** @type {import("../events.js").Listener} */
             this.handleFeatureChange_
           );
         }
@@ -29576,7 +31023,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.features_.splice(itemIndex, 1);
       this.removeFeatureSegmentData_(feature);
       if (this.vertexFeature_ && this.features_.length === 0) {
-        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.overlay_.getSource().removeFeature(
+          this.vertexFeature_
+        );
         this.vertexFeature_ = null;
       }
     }
@@ -29616,7 +31065,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     setActive(active) {
       if (this.vertexFeature_ && !active) {
-        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.overlay_.getSource().removeFeature(
+          this.vertexFeature_
+        );
         this.vertexFeature_ = null;
       }
       super.setActive(active);
@@ -29661,7 +31112,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
-     * @param {import("../Collection.js").CollectionEvent} event Event.
+     * @param {import("../Collection.js").CollectionEvent<Feature>} event Event.
      * @private
      */
     handleExternalCollectionAdd_(event) {
@@ -29671,7 +31122,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
-     * @param {import("../Collection.js").CollectionEvent} event Event.
+     * @param {import("../Collection.js").CollectionEvent<Feature>} event Event.
      * @private
      */
     handleExternalCollectionRemove_(event) {
@@ -29686,10 +31137,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Feature} feature Feature.
      */
     externalAddFeatureHandler_(feature) {
-      feature.addEventListener(EventType.CHANGE, this.handleFeatureChange_);
+      feature.addEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").Listener} */
+        this.handleFeatureChange_
+      );
       if (this.filterFunctionWasSupplied_) {
         feature.addEventListener(
           ObjectEventType.PROPERTYCHANGE,
+          /** @type {import("../events.js").Listener} */
           this.handleFeatureChange_
         );
       }
@@ -29703,10 +31159,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Feature} feature Feature.
      */
     externalRemoveFeatureHandler_(feature) {
-      feature.removeEventListener(EventType.CHANGE, this.handleFeatureChange_);
+      feature.removeEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").Listener} */
+        this.handleFeatureChange_
+      );
       if (this.filterFunctionWasSupplied_) {
         feature.removeEventListener(
           ObjectEventType.PROPERTYCHANGE,
+          /** @type {import("../events.js").Listener} */
           this.handleFeatureChange_
         );
       }
@@ -29909,9 +31370,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!vertexFeature) {
         vertexFeature = new Feature(new Point(coordinates2));
         this.vertexFeature_ = vertexFeature;
-        this.overlay_.getSource().addFeature(vertexFeature);
+        this.overlay_.getSource().addFeature(
+          vertexFeature
+        );
       } else {
-        const geometry = vertexFeature.getGeometry();
+        const geometry = (
+          /** @type {Point} */
+          vertexFeature.getGeometry()
+        );
         geometry.setCoordinates(coordinates2);
       }
       vertexFeature.set("features", features);
@@ -29961,7 +31427,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       this.getMap().getView().getProjection();
       const insertVertices = [];
-      const vertex = this.vertexFeature_.getGeometry().getCoordinates();
+      const vertex = (
+        /** @type {Point} */
+        /** @type {Feature<Point>} */
+        this.vertexFeature_.getGeometry().getCoordinates()
+      );
       const vertexExtent = boundingExtent([vertex]);
       const segmentDataMatches = this.rBush_.getInExtent(vertexExtent);
       const componentSegments = {};
@@ -29994,7 +31464,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           continue;
         }
         if (this.coordinatesEqual_(segment[1], vertex) && !componentSegments[uid][1]) {
-          if (componentSegments[uid][0] && componentSegments[uid][0].index === 0) {
+          const leftSegment = componentSegments[uid][0];
+          if (leftSegment && leftSegment.index === 0) {
             let coordinates2 = segmentDataMatch.geometry.getCoordinates();
             switch (segmentDataMatch.geometry.getType()) {
               // prevent dragging closed linestrings by the connecting node
@@ -30004,10 +31475,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               // if dragging the first vertex of a polygon, ensure the other segment
               // belongs to the closing vertex of the linear ring
               case "MultiPolygon":
-                coordinates2 = coordinates2[depth[1]];
+                coordinates2 = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+                coordinates2[
+                  /** @type {Array<number>} */
+                  depth[1]
+                ];
               /* falls through */
               case "Polygon":
-                if (segmentDataMatch.index !== coordinates2[depth[0]].length - 2) {
+                if (segmentDataMatch.index !== /** @type {Array<import("../coordinate.js").Coordinate>} */
+                coordinates2[
+                  /** @type {Array<number>} */
+                  depth[0]
+                ].length - 2) {
                   continue;
                 }
                 break;
@@ -30017,7 +31496,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           componentSegments[uid][1] = segmentDataMatch;
           continue;
         }
-        if (getUid(segment) in this.vertexSegments_ && !componentSegments[uid][0] && !componentSegments[uid][1]) {
+        if (getUid(segment) in /** @type {Object<string, boolean>} */
+        this.vertexSegments_ && !componentSegments[uid][0] && !componentSegments[uid][1]) {
           insertVertices.push(segmentDataMatch);
         }
       }
@@ -30070,7 +31550,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return;
       }
       if (traceState.targetIndex === -1) {
-        const startPx = event.map.getPixelFromCoordinate(traceState.startCoord);
+        const startPx = event.map.getPixelFromCoordinate(
+          /** @type {import("../coordinate.js").Coordinate} */
+          traceState.startCoord
+        );
         if (distance(startPx, event.pixel) < this.pixelTolerance_) {
           return;
         }
@@ -30081,12 +31564,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         event.map,
         this.pixelTolerance_
       );
-      if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / event.map.getView().getResolution() > this.pixelTolerance_) {
+      if (traceState.targetIndex === -1 && Math.sqrt(updatedTraceTarget.closestTargetDistance) / /** @type {number} */
+      event.map.getView().getResolution() > this.pixelTolerance_) {
         return;
       }
       let commit = true;
       if (traceState.targetIndex === -1) {
-        const candidateTarget = traceState.targets[updatedTraceTarget.index];
+        const candidateTarget = (
+          /** @type {Array<import('./tracing.js').TraceTarget>} */
+          traceState.targets[updatedTraceTarget.index]
+        );
         commit = this.tracePassesVertex_(
           candidateTarget.startIndex,
           updatedTraceTarget.endIndex
@@ -30095,26 +31582,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (commit) {
         if (traceState.targetIndex !== updatedTraceTarget.index) {
           if (traceState.targetIndex !== -1) {
-            const oldTarget = traceState.targets[traceState.targetIndex];
+            const oldTarget = (
+              /** @type {Array<import('./tracing.js').TraceTarget>} */
+              traceState.targets[
+                /** @type {number} */
+                traceState.targetIndex
+              ]
+            );
             this.removeTracedCoordinates_(
               oldTarget.startIndex,
               oldTarget.endIndex
             );
           }
-          const newTarget = traceState.targets[updatedTraceTarget.index];
+          const newTarget = (
+            /** @type {Array<import('./tracing.js').TraceTarget>} */
+            traceState.targets[updatedTraceTarget.index]
+          );
           this.addTracedCoordinates_(
             newTarget,
             newTarget.startIndex,
             updatedTraceTarget.endIndex
           );
         } else {
-          const target = traceState.targets[traceState.targetIndex];
+          const target = (
+            /** @type {Array<import('./tracing.js').TraceTarget>} */
+            traceState.targets[
+              /** @type {number} */
+              traceState.targetIndex
+            ]
+          );
           this.addOrRemoveTracedCoordinates_(target, updatedTraceTarget.endIndex);
         }
         traceState.targetIndex = updatedTraceTarget.index;
         traceState.targets[traceState.targetIndex].endIndex = updatedTraceTarget.endIndex;
       }
-      const snapTarget = traceState.targets[updatedTraceTarget.index];
+      const snapTarget = (
+        /** @type {Array<import('./tracing.js').TraceTarget>} */
+        traceState.targets[updatedTraceTarget.index]
+      );
       const snappedVertex = interpolateCoordinate(
         snapTarget.coordinates,
         updatedTraceTarget.endIndex
@@ -30124,8 +31629,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       return snappedVertex;
     }
+    /**
+     * @param {import("../MapBrowserEvent.js").default} event Event.
+     * @return {Array<import("../Feature.js").default>} Features.
+     * @private
+     */
     getTraceCandidates_(event) {
-      const map = this.getMap();
+      const map = (
+        /** @type {import("../Map.js").default} */
+        this.getMap()
+      );
       const tolerance = this.pixelTolerance_;
       const lowerLeft = map.getCoordinateFromPixel([
         event.pixel[0] - tolerance,
@@ -30136,7 +31649,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         event.pixel[1] - tolerance
       ]);
       const extent = boundingExtent([lowerLeft, upperRight]);
-      const features = this.traceSource_.getFeaturesInExtent(extent);
+      const features = (
+        /** @type {VectorSource} */
+        this.traceSource_.getFeaturesInExtent(extent)
+      );
       return features;
     }
     /**
@@ -30201,7 +31717,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     shiftTracedSegmentIndices_(traceSegmentData, atIndex, delta) {
       for (const dragSegment of this.dragSegments_) {
         const segmentData = dragSegment[0];
-        if (segmentData !== traceSegmentData && segmentData.geometry === traceSegmentData.geometry && (segmentData.depth === void 0 || traceSegmentData.depth === void 0 || equals$2(segmentData.depth, traceSegmentData.depth)) && segmentData.index >= atIndex) {
+        if (segmentData !== traceSegmentData && segmentData.geometry === traceSegmentData.geometry && (segmentData.depth === void 0 || traceSegmentData.depth === void 0 || equals$2(segmentData.depth, traceSegmentData.depth)) && /** @type {number} */
+        segmentData.index >= atIndex) {
           segmentData.index += delta;
         }
       }
@@ -30232,19 +31749,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         remove = start - end + 1;
       }
       if (remove > 0) {
-        for (const traceSegment of this.traceSegments_) {
+        for (
+          const traceSegment of
+          /** @type {Array<DragSegment>} */
+          this.traceSegments_
+        ) {
           const segmentData = traceSegment[0];
           const geometry = segmentData.geometry;
           const index = traceSegment[1];
-          let removeIndex = traceSegment[0].index + 1;
+          let removeIndex = (
+            /** @type {number} */
+            traceSegment[0].index + 1
+          );
           if (index === 1) {
             removeIndex -= remove;
           }
           const coordinates2 = geometry.getCoordinates();
-          const coordinatesArray = getCoordinatesArray(
-            coordinates2,
-            geometry.getType(),
-            segmentData.depth
+          const coordinatesArray = (
+            /** @type {Array<import("../coordinate.js").Coordinate>} */
+            getCoordinatesArray(
+              coordinates2,
+              geometry.getType(),
+              segmentData.depth
+            )
           );
           coordinatesArray.splice(removeIndex, remove);
           this.setGeometryCoordinates_(geometry, coordinates2);
@@ -30290,19 +31817,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (newCoordinates.length) {
-        for (const traceSegment of this.traceSegments_) {
+        for (
+          const traceSegment of
+          /** @type {Array<DragSegment>} */
+          this.traceSegments_
+        ) {
           const segmentData = traceSegment[0];
           const geometry = segmentData.geometry;
           const index = traceSegment[1];
-          const insertIndex = segmentData.index + 1;
+          const insertIndex = (
+            /** @type {number} */
+            segmentData.index + 1
+          );
           if (index === 0) {
             newCoordinates.reverse();
           }
           const coordinates2 = geometry.getCoordinates();
-          const coordinatesArray = getCoordinatesArray(
-            coordinates2,
-            geometry.getType(),
-            segmentData.depth
+          const coordinatesArray = (
+            /** @type {Array<import("../coordinate.js").Coordinate>} */
+            getCoordinatesArray(
+              coordinates2,
+              geometry.getType(),
+              segmentData.depth
+            )
           );
           coordinatesArray.splice(insertIndex, 0, ...newCoordinates);
           this.setGeometryCoordinates_(geometry, coordinates2);
@@ -30340,25 +31877,47 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           segment[1] = vertex;
           break;
         case "MultiPoint":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[segmentData.index] = vertex;
+          coordinates2 = /** @type {Array<import("../coordinate.js").Coordinate>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {number} */
+            segmentData.index
+          ] = vertex;
           segment[0] = vertex;
           segment[1] = vertex;
           break;
         case "LineString":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[segmentData.index + index] = vertex;
+          coordinates2 = /** @type {Array<import("../coordinate.js").Coordinate>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {number} */
+            segmentData.index + index
+          ] = vertex;
           segment[index] = vertex;
           break;
         case "MultiLineString":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[depth[0]][segmentData.index + index] = vertex;
+          coordinates2 = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {Array<number>} */
+            depth[0]
+          ][
+            /** @type {number} */
+            segmentData.index + index
+          ] = vertex;
           segment[index] = vertex;
           break;
         case "Polygon": {
-          coordinates2 = geometry.getCoordinates();
-          const ring = coordinates2[depth[0]];
-          const targetIndex = segmentData.index + index;
+          coordinates2 = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+          geometry.getCoordinates();
+          const ring = coordinates2[
+            /** @type {Array<number>} */
+            depth[0]
+          ];
+          const targetIndex = (
+            /** @type {number} */
+            segmentData.index + index
+          );
           if (ring[targetIndex][0] === vertex[0] && ring[targetIndex][1] === vertex[1]) {
             coordinates2 = null;
           } else {
@@ -30373,9 +31932,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           break;
         }
         case "MultiPolygon": {
-          coordinates2 = geometry.getCoordinates();
-          const mRing = coordinates2[depth[1]][depth[0]];
-          const mTargetIndex = segmentData.index + index;
+          coordinates2 = /** @type {Array<Array<Array<import("../coordinate.js").Coordinate>>>} */
+          geometry.getCoordinates();
+          const mRing = coordinates2[
+            /** @type {Array<number>} */
+            depth[1]
+          ][
+            /** @type {Array<number>} */
+            depth[0]
+          ];
+          const mTargetIndex = (
+            /** @type {number} */
+            segmentData.index + index
+          );
           if (mRing[mTargetIndex][0] === vertex[0] && mRing[mTargetIndex][1] === vertex[1]) {
             coordinates2 = null;
           } else {
@@ -30441,7 +32010,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const eligibleForTracing = distance(
             closestOnSegment(startTraceCoord, segmentData.segment),
             startTraceCoord
-          ) / evt.map.getView().getResolution() < 1;
+          ) / /** @type {number} */
+          evt.map.getView().getResolution() < 1;
           if (eligibleForTracing) {
             this.traceSegments_.push(dragSegment);
           }
@@ -30487,7 +32057,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if ((insertVertices == null ? void 0 : insertVertices.length) && this.insertVertexCondition_(evt)) {
         this.willModifyFeatures_(evt, insertVertices);
         if (this.vertexFeature_) {
-          const vertex = this.vertexFeature_.getGeometry().getCoordinates();
+          const vertex = (
+            /** @type {Point} */
+            this.vertexFeature_.getGeometry().getCoordinates()
+          );
           for (let j = insertVertices.length - 1; j >= 0; --j) {
             this.insertVertex_(insertVertices[j], vertex);
           }
@@ -30516,8 +32089,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             geometry
           );
           const coordinates2 = circle.getCenter();
-          const centerSegmentData = segmentData.featureSegments[0];
-          const circumferenceSegmentData = segmentData.featureSegments[1];
+          const centerSegmentData = (
+            /** @type {Array<SegmentData>} */
+            segmentData.featureSegments[0]
+          );
+          const circumferenceSegmentData = (
+            /** @type {Array<SegmentData>} */
+            segmentData.featureSegments[1]
+          );
           centerSegmentData.segment[0] = coordinates2;
           centerSegmentData.segment[1] = coordinates2;
           circumferenceSegmentData.segment[0] = coordinates2;
@@ -30566,10 +32145,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     handlePointerAtPixel_(pixelCoordinate) {
-      const map = this.getMap();
+      const map = (
+        /** @type {import("../Map.js").default} */
+        this.getMap()
+      );
       const pixel = map.getPixelFromCoordinate(pixelCoordinate);
       map.getView().getProjection();
-      const sortByDistance = function(a, b) {
+      const sortByDistance = (a, b) => {
         return projectedDistanceToSegmentDataSquared(pixelCoordinate, a) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b);
       };
       let nodes;
@@ -30581,7 +32163,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           (feature, layer, geometry) => {
             if (geometry && geometry.getType() === "Point") {
               geometry = new Point(
-                toUserCoordinate(geometry.getCoordinates())
+                toUserCoordinate(
+                  /** @type {import("../coordinate.js").Coordinate} */
+                  geometry.getCoordinates()
+                )
               );
             }
             const geom = geometry || feature.getGeometry();
@@ -30609,7 +32194,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const viewExtent = fromUserExtent(
           createOrUpdateFromCoordinate(pixelCoordinate, tempExtent)
         );
-        const buffer$1 = map.getView().getResolution() * this.pixelTolerance_;
+        const buffer$1 = (
+          /** @type {number} */
+          map.getView().getResolution() * this.pixelTolerance_
+        );
         const box = toUserExtent(
           buffer(viewExtent, buffer$1, tempExtent)
         );
@@ -30643,7 +32231,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const squaredDist2 = squaredDistance(vertexPixel, pixel2);
             dist = Math.sqrt(Math.min(squaredDist1, squaredDist2));
             this.snappedToVertex_ = dist <= this.pixelTolerance_;
-            if (!this.snappedToVertex_ && !this.insertVertexCondition_(this.lastPointerEvent_)) {
+            if (!this.snappedToVertex_ && !this.insertVertexCondition_(
+              /** @type {import("../MapBrowserEvent.js").default} */
+              this.lastPointerEvent_
+            )) {
               if (this.vertexFeature_) {
                 this.overlay_.getSource().removeFeature(this.vertexFeature_);
                 this.vertexFeature_ = null;
@@ -30679,7 +32270,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
       if (this.vertexFeature_) {
-        this.overlay_.getSource().removeFeature(this.vertexFeature_);
+        this.overlay_.getSource().removeFeature(
+          this.vertexFeature_
+        );
         this.vertexFeature_ = null;
       }
     }
@@ -30701,20 +32294,56 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       switch (geometry.getType()) {
         case "MultiLineString":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[depth[0]].splice(index + 1, 0, vertex);
+          coordinates2 = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {Array<number>} */
+            depth[0]
+          ].splice(
+            /** @type {number} */
+            index + 1,
+            0,
+            vertex
+          );
           break;
         case "Polygon":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[depth[0]].splice(index + 1, 0, vertex);
+          coordinates2 = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {Array<number>} */
+            depth[0]
+          ].splice(
+            /** @type {number} */
+            index + 1,
+            0,
+            vertex
+          );
           break;
         case "MultiPolygon":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2[depth[1]][depth[0]].splice(index + 1, 0, vertex);
+          coordinates2 = /** @type {Array<Array<Array<import("../coordinate.js").Coordinate>>>} */
+          geometry.getCoordinates();
+          coordinates2[
+            /** @type {Array<number>} */
+            depth[1]
+          ][
+            /** @type {Array<number>} */
+            depth[0]
+          ].splice(
+            /** @type {number} */
+            index + 1,
+            0,
+            vertex
+          );
           break;
         case "LineString":
-          coordinates2 = geometry.getCoordinates();
-          coordinates2.splice(index + 1, 0, vertex);
+          coordinates2 = /** @type {Array<import("../coordinate.js").Coordinate>} */
+          geometry.getCoordinates();
+          coordinates2.splice(
+            /** @type {number} */
+            index + 1,
+            0,
+            vertex
+          );
           break;
         default:
           return false;
@@ -30722,7 +32351,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.setGeometryCoordinates_(geometry, coordinates2);
       const rTree = this.rBush_;
       rTree.remove(segmentData);
-      this.updateSegmentIndices_(geometry, index, depth, 1);
+      this.updateSegmentIndices_(
+        geometry,
+        /** @type {number} */
+        index,
+        depth,
+        1
+      );
       const newSegmentData = {
         segment: [segment[0], vertex],
         feature,
@@ -30737,7 +32372,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         feature,
         geometry,
         depth,
-        index: index + 1
+        index: (
+          /** @type {number} */
+          index + 1
+        )
       };
       rTree.insert(boundingExtent(newSegmentData2.segment), newSegmentData2);
       this.dragSegments_.push([newSegmentData2, 0]);
@@ -30753,7 +32391,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (coordinate) {
         this.findInsertVerticesAndUpdateDragSegments_(coordinate);
       }
-      return (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+      return (
+        /** @type {import("../coordinate.js").Coordinate} */
+        /** @type {Point} */
+        ((_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry()).getCoordinates()
+      );
     }
     /**
      * Get the current pointer position.
@@ -30761,12 +32403,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     getPoint() {
       var _a;
-      const coordinate = (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+      const coordinate = (
+        /** @type {import("../coordinate.js").Coordinate|undefined} */
+        /** @type {{getGeometry: () => Point}} */
+        (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates()
+      );
       if (!coordinate) {
         return null;
       }
       return toUserCoordinate(
         coordinate,
+        /** @type {import("../Map.js").default} */
         this.getMap().getView().getProjection()
       );
     }
@@ -30785,7 +32432,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       )) {
         return false;
       }
-      const coordinate = this.vertexFeature_.getGeometry().getCoordinates();
+      const coordinate = (
+        /** @type {Point} */
+        this.vertexFeature_.getGeometry().getCoordinates()
+      );
       const segments = this.rBush_.getInExtent(boundingExtent([coordinate]));
       return segments.some(
         ({ segment }) => this.coordinatesEqual_(segment[0], coordinate) || this.coordinatesEqual_(segment[1], coordinate)
@@ -30802,6 +32452,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (coordinate) {
         coordinate = fromUserCoordinate(
           coordinate,
+          /** @type {import("../Map.js").default} */
           this.getMap().getView().getProjection()
         );
         this.updatePointer_(coordinate);
@@ -30809,6 +32460,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.lastPointerEvent_ || this.lastPointerEvent_ && this.lastPointerEvent_.type != MapBrowserEventType.POINTERDRAG) {
         const evt = this.lastPointerEvent_;
         this.willModifyFeatures_(
+          /** @type {import("../MapBrowserEvent.js").default} */
           evt,
           this.dragSegments_.map(([segment]) => segment)
         );
@@ -30850,33 +32502,44 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         if (dragSegment[1] === 0) {
           segmentsByFeature[uid].right = segmentData;
-          segmentsByFeature[uid].index = segmentData.index;
+          segmentsByFeature[uid].index = /** @type {number} */
+          segmentData.index;
         } else if (dragSegment[1] == 1) {
           segmentsByFeature[uid].left = segmentData;
-          segmentsByFeature[uid].index = segmentData.index + 1;
+          segmentsByFeature[uid].index = /** @type {number} */
+          segmentData.index + 1;
         }
       }
       for (uid in segmentsByFeature) {
         right = segmentsByFeature[uid].right;
         left = segmentsByFeature[uid].left;
-        index = segmentsByFeature[uid].index;
+        index = /** @type {number} */
+        segmentsByFeature[uid].index;
         newIndex = index - 1;
         if (left !== void 0) {
           segmentData = left;
         } else {
-          segmentData = right;
+          segmentData = /** @type {SegmentData} */
+          right;
         }
         if (newIndex < 0) {
           newIndex = 0;
         }
         geometry = segmentData.geometry;
-        coordinates2 = geometry.getCoordinates();
+        coordinates2 = /** @type {Array<import("../coordinate.js").Coordinate>} */
+        geometry.getCoordinates();
         component = coordinates2;
         deleted = false;
         switch (geometry.getType()) {
           case "MultiLineString":
-            if (coordinates2[segmentData.depth[0]].length > 2) {
-              coordinates2[segmentData.depth[0]].splice(index, 1);
+            if (coordinates2[
+              /** @type {Array<number>} */
+              segmentData.depth[0]
+            ].length > 2) {
+              coordinates2[
+                /** @type {Array<number>} */
+                segmentData.depth[0]
+              ].splice(index, 1);
               deleted = true;
             }
             break;
@@ -30887,10 +32550,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             }
             break;
           case "MultiPolygon":
-            component = component[segmentData.depth[1]];
+            component = /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+            /** @type {unknown} */
+            component[
+              /** @type {Array<number>} */
+              segmentData.depth[1]
+            ];
           /* falls through */
           case "Polygon":
-            component = component[segmentData.depth[0]];
+            component = /** @type {Array<import("../coordinate.js").Coordinate>} */
+            /** @type {Array<Array<import("../coordinate.js").Coordinate>>} */
+            /** @type {unknown} */
+            component[
+              /** @type {Array<number>} */
+              segmentData.depth[0]
+            ];
             if (component.length > 4) {
               if (index == component.length - 1) {
                 index = 0;
@@ -30931,7 +32605,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           }
           this.updateSegmentIndices_(geometry, index, segmentData.depth, -1);
           if (this.vertexFeature_) {
-            this.overlay_.getSource().removeFeature(this.vertexFeature_);
+            this.overlay_.getSource().removeFeature(
+              this.vertexFeature_
+            );
             this.vertexFeature_ = null;
           }
           dragSegments.length = 0;
@@ -30954,7 +32630,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       )) {
         return false;
       }
-      const coordinate = this.vertexFeature_.getGeometry().getCoordinates();
+      const coordinate = (
+        /** @type {Point} */
+        this.vertexFeature_.getGeometry().getCoordinates()
+      );
       const segments = this.rBush_.getInExtent(boundingExtent([coordinate]));
       return segments.some(
         ({ segment }) => !(this.coordinatesEqual_(segment[0], coordinate) || this.coordinatesEqual_(segment[1], coordinate))
@@ -30969,19 +32648,30 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     insertPoint(coordinate) {
       var _a;
-      const pixelCoordinate = coordinate ? fromUserCoordinate(coordinate, this.getMap().getView().getProjection()) : (_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry().getCoordinates();
+      const pixelCoordinate = coordinate ? fromUserCoordinate(
+        coordinate,
+        /** @type {import("../Map.js").default} */
+        this.getMap().getView().getProjection()
+      ) : (
+        /** @type {import("../coordinate.js").Coordinate} */
+        /** @type {Point} */
+        ((_a = this.vertexFeature_) == null ? void 0 : _a.getGeometry()).getCoordinates()
+      );
       if (!pixelCoordinate) {
         return false;
       }
       const insertVertices = this.findInsertVerticesAndUpdateDragSegments_(pixelCoordinate);
-      return insertVertices.reduce(
-        (prev, segmentData) => prev || this.insertVertex_(segmentData, pixelCoordinate),
-        false
+      return (
+        /** @type {Array<SegmentData>} */
+        insertVertices.reduce(
+          (prev, segmentData) => prev || this.insertVertex_(segmentData, pixelCoordinate),
+          false
+        )
       );
     }
     /**
      * @param {import("../geom/SimpleGeometry.js").default} geometry Geometry.
-     * @param {Array} coordinates Coordinates.
+     * @param {*} coordinates Coordinates.
      * @private
      */
     setGeometryCoordinates_(geometry, coordinates2) {
@@ -31000,7 +32690,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.rBush_.forEachInExtent(
         geometry.getExtent(),
         function(segmentDataMatch) {
-          if (segmentDataMatch.geometry === geometry && (depth === void 0 || segmentDataMatch.depth === void 0 || equals$2(segmentDataMatch.depth, depth)) && segmentDataMatch.index > index) {
+          if (segmentDataMatch.geometry === geometry && (depth === void 0 || segmentDataMatch.depth === void 0 || equals$2(segmentDataMatch.depth, depth)) && /** @type {number} */
+          segmentDataMatch.index > index) {
             segmentDataMatch.index += delta;
           }
         }
@@ -31014,20 +32705,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.featuresCollection_) {
         this.featuresCollection_.removeEventListener(
           CollectionEventType.ADD,
+          /** @type {import("../events.js").Listener} */
           this.handleExternalCollectionAdd_
         );
         this.featuresCollection_.removeEventListener(
           CollectionEventType.REMOVE,
+          /** @type {import("../events.js").Listener} */
           this.handleExternalCollectionRemove_
         );
         for (const feature of this.featuresCollection_.getArray()) {
           feature.removeEventListener(
             EventType.CHANGE,
+            /** @type {import("../events.js").Listener} */
             this.handleFeatureChange_
           );
           if (this.filterFunctionWasSupplied_) {
             feature.removeEventListener(
               ObjectEventType.PROPERTYCHANGE,
+              /** @type {import("../events.js").Listener} */
               this.handleFeatureChange_
             );
           }
@@ -31035,20 +32730,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else if (this.source_) {
         this.source_.removeEventListener(
           VectorEventType.ADDFEATURE,
+          /** @type {import("../events.js").Listener} */
           this.handleSourceAdd_
         );
         this.source_.removeEventListener(
           VectorEventType.REMOVEFEATURE,
+          /** @type {import("../events.js").Listener} */
           this.handleSourceRemove_
         );
         for (const feature of this.source_.getFeatures()) {
           feature.removeEventListener(
             EventType.CHANGE,
+            /** @type {import("../events.js").Listener} */
             this.handleFeatureChange_
           );
           if (this.filterFunctionWasSupplied_) {
             feature.removeEventListener(
               ObjectEventType.PROPERTYCHANGE,
+              /** @type {import("../events.js").Listener} */
               this.handleFeatureChange_
             );
           }
@@ -31057,7 +32756,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function compareIndexes(a, b) {
-    return a.index - b.index;
+    return (
+      /** @type {number} */
+      a.index - /** @type {number} */
+      b.index
+    );
   }
   function projectedDistanceToSegmentDataSquared(pointCoordinates, segmentData, projection) {
     const geometry = segmentData.geometry;
@@ -31137,139 +32840,147 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.segment = options.segment;
     }
   }
-  const GEOMETRY_SEGMENTERS = {
-    /**
-     * @param {import("../geom/Circle.js").default} geometry Geometry.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {Array<Segment>} Segments
-     */
-    Circle(geometry, projection) {
-      let circleGeometry = geometry;
-      const polygon = fromCircle(circleGeometry);
-      return GEOMETRY_SEGMENTERS.Polygon(polygon);
-    },
-    /**
-     * @param {import("../geom/GeometryCollection.js").default} geometry Geometry.
-     * @param {import("../proj/Projection.js").default} projection Projection.
-     * @return {Array<Segment>} Segments
-     */
-    GeometryCollection(geometry, projection) {
-      const segments = [];
-      const geometries = geometry.getGeometriesArray();
-      for (let i = 0; i < geometries.length; ++i) {
-        const segmenter2 = this[geometries[i].getType()];
-        if (segmenter2) {
-          segments.push(segmenter2(geometries[i], projection));
+  const GEOMETRY_SEGMENTERS = (
+    /** @type {Object<string, Segmenter>} */
+    /** @type {unknown} */
+    {
+      /**
+       * @param {import("../geom/Circle.js").default} geometry Geometry.
+       * @param {import("../proj/Projection.js").default} projection Projection.
+       * @return {Array<Segment>} Segments
+       */
+      Circle(geometry, projection) {
+        let circleGeometry = geometry;
+        const polygon = fromCircle(circleGeometry);
+        return GEOMETRY_SEGMENTERS.Polygon(polygon);
+      },
+      /**
+       * @param {import("../geom/GeometryCollection.js").default} geometry Geometry.
+       * @param {import("../proj/Projection.js").default} projection Projection.
+       * @return {Array<Segment>} Segments
+       */
+      GeometryCollection(geometry, projection) {
+        const segments = [];
+        const geometries = geometry.getGeometriesArray();
+        const segmenters = (
+          /** @type {Object<string, Segmenter>} */
+          this
+        );
+        for (let i = 0; i < geometries.length; ++i) {
+          const segmenter2 = segmenters[geometries[i].getType()];
+          if (segmenter2) {
+            segments.push(segmenter2(geometries[i], projection));
+          }
         }
-      }
-      return segments.flat();
-    },
-    /**
-     * @param {import("../geom/LineString.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    LineString(geometry) {
-      const segments = [];
-      const coordinates2 = geometry.getFlatCoordinates();
-      const stride = geometry.getStride();
-      for (let i = 0, ii = coordinates2.length - stride; i < ii; i += stride) {
-        segments.push([
-          coordinates2.slice(i, i + 2),
-          coordinates2.slice(i + stride, i + stride + 2)
-        ]);
-      }
-      return segments;
-    },
-    /**
-     * @param {import("../geom/MultiLineString.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    MultiLineString(geometry) {
-      const segments = [];
-      const coordinates2 = geometry.getFlatCoordinates();
-      const stride = geometry.getStride();
-      const ends = geometry.getEnds();
-      let offset = 0;
-      for (let i = 0, ii = ends.length; i < ii; ++i) {
-        const end = ends[i];
-        for (let j = offset, jj = end - stride; j < jj; j += stride) {
+        return segments.flat();
+      },
+      /**
+       * @param {import("../geom/LineString.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      LineString(geometry) {
+        const segments = [];
+        const coordinates2 = geometry.getFlatCoordinates();
+        const stride = geometry.getStride();
+        for (let i = 0, ii = coordinates2.length - stride; i < ii; i += stride) {
           segments.push([
-            coordinates2.slice(j, j + 2),
-            coordinates2.slice(j + stride, j + stride + 2)
+            coordinates2.slice(i, i + 2),
+            coordinates2.slice(i + stride, i + stride + 2)
           ]);
         }
-        offset = end;
-      }
-      return segments;
-    },
-    /**
-     * @param {import("../geom/MultiPoint.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    MultiPoint(geometry) {
-      const segments = [];
-      const coordinates2 = geometry.getFlatCoordinates();
-      const stride = geometry.getStride();
-      for (let i = 0, ii = coordinates2.length; i < ii; i += stride) {
-        segments.push([coordinates2.slice(i, i + 2)]);
-      }
-      return segments;
-    },
-    /**
-     * @param {import("../geom/MultiPolygon.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    MultiPolygon(geometry) {
-      const segments = [];
-      const coordinates2 = geometry.getFlatCoordinates();
-      const stride = geometry.getStride();
-      const endss = geometry.getEndss();
-      let offset = 0;
-      for (let i = 0, ii = endss.length; i < ii; ++i) {
-        const ends = endss[i];
-        for (let j = 0, jj = ends.length; j < jj; ++j) {
-          const end = ends[j];
-          for (let k = offset, kk = end - stride; k < kk; k += stride) {
+        return segments;
+      },
+      /**
+       * @param {import("../geom/MultiLineString.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      MultiLineString(geometry) {
+        const segments = [];
+        const coordinates2 = geometry.getFlatCoordinates();
+        const stride = geometry.getStride();
+        const ends = geometry.getEnds();
+        let offset = 0;
+        for (let i = 0, ii = ends.length; i < ii; ++i) {
+          const end = ends[i];
+          for (let j = offset, jj = end - stride; j < jj; j += stride) {
             segments.push([
-              coordinates2.slice(k, k + 2),
-              coordinates2.slice(k + stride, k + stride + 2)
+              coordinates2.slice(j, j + 2),
+              coordinates2.slice(j + stride, j + stride + 2)
             ]);
           }
           offset = end;
         }
-      }
-      return segments;
-    },
-    /**
-     * @param {import("../geom/Point.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    Point(geometry) {
-      return [[geometry.getFlatCoordinates().slice(0, 2)]];
-    },
-    /**
-     * @param {import("../geom/Polygon.js").default} geometry Geometry.
-     * @return {Array<Segment>} Segments
-     */
-    Polygon(geometry) {
-      const segments = [];
-      const coordinates2 = geometry.getFlatCoordinates();
-      const stride = geometry.getStride();
-      const ends = geometry.getEnds();
-      let offset = 0;
-      for (let i = 0, ii = ends.length; i < ii; ++i) {
-        const end = ends[i];
-        for (let j = offset, jj = end - stride; j < jj; j += stride) {
-          segments.push([
-            coordinates2.slice(j, j + 2),
-            coordinates2.slice(j + stride, j + stride + 2)
-          ]);
+        return segments;
+      },
+      /**
+       * @param {import("../geom/MultiPoint.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      MultiPoint(geometry) {
+        const segments = [];
+        const coordinates2 = geometry.getFlatCoordinates();
+        const stride = geometry.getStride();
+        for (let i = 0, ii = coordinates2.length; i < ii; i += stride) {
+          segments.push([coordinates2.slice(i, i + 2)]);
         }
-        offset = end;
+        return segments;
+      },
+      /**
+       * @param {import("../geom/MultiPolygon.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      MultiPolygon(geometry) {
+        const segments = [];
+        const coordinates2 = geometry.getFlatCoordinates();
+        const stride = geometry.getStride();
+        const endss = geometry.getEndss();
+        let offset = 0;
+        for (let i = 0, ii = endss.length; i < ii; ++i) {
+          const ends = endss[i];
+          for (let j = 0, jj = ends.length; j < jj; ++j) {
+            const end = ends[j];
+            for (let k = offset, kk = end - stride; k < kk; k += stride) {
+              segments.push([
+                coordinates2.slice(k, k + 2),
+                coordinates2.slice(k + stride, k + stride + 2)
+              ]);
+            }
+            offset = end;
+          }
+        }
+        return segments;
+      },
+      /**
+       * @param {import("../geom/Point.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      Point(geometry) {
+        return [[geometry.getFlatCoordinates().slice(0, 2)]];
+      },
+      /**
+       * @param {import("../geom/Polygon.js").default} geometry Geometry.
+       * @return {Array<Segment>} Segments
+       */
+      Polygon(geometry) {
+        const segments = [];
+        const coordinates2 = geometry.getFlatCoordinates();
+        const stride = geometry.getStride();
+        const ends = geometry.getEnds();
+        let offset = 0;
+        for (let i = 0, ii = ends.length; i < ii; ++i) {
+          const end = ends[i];
+          for (let j = offset, jj = end - stride; j < jj; j += stride) {
+            segments.push([
+              coordinates2.slice(j, j + 2),
+              coordinates2.slice(j + stride, j + stride + 2)
+            ]);
+          }
+          offset = end;
+        }
+        return segments;
       }
-      return segments;
     }
-  };
+  );
   function getFeatureFromEvent(evt) {
     if (
       /** @type {import("../source/Vector.js").VectorSourceEvent} */
@@ -31291,7 +33002,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return null;
   }
-  const tempSegment = [];
+  const tempSegment = (
+    /** @type {Array<import("../coordinate.js").Coordinate>} */
+    []
+  );
   const tempExtents = [];
   const tempSegmentData = [];
   class Snap extends PointerInteraction {
@@ -31338,12 +33052,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const geometry = feature.getGeometry();
       if (geometry) {
         const segmenter2 = this.segmenters_[geometry.getType()];
-        if (segmenter2) {
+        const map = this.getMap();
+        if (segmenter2 && map) {
           this.indexedFeaturesExtents_[feature_uid] = geometry.getExtent(createEmpty());
           const segments = segmenter2.call(
             this.segmenters_,
             geometry,
-            this.getMap().getView().getProjection()
+            map.getView().getProjection()
           );
           let segmentCount = segments.length;
           for (let i = 0; i < segmentCount; ++i) {
@@ -31414,8 +33129,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.featureChangeListenerKeys_[feature_uid] = listen(
           feature,
           EventType.CHANGE,
-          this.handleFeatureChange_,
-          this
+          /** @type {import("../events.js").ListenerFunction} */
+          this.handleFeatureChange_.bind(this)
         );
       }
     }
@@ -31424,7 +33139,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     getFeatures_() {
-      let features;
+      let features = (
+        /** @type {import("../Collection.js").default<import("../Feature.js").default>|Array<import("../Feature.js").default>} */
+        []
+      );
       if (this.features_) {
         features = this.features_;
       } else if (this.source_) {
@@ -31452,21 +33170,40 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     handleEvent(evt) {
       const result = this.snapTo(evt.pixel, evt.coordinate, evt.map);
-      if (result) {
+      if (result && result.vertex && result.vertexPixel && result.feature) {
         evt.coordinate = result.vertex.slice(0, 2);
         evt.pixel = result.vertexPixel;
-        if (this.snapped_ && !this.areSnapDataEqual_(this.snapped_, result)) {
-          this.dispatchEvent(new SnapEvent(SnapEventType.UNSNAP, this.snapped_));
-        }
-        this.snapped_ = {
+        const snapInfo = {
           vertex: evt.coordinate,
           vertexPixel: evt.pixel,
           feature: result.feature,
           segment: result.segment
         };
-        this.dispatchEvent(new SnapEvent(SnapEventType.SNAP, this.snapped_));
+        if (this.snapped_ && !this.areSnapDataEqual_(this.snapped_, snapInfo)) {
+          this.dispatchEvent(
+            new SnapEvent(
+              SnapEventType.UNSNAP,
+              /** @type {{vertex: import("../coordinate.js").Coordinate, vertexPixel: import("../coordinate.js").Coordinate, feature: import("../Feature.js").default, segment: Segment|null}} */
+              this.snapped_
+            )
+          );
+        }
+        this.snapped_ = snapInfo;
+        this.dispatchEvent(
+          new SnapEvent(
+            SnapEventType.SNAP,
+            /** @type {{vertex: import("../coordinate.js").Coordinate, vertexPixel: import("../coordinate.js").Coordinate, feature: import("../Feature.js").default, segment: Segment|null}} */
+            snapInfo
+          )
+        );
       } else if (this.snapped_) {
-        this.dispatchEvent(new SnapEvent(SnapEventType.UNSNAP, this.snapped_));
+        this.dispatchEvent(
+          new SnapEvent(
+            SnapEventType.UNSNAP,
+            /** @type {{vertex: import("../coordinate.js").Coordinate, vertexPixel: import("../coordinate.js").Coordinate, feature: import("../Feature.js").default, segment: Segment|null}} */
+            this.snapped_
+          )
+        );
         this.snapped_ = null;
       }
       return super.handleEvent(evt);
@@ -31575,14 +33312,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             listen(
               this.features_,
               CollectionEventType.ADD,
-              this.handleFeatureAdd_,
-              this
+              /** @type {import("../events.js").ListenerFunction} */
+              this.handleFeatureAdd_.bind(this)
             ),
             listen(
               this.features_,
               CollectionEventType.REMOVE,
-              this.handleFeatureRemove_,
-              this
+              /** @type {import("../events.js").ListenerFunction} */
+              this.handleFeatureRemove_.bind(this)
             )
           );
         } else if (this.source_) {
@@ -31590,14 +33327,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             listen(
               this.source_,
               VectorEventType.ADDFEATURE,
-              this.handleFeatureAdd_,
-              this
+              /** @type {import("../events.js").ListenerFunction} */
+              this.handleFeatureAdd_.bind(this)
             ),
             listen(
               this.source_,
               VectorEventType.REMOVEFEATURE,
-              this.handleFeatureRemove_,
-              this
+              /** @type {import("../events.js").ListenerFunction} */
+              this.handleFeatureRemove_.bind(this)
             )
           );
         }
@@ -31615,10 +33352,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     snapTo(pixel, pixelCoordinate, map) {
       map.getView().getProjection();
       const projectedCoordinate = fromUserCoordinate(pixelCoordinate);
+      const resolution = map.getView().getResolution();
+      if (resolution === void 0) {
+        return null;
+      }
       const box = toUserExtent(
         buffer(
           boundingExtent([projectedCoordinate]),
-          map.getView().getResolution() * this.pixelTolerance_
+          resolution * this.pixelTolerance_
         )
       );
       const segments = this.rBush_.getInExtent(box);
@@ -31640,17 +33381,27 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (squaredPixelDistance > squaredPixelTolerance) {
           return null;
         }
-        return {
-          vertex: closestVertex,
-          vertexPixel: [Math.round(vertexPixel[0]), Math.round(vertexPixel[1])],
-          feature: closestFeature,
-          segment: closestSegment
-        };
+        return (
+          /** @type {SnappedInfo} */
+          {
+            vertex: closestVertex,
+            vertexPixel: (
+              /** @type {import("../pixel.js").Pixel} */
+              [
+                Math.round(vertexPixel[0]),
+                Math.round(vertexPixel[1])
+              ]
+            ),
+            feature: closestFeature,
+            segment: closestSegment
+          }
+        );
       };
       if (this.vertex_ || this.intersection_) {
         for (let i = 0; i < segmentsLength; ++i) {
           const segmentData = segments[i];
-          if (segmentData.feature.getGeometry().getType() !== "Circle") {
+          const segmentGeometry = segmentData.feature.getGeometry();
+          if (segmentGeometry && segmentGeometry.getType() !== "Circle") {
             for (const vertex of segmentData.segment) {
               const tempVertexCoord = fromUserCoordinate(vertex);
               const delta = squaredDistance(projectedCoordinate, tempVertexCoord);
@@ -31671,8 +33422,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         for (let i = 0; i < segmentsLength; ++i) {
           let vertex = null;
           const segmentData = segments[i];
-          if (segmentData.feature.getGeometry().getType() === "Circle") {
-            let circleGeometry = segmentData.feature.getGeometry();
+          const segmentGeometry = segmentData.feature.getGeometry();
+          if (segmentGeometry && segmentGeometry.getType() === "Circle") {
+            let circleGeometry = segmentGeometry;
             vertex = closestOnCircle(
               projectedCoordinate,
               /** @type {import("../geom/Circle.js").default} */
@@ -31690,7 +33442,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             const delta = squaredDistance(projectedCoordinate, vertex);
             if (delta < minSquaredDistance) {
               closestVertex = toUserCoordinate(vertex);
-              closestSegment = segmentData.feature.getGeometry().getType() === "Circle" ? null : segmentData.segment;
+              closestSegment = segmentGeometry && segmentGeometry.getType() === "Circle" ? null : segmentData.segment;
               minSquaredDistance = delta;
               closestFeature = segmentData.feature;
             }
@@ -31844,6 +33596,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function asImageLike(data) {
     return data instanceof Image || data instanceof HTMLCanvasElement || data instanceof HTMLVideoElement || data instanceof ImageBitmap ? data : null;
   }
+  function asArrayLike(data) {
+    return data instanceof Uint8Array || data instanceof Uint8ClampedArray || data instanceof Float32Array || data instanceof DataView ? data : null;
+  }
   const disposedError = new Error("disposed");
   const defaultSize = [256, 256];
   class DataTile extends Tile {
@@ -31870,7 +33625,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.size_) {
         return this.size_;
       }
-      const imageData = asImageLike(this.data_);
+      const imageData = asImageLike(
+        /** @type {Data} */
+        this.data_
+      );
       if (imageData) {
         return [imageData.width, imageData.height];
       }
@@ -31878,7 +33636,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the data for the tile.
-     * @return {Data} Tile data.
+     * @return {Data|null} Tile data.
      * @api
      */
     getData() {
@@ -31886,7 +33644,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get any loading error.
-     * @return {Error} Loading error.
+     * @return {Error|null} Loading error.
      * @api
      */
     getError() {
@@ -31946,7 +33704,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.image_ = new OffscreenCanvas(1, 1);
       } else {
         this.image_ = new Image();
-        if (this.crossOrigin_ !== null) {
+        if (this.crossOrigin_ !== null && this.crossOrigin_ !== void 0) {
           this.image_.crossOrigin = this.crossOrigin_;
         }
         if (this.referrerPolicy_ !== void 0) {
@@ -31958,7 +33716,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the HTML image element for this tile (may be a Canvas, OffscreenCanvas, Image, or Video).
-     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
+     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement|null} Image.
      * @api
      */
     getImage() {
@@ -31976,14 +33734,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the cross origin of the ImageTile.
-     * @return {string} Cross origin.
+     * @return {string|null} Cross origin.
      */
     getCrossOrigin() {
-      return this.crossOrigin_;
+      return this.crossOrigin_ ?? null;
     }
     /**
      * Get the referrer policy of the ImageTile.
-     * @return {ReferrerPolicy} Referrer policy.
+     * @return {ReferrerPolicy|undefined} Referrer policy.
      */
     getReferrerPolicy() {
       return this.referrerPolicy_;
@@ -32062,7 +33820,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.state == TileState.ERROR) {
         this.state = TileState.IDLE;
         this.image_ = new Image();
-        if (this.crossOrigin_ !== null) {
+        if (this.crossOrigin_ !== null && this.crossOrigin_ !== void 0) {
           this.image_.crossOrigin = this.crossOrigin_;
         }
         if (this.referrerPolicy_ !== void 0) {
@@ -32073,11 +33831,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.state = TileState.LOADING;
         this.changed();
         this.tileLoadFunction_(this, this.src_);
-        this.unlisten_ = listenImage(
-          this.image_,
-          this.handleImageLoad_.bind(this),
-          this.handleImageError_.bind(this)
-        );
+        const image = this.image_;
+        if (image) {
+          this.unlisten_ = listenImage(
+            image,
+            this.handleImageLoad_.bind(this),
+            this.handleImageError_.bind(this)
+          );
+        }
       }
     }
     /**
@@ -32301,35 +34062,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const stitchScale = pixelRatio / sourceResolution;
     const inverseScale = (interpolate ? 1 : 1 + Math.pow(2, -24)) / stitchScale;
     {
-      stitchContext = createCanvasContext2D(
+      const stitchCtx = createCanvasContext2D(
         Math.round(getWidth(sourceDataExtent) * stitchScale),
         Math.round(getHeight(sourceDataExtent) * stitchScale),
         canvasPool
       );
+      stitchContext = stitchCtx;
       if (!interpolate) {
-        stitchContext.imageSmoothingEnabled = false;
+        stitchCtx.imageSmoothingEnabled = false;
       }
       sources.forEach(function(src, i, arr) {
         if (src.image.width > 0 && src.image.height > 0) {
           if (src.clipExtent) {
-            stitchContext.save();
+            stitchCtx.save();
             const xPos2 = (src.clipExtent[0] - sourceDataExtent[0]) * stitchScale;
             const yPos2 = -(src.clipExtent[3] - sourceDataExtent[3]) * stitchScale;
             const width2 = getWidth(src.clipExtent) * stitchScale;
             const height2 = getHeight(src.clipExtent) * stitchScale;
-            stitchContext.rect(
+            stitchCtx.rect(
               interpolate ? xPos2 : Math.round(xPos2),
               interpolate ? yPos2 : Math.round(yPos2),
               interpolate ? width2 : Math.round(xPos2 + width2) - Math.round(xPos2),
               interpolate ? height2 : Math.round(yPos2 + height2) - Math.round(yPos2)
             );
-            stitchContext.clip();
+            stitchCtx.clip();
           }
           const xPos = (src.extent[0] - sourceDataExtent[0]) * stitchScale;
           const yPos = -(src.extent[3] - sourceDataExtent[3]) * stitchScale;
           const srcWidth = getWidth(src.extent) * stitchScale;
           const srcHeight = getHeight(src.extent) * stitchScale;
-          stitchContext.drawImage(
+          stitchCtx.drawImage(
             src.image,
             gutter,
             gutter,
@@ -32341,7 +34103,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             interpolate ? srcHeight : Math.round(yPos + srcHeight) - Math.round(yPos)
           );
           if (src.clipExtent) {
-            stitchContext.restore();
+            stitchCtx.restore();
           }
         }
       });
@@ -32472,7 +34234,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {import("../proj/Projection.js").default} sourceProj Source projection.
      * @param {import("../proj/Projection.js").default} targetProj Target projection.
      * @param {import("../extent.js").Extent} targetExtent Target extent to triangulate.
-     * @param {import("../extent.js").Extent} maxSourceExtent Maximal source extent that can be used.
+     * @param {import("../extent.js").Extent|undefined} maxSourceExtent Maximal source extent that can be used.
      * @param {number} errorThreshold Acceptable error (in source units).
      * @param {?number} destinationResolution The (optional) resolution of the destination.
      * @param {import("../transform.js").Transform} [sourceMatrix] Source transform matrix.
@@ -32486,7 +34248,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           sourceMatrix,
           transform(input, this.targetProj_, this.sourceProj_)
         )
-      ) : getTransform(this.targetProj_, this.sourceProj_);
+      ) : (
+        /** @type {import("../proj.js").TransformFunction} */
+        getTransform(this.targetProj_, this.sourceProj_)
+      );
       this.transformInv_ = function(c) {
         const key = c[0] + "/" + c[1];
         if (!transformInvCache[key]) {
@@ -32499,8 +34264,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.triangles_ = [];
       this.wrapsXInSource_ = false;
       this.canWrapXInSource_ = this.sourceProj_.canWrapX() && !!maxSourceExtent && !!this.sourceProj_.getExtent() && getWidth(maxSourceExtent) >= getWidth(this.sourceProj_.getExtent());
-      this.sourceWorldWidth_ = this.sourceProj_.getExtent() ? getWidth(this.sourceProj_.getExtent()) : null;
-      this.targetWorldWidth_ = this.targetProj_.getExtent() ? getWidth(this.targetProj_.getExtent()) : null;
+      this.sourceWorldWidth_ = this.sourceProj_.getExtent() ? getWidth(this.sourceProj_.getExtent()) : void 0;
+      this.targetWorldWidth_ = this.targetProj_.getExtent() ? getWidth(this.targetProj_.getExtent()) : void 0;
       const destinationTopLeft = getTopLeft(targetExtent);
       const destinationTopRight = getTopRight(targetExtent);
       const destinationBottomRight = getBottomRight(targetExtent);
@@ -32529,6 +34294,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         maxSubdivision
       );
       if (this.wrapsXInSource_) {
+        const sourceWorldWidth = this.sourceWorldWidth_;
+        if (!sourceWorldWidth) {
+          return;
+        }
         let leftBound = Infinity;
         this.triangles_.forEach(function(triangle, i, arr) {
           leftBound = Math.min(
@@ -32543,20 +34312,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             triangle.source[0][0],
             triangle.source[1][0],
             triangle.source[2][0]
-          ) - leftBound > this.sourceWorldWidth_ / 2) {
+          ) - leftBound > sourceWorldWidth / 2) {
             const newTriangle = [
               [triangle.source[0][0], triangle.source[0][1]],
               [triangle.source[1][0], triangle.source[1][1]],
               [triangle.source[2][0], triangle.source[2][1]]
             ];
-            if (newTriangle[0][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[0][0] -= this.sourceWorldWidth_;
+            if (newTriangle[0][0] - leftBound > sourceWorldWidth / 2) {
+              newTriangle[0][0] -= sourceWorldWidth;
             }
-            if (newTriangle[1][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[1][0] -= this.sourceWorldWidth_;
+            if (newTriangle[1][0] - leftBound > sourceWorldWidth / 2) {
+              newTriangle[1][0] -= sourceWorldWidth;
             }
-            if (newTriangle[2][0] - leftBound > this.sourceWorldWidth_ / 2) {
-              newTriangle[2][0] -= this.sourceWorldWidth_;
+            if (newTriangle[2][0] - leftBound > sourceWorldWidth / 2) {
+              newTriangle[2][0] -= sourceWorldWidth;
             }
             const minX = Math.min(
               newTriangle[0][0],
@@ -32568,7 +34337,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               newTriangle[1][0],
               newTriangle[2][0]
             );
-            if (maxX - minX < this.sourceWorldWidth_ / 2) {
+            if (maxX - minX < sourceWorldWidth / 2) {
               triangle.source = newTriangle;
             }
           }
@@ -32610,12 +34379,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     addQuad_(a, b, c, d, aSrc, bSrc, cSrc, dSrc, maxSubdivision) {
       const sourceQuadExtent = boundingExtent([aSrc, bSrc, cSrc, dSrc]);
-      const sourceCoverageX = this.sourceWorldWidth_ ? getWidth(sourceQuadExtent) / this.sourceWorldWidth_ : null;
-      const sourceWorldWidth = (
-        /** @type {number} */
-        this.sourceWorldWidth_
-      );
-      const wrapsX = this.sourceProj_.canWrapX() && sourceCoverageX > 0.5 && sourceCoverageX < 1;
+      const sourceWorldWidth = this.sourceWorldWidth_;
+      const sourceCoverageX = sourceWorldWidth ? getWidth(sourceQuadExtent) / sourceWorldWidth : void 0;
+      const wrapsX = this.sourceProj_.canWrapX() && sourceCoverageX !== void 0 && sourceCoverageX > 0.5 && sourceCoverageX < 1;
       let needsSubdivision = false;
       if (maxSubdivision > 0) {
         if (this.targetProj_.isGlobal() && this.targetWorldWidth_) {
@@ -32653,8 +34419,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const centerSrc = this.transformInv_(center);
           let dx;
           if (wrapsX) {
-            const centerSrcEstimX = (modulo(aSrc[0], sourceWorldWidth) + modulo(cSrc[0], sourceWorldWidth)) / 2;
-            dx = centerSrcEstimX - modulo(centerSrc[0], sourceWorldWidth);
+            const worldWidth = (
+              /** @type {number} */
+              sourceWorldWidth
+            );
+            const centerSrcEstimX = (modulo(aSrc[0], worldWidth) + modulo(cSrc[0], worldWidth)) / 2;
+            dx = centerSrcEstimX - modulo(centerSrc[0], worldWidth);
           } else {
             dx = (aSrc[0] + cSrc[0]) / 2 - centerSrc[0];
           }
@@ -32793,7 +34563,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.sourceTiles_ = [];
       this.sourcesListenerKeys_ = null;
       this.sourceZ_ = 0;
-      this.clipExtent_ = sourceProj.canWrapX() ? sourceProj.getExtent() : void 0;
+      this.clipExtent_ = sourceProj.canWrapX() ? sourceProj.getExtent() || void 0 : void 0;
       const targetExtent = targetTileGrid.getTileCoordExtent(
         this.wrappedTileCoord_
       );
@@ -32830,7 +34600,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         sourceProj,
         targetProj,
         limitedTargetExtent,
-        maxSourceExtent,
+        maxSourceExtent || void 0,
         sourceResolution * errorThresholdInPixels,
         targetResolution
       );
@@ -32895,7 +34665,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the HTML Canvas element for this tile.
-     * @return {HTMLCanvasElement|OffscreenCanvas} Canvas.
+     * @return {HTMLCanvasElement|OffscreenCanvas|null} Canvas.
      */
     getImage() {
       return this.canvas_;
@@ -32917,10 +34687,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             clipExtent[0] += source.offset;
             clipExtent[2] += source.offset;
           }
+          const image = tile.getImage();
+          if (!image) {
+            return;
+          }
           sources.push({
             extent,
             clipExtent,
-            image: tile.getImage()
+            image
           });
         }
       });
@@ -32944,7 +34718,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           height,
           this.pixelRatio_,
           sourceResolution,
-          this.sourceTileGrid_.getExtent(),
+          this.sourceTileGrid_.getExtent() ?? targetExtent,
           targetResolution,
           targetExtent,
           this.triangulation_,
@@ -32970,11 +34744,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.changed();
         let leftToLoad = 0;
         this.sourcesListenerKeys_ = [];
-        this.sourceTiles_.forEach(({ tile }) => {
+        this.sourceTiles_.forEach((sourceTile) => {
+          const tile = sourceTile.tile;
+          if (!tile) {
+            return;
+          }
           const state = tile.getState();
           if (state == TileState.IDLE || state == TileState.LOADING) {
             leftToLoad++;
-            const sourceListenKey = listen(tile, EventType.CHANGE, (e) => {
+            const sourceListenKey = listen(tile, EventType.CHANGE, () => {
               const state2 = tile.getState();
               if (state2 == TileState.LOADED || state2 == TileState.ERROR || state2 == TileState.EMPTY) {
                 unlistenByKey(sourceListenKey);
@@ -32991,7 +34769,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (leftToLoad === 0) {
           setTimeout(this.reproject_.bind(this), 0);
         } else {
-          this.sourceTiles_.forEach(function({ tile }, i, arr) {
+          this.sourceTiles_.forEach(function(sourceTile) {
+            const tile = sourceTile.tile;
+            if (!tile) {
+              return;
+            }
             const state = tile.getState();
             if (state == TileState.IDLE) {
               tile.load();
@@ -33004,8 +34786,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @private
      */
     unlistenSources_() {
-      this.sourcesListenerKeys_.forEach(unlistenByKey);
-      this.sourcesListenerKeys_ = null;
+      if (this.sourcesListenerKeys_) {
+        this.sourcesListenerKeys_.forEach(unlistenByKey);
+        this.sourcesListenerKeys_ = null;
+      }
     }
     /**
      * Remove from the cache due to expiry
@@ -33178,20 +34962,29 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {T} Last value.
      */
     peekLast() {
-      return this.oldest_.value_;
+      return (
+        /** @type {Entry} */
+        this.oldest_.value_
+      );
     }
     /**
      * @return {string} Last key.
      */
     peekLastKey() {
-      return this.oldest_.key_;
+      return (
+        /** @type {Entry} */
+        this.oldest_.key_
+      );
     }
     /**
      * Get the key of the newest item in the cache.  Throws if the cache is empty.
      * @return {string} The newest key.
      */
     peekFirstKey() {
-      return this.newest_.key_;
+      return (
+        /** @type {Entry} */
+        this.newest_.key_
+      );
     }
     /**
      * Return an entry without updating least recently used time.
@@ -33206,13 +34999,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {T} value Value.
      */
     pop() {
-      const entry = this.oldest_;
+      const entry = (
+        /** @type {Entry} */
+        this.oldest_
+      );
       delete this.entries_[entry.key_];
       if (entry.newer) {
         entry.newer.older = null;
       }
-      this.oldest_ = /** @type {Entry} */
-      entry.newer;
+      this.oldest_ = entry.newer;
       if (!this.oldest_) {
         this.newest_ = null;
       }
@@ -33321,6 +35116,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         fromUserExtent(layerState.extent, frameState.viewState.projection)
       );
     }
+    if (!layerState.layer) {
+      return extent;
+    }
     const source = (
       /** @type {import("../../source/Tile.js").default} */
       layerState.layer.getRenderSource()
@@ -33358,13 +35156,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.maxStaleKeys = cacheSize2 * 0.5;
     }
     /**
-     * @return {LRUCache} Tile cache.
+     * @return {import("../../structs/LRUCache.js").default<import("../../Tile.js").default>} Tile cache.
      */
     getTileCache() {
       return this.tileCache_;
     }
     /**
-     * @return {LRUCache} Tile cache.
+     * @return {import("../../structs/LRUCache.js").default<import("../../Tile.js").default|null>} Tile cache.
      */
     getSourceTileCache() {
       if (!this.sourceTileCache_) {
@@ -33386,10 +35184,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const tileCache = this.tileCache_;
       const tileLayer = this.getLayer();
       const tileSource = tileLayer.getSource();
+      if (!tileSource) {
+        return null;
+      }
       const cacheKey = getCacheKey(tileSource, tileSource.getKey(), z, x, y);
       let tile;
       if (tileCache.containsKey(cacheKey)) {
         tile = tileCache.get(cacheKey);
+        if (!tile) {
+          return null;
+        }
       } else {
         const projection = frameState.viewState.projection;
         const sourceProjection = tileSource.getProjection();
@@ -33399,7 +35203,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           y,
           frameState.pixelRatio,
           projection,
-          !sourceProjection || equivalent$1(sourceProjection, projection) ? void 0 : this.getSourceTileCache()
+          !sourceProjection || equivalent$1(sourceProjection, projection) ? void 0 : (
+            /** @type {import("../../structs/LRUCache.js").default<import("../../Tile.js").default>} */
+            this.getSourceTileCache()
+          )
         );
         if (!tile) {
           return null;
@@ -33425,7 +35232,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * @param {import("../../pixel.js").Pixel} pixel Pixel.
-     * @return {Uint8ClampedArray} Data at the pixel location.
+     * @return {Uint8ClampedArray|null} Data at the pixel location.
      * @override
      */
     getData(pixel) {
@@ -33446,6 +35253,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const viewState = frameState.viewState;
       const source = layer.getRenderSource();
+      if (!source) {
+        return null;
+      }
       const tileGrid = source.getTileGridForProjection(viewState.projection);
       const tilePixelRatio = source.getTilePixelRatio(frameState.pixelRatio);
       for (let z = tileGrid.getZForResolution(viewState.resolution); z >= tileGrid.getMinZoom(); --z) {
@@ -33457,15 +35267,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const tileOrigin = tileGrid.getOrigin(z);
         const tileSize = toSize(tileGrid.getTileSize(z));
         const tileResolution = tileGrid.getResolution(z);
-        let image;
+        let image = null;
         if (tile instanceof ImageTile || tile instanceof ReprojTile) {
           image = tile.getImage();
         } else if (tile instanceof DataTile) {
-          image = asImageLike(tile.getData());
-          if (!image) {
-            continue;
+          const data = tile.getData();
+          if (data) {
+            image = asImageLike(data);
           }
-        } else {
+        }
+        if (!image) {
           continue;
         }
         const col = Math.floor(
@@ -33480,6 +35291,123 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return this.getImageData(image, col + gutter, row + gutter);
       }
       return null;
+    }
+    /**
+     * Read tile data over the frame extent, resampled with nearest-neighbor
+     * sampling onto the frame's output grid, keeping the tiles' own array type so
+     * floating point precision is preserved.  This is used by
+     * {@link module:ol/source/Raster~RasterSource} to run operations on native
+     * band values.  Returns `null` until every covering tile is loaded.  Sources
+     * with a gutter are not supported.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {{data: Uint8Array|Uint8ClampedArray|Int8Array|Uint16Array|Int16Array|Uint32Array|Int32Array|Float32Array|Float64Array, width: number, height: number, bandCount: number}|null}
+     *     The resampled data, or `null` if not all covering tiles are loaded yet.
+     */
+    readData(frameState) {
+      var _a;
+      const source = this.getLayer().getRenderSource();
+      if (!source) {
+        return null;
+      }
+      const viewState = frameState.viewState;
+      const projection = viewState.projection;
+      if (source.getGutterForProjection(projection)) {
+        throw new Error("readData() does not support sources with a gutter");
+      }
+      const tileGrid = source.getTileGridForProjection(projection);
+      const resolution = viewState.resolution;
+      const extent = (
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      );
+      const z = tileGrid.getZForResolution(resolution);
+      const tilesByZ = {};
+      this.enqueueTiles(frameState, extent, z, tilesByZ, 0);
+      const tileSet = tilesByZ[z];
+      if (!tileSet) {
+        return null;
+      }
+      const tiles = [];
+      let ready = true;
+      tileSet.forEach((candidate) => {
+        const tile = (
+          /** @type {DataTile} */
+          /** @type {*} */
+          candidate
+        );
+        const state = tile.getState();
+        if (state === TileState.LOADED) {
+          tiles.push(tile);
+        } else if (state !== TileState.ERROR && state !== TileState.EMPTY) {
+          ready = false;
+        }
+      });
+      if (!ready || tiles.length === 0) {
+        return null;
+      }
+      const width = frameState.size[0];
+      const height = frameState.size[1];
+      const sampleTile = tiles[0];
+      const sampleData = asArrayLike(
+        /** @type {import("../../DataTile.js").Data} */
+        sampleTile.getData()
+      );
+      if (!sampleData || sampleData instanceof DataView) {
+        throw new Error(
+          "ol/renderer/canvas/TileLayer#readData only supports typed array tile data"
+        );
+      }
+      const sampleSize = sampleTile.getSize();
+      const bandCount = Math.round(
+        sampleData.length / (sampleSize[0] * sampleSize[1])
+      );
+      const ArrayConstructor = (
+        /** @type {*} */
+        sampleData.constructor
+      );
+      const output = new ArrayConstructor(width * height * bandCount);
+      for (const tile of tiles) {
+        const tileExtent = tileGrid.getTileCoordExtent(
+          tile.tileCoord,
+          this.tempExtent
+        );
+        const tileSize = tile.getSize();
+        const tileData = (
+          /** @type {*} */
+          asArrayLike(
+            /** @type {import("../../DataTile.js").Data} */
+            tile.getData()
+          )
+        );
+        const left = (tileExtent[0] - extent[0]) / resolution - 0.5;
+        const top = (extent[3] - tileExtent[3]) / resolution - 0.5;
+        const footprintWidth = getWidth(tileExtent) / resolution;
+        const footprintHeight = getHeight(tileExtent) / resolution;
+        const scaleX = tileSize[0] / footprintWidth;
+        const scaleY = tileSize[1] / footprintHeight;
+        const minX = Math.max(0, Math.ceil(left));
+        const maxX = Math.min(width, Math.ceil(left + footprintWidth));
+        const minY = Math.max(0, Math.ceil(top));
+        const maxY = Math.min(height, Math.ceil(top + footprintHeight));
+        for (let y = minY; y < maxY; ++y) {
+          const tileY = Math.min(Math.floor((y - top) * scaleY), tileSize[1] - 1);
+          for (let x = minX; x < maxX; ++x) {
+            const tileX = Math.min(
+              Math.floor((x - left) * scaleX),
+              tileSize[0] - 1
+            );
+            const inputOffset = (tileY * tileSize[0] + tileX) * bandCount;
+            const outputOffset = (y * width + x) * bandCount;
+            for (let b = 0; b < bandCount; ++b) {
+              output[outputOffset + b] = tileData[inputOffset + b];
+            }
+          }
+        }
+      }
+      this.updateCacheSize(tileSet.size);
+      this.tileCache_.expireCache();
+      (_a = this.sourceTileCache_) == null ? void 0 : _a.expireCache();
+      return { data: output, width, height, bandCount };
     }
     /**
      * Determine whether render should be called.
@@ -33530,6 +35458,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const viewState = frameState.viewState;
       const tileLayer = this.getLayer();
       const tileSource = tileLayer.getRenderSource();
+      if (!tileSource) {
+        return;
+      }
       const tileGrid = tileSource.getTileGridForProjection(viewState.projection);
       const tileSourceKey = getUid(tileSource);
       if (!(tileSourceKey in frameState.wantedTiles)) {
@@ -33564,7 +35495,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const tileResolution = tileGrid.getResolution(z);
         for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
           for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
-            if (rotation && !tileGrid.tileCoordIntersectsViewport([z, x, y], viewport)) {
+            if (rotation && viewport && !tileGrid.tileCoordIntersectsViewport([z, x, y], viewport)) {
               continue;
             }
             const tile = this.getTile(z, x, y, frameState);
@@ -33606,17 +35537,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const x = tileCoord[1];
       const y = tileCoord[2];
       const staleKeys = this.getStaleKeys();
+      const layerSource = this.getLayer().getSource();
+      if (!layerSource) {
+        return false;
+      }
       for (let i = 0; i < staleKeys.length; ++i) {
-        const cacheKey = getCacheKey(
-          this.getLayer().getSource(),
-          staleKeys[i],
-          z,
-          x,
-          y
-        );
+        const cacheKey = getCacheKey(layerSource, staleKeys[i], z, x, y);
         if (tileCache.containsKey(cacheKey)) {
           const tile = tileCache.peek(cacheKey);
-          if (tile.getState() === TileState.LOADED) {
+          if (tile && tile.getState() === TileState.LOADED) {
             tile.endTransition(getUid(this));
             addTileToLookup(tilesByZ, tile, z);
             return true;
@@ -33647,6 +35576,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let covered = true;
       const tileCache = this.tileCache_;
       const source = this.getLayer().getRenderSource();
+      if (!source) {
+        return false;
+      }
       const sourceKey = source.getKey();
       for (let x = tileRange.minX; x <= tileRange.maxX; ++x) {
         for (let y = tileRange.minY; y <= tileRange.maxY; ++y) {
@@ -33654,7 +35586,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           let loaded = false;
           if (tileCache.containsKey(cacheKey)) {
             const tile = tileCache.peek(cacheKey);
-            if (tile.getState() === TileState.LOADED) {
+            if (tile && tile.getState() === TileState.LOADED) {
               addTileToLookup(tilesByZ, tile, altZ);
               loaded = true;
             }
@@ -33690,18 +35622,28 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const pixelRatio = frameState.pixelRatio;
       const tileLayer = this.getLayer();
       const tileSource = tileLayer.getSource();
+      if (!tileSource) {
+        return this.getContainerElement();
+      }
       const tileGrid = tileSource.getTileGridForProjection(projection);
       const z = tileGrid.getZForResolution(viewResolution, tileSource.zDirection);
       const tileResolution = tileGrid.getResolution(z);
       this.updateStaleKeys(tileSource.getKey());
-      let frameExtent = frameState.extent;
+      let frameExtent = (
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      );
       const tilePixelRatio = tileSource.getTilePixelRatio(pixelRatio);
       this.prepareContainer(frameState, target);
-      const width = this.context.canvas.width;
-      const height = this.context.canvas.height;
+      const width = this.getCanvasContext().canvas.width;
+      const height = this.getCanvasContext().canvas.height;
       this.layerExtent = layerState.extent ? fromUserExtent(layerState.extent) : null;
       if (this.layerExtent) {
-        frameExtent = getIntersection(frameExtent, this.layerExtent);
+        frameExtent = getIntersection(
+          frameExtent,
+          /** @type {import("../../extent.js").Extent} */
+          this.layerExtent
+        );
       }
       const dx = tileResolution * width / 2 / tilePixelRatio;
       const dy = tileResolution * height / 2 / tilePixelRatio;
@@ -33716,10 +35658,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const preload = tileLayer.getPreload();
       if (frameState.nextExtent && this.enqueueTilesForNextExtent()) {
         const targetZ = tileGrid.getZForResolution(
-          viewState.nextResolution,
+          viewState.nextResolution ?? viewResolution,
           tileSource.zDirection
         );
-        const nextExtent = getRenderExtent(frameState, frameState.nextExtent);
+        const nextExtent = getRenderExtent(
+          frameState,
+          /** @type {import("../../extent.js").Extent} */
+          frameState.nextExtent
+        );
         this.enqueueTiles(frameState, nextExtent, targetZ, tilesByZ, preload);
       }
       const renderExtent = getRenderExtent(frameState, frameExtent);
@@ -33736,7 +35682,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }, 0);
       }
       if (!(z in tilesByZ)) {
-        return this.container;
+        return this.getContainerElement();
       }
       const uid = getUid(this);
       const time = frameState.time;
@@ -33885,7 +35831,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.extentChanged = !this.renderedExtent_ || !equals$1(this.renderedExtent_, canvasExtent);
       this.renderedExtent_ = canvasExtent;
       this.renderedPixelRatio = pixelRatio;
-      this.postRender(this.context, frameState);
+      this.postRender(this.getCanvasContext(), frameState);
       if (this.layerExtent) {
         context.restore();
       }
@@ -33902,7 +35848,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         };
         frameState.postRenderFunctions.push(postRenderFunction);
       }
-      return this.container;
+      return this.getContainerElement();
     }
     /**
      * Increases the cache size if needed
@@ -33932,7 +35878,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     drawTile(tile, frameState, x, y, w, h, gutter, transition, clipRects) {
       let image;
       if (tile instanceof DataTile) {
-        image = asImageLike(tile.getData());
+        const data = tile.getData();
+        if (!data) {
+          return;
+        }
+        image = asImageLike(data);
         if (!image) {
           throw new Error("Rendering array data is not yet supported");
         }
@@ -34000,20 +35950,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     /**
-     * @return {HTMLCanvasElement|OffscreenCanvas} Image
+     * @return {HTMLCanvasElement|OffscreenCanvas|null} Image
      */
     getImage() {
-      const context = this.context;
+      const context = this.getCanvasContext();
       return context ? context.canvas : null;
     }
     /**
      * Get the image from a tile.
      * @param {import("../../ImageTile.js").default} tile Tile.
-     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement} Image.
+     * @return {HTMLCanvasElement|OffscreenCanvas|HTMLImageElement|HTMLVideoElement|null} Image.
      * @protected
      */
     getTileImage(tile) {
-      return tile.getImage();
+      return tile.getImage() ?? null;
     }
     /**
      * @param {!Object<string, !Object<string, boolean>>} usedTiles Used tiles.
@@ -34278,6 +36228,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           tileRange = createOrUpdate$1(x, x, y, y, tempTileRange);
         } else {
           tileRange = this.getTileRangeForExtentAndZ(
+            /** @type {import("../extent.js").Extent} */
             tileCoordExtent,
             z,
             tempTileRange
@@ -34292,7 +36243,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     /**
      * Get the extent for this tile grid, if it was configured.
-     * @return {import("../extent.js").Extent} Extent.
+     * @return {import("../extent.js").Extent|null} Extent.
      * @api
      */
     getExtent() {
@@ -34324,7 +36275,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.origin_) {
         return this.origin_;
       }
-      return this.origins_[z];
+      return this.origins_ ? this.origins_[z] : [0, 0];
     }
     /**
      * Get the list of origins for the grid.
@@ -34397,8 +36348,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (z === tileCoordZ) {
         return createOrUpdate$1(
           tileCoordX,
-          tileCoordY,
           tileCoordX,
+          tileCoordY,
           tileCoordY,
           tempTileRange
         );
@@ -34579,7 +36530,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (this.tileSize_) {
         return this.tileSize_;
       }
-      return this.tileSizes_[z];
+      return this.tileSizes_ ? this.tileSizes_[z] : DEFAULT_TILE_SIZE;
     }
     /**
      * @param {number} z Zoom level.
@@ -34677,8 +36628,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     });
   }
   function createXYZ(options) {
+    var _a;
     const xyzOptions = options || {};
-    const extent = xyzOptions.extent || get$1("EPSG:3857").getExtent();
+    const extent = xyzOptions.extent || ((_a = get$1("EPSG:3857")) == null ? void 0 : _a.getExtent());
+    if (!extent) {
+      throw new Error("Unable to determine extent for XYZ tile grid");
+    }
     const gridOptions = {
       extent,
       minZoom: xyzOptions.minZoom,
@@ -34697,7 +36652,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     tileSize = toSize(tileSize !== void 0 ? tileSize : DEFAULT_TILE_SIZE);
     const height = getHeight(extent);
     const width = getWidth(extent);
-    maxResolution = maxResolution > 0 ? maxResolution : Math.max(width / tileSize[0], height / tileSize[1]);
+    maxResolution = maxResolution !== void 0 && maxResolution > 0 ? maxResolution : Math.max(width / tileSize[0], height / tileSize[1]);
     const length = maxZoom + 1;
     const resolutions = new Array(length);
     for (let z = 0; z < length; ++z) {
@@ -34710,10 +36665,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return createForExtent(extent, maxZoom, tileSize, corner);
   }
   function extentFromProjection(projection) {
-    projection = get$1(projection);
-    let extent = projection.getExtent();
+    const projectionObj = get$1(projection);
+    if (!projectionObj) {
+      throw new Error("Unable to determine extent from unknown projection");
+    }
+    let extent = projectionObj.getExtent();
     if (!extent) {
-      const half = 180 * METERS_PER_UNIT$1.degrees / projection.getMetersPerUnit();
+      const metersPerUnit = projectionObj.getMetersPerUnit();
+      if (metersPerUnit === void 0) {
+        throw new Error(
+          "Unable to determine extent from projection without units"
+        );
+      }
+      const half = 180 * /** @type {number} */
+      METERS_PER_UNIT$1.degrees / metersPerUnit;
       extent = createOrUpdate$2(-half, -half, half, half);
     }
     return extent;
@@ -34937,14 +36902,26 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * returned.
      * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
      * @param {import("../proj/Projection.js").default} [projection] Projection.
-     * @return {import("../tilecoord.js").TileCoord} Tile coordinate to be passed to the tileUrlFunction or
+     * @return {import("../tilecoord.js").TileCoord|null} Tile coordinate to be passed to the tileUrlFunction or
      *     null if no tile URL should be created for the passed `tileCoord`.
      */
     getTileCoordForTileUrlFunction(tileCoord, projection) {
       const gridProjection = projection !== void 0 ? projection : this.getProjection();
-      const tileGrid = projection !== void 0 ? this.getTileGridForProjection(gridProjection) : this.tileGrid || this.getTileGridForProjection(gridProjection);
-      if (this.getWrapX() && gridProjection.isGlobal()) {
-        tileCoord = wrapX(tileGrid, tileCoord, gridProjection);
+      const tileGrid = projection !== void 0 ? this.getTileGridForProjection(
+        /** @type {import("../proj/Projection.js").default} */
+        gridProjection
+      ) : this.tileGrid || this.getTileGridForProjection(
+        /** @type {import("../proj/Projection.js").default} */
+        gridProjection
+      );
+      if (this.getWrapX() && /** @type {import("../proj/Projection.js").default} */
+      gridProjection.isGlobal()) {
+        tileCoord = wrapX(
+          tileGrid,
+          tileCoord,
+          /** @type {import("../proj/Projection.js").default} */
+          gridProjection
+        );
       }
       return withinExtentAndZ(tileCoord, tileGrid) ? tileCoord : null;
     }
@@ -35125,7 +37102,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.urls = urls;
       const key = urls.join("\n");
       if (this.generateTileUrlFunction_) {
-        this.setTileUrlFunction(createFromTemplates(urls, this.tileGrid), key);
+        this.setTileUrlFunction(
+          createFromTemplates(
+            urls,
+            /** @type {import("../tilegrid/TileGrid.js").default} */
+            this.tileGrid
+          ),
+          key
+        );
       } else {
         this.setKey(key);
       }
@@ -35151,7 +37135,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         projection: options.projection,
         state: options.state,
         tileGrid: options.tileGrid,
-        tileLoadFunction: options.tileLoadFunction ? options.tileLoadFunction : defaultTileLoadFunction,
+        tileLoadFunction: options.tileLoadFunction ? options.tileLoadFunction : (
+          /** @type {import("../Tile.js").LoadFunction} */
+          defaultTileLoadFunction
+        ),
         tilePixelRatio: options.tilePixelRatio,
         tileUrlFunction: options.tileUrlFunction,
         url: options.url,
@@ -35176,7 +37163,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     getGutterForProjection(projection) {
-      if (this.getProjection() && projection && !equivalent$1(this.getProjection(), projection)) {
+      const thisProj = this.getProjection();
+      if (thisProj && projection && !equivalent$1(thisProj, projection)) {
         return 0;
       }
       return this.getGutter();
@@ -35244,7 +37232,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.tileOptions
       );
       tile.key = key;
-      tile.addEventListener(EventType.CHANGE, this.handleTileChange.bind(this));
+      tile.addEventListener(
+        EventType.CHANGE,
+        /** @type {import("../events.js").ListenerFunction} */
+        this.handleTileChange.bind(this)
+      );
       return tile;
     }
     /**
@@ -35272,10 +37264,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const key = this.getKey();
       const sourceTileGrid = this.getTileGridForProjection(sourceProjection);
       const targetTileGrid = this.getTileGridForProjection(projection);
-      const wrappedTileCoord = this.getTileCoordForTileUrlFunction(
-        tileCoord,
-        projection
-      );
+      const wrappedTileCoord = this.getTileCoordForTileUrlFunction(tileCoord, projection) || /** @type {import("../tilecoord.js").TileCoord} */
+      tileCoord;
       const tile = new ReprojTile(
         sourceProjection,
         sourceTileGrid,
@@ -35378,18 +37368,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }).then((imageBitmap) => {
         var _a;
         const canvas = imageTile.getImage();
+        if (!canvas) {
+          return;
+        }
         canvas.width = imageBitmap.width;
         canvas.height = imageBitmap.height;
         const ctx = (
           /** @type {OffscreenCanvas} */
           canvas.getContext("2d")
         );
+        if (!ctx) {
+          return;
+        }
         ctx.drawImage(imageBitmap, 0, 0);
         (_a = imageBitmap.close) == null ? void 0 : _a.call(imageBitmap);
         canvas.dispatchEvent(new Event("load"));
       }).catch(() => {
         const canvas = imageTile.getImage();
-        canvas.dispatchEvent(new Event("error"));
+        canvas == null ? void 0 : canvas.dispatchEvent(new Event("error"));
       });
       return;
     }
@@ -35556,7 +37552,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.defaultFeatureProjection = void 0;
       this.featureClass = /** @type {FeatureToFeatureClass<FeatureType>} */
       Feature;
-      this.supportedMediaTypes = null;
+      this.supportedMediaTypes = void 0;
     }
     /**
      * Adds the data projection to the read options.
@@ -35569,11 +37565,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (options) {
         let dataProjection = options.dataProjection ? get$1(options.dataProjection) : this.readProjection(source);
         if (options.extent && dataProjection && dataProjection.getUnits() === "tile-pixels") {
-          dataProjection = get$1(dataProjection);
-          dataProjection.setWorldExtent(options.extent);
+          const tileProjection = get$1(dataProjection);
+          if (tileProjection) {
+            tileProjection.setWorldExtent(options.extent);
+            dataProjection = tileProjection;
+          }
         }
         options = {
-          dataProjection,
+          dataProjection: dataProjection ?? void 0,
           featureProjection: options.featureProjection
         };
       }
@@ -35611,7 +37610,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @abstract
      * @param {Document|Element|Object|string} source Source.
      * @param {ReadOptions} [options] Read options.
-     * @return {FeatureType|Array<FeatureType>} Feature.
+     * @return {FeatureType|Array<FeatureType>|null} Feature.
      */
     readFeature(source, options) {
       return abstract();
@@ -35633,7 +37632,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @abstract
      * @param {Document|Element|Object|string} source Source.
      * @param {ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometry(source, options) {
       return abstract();
@@ -35696,7 +37695,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (fromProjection.getUnits() === "tile-pixels") {
         transformed.transform(fromProjection, toProjection);
       } else {
-        transformed.applyTransform(getTransform(fromProjection, toProjection));
+        const transformFn = getTransform(fromProjection, toProjection);
+        if (transformFn) {
+          transformed.applyTransform(transformFn);
+        }
       }
     }
     if (write && options && /** @type {WriteOptions} */
@@ -35720,25 +37722,25 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return transformed;
   }
-  const GeometryConstructor$1 = {
-    Point,
-    LineString,
-    Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon
-  };
   function orientFlatCoordinates(flatCoordinates, ends, stride) {
     if (Array.isArray(ends[0])) {
-      if (!linearRingssAreOriented(flatCoordinates, 0, ends, stride)) {
+      const endss = (
+        /** @type {Array<Array<number>>} */
+        ends
+      );
+      if (!linearRingssAreOriented(flatCoordinates, 0, endss, stride)) {
         flatCoordinates = flatCoordinates.slice();
-        orientLinearRingsArray(flatCoordinates, 0, ends, stride);
+        orientLinearRingsArray(flatCoordinates, 0, endss, stride);
       }
       return flatCoordinates;
     }
-    if (!linearRingsAreOriented(flatCoordinates, 0, ends, stride)) {
+    const endsArray = (
+      /** @type {Array<number>} */
+      ends
+    );
+    if (!linearRingsAreOriented(flatCoordinates, 0, endsArray, stride)) {
       flatCoordinates = flatCoordinates.slice();
-      orientLinearRings(flatCoordinates, 0, ends, stride);
+      orientLinearRings(flatCoordinates, 0, endsArray, stride);
     }
     return flatCoordinates;
   }
@@ -35755,12 +37757,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (geometryType === "GeometryCollection" || geometryType === "Circle") {
       throw new Error("Unsupported geometry type: " + geometryType);
     }
-    const stride = geometry.layout.length;
+    const stride = (geometry.layout ?? "XY").length;
     return transformGeometryWithOptions(
       new RenderFeature(
         geometryType,
-        geometryType === "Polygon" ? orientFlatCoordinates(geometry.flatCoordinates, geometry.ends, stride) : geometry.flatCoordinates,
-        (_a = geometry.ends) == null ? void 0 : _a.flat(),
+        geometryType === "Polygon" ? orientFlatCoordinates(
+          geometry.flatCoordinates,
+          /** @type {Array<number>} */
+          geometry.ends,
+          stride
+        ) : geometry.flatCoordinates,
+        ((_a = geometry.ends) == null ? void 0 : _a.flat()) ?? [],
         stride,
         object.properties || {},
         object.id
@@ -35775,16 +37782,57 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     if (Array.isArray(object)) {
       const geometries = object.map(
-        (geometry) => createGeometry(geometry, options)
+        (geometry2) => createGeometry(geometry2, options)
       );
-      return new GeometryCollection(geometries);
+      return new GeometryCollection(
+        /** @type {Array<import("../geom/Geometry.js").default>} */
+        geometries
+      );
     }
-    const Geometry2 = GeometryConstructor$1[object.type];
-    return transformGeometryWithOptions(
-      new Geometry2(object.flatCoordinates, object.layout || "XY", object.ends),
-      false,
-      options
+    const type = (
+      /** @type {'Point'|'LineString'|'Polygon'|'MultiPoint'|'MultiLineString'|'MultiPolygon'} */
+      object.type
     );
+    const layout = object.layout || "XY";
+    let geometry;
+    switch (type) {
+      case "Point":
+        geometry = new Point(object.flatCoordinates, layout);
+        break;
+      case "LineString":
+        geometry = new LineString(object.flatCoordinates, layout);
+        break;
+      case "Polygon":
+        geometry = new Polygon(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<number>} */
+          object.ends
+        );
+        break;
+      case "MultiPoint":
+        geometry = new MultiPoint(object.flatCoordinates, layout);
+        break;
+      case "MultiLineString":
+        geometry = new MultiLineString(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<number>} */
+          object.ends
+        );
+        break;
+      case "MultiPolygon":
+        geometry = new MultiPolygon(
+          object.flatCoordinates,
+          layout,
+          /** @type {Array<Array<number>>} */
+          object.ends
+        );
+        break;
+      default:
+        throw new Error("Unsupported geometry type: " + type);
+    }
+    return transformGeometryWithOptions(geometry, false, options);
   }
   class JSONFeature extends FeatureFormat {
     constructor() {
@@ -35808,8 +37856,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     readFeature(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        return (
+          /** @type {FeatureType} */
+          /** @type {unknown} */
+          []
+        );
+      }
       return this.readFeatureFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -35824,8 +37880,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     readFeatures(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        return [];
+      }
       return this.readFeaturesFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -35854,13 +37914,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      *
      * @param {ArrayBuffer|Document|Element|Object|string} source Source.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      * @api
      * @override
      */
     readGeometry(source, options) {
+      const object = getObject(source);
+      if (!object) {
+        throw new Error("Expected a JSON object");
+      }
       return this.readGeometryFromObject(
-        getObject(source),
+        object,
         this.getReadOptions(source, options)
       );
     }
@@ -35869,7 +37933,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Object} object Object.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometryFromObject(object, options) {
       return abstract();
@@ -35883,7 +37947,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     readProjection(source) {
-      return this.readProjectionFromObject(getObject(source));
+      const object = getObject(source);
+      if (!object) {
+        throw new Error("Expected a JSON object");
+      }
+      return this.readProjectionFromObject(object);
     }
     /**
      * @abstract
@@ -35980,9 +38048,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super();
       this.dataProjection = get$1(
         options.dataProjection ? options.dataProjection : "EPSG:4326"
-      );
+      ) ?? void 0;
       if (options.featureProjection) {
-        this.defaultFeatureProjection = get$1(options.featureProjection);
+        this.defaultFeatureProjection = get$1(options.featureProjection) ?? void 0;
       }
       if (options.featureClass) {
         this.featureClass = options.featureClass;
@@ -36002,10 +38070,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     readFeatureFromObject(object, options) {
-      let geoJSONFeature = null;
-      if (object["type"] === "Feature") {
+      const geoJSONObject = (
+        /** @type {GeoJSONObject} */
+        object
+      );
+      let geoJSONFeature;
+      if (geoJSONObject["type"] === "Feature") {
         geoJSONFeature = /** @type {GeoJSONFeature} */
-        object;
+        geoJSONObject;
       } else {
         geoJSONFeature = {
           "type": "Feature",
@@ -36016,15 +38088,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           "properties": null
         };
       }
-      const geometry = readGeometryInternal(geoJSONFeature["geometry"]);
+      const geometryObject = readGeometryInternal(
+        geoJSONFeature["geometry"]
+      );
       if (this.featureClass === RenderFeature) {
         return (
           /** @type {FeatureType|Array<FeatureType>} */
           createRenderFeature(
             {
-              geometry,
+              geometry: geometryObject ?? void 0,
               id: geoJSONFeature["id"],
-              properties: geoJSONFeature["properties"]
+              properties: geoJSONFeature["properties"] ?? void 0
             },
             options
           )
@@ -36037,10 +38111,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const feature = new FeatureClass();
       if (this.geometryName_) {
         feature.setGeometryName(this.geometryName_);
-      } else if (this.extractGeometryName_ && geoJSONFeature["geometry_name"]) {
-        feature.setGeometryName(geoJSONFeature["geometry_name"]);
+      } else if (this.extractGeometryName_ && "geometry_name" in geoJSONFeature && geoJSONFeature["geometry_name"]) {
+        feature.setGeometryName(
+          /** @type {string} */
+          geoJSONFeature["geometry_name"]
+        );
       }
-      feature.setGeometry(createGeometry(geometry, options));
+      feature.setGeometry(createGeometry(geometryObject, options));
       if ("id" in geoJSONFeature) {
         feature.setId(geoJSONFeature["id"]);
       }
@@ -36094,7 +38171,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {GeoJSONGeometry} object Object.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      * @override
      */
     readGeometryFromObject(object, options) {
@@ -36107,7 +38184,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @override
      */
     readProjectionFromObject(object) {
-      const crs = object["crs"];
+      const geoJSONObject = (
+        /** @type {GeoJSONObject & {crs: ({type: string, properties: Object<string, *>}|undefined)}} */
+        object
+      );
+      const crs = geoJSONObject["crs"];
       let projection;
       if (crs) {
         if (crs["type"] == "name") {
@@ -36136,11 +38217,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     writeFeatureObject(feature, options) {
       options = this.adaptOptions(options);
-      const object = {
-        "type": "Feature",
-        geometry: null,
-        properties: null
-      };
+      const object = (
+        /** @type {GeoJSONFeature} */
+        /** @type {unknown} */
+        {
+          "type": "Feature",
+          "geometry": null,
+          "properties": null
+        }
+      );
       const id = feature.getId();
       if (id !== void 0) {
         object.id = id;
@@ -36152,7 +38237,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const geometry = feature.getGeometry();
       if (geometry) {
         object.geometry = writeGeometry(geometry, options);
-        delete properties[feature.getGeometryName()];
+        delete /** @type {Object<string, *>} */
+        properties[feature.getGeometryName()];
       }
       if (!isEmpty$1(properties)) {
         object.properties = properties;
@@ -36193,7 +38279,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function readGeometryInternal(object, options) {
-    if (!object) {
+    if (!object || object.type !== "GeometryCollection" && Array.isArray(object.coordinates) && !object.coordinates.length) {
       return null;
     }
     let geometry;
@@ -36255,18 +38341,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function readGeometry(object, options) {
     const geometryObject = readGeometryInternal(object);
+    if (!geometryObject) {
+      return null;
+    }
     return createGeometry(geometryObject, options);
   }
   function readGeometryCollectionGeometry(object, options) {
-    const geometries = object["geometries"].map(
-      /**
-       * @param {GeoJSONGeometry} geometry Geometry.
-       * @return {import("./Feature.js").GeometryObject} geometry Geometry.
-       */
-      function(geometry) {
-        return readGeometryInternal(geometry);
+    const geometryObjects = object["geometries"];
+    const geometries = [];
+    for (const geometry of geometryObjects) {
+      const geom = readGeometryInternal(geometry);
+      if (!geom) {
+        continue;
       }
-    );
+      geometries.push(geom);
+    }
     return geometries;
   }
   function readPointGeometry(object) {
@@ -36292,7 +38381,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     var _a, _b;
     const coordinates2 = object["coordinates"];
     const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length) || 2;
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
     return {
       type: "MultiLineString",
@@ -36313,7 +38405,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function readMultiPolygonGeometry(object) {
     var _a, _b;
     const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const stride = ((_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b[0].length) || 2;
     const endss = deflateMultiCoordinatesArray(
       flatCoordinates,
@@ -36331,7 +38426,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function readPolygonGeometry(object) {
     var _a, _b;
     const coordinates2 = object["coordinates"];
-    const flatCoordinates = [];
+    const flatCoordinates = (
+      /** @type {Array<number>} */
+      []
+    );
     const stride = (_b = (_a = coordinates2[0]) == null ? void 0 : _a[0]) == null ? void 0 : _b.length;
     const ends = deflateCoordinatesArray(flatCoordinates, 0, coordinates2, stride);
     return {
@@ -40187,7 +42285,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function getAllTextContent_(node, normalizeWhitespace, accumulator) {
     if (node.nodeType == Node.CDATA_SECTION_NODE || node.nodeType == Node.TEXT_NODE) {
       {
-        accumulator.push(node.nodeValue);
+        accumulator.push(String(node.nodeValue));
       }
     } else {
       let n;
@@ -40206,7 +42304,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function makeArrayExtender(valueReader, thisArg) {
     return (
       /**
-       * @param {Node} node Node.
+       * @param {Element} node Node.
        * @param {Array<*>} objectStack Object stack.
        * @this {*}
        */
@@ -40244,7 +42342,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function makeReplacer(valueReader, thisArg) {
     return (
       /**
-       * @param {Node} node Node.
+       * @param {Element} node Node.
        * @param {Array<*>} objectStack Object stack.
        * @this {*}
        */
@@ -40267,7 +42365,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         const value = valueReader.call(this, node, objectStack);
         if (value !== void 0) {
           const object = (
-            /** @type {!Object} */
+            /** @type {Object<string, *>} */
             objectStack[objectStack.length - 1]
           );
           const name = property !== void 0 ? property : node.localName;
@@ -40315,7 +42413,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
         const namespaceURI = node.namespaceURI;
         return createElementNS(
-          namespaceURI,
+          namespaceURI ?? "",
           /** @type {string} */
           nodeName
         );
@@ -40335,14 +42433,36 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     structureNS = structureNS !== void 0 ? structureNS : {};
     let i, ii;
     for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
-      structureNS[namespaceURIs[i]] = structure;
+      structureNS[namespaceURIs[i] ?? ""] = structure;
     }
     return structureNS;
+  }
+  function makeParsersNS(namespaceURIs, structure, structureNS) {
+    structureNS = structureNS !== void 0 ? structureNS : {};
+    let i, ii;
+    for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
+      structureNS[namespaceURIs[i] ?? ""] = structure;
+    }
+    return (
+      /** @type {ParsersNS} */
+      structureNS
+    );
+  }
+  function makeSerializersNS(namespaceURIs, structure, structureNS) {
+    structureNS = structureNS !== void 0 ? structureNS : {};
+    let i, ii;
+    for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
+      structureNS[namespaceURIs[i] ?? ""] = structure;
+    }
+    return (
+      /** @type {SerializersNS} */
+      structureNS
+    );
   }
   function parseNode(parsersNS, node, objectStack, thisArg) {
     let n;
     for (n = node.firstElementChild; n; n = n.nextElementSibling) {
-      const parsers2 = parsersNS[n.namespaceURI];
+      const parsers2 = parsersNS[n.namespaceURI ?? ""];
       if (parsers2 !== void 0) {
         const parser = parsers2[n.localName];
         if (parser !== void 0) {
@@ -40360,24 +42480,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   }
   function serialize(serializersNS, nodeFactory, values, objectStack, keys, thisArg) {
+    var _a;
     const length = (keys !== void 0 ? keys : values).length;
     let value, node;
     for (let i = 0; i < length; ++i) {
       value = values[i];
       if (value !== void 0) {
         node = nodeFactory.call(
+          /** @type {T} */
           thisArg,
           value,
           objectStack,
           keys !== void 0 ? keys[i] : void 0
         );
         if (node !== void 0) {
-          serializersNS[node.namespaceURI][node.localName].call(
-            thisArg,
-            node,
-            value,
-            objectStack
+          const element = (
+            /** @type {Element} */
+            node
           );
+          const serializer = (_a = serializersNS[element.namespaceURI ?? ""]) == null ? void 0 : _a[element.localName];
+          if (serializer) {
+            serializer.call(
+              /** @type {T} */
+              thisArg,
+              element,
+              value,
+              objectStack
+            );
+          }
         }
       }
     }
@@ -40395,14 +42525,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (xmlSerializer_ === void 0 && typeof XMLSerializer !== "undefined") {
       xmlSerializer_ = new XMLSerializer();
     }
-    return xmlSerializer_;
+    return (
+      /** @type {XMLSerializer} */
+      xmlSerializer_
+    );
   }
   let document_ = void 0;
   function getDocument() {
     if (document_ === void 0 && typeof document !== "undefined") {
       document_ = document.implementation.createDocument("", "", null);
     }
-    return document_;
+    return (
+      /** @type {Document} */
+      document_
+    );
   }
   class XMLFeature extends FeatureFormat {
     constructor() {
@@ -40421,7 +42557,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      *
      * @param {Document|Element|Object|string} source Source.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      * @api
      * @override
      */
@@ -40449,7 +42585,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {Document} doc Document.
      * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      */
     readFeatureFromDocument(doc, options) {
       const features = this.readFeaturesFromDocument(doc, options);
@@ -40461,7 +42597,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {Element} node Node.
      * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      */
     readFeatureFromNode(node, options) {
       return null;
@@ -40533,7 +42669,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      *
      * @param {Document|Element|Object|string} source Source.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      * @override
      */
     readGeometry(source, options) {
@@ -40561,7 +42697,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Document} doc Document.
      * @param {import("./Feature.js").ReadOptions} [options] Options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometryFromDocument(doc, options) {
       return null;
@@ -40570,7 +42706,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {Element} node Node.
      * @param {import("./Feature.js").ReadOptions} [options] Options.
      * @protected
-     * @return {import("../geom/Geometry.js").default} Geometry.
+     * @return {import("../geom/Geometry.js").default|null} Geometry.
      */
     readGeometryFromNode(node, options) {
       return null;
@@ -40579,13 +42715,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * Read the projection from the source.
      *
      * @param {Document|Element|Object|string} source Source.
-     * @return {import("../proj/Projection.js").default} Projection.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
      * @api
      * @override
      */
     readProjection(source) {
       if (!source) {
-        return null;
+        return void 0;
       }
       if (typeof source === "string") {
         const doc = parse(source);
@@ -40605,7 +42741,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {Document} doc Document.
      * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
      */
     readProjectionFromDocument(doc) {
       return this.dataProjection;
@@ -40613,7 +42749,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {Element} node Node.
      * @protected
-     * @return {import("../proj/Projection.js").default} Projection.
+     * @return {import("../proj/Projection.js").default|undefined} Projection.
      */
     readProjectionFromNode(node) {
       return this.dataProjection;
@@ -40628,13 +42764,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     writeFeature(feature, options) {
       const node = this.writeFeatureNode(feature, options);
+      if (!node) {
+        return "";
+      }
       return this.xmlSerializer_.serializeToString(node);
     }
     /**
      * @param {import("../Feature.js").default} feature Feature.
      * @param {import("./Feature.js").WriteOptions} [options] Options.
      * @protected
-     * @return {Node} Node.
+     * @return {Node|null} Node.
      */
     writeFeatureNode(feature, options) {
       return null;
@@ -40650,12 +42789,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     writeFeatures(features, options) {
       const node = this.writeFeaturesNode(features, options);
+      if (!node) {
+        return "";
+      }
       return this.xmlSerializer_.serializeToString(node);
     }
     /**
      * @param {Array<import("../Feature.js").default>} features Features.
      * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @return {Node} Node.
+     * @return {Node|null} Node.
      */
     writeFeaturesNode(features, options) {
       return null;
@@ -40670,12 +42812,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     writeGeometry(geometry, options) {
       const node = this.writeGeometryNode(geometry, options);
+      if (!node) {
+        return "";
+      }
       return this.xmlSerializer_.serializeToString(node);
     }
     /**
      * @param {import("../geom/Geometry.js").default} geometry Geometry.
      * @param {import("./Feature.js").WriteOptions} [options] Options.
-     * @return {Node} Node.
+     * @return {Node|null} Node.
      */
     writeGeometryNode(geometry, options) {
       return null;
@@ -40748,7 +42893,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "pixels": "pixels",
     "insetPixels": "pixels"
   };
-  const PLACEMARK_PARSERS = makeStructureNS(
+  const PLACEMARK_PARSERS = makeParsersNS(
     NAMESPACE_URIS,
     {
       "ExtendedData": extendedDataParser,
@@ -40768,12 +42913,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       "styleUrl": makeObjectPropertySetter(readStyleURL),
       "visibility": makeObjectPropertySetter(readBoolean)
     },
-    makeStructureNS(GX_NAMESPACE_URIS, {
+    makeParsersNS(GX_NAMESPACE_URIS, {
       "MultiTrack": makeObjectPropertySetter(readGxMultiTrack, "geometry"),
       "Track": makeObjectPropertySetter(readGxTrack, "geometry")
     })
   );
-  const NETWORK_LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const NETWORK_LINK_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "ExtendedData": extendedDataParser,
     "Region": regionParser,
     "Link": linkParser,
@@ -40784,10 +42929,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "phoneNumber": makeObjectPropertySetter(readString),
     "visibility": makeObjectPropertySetter(readBoolean)
   });
-  const LINK_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const LINK_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "href": makeObjectPropertySetter(readURI)
   });
-  const CAMERA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const CAMERA_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     Altitude: makeObjectPropertySetter(readDecimal),
     Longitude: makeObjectPropertySetter(readDecimal),
     Latitude: makeObjectPropertySetter(readDecimal),
@@ -40796,12 +42941,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Heading: makeObjectPropertySetter(readDecimal),
     Roll: makeObjectPropertySetter(readDecimal)
   });
-  const REGION_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const REGION_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "LatLonAltBox": latLonAltBoxParser,
     "Lod": lodParser
   });
-  const KML_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["Document", "Placemark"]);
-  const KML_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const KML_SEQUENCE = (
+    /** @type {Object<string, Array<string>>} */
+    makeStructureNS(NAMESPACE_URIS, ["Document", "Placemark"])
+  );
+  const KML_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "Document": makeChildAppender(writeDocument),
     "Placemark": makeChildAppender(writePlacemark)
   });
@@ -40881,7 +43029,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!DEFAULT_STYLE_ARRAY) {
         createStyleDefaults();
       }
-      this.dataProjection = get$1("EPSG:4326");
+      this.dataProjection = get$1("EPSG:4326") ?? void 0;
       this.defaultStyle_ = options.defaultStyle ? options.defaultStyle : DEFAULT_STYLE_ARRAY;
       this.extractStyles_ = options.extractStyles !== void 0 ? options.extractStyles : true;
       this.writeStyles_ = options.writeStyles !== void 0 ? options.writeStyles : true;
@@ -40938,25 +43086,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         /** @type {import("./Feature.js").ReadOptions} */
         objectStack[0]
       );
-      const geometry = object["geometry"];
+      const geometry = (
+        /** @type {import("../geom/Geometry.js").default|undefined} */
+        object["geometry"]
+      );
       if (geometry) {
         transformGeometryWithOptions(geometry, false, options);
       }
-      feature.setGeometry(geometry);
-      delete object["geometry"];
+      feature.setGeometry(geometry ?? null);
+      delete /** @type {Object<string, *>} */
+      object["geometry"];
       if (this.extractStyles_) {
         const style = object["Style"];
         const styleUrl = object["styleUrl"];
         const styleFunction = createFeatureStyleFunction(
           style,
           styleUrl,
+          /** @type {Array<Style>|null} */
           this.defaultStyle_,
           this.sharedStyles_,
           this.showPointNames_
         );
         feature.setStyle(styleFunction);
       }
-      delete object["Style"];
+      delete /** @type {Object<string, *>} */
+      object["Style"];
       feature.setProperties(object, true);
       return feature;
     }
@@ -41015,7 +43169,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     /**
      * @param {Element} node Node.
      * @param {import("./Feature.js").ReadOptions} [options] Options.
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      * @override
      */
     readFeatureFromNode(node, options) {
@@ -41046,7 +43200,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (localName == "Document" || localName == "Folder") {
         features = this.readDocumentOrFolder_(node, [
           this.getReadOptions(node, options)
-        ]);
+        ]) ?? [];
         if (features) {
           return features;
         }
@@ -41105,7 +43259,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     readNameFromDocument(doc) {
       for (let n = (
-        /** @type {Node} */
+        /** @type {ChildNode|null} */
         doc.firstChild
       ); n; n = n.nextSibling) {
         if (n.nodeType == Node.ELEMENT_NODE) {
@@ -41179,7 +43333,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     readNetworkLinksFromDocument(doc) {
       const networkLinks = [];
       for (let n = (
-        /** @type {Node} */
+        /** @type {ChildNode|null} */
         doc.firstChild
       ); n; n = n.nextSibling) {
         if (n.nodeType == Node.ELEMENT_NODE) {
@@ -41249,7 +43403,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     readRegionFromDocument(doc) {
       const regions = [];
       for (let n = (
-        /** @type {Node} */
+        /** @type {ChildNode|null} */
         doc.firstChild
       ); n; n = n.nextSibling) {
         if (n.nodeType == Node.ELEMENT_NODE) {
@@ -41327,7 +43481,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     readCameraFromDocument(doc) {
       const cameras = [];
       for (let n = (
-        /** @type {Node} */
+        /** @type {ChildNode|null} */
         doc.firstChild
       ); n; n = n.nextSibling) {
         if (n.nodeType === Node.ELEMENT_NODE) {
@@ -41390,7 +43544,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else if (features.length == 1) {
         properties["Placemark"] = features[0];
       }
-      const orderedKeys = KML_SEQUENCE[kml.namespaceURI];
+      const orderedKeys = KML_SEQUENCE[kml.namespaceURI ?? ""];
       const values = makeSequence(properties, orderedKeys);
       pushSerializeAndPop(
         context,
@@ -41405,6 +43559,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function createNameStyleFunction(foundStyle, name) {
+    if (!foundStyle || !DEFAULT_TEXT_STYLE) {
+      return new Style();
+    }
     const textOffset = [0, 0];
     let textAlign = "start";
     const imageStyle = foundStyle.getImage();
@@ -41413,9 +43570,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (imageSize && imageSize.length == 2) {
         const imageScale = imageStyle.getScaleArray();
         const anchor = imageStyle.getAnchor();
-        textOffset[0] = imageScale[0] * (imageSize[0] - anchor[0]);
-        textOffset[1] = imageScale[1] * (imageSize[1] / 2 - anchor[1]);
-        textAlign = "left";
+        if (anchor) {
+          textOffset[0] = imageScale[0] * (imageSize[0] - anchor[0]);
+          textOffset[1] = imageScale[1] * (imageSize[1] / 2 - anchor[1]);
+          textAlign = "left";
+        }
       }
     }
     let textStyle = foundStyle.getText();
@@ -41433,7 +43592,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     textStyle.setOffsetY(textOffset[1]);
     textStyle.setTextAlign(textAlign);
     const nameStyle = new Style({
-      image: imageStyle,
+      image: imageStyle ?? void 0,
       text: textStyle
     });
     return nameStyle;
@@ -41441,9 +43600,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function createFeatureStyleFunction(style, styleUrl, defaultStyle, sharedStyles, showPointNames) {
     return (
       /**
-       * @param {Feature} feature feature.
+       * @param {import("../Feature.js").FeatureLike} feature feature.
        * @param {number} resolution Resolution.
-       * @return {Array<Style>|Style} Style.
+       * @return {Style|Array<Style>|void} Style.
        */
       (function(feature, resolution) {
         let drawName = showPointNames;
@@ -41483,21 +43642,32 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           featureStyle = findStyle(styleUrl, defaultStyle, sharedStyles);
         }
         if (drawName) {
-          const nameStyle = createNameStyleFunction(featureStyle[0], name);
+          const styles = (
+            /** @type {Array<Style>} */
+            featureStyle
+          );
+          const nameStyle = createNameStyleFunction(styles[0], name);
           if (multiGeometryPoints.length > 0) {
             nameStyle.setGeometry(new GeometryCollection(multiGeometryPoints));
-            const baseStyle = new Style({
-              geometry: featureStyle[0].getGeometry(),
-              image: null,
-              fill: featureStyle[0].getFill(),
-              stroke: featureStyle[0].getStroke(),
-              text: null
-            });
-            return [nameStyle, baseStyle].concat(featureStyle.slice(1));
+            const baseStyle = new Style(
+              /** @type {import("../style/Style.js").Options} */
+              /** @type {Record<string, *>} */
+              {
+                geometry: styles[0].getGeometry(),
+                image: null,
+                fill: styles[0].getFill(),
+                stroke: styles[0].getStroke(),
+                text: null
+              }
+            );
+            return [nameStyle, baseStyle].concat(styles.slice(1));
           }
           return nameStyle;
         }
-        return featureStyle;
+        return (
+          /** @type {Style|Array<Style>|void} */
+          featureStyle
+        );
       })
     );
   }
@@ -41567,8 +43737,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return s;
   }
   function readVec2(node) {
-    const xunits = node.getAttribute("xunits");
-    const yunits = node.getAttribute("yunits");
+    const xunits = node.getAttribute("xunits") ?? "pixels";
+    const yunits = node.getAttribute("yunits") ?? "pixels";
     let origin;
     if (xunits !== "insetPixels") {
       if (yunits !== "insetPixels") {
@@ -41584,9 +43754,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
     return {
-      x: parseFloat(node.getAttribute("x")),
+      x: parseFloat(node.getAttribute("x") ?? "0"),
       xunits: ICON_ANCHOR_UNITS_MAP[xunits],
-      y: parseFloat(node.getAttribute("y")),
+      y: parseFloat(node.getAttribute("y") ?? "0"),
       yunits: ICON_ANCHOR_UNITS_MAP[yunits],
       origin
     };
@@ -41594,13 +43764,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function readScale(node) {
     return readDecimal(node);
   }
-  const STYLE_MAP_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const STYLE_MAP_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "Pair": pairDataParser
   });
   function readStyleMapValue(node, objectStack) {
     return pushParseAndPop(void 0, STYLE_MAP_PARSERS, node, objectStack, this);
   }
-  const ICON_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const ICON_STYLE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "Icon": makeObjectPropertySetter(readIcon),
     "color": makeObjectPropertySetter(readColor),
     "heading": makeObjectPropertySetter(readDecimal),
@@ -41608,15 +43778,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "scale": makeObjectPropertySetter(readScale)
   });
   function iconStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, ICON_STYLE_PARSERS, node, objectStack);
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, ICON_STYLE_PARSERS, node, objectStack)
+    );
     if (!object) {
       return;
     }
     const styleObject = (
-      /** @type {Object} */
+      /** @type {KMLObject} */
       objectStack[objectStack.length - 1]
     );
-    const IconObject = "Icon" in object ? object["Icon"] : {};
+    const IconObject = (
+      /** @type {KMLObject} */
+      "Icon" in object ? object["Icon"] : {}
+    );
     const drawIcon = !("Icon" in object) || Object.keys(IconObject).length > 0;
     let src;
     const href = (
@@ -41639,7 +43815,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       anchorXUnits = hotSpot.xunits;
       anchorYUnits = hotSpot.yunits;
       anchorOrigin = hotSpot.origin;
-    } else if (/^https?:\/\/maps\.(?:google|gstatic)\.com\//.test(src)) {
+    } else if (src && /^https?:\/\/maps\.(?:google|gstatic)\.com\//.test(src)) {
       if (src.includes("pushpin")) {
         anchor = DEFAULT_IMAGE_STYLE_ANCHOR;
         anchorXUnits = DEFAULT_IMAGE_STYLE_ANCHOR_X_UNITS;
@@ -41710,7 +43886,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         rotation,
         scale: scale2,
         size,
-        src: this.iconUrlFunction_(src),
+        src: this.iconUrlFunction_(
+          /** @type {string} */
+          src
+        ),
         color
       });
       const imageScale = imageStyle.getScaleArray()[0];
@@ -41743,16 +43922,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       styleObject["imageStyle"] = DEFAULT_NO_IMAGE_STYLE;
     }
   }
-  const LABEL_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const LABEL_STYLE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "color": makeObjectPropertySetter(readColor),
     "scale": makeObjectPropertySetter(readScale)
   });
   function labelStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, LABEL_STYLE_PARSERS, node, objectStack);
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, LABEL_STYLE_PARSERS, node, objectStack)
+    );
     if (!object) {
       return;
     }
-    const styleObject = objectStack[objectStack.length - 1];
+    const styleObject = (
+      /** @type {KMLObject} */
+      objectStack[objectStack.length - 1]
+    );
     const textStyle = new Text({
       fill: new Fill({
         color: (
@@ -41767,16 +43952,22 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     });
     styleObject["textStyle"] = textStyle;
   }
-  const LINE_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const LINE_STYLE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "color": makeObjectPropertySetter(readColor),
     "width": makeObjectPropertySetter(readDecimal)
   });
   function lineStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, LINE_STYLE_PARSERS, node, objectStack);
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, LINE_STYLE_PARSERS, node, objectStack)
+    );
     if (!object) {
       return;
     }
-    const styleObject = objectStack[objectStack.length - 1];
+    const styleObject = (
+      /** @type {KMLObject} */
+      objectStack[objectStack.length - 1]
+    );
     const strokeStyle = new Stroke({
       color: (
         /** @type {import("../color.js").Color} */
@@ -41789,17 +43980,23 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     });
     styleObject["strokeStyle"] = strokeStyle;
   }
-  const POLY_STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const POLY_STYLE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "color": makeObjectPropertySetter(readColor),
     "fill": makeObjectPropertySetter(readBoolean),
     "outline": makeObjectPropertySetter(readBoolean)
   });
   function polyStyleParser(node, objectStack) {
-    const object = pushParseAndPop({}, POLY_STYLE_PARSERS, node, objectStack);
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, POLY_STYLE_PARSERS, node, objectStack)
+    );
     if (!object) {
       return;
     }
-    const styleObject = objectStack[objectStack.length - 1];
+    const styleObject = (
+      /** @type {KMLObject} */
+      objectStack[objectStack.length - 1]
+    );
     const fillStyle = new Fill({
       color: (
         /** @type {import("../color.js").Color} */
@@ -41822,11 +44019,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       styleObject["outline"] = outline;
     }
   }
-  const FLAT_LINEAR_RING_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const FLAT_LINEAR_RING_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "coordinates": makeReplacer(readFlatCoordinates)
   });
   function readFlatLinearRing(node, objectStack) {
-    return pushParseAndPop(null, FLAT_LINEAR_RING_PARSERS, node, objectStack);
+    return pushParseAndPop(
+      /** @type {Array<number>|null} */
+      null,
+      FLAT_LINEAR_RING_PARSERS,
+      node,
+      objectStack
+    );
   }
   function gxCoordParser(node, objectStack) {
     const gxTrackObject = (
@@ -41846,7 +44049,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       coordinates2.push([]);
     }
   }
-  const GX_MULTITRACK_GEOMETRY_PARSERS = makeStructureNS(GX_NAMESPACE_URIS, {
+  const GX_MULTITRACK_GEOMETRY_PARSERS = makeParsersNS(GX_NAMESPACE_URIS, {
     "Track": makeArrayPusher(readGxTrack)
   });
   function readGxMultiTrack(node, objectStack) {
@@ -41861,12 +44064,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return new MultiLineString(lineStrings);
   }
-  const GX_TRACK_PARSERS = makeStructureNS(
+  const GX_TRACK_PARSERS = makeParsersNS(
     NAMESPACE_URIS,
     {
       "when": whenParser
     },
-    makeStructureNS(GX_NAMESPACE_URIS, {
+    makeParsersNS(GX_NAMESPACE_URIS, {
       "coord": gxCoordParser
     })
   );
@@ -41899,12 +44102,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return new LineString(flatCoordinates, "XYZM");
   }
-  const ICON_PARSERS = makeStructureNS(
+  const ICON_PARSERS = makeParsersNS(
     NAMESPACE_URIS,
     {
       "href": makeObjectPropertySetter(readURI)
     },
-    makeStructureNS(GX_NAMESPACE_URIS, {
+    makeParsersNS(GX_NAMESPACE_URIS, {
       "x": makeObjectPropertySetter(readDecimal),
       "y": makeObjectPropertySetter(readDecimal),
       "w": makeObjectPropertySetter(readDecimal),
@@ -41918,18 +44121,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return null;
   }
-  const GEOMETRY_FLAT_COORDINATES_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const GEOMETRY_FLAT_COORDINATES_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "coordinates": makeReplacer(readFlatCoordinates)
   });
   function readFlatCoordinatesFromNode(node, objectStack) {
     return pushParseAndPop(
+      /** @type {Array<number>|null} */
       null,
       GEOMETRY_FLAT_COORDINATES_PARSERS,
       node,
       objectStack
     );
   }
-  const EXTRUDE_AND_ALTITUDE_MODE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const EXTRUDE_AND_ALTITUDE_MODE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "extrude": makeObjectPropertySetter(readBoolean),
     "tessellate": makeObjectPropertySetter(readBoolean),
     "altitudeMode": makeObjectPropertySetter(readString)
@@ -41966,7 +44170,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return void 0;
   }
-  const MULTI_GEOMETRY_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const MULTI_GEOMETRY_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "LineString": makeArrayPusher(readLineString),
     "LinearRing": makeArrayPusher(readLinearRing),
     "MultiGeometry": makeArrayPusher(readMultiGeometry),
@@ -42001,20 +44205,33 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       let layout;
       let flatCoordinates;
       if (type == "Point") {
-        const point = geometries[0];
+        const point = (
+          /** @type {Point} */
+          geometries[0]
+        );
         layout = point.getLayout();
         flatCoordinates = point.getFlatCoordinates();
         for (let i = 1, ii = geometries.length; i < ii; ++i) {
           geometry = geometries[i];
-          extend$2(flatCoordinates, geometry.getFlatCoordinates());
+          extend$2(
+            flatCoordinates,
+            /** @type {Point} */
+            geometry.getFlatCoordinates()
+          );
         }
         multiGeometry = new MultiPoint(flatCoordinates, layout);
         setCommonGeometryProperties(multiGeometry, geometries);
       } else if (type == "LineString") {
-        multiGeometry = new MultiLineString(geometries);
+        multiGeometry = new MultiLineString(
+          /** @type {Array<LineString>} */
+          geometries
+        );
         setCommonGeometryProperties(multiGeometry, geometries);
       } else if (type == "Polygon") {
-        multiGeometry = new MultiPolygon(geometries);
+        multiGeometry = new MultiPolygon(
+          /** @type {Array<Polygon>} */
+          geometries
+        );
         setCommonGeometryProperties(multiGeometry, geometries);
       } else if (type == "GeometryCollection" || type.startsWith("Multi")) {
         multiGeometry = new GeometryCollection(geometries);
@@ -42044,7 +44261,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return void 0;
   }
-  const FLAT_LINEAR_RINGS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const FLAT_LINEAR_RINGS_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "innerBoundaryIs": innerBoundaryIsParser,
     "outerBoundaryIs": outerBoundaryIsParser
   });
@@ -42056,11 +44273,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       node,
       objectStack
     );
-    const flatLinearRings = pushParseAndPop(
-      [null],
-      FLAT_LINEAR_RINGS_PARSERS,
-      node,
-      objectStack
+    const flatLinearRings = (
+      /** @type {Array<Array<number>|null>} */
+      pushParseAndPop([null], FLAT_LINEAR_RINGS_PARSERS, node, objectStack)
     );
     if (flatLinearRings && flatLinearRings[0]) {
       const flatCoordinates = flatLinearRings[0];
@@ -42075,27 +44290,24 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return void 0;
   }
-  const STYLE_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const STYLE_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "IconStyle": iconStyleParser,
     "LabelStyle": labelStyleParser,
     "LineStyle": lineStyleParser,
     "PolyStyle": polyStyleParser
   });
   function readStyle(node, objectStack) {
-    const styleObject = pushParseAndPop(
-      {},
-      STYLE_PARSERS,
-      node,
-      objectStack,
-      this
+    const styleObject = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, STYLE_PARSERS, node, objectStack, this)
     );
     if (!styleObject) {
       return null;
     }
-    let fillStyle = (
+    let fillStyle = "fillStyle" in styleObject ? (
       /** @type {Fill} */
-      "fillStyle" in styleObject ? styleObject["fillStyle"] : DEFAULT_FILL_STYLE
-    );
+      styleObject["fillStyle"]
+    ) : DEFAULT_FILL_STYLE;
     const fill = (
       /** @type {boolean|undefined} */
       styleObject["fill"]
@@ -42112,83 +44324,101 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     } else {
       imageStyle = DEFAULT_IMAGE_STYLE;
     }
-    const textStyle = (
+    const textStyle = "textStyle" in styleObject ? (
       /** @type {Text} */
-      "textStyle" in styleObject ? styleObject["textStyle"] : DEFAULT_TEXT_STYLE
-    );
-    const strokeStyle = (
+      styleObject["textStyle"]
+    ) : DEFAULT_TEXT_STYLE;
+    const strokeStyle = "strokeStyle" in styleObject ? (
       /** @type {Stroke} */
-      "strokeStyle" in styleObject ? styleObject["strokeStyle"] : DEFAULT_STROKE_STYLE
-    );
+      styleObject["strokeStyle"]
+    ) : DEFAULT_STROKE_STYLE;
     const outline = (
       /** @type {boolean|undefined} */
       styleObject["outline"]
     );
     if (outline !== void 0 && !outline) {
       return [
-        new Style({
-          geometry: function(feature) {
-            const geometry = feature.getGeometry();
-            const type = geometry.getType();
-            if (type === "GeometryCollection") {
-              const collection = (
-                /** @type {import("../geom/GeometryCollection.js").default} */
-                geometry
-              );
-              return new GeometryCollection(
-                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
-                  const type2 = geometry2.getType();
-                  return type2 !== "Polygon" && type2 !== "MultiPolygon";
-                })
-              );
-            }
-            if (type !== "Polygon" && type !== "MultiPolygon") {
-              return geometry;
-            }
-          },
+        new Style(
+          /** @type {import("../style/Style.js").Options} */
+          /** @type {Record<string, *>} */
+          {
+            geometry: function(feature) {
+              const geometry = feature.getGeometry();
+              if (!geometry) {
+                return void 0;
+              }
+              const type = geometry.getType();
+              if (type === "GeometryCollection") {
+                const collection = (
+                  /** @type {import("../geom/GeometryCollection.js").default} */
+                  geometry
+                );
+                return new GeometryCollection(
+                  collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                    const type2 = geometry2.getType();
+                    return type2 !== "Polygon" && type2 !== "MultiPolygon";
+                  })
+                );
+              }
+              if (type !== "Polygon" && type !== "MultiPolygon") {
+                return geometry;
+              }
+            },
+            fill: fillStyle,
+            image: imageStyle,
+            stroke: strokeStyle,
+            text: textStyle,
+            zIndex: void 0
+            // FIXME
+          }
+        ),
+        new Style(
+          /** @type {import("../style/Style.js").Options} */
+          /** @type {Record<string, *>} */
+          {
+            geometry: function(feature) {
+              const geometry = feature.getGeometry();
+              if (!geometry) {
+                return void 0;
+              }
+              const type = geometry.getType();
+              if (type === "GeometryCollection") {
+                const collection = (
+                  /** @type {import("../geom/GeometryCollection.js").default} */
+                  geometry
+                );
+                return new GeometryCollection(
+                  collection.getGeometriesArrayRecursive().filter(function(geometry2) {
+                    const type2 = geometry2.getType();
+                    return type2 === "Polygon" || type2 === "MultiPolygon";
+                  })
+                );
+              }
+              if (type === "Polygon" || type === "MultiPolygon") {
+                return geometry;
+              }
+            },
+            fill: fillStyle,
+            stroke: null,
+            zIndex: void 0
+            // FIXME
+          }
+        )
+      ];
+    }
+    return [
+      new Style(
+        /** @type {import("../style/Style.js").Options} */
+        /** @type {Record<string, *>} */
+        {
           fill: fillStyle,
           image: imageStyle,
           stroke: strokeStyle,
           text: textStyle,
           zIndex: void 0
           // FIXME
-        }),
-        new Style({
-          geometry: function(feature) {
-            const geometry = feature.getGeometry();
-            const type = geometry.getType();
-            if (type === "GeometryCollection") {
-              const collection = (
-                /** @type {import("../geom/GeometryCollection.js").default} */
-                geometry
-              );
-              return new GeometryCollection(
-                collection.getGeometriesArrayRecursive().filter(function(geometry2) {
-                  const type2 = geometry2.getType();
-                  return type2 === "Polygon" || type2 === "MultiPolygon";
-                })
-              );
-            }
-            if (type === "Polygon" || type === "MultiPolygon") {
-              return geometry;
-            }
-          },
-          fill: fillStyle,
-          stroke: null,
-          zIndex: void 0
-          // FIXME
-        })
-      ];
-    }
-    return [
-      new Style({
-        fill: fillStyle,
-        image: imageStyle,
-        stroke: strokeStyle,
-        text: textStyle,
-        zIndex: void 0
-        // FIXME
-      })
+        }
+      )
     ];
   }
   function setCommonGeometryProperties(multiGeometry, geometries) {
@@ -42219,7 +44449,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       multiGeometry.set("altitudeMode", altitudeModes);
     }
   }
-  const DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const DATA_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "displayName": makeObjectPropertySetter(readString),
     "value": makeObjectPropertySetter(readString)
   });
@@ -42227,7 +44457,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const name = node.getAttribute("name");
     parseNode(DATA_PARSERS, node, objectStack);
     const featureObject = (
-      /** @type {Object} */
+      /** @type {KMLObject} */
       objectStack[objectStack.length - 1]
     );
     if (name && featureObject.displayName) {
@@ -42245,7 +44475,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     delete featureObject["value"];
   }
-  const EXTENDED_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const EXTENDED_DATA_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "Data": dataParser,
     "SchemaData": schemaDataParser
   });
@@ -42255,13 +44485,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function regionParser(node, objectStack) {
     parseNode(REGION_PARSERS, node, objectStack);
   }
-  const PAIR_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const PAIR_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "Style": makeObjectPropertySetter(readStyle),
     "key": makeObjectPropertySetter(readString),
     "styleUrl": makeObjectPropertySetter(readStyleURL)
   });
   function pairDataParser(node, objectStack) {
-    const pairObject = pushParseAndPop({}, PAIR_PARSERS, node, objectStack, this);
+    const pairObject = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, PAIR_PARSERS, node, objectStack, this)
+    );
     if (!pairObject) {
       return;
     }
@@ -42300,7 +44533,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       throw new Error("`styleMapValue` has an unknown type");
     }
   }
-  const SCHEMA_DATA_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const SCHEMA_DATA_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "SimpleData": simpleDataParser
   });
   function schemaDataParser(node, objectStack) {
@@ -42311,13 +44544,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     if (name !== null) {
       const data = readString(node);
       const featureObject = (
-        /** @type {Object} */
+        /** @type {KMLObject} */
         objectStack[objectStack.length - 1]
       );
       featureObject[name] = data;
     }
   }
-  const LAT_LON_ALT_BOX_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const LAT_LON_ALT_BOX_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "altitudeMode": makeObjectPropertySetter(readString),
     "minAltitude": makeObjectPropertySetter(readDecimal),
     "maxAltitude": makeObjectPropertySetter(readDecimal),
@@ -42327,43 +44560,56 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "west": makeObjectPropertySetter(readDecimal)
   });
   function latLonAltBoxParser(node, objectStack) {
-    const object = pushParseAndPop(
-      {},
-      LAT_LON_ALT_BOX_PARSERS,
-      node,
-      objectStack
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, LAT_LON_ALT_BOX_PARSERS, node, objectStack)
     );
     if (!object) {
       return;
     }
     const regionObject = (
-      /** @type {Object} */
+      /** @type {KMLObject} */
       objectStack[objectStack.length - 1]
     );
     const extent = [
-      parseFloat(object["west"]),
-      parseFloat(object["south"]),
-      parseFloat(object["east"]),
-      parseFloat(object["north"])
+      parseFloat(
+        /** @type {string} */
+        object["west"]
+      ),
+      parseFloat(
+        /** @type {string} */
+        object["south"]
+      ),
+      parseFloat(
+        /** @type {string} */
+        object["east"]
+      ),
+      parseFloat(
+        /** @type {string} */
+        object["north"]
+      )
     ];
     regionObject["extent"] = extent;
     regionObject["altitudeMode"] = object["altitudeMode"];
     regionObject["minAltitude"] = parseFloat(object["minAltitude"]);
     regionObject["maxAltitude"] = parseFloat(object["maxAltitude"]);
   }
-  const LOD_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const LOD_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "minLodPixels": makeObjectPropertySetter(readDecimal),
     "maxLodPixels": makeObjectPropertySetter(readDecimal),
     "minFadeExtent": makeObjectPropertySetter(readDecimal),
     "maxFadeExtent": makeObjectPropertySetter(readDecimal)
   });
   function lodParser(node, objectStack) {
-    const object = pushParseAndPop({}, LOD_PARSERS, node, objectStack);
+    const object = (
+      /** @type {KMLObject} */
+      pushParseAndPop({}, LOD_PARSERS, node, objectStack)
+    );
     if (!object) {
       return;
     }
     const lodObject = (
-      /** @type {Object} */
+      /** @type {KMLObject} */
       objectStack[objectStack.length - 1]
     );
     lodObject["minLodPixels"] = parseFloat(object["minLodPixels"]);
@@ -42371,7 +44617,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     lodObject["minFadeExtent"] = parseFloat(object["minFadeExtent"]);
     lodObject["maxFadeExtent"] = parseFloat(object["maxFadeExtent"]);
   }
-  const INNER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const INNER_BOUNDARY_IS_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     // KML spec only allows one LinearRing  per innerBoundaryIs, but Google Earth
     // allows multiple, so we parse multiple here too.
     "LinearRing": makeArrayPusher(readFlatLinearRing)
@@ -42392,7 +44638,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       flatLinearRings.push(...innerBoundaryFlatLinearRings);
     }
   }
-  const OUTER_BOUNDARY_IS_PARSERS = makeStructureNS(NAMESPACE_URIS, {
+  const OUTER_BOUNDARY_IS_PARSERS = makeParsersNS(NAMESPACE_URIS, {
     "LinearRing": makeReplacer(readFlatLinearRing)
   });
   function outerBoundaryIsParser(node, objectStack) {
@@ -42464,7 +44710,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     writeStringTextNode(node, text);
   }
-  const EXTENDEDDATA_NODE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const EXTENDEDDATA_NODE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "Data": makeChildAppender(writeDataNode),
     "value": makeChildAppender(writeDataNodeValue),
     "displayName": makeChildAppender(writeDataNodeName)
@@ -42511,7 +44757,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function writeDataNodeValue(node, value) {
     writeStringTextNode(node, value);
   }
-  const DOCUMENT_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const DOCUMENT_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "Placemark": makeChildAppender(writePlacemark)
   });
   const DOCUMENT_NODE_FACTORY = function(value, objectStack, nodeName) {
@@ -42551,12 +44797,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     ["href"],
     makeStructureNS(GX_NAMESPACE_URIS, ["x", "y", "w", "h"])
   );
-  const ICON_SERIALIZERS = makeStructureNS(
+  const ICON_SERIALIZERS = makeSerializersNS(
     NAMESPACE_URIS,
     {
       "href": makeChildAppender(writeStringTextNode)
     },
-    makeStructureNS(GX_NAMESPACE_URIS, {
+    makeSerializersNS(GX_NAMESPACE_URIS, {
       "x": makeChildAppender(writeDecimalTextNode),
       "y": makeChildAppender(writeDecimalTextNode),
       "w": makeChildAppender(writeDecimalTextNode),
@@ -42597,7 +44843,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "color",
     "hotSpot"
   ]);
-  const ICON_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const ICON_STYLE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "Icon": makeChildAppender(writeIcon),
     "color": makeChildAppender(writeColorTextNode),
     "heading": makeChildAppender(writeDecimalTextNode),
@@ -42610,9 +44856,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const src = style.getSrc();
     const size = style.getSize();
     const iconImageSize = style.getImageSize();
-    const iconProperties = {
-      "href": src
-    };
+    const iconProperties = (
+      /** @type {KMLObject} */
+      {
+        "href": src
+      }
+    );
     if (size) {
       iconProperties["w"] = size[0];
       iconProperties["h"] = size[1];
@@ -42669,7 +44918,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "color",
     "scale"
   ]);
-  const LABEL_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const LABEL_STYLE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "color": makeChildAppender(writeColorTextNode),
     "scale": makeChildAppender(writeScaleTextNode)
   });
@@ -42697,7 +44946,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   }
   const LINE_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, ["color", "width"]);
-  const LINE_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const LINE_STYLE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "color": makeChildAppender(writeColorTextNode),
     "width": makeChildAppender(writeDecimalTextNode)
   });
@@ -42745,7 +44994,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const LINE_STRING_NODE_FACTORY = makeSimpleNodeFactory("LineString");
   const LINEAR_RING_NODE_FACTORY = makeSimpleNodeFactory("LinearRing");
   const POLYGON_NODE_FACTORY = makeSimpleNodeFactory("Polygon");
-  const MULTI_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const MULTI_GEOMETRY_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "LineString": makeChildAppender(writePrimitiveGeometry),
     "Point": makeChildAppender(writePrimitiveGeometry),
     "Polygon": makeChildAppender(writePolygon),
@@ -42804,7 +45053,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       objectStack
     );
   }
-  const BOUNDARY_IS_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const BOUNDARY_IS_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "LinearRing": makeChildAppender(writePrimitiveGeometry)
   });
   function writeBoundaryIs(node, linearRing2, objectStack) {
@@ -42817,7 +45066,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       objectStack
     );
   }
-  const PLACEMARK_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const PLACEMARK_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "ExtendedData": makeChildAppender(writeExtendedData),
     "MultiGeometry": makeChildAppender(writeMultiGeometry),
     "LineString": makeChildAppender(writePrimitiveGeometry),
@@ -42980,13 +45229,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       objectStack
     );
   }
-  const PRIMITIVE_GEOMETRY_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "extrude",
-    "tessellate",
-    "altitudeMode",
-    "coordinates"
-  ]);
-  const PRIMITIVE_GEOMETRY_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const PRIMITIVE_GEOMETRY_SEQUENCE = (
+    /** @type {Object<string, Array<string>>} */
+    makeStructureNS(NAMESPACE_URIS, [
+      "extrude",
+      "tessellate",
+      "altitudeMode",
+      "coordinates"
+    ])
+  );
+  const PRIMITIVE_GEOMETRY_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "extrude": makeChildAppender(writeBooleanTextNode),
     "tessellate": makeChildAppender(writeBooleanTextNode),
     "altitudeMode": makeChildAppender(writeStringTextNode),
@@ -43000,7 +45252,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     const properties = geometry.getProperties();
     properties.coordinates = flatCoordinates;
     const parentNode = objectStack[objectStack.length - 1].node;
-    const orderedKeys = PRIMITIVE_GEOMETRY_SEQUENCE[parentNode.namespaceURI];
+    const orderedKeys = PRIMITIVE_GEOMETRY_SEQUENCE[parentNode.namespaceURI ?? ""];
     const values = makeSequence(properties, orderedKeys);
     pushSerializeAndPop(
       context,
@@ -43011,12 +45263,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       orderedKeys
     );
   }
-  const POLY_STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
-    "color",
-    "fill",
-    "outline"
-  ]);
-  const POLYGON_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const POLY_STYLE_SEQUENCE = (
+    /** @type {Object<string, Array<string>>} */
+    makeStructureNS(NAMESPACE_URIS, ["color", "fill", "outline"])
+  );
+  const POLYGON_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "outerBoundaryIs": makeChildAppender(writeBoundaryIs),
     "innerBoundaryIs": makeChildAppender(writeBoundaryIs)
   });
@@ -43041,7 +45292,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       objectStack
     );
   }
-  const POLY_STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const POLY_STYLE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "color": makeChildAppender(writeColorTextNode),
     "fill": makeChildAppender(writeBooleanTextNode),
     "outline": makeChildAppender(writeBooleanTextNode)
@@ -43068,6 +45319,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   }
   function writeScaleTextNode(node, scale2) {
+    if (scale2 === void 0) {
+      return;
+    }
     writeDecimalTextNode(node, Math.round(scale2 * 1e6) / 1e6);
   }
   const STYLE_SEQUENCE = makeStructureNS(NAMESPACE_URIS, [
@@ -43076,7 +45330,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     "LineStyle",
     "PolyStyle"
   ]);
-  const STYLE_SERIALIZERS = makeStructureNS(NAMESPACE_URIS, {
+  const STYLE_SERIALIZERS = makeSerializersNS(NAMESPACE_URIS, {
     "IconStyle": makeChildAppender(writeIconStyle),
     "LabelStyle": makeChildAppender(writeLabelStyle),
     "LineStyle": makeChildAppender(writeLineStyle),
@@ -48271,7 +50525,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      *
      * @param {Document|Element|Object|string} source Source.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      * @api
      * @override
      */
@@ -48286,7 +50540,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @param {string} text Text.
      * @param {import("./Feature.js").ReadOptions} [options] Read options.
      * @protected
-     * @return {import("../Feature.js").default} Feature.
+     * @return {import("../Feature.js").default|null} Feature.
      */
     readFeatureFromText(text, options) {
       return abstract();
@@ -48848,7 +51102,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const geometries = this.parseGeometryCollectionText_();
           return new GeometryCollection(geometries);
         }
-        const ctor = GeometryConstructor[geomType];
+        const ctor = (
+          /** @type {Object<string, *>} */
+          GeometryConstructor[geomType]
+        );
         if (!ctor) {
           throw new Error("Invalid geometry type: " + geomType);
         }
@@ -48887,7 +51144,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             }
           }
         }
-        return new ctor(coordinates2, this.layout_);
+        return new ctor(
+          /** @type {Array<*>} */
+          coordinates2 ?? [],
+          this.layout_
+        );
       }
       throw new Error(this.formatErrorMessage_());
     }
@@ -48900,6 +51161,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       super();
       options = options ? options : {};
       this.splitCollection_ = options.splitCollection !== void 0 ? options.splitCollection : false;
+      this.dataProjection = get$1(options.dataProjection) ?? void 0;
+      this.defaultFeatureProjection = get$1(options.featureProjection) ?? void 0;
     }
     /**
      * Parse a WKT string.
@@ -48988,7 +51251,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       const geometries = [];
       for (let i = 0, ii = features.length; i < ii; ++i) {
-        geometries.push(features[i].getGeometry());
+        const geometry = features[i].getGeometry();
+        if (geometry) {
+          geometries.push(geometry);
+        }
       }
       const collection = new GeometryCollection(geometries);
       return this.writeGeometryText(collection, options);
@@ -49071,13 +51337,34 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return dimInfo;
   }
   const GeometryEncoder = {
-    "Point": encodePointGeometry,
-    "LineString": encodeLineStringGeometry,
-    "Polygon": encodePolygonGeometry,
-    "MultiPoint": encodeMultiPointGeometry,
-    "MultiLineString": encodeMultiLineStringGeometry,
-    "MultiPolygon": encodeMultiPolygonGeometry,
-    "GeometryCollection": encodeGeometryCollectionGeometry
+    "Point": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodePointGeometry
+    ),
+    "LineString": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodeLineStringGeometry
+    ),
+    "Polygon": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodePolygonGeometry
+    ),
+    "MultiPoint": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodeMultiPointGeometry
+    ),
+    "MultiLineString": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodeMultiLineStringGeometry
+    ),
+    "MultiPolygon": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodeMultiPolygonGeometry
+    ),
+    "GeometryCollection": (
+      /** @type {function(import("../geom/Geometry.js").default): string} */
+      encodeGeometryCollectionGeometry
+    )
   };
   function encode(geom) {
     const type = geom.getType();

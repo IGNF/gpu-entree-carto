@@ -15,9 +15,12 @@ const DISPLAY_ONLY_CONTROL_SELECTOR = '.ol-attribution, .ol-scale-line'
  * - On les déplace dans ol-overlaycontainer et on force pointer-events:none sur la racine.
  */
 export function configureDisplayOnlyOlControls(map: Map): void {
+  const viewport = map.getViewport()
   const passiveContainer = map.getOverlayContainer()
   const stopContainer = map.getOverlayContainerStopEvent()
-  const nodes = map.getViewport().querySelectorAll(DISPLAY_ONLY_CONTROL_SELECTOR)
+  if (!viewport || !passiveContainer || !stopContainer) return
+
+  const nodes = viewport.querySelectorAll(DISPLAY_ONLY_CONTROL_SELECTOR)
   for (const node of nodes) {
     if (!(node instanceof HTMLElement)) continue
     node.style.setProperty('pointer-events', 'none')
