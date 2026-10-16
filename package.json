@@ -40,7 +40,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@gouvfr/dsfr": "^1.15.3",
+    "@gouvfr/dsfr": "^1.15.4",
     "@gouvminint/vue-dsfr": "8.20.0",
     "@iconify/vue": "^5.0.0",
     "dompurify": "^3.4.16",
