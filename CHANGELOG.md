@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Map print** — `MapPrintControl` + DSFR modal (PDF/PNG/JPEG, cartes.gouv print pipeline); button between sketch and overview map; optional extra PDF pages (territory fiche, parcel fiche, legends) with preview pagination; map preview attributions and bottom-right scale line.
 - **Demo external assets** — `public/external/` (DSFR + Remix synced via `npm run sync:demo-external`), [DemoExternal.md](./doc/DemoExternal.md); standalone demo loads them from `index.html`; gpu-site embed uses `stubDsfrIconsCss` (no embedded `icons.min.css` in `dist/css/`).
 
 - **Fiche info v2 (client)** — `fiche-info-v2` territory / parcel / combined routes (`ficheInfoApiUrls`, `ficheInfoFetch`), DSFR document and procedure tiles, legal status badges, parcel/territory GeoJSON highlight, dual-mode cherry cache, [FicheInfoApi](./doc/FicheInfoApi.md) contract doc; removed browser APICarto parcel fallback.
 
 ### Changed
 
+- **Map print** — supplement pages scale typography and imagery to the printable area; pagination matches real content (no blank trailing slices); faster annex export via off-screen measure; attributions rasterized at export resolution.
 - **Fiche info v2 API (gpu-site)** — v2 JSON trimmed to entree-carto fiche fields only (`FicheInfoV2PayloadOptimizer`: drop unused top-level keys, whitelist document/procedure/grid/parcel fields, scope-specific `parcelFiche`); see [FicheInfoApi](./doc/FicheInfoApi.md).
 - **Mode emprise (map)** — red/orange parcel and territory outlines come from fiche-info v2 JSON only (`searchResultGraphics`, `modeEmpriseFromFiche`); no browser APICarto or geo.api; v2 fetch prefers the combined endpoint when configured.
 - **Document / procedure links (demo)** — fiche tile `viewUrl` and related paths resolve against the gpu-client-config script host (`ficheGpuSiteUrls`); document/procedure fallbacks use **`documentViewUrl` / `procedureViewUrl`** templates from gpu-site config (Symfony routes), not hard-coded paths in entree-carto.
@@ -36,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Map print control** — DSFR/geopf button styling; mobile bottom bar slot; sketch column max-height; print modal realigned on cartes.gouv `PrintModal` (`DsfrModal`, `defineExpose` open/close, always mounted); OL clone preview kept for embed.
 - **Demo document startup** — `/map` with `DEMO_CONFIG.document` only fits extent and WMS preview (aligned with gpu-site embed); no automatic fiche tab or location cherry at bbox center.
 - **Document preview (gpu-site embed)** — `createStandardViewer` now copies `params.document` into shared `config.document` so WMS validation layers (`_previsu`, partition CQL) stay active after `TabPanelsControl` reloads the GPU WMS registry (previously production tiles were shown on the host site while the Vite demo worked).
 - **Demo DSFR assets** — `sync:demo-external` copies Marianne/Spectral (`dsfr/fonts/`) and icon SVG masks (`dsfr/icons/`) so `dsfr.min.css` and `icons.min.css` URLs resolve (avoids Vite HTML fallback, missing `fr-icon-*`, and “rejected by sanitizer”).

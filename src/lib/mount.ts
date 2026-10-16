@@ -9,6 +9,8 @@ import {
 } from '@/lib/map/mapPermalink'
 import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import { ensureEmbedSharedStylesheets } from '@/lib/demo/demoExternalAssets'
+import { registerVueDsfrComponents } from '@/lib/vue/registerVueDsfrComponents'
+import '@gouvminint/vue-dsfr/styles'
 
 let embedApp: App | null = null
 
@@ -34,6 +36,7 @@ export function mountMapViewer(
   }
   void ensureEmbedSharedStylesheets()
   embedApp = createApp(EmbedMapViewer, { params })
+  registerVueDsfrComponents(embedApp)
   embedApp.mount(container)
 
   queueMicrotask(() => {

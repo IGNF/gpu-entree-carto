@@ -1,11 +1,11 @@
-import { createApp, type Component } from 'vue'
+import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
 import 'notivue/animations.css'
 import { startDsfrForVueApp } from '@/lib/demo/dsfrVue'
 import '@gouvminint/vue-dsfr/styles'
-import * as VueDsfrExports from '@gouvminint/vue-dsfr'
+import { registerVueDsfrComponents } from '@/lib/vue/registerVueDsfrComponents'
 
 import App from './App.vue'
 import HomeView from './views/HomeView.vue'
@@ -70,21 +70,7 @@ const app = createApp(App)
 app.use(router)
 app.use(notivue)
 
-/*
- * Enregistrement manuel des composants vue-dsfr :
- * - le plugin filtre via `component.name`, or les builds n’ont que `__name`
- *   → rien n’était enregistré (DsfrAccordion introuvable) ;
- * - le plugin enregistre aussi VIcon deux fois → warning.
- */
-for (const [name, comp] of Object.entries(VueDsfrExports)) {
-  if (!name.startsWith('Dsfr') || comp == null || typeof comp !== 'object') {
-    continue
-  }
-  app.component(name, comp as Component)
-}
-if (VueDsfrExports.VIcon) {
-  app.component('VIcon', VueDsfrExports.VIcon as Component)
-}
+registerVueDsfrComponents(app)
 
 app.mount('#app')
 startDsfrForVueApp()

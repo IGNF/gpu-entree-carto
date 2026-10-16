@@ -623,21 +623,76 @@
   content: none;
 }
 
+/*
+ * Widgets geopf type bouton (impression, etc.) : pas de styles `.ol-control button` (ol.css).
+ */
+#gpu-map .gpf-widget-button.ol-control,
+#gpu-map .gpf-widget-button.ec-map-print-control {
+  background: transparent;
+  padding: 0;
+  pointer-events: auto;
+}
+
+#gpu-map .gpf-widget-button.ol-control > button.gpf-btn-icon,
+#gpu-map .gpf-widget-button.ec-map-print-control > button.gpf-btn-icon {
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: var(--ec-widget-btn-size) !important;
+  height: var(--ec-widget-btn-size) !important;
+  margin: 0 !important;
+  padding: var(--ec-widget-btn-padding) !important;
+  line-height: normal !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  text-align: center !important;
+  border: none !important;
+  border-radius: var(--ec-widget-btn-radius) !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 var(--ec-widget-btn-padding) var(--ec-map-control-bg);
+}
+
+#gpu-map .gpf-widget-button.ol-control > button.gpf-btn-icon:hover,
+#gpu-map .gpf-widget-button.ol-control > button.gpf-btn-icon:focus,
+#gpu-map .gpf-widget-button.ol-control > button.gpf-btn-icon:focus-visible,
+#gpu-map .gpf-widget-button.ec-map-print-control > button.gpf-btn-icon:hover,
+#gpu-map .gpf-widget-button.ec-map-print-control > button.gpf-btn-icon:focus,
+#gpu-map .gpf-widget-button.ec-map-print-control > button.gpf-btn-icon:focus-visible {
+  outline: none !important;
+}
+
 /* Infobulles — appendice aligné sur le bord du bouton (cartes.gouv Controls.vue) */
-.position-container-top-left > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-bottom-left > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-top-left > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-bottom-left > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before {
+.position-container-top-left
+  > .gpf-widget-button
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-bottom-left
+  > .gpf-widget-button
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-top-left
+  > .gpf-widget
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-bottom-left
+  > .gpf-widget
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before {
   transform: translate(
     calc(var(--ec-widget-btn-size) - var(--ec-widget-btn-padding) * 2),
     var(--ec-widget-btn-padding)
   );
 }
 
-.position-container-top-right > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-bottom-right > .gpf-widget-button > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-top-right > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before,
-.position-container-bottom-right > .gpf-widget > .gpf-btn-icon[aria-label]:hover::before {
+.position-container-top-right
+  > .gpf-widget-button
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-bottom-right
+  > .gpf-widget-button
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-top-right
+  > .gpf-widget
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before,
+.position-container-bottom-right
+  > .gpf-widget
+  > .gpf-btn-icon[aria-label]:not([class*='fr-icon-']):hover::before {
   transform: translate(-100%, var(--ec-widget-btn-padding));
 }
 
@@ -661,8 +716,15 @@
 }
 
 /* SketchControl : slot geopf uniquement (styles boutons = geometry-editor.css) */
-.position-container-bottom-left > .ec-sketch-control--geopf-slot {
+.position-container-bottom-left > .ec-map-print-control {
   order: -2;
+  position: relative !important;
+  inset: auto !important;
+  align-self: flex-start;
+}
+
+.position-container-bottom-left > .ec-sketch-control--geopf-slot {
+  order: -3;
   position: relative !important;
   inset: auto !important;
   top: auto !important;
@@ -677,10 +739,10 @@
   width: var(--ec-sketch-column-width);
   max-width: var(--ec-sketch-column-width);
   /*
-   * Hauteur bornée à la carte (cqb) : réserve minimap (~2 boutons) + gaps.
+   * Hauteur bornée à la carte (cqb) : réserve impression + minimap + gaps sous la colonne croquis.
    */
   max-height: calc(
-    100cqb - 2 * var(--ec-widget-gap) - (var(--ec-widget-btn-size) * 2 + var(--ec-widget-gap) * 2)
+    100cqb - 2 * var(--ec-widget-gap) - (var(--ec-widget-btn-size) * 3 + var(--ec-widget-gap) * 3)
   );
   min-height: 0;
   display: flex;
@@ -1224,6 +1286,11 @@ dialog[id^='GPterritoriesPanel-'] {
 
 .ec-map-shell--tab-panels-layout-bottom .position-container-bottom-left > * {
   pointer-events: auto;
+}
+
+/* Impression : le bouton est déplacé dans la barre basse (slot geopf). */
+.ec-map-shell--tab-panels-layout-bottom .position-container-bottom-left > .ec-map-print-control {
+  display: none !important;
 }
 
 /*

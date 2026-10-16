@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
 import OverviewMapControl from '@/components/map/OverviewMapControl.vue'
+import MapPrintControl from '@/components/map/MapPrintControl.vue'
+import MapPrintModal from '@/components/map/MapPrintModal.vue'
+import { mapPrintModalKey } from '@/map/mapPrintModalContext'
 import TerritoriesControl from '@/components/map/TerritoriesControl.vue'
 import SketchControl from '@/components/map/SketchControl.vue'
 import TabPanelsControl from '@/components/map/TabPanelsControl.vue'
@@ -60,6 +63,13 @@ const baseLayers = computed(() => gpuBaseEnv.allLayers)
 const initialSearch = computed(() => props.params?.search ?? null)
 
 const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
+const printModalRef = ref<InstanceType<typeof MapPrintModal> | null>(null)
+
+provide(mapPrintModalKey, {
+  open: () => printModalRef.value?.open(),
+  close: () => printModalRef.value?.close(),
+})
+
 const layerNodes = ref<TreeLayerNode[]>([])
 const pendingStartupBbox = ref<[number, number, number, number] | null>(null)
 
@@ -172,12 +182,14 @@ function onToggleLayer(id: string, visible: boolean) {
       <ClickInfoControl />
       <MapPermalinkSync :skip-marker-restore="Boolean(initialSearch)" />
       <MapModeSelector />
-      <OverviewMapControl />
       <SketchControl />
+      <MapPrintControl />
+      <OverviewMapControl />
       <TerritoriesControl />
       <ZoomControl />
       <FullScreenControl />
       <ScaleLineControl />
+      <MapPrintModal ref="printModalRef" />
     </MapShell>
   </div>
 </template>

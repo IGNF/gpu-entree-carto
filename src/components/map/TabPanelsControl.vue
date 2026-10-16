@@ -64,6 +64,7 @@ import DataLayersManagerPanel from '@/components/panels/DataLayersManagerPanel.v
 import LayerLegendsPanel from '@/components/panels/LayerLegendsPanel.vue'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
+import { mapPrintPanelsKey, registerMapPrintPanels } from '@/map/mapPrintPanelsContext'
 import { TAB_PANELS_AUTO_OPEN_SNAP, type TabPanelsSheetSnapIndex } from '@/lib/map/tabPanelsLayout'
 import { useTabPanelsLayout } from '@/composables/useTabPanelsLayout'
 import { useTabPanelsMobileSheet } from '@/composables/useTabPanelsMobileSheet'
@@ -99,8 +100,9 @@ const shellEl = ref<HTMLElement | null>(null)
 /** Seul nœud passé à OpenLayers — colonne / barre d’onglets. */
 const tabsControlEl = ref<HTMLElement | null>(null)
 const mobileSketchSlotEl = ref<HTMLElement | null>(null)
-const mobileTerritoriesSlotEl = ref<HTMLElement | null>(null)
+const mobilePrintSlotEl = ref<HTMLElement | null>(null)
 const mobileOverviewSlotEl = ref<HTMLElement | null>(null)
+const mobileTerritoriesSlotEl = ref<HTMLElement | null>(null)
 let olControl: Control | null = null
 
 const isOpen = ref(false)
@@ -127,6 +129,7 @@ const { zoomIn, zoomOut, toggleFullscreen, isFullscreen } = useMapViewportContro
 const { startMobileBottomBarGeopfObserver } = useMobileBottomBarGeopf(
   layoutMode,
   mobileSketchSlotEl,
+  mobilePrintSlotEl,
   mobileOverviewSlotEl,
   mobileTerritoriesSlotEl,
 )
@@ -286,6 +289,15 @@ const api: TabPanelsApi = {
 }
 
 provide(TAB_PANELS_KEY, api)
+const mapPrintPanelsCtx = {
+  selection,
+  legendLayers,
+  mapZoom,
+  catalogEntryInZoomRange,
+}
+
+provide(mapPrintPanelsKey, mapPrintPanelsCtx)
+registerMapPrintPanels(mapPrintPanelsCtx)
 registerTabPanelsApi(api)
 defineExpose(api)
 
@@ -542,6 +554,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  registerMapPrintPanels(null)
   syncShellOpenClass(false)
   registerMapPermalinkLayersBridge(null)
   registerTabPanelsApi(null)
@@ -576,6 +589,10 @@ onUnmounted(() => {
           <div
             ref="mobileSketchSlotEl"
             class="ec-tab-panels__geopf-slot ec-tab-panels__geopf-slot--sketch"
+          />
+          <div
+            ref="mobilePrintSlotEl"
+            class="ec-tab-panels__geopf-slot ec-tab-panels__geopf-slot--print"
           />
           <div
             ref="mobileOverviewSlotEl"

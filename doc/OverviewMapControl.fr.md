@@ -18,7 +18,7 @@ Mini-carte Géoplateforme (`GeoportalOverviewMap`).
 
 ## Placement
 
-Bas-gauche, **au-dessus** du sélecteur de territoire (`order: -1` dans `map-controls.css`).
+Bas-gauche, **au-dessus** du sélecteur de territoire (`order: -1` dans `map-controls.css`), sous [MapPrintControl](./MapPrintControl.fr.md) (`order: -2`) et le croquis (`order: -3`).
 
 ## Styles
 

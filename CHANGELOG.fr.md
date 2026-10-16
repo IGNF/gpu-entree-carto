@@ -12,12 +12,14 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Impression carte** — `MapPrintControl` + modale DSFR (PDF/PNG/JPEG, logique cartes.gouv) ; bouton entre croquis et minimap ; pages annexes optionnelles (fiche territoire, fiche parcelle, légendes) avec pagination d’aperçu ; attributions et échelle en bas à droite sur l’aperçu carte.
 - **Assets externes démo** — `public/external/` (DSFR + Remix via `npm run sync:demo-external`), [DemoExternal.fr.md](./doc/DemoExternal.fr.md) ; démo autonome via `index.html` ; intégration gpu-site avec `stubDsfrIconsCss` (plus de `icons.min.css` dans `dist/css/`).
 
 - **Fiche info v2 (client)** — routes `fiche-info-v2` territoire / parcelle / combinée (`ficheInfoApiUrls`, `ficheInfoFetch`), tuiles DSFR documents et procédures, badges légaux, surbrillance GeoJSON parcelle/territoire, cache sélections par mode au point cerise, doc [FicheInfoApi](./doc/FicheInfoApi.fr.md) ; fin du repli APICarto parcelle côté navigateur.
 
 ### Modifié
 
+- **Impression carte** — mise en page annexes proportionnelle à la feuille (texte, tuiles, légendes en grille) ; pagination alignée sur le contenu réel (sans pages blanches) ; export annexes plus rapide (mesure hors UI) ; attributions rasterisées à la résolution d’export.
 - **API fiche info v2 (gpu-site)** — JSON v2 réduit aux champs utilisés par la fiche entree-carto (`FicheInfoV2PayloadOptimizer` : clés racine inutiles supprimées, listes blanches documents/procédures/grid/parcelle, `parcelFiche` selon le scope) ; voir [FicheInfoApi](./doc/FicheInfoApi.fr.md).
 - **Emprise mode (carte)** — contours parcelle / territoire rouge et orange uniquement via le JSON fiche-info v2 (`searchResultGraphics`, `modeEmpriseFromFiche`) ; plus d’APICarto ni geo.api dans le navigateur ; appel v2 combiné privilégié quand il est configuré.
 - **Liens documents / procédures (démo)** — résolution via le script gpu-client-config (`ficheGpuSiteUrls`) ; repli document/procédure sur les modèles **`documentViewUrl` / `procedureViewUrl`** (routes Symfony dans la config gpu-site), sans chemins codés en dur dans entree-carto.
@@ -36,6 +38,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Impression carte** — style bouton DSFR/geopf ; slot barre basse mobile ; hauteur colonne croquis ; modale réalignée sur cartes.gouv `PrintModal` (`DsfrModal`, `open`/`close` exposés, montage permanent) ; prévisualisation par clone OL (embed).
 - **Démarrage document (démo)** — `/map` avec `DEMO_CONFIG.document` : recentrage + WMS preview uniquement (aligné gpu-site) ; plus d’ouverture auto de la fiche ni cerise au centre de l’emprise.
 - **Prévisualisation document (embed gpu-site)** — `createStandardViewer` recopie `params.document` dans `config.document` pour conserver les couches WMS validation (`_previsu`, filtre partition) après rechargement du registre WMS par `TabPanelsControl` (auparavant tuiles production sur gpu-site alors que la démo Vite affichait correctement le preview).
 - **Assets DSFR (démo)** — `sync:demo-external` copie Marianne/Spectral (`dsfr/fonts/`) et les SVG masques (`dsfr/icons/`) pour que `dsfr.min.css` et `icons.min.css` résolvent leurs URLs (plus de repli HTML Vite, `fr-icon-*` absents ni « rejected by sanitizer »).

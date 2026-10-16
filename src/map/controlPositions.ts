@@ -12,8 +12,10 @@ export const CONTROL_POSITIONS = {
   searchEngine: 'top-left',
   overviewMap: 'bottom-left',
   territories: 'bottom-left',
-  /** Croquis : même colonne, au-dessus de la minimap (CSS order). */
+  /** Croquis : même colonne (CSS order -3). */
   sketch: 'bottom-left',
+  /** Impression carte entre croquis et minimap (CSS order -2). */
+  mapPrint: 'bottom-left',
 } as const
 
 export type GeopfControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'

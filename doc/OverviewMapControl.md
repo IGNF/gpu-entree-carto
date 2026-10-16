@@ -18,7 +18,7 @@ Géoplateforme overview map (`GeoportalOverviewMap`).
 
 ## Placement
 
-Bottom-left, **above** the territory selector (`order: -1` in `map-controls.css`).
+Bottom-left, **above** the territory selector (`order: -1` in `map-controls.css`), below [MapPrintControl](./MapPrintControl.md) (`order: -2`) and sketch (`order: -3`).
 
 ## Styles
 
