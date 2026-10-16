@@ -62,7 +62,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/dompurify": "^3.2.0",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "@vitejs/plugin-vue": "^6.0.9",
     "@vue/test-utils": "^2.4.6",
     "eslint": "^10.12.0",
