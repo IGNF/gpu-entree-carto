@@ -50,11 +50,11 @@
     "ol": "^10.11.0",
     "remixicon": "^4.9.1",
     "vue": "^3.5.27",
-    "vue-router": "5.0.3"
+    "vue-router": "5.4.0"
   },
   "overrides": {
     "maplibre-gl": "^6.10.0",
-    "vue-router": "5.0.3",
+    "vue-router": "5.4.0",
     "@gouvminint/vue-dsfr": {
       "vue-router": "$vue-router"
     }
