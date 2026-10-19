@@ -1,9 +1,16 @@
 import html2canvas from 'html2canvas'
 import { convertMmToPx } from '@/lib/map/print/paperFormats'
+import {
+  hideSupplementElementsForSlice,
+  resetSupplementElementVisibility,
+  resolveSupplementSliceEndPx,
+  resolveSupplementSliceStartPx,
+} from '@/lib/map/print/printSupplementLayout'
 
 function buildSupplementRasterHost(
   contentRoot: HTMLElement,
-  sliceIndex: number,
+  sliceStartPx: number,
+  sliceEndPx: number,
   paperWidthPx: number,
   paperHeightPx: number,
   marginPx: number,
@@ -33,7 +40,9 @@ function buildSupplementRasterHost(
   clone.style.height = 'auto'
   clone.style.maxHeight = 'none'
   clone.style.overflow = 'visible'
-  clone.style.marginTop = `-${sliceIndex * innerHeightPx}px`
+  clone.style.marginTop = `-${sliceStartPx}px`
+  resetSupplementElementVisibility(clone)
+  hideSupplementElementsForSlice(clone, sliceStartPx, sliceEndPx)
 
   viewport.appendChild(clone)
   host.appendChild(viewport)
@@ -81,9 +90,11 @@ export async function rasterizePrintSupplementPage(
   const innerWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
   const innerHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
 
+  const sliceStartPx = sliceIndex * innerHeightPx
   const host = buildSupplementRasterHost(
     contentRoot,
-    sliceIndex,
+    sliceStartPx,
+    sliceStartPx + innerHeightPx,
     paperWidthPx,
     paperHeightPx,
     marginPx,
@@ -101,7 +112,7 @@ export async function rasterizePrintSupplementPage(
 /** Toutes les tranches d’une section (réutilise le même contenu cloné, sans navigation UI). */
 export async function rasterizePrintSupplementSlices(
   contentRoot: HTMLElement,
-  sliceCount: number,
+  sliceStarts: number[],
   paperWidthMm: number,
   paperHeightMm: number,
   marginMm: number,
@@ -112,13 +123,16 @@ export async function rasterizePrintSupplementSlices(
   const marginPx = convertMmToPx(marginMm, dpi)
   const innerWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
   const innerHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
-  const count = Math.max(1, sliceCount)
+  const sliceCount = Math.max(1, sliceStarts.length)
   const canvases: HTMLCanvasElement[] = []
 
-  for (let sliceIndex = 0; sliceIndex < count; sliceIndex += 1) {
+  for (let index = 0; index < sliceCount; index += 1) {
+    const sliceStartPx = resolveSupplementSliceStartPx(contentRoot, index, innerHeightPx)
+    const sliceEndPx = resolveSupplementSliceEndPx(contentRoot, sliceStartPx, innerHeightPx)
     const host = buildSupplementRasterHost(
       contentRoot,
-      sliceIndex,
+      sliceStartPx,
+      sliceEndPx,
       paperWidthPx,
       paperHeightPx,
       marginPx,

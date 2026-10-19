@@ -7,6 +7,7 @@ export function sanitizeFicheHtmlForPrint(html: string): string {
   tpl.innerHTML = html
 
   tpl.content.querySelectorAll('.ec-fiche-info__rule-doc').forEach((el) => el.remove())
+  tpl.content.querySelectorAll('hr').forEach((el) => el.remove())
 
   tpl.content.querySelectorAll('a').forEach((anchor) => {
     const tag = anchor.classList.contains('fr-tile') ? 'div' : 'span'

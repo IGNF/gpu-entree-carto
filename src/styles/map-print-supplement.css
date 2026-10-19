@@ -2,8 +2,10 @@
 .ec-print-supplement-page {
   box-sizing: border-box;
   width: var(--print-inner-width, 100%);
+  max-width: var(--print-inner-width, 100%);
   height: auto;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
   font-size: var(--print-body-font, 12px);
   line-height: 1.35;
   color: #161616;
@@ -14,15 +16,7 @@
   line-height: inherit;
 }
 
-.ec-print-supplement-page :deep(.fr-tile),
-.ec-print-supplement-page :deep(.fr-card) {
-  font-size: inherit;
-  padding: 0.35em 0.45em;
-  margin-bottom: 0.35em;
-}
-
-.ec-print-supplement-page :deep(.fr-tile__title),
-.ec-print-supplement-page :deep(h3),
+.ec-print-supplement-page :deep(h3:not(.fr-tile__title)),
 .ec-print-supplement-page :deep(h4) {
   font-size: 1.05em;
   line-height: 1.25;
@@ -57,39 +51,195 @@
   margin: 0 0 0.35em;
   font-size: var(--print-section-font, 14px);
   font-weight: 700;
-  border-bottom: 1px solid var(--border-default-grey, #ddd);
-  padding-bottom: 0.2em;
+}
+
+.ec-print-fiche .ec-fiche-info__body hr {
+  display: none;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-row {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ec-print-fiche .ec-fiche-info__sup-group-title,
+.ec-print-fiche .ec-fiche-info__rules-section-title {
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-title {
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-sub {
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.4;
+  color: var(--text-mention-grey, #666);
 }
 
 .ec-print-fiche__cadastre-headline {
-  margin: 0 0 0.25em;
-  font-size: var(--print-cadastre-headline-font, 10px);
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .ec-print-fiche__cadastre-dl {
   margin: 0;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.12em 0.5em;
-  font-size: var(--print-cadastre-font, 9px);
-  line-height: 1.25;
-}
-
-.ec-print-fiche__section:has(.ec-print-fiche__cadastre-dl) .ec-print-fiche__section-title {
-  font-size: var(--print-cadastre-headline-font, 10px);
-  margin-bottom: 0.2em;
-  padding-bottom: 0.12em;
+  gap: 0.2em 0.65em;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .ec-print-fiche__cadastre-dl dt {
   margin: 0;
-  font-weight: 600;
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .ec-print-fiche__cadastre-dl dd {
   margin: 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.4;
+  color: var(--text-mention-grey, #666);
+}
+
+/* Tuiles document (parcelle / territoire) — compactes, sans cadre DSFR */
+.ec-print-fiche .ec-fiche-info__tile-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--print-block-gap, 8px) + 0.85em);
+  margin: 0 0 0.35em;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-tile {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+  text-align: left;
+  align-items: stretch;
+  --idle: transparent;
+  --hover: transparent;
+  --active: transparent;
+  --title-spacing: 0;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-tile--horizontal {
+  flex-direction: column;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-link::before,
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-button::before {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__body,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__content {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-link:not(.fr-tile--no-icon) .fr-tile__content,
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-button:not(.fr-tile--no-icon) .fr-tile__content {
+  padding-bottom: 0 !important;
+  padding-right: 0 !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile-badges,
+.ec-print-fiche .ec-fiche-info__doc-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.2em;
+}
+
+.ec-print-fiche .ec-fiche-info__badge {
+  padding: 0.1em 0.35em;
+  font-size: calc(var(--print-fiche-desc-font, 10px) * 0.92);
+  line-height: 1.2;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: var(--print-fiche-label-font, 11px) !important;
+  font-weight: 700;
+  line-height: 1.35 !important;
+  color: #161616;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title .fr-tile__link,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title a {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  box-shadow: none;
+  background: none;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title a::after,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title button::after {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__detail {
+  margin: 0.05em 0 0 !important;
+  padding: 0 !important;
+  font-size: var(--print-fiche-desc-font, 10px) !important;
+  line-height: 1.3 !important;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-print-fiche .ec-fiche-info__mec-notice {
+  margin: 0.2em 0 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card + .ec-fiche-info__doc-card {
+  margin-top: calc(var(--print-block-gap, 8px) + 0.85em);
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card-title {
+  margin: 0;
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
+  color: #161616;
+  text-decoration: none;
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card-meta {
+  margin: 0.12em 0 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.35;
+  color: var(--text-mention-grey, #666);
 }
 
 .ec-print-legends__title {
@@ -122,6 +272,15 @@
   font-size: var(--print-small-font, 11px);
   margin-bottom: 0;
   align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.ec-print-supplement-page .ec-layer-legends__item > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ec-print-supplement-page .ec-layer-legends__img {

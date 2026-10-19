@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Map print** — annex pagination: fiche height from DOM markers (not inflated HTML scroll); legends re-measured after layout stabilizes and from visible preview; slice cache cleared when the print modal opens; slice bounds follow legend rows (no clipped symbols at page bottom).
+- **Map print** — parcel / territory fiche options enabled when data is cached or in the fiche JSON (without requiring the matching map mode).
+- **Map print** — document tiles on fiche pages: no DSFR frame; compact typography (bold title, tighter procedure date).
+- **Map print** — parcel / territory fiche pagination: per-tile / per-rule slice markers (no whole-body hide); fixes blank or clipped document previews.
+- **Map print** — parcel / territory fiche: no separator lines; cadastre references typography aligned with Infos (titles, labels, descriptions).
+- **Map print** — pagination bar above the preview (“Page 1 / 1 — Map” even with no annex); preview zoom with **Ctrl + wheel** (wheel alone scrolls).
+- **Map print** — predefined templates (A4 preview / print, A4 landscape, A3) and background pre-warming of annex pagination; page breaks avoid sliver blocks at the top/bottom of slices; per-template and content cache.
 - **Map print** — supplement pages scale typography and imagery to the printable area; pagination matches real content (no blank trailing slices); faster annex export via off-screen measure; attributions rasterized at export resolution.
 - **Fiche info v2 API (gpu-site)** — v2 JSON trimmed to entree-carto fiche fields only (`FicheInfoV2PayloadOptimizer`: drop unused top-level keys, whitelist document/procedure/grid/parcel fields, scope-specific `parcelFiche`); see [FicheInfoApi](./doc/FicheInfoApi.md).
 - **Mode emprise (map)** — red/orange parcel and territory outlines come from fiche-info v2 JSON only (`searchResultGraphics`, `modeEmpriseFromFiche`); no browser APICarto or geo.api; v2 fetch prefers the combined endpoint when configured.

@@ -19,6 +19,13 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Impression carte** — pagination annexes : hauteur fiche basée sur les repères (pas le scroll HTML) ; légendes remesurées après stabilisation + aperçu visible ; cache pagination vidé à l’ouverture de la modale ; coupures légende/fiche alignées sur les lignes (plus de symbole rogné en bas de page).
+- **Impression carte** — options fiche parcelle / territoire activables dès que les données sont en cache ou dans le JSON fiche (sans exiger le mode carte affiché).
+- **Impression carte** — tuiles document (fiche) : sans cadre DSFR, typo compacte (titre gras, date procédure rapprochée).
+- **Impression carte** — pagination fiche parcelle / territoire : repères par tuile / règle (plus de masquage du bloc HTML entier) ; pages vides ou documents tronqués corrigés.
+- **Impression carte** — fiche parcelle / territoire : sans lignes de séparation ; références cadastrales alignées sur la typo Infos (titres, labels, descriptions).
+- **Impression carte** — barre de pagination au-dessus de l’aperçu (libellé « Page 1 / 1 — Carte » même sans annexe) ; zoom aperçu avec **Ctrl + molette** (molette seule = défilement).
+- **Impression carte** — modèles prédéfinis (A4 aperçu / impression, A4 paysage, A3) et pré-calcul des pagination annexes en arrière-plan ; découpes de page évitant les blocs en bande haute/basse ; cache par gabarit et contenu.
 - **Impression carte** — mise en page annexes proportionnelle à la feuille (texte, tuiles, légendes en grille) ; pagination alignée sur le contenu réel (sans pages blanches) ; export annexes plus rapide (mesure hors UI) ; attributions rasterisées à la résolution d’export.
 - **API fiche info v2 (gpu-site)** — JSON v2 réduit aux champs utilisés par la fiche entree-carto (`FicheInfoV2PayloadOptimizer` : clés racine inutiles supprimées, listes blanches documents/procédures/grid/parcelle, `parcelFiche` selon le scope) ; voir [FicheInfoApi](./doc/FicheInfoApi.fr.md).
 - **Emprise mode (carte)** — contours parcelle / territoire rouge et orange uniquement via le JSON fiche-info v2 (`searchResultGraphics`, `modeEmpriseFromFiche`) ; plus d’APICarto ni geo.api dans le navigateur ; appel v2 combiné privilégié quand il est configuré.

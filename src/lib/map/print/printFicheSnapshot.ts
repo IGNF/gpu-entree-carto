@@ -1,6 +1,12 @@
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { DEFAULT_FICHE_EMPTY } from '@/composables/tabPanels'
-import { isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
+import { ficheHasParcelAtPoint, ficheHasTerritoryAtPoint } from '@/lib/fiche/ficheAvailability'
+import {
+  ficheSelectionFromGpuApi,
+  isGpuFicheInfoPayload,
+  type GpuFicheInfoPayload,
+} from '@/lib/fiche/ficheInfoFromGpuApi'
+import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
@@ -19,19 +25,73 @@ function parcelFichePayloadFromSelection(
   return isGpuParcelFichePayload(payload) ? payload : null
 }
 
-function hasActiveMapSelection(selection: FicheInfoSelection | null): boolean {
-  if (!selection || selection.loading === 'data') return false
-  return Boolean(selection.mapMode || selection.raw)
+function gpuPointFromRaw(raw: Record<string, unknown>): { lon: number; lat: number } | null {
+  const lon = raw.lon
+  const lat = raw.lat
+  if (typeof lon === 'number' && typeof lat === 'number') return { lon, lat }
+  return null
 }
 
-/** Activable dès qu’une fiche est chargée (indépendamment du mode carte affiché). */
+function gpuPayloadFromSelection(selection: FicheInfoSelection): GpuFicheInfoPayload | null {
+  const raw = selection.raw
+  return raw && isGpuFicheInfoPayload(raw) ? raw : null
+}
+
+/** Activable dès que le contenu parcelle est disponible (mode panneau ou cache). */
 export function isParcelFichePrintReady(selection: FicheInfoSelection | null): boolean {
-  if (!selection || selection.parcelMissingAtPoint) return false
-  return hasActiveMapSelection(selection)
+  if (!selection || selection.loading === 'data' || selection.parcelMissingAtPoint) return false
+  if (selection.cadastreReferences) return true
+  if (selection.parcelInfosHtml?.trim() || selection.parcelDocumentsHtml?.trim()) return true
+  if (parcelFichePayloadFromSelection(selection)) return true
+  const payload = gpuPayloadFromSelection(selection)
+  if (payload && ficheHasParcelAtPoint(payload)) return true
+  return selection.mapMode === MAP_MODE_PARCEL && Boolean(selection.raw)
 }
 
 export function isTerritoryFichePrintReady(selection: FicheInfoSelection | null): boolean {
-  return hasActiveMapSelection(selection)
+  if (!selection || selection.loading === 'data') return false
+  if ((selection.documentTabs?.length ?? 0) > 0) return true
+  if (selection.bodyHtml?.trim()) return true
+  const payload = gpuPayloadFromSelection(selection)
+  if (payload && ficheHasTerritoryAtPoint(payload)) return true
+  return selection.mapMode === MAP_MODE_TERRITORY && Boolean(selection.raw)
+}
+
+/**
+ * Adapte une sélection (panneau ou cache) au mode d’impression demandé
+ * (ex. fiche territoire reconstruite depuis le JSON quand le panneau est en mode parcelle).
+ */
+export function normalizeFicheSelectionForPrint(
+  selection: FicheInfoSelection | null,
+  mode: MapModeId,
+): FicheInfoSelection | null {
+  if (!selection) return null
+  if (mode === MAP_MODE_PARCEL && isParcelFichePrintReady(selection)) {
+    if (
+      selection.mapMode === MAP_MODE_PARCEL ||
+      selection.cadastreReferences ||
+      selection.parcelInfosHtml?.trim() ||
+      parcelFichePayloadFromSelection(selection)
+    ) {
+      return selection
+    }
+    const payload = gpuPayloadFromSelection(selection)
+    const point = payload ? gpuPointFromRaw(selection.raw as Record<string, unknown>) : null
+    if (payload && point && ficheHasParcelAtPoint(payload)) {
+      return ficheSelectionFromGpuApi(payload, MAP_MODE_PARCEL, point.lon, point.lat)
+    }
+    return selection
+  }
+  if (mode === MAP_MODE_TERRITORY && isTerritoryFichePrintReady(selection)) {
+    if ((selection.documentTabs?.length ?? 0) > 0) return selection
+    const payload = gpuPayloadFromSelection(selection)
+    const point = payload ? gpuPointFromRaw(selection.raw as Record<string, unknown>) : null
+    if (payload && point && ficheHasTerritoryAtPoint(payload)) {
+      return ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, point.lon, point.lat)
+    }
+    return selection
+  }
+  return null
 }
 
 export function buildParcelInfosPrintHtml(
