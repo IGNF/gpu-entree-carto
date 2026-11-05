@@ -36,6 +36,8 @@
     "doc:icon-previews": "node scripts/sync-doc-icon-previews.mjs",
     "codeql:install": "bash scripts/codeql-install.sh",
     "verify:codeql": "bash scripts/codeql-verify.sh",
+    "verify:codeql:dist": "node scripts/prune-dist-orphans.mjs && CODEQL_SCOPE=dist bash scripts/codeql-verify.sh",
+    "verify:codeql:all": "CODEQL_SCOPE=all bash scripts/codeql-verify.sh",
     "fix": "npm run lint:fix && npm run format",
     "prepare": "husky"
   },
@@ -48,7 +50,7 @@
     "fast-xml-parser": "5.8.0",
     "geopf-extensions-openlayers": "^1.0.0-beta.15",
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
+    "pdf-lib": "^1.17.1",
     "notivue": "^2.4.5",
     "ol": "^10.11.0",
     "remixicon": "^4.9.1",

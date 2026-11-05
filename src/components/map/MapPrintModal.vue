@@ -21,7 +21,6 @@ import { Attribution } from 'ol/control'
 import ScaleLine from 'ol/control/ScaleLine'
 import { useMapLegendZoom } from '@/composables/useMapLegendZoom'
 import { configureDisplayOnlyOlControls } from '@/composables/useOlMap'
-import { jsPDF } from 'jspdf'
 import {
   DsfrButton,
   DsfrCheckbox,
@@ -1892,41 +1891,15 @@ async function exportPdfFromCanvases(
     pages.length > 1 ? `Assemblage PDF (${pages.length} pages)…` : 'Génération du PDF…',
   )
   progress.tick(0.1)
-  try {
-    const blob = await encodePrintPdf({
-      canvases: pages,
-      paperWidthMm: paperDimension.value.width,
-      paperHeightMm: paperDimension.value.height,
-      orientation: printFormState.pageOrientation,
-    })
-    progress.setDetail('Finalisation du PDF…')
-    progress.tick(0.85)
-    triggerDownload(fileName, URL.createObjectURL(blob))
-  } catch {
-    progress.setDetail('Assemblage PDF (mode secours)…')
-    const doc = new jsPDF({
-      orientation: printFormState.pageOrientation,
-      unit: 'mm',
-      format: [paperDimension.value.width, paperDimension.value.height],
-    })
-    for (let i = 0; i < pages.length; i += 1) {
-      if (i > 0) {
-        doc.addPage(
-          [paperDimension.value.width, paperDimension.value.height],
-          printFormState.pageOrientation,
-        )
-      }
-      doc.addImage(
-        pages[i].toDataURL('image/png'),
-        'PNG',
-        0,
-        0,
-        paperDimension.value.width,
-        paperDimension.value.height,
-      )
-    }
-    doc.save(fileName)
-  }
+  const blob = await encodePrintPdf({
+    canvases: pages,
+    paperWidthMm: paperDimension.value.width,
+    paperHeightMm: paperDimension.value.height,
+    orientation: printFormState.pageOrientation,
+  })
+  progress.setDetail('Finalisation du PDF…')
+  progress.tick(0.85)
+  triggerDownload(fileName, URL.createObjectURL(blob))
   for (const canvas of pages) canvas.remove()
 }
 

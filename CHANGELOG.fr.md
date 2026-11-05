@@ -21,6 +21,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - **Impression carte** — option **Toutes les légendes** (sous « Afficher la légende ») : couches masquées et hors zoom incluses, style grisé.
 - **Fiche info** — boutons **Imprimer** parcelle / territoire ouvrent la modale d’impression avec la fiche correspondante précochée.
+- **Impression carte** — export PDF : **pdf-lib** dans le worker d’encodage (remplace jsPDF / canvg) ; même fonctionnalité multi-pages, moins de code tiers signalé par CodeQL dans `dist/`.
 - **Impression carte** — export : sous-étapes détaillées pendant la capture (page i/n, aperçu carte, tuiles, annexes, encodage) pour éviter un long palier à 0 % avec seulement « X page(s) à exporter… ».
 - **Impression carte** — export : correction blocage à ~85 % (« Génération du fichier ») lorsque le worker d’encodage ignorait silencieusement les réponses (validation ArrayBuffer inter-realms).
 - **Impression carte** — logique annexes clarifiée (fiches indépendantes de la vue sauf pictos parcelle low/high ; légendes au zoom ou « toutes » sans grisé) ; remesure discrète vs gabarit papier ; fiche parcelle : encarts et pagination stabilisés.

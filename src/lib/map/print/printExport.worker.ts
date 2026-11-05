@@ -1,6 +1,9 @@
-import { jsPDF } from 'jspdf'
+import { PDFDocument } from 'pdf-lib'
 import { injectDpiInPngBytes } from '@/lib/map/print/pngDpi'
 import { isArrayBufferValue } from '@/lib/map/print/printExportTransfer'
+
+/** Points PDF (1/72 in) depuis millimètres papier. */
+const MM_TO_PT = 72 / 25.4
 
 type WorkerRequest =
   | {
@@ -50,29 +53,26 @@ async function pngToJpeg(pngBuffer: ArrayBuffer, quality: number): Promise<Array
   return jpegBlob.arrayBuffer()
 }
 
-function buildPdfFromPngPages(
+async function buildPdfFromPngPages(
   pages: ArrayBuffer[],
   paperWidthMm: number,
   paperHeightMm: number,
-  orientation: 'portrait' | 'landscape',
-): ArrayBuffer {
-  const doc = new jsPDF({
-    orientation,
-    unit: 'mm',
-    format: [paperWidthMm, paperHeightMm],
-  })
-  for (let i = 0; i < pages.length; i += 1) {
-    if (i > 0) doc.addPage([paperWidthMm, paperHeightMm], orientation)
-    const bytes = new Uint8Array(pages[i])
-    let binary = ''
-    const chunkSize = 0x8000
-    for (let j = 0; j < bytes.length; j += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(j, j + chunkSize))
-    }
-    const dataUrl = `data:image/png;base64,${btoa(binary)}`
-    doc.addImage(dataUrl, 'PNG', 0, 0, paperWidthMm, paperHeightMm)
+): Promise<ArrayBuffer> {
+  const pdfDoc = await PDFDocument.create()
+  const widthPt = paperWidthMm * MM_TO_PT
+  const heightPt = paperHeightMm * MM_TO_PT
+  for (const pageBuffer of pages) {
+    const page = pdfDoc.addPage([widthPt, heightPt])
+    const png = await pdfDoc.embedPng(pageBuffer)
+    page.drawImage(png, {
+      x: 0,
+      y: 0,
+      width: widthPt,
+      height: heightPt,
+    })
   }
-  return doc.output('arraybuffer')
+  const bytes = await pdfDoc.save()
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
 }
 
 function isWorkerRequestPayload(data: unknown): data is WorkerRequest {
@@ -129,11 +129,10 @@ self.onmessage = (event: MessageEvent) => {
         return
       }
       if (message.type === 'pdf') {
-        const pdf = buildPdfFromPngPages(
+        const pdf = await buildPdfFromPngPages(
           message.pages,
           message.paperWidthMm,
           message.paperHeightMm,
-          message.orientation,
         )
         const response: WorkerSuccess = {
           id: message.id,

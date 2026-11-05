@@ -11,3 +11,7 @@ paths-ignore:
   - 'node_modules/**'
   - coverage
   - '**/*.min.js'
+  # Chunks lib (jsPDF dans worker, html2canvas dans index.es-*)
+  - '**/printExport.worker-*.js'
+  - '**/index.es-*.js'
+  - dist/entree-carto.js

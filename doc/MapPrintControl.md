@@ -50,5 +50,5 @@ Trigger button: `fr-icon-printer-line` (DSFR).
 ## Dependencies
 
 - `MapPrintModal` inside `MapShell` (`olMap` inject); fiche/legend data via `mapPrintPanelsRef` (`TabPanelsControl`)
-- `@gouvminint/vue-dsfr` (`DsfrModal` + form controls), `jspdf`, `html2canvas`, `@vueuse/core`
+- `@gouvminint/vue-dsfr` (`DsfrModal` + form controls), `pdf-lib`, `html2canvas`, `@vueuse/core`
 - Embed bundle registers vue-dsfr in `mount.ts`

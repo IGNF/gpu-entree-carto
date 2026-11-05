@@ -16,7 +16,7 @@ export function demoManualChunks(id: string): string | undefined {
   }
   if (id.includes('vue') || id.includes('vue-router')) return 'vendor-vue'
   if (id.includes('html2canvas')) return 'vendor-html2canvas'
-  if (id.includes('jspdf') || id.includes('dompurify')) return 'vendor-print-pdf'
+  if (id.includes('pdf-lib') || id.includes('dompurify')) return 'vendor-print-pdf'
 
   return undefined
 }

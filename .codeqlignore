@@ -1,6 +1,15 @@
-# Artefacts build (DOMPurify bundlé, etc.) — ne pas analyser
+# Artefacts build Vite — code tiers minifié (jsPDF, html2canvas, DOMPurify, …).
+# CodeQL default setup analyse parfois les fichiers modifiés dans dist/ malgré cette liste :
+# voir .github/codeql/README.md (exclusion org ou bascule advanced + codeql-config.yml).
 dist/
-**/*.min.js
+dist/**
+**/dist/**
+
+# Workers et chunks lib (hash Vite) — jsPDF / html2canvas bundlés
+**/printExport.worker-*.js
+**/index.es-*.js
+dist/entree-carto.js
+dist/entree-carto.min.js
 
 node_modules/
 coverage/

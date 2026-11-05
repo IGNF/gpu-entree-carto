@@ -50,5 +50,5 @@ Bouton déclencheur : `fr-icon-printer-line` (DSFR).
 ## Dépendances
 
 - `MapPrintModal` dans `MapShell` (inject `olMap`) ; données fiche/légendes via `mapPrintPanelsRef` (`TabPanelsControl`)
-- `@gouvminint/vue-dsfr`, `jspdf`, `html2canvas`, `@vueuse/core`
+- `@gouvminint/vue-dsfr`, `pdf-lib`, `html2canvas`, `@vueuse/core`
 - Enregistrement vue-dsfr dans `mount.ts` pour l’embed gpu-site

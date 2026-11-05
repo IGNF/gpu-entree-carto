@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
 - **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.
+- **Map print** — PDF export uses **pdf-lib** in the encode worker (replaces jsPDF / canvg); same multi-page output, fewer third-party CodeQL findings in `dist/`.
 - **Map print** — export: granular step labels during capture (page i/n, map preview, tiles, annexes, encoding) so progress no longer sits at 0% with only “X page(s) to export…”.
 - **Map print** — export: fix hang at ~85% (“Generating file”) when the encode worker silently dropped cross-realm ArrayBuffer responses.
 - **Map print** — annex content rules clarified (fiches vs preview map; parcel rule pictos low/high only; legends zoom-filtered or “all” without muted styling); quiet remeasure vs paper layout; stable parcel footnotes and pagination.
