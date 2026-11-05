@@ -36,6 +36,10 @@ function collectReferencedAssetNames(dir) {
     for (const match of text.matchAll(/(?:assets\/|\.\/)([A-Za-z0-9_.-]+\.(?:js|css))/g)) {
       names.add(match[1])
     }
+    // Worker Vite : new URL("printExport.worker-….js", import.meta.url) sans préfixe assets/
+    for (const match of text.matchAll(/printExport\.worker-[A-Za-z0-9_.-]+\.js/g)) {
+      names.add(match[0])
+    }
   }
   }
   walk(dir)

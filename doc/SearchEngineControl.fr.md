@@ -9,7 +9,7 @@ Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, g�
 **Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `SearchEngine.vue` (clone `cartes.gouv.fr-entree-carto`)  
 **Dépendance :** `geopf-extensions-openlayers` (`SearchEngineAdvanced`, `InseeAdvancedSearch`, `LocationAdvancedSearch`, `CoordinateAdvancedSearch`, `ParcelAdvancedSearch`)
 
-Au build, le plugin Vite `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) remplace l’`eval` de `Services/Search.js` (upstream) par une affectation de chaîne — nos URLs de service sont des HTTPS fixes.
+Au build, `vite.geopfPlugins.ts` applique des correctifs upstream : `patchGeopfSearchEval` remplace l’`eval` de `Services/Search.js` par une affectation de chaîne (URLs HTTPS fixes) ; `patchGeopfPanelManager` ignore dans `PanelManager.js` les nœuds sans id geopf (`GP…-123456`) lorsque des contrôles entree-carto (ex. impression) partagent la même zone `.position-container-*`.
 
 ## Props
 

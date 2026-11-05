@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Territories (geopf)** — opening the panel no longer throws when the bottom bar also hosts `MapPrintControl` (build-time patch of `PanelManager.js` / `Widget.js` in `vite.geopfPlugins.ts`).
 - **Map print control** — DSFR/geopf button styling; mobile bottom bar slot; sketch column max-height; print modal realigned on cartes.gouv `PrintModal` (`DsfrModal`, `defineExpose` open/close, always mounted); OL clone preview kept for embed.
 - **Demo document startup** — `/map` with `DEMO_CONFIG.document` only fits extent and WMS preview (aligned with gpu-site embed); no automatic fiche tab or location cherry at bbox center.
 - **Document preview (gpu-site embed)** — `createStandardViewer` now copies `params.document` into shared `config.document` so WMS validation layers (`_previsu`, partition CQL) stay active after `TabPanelsControl` reloads the GPU WMS registry (previously production tiles were shown on the host site while the Vite demo worked).

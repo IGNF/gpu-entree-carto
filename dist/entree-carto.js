@@ -95116,12 +95116,24 @@ Expected function or array of functions, received type ${typeof value2}.`
       controlPanels = [...bottomRight.children, ...topRight.children];
     }
     return controlPanels.filter((p5) => {
-      var panelID = p5.id.match(/(\w+)-[0-9]+/)[1];
+      if (!p5 || typeof p5.id !== "string") {
+        return false;
+      }
+      var panelMatch = p5.id.match(/(\w+)-[0-9]+/);
+      if (!panelMatch) {
+        return false;
+      }
+      var panelID = panelMatch[1];
       var isException2 = exceptionPanel.includes(panelID);
-      var isOpened = p5.getElementsByTagName("button")[0].getAttribute("aria-pressed");
+      var firstButton = p5.getElementsByTagName("button")[0];
+      if (!firstButton) {
+        return false;
+      }
+      var isOpened = firstButton.getAttribute("aria-pressed");
       if (isOpened === "true" && !isException2) {
         return p5;
       }
+      return false;
     });
   }
   var PanelManager = function(position2, openedPanelID, widget) {
@@ -95154,14 +95166,22 @@ Expected function or array of functions, received type ${typeof value2}.`
      * It calls the panelManager to automatically close other panels
      */
     onPanelOpen: function() {
-      PanelManager(this.options.position, this.element.id.match(/(\w+)-[0-9]+/)[1], this);
+      var idMatch = this.element && this.element.id && this.element.id.match(/(\w+)-[0-9]+/);
+      if (!idMatch) {
+        return;
+      }
+      PanelManager(this.options.position, idMatch[1], this);
     },
     /**
      * This method is called when a widget closes its panel
      * It lets the panelManager restore the state of the other widgets
      */
     onPanelClose: function() {
-      PanelManagerClose(this.element.id.match(/(\w+)-[0-9]+/)[1], this);
+      var idMatch = this.element && this.element.id && this.element.id.match(/(\w+)-[0-9]+/);
+      if (!idMatch) {
+        return;
+      }
+      PanelManagerClose(idMatch[1], this);
     }
   };
   LoggerByDefault$1.getLogger("draggable");
