@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **gpu-site integration** — lib build `base: './'`: print worker `assets/printExport.worker-*.js` resolves from the script URL; integration doc (webpack copy).
+- **Map print** — PNG DPI fallback without `fetch(data:…)` (strict embed `connect-src` CSP).
 - **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
 - **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.
 - **Map print** — PDF export uses **pdf-lib** in the encode worker (replaces jsPDF / canvg); same multi-page output, fewer third-party CodeQL findings in `dist/`.

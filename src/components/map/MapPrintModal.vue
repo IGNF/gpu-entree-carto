@@ -1871,7 +1871,7 @@ async function exportRasterCanvases(
       }
     } catch {
       if (printFormState.format === 'PNG') {
-        const finalUrl = await injectDpiInPng(canvas.toDataURL('image/png'), dpiValue)
+        const finalUrl = injectDpiInPng(canvas.toDataURL('image/png'), dpiValue)
         triggerDownload(fileName, finalUrl)
       } else {
         triggerDownload(fileName, canvas.toDataURL('image/jpeg', 0.95))

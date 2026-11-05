@@ -25,7 +25,7 @@ dist/
   entree-carto-search-engine.js / .min.js     # home geopf SearchEngine (mountSearchEngine)
   entree-carto-geometry-editor.js / .min.js   # form mini-map (replaces ol-geometry-editor)
   entree-carto-sketch.js / .min.js            # standalone sketch (mountSketch / SketchControl)
-  assets/                                     # Remix fonts (woff2), …
+  assets/                                     # Remix fonts (woff2), map print worker printExport.worker-*.js, …
   css/
     entree-carto.css / .min.css
     entree-carto-location-search.css / .min.css
@@ -98,6 +98,8 @@ with:
 ```
 
 Region/department limit GeoJSON for base maps (`department-fr-geojson.json`, `region-fr-geojson.json`) stay on the gpu-site web root at `public/json-data/` (requested as `/json-data/…`), not inside the entree-carto vendor bundle.
+
+gpu-site usually does **not** copy all of `dist/assets/` (Vite demo artefacts). Copy at least `assets/remixicon*.woff2` and **`assets/printExport.worker-*.js`** into `vendor/entree-carto/assets/`: the map bundle loads the worker with a URL **relative** to `entree-carto.min.js` (`assets/printExport.worker-….js`).
 
 ### 3. Twig templates — mapping (`templates/map/index.html.twig`)
 

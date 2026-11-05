@@ -15,6 +15,8 @@ const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
   ...vitePrintWorkerBuildOptions,
+  /** URLs relatives (worker print, …) résolues depuis l’URL du script embed (gpu-site `/build/vendor/entree-carto/`). */
+  base: './',
   plugins: [
     patchGeopfSearchEval(),
     patchGeopfPanelManager(),

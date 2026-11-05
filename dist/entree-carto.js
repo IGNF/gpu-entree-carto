@@ -70360,7 +70360,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (scriptDir && scriptDir !== "/") {
       return scriptDir;
     }
-    return normalizeDir("/");
+    return normalizeDir("./");
   }
   function ignGeoportalAttributions(options = {}) {
     const year = options.yearOfIgnCopyright ?? (typeof config.yearOfIgnCopyright === "number" ? config.yearOfIgnCopyright : 2019);
@@ -83716,10 +83716,24 @@ Expected function or array of functions, received type ${typeof value2}.`
     result.set(bytes.slice(33), 33 + chunk.length);
     return result;
   }
-  async function injectDpiInPng(dataUrl, dpi) {
-    const response = await fetch(dataUrl);
-    const buffer2 = await response.arrayBuffer();
-    const withDpi = injectDpiInPngBytes(new Uint8Array(buffer2), dpi);
+  function dataUrlToUint8Array(dataUrl) {
+    const comma = dataUrl.indexOf(",");
+    if (comma === -1) throw new Error("Data URL PNG invalide.");
+    const meta = dataUrl.slice(0, comma);
+    const payload = dataUrl.slice(comma + 1);
+    if (meta.includes(";base64")) {
+      const binary = atob(payload);
+      const bytes2 = new Uint8Array(binary.length);
+      for (let i2 = 0; i2 < binary.length; i2++) bytes2[i2] = binary.charCodeAt(i2);
+      return bytes2;
+    }
+    const decoded = decodeURIComponent(payload);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i2 = 0; i2 < decoded.length; i2++) bytes[i2] = decoded.charCodeAt(i2);
+    return bytes;
+  }
+  function injectDpiInPng(dataUrl, dpi) {
+    const withDpi = injectDpiInPngBytes(dataUrlToUint8Array(dataUrl), dpi);
     return URL.createObjectURL(new Blob([withDpi], { type: "image/png" }));
   }
   function waitForMapRender(map2, passes = 2, timeoutMs = 1e4) {
@@ -84616,7 +84630,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!worker) {
       const instance = new Worker(new URL(
         /* @vite-ignore */
-        "/assets/printExport.worker-CNXuYKaC.js",
+        "" + new URL("assets/printExport.worker-CNXuYKaC.js", document.currentScript && document.currentScript.tagName.toUpperCase() === "SCRIPT" && document.currentScript.src || document.baseURI).href,
         _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href
       ), {
         type: "module"
@@ -94663,7 +94677,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
           } catch {
             if (printFormState.format === "PNG") {
-              const finalUrl = await injectDpiInPng(canvas.toDataURL("image/png"), dpiValue);
+              const finalUrl = injectDpiInPng(canvas.toDataURL("image/png"), dpiValue);
               triggerDownload(fileName, finalUrl);
             } else {
               triggerDownload(fileName, canvas.toDataURL("image/jpeg", 0.95));
@@ -95091,7 +95105,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-27aab4ef"]]);
+  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-f2832da4"]]);
   const exceptions = ["GPoverviewMap", "GPfullScreen"];
   const gfiIncompatiblePanels = ["GPdrawing", "GPisochron", "GPmeasureArea", "GPmeasureAzimuth", "GPmeasureLength", "GProute", "GPelevationPath", "GPpanoramax", "GPreporting"];
   var gfiActiveBeforePanel = false;
@@ -119030,7 +119044,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const MAP_PROJECTION = "EPSG:3857";
   const DATA_PROJECTION = "EPSG:4326";
   function limitGeoJsonUrl(fileName) {
-    return `${"/"}json-data/${fileName}`;
+    return `${"./"}json-data/${fileName}`;
   }
   const limitStyle = new Style({
     stroke: new Stroke({ width: 2, color: "#000000" })
@@ -119459,7 +119473,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-7dc1461f"]]);
   const LOADED = /* @__PURE__ */ new Set();
   function demoExternalBaseUrl() {
-    const base = "/";
+    const base = "./";
     return `${base.endsWith("/") ? base : `${base}/`}external/`;
   }
   function demoExternalStylesheet(pathFromExternalRoot) {
