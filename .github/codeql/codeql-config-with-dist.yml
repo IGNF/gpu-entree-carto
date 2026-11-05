@@ -1,0 +1,12 @@
+name: entree-carto-with-dist
+
+# Périmètre local (CODEQL_SCOPE=all) — aligné sur le default setup GitHub qui analyse dist/ dans le diff.
+paths:
+  - src
+  - dist
+
+paths-ignore:
+  - node_modules
+  - 'node_modules/**'
+  - coverage
+  - '**/*.min.js'

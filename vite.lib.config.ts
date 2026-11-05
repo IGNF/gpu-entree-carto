@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
+import {
+  libCssAssetFileName,
+  libMinifyEsbuildOptions,
+  vitePrintWorkerBuildOptions,
+} from './vite/libBuildOptions'
 import { remixiconExternal } from './vite/remixiconExternal'
 import { stubDsfrIconsCss } from './vite/stubDsfrIconsCss'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
@@ -10,6 +14,7 @@ import { patchGeopfSearchEval } from './vite.geopfPlugins'
 const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
+  ...vitePrintWorkerBuildOptions,
   plugins: [patchGeopfSearchEval(), stubDsfrIconsCss(), remixiconExternal(), vue()],
   esbuild: libMinifyEsbuildOptions(minify),
   resolve: {

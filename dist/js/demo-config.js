@@ -21,8 +21,11 @@ window.DEMO_CONFIG = {
   document: null,
   bbox: null,
 
-  // document: { id: "2851a76557fa23f7df07b71ee519c905", status: "document.preview", type: "DU", name: "DU_95197" },
-  // bbox: [2.3097275,48.9575251,2.3442079,48.9832766],
+  // document: { id: "9d75a4a2e23058cef87359031c82ba65", status: "document.preview", type: "DU", name: "DU_95197" },
+  // bbox: [2.3097275,48.9575251,2.3442079,48.9832767],
+
+
+
 
   // /** Document GPU à ouvrir au chargement (optionnel). */
   // document: { id: "89866a4198db08c8b6c0077e0aa3407a", status: "document.preview", type: "PLU", name: "DU_62193" },

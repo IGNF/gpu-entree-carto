@@ -80,6 +80,26 @@ export function shouldShowInDataLayersStack(
   return false
 }
 
+/** Couches `onlyLegend` cochées au catalogue (sans filtre visibilité carte). */
+export function collectCheckedOnlyLegendNodes(
+  roots: TreeLayerNode[],
+  checkedById: Record<string, boolean>,
+): TreeLayerNode[] {
+  const out: TreeLayerNode[] = []
+
+  function walk(nodes: TreeLayerNode[]) {
+    for (const node of nodes) {
+      if (node.gpuOnlyLegend && node.legend?.length && Boolean(checkedById[node.id])) {
+        out.push(node)
+      }
+      walk(catalogChildNodes(node))
+    }
+  }
+
+  walk(roots)
+  return out
+}
+
 /** Couches `onlyLegend` actives sur la carte — complément légendes si absentes de la pile panneau. */
 export function collectActiveOnlyLegendNodesForLegendsPanel(
   roots: TreeLayerNode[],

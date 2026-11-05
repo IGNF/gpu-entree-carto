@@ -30,7 +30,7 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | <img src="./img/icon-previews/remix/stack-line.svg" width="24" height="24" alt="" /> | Onglet couches | `ri-stack-line` | Remix | [stack-line](https://remixicon.com/icon/stack-line) |
 | <img src="./img/icon-previews/remix/list-indefinite.svg" width="24" height="24" alt="" /> | Onglet légendes | `ri-list-indefinite` | Remix | [list-indefinite](https://remixicon.com/icon/list-indefinite) |
 | <img src="./img/icon-previews/remix/fullscreen-line.svg" width="24" height="24" alt="" /> | Barre carte mobile — entrer en plein écran | `ri-fullscreen-line` | Remix | [fullscreen-line](https://remixicon.com/icon/fullscreen-line) |
-| — | Barre carte mobile — quitter le plein écran | `ri-fullscreen-exit-line` | Remix | [fullscreen-exit-line](https://remixicon.com/icon/fullscreen-exit-line) |
+| <img src="./img/icon-previews/remix/fullscreen-exit-line.svg" width="24" height="24" alt="" /> | Barre carte mobile — quitter le plein écran | `ri-fullscreen-exit-line` | Remix | [fullscreen-exit-line](https://remixicon.com/icon/fullscreen-exit-line) |
 
 ---
 
@@ -93,6 +93,14 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | ------- | ------- | ------------ | --------- | --- |
 | <img src="./img/icon-previews/custom/parcelle.svg" width="24" height="24" alt="" /> | Parcelle | `ec-icon-parcelle` | Custom | `src/assets/custom-icons/parcelle.svg` (`custom-remix-icons.css`) |
 | <img src="./img/icon-previews/dsfr/france-fill.svg" width="24" height="24" alt="" /> | Territoire | `fr-icon-france-fill` | DSFR | [france-fill](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=france-fill) |
+
+---
+
+## Impression carte (`MapPrintControl.vue`)
+
+| Aperçu | Libellé | Classe HTML | Catalogue | URL |
+| ------ | ------- | ----------- | --------- | --- |
+| <img src="./img/icon-previews/dsfr/printer-line.svg" width="24" height="24" alt="" /> | Imprimer la carte | `fr-icon-printer-line` | DSFR | [printer-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=printer-line) |
 
 ---
 

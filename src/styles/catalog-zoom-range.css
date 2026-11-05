@@ -4,7 +4,8 @@
 
 .ec-not-in-zoom-range .fr-label,
 .ec-not-in-zoom-range .ec-data-layers__name,
-.ec-not-in-zoom-range.fr-accordion .fr-accordion__btn {
+.ec-not-in-zoom-range.fr-accordion .fr-accordion__btn,
+.ec-not-in-zoom-range .ec-print-legends__group-title {
   color: var(--text-disabled-grey, #929292);
 }
 

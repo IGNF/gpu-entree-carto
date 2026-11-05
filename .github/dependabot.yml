@@ -11,8 +11,9 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: vitest
         update-types: [version-update:semver-major]
+      # 5.1+ : peer optional Vite ^7.3 (projet sur Vite 6) — monter vue-router avec la migration Vite
       - dependency-name: vue-router
-        update-types: [version-update:semver-major]
+        update-types: [version-update:semver-minor, version-update:semver-major]
       # CodeQL : is-unsafe bundlé depuis fxp 5.9+
       - dependency-name: fast-xml-parser
         versions: ['>=5.9.0']

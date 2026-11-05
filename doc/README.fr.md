@@ -29,6 +29,7 @@ Chaque contrôle / composant cartographique a une page Markdown ici.
 | mountSearchEngine           | `src/lib/mountSearchEngine.ts`                               | [mountSearchEngine.md](./mountSearchEngine.fr.md)                  |
 | LocationSearchWidget        | `src/components/search/LocationSearchWidget.vue`             | [LocationSearchWidget.md](./LocationSearchWidget.fr.md)            |
 | OverviewMapControl          | `src/components/map/OverviewMapControl.vue`                  | [OverviewMapControl.md](./OverviewMapControl.fr.md)                |
+| MapPrintControl             | `src/components/map/MapPrintControl.vue`                     | [MapPrintControl.md](./MapPrintControl.fr.md)                      |
 | TerritoriesControl          | `src/components/map/TerritoriesControl.vue`                  | [TerritoriesControl.md](./TerritoriesControl.fr.md)                |
 | MapModeSelector             | `src/components/map/MapModeSelector.vue`                     | [MapModeSelector.fr.md](./MapModeSelector.fr.md)                   |
 | ClickInfoControl            | `src/components/map/ClickInfoControl.vue`                    | [ClickInfoControl.fr.md](./ClickInfoControl.fr.md)                 |

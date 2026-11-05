@@ -96,6 +96,14 @@ Stylesheets: DSFR `icons.min.css` (`main.ts`, demo); Remix `remixicon.css` + `sr
 
 ---
 
+## Map print (`MapPrintControl.vue`)
+
+| Preview | Label | HTML class | Catalog | URL |
+| ------- | ----- | ---------- | ------- | --- |
+| <img src="./img/icon-previews/dsfr/printer-line.svg" width="24" height="24" alt="" /> | Print map | `fr-icon-printer-line` | DSFR | [printer-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=printer-line) |
+
+---
+
 ## Territories overlay (`TerritoriesControl.vue`)
 
 | Preview | Label | HTML class | Catalog | URL |

@@ -12,12 +12,36 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Impression carte** — `MapPrintControl` + modale DSFR (PDF/PNG/JPEG, logique cartes.gouv) ; bouton entre croquis et minimap ; pages annexes optionnelles (fiche territoire, fiche parcelle, légendes) avec pagination d’aperçu ; attributions et échelle en bas à droite sur l’aperçu carte.
 - **Assets externes démo** — `public/external/` (DSFR + Remix via `npm run sync:demo-external`), [DemoExternal.fr.md](./doc/DemoExternal.fr.md) ; démo autonome via `index.html` ; intégration gpu-site avec `stubDsfrIconsCss` (plus de `icons.min.css` dans `dist/css/`).
 
 - **Fiche info v2 (client)** — routes `fiche-info-v2` territoire / parcelle / combinée (`ficheInfoApiUrls`, `ficheInfoFetch`), tuiles DSFR documents et procédures, badges légaux, surbrillance GeoJSON parcelle/territoire, cache sélections par mode au point cerise, doc [FicheInfoApi](./doc/FicheInfoApi.fr.md) ; fin du repli APICarto parcelle côté navigateur.
 
 ### Modifié
 
+- **Impression carte** — option **Toutes les légendes** (sous « Afficher la légende ») : couches masquées et hors zoom incluses, style grisé.
+- **Fiche info** — boutons **Imprimer** parcelle / territoire ouvrent la modale d’impression avec la fiche correspondante précochée.
+- **Impression carte** — export PDF : **pdf-lib** dans le worker d’encodage (remplace jsPDF / canvg) ; même fonctionnalité multi-pages, moins de code tiers signalé par CodeQL dans `dist/`.
+- **Impression carte** — export : sous-étapes détaillées pendant la capture (page i/n, aperçu carte, tuiles, annexes, encodage) pour éviter un long palier à 0 % avec seulement « X page(s) à exporter… ».
+- **Impression carte** — export : correction blocage à ~85 % (« Génération du fichier ») lorsque le worker d’encodage ignorait silencieusement les réponses (validation ArrayBuffer inter-realms).
+- **Impression carte** — logique annexes clarifiée (fiches indépendantes de la vue sauf pictos parcelle low/high ; légendes au zoom ou « toutes » sans grisé) ; remesure discrète vs gabarit papier ; fiche parcelle : encarts et pagination stabilisés.
+- **Fiche parcelle (panneau + impression)** — libellés « Règles d’urbanisme » / « Documents couvrant la parcelle » ; retrait de l’intro documents ; espacement des groupes de documents ; deux encarts DSFR (caractère informatif, SUP protégées) ; lien **FAQ** (`faqUrl`) dans le panneau.
+- **Fiche territoire (impression)** — sans titre de section « Documents » ; sans liens « fiche juridique » dans l’onglet SUP.
+- **Impression carte** — la vue de l’aperçu carte n’est plus réinitialisée au changement des options du formulaire ; bouton secondaire **Replacer la carte** pour resynchroniser après zoom/déplacement ; case **Afficher le titre** ; action principale **Exporter** (ex « Imprimer la carte »).
+- **Impression carte** — annexes : retrait intérieur (~1,6 mm) hors marge formulaire ; pictos légende un peu plus grands à 300 DPI.
+- **Impression carte** — aperçu légendes (page 2+) : première ligne de la tranche visible (masquage corrigé au début de tranche).
+- **Impression carte** — export annexes : capture directe du cadre d’aperçu (WYSIWYG), plus clone html2canvas hors écran (évite les lignes rognées en bas de page).
+- **Impression carte** — réouverture de la modale : réutilisation de l’aperçu carte et du cache de pagination si la vue / les couches n’ont pas changé (évite « Préparation de l’aperçu… » systématique).
+- **Impression carte** — export : aperçu figé au clic (vue carte d’aperçu + annexes), sans resynchronisation sur la carte principale pendant le traitement ; raster carte sur **carte hors écran** avec attente du chargement des tuiles (corrige les zones blanches en 300 DPI) ; barre de progression et libellé d’étape pendant l’export ; **worker** d’encodage PNG/JPEG/PDF ; **préchauffage** tuiles et **cache** de rendu carte ; titre limité (100 car.) avec taille adaptée et zone carte minimale garantie (corrige export impossible / carte à hauteur 0) ; plus de « Préparation de l’aperçu… » au pan/zoom de l’aperçu carte (pagination légendes recalculée à l’export).
+- **Impression carte** — page légendes : masquage des couches hors zoom de l’aperçu carte (plus de légendes grisées) ; option et pagination recalculées au changement de zoom de l’aperçu.
+- **Impression carte** — pagination annexes : hauteur fiche basée sur les repères (pas le scroll HTML) ; légendes remesurées après stabilisation + aperçu visible ; cache pagination vidé à l’ouverture de la modale ; coupures légende/fiche alignées sur les lignes (plus de symbole rogné en bas de page).
+- **Impression carte** — options fiche parcelle / territoire activables dès que les données sont en cache ou dans le JSON fiche (sans exiger le mode carte affiché).
+- **Impression carte** — tuiles document (fiche) : sans cadre DSFR, typo compacte (titre gras, date procédure rapprochée).
+- **Impression carte** — pagination fiche parcelle / territoire : repères par tuile / règle (plus de masquage du bloc HTML entier) ; pages vides ou documents tronqués corrigés.
+- **Impression carte** — fiche parcelle / territoire : sans lignes de séparation ; références cadastrales alignées sur la typo Infos (titres, labels, descriptions).
+- **Impression carte** — barre de pagination au-dessus de l’aperçu (libellé « Page 1 / 1 — Carte » même sans annexe) ; zoom aperçu avec **Ctrl + molette** (molette seule = défilement).
+- **Impression carte** — modèles prédéfinis (A4 aperçu / impression, A4 paysage, A3) et pré-calcul des pagination annexes en arrière-plan ; découpes de page évitant les blocs en bande haute/basse ; cache par gabarit et contenu.
+- **Impression carte** — mise en page annexes proportionnelle à la feuille (texte, tuiles, légendes en grille) ; pagination alignée sur le contenu réel (sans pages blanches) ; export annexes plus rapide (mesure hors UI) ; attributions rasterisées à la résolution d’export.
 - **API fiche info v2 (gpu-site)** — JSON v2 réduit aux champs utilisés par la fiche entree-carto (`FicheInfoV2PayloadOptimizer` : clés racine inutiles supprimées, listes blanches documents/procédures/grid/parcelle, `parcelFiche` selon le scope) ; voir [FicheInfoApi](./doc/FicheInfoApi.fr.md).
 - **Emprise mode (carte)** — contours parcelle / territoire rouge et orange uniquement via le JSON fiche-info v2 (`searchResultGraphics`, `modeEmpriseFromFiche`) ; plus d’APICarto ni geo.api dans le navigateur ; appel v2 combiné privilégié quand il est configuré.
 - **Liens documents / procédures (démo)** — résolution via le script gpu-client-config (`ficheGpuSiteUrls`) ; repli document/procédure sur les modèles **`documentViewUrl` / `procedureViewUrl`** (routes Symfony dans la config gpu-site), sans chemins codés en dur dans entree-carto.
@@ -36,6 +60,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Impression carte** — style bouton DSFR/geopf ; slot barre basse mobile ; hauteur colonne croquis ; modale réalignée sur cartes.gouv `PrintModal` (`DsfrModal`, `open`/`close` exposés, montage permanent) ; prévisualisation par clone OL (embed).
 - **Démarrage document (démo)** — `/map` avec `DEMO_CONFIG.document` : recentrage + WMS preview uniquement (aligné gpu-site) ; plus d’ouverture auto de la fiche ni cerise au centre de l’emprise.
 - **Prévisualisation document (embed gpu-site)** — `createStandardViewer` recopie `params.document` dans `config.document` pour conserver les couches WMS validation (`_previsu`, filtre partition) après rechargement du registre WMS par `TabPanelsControl` (auparavant tuiles production sur gpu-site alors que la démo Vite affichait correctement le preview).
 - **Assets DSFR (démo)** — `sync:demo-external` copie Marianne/Spectral (`dsfr/fonts/`) et les SVG masques (`dsfr/icons/`) pour que `dsfr.min.css` et `icons.min.css` résolvent leurs URLs (plus de repli HTML Vite, `fr-icon-*` absents ni « rejected by sanitizer »).

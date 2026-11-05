@@ -78,6 +78,15 @@ function cachedFicheForMode(mode: MapModeId, lon: number, lat: number): FicheInf
   return fichePointCache.byMode[mode] ?? null
 }
 
+/** Fiche en cache au point cerise du permalink (impression / bascule mode). */
+export function getCachedFicheSelectionAtMarker(mode: MapModeId): FicheInfoSelection | null {
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (!marker) return null
+  const cached = cachedFicheForMode(mode, marker.lon, marker.lat)
+  if (!cached) return null
+  return mode === MAP_MODE_PARCEL ? applyParcelFicheDetailCache(cached) : cached
+}
+
 /** Bascule la fiche au changement de mode si une cerise est présente (sans refetch si en cache). */
 export function refreshFicheForMapModeChange(mode: MapModeId, zoom: number): void {
   const marker = readMapPermalinkMarker(getMapPermalinkParams())
@@ -238,13 +247,16 @@ function applyMapPointResult(
   selection: FicheInfoSelection,
   markerPlacedAtClick: boolean,
   skipLocationMarker: boolean,
+  silent: boolean,
 ): FicheInfoSelection | null {
   if (requestId !== mapPointRequestSeq) return null
   const resolved = withParcelDetailCache(selection, mode)
   storeFicheInCache(mode, lon, lat, resolved)
-  showFiche(resolved)
-  if (!skipLocationMarker && !markerPlacedAtClick) {
-    syncFicheLocationMarker(lon, lat)
+  if (!silent) {
+    showFiche(resolved)
+    if (!skipLocationMarker && !markerPlacedAtClick) {
+      syncFicheLocationMarker(lon, lat)
+    }
   }
   return resolved
 }
@@ -279,14 +291,18 @@ async function loadFicheForMapPointImpl(params: {
   loadingTitle?: string
   markerPlacedAtClick?: boolean
   skipLocationMarker?: boolean
+  silent?: boolean
 }): Promise<FicheInfoSelection | null> {
   const requestId = ++mapPointRequestSeq
   const markerPlacedAtClick = params.markerPlacedAtClick === true
   const skipLocationMarker = params.skipLocationMarker === true
+  const silent = params.silent === true
   syncFichePointCache(params.lon, params.lat)
   const loadingTitle =
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
-  showLoading(loadingTitle)
+  if (!silent) {
+    showLoading(loadingTitle)
+  }
 
   const apiUrl = resolveApiFicheInfoUrl()
   if (!apiUrl) {
@@ -300,6 +316,7 @@ async function loadFicheForMapPointImpl(params: {
       { title: loadingTitle, bodyHtml: body, raw: { source: 'fiche-service-unavailable' } },
       markerPlacedAtClick,
       skipLocationMarker,
+      silent,
     )
   }
 
@@ -313,6 +330,7 @@ async function loadFicheForMapPointImpl(params: {
       ficheServiceUnavailableSelection(loadingTitle),
       markerPlacedAtClick,
       skipLocationMarker,
+      silent,
     )
   }
 
@@ -326,6 +344,7 @@ async function loadFicheForMapPointImpl(params: {
     selection,
     markerPlacedAtClick,
     skipLocationMarker,
+    silent,
   )
 }
 
@@ -339,6 +358,8 @@ export function loadFicheForMapPoint(params: {
   markerPlacedAtClick?: boolean
   /** Ne pas appeler createMarker (ex. résultat SearchEngine : conserver cerise + emprise). */
   skipLocationMarker?: boolean
+  /** Ne pas mettre à jour le panneau fiche (ex. préparation impression). */
+  silent?: boolean
 }): Promise<FicheInfoSelection | null> {
   return new Promise((resolve) => {
     whenGpuClientConfigReady(() => {
@@ -398,7 +419,9 @@ export async function loadFicheForSearch(
 /** Charge la fiche parcelle complète (Infos + Documents) en un seul appel. */
 export async function loadParcelFicheDetail(
   selection: FicheInfoSelection,
+  options?: { silent?: boolean },
 ): Promise<FicheInfoSelection> {
+  const silent = options?.silent === true
   const parcelId = parcelIdFromSelection(selection)
   if (!parcelId) {
     throw new Error('Identifiant parcelle indisponible')
@@ -407,7 +430,9 @@ export async function loadParcelFicheDetail(
   const cachedDetail = getParcelFicheDetailCache(parcelId)
   if (cachedDetail) {
     const next = applyParcelFicheDetailCache(selection)
-    showFiche(next)
+    if (!silent) {
+      showFiche(next)
+    }
     const marker = readMapPermalinkMarker(getMapPermalinkParams())
     if (marker) {
       storeFicheInCache(MAP_MODE_PARCEL, marker.lon, marker.lat, next)
@@ -439,7 +464,9 @@ export async function loadParcelFicheDetail(
     parcelInfosHtml,
     parcelDocumentsHtml,
   }
-  showFiche(next)
+  if (!silent) {
+    showFiche(next)
+  }
   const marker = readMapPermalinkMarker(getMapPermalinkParams())
   if (marker) {
     storeFicheInCache(MAP_MODE_PARCEL, marker.lon, marker.lat, next)

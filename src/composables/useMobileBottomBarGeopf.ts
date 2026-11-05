@@ -13,10 +13,12 @@ type SavedNode = {
 export function useMobileBottomBarGeopf(
   layoutMode: Ref<TabPanelsLayoutMode>,
   sketchSlot: Ref<HTMLElement | null>,
+  printSlot: Ref<HTMLElement | null>,
   overviewSlot: Ref<HTMLElement | null>,
   territoriesSlot: Ref<HTMLElement | null>,
 ) {
   let sketchSaved: SavedNode | null = null
+  let printSaved: SavedNode | null = null
   let territoriesSaved: SavedNode | null = null
   let overviewSaved: SavedNode | null = null
   let observer: MutationObserver | null = null
@@ -38,6 +40,10 @@ export function useMobileBottomBarGeopf(
 
   function queryOverviewWidget(): HTMLElement | null {
     return document.querySelector('#gpu-map .gpf-widget[id^="GPoverviewMap-"]')
+  }
+
+  function queryPrintControl(): HTMLElement | null {
+    return document.querySelector('#gpu-map .ec-map-print-control')
   }
 
   function moveToSlot(
@@ -68,9 +74,11 @@ export function useMobileBottomBarGeopf(
 
   function restore() {
     restoreNode(querySketchRoot(), sketchSaved, 'ec-tab-panels__geopf-sketch-root')
+    restoreNode(queryPrintControl(), printSaved)
     restoreNode(queryTerritoriesWidget(), territoriesSaved, 'ec-tab-panels__geopf-widget')
     restoreNode(queryOverviewWidget(), overviewSaved, 'ec-tab-panels__geopf-widget')
     sketchSaved = null
+    printSaved = null
     territoriesSaved = null
     overviewSaved = null
   }
@@ -80,9 +88,10 @@ export function useMobileBottomBarGeopf(
       return
     }
     const sketchSlotEl = sketchSlot.value
+    const printSlotEl = printSlot.value
     const overviewSlotEl = overviewSlot.value
     const territoriesSlotEl = territoriesSlot.value
-    if (!sketchSlotEl || !overviewSlotEl || !territoriesSlotEl) return
+    if (!sketchSlotEl || !printSlotEl || !overviewSlotEl || !territoriesSlotEl) return
 
     const sketchRoot = querySketchRoot()
     if (sketchRoot) {
@@ -92,6 +101,11 @@ export function useMobileBottomBarGeopf(
         sketchSaved,
         'ec-tab-panels__geopf-sketch-root',
       )
+    }
+
+    const printControl = queryPrintControl()
+    if (printControl) {
+      printSaved = moveToSlot(printControl, printSlotEl, printSaved)
     }
 
     const overviewWidget = queryOverviewWidget()
@@ -127,7 +141,7 @@ export function useMobileBottomBarGeopf(
     { flush: 'sync' },
   )
 
-  watch([sketchSlot, overviewSlot, territoriesSlot], () => {
+  watch([sketchSlot, printSlot, overviewSlot, territoriesSlot], () => {
     if (layoutMode.value === 'bottom') void nextTick(apply)
   })
 

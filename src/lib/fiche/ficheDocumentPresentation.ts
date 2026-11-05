@@ -237,9 +237,6 @@ export function buildParcelDocumentsPresentationHtml(data: GpuFicheInfoPayload):
   if (fichePayloadHasNonExecutoireDocument(data)) {
     parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML)
   }
-  parts.push(
-    '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>',
-  )
 
   const dus = collectProductionDocuments(normalizePartitionsMap(data.dus))
   const psmvs = collectProductionDocuments(normalizePartitionsMap(data.psmvs))

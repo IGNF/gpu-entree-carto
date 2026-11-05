@@ -12,12 +12,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Map print** — `MapPrintControl` + DSFR modal (PDF/PNG/JPEG, cartes.gouv print pipeline); button between sketch and overview map; optional extra PDF pages (territory fiche, parcel fiche, legends) with preview pagination; map preview attributions and bottom-right scale line.
 - **Demo external assets** — `public/external/` (DSFR + Remix synced via `npm run sync:demo-external`), [DemoExternal.md](./doc/DemoExternal.md); standalone demo loads them from `index.html`; gpu-site embed uses `stubDsfrIconsCss` (no embedded `icons.min.css` in `dist/css/`).
 
 - **Fiche info v2 (client)** — `fiche-info-v2` territory / parcel / combined routes (`ficheInfoApiUrls`, `ficheInfoFetch`), DSFR document and procedure tiles, legal status badges, parcel/territory GeoJSON highlight, dual-mode cherry cache, [FicheInfoApi](./doc/FicheInfoApi.md) contract doc; removed browser APICarto parcel fallback.
 
 ### Changed
 
+- **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
+- **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.
+- **Map print** — PDF export uses **pdf-lib** in the encode worker (replaces jsPDF / canvg); same multi-page output, fewer third-party CodeQL findings in `dist/`.
+- **Map print** — export: granular step labels during capture (page i/n, map preview, tiles, annexes, encoding) so progress no longer sits at 0% with only “X page(s) to export…”.
+- **Map print** — export: fix hang at ~85% (“Generating file”) when the encode worker silently dropped cross-realm ArrayBuffer responses.
+- **Map print** — annex content rules clarified (fiches vs preview map; parcel rule pictos low/high only; legends zoom-filtered or “all” without muted styling); quiet remeasure vs paper layout; stable parcel footnotes and pagination.
+- **Parcel fiche (panel + print)** — “Urban planning rules” / “Documents covering the parcel” headings; removed documents intro line; tighter document group spacing; two DSFR callouts (informational notice, protected SUPs); **FAQ** link (`faqUrl`) in the panel.
+- **Territory fiche (print)** — no “Documents” section title; no legal-profile links in the SUP tab.
+- **Map print** — preview map view no longer resets when form options change; optional **Replace map** button syncs preview view from the main map after pan/zoom; title checkbox **Show title**; primary action **Export** (was “Print map”).
+- **Map print** — annex pages: inner inset (~1.6 mm) separate from form margin; slightly larger legend icons at 300 DPI.
+- **Map print** — legends preview (page 2+): first row of each slice visible again (slice-start masking fix).
+- **Map print** — annex export captures the on-screen preview frame (WYSIWYG) instead of an off-screen html2canvas clone (fixes bottom row clipping).
+- **Map print** — reopening the modal reuses the preview map and annex pagination cache when the main map view / layers are unchanged (avoids systematic “Preparing preview…”).
+- **Map print** — off-screen map raster with tile wait and progress UI; **worker** for PNG/JPEG/PDF encoding; map **pre-warm** and render **cache**; map title capped (100 chars) with adaptive font size and guaranteed minimum map area (fixes zero-height map / failed export); no “Preparing preview…” overlay on preview map pan/zoom (legend pagination recomputed on Export).
+- **Map print** — legends page: hide layers outside preview map zoom (no greyed-out entries); print option and pagination update when preview map zoom changes.
+- **Map print** — annex pagination: fiche height from DOM markers (not inflated HTML scroll); legends re-measured after layout stabilizes and from visible preview; slice cache cleared when the print modal opens; slice bounds follow legend rows (no clipped symbols at page bottom).
+- **Map print** — parcel / territory fiche options enabled when data is cached or in the fiche JSON (without requiring the matching map mode).
+- **Map print** — document tiles on fiche pages: no DSFR frame; compact typography (bold title, tighter procedure date).
+- **Map print** — parcel / territory fiche pagination: per-tile / per-rule slice markers (no whole-body hide); fixes blank or clipped document previews.
+- **Map print** — parcel / territory fiche: no separator lines; cadastre references typography aligned with Infos (titles, labels, descriptions).
+- **Map print** — pagination bar above the preview (“Page 1 / 1 — Map” even with no annex); preview zoom with **Ctrl + wheel** (wheel alone scrolls).
+- **Map print** — predefined templates (A4 preview / print, A4 landscape, A3) and background pre-warming of annex pagination; page breaks avoid sliver blocks at the top/bottom of slices; per-template and content cache.
+- **Map print** — supplement pages scale typography and imagery to the printable area; pagination matches real content (no blank trailing slices); faster annex export via off-screen measure; attributions rasterized at export resolution.
 - **Fiche info v2 API (gpu-site)** — v2 JSON trimmed to entree-carto fiche fields only (`FicheInfoV2PayloadOptimizer`: drop unused top-level keys, whitelist document/procedure/grid/parcel fields, scope-specific `parcelFiche`); see [FicheInfoApi](./doc/FicheInfoApi.md).
 - **Mode emprise (map)** — red/orange parcel and territory outlines come from fiche-info v2 JSON only (`searchResultGraphics`, `modeEmpriseFromFiche`); no browser APICarto or geo.api; v2 fetch prefers the combined endpoint when configured.
 - **Document / procedure links (demo)** — fiche tile `viewUrl` and related paths resolve against the gpu-client-config script host (`ficheGpuSiteUrls`); document/procedure fallbacks use **`documentViewUrl` / `procedureViewUrl`** templates from gpu-site config (Symfony routes), not hard-coded paths in entree-carto.
@@ -36,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Map print control** — DSFR/geopf button styling; mobile bottom bar slot; sketch column max-height; print modal realigned on cartes.gouv `PrintModal` (`DsfrModal`, `defineExpose` open/close, always mounted); OL clone preview kept for embed.
 - **Demo document startup** — `/map` with `DEMO_CONFIG.document` only fits extent and WMS preview (aligned with gpu-site embed); no automatic fiche tab or location cherry at bbox center.
 - **Document preview (gpu-site embed)** — `createStandardViewer` now copies `params.document` into shared `config.document` so WMS validation layers (`_previsu`, partition CQL) stay active after `TabPanelsControl` reloads the GPU WMS registry (previously production tiles were shown on the host site while the Vite demo worked).
 - **Demo DSFR assets** — `sync:demo-external` copies Marianne/Spectral (`dsfr/fonts/`) and icon SVG masks (`dsfr/icons/`) so `dsfr.min.css` and `icons.min.css` URLs resolve (avoids Vite HTML fallback, missing `fr-icon-*`, and “rejected by sanitizer”).

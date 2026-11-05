@@ -1,0 +1,355 @@
+/* Pages annexes impression — typo et images proportionnelles à --print-inner-width. */
+.ec-print-supplement-page {
+  box-sizing: border-box;
+  width: var(--print-inner-width, 100%);
+  max-width: var(--print-inner-width, 100%);
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
+  font-size: var(--print-body-font, 12px);
+  line-height: 1.35;
+  color: #161616;
+}
+
+.ec-print-supplement-page .ec-fiche-info__body {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ec-print-supplement-page :deep(h3:not(.fr-tile__title)),
+.ec-print-supplement-page :deep(h4) {
+  font-size: 1.05em;
+  line-height: 1.25;
+  margin: 0 0 0.25em;
+}
+
+.ec-print-supplement-page :deep(p),
+.ec-print-supplement-page :deep(li) {
+  font-size: 1em;
+  margin: 0 0 0.35em;
+}
+
+.ec-print-supplement-page :deep(img) {
+  max-width: var(--print-img-max, 96px) !important;
+  height: auto !important;
+}
+
+.ec-print-fiche__title {
+  margin: 0 0 var(--print-block-gap, 8px);
+  font-size: var(--print-title-font, 16px);
+  font-weight: 700;
+  text-align: center;
+}
+
+.ec-print-fiche__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-block-gap, 8px);
+}
+
+.ec-print-fiche__section-title {
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+}
+
+/** Fiche parcelle : séparation références cadastrales / bloc Infos. */
+.ec-print-fiche__section--cadastre {
+  margin-bottom: var(--print-block-gap, 8px);
+}
+
+.ec-print-fiche .ec-fiche-info__body hr {
+  display: none;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-row {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ec-print-fiche .ec-fiche-info__sup-group-title,
+.ec-print-fiche .ec-fiche-info__rules-section-title {
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-title {
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ec-print-fiche .ec-fiche-info__rule-sub {
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.4;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-print-fiche__cadastre-headline {
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ec-print-fiche__cadastre-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2em 0.65em;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ec-print-fiche__cadastre-dl dt {
+  margin: 0;
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ec-print-fiche__cadastre-dl dd {
+  margin: 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.4;
+  color: var(--text-mention-grey, #666);
+}
+
+/* Tuiles document (parcelle / territoire) — compactes, sans cadre DSFR */
+.ec-print-fiche .ec-fiche-info__body--parcel-documents .ec-fiche-info__section-title {
+  margin: 0 0 0.2em;
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+}
+
+.ec-print-fiche
+  .ec-fiche-info__body--parcel-documents
+  .ec-fiche-info__section-title
+  ~ .ec-fiche-info__section-title,
+.ec-print-fiche
+  .ec-fiche-info__body--parcel-documents
+  .ec-fiche-info__section-title
+  + .ec-fiche-info__tile-list
+  + .ec-fiche-info__section-title {
+  margin-top: 1.1em;
+}
+
+.ec-print-fiche__section--footnotes {
+  margin-top: calc(var(--print-block-gap, 8px) + 0.5em);
+}
+
+.ec-print-fiche__section--footnotes .ec-print-fiche__footnote-callout {
+  margin: 0 0 0.45em;
+  padding: 0.35em 0.5em 0.35em 0.75em;
+  font-size: var(--print-fiche-label-font, 11px);
+  line-height: 1.35;
+  font-weight: 700;
+  box-sizing: border-box;
+  background-image: none;
+  background-color: var(--background-contrast-grey, #f6f6f6);
+  border-left: 4px solid var(--border-active-blue-france, #000091);
+}
+
+.ec-print-fiche__section--footnotes .ec-print-fiche__footnote-callout .fr-callout__text {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+.ec-print-fiche__section--footnotes .ec-print-fiche__footnote-callout:last-child {
+  margin-bottom: 0;
+}
+
+.ec-print-fiche .ec-fiche-info__tile-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--print-block-gap, 8px) + 0.85em);
+  margin: 0 0 0.35em;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-tile {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+  text-align: left;
+  align-items: stretch;
+  --idle: transparent;
+  --hover: transparent;
+  --active: transparent;
+  --title-spacing: 0;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-tile--horizontal {
+  flex-direction: column;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-link::before,
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-button::before {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__body,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__content {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-link:not(.fr-tile--no-icon) .fr-tile__content,
+.ec-print-fiche .ec-fiche-info__tile.fr-enlarge-button:not(.fr-tile--no-icon) .fr-tile__content {
+  padding-bottom: 0 !important;
+  padding-right: 0 !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile-badges,
+.ec-print-fiche .ec-fiche-info__doc-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.2em;
+}
+
+.ec-print-fiche .ec-fiche-info__badge {
+  padding: 0.1em 0.35em;
+  font-size: calc(var(--print-fiche-desc-font, 10px) * 0.92);
+  line-height: 1.2;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: var(--print-fiche-label-font, 11px) !important;
+  font-weight: 700;
+  line-height: 1.35 !important;
+  color: #161616;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title .fr-tile__link,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title a {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  box-shadow: none;
+  background: none;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title a::after,
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__title button::after {
+  content: none !important;
+  display: none !important;
+}
+
+.ec-print-fiche .ec-fiche-info__tile .fr-tile__detail {
+  margin: 0.05em 0 0 !important;
+  padding: 0 !important;
+  font-size: var(--print-fiche-desc-font, 10px) !important;
+  line-height: 1.3 !important;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-print-fiche .ec-fiche-info__mec-notice {
+  margin: 0.2em 0 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card + .ec-fiche-info__doc-card {
+  margin-top: calc(var(--print-block-gap, 8px) + 0.85em);
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card-title {
+  margin: 0;
+  font-size: var(--print-fiche-label-font, 11px);
+  font-weight: 700;
+  line-height: 1.35;
+  color: #161616;
+  text-decoration: none;
+}
+
+.ec-print-fiche .ec-fiche-info__doc-card-meta {
+  margin: 0.12em 0 0;
+  font-size: var(--print-fiche-desc-font, 10px);
+  line-height: 1.35;
+  color: var(--text-mention-grey, #666);
+}
+
+.ec-print-legends__title {
+  margin: 0 0 var(--print-block-gap, 8px);
+  font-size: var(--print-title-font, 16px);
+  font-weight: 700;
+  text-align: center;
+}
+
+.ec-print-legends__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-block-gap, 8px);
+}
+
+.ec-print-legends__group-title {
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+}
+
+.ec-print-legends .ec-layer-legends__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1em;
+  row-gap: 0.35em;
+}
+
+.ec-print-supplement-page .ec-layer-legends__item {
+  font-size: var(--print-small-font, 11px);
+  margin-bottom: 0;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.ec-print-supplement-page .ec-layer-legends__item > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ec-print-supplement-page .ec-layer-legends__img {
+  max-width: var(--print-legend-img-max, 72px);
+  height: auto;
+}
+
+.ec-print-supplement-page .ec-layer-legends__swatch {
+  width: calc(var(--print-legend-img-max, 72px) * 0.35);
+  height: calc(var(--print-legend-img-max, 72px) * 0.28);
+}
+
+.ec-print-supplement-page .ec-layer-legends__hint {
+  font-size: var(--print-small-font, 11px);
+}
+
+.print-supplement-layout-root {
+  box-sizing: border-box;
+  width: var(--print-inner-width, 100%);
+  padding: var(--print-supplement-slice-inset, 0) 0;
+  transform-origin: top left;
+}
