@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { demoManualChunks } from './vite.manualChunks'
 import { patchDemoConfigForPages, serveDistLibAssets } from './vite.demoPlugins'
 import { patchGeopfSearchEval } from './vite.geopfPlugins'
+import { vitePrintWorkerBuildOptions } from './vite/libBuildOptions'
 
 /**
  * GitHub Pages (CI) : `/nom-du-repo/`.
@@ -17,6 +18,7 @@ function pagesBase(): string {
 }
 
 export default defineConfig({
+  ...vitePrintWorkerBuildOptions,
   base: pagesBase(),
   plugins: [patchGeopfSearchEval(), serveDistLibAssets(), patchDemoConfigForPages(), vue()],
   resolve: {

@@ -5,7 +5,15 @@ import {
   resetSupplementElementVisibility,
   resolveSupplementSliceEndPx,
   resolveSupplementSliceStartPx,
+  supplementSliceContentInsetPx,
 } from '@/lib/map/print/printSupplementLayout'
+
+function applyCssVars(target: HTMLElement, cssVars?: Record<string, string>): void {
+  if (!cssVars) return
+  for (const [name, value] of Object.entries(cssVars)) {
+    target.style.setProperty(name, value)
+  }
+}
 
 function buildSupplementRasterHost(
   contentRoot: HTMLElement,
@@ -16,6 +24,8 @@ function buildSupplementRasterHost(
   marginPx: number,
   innerWidthPx: number,
   innerHeightPx: number,
+  cssVars?: Record<string, string>,
+  sliceContentInsetPx = 0,
 ): HTMLDivElement {
   const host = document.createElement('div')
   host.style.position = 'fixed'
@@ -34,6 +44,12 @@ function buildSupplementRasterHost(
   viewport.style.overflow = 'hidden'
   viewport.style.position = 'relative'
   viewport.style.background = '#ffffff'
+  viewport.style.boxSizing = 'border-box'
+  if (sliceContentInsetPx > 0) {
+    viewport.style.paddingTop = `${sliceContentInsetPx}px`
+    viewport.style.paddingBottom = `${sliceContentInsetPx}px`
+  }
+  applyCssVars(viewport, cssVars)
 
   const clone = contentRoot.cloneNode(true) as HTMLElement
   clone.style.width = `${innerWidthPx}px`
@@ -42,7 +58,7 @@ function buildSupplementRasterHost(
   clone.style.overflow = 'visible'
   clone.style.marginTop = `-${sliceStartPx}px`
   resetSupplementElementVisibility(clone)
-  hideSupplementElementsForSlice(clone, sliceStartPx, sliceEndPx)
+  hideSupplementElementsForSlice(clone, sliceStartPx, sliceEndPx, 1)
 
   viewport.appendChild(clone)
   host.appendChild(viewport)
@@ -71,6 +87,89 @@ async function rasterizeHostToCanvas(
   ctx.fillRect(0, 0, paperWidthPx, paperHeightPx)
   ctx.drawImage(shot, 0, 0, paperWidthPx, paperHeightPx)
   return canvas
+}
+
+/**
+ * Capture le cadre d’aperçu annexe tel qu’affiché (WYSIWYG), upscalé au DPI d’export.
+ * Plus fiable qu’un clone hors écran + html2canvas (coupures bas de page).
+ */
+export async function rasterizePrintSupplementPreviewFrame(
+  previewFrameEl: HTMLElement,
+  paperWidthMm: number,
+  paperHeightMm: number,
+  marginMm: number,
+  dpi: number,
+): Promise<HTMLCanvasElement> {
+  const paperWidthPx = convertMmToPx(paperWidthMm, dpi)
+  const paperHeightPx = convertMmToPx(paperHeightMm, dpi)
+  const marginPx = convertMmToPx(marginMm, dpi)
+  const innerWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
+  const innerHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
+
+  const rect = previewFrameEl.getBoundingClientRect()
+  const cssWidth = rect.width
+  const cssHeight = rect.height
+  if (cssWidth < 1 || cssHeight < 1) {
+    throw new Error('Cadre aperçu annexe indisponible.')
+  }
+
+  const scale = innerWidthPx / cssWidth
+  const shot = await html2canvas(previewFrameEl, {
+    backgroundColor: '#ffffff',
+    scale,
+    useCORS: true,
+    logging: false,
+    width: cssWidth,
+    height: cssHeight,
+  })
+
+  const finalCanvas = document.createElement('canvas')
+  finalCanvas.width = paperWidthPx
+  finalCanvas.height = paperHeightPx
+  const ctx = finalCanvas.getContext('2d')
+  if (!ctx) throw new Error('Contexte canvas indisponible.')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, paperWidthPx, paperHeightPx)
+  ctx.drawImage(shot, marginPx, marginPx, innerWidthPx, innerHeightPx)
+  return finalCanvas
+}
+
+/** Rasterise une tranche avec des bornes déjà calculées (alignées sur l’aperçu). */
+export async function rasterizePrintSupplementSliceBounds(
+  contentRoot: HTMLElement,
+  sliceStartPx: number,
+  sliceEndPx: number,
+  paperWidthMm: number,
+  paperHeightMm: number,
+  marginMm: number,
+  dpi: number,
+  cssVars?: Record<string, string>,
+): Promise<HTMLCanvasElement> {
+  const paperWidthPx = convertMmToPx(paperWidthMm, dpi)
+  const paperHeightPx = convertMmToPx(paperHeightMm, dpi)
+  const marginPx = convertMmToPx(marginMm, dpi)
+  const innerWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
+  const innerHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
+  const sliceContentInsetPx = supplementSliceContentInsetPx(dpi)
+
+  const host = buildSupplementRasterHost(
+    contentRoot,
+    sliceStartPx,
+    sliceEndPx,
+    paperWidthPx,
+    paperHeightPx,
+    marginPx,
+    innerWidthPx,
+    innerHeightPx,
+    cssVars,
+    sliceContentInsetPx,
+  )
+  document.body.appendChild(host)
+  try {
+    return await rasterizeHostToCanvas(host, paperWidthPx, paperHeightPx)
+  } finally {
+    host.remove()
+  }
 }
 
 /**

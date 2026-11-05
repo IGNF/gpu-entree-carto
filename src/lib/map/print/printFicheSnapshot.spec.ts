@@ -4,6 +4,7 @@ import {
   isParcelFichePrintReady,
   isTerritoryFichePrintReady,
   normalizeFicheSelectionForPrint,
+  sanitizeTerritoryTabHtmlForPrint,
 } from '@/lib/map/print/printFicheSnapshot'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 
@@ -25,6 +26,15 @@ describe('printFicheSnapshot', () => {
     const parcel = normalizeFicheSelectionForPrint(territoryPanel, MAP_MODE_PARCEL)
     expect(parcel?.mapMode).toBe(MAP_MODE_PARCEL)
     expect(parcel?.cadastreReferences).toBeTruthy()
+  })
+
+  it('retire les liens fiche juridique SUP pour l’impression territoire', () => {
+    const html = sanitizeTerritoryTabHtmlForPrint(
+      '<p class="ec-fiche-info__sup-legal-link"><a href="https://example.com/sup">Lien vers la fiche juridique de la SUP (AC1)</a></p><div class="ec-fiche-info__tile-list">x</div>',
+    )
+    expect(html).not.toContain('ec-fiche-info__sup-legal-link')
+    expect(html).not.toContain('fiche juridique')
+    expect(html).toContain('ec-fiche-info__tile-list')
   })
 
   it('active la fiche territoire depuis une sélection parcelle avec JSON combiné', () => {

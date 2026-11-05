@@ -64,9 +64,15 @@ export function copyVisibleMapLayers(sourceLayers: BaseLayer[], targetMap: Map):
   }
 }
 
-export function rebuildPrintPreviewMap(sourceMap: Map, targetMap: Map): void {
+export function rebuildPrintPreviewMap(
+  sourceMap: Map,
+  targetMap: Map,
+  options: { syncViewFromSource?: boolean } = {},
+): void {
   targetMap.getLayers().clear()
   copyVisibleMapLayers(sourceMap.getLayers().getArray(), targetMap)
-  copyViewState(sourceMap.getView(), targetMap.getView())
+  if (options.syncViewFromSource !== false) {
+    copyViewState(sourceMap.getView(), targetMap.getView())
+  }
   targetMap.renderSync()
 }

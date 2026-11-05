@@ -42,20 +42,40 @@ import {
   type PaperFormatId,
 } from '@/lib/map/print/paperFormats'
 import { rebuildPrintPreviewMap } from '@/lib/map/print/cloneMapLayers'
-import { renderMapCanvasForExport } from '@/lib/map/print/mapExport'
+import { renderOffscreenPrintMapCanvas } from '@/lib/map/print/offscreenPrintMapExport'
+import { WeightedExportProgress } from '@/lib/map/print/printExportProgress'
 import { injectDpiInPng } from '@/lib/map/print/pngDpi'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
 import { waitForMapRender } from '@/lib/map/print/waitForMapRender'
+import { captureScaleLineSnapshot, computeScaleCoeff, drawScale } from '@/lib/map/print/printScale'
 import {
-  captureScaleLineSnapshot,
-  computeScaleCoeff,
-  drawScale,
-  drawTitle,
-} from '@/lib/map/print/printScale'
-import { buildPrintPreviewPages, type PrintPreviewPageKind } from '@/lib/map/print/printPageTypes'
-import { rasterizePrintSupplementSlices } from '@/lib/map/print/rasterizePrintSupplementPage'
+  computePrintMapTitleLayout,
+  drawPrintMapTitleOnCanvas,
+  PRINT_MAP_TITLE_MAX_CHARS,
+  PRINT_MAP_MIN_MAP_HEIGHT_RATIO,
+} from '@/lib/map/print/printMapTitle'
+import {
+  buildPrintMapRenderCacheKey,
+  buildVisibleLayerFingerprint,
+  clearPrintMapRenderCache,
+} from '@/lib/map/print/printMapRenderCache'
+import { prewarmPrintMapRenderCache } from '@/lib/map/print/printMapPrewarm'
+import {
+  encodePrintJpeg,
+  encodePrintPdf,
+  encodePrintPngWithDpi,
+  terminatePrintExportWorker,
+} from '@/lib/map/print/printExportEncode'
+import {
+  buildPrintPreviewPages,
+  PRINT_PAGE_LABELS,
+  type PrintPreviewPageKind,
+} from '@/lib/map/print/printPageTypes'
+import { rasterizePrintSupplementPreviewFrame } from '@/lib/map/print/rasterizePrintSupplementPage'
 import {
   computePrintSupplementInnerPx,
+  ficheFootnotesVisibleForSlice,
+  PRINT_SUPPLEMENT_BLOCK_GAP_MM,
   hideSupplementElementsForSlice,
   measureSupplementSlicePlan,
   measureSupplementSlicePlanFromPage,
@@ -63,6 +83,7 @@ import {
   resetSupplementElementVisibility,
   resolveSupplementSliceEndPx,
   resolveSupplementSliceStartPx,
+  supplementSliceLayoutHeightPx,
   type SupplementSlicePlan,
   waitForPrintSupplementImages,
   waitForSupplementMeasureHeightStable,
@@ -80,11 +101,13 @@ import {
 import { getCachedFicheSelectionAtMarker } from '@/lib/fiche/ficheInfoService'
 import { dedupeLegendLayersForPanel } from '@/lib/layerConfig/gpuLegendItems'
 import { mapPrintPanelsRef } from '@/map/mapPrintPanelsContext'
+import type { MapPrintModalOpenOptions } from '@/map/mapPrintModalContext'
 import { sanitizePrintPreviewAttributions } from '@/lib/map/print/sanitizePrintAttributions'
 import { drawAttributionOnMapExport } from '@/lib/map/print/drawPrintAttribution'
 import MapPrintFicheTerritoryPage from '@/components/map/print/MapPrintFicheTerritoryPage.vue'
 import MapPrintFicheParcelPage from '@/components/map/print/MapPrintFicheParcelPage.vue'
 import MapPrintLegendsPage from '@/components/map/print/MapPrintLegendsPage.vue'
+import PrintExportProgressOverlay from '@/components/map/print/PrintExportProgressOverlay.vue'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import {
@@ -92,10 +115,16 @@ import {
   type PrintFicheSelections,
 } from '@/lib/map/print/resolvePrintFicheSelections'
 import {
+  annexKindsToInvalidateForContentChange,
+  buildAnnexContentMeasureSnapshot,
+  type AnnexContentMeasureSnapshot,
+} from '@/lib/map/print/printAnnexContentMeasure'
+import {
   buildSupplementSlicePlanCacheKey,
   supplementContentSuffixForKind,
   type SupplementContentFingerprints,
 } from '@/lib/map/print/printSlicePlanCache'
+import { parcelLegendScaleBand } from '@/lib/fiche/parcelLegendImage'
 import {
   PRINT_TEMPLATE_CUSTOM_ID,
   PRINT_TEMPLATE_LAYOUTS,
@@ -122,6 +151,8 @@ function logPrintPreview(step: string, detail?: unknown): void {
 
 const printModalOpened = ref(false)
 const isExportInProgress = ref(false)
+const exportProgressPercent = ref(0)
+const exportProgressDetail = ref('')
 /** Aperçu feuille masqué tant que carte + pagination annexes ne sont pas prêts. */
 const isPreviewLayoutPending = ref(false)
 /** Ignore un `@close` DSFR dans la foulée du clic d’ouverture (carte / focus). */
@@ -140,7 +171,19 @@ function syncNativePrintDialog(): void {
   document.body.classList.add('modal-open')
 }
 
-function onModalPrintOpen(): void {
+function applyPrintOpenOptions(options?: MapPrintModalOpenOptions): void {
+  if (!options) return
+  if (options.hasTerritoryFiche !== undefined) {
+    printFormState.hasTerritoryFiche = options.hasTerritoryFiche
+  }
+  if (options.hasParcelFiche !== undefined) printFormState.hasParcelFiche = options.hasParcelFiche
+  if (options.hasLegends !== undefined) printFormState.hasLegends = options.hasLegends
+  if (options.hasAllLegends !== undefined) printFormState.hasAllLegends = options.hasAllLegends
+  if (!printFormState.hasLegends) printFormState.hasAllLegends = false
+}
+
+function onModalPrintOpen(options?: MapPrintModalOpenOptions): void {
+  applyPrintOpenOptions(options)
   dismissGuardUntil = Date.now() + 500
   printModalOpened.value = true
   void nextTick(() => {
@@ -158,6 +201,9 @@ function onModalPrintClose(): void {
   }
   isExportInProgress.value = false
   isPreviewLayoutPending.value = false
+  printMapPrewarmGeneration += 1
+  clearPrintMapRenderCache()
+  terminatePrintExportWorker()
   printTemplatePrewarmGeneration += 1
   measureLayoutOverride.value = null
   previewColumnZoom.value = 1
@@ -197,7 +243,6 @@ const measureLayoutOverride = ref<{
 const selectedPrintTemplateId = ref<PrintTemplateId>('a4-apercu')
 let applyingPrintTemplate = false
 const previewPageIndex = ref(0)
-const mapTitle = ref<HTMLElement | null>(null)
 const printPage = ref<HTMLElement | null>(null)
 const printForm = ref<HTMLElement | null>(null)
 const previewPaginationEl = ref<HTMLElement | null>(null)
@@ -217,6 +262,7 @@ type PrintFormState = {
   hasTerritoryFiche: boolean
   hasParcelFiche: boolean
   hasLegends: boolean
+  hasAllLegends: boolean
   printTitle: string
   pageOrientation: 'portrait' | 'landscape'
   margin: number
@@ -231,6 +277,7 @@ const printFormState = reactive<PrintFormState>({
   hasTerritoryFiche: false,
   hasParcelFiche: false,
   hasLegends: false,
+  hasAllLegends: false,
   printTitle: 'Ma carte',
   pageOrientation: 'portrait',
   margin: 10,
@@ -254,6 +301,12 @@ const paperDimension = computed(() => {
 
 const panelSelection = computed(() => printPanels.value?.selection.value ?? null)
 const panelLegendLayers = computed(() => printPanels.value?.legendLayers.value ?? [])
+const panelLegendLayersAll = computed(() => printPanels.value?.legendLayersAll.value ?? [])
+const printLegendLayerSource = computed(() =>
+  printFormState.hasLegends && printFormState.hasAllLegends
+    ? panelLegendLayersAll.value
+    : panelLegendLayers.value,
+)
 const panelMapZoom = computed(() => printPanels.value?.mapZoom.value ?? 6)
 
 const printFicheSelections = ref<PrintFicheSelections | null>(null)
@@ -311,9 +364,22 @@ const canPrintTerritoryFiche = computed(() =>
 )
 const canPrintParcelFiche = computed(() => isParcelFichePrintReady(parcelSelectionForPrint.value))
 const canPrintLegends = computed(() => {
-  const layers = dedupeLegendLayersForPanel(panelLegendLayers.value)
-  return layers.some((layer) => layer.legend?.length)
+  const zoom = printPreviewLegendZoom.value
+  const filtered = dedupeLegendLayersForPanel(panelLegendLayers.value)
+  const all = dedupeLegendLayersForPanel(panelLegendLayersAll.value)
+  const hasFiltered = filtered.some(
+    (layer) => (layer.legend?.length ?? 0) > 0 && catalogEntryInZoomRangeForPrint(layer.id, zoom),
+  )
+  const hasAll = all.some((layer) => (layer.legend?.length ?? 0) > 0)
+  return hasFiltered || hasAll
 })
+
+watch(
+  () => printFormState.hasLegends,
+  (enabled) => {
+    if (!enabled) printFormState.hasAllLegends = false
+  },
+)
 
 const territoryDocumentTabs = computed(() => territorySelectionForPrint.value?.documentTabs ?? [])
 
@@ -339,6 +405,7 @@ async function refreshPrintFicheSelections(): Promise<void> {
     return
   }
   printFicheSelections.value = result
+  lastAnnexContentSnapshot = annexContentSnapshot.value
   logPrintPreview('fiches: chargées, mesure annexes…')
   await remeasureSupplementPageCounts()
 }
@@ -371,24 +438,42 @@ watch(
       printFormState.hasTerritoryFiche,
       printFormState.hasParcelFiche,
       printFormState.hasLegends,
+      printFormState.hasAllLegends,
     ] as const,
   () => {
     previewPageIndex.value = 0
   },
 )
 
+/** Contenu annexes (indépendant du gabarit papier) — voir `printAnnexContentMeasure.ts`. */
+const annexContentSnapshot = computed(() =>
+  buildAnnexContentMeasureSnapshot({
+    territoryTabCount: territoryDocumentTabs.value.length,
+    parcelInfosLength: parcelInfosHtml.value.length,
+    parcelDocumentsLength: parcelDocumentsHtml.value.length,
+    parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
+    legendsIncludeAll: printFormState.hasAllLegends,
+    legendPreviewZoom: printPreviewLegendZoom.value,
+    legendLayerIds: printLegendLayerSource.value.map((layer) => layer.id).join(','),
+    legendItemCount: printLegendLayerSource.value.reduce(
+      (count, layer) => count + (layer.legend?.length ?? 0),
+      0,
+    ),
+  }),
+)
+
 const supplementContentFingerprints = computed((): SupplementContentFingerprints => ({
-  territoryTabCount: territoryDocumentTabs.value.length,
-  territoryPanelZoom: panelMapZoom.value,
-  parcelInfosLength: parcelInfosHtml.value.length,
-  parcelDocumentsLength: parcelDocumentsHtml.value.length,
-  legendLayerIds: panelLegendLayers.value.map((layer) => layer.id).join(','),
-  legendItemCount: panelLegendLayers.value.reduce(
-    (count, layer) => count + (layer.legend?.length ?? 0),
-    0,
-  ),
-  legendPreviewZoom: printPreviewLegendZoom.value,
+  territoryTabCount: annexContentSnapshot.value.territoryTabCount,
+  parcelInfosLength: annexContentSnapshot.value.parcelInfosLength,
+  parcelDocumentsLength: annexContentSnapshot.value.parcelDocumentsLength,
+  parcelLegendScale: annexContentSnapshot.value.parcelLegendScale,
+  legendsIncludeAll: annexContentSnapshot.value.legendsIncludeAll,
+  legendPreviewZoom: annexContentSnapshot.value.legendPreviewZoom ?? 0,
+  legendLayerIds: annexContentSnapshot.value.legendLayerIds,
+  legendItemCount: annexContentSnapshot.value.legendItemCount,
 }))
+
+let lastAnnexContentSnapshot: AnnexContentMeasureSnapshot | null = null
 
 function currentMeasureLayoutContext(): PrintTemplateMeasureContext {
   return measureContextForFormLayout(printFormState)
@@ -455,6 +540,26 @@ function invalidateLegendsSlicePlanCache(): void {
   }
 }
 
+function invalidateTerritorySlicePlanCache(): void {
+  for (const key of supplementSlicePlanByKey.keys()) {
+    if (key.includes('|ficheTerritory|')) supplementSlicePlanByKey.delete(key)
+  }
+}
+
+function invalidateParcelSlicePlanCache(): void {
+  for (const key of supplementSlicePlanByKey.keys()) {
+    if (key.includes('|ficheParcel|')) supplementSlicePlanByKey.delete(key)
+  }
+}
+
+function invalidateAnnexSlicePlanCacheForKinds(kinds: PrintPreviewPageKind[]): void {
+  for (const kind of kinds) {
+    if (kind === 'ficheTerritory') invalidateTerritorySlicePlanCache()
+    else if (kind === 'ficheParcel') invalidateParcelSlicePlanCache()
+    else if (kind === 'legends') invalidateLegendsSlicePlanCache()
+  }
+}
+
 function goPreviewPage(delta: number): void {
   const count = previewPages.value.length
   if (count <= 1) return
@@ -503,6 +608,9 @@ function applySupplementSlicePlanFromPreview(
   const current = supplementSliceCounts.value[kind] ?? 1
   const starts = supplementSliceStarts.value[kind] ?? [0]
   if (plan.sliceCount === current && sliceStartsEqual(starts, plan.sliceStarts)) return
+  if ((kind === 'ficheParcel' || kind === 'ficheTerritory') && plan.sliceCount < current) {
+    return
+  }
   supplementSlicePlanByKey.set(supplementSlicePlanCacheKey(kind), plan)
   supplementSliceCounts.value = { ...supplementSliceCounts.value, [kind]: plan.sliceCount }
   supplementSliceStarts.value = { ...supplementSliceStarts.value, [kind]: [...plan.sliceStarts] }
@@ -510,17 +618,21 @@ function applySupplementSlicePlanFromPreview(
 }
 
 async function remeasureSupplementFromVisiblePreview(): Promise<void> {
-  if (!printModalOpened.value || isPreviewLayoutPending.value) return
+  if (!printModalOpened.value || isPreviewLayoutPending.value || isExportInProgress.value) return
   const pageMeta = currentPreviewPage.value
   if (!pageMeta || pageMeta.kind === 'map') return
+  /** Fiches : mesure hors écran uniquement (aperçu zoomé + tranches fausse la hauteur des encarts). */
+  if (pageMeta.kind === 'ficheParcel' || pageMeta.kind === 'ficheTerritory') return
+  /** « Toutes les légendes » : contenu indépendant du zoom aperçu. */
+  if (pageMeta.kind === 'legends' && printFormState.hasAllLegends) return
 
   const pageRoot = findSupplementPreviewPageRoot()
-  const innerHeightPx = supplementExportInner.value.innerHeightPx
-  if (!pageRoot || innerHeightPx < 8) return
+  const sliceHeightPx = supplementSliceLayoutHeight.value
+  if (!pageRoot || sliceHeightPx < 8) return
 
   await waitForPrintSupplementImages(pageRoot, { timeoutMs: 6_000 })
   await waitForSupplementPageHeightStable(pageRoot, { timeoutMs: 4_000 })
-  const plan = measureSupplementSlicePlanFromPage(pageRoot, innerHeightPx)
+  const plan = measureSupplementSlicePlanFromPage(pageRoot, sliceHeightPx)
   applySupplementSlicePlanFromPreview(pageMeta.kind, plan)
 }
 
@@ -559,9 +671,11 @@ async function prewarmOtherPrintTemplateCaches(): Promise<void> {
       }
       logPrintPreview('préchauffage gabarit', { template: template.id, kind })
       try {
-        const plan = await measureSlicePlanForKindInDom(kind, layout.inner.innerHeightPx, {
-          imageTimeoutMs: 2_500,
-        })
+        const plan = await measureSlicePlanForKindInDom(
+          kind,
+          supplementSliceLayoutHeightPx(layout.inner.innerHeightPx, layout.dpi),
+          { imageTimeoutMs: 2_500 },
+        )
         supplementSlicePlanByKey.set(cacheKey, plan)
       } catch (err) {
         logPrintPreview('préchauffage gabarit: erreur', err)
@@ -585,7 +699,70 @@ function schedulePrintTemplatePrewarm(): void {
   }
 }
 
-async function remeasureSupplementPageCounts(): Promise<void> {
+function schedulePrintMapPrewarm(): void {
+  const run = (): void => {
+    void runPrintMapPrewarm()
+  }
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(run, { timeout: 20_000 })
+  } else {
+    window.setTimeout(run, 800)
+  }
+}
+
+async function runPrintMapPrewarm(): Promise<void> {
+  const generation = ++printMapPrewarmGeneration
+  if (!printModalOpened.value || isExportInProgress.value || isPreviewLayoutPending.value) return
+  const map = previewMap.value
+  if (!map || currentPreviewPage.value?.kind !== 'map') return
+  const mapSize = map.getSize()
+  if (!mapSize || mapSize[0] < 16 || mapSize[1] < 16) return
+
+  const dpiValue = printFormState.dpi
+  const paperWidthPx = convertMmToPx(paperDimension.value.width, dpiValue)
+  const paperHeightPx = convertMmToPx(paperDimension.value.height, dpiValue)
+  const marginPx = convertMmToPx(printFormState.margin, dpiValue)
+  const printableHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
+  const titleHeightPx = printFormState.hasTitle
+    ? Math.round(
+        (printMapTitleLayout.value.titleHeightMm / printableAreaMm.value.height) *
+          printableHeightPx,
+      )
+    : 0
+  const mapWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
+  const mapHeightPx = Math.max(0, printableHeightPx - titleHeightPx)
+  if (mapHeightPx < 16 || mapWidthPx < 16) return
+
+  const extent = map.getView().calculateExtent(mapSize)
+  try {
+    await prewarmPrintMapRenderCache({
+      previewMap: map,
+      dpi: dpiValue,
+      mapWidthPx,
+      mapHeightPx,
+      extent,
+    })
+  } catch (err) {
+    logPrintPreview('préchauffage carte: ignoré', err)
+  }
+  if (generation !== printMapPrewarmGeneration) return
+  logPrintPreview('préchauffage carte terminé')
+}
+
+type RemeasureSupplementOptions = {
+  /** Masque l’aperçu (« Préparation de l’aperçu… »). Désactivé pendant l’export. */
+  blockPreview?: boolean
+  onStage?: (label: string) => void
+}
+
+async function remeasureSupplementPageCounts(
+  options: RemeasureSupplementOptions = {},
+): Promise<void> {
+  const blockPreview = options.blockPreview !== false
+  if (isExportInProgress.value && blockPreview) {
+    logPrintPreview('mesure: ignorée (export en cours)')
+    return
+  }
   if (!printModalOpened.value) {
     logPrintPreview('mesure: ignorée (modale fermée)')
     return
@@ -612,9 +789,10 @@ async function remeasureSupplementPageCounts(): Promise<void> {
   const kindsToMeasure = kinds.filter(
     (kind) => !supplementSlicePlanByKey.has(supplementSlicePlanCacheKey(kind)),
   )
-  if (kindsToMeasure.length > 0) {
+  if (kindsToMeasure.length > 0 && blockPreview) {
     isPreviewLayoutPending.value = true
   }
+  options.onStage?.('Analyse de la pagination des annexes…')
   logPrintPreview('mesure: début', {
     kinds,
     cacheHits: kinds.length - kindsToMeasure.length,
@@ -638,8 +816,9 @@ async function remeasureSupplementPageCounts(): Promise<void> {
         logPrintPreview(`mesure: cache « ${kind} »`, plan)
       } else {
         logPrintPreview(`mesure: DOM « ${kind} »`)
+        options.onStage?.(`Pagination « ${PRINT_PAGE_LABELS[kind]} »…`)
         measureLayoutOverride.value = null
-        plan = await measureSlicePlanForKindInDom(kind, innerHeightPx, {
+        plan = await measureSlicePlanForKindInDom(kind, supplementSliceLayoutHeight.value, {
           imageTimeoutMs: 4_000,
         })
         supplementSlicePlanByKey.set(cacheKey, plan)
@@ -661,6 +840,7 @@ async function remeasureSupplementPageCounts(): Promise<void> {
       isPreviewLayoutPending.value = false
       logPrintPreview('mesure: aperçu affiché (pending=false)')
       schedulePrintTemplatePrewarm()
+      schedulePrintMapPrewarm()
     } else {
       logPrintPreview('mesure: fin sans réafficher (modale fermée)')
     }
@@ -669,10 +849,6 @@ async function remeasureSupplementPageCounts(): Promise<void> {
 
 const catalogEntryInZoomRangeForPrint = (layerId: string, zoom: number): boolean =>
   printPanels.value?.catalogEntryInZoomRange(layerId, zoom) ?? true
-
-function catalogEntryInZoomRangeForPrintPreview(layerId: string): boolean {
-  return catalogEntryInZoomRangeForPrint(layerId, printPreviewLegendZoom.value)
-}
 
 const previewMapHostSize = reactive(
   useElementSize(previewMapEl, { width: 0, height: 0 }, { box: 'border-box' }),
@@ -766,7 +942,6 @@ const printPageSize = reactive(
 const printFormSize = reactive(
   useElementSize(printForm, { width: 0, height: 0 }, { box: 'border-box' }),
 )
-const titleSize = reactive(useElementSize(mapTitle, { width: 0, height: 0 }, { box: 'border-box' }))
 const previewPaginationSize = reactive(
   useElementSize(previewPaginationEl, { width: 0, height: 0 }, { box: 'border-box' }),
 )
@@ -823,13 +998,49 @@ const previewDimensionPx = computed(() => ({
   height: paperDimensionPx.value.height * paper2PreviewScaleCoeff.value,
 }))
 
-const titleHeightRatioInPreview = computed(() => {
-  if (!printFormState.hasTitle || previewDimensionPx.value.height <= 0) return 0
-  const ratio = titleSize.height / previewDimensionPx.value.height
-  return Math.max(0, Math.min(1, ratio))
+const printMapTitleLayout = computed(() =>
+  computePrintMapTitleLayout(
+    printFormState.printTitle,
+    printableAreaMm.value.width,
+    printableAreaMm.value.height,
+    printFormState.hasTitle,
+  ),
+)
+
+const titleHeightMm = computed(() => printMapTitleLayout.value.titleHeightMm)
+
+const mapTitlePreviewStyle = computed(() => {
+  const layout = printMapTitleLayout.value
+  const printableH = previewPrintableSizePx.value.height
+  const printableAreaH = printableAreaMm.value.height
+  if (!printFormState.hasTitle || !layout.titleHeightMm || !printableH || !printableAreaH) {
+    return undefined
+  }
+  /** Même repère physique que « Légendes » (contenu export × scale), pas `--print-title-font` brut au DPI d’export. */
+  const mmToPreviewY = printableH / printableAreaH
+  const heightPx = layout.titleHeightMm * mmToPreviewY
+  const fontPx = layout.fontSizeMm * mmToPreviewY
+  const lineHeightPx = layout.lineHeightMm * mmToPreviewY
+  const blockGapPx = PRINT_SUPPLEMENT_BLOCK_GAP_MM * mmToPreviewY
+  return {
+    height: `${heightPx}px`,
+    maxHeight: `${heightPx}px`,
+    fontSize: `${fontPx}px`,
+    lineHeight: `${lineHeightPx}px`,
+    marginBottom: `${blockGapPx}px`,
+    overflow: 'hidden',
+  }
 })
 
-const titleHeightMm = computed(() => printableAreaMm.value.height * titleHeightRatioInPreview.value)
+const previewMapMinHeightPx = computed(() => {
+  const printableH = previewPrintableSizePx.value.height
+  const printableAreaH = printableAreaMm.value.height
+  if (!printableH || !printableAreaH) return 48
+  const minMapMm = printableAreaH * PRINT_MAP_MIN_MAP_HEIGHT_RATIO
+  return Math.max(48, (minMapMm / printableAreaH) * printableH)
+})
+
+let printMapPrewarmGeneration = 0
 
 const previewPrintableSizePx = computed(() => {
   const w = previewDimensionPx.value.width
@@ -852,6 +1063,11 @@ const supplementExportInner = computed(() =>
     printFormState.margin,
     printFormState.dpi,
   ),
+)
+
+/** Hauteur de tranche annexes (padding intérieur, distinct de la marge formulaire). */
+const supplementSliceLayoutHeight = computed(() =>
+  supplementSliceLayoutHeightPx(supplementExportInner.value.innerHeightPx, printFormState.dpi),
 )
 
 const supplementLayoutStyle = computed(() =>
@@ -880,11 +1096,12 @@ const supplementPreviewFrame = computed(() => {
     return { width: 0, height: 0, scale: 1, sliceHeightPx: innerHeightPx || 0 }
   }
   const scale = previewW / innerWidthPx
+  const sliceH = supplementSliceLayoutHeight.value
   return {
     width: previewW,
-    height: innerHeightPx * scale,
+    height: Math.max(sliceH, 1) * scale,
     scale,
-    sliceHeightPx: innerHeightPx,
+    sliceHeightPx: sliceH,
   }
 })
 
@@ -925,6 +1142,11 @@ function findSupplementPreviewPageRoot(): HTMLElement | null {
   return fromHost instanceof HTMLElement ? fromHost : null
 }
 
+function findSupplementPreviewFrameEl(): HTMLElement | null {
+  const frame = supplementPreviewEl.value?.querySelector('.print-supplement-preview-frame')
+  return frame instanceof HTMLElement ? frame : null
+}
+
 function applyCurrentSupplementSliceVisibility(): void {
   const pageRoot = findSupplementPreviewPageRoot()
   if (!pageRoot) return
@@ -933,19 +1155,39 @@ function applyCurrentSupplementSliceVisibility(): void {
   const page = currentPreviewPage.value
   if (!page || page.kind === 'map') return
 
-  const sliceHeightPx = supplementExportInner.value.innerHeightPx
+  const sliceHeightPx = supplementSliceLayoutHeight.value
   if (sliceHeightPx < 8) return
 
   const layoutScale = supplementPreviewFrame.value.scale * previewColumnZoom.value
-  const sliceStartPx = resolveSupplementSliceStartPx(
-    pageRoot,
-    page.sliceIndex,
-    sliceHeightPx,
-    layoutScale,
-  )
-  const sliceEndPx = resolveSupplementSliceEndPx(pageRoot, sliceStartPx, sliceHeightPx, layoutScale)
+  const storedStarts = supplementSliceStarts.value[page.kind]
+  let sliceStartPx =
+    storedStarts?.[page.sliceIndex] ??
+    resolveSupplementSliceStartPx(pageRoot, page.sliceIndex, sliceHeightPx, layoutScale)
+  let sliceEndPx =
+    storedStarts?.[page.sliceIndex + 1] ??
+    resolveSupplementSliceEndPx(pageRoot, sliceStartPx, sliceHeightPx, layoutScale)
+  if (storedStarts?.[page.sliceIndex + 1] === undefined && storedStarts?.length) {
+    sliceEndPx = resolveSupplementSliceEndPx(pageRoot, sliceStartPx, sliceHeightPx, layoutScale)
+  }
   supplementPreviewSliceStartPx.value = sliceStartPx
   hideSupplementElementsForSlice(pageRoot, sliceStartPx, sliceEndPx, layoutScale)
+
+  if (page.kind === 'ficheParcel') {
+    const footnoteEls = pageRoot.querySelectorAll(
+      '.ec-print-fiche__section--footnotes, .ec-print-fiche__footnote-callout',
+    )
+    const showFootnotes = ficheFootnotesVisibleForSlice(
+      pageRoot,
+      sliceStartPx,
+      sliceEndPx,
+      layoutScale,
+    )
+    for (const el of footnoteEls) {
+      if (el instanceof HTMLElement) {
+        el.style.visibility = showFootnotes ? '' : 'hidden'
+      }
+    }
+  }
 }
 
 watch(
@@ -955,6 +1197,7 @@ watch(
       supplementSliceStarts.value,
       isPreviewLayoutPending.value,
       supplementExportInner.value.innerHeightPx,
+      supplementSliceLayoutHeight.value,
       supplementPreviewFrame.value.scale,
       previewColumnZoom.value,
     ] as const,
@@ -987,7 +1230,7 @@ const cssPreviewPaddingPx = computed(() => {
   }
 })
 
-/** Dépendances de pagination export (hors échelle écran → évite boucle avec la barre de pages). */
+/** Gabarit papier / DPI uniquement (masque « Préparation de l’aperçu… »). */
 const previewLayoutMeasureDeps = computed(
   () =>
     [
@@ -997,85 +1240,164 @@ const previewLayoutMeasureDeps = computed(
       printFormState.dpi,
       supplementExportInner.value.innerWidthPx,
       supplementExportInner.value.innerHeightPx,
-      territoryDocumentTabs.value.length,
-      parcelInfosHtml.value.length,
-      parcelDocumentsHtml.value.length,
-      panelLegendLayers.value.length,
     ] as const,
 )
 
 watch(previewLayoutMeasureDeps, () => {
   if (!printModalOpened.value) return
-  logPrintPreview('paramètres: changement (debounce mesure)')
+  logPrintPreview('gabarit: changement (debounce mesure)')
 })
 
 watchDebounced(
   previewLayoutMeasureDeps,
   () => {
-    logPrintPreview('paramètres: relance mesure (debounce)')
+    if (!printModalOpened.value) return
+    supplementSlicePlanByKey.clear()
+    logPrintPreview('gabarit: relance mesure complète')
     void remeasureSupplementPageCounts()
   },
   { debounce: 120, maxWait: 400 },
 )
 
+/**
+ * Contenu annexes (fiches / légendes) : remesure discrète, sans overlay.
+ * - Territoire : onglets fiche uniquement.
+ * - Parcelle : HTML + bande pictos lowscale/highscale (pas le zoom continu).
+ * - Légendes filtrées : zoom aperçu ; « Toutes les légendes » : pile complète, sans zoom.
+ */
 watchDebounced(
-  printPreviewLegendZoom,
-  (zoom, previous) => {
-    if (!printModalOpened.value || zoom === previous) return
-    logPrintPreview('zoom carte aperçu → légendes', { zoom, previous })
-    invalidateLegendsSlicePlanCache()
-    if (canPrintLegends.value) void remeasureSupplementPageCounts()
+  annexContentSnapshot,
+  (next) => {
+    if (!printModalOpened.value || isExportInProgress.value) return
+    const kinds = annexKindsToInvalidateForContentChange(lastAnnexContentSnapshot, next)
+    lastAnnexContentSnapshot = next
+    if (!kinds.length) return
+    invalidateAnnexSlicePlanCacheForKinds(kinds)
+    logPrintPreview('contenu annexes: remesure discrète', { kinds })
+    void remeasureSupplementPageCounts({ blockPreview: false })
   },
-  { debounce: 150 },
+  { debounce: 280, maxWait: 700 },
 )
 
-let sourceViewListeners: EventsKey[] = []
+let previewViewCustomizationListeners: EventsKey[] = []
+const previewMapViewCustomized = ref(false)
+let suppressPreviewViewCustomizationTracking = 0
 
-function clearSourceViewListeners(): void {
-  unByKey(sourceViewListeners)
-  sourceViewListeners = []
+function clearPreviewViewCustomizationListeners(): void {
+  unByKey(previewViewCustomizationListeners)
+  previewViewCustomizationListeners = []
 }
 
-function destroyPreviewMap(): void {
-  clearSourceViewListeners()
-  previewMap.value?.setTarget(undefined)
-  previewMap.value?.dispose()
-  previewMap.value = null
+function runWithoutPreviewViewCustomizationTracking(fn: () => void): void {
+  suppressPreviewViewCustomizationTracking += 1
+  try {
+    fn()
+  } finally {
+    void nextTick(() => {
+      suppressPreviewViewCustomizationTracking = Math.max(
+        0,
+        suppressPreviewViewCustomizationTracking - 1,
+      )
+    })
+  }
 }
 
-function syncPreviewFromSource(): void {
-  const source = sourceMapRef.value
+function markPreviewMapViewCustomized(): void {
+  if (suppressPreviewViewCustomizationTracking > 0) return
+  if (isExportInProgress.value) return
+  previewMapViewCustomized.value = true
+}
+
+function attachPreviewViewCustomizationListeners(): void {
+  clearPreviewViewCustomizationListeners()
   const preview = previewMap.value
-  if (!source || !preview) return
-  copyViewState(source.getView(), preview.getView())
-  preview.renderSync()
-}
-
-function attachSourceViewListeners(): void {
-  clearSourceViewListeners()
-  const source = sourceMapRef.value
-  if (!source) return
-  const view = source.getView()
-  const handler = () => syncPreviewFromSource()
-  sourceViewListeners = [
+  if (!preview) return
+  const view = preview.getView()
+  const handler = () => markPreviewMapViewCustomized()
+  previewViewCustomizationListeners = [
     view.on('change:center', handler),
     view.on('change:resolution', handler),
     view.on('change:rotation', handler),
   ]
 }
 
+/** Vue / couches carte principale au dernier fermeture de la modale (réouverture sans recalcul). */
+let printPreviewSessionSourceViewKey = ''
+let printPreviewSessionViewCustomized = false
+
+function computeSourceMapViewKey(): string {
+  const source = sourceMapRef.value
+  if (!source) return ''
+  const view = source.getView()
+  const center = view.getCenter()
+  const resolution = view.getResolution()
+  return [
+    center?.map((value) => value.toFixed(2)).join(',') ?? '',
+    resolution?.toFixed(8) ?? '',
+    view.getRotation().toFixed(6),
+    buildVisibleLayerFingerprint(source),
+  ].join('|')
+}
+
+function detachPreviewMap(): void {
+  clearPreviewViewCustomizationListeners()
+  previewMap.value?.setTarget(undefined)
+}
+
+function destroyPreviewMap(): void {
+  clearPreviewViewCustomizationListeners()
+  previewMapViewCustomized.value = false
+  previewMap.value?.setTarget(undefined)
+  previewMap.value?.dispose()
+  previewMap.value = null
+}
+
+function syncPreviewFromSource(): void {
+  if (isExportInProgress.value) return
+  const source = sourceMapRef.value
+  const preview = previewMap.value
+  if (!source || !preview) return
+  runWithoutPreviewViewCustomizationTracking(() => {
+    copyViewState(source.getView(), preview.getView())
+    preview.renderSync()
+  })
+  previewMapViewCustomized.value = false
+}
+
+function replacerPreviewMapFromSource(): void {
+  syncPreviewFromSource()
+}
+
+function createScaleLineControl(): ScaleLine {
+  return new ScaleLine({
+    units: 'metric',
+    minWidth: 100,
+    bar: false,
+  })
+}
+
 function createPreviewControls(): (Attribution | ScaleLine)[] {
   const controls: (Attribution | ScaleLine)[] = [new Attribution({ collapsible: false })]
   if (printFormState.hasScale) {
-    controls.push(
-      new ScaleLine({
-        units: 'metric',
-        minWidth: 100,
-        bar: false,
-      }),
-    )
+    controls.push(createScaleLineControl())
   }
   return controls
+}
+
+function syncPreviewScaleLineControl(): void {
+  const map = previewMap.value
+  if (!map) return
+  const controls = map.getControls().getArray()
+  for (const control of controls) {
+    if (control instanceof ScaleLine) {
+      map.removeControl(control)
+    }
+  }
+  if (printFormState.hasScale) {
+    map.addControl(createScaleLineControl())
+  }
+  configureDisplayOnlyOlControls(map)
+  map.renderSync()
 }
 
 function wirePreviewMapDisplayControls(map: Map): void {
@@ -1084,6 +1406,9 @@ function wirePreviewMapDisplayControls(map: Map): void {
 }
 
 async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
+  if (isExportInProgress.value && !forceRecreate) {
+    return previewMap.value
+  }
   const source = sourceMapRef.value
   const target = previewMapEl.value
   if (!source || !target) {
@@ -1096,11 +1421,15 @@ async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
   logPrintPreview('carte aperçu: construction…', { forceRecreate })
 
   if (previewMap.value && !forceRecreate) {
-    rebuildPrintPreviewMap(source, previewMap.value)
+    if (previewMap.value.getTargetElement() !== target) {
+      previewMap.value.setTarget(target)
+      attachPreviewViewCustomizationListeners()
+    }
+    rebuildPrintPreviewMap(source, previewMap.value, { syncViewFromSource: false })
     previewMap.value.updateSize()
     previewMap.value.renderSync()
-    await waitForMapRender(previewMap.value, 2)
     sanitizePrintPreviewAttributions(previewMapEl.value)
+    schedulePrintMapPrewarm()
     return previewMap.value
   }
 
@@ -1116,40 +1445,122 @@ async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
     }),
     controls: createPreviewControls(),
   })
-  rebuildPrintPreviewMap(source, map)
+  runWithoutPreviewViewCustomizationTracking(() => {
+    rebuildPrintPreviewMap(source, map, { syncViewFromSource: forceRecreate })
+  })
   previewMap.value = map
   wirePreviewMapDisplayControls(map)
-  attachSourceViewListeners()
+  attachPreviewViewCustomizationListeners()
+  if (forceRecreate) {
+    previewMapViewCustomized.value = false
+  }
   await nextTick()
   map.updateSize()
   await waitForMapRender(map, 2)
   sanitizePrintPreviewAttributions(previewMapEl.value)
   logPrintPreview('carte aperçu: prête')
+  schedulePrintMapPrewarm()
   return map
 }
+
+function previewNeedsSourceViewResync(sourceViewKey: string): boolean {
+  return (
+    Boolean(previewMap.value) &&
+    !printPreviewSessionViewCustomized &&
+    Boolean(printPreviewSessionSourceViewKey) &&
+    sourceViewKey !== printPreviewSessionSourceViewKey
+  )
+}
+
+/** Réouverture modale : resync vue avant tuiles (évite d’attendre l’ancienne emprise). */
+async function preparePreviewMapOnModalOpen(): Promise<void> {
+  const sourceViewKey = computeSourceMapViewKey()
+  const reusePreviewMap = Boolean(previewMap.value)
+  const needsViewResync = previewNeedsSourceViewResync(sourceViewKey)
+
+  if (!reusePreviewMap) {
+    await ensurePreviewMap(true)
+    printPreviewSessionSourceViewKey = sourceViewKey
+    return
+  }
+
+  const source = sourceMapRef.value
+  const target = previewMapEl.value
+  const preview = previewMap.value
+  if (!source || !target || !preview) {
+    await ensurePreviewMap(true)
+    printPreviewSessionSourceViewKey = sourceViewKey
+    return
+  }
+
+  if (preview.getTargetElement() !== target) {
+    preview.setTarget(target)
+    attachPreviewViewCustomizationListeners()
+  }
+
+  if (needsViewResync) {
+    logPrintPreview('carte principale modifiée: resync aperçu')
+    isPreviewLayoutPending.value = true
+    try {
+      syncPreviewFromSource()
+      rebuildPrintPreviewMap(source, preview, { syncViewFromSource: false })
+      preview.updateSize()
+      preview.renderSync()
+      await waitForMapRender(preview, 2)
+      sanitizePrintPreviewAttributions(previewMapEl.value)
+    } finally {
+      isPreviewLayoutPending.value = false
+    }
+  } else {
+    rebuildPrintPreviewMap(source, preview, { syncViewFromSource: false })
+    preview.updateSize()
+    preview.renderSync()
+    sanitizePrintPreviewAttributions(previewMapEl.value)
+  }
+
+  printPreviewSessionSourceViewKey = sourceViewKey
+  schedulePrintMapPrewarm()
+}
+
+watchDebounced(
+  () =>
+    [
+      printModalOpened.value,
+      isPreviewLayoutPending.value,
+      printFormState.dpi,
+      printFormState.margin,
+      printFormState.hasTitle,
+      printFormState.printTitle,
+      printFormState.paperFormat,
+      printFormState.pageOrientation,
+      previewPageIndex.value,
+      previewMapViewCustomized.value,
+    ] as const,
+  () => {
+    if (printModalOpened.value && !isPreviewLayoutPending.value) schedulePrintMapPrewarm()
+  },
+  { debounce: 1500 },
+)
 
 watch(printModalOpened, async (isOpen) => {
   if (!isOpen) {
     printFicheLoadGeneration += 1
     printFicheSelections.value = null
-    supplementSlicePlanByKey.clear()
-    supplementSliceCounts.value = {}
-    supplementSliceStarts.value = {}
-    destroyPreviewMap()
+    clearPrintMapRenderCache()
+    printPreviewSessionViewCustomized = previewMapViewCustomized.value
+    printPreviewSessionSourceViewKey = computeSourceMapViewKey()
+    detachPreviewMap()
     isPreviewLayoutPending.value = false
+    lastAnnexContentSnapshot = null
     logPrintPreview('modale fermée')
     return
   }
-  supplementSlicePlanByKey.clear()
-  supplementSliceCounts.value = {}
-  supplementSliceStarts.value = {}
-  isPreviewLayoutPending.value = true
-  logPrintPreview('modale ouverte: patience')
+  logPrintPreview('modale ouverte')
   try {
     syncPrintFicheSelectionsFromCache()
     await nextTick()
     syncNativePrintDialog()
-    await ensurePreviewMap(true)
+    await preparePreviewMapOnModalOpen()
     syncNativePrintDialog()
     await refreshPrintFicheSelections()
   } catch (err) {
@@ -1159,10 +1570,10 @@ watch(printModalOpened, async (isOpen) => {
 })
 
 watch(
-  () => [printFormState.hasScale, printFormState.hasTitle, printFormState.margin] as const,
+  () => printFormState.hasScale,
   () => {
     if (!printModalOpened.value) return
-    void nextTick().then(() => ensurePreviewMap(true))
+    void nextTick(() => syncPreviewScaleLineControl())
   },
 )
 
@@ -1185,6 +1596,7 @@ watch(
 onUnmounted(() => destroyPreviewMap())
 
 function getPrintMapInstance(): Map | null {
+  if (printModalOpened.value) return previewMap.value
   return previewMap.value ?? sourceMapRef.value
 }
 
@@ -1211,21 +1623,55 @@ async function ensureMapPreviewPageVisibleForExport(): Promise<number> {
   return savedIndex
 }
 
-async function buildRasterExportCanvas(): Promise<{
+function buildExportProgressSteps(): { weight: number }[] {
+  const steps: { weight: number }[] = []
+  if (previewPages.value.some((page) => page.kind === 'map')) {
+    steps.push({ weight: 55 })
+  }
+  const annexCount = previewPages.value.filter((page) => page.kind !== 'map').length
+  if (annexCount > 0) {
+    const each = 35 / annexCount
+    for (let i = 0; i < annexCount; i += 1) steps.push({ weight: each })
+  }
+  steps.push({ weight: 10 })
+  return steps
+}
+
+function syncExportProgressUi(percent: number, detail: string): void {
+  exportProgressPercent.value = percent
+  exportProgressDetail.value = detail
+}
+
+async function buildRasterExportCanvas(
+  progress: WeightedExportProgress,
+  stepIndex: number,
+  pagePrefix = '',
+): Promise<{
   dpiValue: number
   finalCanvas: HTMLCanvasElement
 }> {
+  const prefix = pagePrefix ? `${pagePrefix} — ` : ''
+  progress.startStep(stepIndex, `${prefix}Préparation de la page carte…`)
+  progress.tick(0.02)
+  progress.setDetail(`${prefix}Affichage de l’aperçu carte…`)
   const restorePreviewIndex = await ensureMapPreviewPageVisibleForExport()
+  progress.tick(0.05)
+  progress.setDetail(`${prefix}Calcul des dimensions d’export…`)
   const dpiValue = printFormState.dpi
-  const dpiCoeff = dpiValue / BASE_DPI
   const paperWidthPx = convertMmToPx(paperDimension.value.width, dpiValue)
   const paperHeightPx = convertMmToPx(paperDimension.value.height, dpiValue)
   const marginPx = convertMmToPx(printFormState.margin, dpiValue)
+  const printableHeightPx = Math.max(0, paperHeightPx - marginPx * 2)
   const titleHeightPx = printFormState.hasTitle
-    ? Math.round((titleHeightMm.value / paperDimension.value.height) * paperHeightPx)
+    ? Math.round((titleHeightMm.value / printableAreaMm.value.height) * printableHeightPx)
     : 0
   const mapWidthPx = Math.max(0, paperWidthPx - marginPx * 2)
-  const mapHeightPx = Math.max(0, paperHeightPx - marginPx * 2 - titleHeightPx)
+  const mapHeightPx = Math.max(0, printableHeightPx - titleHeightPx)
+  if (mapHeightPx < 16 || mapWidthPx < 16) {
+    throw new Error(
+      'Zone carte insuffisante pour l’export. Réduisez le titre, les marges ou choisissez un format plus grand.',
+    )
+  }
 
   const mapElement = previewMapEl.value
   const scaleSnapshot =
@@ -1235,10 +1681,37 @@ async function buildRasterExportCanvas(): Promise<{
 
   const map = getPrintMapInstance()
   if (!map) throw new Error('Carte indisponible pour l’export.')
-  syncPreviewFromSource()
+  progress.setDetail(`${prefix}Synchronisation de la vue carte…`)
+  progress.tick(0.08)
   await waitForMapRender(map, 2)
   sanitizePrintPreviewAttributions(previewMapEl.value)
-  const mapCanvas = await renderMapCanvasForExport(map, mapWidthPx, mapHeightPx)
+  const previewSize = map.getSize()
+  const mapExtent = map.getView().calculateExtent(previewSize ?? undefined)
+  const mapCacheKey = buildPrintMapRenderCacheKey({
+    dpi: dpiValue,
+    mapWidthPx,
+    mapHeightPx,
+    extent: mapExtent,
+    layerFingerprint: buildVisibleLayerFingerprint(map),
+    rotation: map.getView().getRotation(),
+  })
+
+  const mapCanvas = await renderOffscreenPrintMapCanvas(map, {
+    widthPx: mapWidthPx,
+    heightPx: mapHeightPx,
+    extent: mapExtent,
+    cacheKey: mapCacheKey,
+    onStage: (label) => {
+      progress.setDetail(`${prefix}${label}`)
+    },
+    onTileProgress: (loadedTiles, pendingTiles) => {
+      const total = loadedTiles + pendingTiles
+      const ratio = total > 0 ? loadedTiles / total : 0
+      progress.tick(0.15 + ratio * 0.65)
+    },
+  })
+  progress.setDetail(`${prefix}Composition (titre, échelle, attributions)…`)
+  progress.tick(0.85)
 
   const finalWidthPx = mapWidthPx + marginPx * 2
   const finalHeightPx = mapHeightPx + titleHeightPx + marginPx * 2
@@ -1252,19 +1725,18 @@ async function buildRasterExportCanvas(): Promise<{
   finalCtx.drawImage(mapCanvas, marginPx, marginPx + titleHeightPx)
   mapCanvas.remove()
 
-  if (printFormState.hasTitle && mapTitle.value) {
+  if (printFormState.hasTitle && printMapTitleLayout.value.displayTitle) {
     const titleCanvas = document.createElement('canvas')
     titleCanvas.width = mapWidthPx
     titleCanvas.height = titleHeightPx
     const titleCtx = titleCanvas.getContext('2d')
     if (titleCtx) {
-      drawTitle(
+      drawPrintMapTitleOnCanvas(
         titleCtx,
-        titleHeightPx,
         mapWidthPx,
-        printFormState.printTitle,
-        mapTitle.value,
-        dpiCoeff,
+        titleHeightPx,
+        printMapTitleLayout.value,
+        dpiValue,
       )
       finalCtx.drawImage(titleCanvas, marginPx, marginPx)
     }
@@ -1295,68 +1767,77 @@ async function buildRasterExportCanvas(): Promise<{
 
   previewPageIndex.value = restorePreviewIndex
   await nextTick()
+  progress.tick(1)
+  progress.endStep()
 
   return { dpiValue, finalCanvas }
 }
 
-async function buildSupplementExportCanvasesByKind(): Promise<
-  Partial<Record<PrintPreviewPageKind, HTMLCanvasElement[]>>
-> {
-  const byKind: Partial<Record<PrintPreviewPageKind, HTMLCanvasElement[]>> = {}
-  const sections: { kind: PrintPreviewPageKind; enabled: boolean }[] = [
-    {
-      kind: 'ficheTerritory',
-      enabled: printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value,
-    },
-    {
-      kind: 'ficheParcel',
-      enabled: printFormState.hasParcelFiche && canPrintParcelFiche.value,
-    },
-    { kind: 'legends', enabled: printFormState.hasLegends && canPrintLegends.value },
-  ]
+/** Export annexe = capture du cadre d’aperçu (WYSIWYG), upscalée au DPI d’export. */
+async function exportSupplementPageFromPreview(
+  onStage?: (label: string) => void,
+): Promise<HTMLCanvasElement | null> {
+  const pageMeta = currentPreviewPage.value
+  if (!pageMeta || pageMeta.kind === 'map') return null
 
-  for (const { kind, enabled } of sections) {
-    if (!enabled) continue
-    const sliceStarts = supplementSliceStarts.value[kind] ?? [0]
-    measureKind.value = kind
-    await nextTick()
-    const measureRoot = supplementMeasureInnerRef.value
-    if (measureRoot) {
-      await waitForPrintSupplementImages(measureRoot, { timeoutMs: 8_000 })
-    }
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-    const pageEl = measureRoot?.querySelector('.ec-print-supplement-page') as HTMLElement | null
-    if (!pageEl) continue
-    byKind[kind] = await rasterizePrintSupplementSlices(
-      pageEl,
-      sliceStarts,
-      paperDimension.value.width,
-      paperDimension.value.height,
-      printFormState.margin,
-      printFormState.dpi,
-    )
-  }
-  measureKind.value = null
-  return byKind
+  onStage?.('Préparation de l’aperçu…')
+  await nextTick()
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+  const pageRoot = findSupplementPreviewPageRoot()
+  const previewFrame = findSupplementPreviewFrameEl()
+  if (!pageRoot || !previewFrame) return null
+
+  onStage?.('Chargement des images…')
+  await waitForPrintSupplementImages(pageRoot, { timeoutMs: 8_000 })
+  applyCurrentSupplementSliceVisibility()
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+  onStage?.('Capture de la page…')
+  return rasterizePrintSupplementPreviewFrame(
+    previewFrame,
+    paperDimension.value.width,
+    paperDimension.value.height,
+    printFormState.margin,
+    printFormState.dpi,
+  )
 }
 
-async function captureAllExportCanvases(): Promise<HTMLCanvasElement[]> {
+async function captureAllExportCanvases(
+  progress: WeightedExportProgress,
+): Promise<HTMLCanvasElement[]> {
   const savedIndex = previewPageIndex.value
   const canvases: HTMLCanvasElement[] = []
   let mapCanvas: HTMLCanvasElement | null = null
+  let progressStep = 0
+  const totalPages = previewPages.value.length
   try {
-    const supplementByKind = await buildSupplementExportCanvasesByKind()
-    for (const page of previewPages.value) {
+    for (let index = 0; index < previewPages.value.length; index += 1) {
+      const page = previewPages.value[index]
+      if (!page) continue
+      const pagePrefix = `Page ${index + 1}/${totalPages}`
       if (page.kind === 'map') {
         if (!mapCanvas) {
-          const { finalCanvas } = await buildRasterExportCanvas()
-          mapCanvas = finalCanvas
+          mapCanvas = (await buildRasterExportCanvas(progress, progressStep, pagePrefix))
+            .finalCanvas
+          progressStep += 1
         }
-        canvases.push(mapCanvas)
+        if (mapCanvas) canvases.push(mapCanvas)
         continue
       }
-      const slice = supplementByKind[page.kind]?.[page.sliceIndex]
-      if (slice) canvases.push(slice)
+      previewPageIndex.value = index
+      progress.startStep(progressStep, `${pagePrefix} — ${page.label}…`)
+      progress.tick(0.03)
+      const sliceCanvas = await exportSupplementPageFromPreview((detail) => {
+        progress.setDetail(`${pagePrefix} — ${detail}`)
+        if (detail.startsWith('Chargement')) progress.tick(0.4)
+        else if (detail.startsWith('Capture')) progress.tick(0.72)
+        else progress.tick(0.12)
+      })
+      progress.tick(1)
+      progress.endStep()
+      progressStep += 1
+      if (sliceCanvas) canvases.push(sliceCanvas)
     }
   } finally {
     previewPageIndex.value = savedIndex
@@ -1365,65 +1846,151 @@ async function captureAllExportCanvases(): Promise<HTMLCanvasElement[]> {
   return canvases
 }
 
-async function exportRasterCanvases(canvases: HTMLCanvasElement[]): Promise<void> {
+async function exportRasterCanvases(
+  canvases: HTMLCanvasElement[],
+  progress: WeightedExportProgress,
+): Promise<void> {
   const dpiValue = printFormState.dpi
   const ext = printFormState.format === 'JPEG' ? 'jpeg' : 'png'
   for (let i = 0; i < canvases.length; i += 1) {
     const canvas = canvases[i]
     const suffix = canvases.length > 1 ? ` - page ${i + 1}` : ''
     const fileName = `carte${suffix}.${ext}`
-    if (printFormState.format === 'PNG') {
-      const finalUrl = await injectDpiInPng(canvas.toDataURL('image/png'), dpiValue)
-      triggerDownload(fileName, finalUrl)
-    } else {
-      triggerDownload(fileName, canvas.toDataURL('image/jpeg', 0.95))
+    const encodeLabel =
+      printFormState.format === 'PNG'
+        ? `Encodage PNG${canvases.length > 1 ? ` (${i + 1}/${canvases.length})` : ''}…`
+        : `Encodage JPEG${canvases.length > 1 ? ` (${i + 1}/${canvases.length})` : ''}…`
+    progress.setDetail(encodeLabel)
+    progress.tick(canvases.length > 0 ? (i / canvases.length) * 0.85 : 0)
+    try {
+      if (printFormState.format === 'PNG') {
+        const blob = await encodePrintPngWithDpi(canvas, dpiValue)
+        triggerDownload(fileName, URL.createObjectURL(blob))
+      } else {
+        const blob = await encodePrintJpeg(canvas, 0.95)
+        triggerDownload(fileName, URL.createObjectURL(blob))
+      }
+    } catch {
+      if (printFormState.format === 'PNG') {
+        const finalUrl = await injectDpiInPng(canvas.toDataURL('image/png'), dpiValue)
+        triggerDownload(fileName, finalUrl)
+      } else {
+        triggerDownload(fileName, canvas.toDataURL('image/jpeg', 0.95))
+      }
     }
     canvas.remove()
   }
+  progress.tick(0.95)
 }
 
-function exportPdfFromCanvases(pages: HTMLCanvasElement[]): void {
-  const doc = new jsPDF({
-    orientation: printFormState.pageOrientation,
-    unit: 'mm',
-    format: [paperDimension.value.width, paperDimension.value.height],
-  })
-  for (let i = 0; i < pages.length; i += 1) {
-    if (i > 0) {
-      doc.addPage(
-        [paperDimension.value.width, paperDimension.value.height],
-        printFormState.pageOrientation,
+async function exportPdfFromCanvases(
+  pages: HTMLCanvasElement[],
+  progress: WeightedExportProgress,
+): Promise<void> {
+  const fileName = pages.length > 1 ? 'carte-et-annexes.pdf' : 'carte.pdf'
+  progress.setDetail(
+    pages.length > 1 ? `Assemblage PDF (${pages.length} pages)…` : 'Génération du PDF…',
+  )
+  progress.tick(0.1)
+  try {
+    const blob = await encodePrintPdf({
+      canvases: pages,
+      paperWidthMm: paperDimension.value.width,
+      paperHeightMm: paperDimension.value.height,
+      orientation: printFormState.pageOrientation,
+    })
+    progress.setDetail('Finalisation du PDF…')
+    progress.tick(0.85)
+    triggerDownload(fileName, URL.createObjectURL(blob))
+  } catch {
+    progress.setDetail('Assemblage PDF (mode secours)…')
+    const doc = new jsPDF({
+      orientation: printFormState.pageOrientation,
+      unit: 'mm',
+      format: [paperDimension.value.width, paperDimension.value.height],
+    })
+    for (let i = 0; i < pages.length; i += 1) {
+      if (i > 0) {
+        doc.addPage(
+          [paperDimension.value.width, paperDimension.value.height],
+          printFormState.pageOrientation,
+        )
+      }
+      doc.addImage(
+        pages[i].toDataURL('image/png'),
+        'PNG',
+        0,
+        0,
+        paperDimension.value.width,
+        paperDimension.value.height,
       )
     }
-    doc.addImage(
-      pages[i].toDataURL('image/png'),
-      'PNG',
-      0,
-      0,
-      paperDimension.value.width,
-      paperDimension.value.height,
-    )
+    doc.save(fileName)
   }
-  doc.save(pages.length > 1 ? 'carte-et-annexes.pdf' : 'carte.pdf')
   for (const canvas of pages) canvas.remove()
+}
+
+async function syncAnnexPaginationForExport(
+  onStage: (label: string, percent: number) => void,
+): Promise<void> {
+  const hasAnnex =
+    (printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value) ||
+    (printFormState.hasParcelFiche && canPrintParcelFiche.value) ||
+    (printFormState.hasLegends && canPrintLegends.value)
+  if (!hasAnnex) {
+    onStage('Aucune annexe à synchroniser.', 8)
+    return
+  }
+  onStage('Synchronisation des annexes avec la vue carte…', 2)
+  if (printFormState.hasLegends && canPrintLegends.value) {
+    invalidateLegendsSlicePlanCache()
+  }
+  let stagePercent = 3
+  await remeasureSupplementPageCounts({
+    blockPreview: false,
+    onStage: (label) => {
+      stagePercent = Math.min(7, stagePercent + 1)
+      onStage(label, stagePercent)
+    },
+  })
+  onStage('Pagination des annexes à jour.', 8)
 }
 
 async function onClickExportMap(): Promise<void> {
   if (isExportInProgress.value) return
   isExportInProgress.value = true
+  exportProgressPercent.value = 1
+  exportProgressDetail.value = 'Préparation de l’export…'
+  const savedPreviewPageIndex = previewPageIndex.value
+  const finalizeStepIndexRef = { value: 0 }
   try {
-    const canvases =
-      previewPages.value.length > 1
-        ? await captureAllExportCanvases()
-        : [(await buildRasterExportCanvas()).finalCanvas]
+    await syncAnnexPaginationForExport((label, percent) => {
+      syncExportProgressUi(percent, label)
+    })
+    const progressSteps = buildExportProgressSteps()
+    const progress = new WeightedExportProgress(progressSteps, syncExportProgressUi)
+    finalizeStepIndexRef.value = progressSteps.length - 1
+    const canvases = await captureAllExportCanvases(progress)
     if (!canvases.length) return
+    progress.startStep(finalizeStepIndexRef.value, 'Génération du fichier…')
+    progress.tick(0.02)
     if (printFormState.format === 'PDF') {
-      exportPdfFromCanvases(canvases)
-      return
+      await exportPdfFromCanvases(canvases, progress)
+    } else {
+      await exportRasterCanvases(canvases, progress)
     }
-    await exportRasterCanvases(canvases)
+    progress.endStep()
+    syncExportProgressUi(100, 'Export terminé.')
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Export impossible. Réessayez avec un titre plus court.'
+    syncExportProgressUi(exportProgressPercent.value, message)
   } finally {
+    previewPageIndex.value = savedPreviewPageIndex
+    await nextTick()
     isExportInProgress.value = false
+    exportProgressPercent.value = 0
+    exportProgressDetail.value = ''
   }
 }
 </script>
@@ -1470,17 +2037,21 @@ async function onClickExportMap(): Promise<void> {
           <DsfrInput
             v-model="printFormState.printTitle"
             :disabled="!printFormState.hasTitle"
+            :maxlength="PRINT_MAP_TITLE_MAX_CHARS"
             label="Titre de la carte"
             label-visible
             name="titre"
             class="mb-10"
           />
+          <p v-if="printFormState.hasTitle" class="fr-text--xs fr-mb-2w print-form__title-hint">
+            100 caractères maximum. Un titre long réduit automatiquement la taille du texte.
+          </p>
           <div class="mt-10">
             <DsfrCheckbox
               v-model="printFormState.hasTitle"
               :value="true"
               name="ec-map-print-has-title"
-              label="Activer le titre"
+              label="Afficher le titre"
             />
           </div>
           <div class="mt-10">
@@ -1518,6 +2089,15 @@ async function onClickExportMap(): Promise<void> {
               label="Afficher la légende"
             />
           </div>
+          <div class="mt-10 ec-map-print-form__indent">
+            <DsfrCheckbox
+              v-model="printFormState.hasAllLegends"
+              :value="true"
+              name="ec-map-print-all-legends"
+              :disabled="!printFormState.hasLegends"
+              label="Toutes les légendes"
+            />
+          </div>
           <DsfrSelect
             v-model="printFormState.format"
             label="Format d'export"
@@ -1529,9 +2109,24 @@ async function onClickExportMap(): Promise<void> {
             :options="dpiOptions"
           />
           <DsfrButton
+            id="print-page-reset-map-view"
+            class="print-form__replacer-carte"
+            label="Replacer la carte"
+            title="Replacer la carte"
+            secondary
+            :disabled="
+              !previewMapViewCustomized ||
+              isExportInProgress ||
+              isPreviewLayoutPending ||
+              !previewMap
+            "
+            icon=""
+            @click="replacerPreviewMapFromSource"
+          />
+          <DsfrButton
             id="print-page-export"
-            :label="isExportInProgress ? 'Traitement en cours...' : 'Imprimer la carte'"
-            :title="isExportInProgress ? 'Traitement en cours...' : 'Imprimer la carte'"
+            :label="isExportInProgress ? 'Traitement en cours...' : 'Exporter'"
+            :title="isExportInProgress ? 'Traitement en cours...' : 'Exporter'"
             :disabled="isExportInProgress || isPreviewLayoutPending"
             icon=""
             no-outline
@@ -1540,7 +2135,6 @@ async function onClickExportMap(): Promise<void> {
         </div>
         <div class="print-preview-panel">
           <nav
-            v-show="!isPreviewLayoutPending"
             ref="previewPaginationEl"
             class="print-preview-pagination"
             aria-label="Pages à imprimer"
@@ -1574,90 +2168,86 @@ async function onClickExportMap(): Promise<void> {
             @wheel="onPreviewColumnWheel"
           >
             <div
-              v-show="isPreviewLayoutPending"
-              class="print-preview-patience"
-              role="status"
-              aria-live="polite"
-              aria-busy="true"
+              class="print-preview-column__viewport"
+              :class="{ 'print-preview-column__viewport--pending': isPreviewLayoutPending }"
             >
-              Préparation de l’aperçu…
-            </div>
-            <div
-              v-show="!isPreviewLayoutPending"
-              class="print-preview-column__scale-slot"
-              :style="previewColumnScaleSlotStyle"
-            >
-              <div
-                ref="previewZoomHostEl"
-                class="print-preview-column__scale-inner"
-                :style="previewColumnScaleInnerStyle"
-              >
-                <div class="print-preview-container">
-                  <div
-                    class="print-preview"
-                    :style="{
-                      width: cssPreviewDimensionPx.width,
-                      height: cssPreviewDimensionPx.height,
-                      paddingLeft: cssPreviewPaddingPx.left,
-                      paddingRight: cssPreviewPaddingPx.right,
-                      paddingTop: cssPreviewPaddingPx.top,
-                      paddingBottom: cssPreviewPaddingPx.bottom,
-                      ...supplementLayoutStyle,
-                    }"
-                  >
-                    <div v-show="currentPreviewPage?.kind === 'map'" class="print-preview-page">
-                      <div
-                        v-if="printFormState.hasTitle"
-                        id="map-title"
-                        ref="mapTitle"
-                        class="map-title"
-                      >
-                        {{ printFormState.printTitle }}
+              <div class="print-preview-column__scale-slot" :style="previewColumnScaleSlotStyle">
+                <div
+                  ref="previewZoomHostEl"
+                  class="print-preview-column__scale-inner"
+                  :style="previewColumnScaleInnerStyle"
+                >
+                  <div class="print-preview-container">
+                    <div
+                      class="print-preview"
+                      :style="{
+                        width: cssPreviewDimensionPx.width,
+                        height: cssPreviewDimensionPx.height,
+                        paddingLeft: cssPreviewPaddingPx.left,
+                        paddingRight: cssPreviewPaddingPx.right,
+                        paddingTop: cssPreviewPaddingPx.top,
+                        paddingBottom: cssPreviewPaddingPx.bottom,
+                        ...supplementLayoutStyle,
+                      }"
+                    >
+                      <div v-show="currentPreviewPage?.kind === 'map'" class="print-preview-page">
+                        <div
+                          v-if="printFormState.hasTitle"
+                          id="map-title"
+                          class="map-title"
+                          :style="mapTitlePreviewStyle"
+                        >
+                          {{ printMapTitleLayout.displayTitle }}
+                        </div>
+                        <div
+                          v-if="printModalOpened"
+                          ref="previewMapEl"
+                          class="map ec-map-print-preview-map"
+                          :style="{ minHeight: `${previewMapMinHeightPx}px` }"
+                        />
                       </div>
                       <div
-                        v-if="printModalOpened"
-                        ref="previewMapEl"
-                        class="map ec-map-print-preview-map"
-                      />
-                    </div>
-                    <div
-                      v-show="currentPreviewPage?.kind !== 'map'"
-                      ref="supplementPreviewEl"
-                      class="print-preview-page print-preview-page--supplement"
-                    >
-                      <div
-                        class="print-supplement-preview-frame"
-                        :style="supplementPreviewFrameStyle"
+                        v-show="currentPreviewPage?.kind !== 'map'"
+                        ref="supplementPreviewEl"
+                        class="print-preview-page print-preview-page--supplement"
                       >
                         <div
-                          class="print-supplement-layout-root"
-                          :style="supplementPreviewScalerStyle"
+                          class="print-supplement-preview-frame"
+                          :style="supplementPreviewFrameStyle"
                         >
                           <div
-                            ref="supplementContentRef"
-                            class="print-preview-supplement-content"
-                            :style="supplementContentOffsetStyle"
+                            class="print-supplement-layout-root"
+                            :style="supplementPreviewScalerStyle"
                           >
-                            <MapPrintFicheTerritoryPage
-                              v-if="
-                                printModalOpened && currentPreviewPage?.kind === 'ficheTerritory'
-                              "
-                              :document-tabs="territoryDocumentTabs"
-                              :title="territoryPrintTitle(territorySelectionForPrint)"
-                            />
-                            <MapPrintFicheParcelPage
-                              v-if="printModalOpened && currentPreviewPage?.kind === 'ficheParcel'"
-                              :title="parcelPrintTitle(parcelSelectionForPrint)"
-                              :infos-html="parcelInfosHtml"
-                              :documents-html="parcelDocumentsHtml"
-                              :cadastre-references="parcelCadastreReferences"
-                            />
-                            <MapPrintLegendsPage
-                              v-if="printModalOpened && currentPreviewPage?.kind === 'legends'"
-                              :layers="panelLegendLayers"
-                              :map-zoom="printPreviewLegendZoom"
-                              :catalog-entry-in-zoom-range="catalogEntryInZoomRangeForPrintPreview"
-                            />
+                            <div
+                              ref="supplementContentRef"
+                              class="print-preview-supplement-content"
+                              :style="supplementContentOffsetStyle"
+                            >
+                              <MapPrintFicheTerritoryPage
+                                v-if="
+                                  printModalOpened && currentPreviewPage?.kind === 'ficheTerritory'
+                                "
+                                :document-tabs="territoryDocumentTabs"
+                                :title="territoryPrintTitle(territorySelectionForPrint)"
+                              />
+                              <MapPrintFicheParcelPage
+                                v-if="
+                                  printModalOpened && currentPreviewPage?.kind === 'ficheParcel'
+                                "
+                                :title="parcelPrintTitle(parcelSelectionForPrint)"
+                                :infos-html="parcelInfosHtml"
+                                :documents-html="parcelDocumentsHtml"
+                                :cadastre-references="parcelCadastreReferences"
+                              />
+                              <MapPrintLegendsPage
+                                v-if="printModalOpened && currentPreviewPage?.kind === 'legends'"
+                                :layers="printLegendLayerSource"
+                                :map-zoom="printPreviewLegendZoom"
+                                :catalog-entry-in-zoom-range="catalogEntryInZoomRangeForPrint"
+                                :include-all-legend-layers="printFormState.hasAllLegends"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1665,10 +2255,23 @@ async function onClickExportMap(): Promise<void> {
                   </div>
                 </div>
               </div>
+              <div
+                v-if="isPreviewLayoutPending"
+                class="print-preview-patience"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                Préparation de l’aperçu…
+              </div>
             </div>
           </div>
         </div>
-        <div v-if="isExportInProgress" class="print-patience-overlay">Traitement en cours…</div>
+        <PrintExportProgressOverlay
+          v-if="isExportInProgress"
+          :percent="exportProgressPercent"
+          :detail="exportProgressDetail"
+        />
       </div>
     </DsfrModal>
     <div ref="supplementMeasureInnerRef" class="print-supplement-measure" aria-hidden="true">
@@ -1699,9 +2302,10 @@ async function onClickExportMap(): Promise<void> {
           />
           <MapPrintLegendsPage
             v-if="measureKind === 'legends'"
-            :layers="panelLegendLayers"
+            :layers="printLegendLayerSource"
             :map-zoom="printPreviewLegendZoom"
-            :catalog-entry-in-zoom-range="catalogEntryInZoomRangeForPrintPreview"
+            :catalog-entry-in-zoom-range="catalogEntryInZoomRangeForPrint"
+            :include-all-legend-layers="printFormState.hasAllLegends"
           />
         </div>
       </div>
@@ -1722,23 +2326,16 @@ async function onClickExportMap(): Promise<void> {
   margin-top: 6px;
 }
 
+.ec-map-print-form__indent {
+  padding-left: 1.25rem;
+}
+
 .print-page {
   display: flex;
   flex-direction: row;
-  height: min(35rem, calc(100dvh - 6rem));
-  max-height: calc(100dvh - 6rem);
-  min-height: 0;
+  min-height: min(35rem, calc(100dvh - 6rem));
+  height: auto;
   position: relative;
-}
-
-.print-patience-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.75);
-  z-index: 2;
 }
 
 .print-preview-panel {
@@ -1766,6 +2363,21 @@ async function onClickExportMap(): Promise<void> {
   box-sizing: border-box;
 }
 
+.print-preview-column__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.print-preview-column__viewport--pending .print-preview-column__scale-slot {
+  pointer-events: none;
+}
+
 .print-preview-column__scale-slot {
   flex: 0 0 auto;
   max-width: none;
@@ -1784,17 +2396,20 @@ async function onClickExportMap(): Promise<void> {
 }
 
 .print-preview-patience {
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  width: 100%;
-  min-height: 12rem;
-  padding: 1.5rem 1rem;
+  padding: 1rem;
   box-sizing: border-box;
-  color: var(--text-mention-grey, #666);
+  background: rgba(255, 255, 255, 0.45);
+  color: #161616;
   font-size: 0.875rem;
+  font-weight: 600;
   text-align: center;
+  pointer-events: none;
 }
 
 .print-preview-container {
@@ -1896,12 +2511,23 @@ async function onClickExportMap(): Promise<void> {
   margin-bottom: 8px;
 }
 
+.print-form__replacer-carte {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.print-form__title-hint {
+  margin-top: -0.25rem;
+  color: var(--text-mention-grey, #666);
+}
+
 .map-title {
   flex: 0 0 auto;
+  margin: 0;
+  font-weight: 700;
   text-align: center;
-  font-size: var(--print-map-title-font, 0.875rem);
-  line-height: 1.25;
-  margin-bottom: 0.25rem;
+  color: #161616;
 }
 
 .map {
@@ -2021,13 +2647,15 @@ body > dialog.fr-modal:has(.print-page) .fr-col-12 {
 
 body > dialog.fr-modal:has(.print-page) .fr-modal__body {
   max-height: calc(100dvh - 4rem);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
 body > dialog.fr-modal:has(.print-page) .fr-modal__content {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;

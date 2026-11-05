@@ -3020,6 +3020,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return transformFunc(coordinate, void 0, coordinate.length);
   }
+  let userProjection = null;
+  function getUserProjection() {
+    return userProjection;
+  }
   function toUserCoordinate(coordinate, sourceProjection) {
     {
       return coordinate;
@@ -3044,6 +3048,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function fromUserExtent(extent, destProjection) {
     {
       return extent;
+    }
+  }
+  function toUserResolution(resolution, sourceProjection) {
+    {
+      return resolution;
     }
   }
   function addCommon() {
@@ -6382,7 +6391,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         geometry = fromExtent(extent);
         geometry.rotate(this.getRotation(), getCenter(extent));
       } else {
-        {
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          geometry = /** @type {import("./geom/SimpleGeometry.js").default} */
+          geometryOrExtent.clone().transform(userProjection2, this.getProjection());
+        } else {
           geometry = geometryOrExtent;
         }
       }
@@ -17350,7 +17363,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         this.getView().getProjection()
       );
       if ((options == null ? void 0 : options.wrapX) && coordinate) {
-        const projection = this.getView().getProjection();
+        const projection = getUserProjection() || this.getView().getProjection();
         wrapX(coordinate, projection);
       }
       return coordinate;
@@ -30047,7 +30060,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             }
           }
         }
-        filters.postalCode = location.postalCode ? location.postalCode : null;
+        filters.postcode = location.postalCode ? location.postalCode : null;
         for (const key2 in filters) {
           if (!Object.hasOwn(filters, key2)) {
             continue;
@@ -30265,7 +30278,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.16 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.16/LICENSE */
+  /*! @license DOMPurify 3.4.17 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.17/LICENSE */
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
     for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -30336,8 +30349,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   const arrayLastIndexOf = unapply(Array.prototype.lastIndexOf);
   const arrayPop = unapply(Array.prototype.pop);
   const arrayPush = unapply(Array.prototype.push);
+  const arraySlice = unapply(Array.prototype.slice);
   const arraySplice = unapply(Array.prototype.splice);
   const arrayIsArray = Array.isArray;
+  const setCreate = unconstruct(Set);
+  const setAdd = unapply(Set.prototype.add);
+  const setHas = unapply(Set.prototype.has);
   const stringToLowerCase = unapply(String.prototype.toLowerCase);
   const stringToString = unapply(String.prototype.toString);
   const stringMatch = unapply(String.prototype.match);
@@ -30443,6 +30460,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return null;
     }
     return fallbackValue;
+  }
+  function lookupAccessor(object, prop) {
+    while (object !== null) {
+      const desc = getOwnPropertyDescriptor(object, prop);
+      if (desc) return desc.get ? unapply(desc.get) : null;
+      object = getPrototypeOf(object);
+    }
+    return null;
   }
   function isRegex(value2) {
     try {
@@ -31128,7 +31153,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     documentFragment: 11,
     notation: 12
   };
-  const LITERAL_TEXT_ELEMENT_NAMES = [
+  const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, [
     "style",
     "script",
     "xmp",
@@ -31137,15 +31162,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     "noframes",
     "plaintext",
     "noscript"
-  ];
-  const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, LITERAL_TEXT_ELEMENT_NAMES));
-  const LITERAL_TEXT_CLOSE = (function() {
-    const map = {};
-    arrayForEach(LITERAL_TEXT_ELEMENT_NAMES, (name) => {
-      map[name] = seal(new RegExp("</" + name + "(?=[\\t\\n\\f\\r />])", "i"));
-    });
-    return freeze(map);
-  })();
+  ]));
   const getGlobal = function getGlobal2() {
     return typeof window === "undefined" ? null : window;
   };
@@ -31192,7 +31209,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.16";
+    DOMPurify.version = "3.4.17";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -31223,6 +31240,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _readNodeName = function _readNodeName2(node) {
       return getNodeName ? getNodeName(node) : node.nodeName;
+    };
+    const getNamespaceURI = lookupAccessor(ElementPrototype, "namespaceURI");
+    const _readNamespaceURI = function _readNamespaceURI2(element) {
+      return getNamespaceURI ? getNamespaceURI(element) : element.namespaceURI;
     };
     if (typeof HTMLTemplateElement === "function") {
       const template = document2.createElement("template");
@@ -31337,6 +31358,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const SANITIZE_NAMED_PROPS_PREFIX = "user-content-";
     let KEEP_CONTENT = true;
     let IN_PLACE = false;
+    let IN_PLACE_VISITED = null;
     let USE_PROFILES = {};
     let FORBID_CONTENTS = null;
     const DEFAULT_FORBID_CONTENTS = addToSet({}, [
@@ -31575,18 +31597,23 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
     };
     const _checkValidNamespace = function _checkValidNamespace2(element) {
-      let parent = getParentNode(element);
-      if (!parent || !parent.tagName) parent = {
-        namespaceURI: NAMESPACE,
-        tagName: "template"
-      };
-      const tagName = stringToLowerCase(element.tagName);
-      const parentTagName = stringToLowerCase(parent.tagName);
-      if (!ALLOWED_NAMESPACES[element.namespaceURI]) return false;
-      if (element.namespaceURI === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
-      if (element.namespaceURI === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
-      if (element.namespaceURI === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
-      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[element.namespaceURI]) return true;
+      const elementNamespace = _readNamespaceURI(element);
+      const tagName = stringToLowerCase(_readNodeName(element));
+      const parentNode = getParentNode(element);
+      let parent;
+      let parentTagName;
+      if (parentNode && _readNodeType(parentNode) === NODE_TYPE.element) {
+        parent = { namespaceURI: _readNamespaceURI(parentNode) };
+        parentTagName = stringToLowerCase(_readNodeName(parentNode));
+      } else {
+        parent = { namespaceURI: NAMESPACE };
+        parentTagName = "template";
+      }
+      if (!ALLOWED_NAMESPACES[elementNamespace]) return false;
+      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
+      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
+      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
+      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[elementNamespace]) return true;
       return false;
     };
     const _forceRemove = function _forceRemove2(node) {
@@ -31611,19 +31638,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const _neutralizeRoot = function _neutralizeRoot2(root) {
       _neutralizeSubtree(root);
       const childNodes = getChildNodes(root);
-      if (childNodes) {
-        const snapshot = [];
-        arrayForEach(childNodes, (child) => {
-          arrayPush(snapshot, child);
-        });
-        arrayForEach(snapshot, (child) => {
-          try {
-            remove(child);
-          } catch (_) {
-          }
-        });
-      }
-      const attributes = getAttributes(root);
+      if (childNodes) arrayForEach(arraySlice(childNodes), (child) => {
+        try {
+          remove(child);
+        } catch (_) {
+        }
+      });
+      const attributes = _readNodeType(root) === NODE_TYPE.element ? getAttributes(root) : null;
       if (attributes) for (let i = attributes.length - 1; i >= 0; --i) {
         const attribute = attributes[i];
         const name = attribute && attribute.name;
@@ -31670,14 +31691,93 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         _stripAttributeNode(element, attribute, name);
       }
     };
-    const _neutralizeSubtree = function _neutralizeSubtree2(root) {
+    const _walkTree = function _walkTree2(root, visit) {
+      let intoShadow = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : false;
       const stack = [root];
       while (stack.length > 0) {
         const node = stack.pop();
-        if (_readNodeType(node) === NODE_TYPE.element) _stripDisallowedAttributes(node);
+        if (visit(node) === false) continue;
+        if (intoShadow && _readNodeType(node) === NODE_TYPE.element) {
+          const shadowRoot = getShadowRoot(node);
+          if (_isDocumentFragment(shadowRoot)) stack.push(shadowRoot);
+        }
         const childNodes = getChildNodes(node);
         if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push(childNodes[i]);
       }
+    };
+    const _neutralizeSubtree = function _neutralizeSubtree2(root) {
+      _walkTree(root, (node) => {
+        if (_readNodeType(node) === NODE_TYPE.element) _stripDisallowedAttributes(node);
+      });
+    };
+    const _collectLiveNodes = function _collectLiveNodes2(root) {
+      const nodes = [];
+      _walkTree(root, (node) => {
+        nodes.push(node);
+      }, true);
+      return nodes;
+    };
+    const _neutralizeEscapedElements = function _neutralizeEscapedElements2(root, before) {
+      const reachable = setCreate();
+      arrayForEach(_collectLiveNodes(root), (node) => {
+        if (_readNodeType(node) === NODE_TYPE.element) setAdd(reachable, node);
+      });
+      arrayForEach(before, (node) => {
+        if (_readNodeType(node) === NODE_TYPE.element && !setHas(reachable, node)) _stripDisallowedAttributes(node);
+      });
+    };
+    const _neutralizeDiscarded = function _neutralizeDiscarded2(root, before) {
+      let rootRemoved = false;
+      arrayForEach(DOMPurify.removed, (entry) => {
+        if (entry.element) {
+          rootRemoved = rootRemoved || entry.element === root;
+          _neutralizeSubtree(entry.element);
+        }
+      });
+      _neutralizeEscapedElements(root, before);
+      return rootRemoved;
+    };
+    const MAX_UNVISITED_ROUNDS = 8;
+    const _sanitizeUnvisitedNodes = function _sanitizeUnvisitedNodes2(root, before) {
+      const visited = IN_PLACE_VISITED;
+      let original = null;
+      const getOriginal = () => {
+        if (!original) {
+          original = setCreate();
+          arrayForEach(before, (beforeNode) => {
+            setAdd(original, beforeNode);
+          });
+        }
+        return original;
+      };
+      for (let round = 0; ; round++) {
+        const live = _collectLiveNodes(root);
+        const containers = [root];
+        let pending = false;
+        arrayForEach(live, (node) => {
+          if (_readNodeType(node) === NODE_TYPE.documentFragment) arrayPush(containers, node);
+          else if (!pending && !setHas(visited, node)) pending = setHas(getOriginal(), node);
+        });
+        if (!pending) return;
+        if (round >= MAX_UNVISITED_ROUNDS) throw typeErrorCreate("the tree kept changing during in-place sanitization; refusing to return it");
+        arrayForEach(containers, (container, index) => {
+          _sanitizeUnvisitedIn(container, index > 0, root, getOriginal());
+        });
+      }
+    };
+    const _sanitizeUnvisitedIn = function _sanitizeUnvisitedIn2(container, inShadow, root, original) {
+      const iterator = _createNodeIterator(container);
+      let node;
+      while (node = iterator.nextNode()) {
+        if (!setHas(original, node) || setHas(IN_PLACE_VISITED, node)) continue;
+        if (inShadow) _executeHooks(hooks.uponSanitizeShadowNode, node, null);
+        _sanitizeElements(node, root);
+        _sanitizeAttributes(node, root);
+        if (_isDocumentFragment(node.content)) _sanitizeShadowDOM2(node.content);
+      }
+    };
+    const _markVisited = function _markVisited2(node) {
+      if (IN_PLACE_VISITED) setAdd(IN_PLACE_VISITED, node);
     };
     const _isPatchLinkageAttribute = function _isPatchLinkageAttribute2(lcName, lcTag) {
       if (!SAFE_FOR_XML) return false;
@@ -31686,16 +31786,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _neutralizePatchLinkage = function _neutralizePatchLinkage2(root) {
       if (!SAFE_FOR_XML) return;
-      const stack = [root];
-      while (stack.length > 0) {
-        const node = stack.pop();
+      _walkTree(root, (node) => {
         const nodeType = _readNodeType(node);
         if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node.data)) {
           try {
             remove(node);
           } catch (_) {
           }
-          continue;
+          return false;
         }
         if (nodeType === NODE_TYPE.element) {
           const element = node;
@@ -31706,9 +31804,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           } catch (_) {
           }
         }
-        const childNodes = getChildNodes(node);
-        if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push(childNodes[i]);
-      }
+        return true;
+      });
     };
     const _initDocument = function _initDocument2(dirty) {
       let doc = null;
@@ -31748,6 +31845,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _scrubTemplateExpressions2 = function _scrubTemplateExpressions(node) {
       var _node$querySelectorAl;
+      _scrubOwnCharacterData(node);
+      const templates = (_node$querySelectorAl = node.querySelectorAll) === null || _node$querySelectorAl === void 0 ? void 0 : _node$querySelectorAl.call(node, "template");
+      if (templates) arrayForEach(templates, (tmpl) => {
+        if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
+      });
+    };
+    const _scrubOwnCharacterData = function _scrubOwnCharacterData2(node) {
       node.normalize();
       const doc = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
       const walker = createNodeIterator.call(doc || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
@@ -31756,10 +31860,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         currentNode.data = _stripTemplateExpressions(currentNode.data);
         currentNode = walker.nextNode();
       }
-      const templates = (_node$querySelectorAl = node.querySelectorAll) === null || _node$querySelectorAl === void 0 ? void 0 : _node$querySelectorAl.call(node, "template");
-      if (templates) arrayForEach(templates, (tmpl) => {
-        if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
-      });
     };
     const _isClobbered = function _isClobbered2(element) {
       const realTagName = getNodeName ? getNodeName(element) : null;
@@ -31791,7 +31891,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName) {
       if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
-      if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && LITERAL_TEXT_ELEMENTS[tagName] && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(LITERAL_TEXT_CLOSE[tagName], currentNode.textContent))) return true;
+      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && _readNodeType(currentNode) === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
       if (currentNode.nodeType === NODE_TYPE.processingInstruction) return true;
       if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
       return false;
@@ -31806,7 +31906,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _sanitizeDisallowedNode = function _sanitizeDisallowedNode2(currentNode, tagName, root) {
       if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) return false;
-      if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
+      if (KEEP_CONTENT && !FORBID_CONTENTS[tagName] && !FORBID_CONTENTS[stringToLowerCase(tagName)]) {
         const parentNode = getParentNode(currentNode);
         const childNodes = getChildNodes(currentNode);
         if (childNodes && parentNode) {
@@ -31830,6 +31930,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return true;
     };
     const _sanitizeElements = function _sanitizeElements2(currentNode, root) {
+      _markVisited(currentNode);
       _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
       if (_handleHookDetachedNode(currentNode, root)) return true;
       if (_isClobbered(currentNode)) {
@@ -31923,6 +32024,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return false;
       }
     };
+    const _isUnsafeAttributeValue = function _isUnsafeAttributeValue2(name, value2) {
+      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) return true;
+      return stringToLowerCase(name) === "attributename" && stringMatch(value2, "href") !== null;
+    };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
       if (_handleHookDetachedNode(currentNode, root)) return;
@@ -31956,11 +32061,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           value2 = SANITIZE_NAMED_PROPS_PREFIX + value2;
           recreatedNamedProp = true;
         }
-        if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) {
-          _removeAttribute(name, currentNode, attr);
-          continue;
-        }
-        if (lcName === "attributename" && stringMatch(value2, "href")) {
+        if (_isUnsafeAttributeValue(name, value2)) {
           _removeAttribute(name, currentNode, attr);
           continue;
         }
@@ -32003,6 +32104,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           }
         }
       }
+      if (SAFE_FOR_TEMPLATES) _scrubOwnCharacterData(fragment);
       _executeHooks(hooks.afterSanitizeShadowDOM, fragment, null);
     };
     const _sanitizeAttachedShadowRoots = function _sanitizeAttachedShadowRoots2(root) {
@@ -32066,6 +32168,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (hooks.uponSanitizeAttribute.length > 0) ALLOWED_ATTR = clone(ALLOWED_ATTR);
       DOMPurify.removed = [];
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
+      let inPlaceNodes = [];
+      const outerVisited = IN_PLACE_VISITED;
       if (inPlace) {
         _neutralizePatchLinkage(dirty);
         const nn = _readNodeName(dirty);
@@ -32080,12 +32184,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           _neutralizeRoot(dirty);
           throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
         }
-        try {
-          _sanitizeAttachedShadowRoots(dirty);
-        } catch (error) {
-          _neutralizeRoot(dirty);
-          throw error;
-        }
+        inPlaceNodes = _collectLiveNodes(dirty);
+        IN_PLACE_VISITED = setCreate();
       } else if (_isNode(dirty)) {
         body = _initDocument("<!---->");
         importedNode = body.ownerDocument.importNode(dirty, true);
@@ -32101,30 +32201,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (body && FORCE_BODY) _forceRemove(body.firstChild);
       const walkRoot = inPlace ? dirty : body;
       try {
+        if (inPlace) _sanitizeAttachedShadowRoots(dirty);
         const nodeIterator = _createNodeIterator(walkRoot);
         while (currentNode = nodeIterator.nextNode()) {
           _sanitizeElements(currentNode, walkRoot);
           _sanitizeAttributes(currentNode, walkRoot);
           if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
         }
+        if (inPlace) _sanitizeUnvisitedNodes(dirty, inPlaceNodes);
       } catch (error) {
         if (inPlace) {
           _neutralizeRoot(dirty);
-          arrayForEach(DOMPurify.removed, (entry) => {
-            if (entry.element) _neutralizeSubtree(entry.element);
-          });
+          _neutralizeDiscarded(dirty, inPlaceNodes);
         }
         throw error;
+      } finally {
+        IN_PLACE_VISITED = outerVisited;
       }
       if (inPlace) {
-        let rootWasRemoved = false;
-        arrayForEach(DOMPurify.removed, (entry) => {
-          if (entry.element) {
-            if (entry.element === dirty) rootWasRemoved = true;
-            _neutralizeSubtree(entry.element);
-          }
-        });
-        if (rootWasRemoved) throw typeErrorCreate("a node selected for removal could not be safely returned; refusing to sanitize in place");
+        if (_neutralizeDiscarded(dirty, inPlaceNodes)) throw typeErrorCreate("a node selected for removal could not be safely returned; refusing to sanitize in place");
         if (SAFE_FOR_TEMPLATES) _scrubTemplateExpressions2(dirty);
         return dirty;
       }
@@ -32161,6 +32256,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (!CONFIG) _parseConfig({});
       const lcTag = transformCaseFunc(tag);
       const lcName = transformCaseFunc(attr);
+      if (typeof value2 === "string" && (_isUnsafeAttributeValue(attr, value2) || !ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(SELF_CLOSING_TAG, value2))) return false;
       return _isValidAttribute(lcTag, lcName, value2);
     };
     DOMPurify.addHook = function(entryPoint, hookFunction) {
@@ -37158,7 +37254,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   }
   const HIT_DETECT_RESOLUTION = 0.5;
   function createHitDetectionImageData(size, transforms2, features, styleFunction, extent, resolution, rotation, squaredTolerance, projection) {
-    const userExtent = extent;
+    const userExtent = projection ? toUserExtent(extent) : extent;
     const width = size[0] * HIT_DETECT_RESOLUTION;
     const height = size[1] * HIT_DETECT_RESOLUTION;
     const context = createCanvasContext2D(width, height);
@@ -37171,7 +37267,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       [1, 0, 0, 1, 0, 0],
       rotation,
       squaredTolerance ?? 0,
-      void 0
+      projection ? getTransformFromProjections(getUserProjection(), projection) ?? void 0 : void 0
     );
     const featureCount = features.length;
     const indexFactor = Math.floor((256 * 256 * 256 - 1) / featureCount);
@@ -38433,6 +38529,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               startX -= worldWidth;
             }
           }
+          const userProjection2 = getUserProjection();
           this.hitDetectionImageData_ = createHitDetectionImageData(
             size,
             transforms2,
@@ -38442,7 +38539,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             extent,
             resolution,
             rotation,
-            getSquaredTolerance(resolution, this.renderedPixelRatio_)
+            getSquaredTolerance(resolution, this.renderedPixelRatio_),
+            userProjection2 ? (
+              /** @type {import("../../proj/Projection.js").default} */
+              projection
+            ) : (
+              /** @type {import("../../proj/Projection.js").default|undefined} */
+              /** @type {unknown} */
+              null
+            )
           );
         }
         resolve(
@@ -38634,8 +38739,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         resolution,
         pixelRatio
       );
+      const userProjection2 = getUserProjection();
       let userTransform;
-      {
+      if (userProjection2) {
+        for (let i = 0, ii = loadExtents.length; i < ii; ++i) {
+          const extent2 = loadExtents[i];
+          const userExtent2 = toUserExtent(extent2);
+          vectorSource.loadFeatures(
+            userExtent2,
+            toUserResolution(resolution),
+            userProjection2
+          );
+        }
+        userTransform = /** @type {import("../../proj.js").TransformFunction|undefined} */
+        getTransformFromProjections(userProjection2, projection);
+      } else {
         for (let i = 0, ii = loadExtents.length; i < ii; ++i) {
           vectorSource.loadFeatures(loadExtents[i], resolution, projection);
         }
@@ -42852,6 +42970,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           break;
       }
     });
+    if (!result.datumCode && (projjson.type === "GeographicCRS" || projjson.type === "GeodeticCRS") && projjson.id) {
+      result.datumCode = projjson.id.authority + "_" + projjson.id.code;
+    }
     if (result.latitude_of_false_origin !== void 0) {
       result.lat0 = result.latitude_of_false_origin;
     }

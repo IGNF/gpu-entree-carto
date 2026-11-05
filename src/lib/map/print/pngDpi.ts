@@ -25,11 +25,8 @@ function buildPngChunk(type: string, data: Uint8Array): Uint8Array {
   return chunk
 }
 
-export async function injectDpiInPng(dataUrl: string, dpi: number): Promise<string> {
+export function injectDpiInPngBytes(bytes: Uint8Array, dpi: number): Uint8Array {
   const ppm = Math.round(dpi / 0.0254)
-  const response = await fetch(dataUrl)
-  const buffer = await response.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
   const phys = new Uint8Array(9)
   const view = new DataView(phys.buffer)
   view.setUint32(0, ppm, false)
@@ -40,5 +37,12 @@ export async function injectDpiInPng(dataUrl: string, dpi: number): Promise<stri
   result.set(bytes.slice(0, 33))
   result.set(chunk, 33)
   result.set(bytes.slice(33), 33 + chunk.length)
-  return URL.createObjectURL(new Blob([result], { type: 'image/png' }))
+  return result
+}
+
+export async function injectDpiInPng(dataUrl: string, dpi: number): Promise<string> {
+  const response = await fetch(dataUrl)
+  const buffer = await response.arrayBuffer()
+  const withDpi = injectDpiInPngBytes(new Uint8Array(buffer), dpi)
+  return URL.createObjectURL(new Blob([withDpi], { type: 'image/png' }))
 }

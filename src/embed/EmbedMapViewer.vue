@@ -66,7 +66,7 @@ const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const printModalRef = ref<InstanceType<typeof MapPrintModal> | null>(null)
 
 provide(mapPrintModalKey, {
-  open: () => printModalRef.value?.open(),
+  open: (options) => printModalRef.value?.open(options),
   close: () => printModalRef.value?.close(),
 })
 

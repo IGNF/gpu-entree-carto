@@ -19,6 +19,20 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Impression carte** — option **Toutes les légendes** (sous « Afficher la légende ») : couches masquées et hors zoom incluses, style grisé.
+- **Fiche info** — boutons **Imprimer** parcelle / territoire ouvrent la modale d’impression avec la fiche correspondante précochée.
+- **Impression carte** — export : sous-étapes détaillées pendant la capture (page i/n, aperçu carte, tuiles, annexes, encodage) pour éviter un long palier à 0 % avec seulement « X page(s) à exporter… ».
+- **Impression carte** — export : correction blocage à ~85 % (« Génération du fichier ») lorsque le worker d’encodage ignorait silencieusement les réponses (validation ArrayBuffer inter-realms).
+- **Impression carte** — logique annexes clarifiée (fiches indépendantes de la vue sauf pictos parcelle low/high ; légendes au zoom ou « toutes » sans grisé) ; remesure discrète vs gabarit papier ; fiche parcelle : encarts et pagination stabilisés.
+- **Fiche parcelle (panneau + impression)** — libellés « Règles d’urbanisme » / « Documents couvrant la parcelle » ; retrait de l’intro documents ; espacement des groupes de documents ; deux encarts DSFR (caractère informatif, SUP protégées) ; lien **FAQ** (`faqUrl`) dans le panneau.
+- **Fiche territoire (impression)** — sans titre de section « Documents » ; sans liens « fiche juridique » dans l’onglet SUP.
+- **Impression carte** — la vue de l’aperçu carte n’est plus réinitialisée au changement des options du formulaire ; bouton secondaire **Replacer la carte** pour resynchroniser après zoom/déplacement ; case **Afficher le titre** ; action principale **Exporter** (ex « Imprimer la carte »).
+- **Impression carte** — annexes : retrait intérieur (~1,6 mm) hors marge formulaire ; pictos légende un peu plus grands à 300 DPI.
+- **Impression carte** — aperçu légendes (page 2+) : première ligne de la tranche visible (masquage corrigé au début de tranche).
+- **Impression carte** — export annexes : capture directe du cadre d’aperçu (WYSIWYG), plus clone html2canvas hors écran (évite les lignes rognées en bas de page).
+- **Impression carte** — réouverture de la modale : réutilisation de l’aperçu carte et du cache de pagination si la vue / les couches n’ont pas changé (évite « Préparation de l’aperçu… » systématique).
+- **Impression carte** — export : aperçu figé au clic (vue carte d’aperçu + annexes), sans resynchronisation sur la carte principale pendant le traitement ; raster carte sur **carte hors écran** avec attente du chargement des tuiles (corrige les zones blanches en 300 DPI) ; barre de progression et libellé d’étape pendant l’export ; **worker** d’encodage PNG/JPEG/PDF ; **préchauffage** tuiles et **cache** de rendu carte ; titre limité (100 car.) avec taille adaptée et zone carte minimale garantie (corrige export impossible / carte à hauteur 0) ; plus de « Préparation de l’aperçu… » au pan/zoom de l’aperçu carte (pagination légendes recalculée à l’export).
+- **Impression carte** — page légendes : masquage des couches hors zoom de l’aperçu carte (plus de légendes grisées) ; option et pagination recalculées au changement de zoom de l’aperçu.
 - **Impression carte** — pagination annexes : hauteur fiche basée sur les repères (pas le scroll HTML) ; légendes remesurées après stabilisation + aperçu visible ; cache pagination vidé à l’ouverture de la modale ; coupures légende/fiche alignées sur les lignes (plus de symbole rogné en bas de page).
 - **Impression carte** — options fiche parcelle / territoire activables dès que les données sont en cache ou dans le JSON fiche (sans exiger le mode carte affiché).
 - **Impression carte** — tuiles document (fiche) : sans cadre DSFR, typo compacte (titre gras, date procédure rapprochée).

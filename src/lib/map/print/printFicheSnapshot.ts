@@ -124,7 +124,13 @@ export function buildParcelDocumentsPrintHtml(selection: FicheInfoSelection | nu
 }
 
 export function sanitizeTerritoryTabHtmlForPrint(html: string): string {
-  return sanitizeFicheHtmlForPrint(html)
+  let out = sanitizeFicheHtmlForPrint(html)
+  if (typeof document === 'undefined') return out
+  const tpl = document.createElement('template')
+  tpl.innerHTML = out
+  tpl.content.querySelectorAll('.ec-fiche-info__sup-legal-link').forEach((el) => el.remove())
+  out = tpl.innerHTML
+  return out
 }
 
 export function territoryPrintTitle(selection: FicheInfoSelection | null): string {

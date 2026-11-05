@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
+- **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.
+- **Map print** — export: granular step labels during capture (page i/n, map preview, tiles, annexes, encoding) so progress no longer sits at 0% with only “X page(s) to export…”.
+- **Map print** — export: fix hang at ~85% (“Generating file”) when the encode worker silently dropped cross-realm ArrayBuffer responses.
+- **Map print** — annex content rules clarified (fiches vs preview map; parcel rule pictos low/high only; legends zoom-filtered or “all” without muted styling); quiet remeasure vs paper layout; stable parcel footnotes and pagination.
+- **Parcel fiche (panel + print)** — “Urban planning rules” / “Documents covering the parcel” headings; removed documents intro line; tighter document group spacing; two DSFR callouts (informational notice, protected SUPs); **FAQ** link (`faqUrl`) in the panel.
+- **Territory fiche (print)** — no “Documents” section title; no legal-profile links in the SUP tab.
+- **Map print** — preview map view no longer resets when form options change; optional **Replace map** button syncs preview view from the main map after pan/zoom; title checkbox **Show title**; primary action **Export** (was “Print map”).
+- **Map print** — annex pages: inner inset (~1.6 mm) separate from form margin; slightly larger legend icons at 300 DPI.
+- **Map print** — legends preview (page 2+): first row of each slice visible again (slice-start masking fix).
+- **Map print** — annex export captures the on-screen preview frame (WYSIWYG) instead of an off-screen html2canvas clone (fixes bottom row clipping).
+- **Map print** — reopening the modal reuses the preview map and annex pagination cache when the main map view / layers are unchanged (avoids systematic “Preparing preview…”).
+- **Map print** — off-screen map raster with tile wait and progress UI; **worker** for PNG/JPEG/PDF encoding; map **pre-warm** and render **cache**; map title capped (100 chars) with adaptive font size and guaranteed minimum map area (fixes zero-height map / failed export); no “Preparing preview…” overlay on preview map pan/zoom (legend pagination recomputed on Export).
+- **Map print** — legends page: hide layers outside preview map zoom (no greyed-out entries); print option and pagination update when preview map zoom changes.
 - **Map print** — annex pagination: fiche height from DOM markers (not inflated HTML scroll); legends re-measured after layout stabilizes and from visible preview; slice cache cleared when the print modal opens; slice bounds follow legend rows (no clipped symbols at page bottom).
 - **Map print** — parcel / territory fiche options enabled when data is cached or in the fiche JSON (without requiring the matching map mode).
 - **Map print** — document tiles on fiche pages: no DSFR frame; compact typography (bold title, tighter procedure date).

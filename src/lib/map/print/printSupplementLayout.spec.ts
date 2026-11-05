@@ -6,9 +6,14 @@ import {
   hideSupplementElementsForSlice,
   hideSupplementElementsSplitAtSliceBottom,
   measureSupplementSlicePlan,
+  finalizeFicheParcelFootnoteSlicePlan,
   measureSupplementSlicePlanFromPage,
+  trimTrailingSupplementSliceStarts,
+  ficheFootnotesVisibleForSlice,
   resolveSupplementSliceEndPx,
   sanitizeSupplementSliceStarts,
+  supplementSliceContentInsetPx,
+  supplementSliceLayoutHeightPx,
 } from '@/lib/map/print/printSupplementLayout'
 
 describe('countSupplementPageSlices', () => {
@@ -77,6 +82,12 @@ describe('countSupplementPageSlices', () => {
     } finally {
       root.remove()
     }
+  })
+
+  it('calcule la hauteur de tranche avec retrait intérieur', () => {
+    expect(supplementSliceLayoutHeightPx(1000, 96)).toBe(
+      1000 - supplementSliceContentInsetPx(96) * 2,
+    )
   })
 
   it('remonte la fin de tranche avant une ligne légende', () => {
@@ -498,6 +509,48 @@ describe('countSupplementPageSlices', () => {
     expect(nextSlice.style.visibility).toBe('hidden')
   })
 
+  it('affiche en tête de tranche une ligne légende chevauchant le début (aperçu)', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-legends'
+    const left = document.createElement('li')
+    left.className = 'ec-layer-legends__item'
+    const right = document.createElement('li')
+    right.className = 'ec-layer-legends__item'
+    page.appendChild(left)
+    page.appendChild(right)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    const rowTop = 796
+    for (const item of [left, right]) {
+      item.getBoundingClientRect = () => ({
+        top: rowTop,
+        bottom: rowTop + 28,
+        left: 0,
+        right: 200,
+        width: 200,
+        height: 28,
+        x: 0,
+        y: rowTop,
+        toJSON: () => ({}),
+      })
+      Object.defineProperty(item, 'offsetHeight', { configurable: true, value: 28 })
+    }
+
+    hideSupplementElementsForSlice(page, 800, 1200)
+    expect(left.style.visibility).toBe('')
+    expect(right.style.visibility).toBe('')
+  })
+
   it('ne masque pas le conteneur ec-fiche-info__body entier sur une tranche', () => {
     const page = document.createElement('article')
     page.className = 'ec-print-supplement-page ec-print-fiche'
@@ -563,5 +616,292 @@ describe('countSupplementPageSlices', () => {
     expect(body.style.visibility).toBe('')
     expect(firstTile.style.visibility).toBe('')
     expect(secondTile.style.visibility).toBe('hidden')
+  })
+
+  it('paginer les encarts de fin de fiche parcelle sur une tranche dédiée', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const tile = document.createElement('div')
+    tile.className = 'ec-fiche-info__tile'
+    const foot1 = document.createElement('div')
+    foot1.className = 'ec-print-fiche__footnote-callout'
+    const foot2 = document.createElement('div')
+    foot2.className = 'ec-print-fiche__footnote-callout'
+    page.append(tile, foot1, foot2)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    tile.getBoundingClientRect = () => ({
+      top: 20,
+      bottom: 360,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 340,
+      x: 0,
+      y: 20,
+      toJSON: () => ({}),
+    })
+    foot1.getBoundingClientRect = () => ({
+      top: 820,
+      bottom: 860,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 40,
+      x: 0,
+      y: 820,
+      toJSON: () => ({}),
+    })
+    foot2.getBoundingClientRect = () => ({
+      top: 868,
+      bottom: 908,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 40,
+      x: 0,
+      y: 868,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(tile, 'offsetHeight', { configurable: true, value: 340 })
+    Object.defineProperty(foot1, 'offsetHeight', { configurable: true, value: 40 })
+    Object.defineProperty(foot2, 'offsetHeight', { configurable: true, value: 40 })
+
+    const pageHeightPx = 400
+    const plan = measureSupplementSlicePlanFromPage(page, pageHeightPx)
+    expect(plan.sliceCount).toBeGreaterThanOrEqual(2)
+    expect(plan.sliceStarts[1]).toBeLessThanOrEqual(820)
+  })
+
+  it('finalizeFicheParcelFootnoteSlicePlan force une 2e tranche si les encarts dépassent la feuille', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const foot = document.createElement('div')
+    foot.className = 'ec-print-fiche__footnote-callout'
+    page.appendChild(foot)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    foot.getBoundingClientRect = () => ({
+      top: 850,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 50,
+      x: 0,
+      y: 850,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(foot, 'offsetHeight', { configurable: true, value: 50 })
+
+    const finalized = finalizeFicheParcelFootnoteSlicePlan(
+      page,
+      { sliceCount: 1, sliceStarts: [0] },
+      400,
+    )
+    expect(finalized.sliceCount).toBe(2)
+    expect(finalized.sliceStarts[1]).toBe(850)
+  })
+
+  it('finalizeFicheParcelFootnoteSlicePlan ne conserve pas de tranches uniformes après les encarts', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const tile = document.createElement('div')
+    tile.className = 'ec-fiche-info__tile'
+    const foot = document.createElement('div')
+    foot.className = 'ec-print-fiche__footnote-callout'
+    page.append(tile, foot)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    tile.getBoundingClientRect = () => ({
+      top: 40,
+      bottom: 420,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 380,
+      x: 0,
+      y: 40,
+      toJSON: () => ({}),
+    })
+    foot.getBoundingClientRect = () => ({
+      top: 850,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 50,
+      x: 0,
+      y: 850,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(tile, 'offsetHeight', { configurable: true, value: 380 })
+    Object.defineProperty(foot, 'offsetHeight', { configurable: true, value: 50 })
+
+    const finalized = finalizeFicheParcelFootnoteSlicePlan(
+      page,
+      { sliceCount: 4, sliceStarts: [0, 400, 800, 1200] },
+      400,
+    )
+    expect(finalized.sliceStarts).toEqual([0, 400, 850])
+    expect(finalized.sliceCount).toBe(3)
+  })
+
+  it('trimTrailingSupplementSliceStarts retire les tranches au-delà du contenu', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const tile = document.createElement('div')
+    tile.className = 'ec-fiche-info__tile'
+    page.appendChild(tile)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 720,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 720,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    tile.getBoundingClientRect = () => ({
+      top: 20,
+      bottom: 700,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 680,
+      x: 0,
+      y: 20,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(tile, 'offsetHeight', { configurable: true, value: 680 })
+
+    const trimmed = trimTrailingSupplementSliceStarts(
+      page,
+      { sliceCount: 3, sliceStarts: [0, 400, 800] },
+      300,
+    )
+    expect(trimmed.sliceStarts).toEqual([0, 400])
+    expect(trimmed.sliceCount).toBe(2)
+  })
+
+  it('finalizeFicheParcelFootnoteSlicePlan limite à 2 tranches si le corps tient sur une feuille', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const tile = document.createElement('div')
+    tile.className = 'ec-fiche-info__tile'
+    const foot = document.createElement('div')
+    foot.className = 'ec-print-fiche__footnote-callout'
+    page.append(tile, foot)
+
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    tile.getBoundingClientRect = () => ({
+      top: 40,
+      bottom: 360,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 320,
+      x: 0,
+      y: 40,
+      toJSON: () => ({}),
+    })
+    foot.getBoundingClientRect = () => ({
+      top: 850,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 50,
+      x: 0,
+      y: 850,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(tile, 'offsetHeight', { configurable: true, value: 320 })
+    Object.defineProperty(foot, 'offsetHeight', { configurable: true, value: 50 })
+
+    const finalized = finalizeFicheParcelFootnoteSlicePlan(
+      page,
+      { sliceCount: 4, sliceStarts: [0, 400, 800, 1200] },
+      400,
+    )
+    expect(finalized.sliceStarts).toEqual([0, 850])
+    expect(finalized.sliceCount).toBe(2)
+  })
+
+  it('ficheFootnotesVisibleForSlice cible la tranche qui contient les encarts', () => {
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-fiche'
+    const foot = document.createElement('div')
+    foot.className = 'ec-print-fiche__footnote-callout'
+    page.appendChild(foot)
+    page.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 900,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    foot.getBoundingClientRect = () => ({
+      top: 850,
+      bottom: 900,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 50,
+      x: 0,
+      y: 850,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(foot, 'offsetHeight', { configurable: true, value: 50 })
+
+    expect(ficheFootnotesVisibleForSlice(page, 0, 600)).toBe(false)
+    expect(ficheFootnotesVisibleForSlice(page, 600, 900)).toBe(true)
   })
 })

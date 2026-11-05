@@ -2310,6 +2310,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return transformFunc(coordinate, void 0, coordinate.length);
   }
+  let userProjection = null;
+  function getUserProjection() {
+    return userProjection;
+  }
   function toUserCoordinate(coordinate, sourceProjection) {
     {
       return coordinate;
@@ -2334,6 +2338,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function fromUserExtent(extent, destProjection) {
     {
       return extent;
+    }
+  }
+  function toUserResolution(resolution, sourceProjection) {
+    {
+      return resolution;
     }
   }
   function addCommon() {
@@ -10407,7 +10416,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   const HIT_DETECT_RESOLUTION = 0.5;
   function createHitDetectionImageData(size, transforms2, features, styleFunction, extent, resolution, rotation, squaredTolerance, projection) {
-    const userExtent = extent;
+    const userExtent = projection ? toUserExtent(extent) : extent;
     const width = size[0] * HIT_DETECT_RESOLUTION;
     const height = size[1] * HIT_DETECT_RESOLUTION;
     const context = createCanvasContext2D(width, height);
@@ -10420,7 +10429,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       [1, 0, 0, 1, 0, 0],
       rotation,
       squaredTolerance ?? 0,
-      void 0
+      projection ? getTransformFromProjections(getUserProjection(), projection) ?? void 0 : void 0
     );
     const featureCount = features.length;
     const indexFactor = Math.floor((256 * 256 * 256 - 1) / featureCount);
@@ -11697,6 +11706,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               startX -= worldWidth;
             }
           }
+          const userProjection2 = getUserProjection();
           this.hitDetectionImageData_ = createHitDetectionImageData(
             size,
             transforms2,
@@ -11706,7 +11716,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             extent,
             resolution,
             rotation,
-            getSquaredTolerance(resolution, this.renderedPixelRatio_)
+            getSquaredTolerance(resolution, this.renderedPixelRatio_),
+            userProjection2 ? (
+              /** @type {import("../../proj/Projection.js").default} */
+              projection
+            ) : (
+              /** @type {import("../../proj/Projection.js").default|undefined} */
+              /** @type {unknown} */
+              null
+            )
           );
         }
         resolve(
@@ -11898,8 +11916,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         resolution,
         pixelRatio
       );
+      const userProjection2 = getUserProjection();
       let userTransform;
-      {
+      if (userProjection2) {
+        for (let i = 0, ii = loadExtents.length; i < ii; ++i) {
+          const extent2 = loadExtents[i];
+          const userExtent2 = toUserExtent(extent2);
+          vectorSource.loadFeatures(
+            userExtent2,
+            toUserResolution(resolution),
+            userProjection2
+          );
+        }
+        userTransform = /** @type {import("../../proj.js").TransformFunction|undefined} */
+        getTransformFromProjections(userProjection2, projection);
+      } else {
         for (let i = 0, ii = loadExtents.length; i < ii; ++i) {
           vectorSource.loadFeatures(loadExtents[i], resolution, projection);
         }
@@ -18777,7 +18808,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         geometry = fromExtent(extent);
         geometry.rotate(this.getRotation(), getCenter(extent));
       } else {
-        {
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          geometry = /** @type {import("./geom/SimpleGeometry.js").default} */
+          geometryOrExtent.clone().transform(userProjection2, this.getProjection());
+        } else {
           geometry = geometryOrExtent;
         }
       }
@@ -24981,6 +25016,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
               Math.sqrt(squaredLength),
               this.geometryLayout_
             );
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              circle.transform(projection, userProjection2);
+            }
             return circle;
           });
         } else {
@@ -26018,6 +26057,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       } else {
         geometry = new Polygon(boxCoordinates);
       }
+      const userProjection2 = getUserProjection();
+      if (userProjection2) {
+        geometry.transform(projection, userProjection2);
+      }
       return geometry;
     };
   }
@@ -26614,6 +26657,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         /** @type {import("../geom/Geometry.js").default} */
         geometry
       );
+      const userProjection2 = getUserProjection();
+      if (userProjection2 && this.getMap()) {
+        const projection = (
+          /** @type {import("../Map.js").default} */
+          this.getMap().getView().getProjection()
+        );
+        circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        circleGeometry = fromCircle(
+          /** @type {import("../geom/Circle.js").default} */
+          circleGeometry
+        ).transform(projection, userProjection2);
+      }
       this.rBush_.insert(circleGeometry.getExtent(), circumferenceSegmentData);
     }
     /**
@@ -26697,7 +26752,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!vertexFeature) {
         return;
       }
-      this.getMap().getView().getProjection();
+      const projection = (
+        /** @type {import("../Map.js").default} */
+        this.getMap().getView().getProjection()
+      );
       const insertVertices = [];
       const vertex = (
         /** @type {Point} */
@@ -26722,7 +26780,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         if (segmentDataMatch.geometry.getType() === "Circle" && segmentDataMatch.index === CIRCLE_CIRCUMFERENCE_INDEX) {
           const closestVertex = closestOnSegmentData(
             pixelCoordinate,
-            segmentDataMatch
+            segmentDataMatch,
+            projection
           );
           if (this.coordinatesEqual_(closestVertex, vertex) && !componentSegments[uid][0]) {
             this.dragSegments_.push([segmentDataMatch, 0]);
@@ -27243,11 +27302,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             this.changingFeature_ = false;
           } else {
             this.changingFeature_ = true;
-            this.getMap().getView().getProjection();
+            const projection = (
+              /** @type {import("../Map.js").default} */
+              this.getMap().getView().getProjection()
+            );
             let radius = distance(
               fromUserCoordinate(circle.getCenter()),
               fromUserCoordinate(vertex)
             );
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              const circleGeometry = circle.clone().transform(userProjection2, projection);
+              circleGeometry.setRadius(radius);
+              radius = circleGeometry.transform(projection, userProjection2).getRadius();
+            }
             circle.setRadius(radius);
             this.changingFeature_ = false;
           }
@@ -27375,6 +27443,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           circumferenceSegmentData.segment[1] = coordinates2;
           this.rBush_.update(createOrUpdateFromCoordinate(coordinates2), centerSegmentData);
           let circleGeometry = circle;
+          const userProjection2 = getUserProjection();
+          if (userProjection2) {
+            const projection = evt.map.getView().getProjection();
+            circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+            circleGeometry = fromCircle(circleGeometry).transform(
+              projection,
+              userProjection2
+            );
+          }
           this.rBush_.update(
             circleGeometry.getExtent(),
             circumferenceSegmentData
@@ -27422,9 +27499,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.getMap()
       );
       const pixel = map.getPixelFromCoordinate(pixelCoordinate);
-      map.getView().getProjection();
+      const projection = map.getView().getProjection();
       const sortByDistance = (a, b) => {
-        return projectedDistanceToSegmentDataSquared(pixelCoordinate, a) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b);
+        return projectedDistanceToSegmentDataSquared(pixelCoordinate, a, projection) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b, projection);
       };
       let nodes;
       let hitPointGeometry;
@@ -27478,7 +27555,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (nodes && nodes.length > 0) {
         const node = nodes.sort(sortByDistance)[0];
         const closestSegment = node.segment;
-        let vertex = closestOnSegmentData(pixelCoordinate, node);
+        let vertex = closestOnSegmentData(pixelCoordinate, node, projection);
         const vertexPixel = map.getPixelFromCoordinate(vertex);
         let dist = distance(pixel, vertexPixel);
         if (hitPointGeometry || dist <= this.pixelTolerance_) {
@@ -28042,6 +28119,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         geometry
       );
       if (segmentData.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        }
         const distanceToCenterSquared = squaredDistance(
           circleGeometry.getCenter(),
           fromUserCoordinate(pointCoordinates)
@@ -28062,6 +28143,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         /** @type {import("../geom/Circle.js").default} */
         geometry
       );
+      const userProjection2 = getUserProjection();
+      if (userProjection2) {
+        circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+      }
       return toUserCoordinate(
         circleGeometry.getClosestPoint(
           fromUserCoordinate(pointCoordinates)
@@ -28123,7 +28208,14 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
        */
       Circle(geometry, projection) {
         let circleGeometry = geometry;
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        }
         const polygon = fromCircle(circleGeometry);
+        if (userProjection2) {
+          polygon.transform(projection, userProjection2);
+        }
         return GEOMETRY_SEGMENTERS.Polygon(polygon);
       },
       /**
@@ -28622,7 +28714,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      * @return {SnappedInfo|null} Snap result
      */
     snapTo(pixel, pixelCoordinate, map) {
-      map.getView().getProjection();
+      const projection = map.getView().getProjection();
       const projectedCoordinate = fromUserCoordinate(pixelCoordinate);
       const resolution = map.getView().getResolution();
       if (resolution === void 0) {
@@ -28697,6 +28789,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           const segmentGeometry = segmentData.feature.getGeometry();
           if (segmentGeometry && segmentGeometry.getType() === "Circle") {
             let circleGeometry = segmentGeometry;
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+            }
             vertex = closestOnCircle(
               projectedCoordinate,
               /** @type {import("../geom/Circle.js").default} */
@@ -33556,7 +33652,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     } else if (options.octal && octRegex.test(trimmedStr)) {
       return parse_int(trimmedStr, 8);
     } else if (!isFinite(trimmedStr)) {
-      return handleInfinity(str, Number(trimmedStr), options);
+      const num = Number(trimmedStr);
+      if (Number.isNaN(num)) return str;
+      return handleInfinity(str, num, options);
     } else if (trimmedStr.includes("e") || trimmedStr.includes("E")) {
       return resolveEnotation(str, trimmedStr, options);
     } else {
@@ -33567,8 +33665,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         let numTrimmedByZeros = trimZeros(match[3]);
         const decimalAdjacentToLeadingZeros = sign ? (
           // 0., -00., 000.
-          str[leadingZeros.length + 1] === "."
-        ) : str[leadingZeros.length] === ".";
+          trimmedStr[leadingZeros.length + 1] === "."
+        ) : trimmedStr[leadingZeros.length] === ".";
         if (!options.leadingZeros && (leadingZeros.length > 1 || leadingZeros.length === 1 && !decimalAdjacentToLeadingZeros)) {
           return str;
         } else {
@@ -33606,14 +33704,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const leadingZeros = notation[2];
       const eAdjacentToLeadingZeros = sign ? (
         // 0E.
-        str[leadingZeros.length + 1] === eChar
-      ) : str[leadingZeros.length] === eChar;
+        trimmedStr[leadingZeros.length + 1] === eChar
+      ) : trimmedStr[leadingZeros.length] === eChar;
       if (leadingZeros.length > 1 && eAdjacentToLeadingZeros) return str;
       else if (leadingZeros.length === 1 && (notation[3].startsWith(`.${eChar}`) || notation[3][0] === eChar)) {
         return Number(trimmedStr);
       } else if (leadingZeros.length > 0) {
         if (options.leadingZeros && !eAdjacentToLeadingZeros) {
-          trimmedStr = (notation[1] || "") + notation[3];
           return Number(trimmedStr);
         } else return str;
       } else {
@@ -44756,7 +44853,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this.getView().getProjection()
       );
       if ((options == null ? void 0 : options.wrapX) && coordinate) {
-        const projection = this.getView().getProjection();
+        const projection = getUserProjection() || this.getView().getProjection();
         wrapX$1(coordinate, projection);
       }
       return coordinate;

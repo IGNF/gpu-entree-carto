@@ -9,6 +9,14 @@ import type { ParcelFicheFeature } from '@/lib/fiche/parcelFicheFromGpuApi'
 /** Zoom par défaut fiche parcelle (~ 1/5000), comme vue serrée gpu-client. */
 export const DEFAULT_PARCEL_FICHE_LEGEND_ZOOM = 17
 
+/** Bande d’échelle des pictos règles parcelle (seul le nom de fichier -lowscale / -highscale change). */
+export type ParcelLegendScaleBand = 'lowscale' | 'highscale'
+
+export function parcelLegendScaleBand(zoom: number): ParcelLegendScaleBand {
+  if (!Number.isFinite(zoom)) return 'highscale'
+  return zoom >= DEFAULT_PARCEL_FICHE_LEGEND_ZOOM ? 'highscale' : 'lowscale'
+}
+
 export type ParcelLegendConfigEntry = {
   name: string
   type?: string

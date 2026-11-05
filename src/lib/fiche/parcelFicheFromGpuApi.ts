@@ -727,10 +727,6 @@ export function buildParcelDocumentsHtmlFromFiche(
   ) {
     parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML)
   }
-  parts.push(
-    '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>',
-  )
-
   const duTiles = isFicheDocumentFamilyVisible('du')
     ? [
         ...(mecCatalogVisible
@@ -754,11 +750,8 @@ export function buildParcelDocumentsHtmlFromFiche(
     : []
 
   if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
-    const presentation = buildParcelDocumentsPresentationHtml(ficheApi)
-    const sections = presentation
-      .replace(/^[\s\S]*?<p class="ec-fiche-info__intro">[\s\S]*?<\/p>/, '')
-      .trim()
-    if (sections) parts.push(sections)
+    const presentation = buildParcelDocumentsPresentationHtml(ficheApi).trim()
+    if (presentation) parts.push(presentation)
     return parts.join('')
   }
 

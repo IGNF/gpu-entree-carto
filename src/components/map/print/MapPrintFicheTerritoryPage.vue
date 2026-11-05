@@ -27,7 +27,9 @@ const sanitizedTabs = computed(() =>
     <h2 class="ec-print-fiche__title">{{ title }}</h2>
     <div v-if="documentTabs.length" class="ec-print-fiche__sections">
       <section v-for="tab in sanitizedTabs" :key="tab.id" class="ec-print-fiche__section">
-        <h3 class="ec-print-fiche__section-title">{{ tab.label }}</h3>
+        <h3 v-if="tab.label !== 'Documents'" class="ec-print-fiche__section-title">
+          {{ tab.label }}
+        </h3>
         <SanitizedHtml class="ec-fiche-info__body" :html="tab.bodyHtml" />
       </section>
     </div>

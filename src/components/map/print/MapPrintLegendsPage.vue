@@ -7,6 +7,7 @@ import {
   resolveLegendItemImageUrls,
 } from '@/lib/layerConfig/gpuLegendItems'
 import type { LegendItem } from '@/types/stubs'
+import '@/styles/catalog-zoom-range.css'
 import '@/styles/layer-legends.css'
 import '@/styles/map-print-supplement.css'
 
@@ -14,16 +15,24 @@ const props = defineProps<{
   layers: ManagedLayer[]
   mapZoom: number
   catalogEntryInZoomRange: (id: string, zoom: number) => boolean
+  /** Toutes les couches avec légende (y compris masquées / hors zoom), sans filtrage ni grisé. */
+  includeAllLegendLayers?: boolean
 }>()
 
-const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
-
-function legendImageSrcs(leg: LegendItem): string[] {
-  return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url))
-}
+const stackedLegendLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
 
 function layerInZoomRange(layer: ManagedLayer): boolean {
   return props.catalogEntryInZoomRange(layer.id, props.mapZoom)
+}
+
+/** Impression filtrée : masquer les couches hors zoom (pas de grisé). */
+const displayLayers = computed(() => {
+  if (props.includeAllLegendLayers) return stackedLegendLayers.value
+  return stackedLegendLayers.value.filter((layer) => layerInZoomRange(layer))
+})
+
+function legendImageSrcs(leg: LegendItem): string[] {
+  return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url))
 }
 </script>
 
@@ -34,17 +43,16 @@ function layerInZoomRange(layer: ManagedLayer): boolean {
   >
     <h2 id="ec-print-legends-title" class="ec-print-legends__title">Légendes</h2>
 
-    <p v-if="!displayLayers.length" class="ec-layer-legends__hint">
+    <p v-if="!stackedLegendLayers.length" class="ec-layer-legends__hint">
       Aucune couche avec légende dans la pile.
     </p>
 
+    <p v-else-if="!displayLayers.length" class="ec-layer-legends__hint">
+      Aucune légende visible au niveau de zoom de l’aperçu carte.
+    </p>
+
     <div v-else class="ec-print-legends__groups">
-      <section
-        v-for="layer in displayLayers"
-        :key="layer.id"
-        class="ec-print-legends__group"
-        :class="{ 'ec-not-in-zoom-range': !layerInZoomRange(layer) }"
-      >
+      <section v-for="layer in displayLayers" :key="layer.id" class="ec-print-legends__group">
         <h3 class="ec-print-legends__group-title">{{ layer.title }}</h3>
         <ul v-if="layer.legend?.length" class="ec-layer-legends__list">
           <li v-for="leg in layer.legend" :key="leg.id" class="ec-layer-legends__item">

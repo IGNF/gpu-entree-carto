@@ -8,6 +8,7 @@ import {
 import {
   aggregateStackNodeLegend,
   collectActiveOnlyLegendNodesForLegendsPanel,
+  collectCheckedOnlyLegendNodes,
   collectDataLayersStackNodes,
   dataLayersStackToWmsIdsBottomToTop,
   mergeWmsStackOrderWithForceOpacityOnTop,
@@ -388,6 +389,25 @@ export function useManagedLayers(
     return [...fromStack, ...onlyLegendRows]
   })
 
+  /** Pile + onlyLegend cochés, y compris couches masquées ou hors zoom (impression « toutes les légendes »). */
+  const legendLayersAll = computed((): ManagedLayer[] => {
+    const fromStack = layers.value.filter((l) => l.inStack && (l.legend?.length ?? 0) > 0)
+    const seen = new Set(fromStack.map((l) => l.id))
+    const onlyLegendRows = collectCheckedOnlyLegendNodes(nodes.value, catalogChecked.value)
+      .filter((node) => !seen.has(node.id))
+      .map((node): ManagedLayer => ({
+        id: node.id,
+        title: node.title,
+        inStack: false,
+        visible: true,
+        opacity: catalogNodeOpacityPercent(node),
+        grayscale: false,
+        forceOpacity: false,
+        legend: node.legend,
+      }))
+    return [...fromStack, ...onlyLegendRows]
+  })
+
   const catalogCheckedById = computed(() => {
     const out: Record<string, boolean> = { ...catalogChecked.value }
     for (const node of treeIndex.nodesById.values()) {
@@ -591,6 +611,7 @@ export function useManagedLayers(
     layers,
     stackLayers,
     legendLayers,
+    legendLayersAll,
     catalogCheckedById,
     setCatalogChecked,
     setInStack,

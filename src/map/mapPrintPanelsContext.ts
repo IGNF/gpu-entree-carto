@@ -6,6 +6,7 @@ import type { FicheInfoSelection } from '@/composables/tabPanels'
 export type MapPrintPanelsContext = {
   selection: Ref<FicheInfoSelection | null>
   legendLayers: Ref<ManagedLayer[]>
+  legendLayersAll: Ref<ManagedLayer[]>
   mapZoom: Ref<number>
   catalogEntryInZoomRange: (layerId: string, zoom: number) => boolean
 }

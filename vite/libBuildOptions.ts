@@ -1,5 +1,10 @@
 import type { PreRenderedAsset } from 'rollup'
-import type { EsbuildOptions } from 'esbuild'
+import type { BuildOptions as EsbuildOptions } from 'esbuild'
+
+/** Workers (export PDF) : format ES requis si le worker importe jspdf (pas IIFE multi-chunks). */
+export const vitePrintWorkerBuildOptions = {
+  worker: { format: 'es' as const },
+}
 
 /**
  * Option Vite racine `esbuild` (pas `build.esbuild`) : utilisée aussi pour la minification

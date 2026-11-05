@@ -140,6 +140,7 @@ const { mapZoom } = useMapZoom()
 const {
   layers,
   legendLayers,
+  legendLayersAll,
   catalogCheckedById,
   catalogEntryInZoomRange,
   setCatalogChecked,
@@ -292,6 +293,7 @@ provide(TAB_PANELS_KEY, api)
 const mapPrintPanelsCtx = {
   selection,
   legendLayers,
+  legendLayersAll,
   mapZoom,
   catalogEntryInZoomRange,
 }

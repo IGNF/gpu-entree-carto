@@ -1,4 +1,13 @@
-import { convertMmToPx } from '@/lib/map/print/paperFormats'
+import { convertMmToPx, HIGH_DPI_VALUE } from '@/lib/map/print/paperFormats'
+
+/** Marge intérieure des pages annexes (mm), indépendante de la marge papier du formulaire. */
+export const SUPPLEMENT_SLICE_CONTENT_INSET_MM = 1.6
+
+/** Titre principal annexes (ex. « Légendes ») — même taille que le titre carte. */
+export const PRINT_SUPPLEMENT_TITLE_FONT_MM = 4.5
+
+/** Espacement sous les titres annexes (`--print-block-gap`). */
+export const PRINT_SUPPLEMENT_BLOCK_GAP_MM = 2
 import { countSupplementSlices } from '@/lib/map/print/printPageTypes'
 
 export type PrintSupplementInnerPx = {
@@ -24,6 +33,8 @@ const SUPPLEMENT_PAGINATION_MARKERS = [
   '.ec-fiche-info__sup-group-title',
   '.ec-fiche-info__rules-section-title',
   '.ec-fiche-info__callout',
+  '.ec-print-fiche__footnote-callout',
+  '.ec-print-fiche__section--footnotes',
   '.ec-fiche-info__rule-row',
   '.ec-fiche-info__tile',
   '.ec-fiche-info__doc-card',
@@ -65,20 +76,32 @@ export function computePrintSupplementInnerPx(
 /**
  * Typo et images en mm (taille physique stable A4 → A0), converties au DPI d’export.
  */
+export function supplementSliceContentInsetPx(dpi: number): number {
+  return convertMmToPx(SUPPLEMENT_SLICE_CONTENT_INSET_MM, dpi)
+}
+
+/** Hauteur utile d’une tranche annexe (zone intérieure moins padding haut/bas). */
+export function supplementSliceLayoutHeightPx(innerHeightPx: number, dpi: number): number {
+  const inset = supplementSliceContentInsetPx(dpi)
+  return Math.max(40, innerHeightPx - inset * 2)
+}
+
 export function printSupplementCssVars(innerWidthPx: number, dpi: number): Record<string, string> {
   const px = (mm: number) => `${convertMmToPx(mm, dpi)}px`
+  const legendImgMm = dpi >= HIGH_DPI_VALUE ? 13.2 : 11
   return {
     '--print-inner-width': `${Math.max(innerWidthPx, 120)}px`,
     '--print-body-font': px(2.8),
-    '--print-title-font': px(4.5),
+    '--print-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
     '--print-section-font': px(3.4),
     '--print-small-font': px(2.4),
     '--print-fiche-label-font': px(2.5),
     '--print-fiche-desc-font': px(2.2),
     '--print-img-max': px(16),
-    '--print-legend-img-max': px(11),
-    '--print-block-gap': px(2),
-    '--print-map-title-font': px(5),
+    '--print-legend-img-max': px(legendImgMm),
+    '--print-block-gap': px(PRINT_SUPPLEMENT_BLOCK_GAP_MM),
+    '--print-map-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
+    '--print-supplement-slice-inset': px(SUPPLEMENT_SLICE_CONTENT_INSET_MM),
   }
 }
 
@@ -300,6 +323,168 @@ function contentBlocksForPage(page: HTMLElement, layoutScale = 1): ContentBlock[
   return blocks.sort((a, b) => a.top - b.top || a.bottom - b.bottom)
 }
 
+function ficheFootnoteBlockTop(page: HTMLElement, layoutScale = 1): number {
+  if (!page.classList.contains('ec-print-fiche')) return 0
+  const section = page.querySelector('.ec-print-fiche__section--footnotes')
+  if (section instanceof HTMLElement) {
+    const block = blockFromElement(section, page, layoutScale)
+    if (block) return block.top
+  }
+  let minTop = Infinity
+  for (const el of page.querySelectorAll('.ec-print-fiche__footnote-callout')) {
+    if (!(el instanceof HTMLElement)) continue
+    const block = blockFromElement(el, page, layoutScale)
+    if (block) minTop = Math.min(minTop, block.top)
+  }
+  return Number.isFinite(minTop) ? minTop : 0
+}
+
+function ficheMainContentBottomExcludingFootnotes(page: HTMLElement, layoutScale = 1): number {
+  if (!page.classList.contains('ec-print-fiche')) return 0
+  let maxBottom = 0
+  for (const el of supplementPaginationElements(page)) {
+    if (!(el instanceof HTMLElement)) continue
+    if (el.closest('.ec-print-fiche__section--footnotes')) continue
+    if (el.classList.contains('ec-print-fiche__footnote-callout')) continue
+    const block = blockFromElement(el, page, layoutScale)
+    if (block) maxBottom = Math.max(maxBottom, block.bottom)
+  }
+  return maxBottom
+}
+
+function ficheFootnoteBlockBottom(page: HTMLElement, layoutScale = 1): number {
+  if (!page.classList.contains('ec-print-fiche')) return 0
+  const section = page.querySelector('.ec-print-fiche__section--footnotes')
+  if (section instanceof HTMLElement) {
+    const block = blockFromElement(section, page, layoutScale)
+    if (block) return block.bottom
+  }
+  let maxBottom = 0
+  for (const el of page.querySelectorAll('.ec-print-fiche__footnote-callout')) {
+    if (!(el instanceof HTMLElement)) continue
+    const block = blockFromElement(el, page, layoutScale)
+    if (block) maxBottom = Math.max(maxBottom, block.bottom)
+  }
+  return maxBottom
+}
+
+/** Garantit une tranche dédiée aux encarts si le bloc dépasse la hauteur utile d’une feuille. */
+export function finalizeFicheParcelFootnoteSlicePlan(
+  page: HTMLElement,
+  plan: SupplementSlicePlan,
+  pageHeightPx: number,
+): SupplementSlicePlan {
+  if (!page.classList.contains('ec-print-fiche')) return plan
+  if (!page.querySelector('.ec-print-fiche__footnote-callout')) return plan
+
+  const footTop = ficheFootnoteBlockTop(page)
+  const footBottom = ficheFootnoteBlockBottom(page)
+  if (footBottom < 1 || footTop < 1) return plan
+
+  const epsilon = Math.max(4, pageHeightPx * 0.008)
+  if (footBottom <= pageHeightPx + epsilon) return plan
+
+  const splitAt = Math.max(0, footTop)
+  const starts = [...plan.sliceStarts]
+
+  if (plan.sliceCount < 2) {
+    return { sliceCount: 2, sliceStarts: [0, splitAt] }
+  }
+
+  const mainBottom = ficheMainContentBottomExcludingFootnotes(page)
+  /** Corps sur une feuille : feuille 1 = contenu, feuille 2 = encarts. */
+  if (mainBottom > 0 && mainBottom <= pageHeightPx + epsilon * 2) {
+    return { sliceCount: 2, sliceStarts: [0, splitAt] }
+  }
+
+  const contentStarts = starts.filter(
+    (start) =>
+      start > 0 && start < splitAt - epsilon && (mainBottom < 1 || start <= mainBottom + epsilon),
+  )
+  const bodyStart = contentStarts.length ? contentStarts[contentStarts.length - 1] : null
+  if (bodyStart == null) {
+    return { sliceCount: 2, sliceStarts: [0, splitAt] }
+  }
+  /** Au plus une coupure corps + une feuille encarts (pas de tranches uniformes intermédiaires). */
+  return { sliceCount: 3, sliceStarts: [0, bodyStart, splitAt] }
+}
+
+/** Encarts visibles sur la tranche qui contient le haut du bloc encarts (pas seulement la dernière page). */
+export function ficheFootnotesVisibleForSlice(
+  page: HTMLElement,
+  sliceStartPx: number,
+  sliceEndPx: number,
+  layoutScale = 1,
+): boolean {
+  if (!page.classList.contains('ec-print-fiche')) return false
+  const footTop = ficheFootnoteBlockTop(page, layoutScale)
+  if (footTop < 1) return sliceEndPx > sliceStartPx + 8
+  const epsilon = Math.max(4, (sliceEndPx - sliceStartPx) * 0.008)
+  return footTop >= sliceStartPx - epsilon && footTop < sliceEndPx + epsilon
+}
+
+/** Supprime les débuts de tranche au-delà du contenu mesuré (aperçu blanc). */
+export function trimTrailingSupplementSliceStarts(
+  page: HTMLElement,
+  plan: SupplementSlicePlan,
+  pageHeightPx: number,
+): SupplementSlicePlan {
+  if (!page.classList.contains('ec-print-fiche')) return plan
+  const contentBottom = Math.max(
+    resolveSupplementContentHeightForPage(page),
+    ficheFootnoteBlockBottom(page),
+  )
+  const epsilon = Math.max(4, pageHeightPx * 0.008)
+  let starts = plan.sliceStarts.filter(
+    (start, index) => index === 0 || start < contentBottom - epsilon,
+  )
+  starts = sanitizeSupplementSliceStarts(starts, pageHeightPx)
+  if (!starts.length) starts = [0]
+  return { sliceCount: starts.length, sliceStarts: starts }
+}
+
+/** Encarts fin de fiche parcelle : jamais rognés — reportent sur la tranche suivante. */
+function adjustCutForFicheFootnotes(
+  page: HTMLElement,
+  sliceStartPx: number,
+  cut: number,
+  pageHeightPx: number,
+  epsilon: number,
+  layoutScale = 1,
+): number {
+  if (!page.classList.contains('ec-print-fiche')) return cut
+  const footnotes = Array.from(page.querySelectorAll('.ec-print-fiche__footnote-callout')).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement,
+  )
+  if (!footnotes.length) return cut
+
+  let footTop = Infinity
+  let footBottom = 0
+  for (const el of footnotes) {
+    const block = blockFromElement(el, page, layoutScale)
+    if (!block) continue
+    footTop = Math.min(footTop, block.top)
+    footBottom = Math.max(footBottom, block.bottom)
+  }
+  if (!Number.isFinite(footTop)) return cut
+
+  const sliceEndUniform = sliceStartPx + pageHeightPx
+  const footnotesFitInSlice =
+    footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + epsilon
+
+  if (footnotesFitInSlice) return cut
+
+  if (footTop > sliceStartPx + epsilon && footTop < cut + epsilon) {
+    return Math.min(cut, footTop)
+  }
+
+  if (footBottom > cut + epsilon && footTop < cut + epsilon) {
+    return Math.min(cut, footTop > sliceStartPx + epsilon ? footTop : cut)
+  }
+
+  return cut
+}
+
 /** Ne pas laisser un titre de groupe seul en bas de page sans la première ligne d’items. */
 function adjustCutForLegendGroupTitles(
   page: HTMLElement,
@@ -395,6 +580,7 @@ export function resolveSupplementSliceEndPx(
   }
 
   cut = adjustCutForLegendGroupTitles(page, sliceStartPx, cut, tailZoneStart, epsilon, layoutScale)
+  cut = adjustCutForFicheFootnotes(page, sliceStartPx, cut, pageHeightPx, epsilon, layoutScale)
 
   if (cut <= sliceStartPx + epsilon) {
     cut = uniformEnd
@@ -490,17 +676,39 @@ export function measureSupplementSlicePlanFromPage(
   page: HTMLElement,
   pageHeightPx: number,
 ): SupplementSlicePlan {
-  const contentHeight = resolveSupplementContentHeightForPage(page)
-  const targetCount = countSupplementSlices(contentHeight, pageHeightPx)
-  if (targetCount <= 1) return { sliceCount: 1, sliceStarts: [0] }
-
-  const blockPlan = computeSupplementSlicePlan(page, pageHeightPx)
-  const starts = sanitizeSupplementSliceStarts(blockPlan.sliceStarts, pageHeightPx)
-  if (starts.length >= 2 && starts.length <= targetCount + 1) {
-    return { sliceCount: starts.length, sliceStarts: starts }
+  const footnoteBottom = ficheFootnoteBlockBottom(page)
+  const contentHeight = Math.max(resolveSupplementContentHeightForPage(page), footnoteBottom)
+  let targetCount = countSupplementSlices(contentHeight, pageHeightPx)
+  if (footnoteBottom > pageHeightPx + 2) {
+    targetCount = Math.max(targetCount, 2)
   }
 
-  return buildUniformSupplementSlicePlan(contentHeight, pageHeightPx)
+  let plan: SupplementSlicePlan
+  if (targetCount <= 1 && footnoteBottom <= pageHeightPx + 2) {
+    plan = { sliceCount: 1, sliceStarts: [0] }
+  } else {
+    const blockPlan = computeSupplementSlicePlan(page, pageHeightPx)
+    let starts = sanitizeSupplementSliceStarts(blockPlan.sliceStarts, pageHeightPx)
+    if (starts.length >= 2) {
+      plan = { sliceCount: starts.length, sliceStarts: starts }
+    } else {
+      const uniform = buildUniformSupplementSlicePlan(
+        Math.max(contentHeight, footnoteBottom),
+        pageHeightPx,
+      )
+      starts = sanitizeSupplementSliceStarts(uniform.sliceStarts, pageHeightPx)
+      if (starts.length < 2 && footnoteBottom > pageHeightPx + 2) {
+        starts = [0, Math.max(0, ficheFootnoteBlockTop(page))]
+      }
+      plan = { sliceCount: Math.max(1, starts.length), sliceStarts: starts.length ? starts : [0] }
+    }
+  }
+
+  plan = finalizeFicheParcelFootnoteSlicePlan(page, plan, pageHeightPx)
+  if (page.classList.contains('ec-print-fiche')) {
+    plan = trimTrailingSupplementSliceStarts(page, plan, pageHeightPx)
+  }
+  return plan
 }
 
 /** Plan de pagination à partir du bloc de mesure hors écran. */
@@ -536,7 +744,6 @@ export function hideSupplementElementsForSlice(
   const epsilon = Math.max(4, sliceHeightPx * 0.008)
 
   const shouldHide = (top: number, bottom: number): boolean => {
-    if (sliceStartPx > epsilon && top < sliceStartPx + epsilon) return true
     if (bottom <= sliceStartPx + epsilon) return true
     if (top >= sliceEndPx - epsilon) return true
     return top < sliceEndPx - epsilon && bottom > sliceEndPx + epsilon

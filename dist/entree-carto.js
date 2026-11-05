@@ -10,6 +10,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
 this.gpu = (function() {
   "use strict";
   var _PositionFactory_instances, existContainer_fn, createContainer_fn, setAnchor_fn;
+  var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
   const config = {
     scriptDir: "/",
     yearOfIgnCopyright: 2019,
@@ -28,7 +29,7 @@ this.gpu = (function() {
     config.scriptDir = path2.split("/").slice(0, -1).join("/");
   }
   /**
-  * @vue/shared v3.5.43
+  * @vue/shared v3.5.44
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -199,7 +200,7 @@ this.gpu = (function() {
   const isHTMLTag = /* @__PURE__ */ makeMap(HTML_TAGS);
   const isSVGTag = /* @__PURE__ */ makeMap(SVG_TAGS);
   const isMathMLTag = /* @__PURE__ */ makeMap(MATH_TAGS);
-  const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`;
+  const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`;
   const isSpecialBooleanAttr = /* @__PURE__ */ makeMap(specialBooleanAttrs);
   function includeBooleanAttr(value2) {
     return !!value2 || value2 === "";
@@ -355,7 +356,7 @@ this.gpu = (function() {
     return String(value2);
   }
   /**
-  * @vue/reactivity v3.5.43
+  * @vue/reactivity v3.5.44
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -1154,18 +1155,40 @@ this.gpu = (function() {
   };
   function iterator(self2, method, wrapValue) {
     const arr = shallowReadArray(self2);
-    const iter = arr[method]();
+    const methodFn = arr[method];
+    const iter = methodFn.call(arr);
     if (arr !== self2 && !/* @__PURE__ */ isShallow(self2)) {
-      iter._next = iter.next;
-      iter.next = () => {
-        const result = iter._next();
-        if (!result.done) {
-          result.value = wrapValue(result.value);
+      if (iter[Symbol.toStringTag] === "Array Iterator") {
+        const wrapped = Object.create(Object.getPrototypeOf(iter));
+        wrapped.next = () => wrapResult(iter.next(), wrapValue);
+        if (methodFn !== arrayProto[method]) {
+          Object.defineProperties(wrapped, {
+            return: {
+              get() {
+                const fn2 = iter.return;
+                return typeof fn2 === "function" ? fn2.bind(iter) : fn2;
+              }
+            },
+            throw: {
+              get() {
+                const fn2 = iter.throw;
+                return typeof fn2 === "function" ? fn2.bind(iter) : fn2;
+              }
+            }
+          });
         }
-        return result;
-      };
+        return wrapped;
+      }
+      iter._next = iter.next;
+      iter.next = () => wrapResult(iter._next(), wrapValue);
     }
     return iter;
+  }
+  function wrapResult(result, wrapValue) {
+    if (!result.done) {
+      result.value = wrapValue(result.value);
+    }
+    return result;
   }
   const arrayProto = Array.prototype;
   function apply$2(self2, method, fn2, thisArg, wrappedRetFn, args) {
@@ -1587,6 +1610,8 @@ this.gpu = (function() {
         return !isReadonly2;
       } else if (key2 === "__v_isReadonly") {
         return isReadonly2;
+      } else if (key2 === "__v_isShallow") {
+        return shallow;
       } else if (key2 === "__v_raw") {
         return target2;
       }
@@ -2059,9 +2084,11 @@ this.gpu = (function() {
     if (once && cb) {
       const _cb = cb;
       cb = (...args) => {
-        const res = _cb(...args);
-        watchHandle();
-        return res;
+        try {
+          return _cb(...args);
+        } finally {
+          watchHandle();
+        }
       };
     }
     let oldValue = isMultiSource ? new Array(source.length).fill(INITIAL_WATCHER_VALUE) : INITIAL_WATCHER_VALUE;
@@ -2072,12 +2099,13 @@ this.gpu = (function() {
       if (cb) {
         const newValue = effect2.run();
         if (immediateFirstRun || deep || forceTrigger || (isMultiSource ? newValue.some((v2, i2) => hasChanged(v2, oldValue[i2])) : hasChanged(newValue, oldValue))) {
-          if (cleanup) {
-            cleanup();
-          }
           const currentWatcher = activeWatcher;
-          activeWatcher = effect2;
+          pauseTracking();
           try {
+            if (cleanup) {
+              cleanup();
+            }
+            activeWatcher = effect2;
             const args = [
               newValue,
               // pass undefined as the old value when it's changed for the first time
@@ -2091,6 +2119,7 @@ this.gpu = (function() {
             );
           } finally {
             activeWatcher = currentWatcher;
+            resetTracking();
           }
         }
       } else {
@@ -2167,7 +2196,7 @@ this.gpu = (function() {
     return value2;
   }
   /**
-  * @vue/runtime-core v3.5.43
+  * @vue/runtime-core v3.5.44
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -2463,21 +2492,21 @@ this.gpu = (function() {
     }
     queueFlush();
   }
-  function flushPreFlushCbs(instance, seen, i2 = flushIndex + 1) {
+  function flushPreFlushCbs(instance, minUid, seen, i2 = flushIndex + 1) {
     {
       seen = seen || /* @__PURE__ */ new Map();
     }
     for (; i2 < queue$1.length; i2++) {
       const cb = queue$1[i2];
       if (cb && cb.flags & 2) {
-        if (instance && cb.id !== instance.uid) {
+        if (instance && cb.id !== instance.uid || minUid !== void 0 && !(cb.id >= minUid)) {
           continue;
         }
         if (checkRecursiveUpdates(seen, cb)) {
           continue;
         }
         queue$1.splice(i2, 1);
-        i2--;
+        i2 = instance ? i2 - 1 : flushIndex;
         if (cb.flags & 4) {
           cb.flags &= -2;
         }
@@ -2488,12 +2517,23 @@ this.gpu = (function() {
       }
     }
   }
-  function flushPostFlushCbs(seen) {
+  function flushPostFlushCbs(seen, skip, minUid = 0) {
     if (pendingPostFlushCbs.length) {
-      const deduped = [...new Set(pendingPostFlushCbs)].sort(
-        (a3, b3) => getId(a3) - getId(b3)
-      );
-      pendingPostFlushCbs.length = 0;
+      let cbs = pendingPostFlushCbs;
+      let kept = 0;
+      if (skip) {
+        cbs = [];
+        for (let i2 = 0; i2 < pendingPostFlushCbs.length; i2++) {
+          const cb = pendingPostFlushCbs[i2];
+          if (cb.i !== void 0 ? !cb.i || cb.i.uid < minUid : skip.has(cb)) {
+            pendingPostFlushCbs[kept++] = cb;
+          } else {
+            cbs.push(cb);
+          }
+        }
+      }
+      const deduped = [...new Set(cbs)].sort((a3, b3) => getId(a3) - getId(b3));
+      pendingPostFlushCbs.length = kept;
       if (activePostFlushCbs) {
         for (let i2 = 0; i2 < deduped.length; i2++) {
           activePostFlushCbs.push(deduped[i2]);
@@ -2517,6 +2557,22 @@ this.gpu = (function() {
       }
       activePostFlushCbs = null;
       postFlushIndex = 0;
+    }
+  }
+  let isFlushing = false;
+  function flushOnAppMount(fn2, minUid) {
+    if (isFlushing) {
+      fn2();
+      return;
+    }
+    const queued = minUid === void 0 ? void 0 : new Set(pendingPostFlushCbs);
+    fn2();
+    isFlushing = true;
+    try {
+      flushPreFlushCbs(void 0, minUid);
+      flushPostFlushCbs(void 0, queued, minUid);
+    } finally {
+      isFlushing = false;
     }
   }
   const getId = (job) => job.id == null ? job.flags & 2 ? -1 : Infinity : job.id;
@@ -3012,6 +3068,7 @@ this.gpu = (function() {
     let isPre = false;
     if (flush === "post") {
       baseWatchOptions.scheduler = (job) => {
+        job.i = instance;
         queuePostRenderEffect(job, instance && instance.suspense);
       };
     } else if (flush !== "sync") {
@@ -3312,7 +3369,11 @@ this.gpu = (function() {
   };
   function moveTeleport(vnode, container, parentAnchor, { o: { insert }, m: move }, moveType = 2) {
     if (moveType === 0) {
+      if (vnode.targetStart) {
+        insert(vnode.targetStart, container, parentAnchor);
+      }
       insert(vnode.targetAnchor, container, parentAnchor);
+      parentAnchor = vnode.targetAnchor;
     }
     const { el: el2, anchor, shapeFlag, children, props } = vnode;
     const isReorder = moveType === 2;
@@ -3480,10 +3541,6 @@ this.gpu = (function() {
     onAfterAppear: TransitionHookValidator,
     onAppearCancelled: TransitionHookValidator
   };
-  const recursiveGetSubtree = (instance) => {
-    const subTree = instance.subTree;
-    return subTree.component ? recursiveGetSubtree(subTree.component) : subTree;
-  };
   const BaseTransitionImpl = {
     name: `BaseTransition`,
     props: BaseTransitionPropsValidators,
@@ -3524,7 +3581,7 @@ this.gpu = (function() {
           setTransitionHooks(innerChild, enterHooks);
         }
         let oldInnerChild = instance.subTree && getInnerChild$1(instance.subTree);
-        if (oldInnerChild && oldInnerChild.type !== Comment && !isSameVNodeType(oldInnerChild, innerChild) && recursiveGetSubtree(instance).type !== Comment) {
+        if (oldInnerChild && oldInnerChild.type !== Comment && !isSameVNodeType(oldInnerChild, innerChild) && getTransitionRoot(instance.subTree)) {
           let leavingHooks = resolveTransitionHooks(
             oldInnerChild,
             rawProps,
@@ -3657,8 +3714,15 @@ this.gpu = (function() {
           );
         }
         const leavingVNode = leavingVNodesCache[key2];
-        if (leavingVNode && isSameVNodeType(vnode, leavingVNode) && leavingVNode.el[leaveCbKey]) {
-          leavingVNode.el[leaveCbKey]();
+        if (leavingVNode && isSameVNodeType(vnode, leavingVNode)) {
+          let leavingCb = leavingVNode.el[leaveCbKey];
+          if (!leavingCb) {
+            const leavingRoot = getTransitionRoot(leavingVNode);
+            leavingCb = leavingRoot && leavingRoot.el[leaveCbKey];
+          }
+          if (leavingCb) {
+            leavingCb();
+          }
         }
         callHook2(hook, [el2]);
       },
@@ -3786,6 +3850,12 @@ this.gpu = (function() {
       vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
     } else {
       vnode.transition = hooks;
+      if (vnode.type === Fragment && isArray$1(vnode.children)) {
+        const child = filterSingleRoot(vnode.children, false);
+        if (child) {
+          setTransitionHooks(child, hooks);
+        }
+      }
     }
   }
   function getTransitionRawChildren(children, keepComment = false, parentKey) {
@@ -3809,6 +3879,18 @@ this.gpu = (function() {
       }
     }
     return ret;
+  }
+  function getTransitionRoot(vnode) {
+    if (vnode.component) {
+      return getTransitionRoot(vnode.component.subTree);
+    }
+    if (vnode.type === Fragment) {
+      const child = isArray$1(vnode.children) && filterSingleRoot(vnode.children, false);
+      return child ? getTransitionRoot(child) : void 0;
+    }
+    if (vnode.type !== Comment) {
+      return vnode;
+    }
   }
   // @__NO_SIDE_EFFECTS__
   function defineComponent(options, extraOptions) {
@@ -4166,9 +4248,11 @@ If this is a native custom element, make sure to exclude it from component resol
       }
     } else if (typeof source === "number") {
       if (!Number.isInteger(source) || source < 0) {
-        warn$1(
-          `The v-for range expects a positive integer value but got ${source}.`
-        );
+        {
+          warn$1(
+            `The v-for range expects a positive integer value but got ${source}.`
+          );
+        }
         ret = [];
       } else {
         ret = new Array(source);
@@ -5372,7 +5456,7 @@ If you want to remount the same app, move your app creation logic into a factory
       attrs,
       emit: emit2,
       render: render2,
-      renderCache,
+      renderCache: renderCache2,
       props,
       data,
       setupState,
@@ -5402,7 +5486,7 @@ If you want to remount the same app, move your app creation logic into a factory
           render2.call(
             thisProxy,
             proxyToUse,
-            renderCache,
+            renderCache2,
             true ? /* @__PURE__ */ shallowReadonly(props) : props,
             setupState,
             data,
@@ -5627,7 +5711,7 @@ If you want to remount the same app, move your app creation logic into a factory
     }
     for (let i2 = 0; i2 < nextKeys.length; i2++) {
       const key2 = nextKeys[i2];
-      if (hasPropValueChanged(nextProps, prevProps, key2) && !isEmitListener(emitsOptions, key2)) {
+      if (!hasOwn(prevProps, key2) || hasPropValueChanged(nextProps, prevProps, key2) && !isEmitListener(emitsOptions, key2)) {
         return true;
       }
     }
@@ -6684,15 +6768,16 @@ For more details, see https://link.vuejs.org/feature-flags.`
       for (let i2 = 0; i2 < newChildren.length; i2++) {
         const oldVNode = oldChildren[i2];
         const newVNode = newChildren[i2];
+        const oldEl = oldVNode.el || resolveAsyncComponentPlaceholder(oldVNode);
         const container = (
           // oldVNode may be an errored async setup() component inside Suspense
           // which will not have a mounted element
-          oldVNode.el && // - In the case of a Fragment, we need to provide the actual parent
+          oldEl && // - In the case of a Fragment, we need to provide the actual parent
           // of the Fragment itself so it can move its children.
           (oldVNode.type === Fragment || // - In the case of different nodes, there is going to be a replacement
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) || // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (6 | 64 | 128)) ? hostParentNode(oldVNode.el) : (
+          oldVNode.shapeFlag & (6 | 64 | 128)) ? hostParentNode(oldEl) : (
             // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
@@ -6856,7 +6941,12 @@ For more details, see https://link.vuejs.org/feature-flags.`
       }
       if (isHmrUpdating) initialVNode.el = null;
       if (instance.asyncDep) {
-        parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect, optimized);
+        parentSuspense && parentSuspense.registerDep(
+          instance,
+          setupRenderEffect,
+          optimized,
+          namespace
+        );
         if (!initialVNode.el) {
           const placeholder = instance.subTree = createVNode(Comment);
           processCommentNode(null, placeholder, container, anchor);
@@ -6886,6 +6976,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
             pushWarningContext(n2);
           }
           n2.el = n1.el;
+          n2.placeholder = n1.placeholder;
           updateComponentPreRender(instance, n2, optimized);
           {
             popWarningContext();
@@ -6897,6 +6988,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
         }
       } else {
         n2.el = n1.el;
+        n2.placeholder = n1.placeholder;
         instance.vnode = n2;
       }
     };
@@ -7518,18 +7610,9 @@ For more details, see https://link.vuejs.org/feature-flags.`
     };
     const remove2 = (vnode) => {
       const { type, el: el2, anchor, transition } = vnode;
-      if (type === Fragment) {
-        if (vnode.patchFlag > 0 && vnode.patchFlag & 2048 && transition && !transition.persisted) {
-          vnode.children.forEach((child) => {
-            if (child.type === Comment) {
-              hostRemove(child.el);
-            } else {
-              remove2(child);
-            }
-          });
-        } else {
-          removeFragment(el2, anchor);
-        }
+      const isFragment = type === Fragment;
+      if (isFragment && !transition) {
+        removeFragment(el2, anchor);
         return;
       }
       if (type === Static) {
@@ -7539,17 +7622,25 @@ For more details, see https://link.vuejs.org/feature-flags.`
         }
         return;
       }
+      const leavingNode = isFragment ? getTransitionRoot(vnode) : vnode;
       const performRemove = () => {
-        hostRemove(el2);
+        if (isFragment) {
+          if (hostParentNode(el2)) {
+            removeFragment(el2, anchor);
+          }
+        } else {
+          hostRemove(el2);
+        }
         if (transition && !transition.persisted && transition.afterLeave) {
           transition.afterLeave();
         }
       };
-      if (vnode.shapeFlag & 1 && transition && !transition.persisted) {
+      if (leavingNode && leavingNode.shapeFlag & 1 && transition && !transition.persisted) {
         const { leave, delayLeave } = transition;
-        const performLeave = () => leave(el2, performRemove);
+        const leavingEl = leavingNode.el;
+        const performLeave = () => leave(leavingEl, performRemove);
         if (delayLeave) {
-          delayLeave(vnode.el, performRemove, performLeave);
+          delayLeave(leavingEl, performRemove, performLeave);
         } else {
           performLeave();
         }
@@ -7610,32 +7701,26 @@ For more details, see https://link.vuejs.org/feature-flags.`
       const teleportEnd = el2 && el2[TeleportEndKey];
       return teleportEnd ? hostNextSibling(teleportEnd) : el2;
     };
-    let isFlushing = false;
     const render2 = (vnode, container, namespace) => {
-      let instance;
-      if (vnode == null) {
-        if (container._vnode) {
-          unmount(container._vnode, null, null, true);
-          instance = container._vnode.component;
+      const minUid = vnode && container._vnode ? void 0 : vnode && vnode.component ? vnode.component.uid : getNextUid();
+      flushOnAppMount(() => {
+        if (vnode == null) {
+          if (container._vnode) {
+            unmount(container._vnode, null, null, true);
+          }
+        } else {
+          patch(
+            container._vnode || null,
+            vnode,
+            container,
+            null,
+            null,
+            null,
+            namespace
+          );
         }
-      } else {
-        patch(
-          container._vnode || null,
-          vnode,
-          container,
-          null,
-          null,
-          null,
-          namespace
-        );
-      }
-      container._vnode = vnode;
-      if (!isFlushing) {
-        isFlushing = true;
-        flushPreFlushCbs(instance);
-        flushPostFlushCbs();
-        isFlushing = false;
-      }
+        container._vnode = vnode;
+      }, minUid);
     };
     const internals = {
       p: patch,
@@ -8171,6 +8256,9 @@ Component that was made reactive: `,
   }
   const emptyAppContext = createAppContext();
   let uid$2 = 0;
+  function getNextUid() {
+    return uid$2;
+  }
   function createComponentInstance(vnode, parent, suspense) {
     const type = vnode.type;
     const appContext = (parent ? parent.appContext : vnode.appContext) || emptyAppContext;
@@ -8776,10 +8864,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version$4 = "3.5.43";
+  const version$4 = "3.5.44";
   const warn$2 = warn$1;
   /**
-  * @vue/runtime-dom v3.5.43
+  * @vue/runtime-dom v3.5.44
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -9325,7 +9413,9 @@ Component that was made reactive: `,
       }
     }
     if (vShowOriginalDisplay in el2) {
-      el2[vShowOriginalDisplay] = hasControlledDisplay ? style.display : "";
+      if (!isCssString || prev !== next) {
+        el2[vShowOriginalDisplay] = hasControlledDisplay ? style.display : "";
+      }
       if (el2[vShowHidden]) {
         style.display = "none";
       }
@@ -9791,7 +9881,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         );
         const multiple = el2.multiple;
         const assignedValue = multiple ? isSet(el2._modelValue) ? new Set(selectedVal) : selectedVal : selectedVal[0];
-        const pending = el2._pendingValue = [
+        const pending2 = el2._pendingValue = [
           multiple,
           multiple ? isArray$1(assignedValue) ? selectedVal.slice() : selectedVal : assignedValue
         ];
@@ -9799,7 +9889,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           el2[assignKey](assignedValue);
         } finally {
           nextTick(() => {
-            if (el2._pendingValue === pending) {
+            if (el2._pendingValue === pending2) {
               el2._pendingValue = void 0;
             }
           });
@@ -9817,9 +9907,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       el2[assignKey] = getModelAssigner(vnode);
     },
     updated(el2, { value: value2 }) {
-      const pending = el2._pendingValue;
+      const pending2 = el2._pendingValue;
       el2._pendingValue = void 0;
-      if (!pending || pending[0] !== el2.multiple || !isSameSelectValue(value2, pending[1], pending[0])) {
+      if (!pending2 || pending2[0] !== el2.multiple || !isSameSelectValue(value2, pending2[1], pending2[0])) {
         setSelected(el2, value2);
       }
     }
@@ -10017,7 +10107,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return container;
   }
   /**
-  * vue v3.5.43
+  * vue v3.5.44
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -13476,6 +13566,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       return extent;
     }
   }
+  function toUserResolution(resolution, sourceProjection) {
+    {
+      return resolution;
+    }
+  }
   function addCommon() {
     addEquivalentProjections(PROJECTIONS$1);
     addEquivalentProjections(PROJECTIONS);
@@ -16894,7 +16989,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         geometry = fromExtent(extent);
         geometry.rotate(this.getRotation(), getCenter(extent));
       } else {
-        {
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          geometry = /** @type {import("./geom/SimpleGeometry.js").default} */
+          geometryOrExtent.clone().transform(userProjection2, this.getProjection());
+        } else {
           geometry = geometryOrExtent;
         }
       }
@@ -27914,7 +28013,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.getView().getProjection()
       );
       if ((options == null ? void 0 : options.wrapX) && coordinate) {
-        const projection = this.getView().getProjection();
+        const projection = getUserProjection() || this.getView().getProjection();
         wrapX$1(coordinate, projection);
       }
       return coordinate;
@@ -30400,11 +30499,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$r = {
+  const _hoisted_1$s = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$r = /* @__PURE__ */ defineComponent({
+  const _sfc_main$s = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -30429,7 +30528,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$r, [
+        return openBlock(), createElementBlock("div", _hoisted_1$s, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -30984,12 +31083,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$q = {
+  const _hoisted_1$r = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$q = /* @__PURE__ */ defineComponent({
+  const _sfc_main$r = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -31004,7 +31103,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$q);
+        return openBlock(), createElementBlock("span", _hoisted_1$r);
       };
     }
   });
@@ -31204,12 +31303,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$p = {
+  const _hoisted_1$q = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$p = /* @__PURE__ */ defineComponent({
+  const _sfc_main$q = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -31226,16 +31325,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
       });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$p);
+        return openBlock(), createElementBlock("span", _hoisted_1$q);
       };
     }
   });
-  const _hoisted_1$o = {
+  const _hoisted_1$p = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$o = /* @__PURE__ */ defineComponent({
+  const _sfc_main$p = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -31245,7 +31344,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$o);
+        return openBlock(), createElementBlock("span", _hoisted_1$p);
       };
     }
   });
@@ -42438,7 +42537,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
           }
         }
-        filters.postalCode = location2.postalCode ? location2.postalCode : null;
+        filters.postcode = location2.postalCode ? location2.postalCode : null;
         for (const key2 in filters) {
           if (!Object.hasOwn(filters, key2)) {
             continue;
@@ -42656,7 +42755,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.16 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.16/LICENSE */
+  /*! @license DOMPurify 3.4.17 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.17/LICENSE */
   function _arrayLikeToArray$1(r2, a3) {
     (null == a3 || a3 > r2.length) && (a3 = r2.length);
     for (var e2 = 0, n2 = Array(a3); e2 < a3; e2++) n2[e2] = r2[e2];
@@ -42727,8 +42826,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   const arrayLastIndexOf = unapply(Array.prototype.lastIndexOf);
   const arrayPop = unapply(Array.prototype.pop);
   const arrayPush = unapply(Array.prototype.push);
+  const arraySlice$1 = unapply(Array.prototype.slice);
   const arraySplice = unapply(Array.prototype.splice);
   const arrayIsArray = Array.isArray;
+  const setCreate = unconstruct(Set);
+  const setAdd = unapply(Set.prototype.add);
+  const setHas = unapply(Set.prototype.has);
   const stringToLowerCase = unapply(String.prototype.toLowerCase);
   const stringToString = unapply(String.prototype.toString);
   const stringMatch = unapply(String.prototype.match);
@@ -42834,6 +42937,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       return null;
     }
     return fallbackValue;
+  }
+  function lookupAccessor(object, prop) {
+    while (object !== null) {
+      const desc = getOwnPropertyDescriptor(object, prop);
+      if (desc) return desc.get ? unapply(desc.get) : null;
+      object = getPrototypeOf(object);
+    }
+    return null;
   }
   function isRegex(value2) {
     try {
@@ -43519,7 +43630,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     documentFragment: 11,
     notation: 12
   };
-  const LITERAL_TEXT_ELEMENT_NAMES = [
+  const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, [
     "style",
     "script",
     "xmp",
@@ -43528,15 +43639,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "noframes",
     "plaintext",
     "noscript"
-  ];
-  const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, LITERAL_TEXT_ELEMENT_NAMES));
-  const LITERAL_TEXT_CLOSE = (function() {
-    const map2 = {};
-    arrayForEach(LITERAL_TEXT_ELEMENT_NAMES, (name2) => {
-      map2[name2] = seal(new RegExp("</" + name2 + "(?=[\\t\\n\\f\\r />])", "i"));
-    });
-    return freeze(map2);
-  })();
+  ]));
   const getGlobal = function getGlobal2() {
     return typeof window === "undefined" ? null : window;
   };
@@ -43583,7 +43686,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.16";
+    DOMPurify.version = "3.4.17";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -43614,6 +43717,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _readNodeName = function _readNodeName2(node2) {
       return getNodeName ? getNodeName(node2) : node2.nodeName;
+    };
+    const getNamespaceURI = lookupAccessor(ElementPrototype, "namespaceURI");
+    const _readNamespaceURI = function _readNamespaceURI2(element) {
+      return getNamespaceURI ? getNamespaceURI(element) : element.namespaceURI;
     };
     if (typeof HTMLTemplateElement === "function") {
       const template = document2.createElement("template");
@@ -43728,6 +43835,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const SANITIZE_NAMED_PROPS_PREFIX = "user-content-";
     let KEEP_CONTENT = true;
     let IN_PLACE = false;
+    let IN_PLACE_VISITED = null;
     let USE_PROFILES = {};
     let FORBID_CONTENTS = null;
     const DEFAULT_FORBID_CONTENTS = addToSet({}, [
@@ -43966,18 +44074,23 @@ Expected function or array of functions, received type ${typeof value2}.`
       return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
     };
     const _checkValidNamespace = function _checkValidNamespace2(element) {
-      let parent = getParentNode(element);
-      if (!parent || !parent.tagName) parent = {
-        namespaceURI: NAMESPACE,
-        tagName: "template"
-      };
-      const tagName = stringToLowerCase(element.tagName);
-      const parentTagName = stringToLowerCase(parent.tagName);
-      if (!ALLOWED_NAMESPACES[element.namespaceURI]) return false;
-      if (element.namespaceURI === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
-      if (element.namespaceURI === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
-      if (element.namespaceURI === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
-      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[element.namespaceURI]) return true;
+      const elementNamespace = _readNamespaceURI(element);
+      const tagName = stringToLowerCase(_readNodeName(element));
+      const parentNode = getParentNode(element);
+      let parent;
+      let parentTagName;
+      if (parentNode && _readNodeType(parentNode) === NODE_TYPE.element) {
+        parent = { namespaceURI: _readNamespaceURI(parentNode) };
+        parentTagName = stringToLowerCase(_readNodeName(parentNode));
+      } else {
+        parent = { namespaceURI: NAMESPACE };
+        parentTagName = "template";
+      }
+      if (!ALLOWED_NAMESPACES[elementNamespace]) return false;
+      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
+      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
+      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
+      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[elementNamespace]) return true;
       return false;
     };
     const _forceRemove = function _forceRemove2(node2) {
@@ -44002,19 +44115,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     const _neutralizeRoot = function _neutralizeRoot2(root) {
       _neutralizeSubtree(root);
       const childNodes = getChildNodes(root);
-      if (childNodes) {
-        const snapshot = [];
-        arrayForEach(childNodes, (child) => {
-          arrayPush(snapshot, child);
-        });
-        arrayForEach(snapshot, (child) => {
-          try {
-            remove2(child);
-          } catch (_2) {
-          }
-        });
-      }
-      const attributes = getAttributes(root);
+      if (childNodes) arrayForEach(arraySlice$1(childNodes), (child) => {
+        try {
+          remove2(child);
+        } catch (_2) {
+        }
+      });
+      const attributes = _readNodeType(root) === NODE_TYPE.element ? getAttributes(root) : null;
       if (attributes) for (let i2 = attributes.length - 1; i2 >= 0; --i2) {
         const attribute = attributes[i2];
         const name2 = attribute && attribute.name;
@@ -44061,14 +44168,93 @@ Expected function or array of functions, received type ${typeof value2}.`
         _stripAttributeNode(element, attribute, name2);
       }
     };
-    const _neutralizeSubtree = function _neutralizeSubtree2(root) {
+    const _walkTree = function _walkTree2(root, visit) {
+      let intoShadow = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : false;
       const stack2 = [root];
       while (stack2.length > 0) {
         const node2 = stack2.pop();
-        if (_readNodeType(node2) === NODE_TYPE.element) _stripDisallowedAttributes(node2);
+        if (visit(node2) === false) continue;
+        if (intoShadow && _readNodeType(node2) === NODE_TYPE.element) {
+          const shadowRoot = getShadowRoot(node2);
+          if (_isDocumentFragment(shadowRoot)) stack2.push(shadowRoot);
+        }
         const childNodes = getChildNodes(node2);
         if (childNodes) for (let i2 = childNodes.length - 1; i2 >= 0; --i2) stack2.push(childNodes[i2]);
       }
+    };
+    const _neutralizeSubtree = function _neutralizeSubtree2(root) {
+      _walkTree(root, (node2) => {
+        if (_readNodeType(node2) === NODE_TYPE.element) _stripDisallowedAttributes(node2);
+      });
+    };
+    const _collectLiveNodes = function _collectLiveNodes2(root) {
+      const nodes = [];
+      _walkTree(root, (node2) => {
+        nodes.push(node2);
+      }, true);
+      return nodes;
+    };
+    const _neutralizeEscapedElements = function _neutralizeEscapedElements2(root, before) {
+      const reachable = setCreate();
+      arrayForEach(_collectLiveNodes(root), (node2) => {
+        if (_readNodeType(node2) === NODE_TYPE.element) setAdd(reachable, node2);
+      });
+      arrayForEach(before, (node2) => {
+        if (_readNodeType(node2) === NODE_TYPE.element && !setHas(reachable, node2)) _stripDisallowedAttributes(node2);
+      });
+    };
+    const _neutralizeDiscarded = function _neutralizeDiscarded2(root, before) {
+      let rootRemoved = false;
+      arrayForEach(DOMPurify.removed, (entry) => {
+        if (entry.element) {
+          rootRemoved = rootRemoved || entry.element === root;
+          _neutralizeSubtree(entry.element);
+        }
+      });
+      _neutralizeEscapedElements(root, before);
+      return rootRemoved;
+    };
+    const MAX_UNVISITED_ROUNDS = 8;
+    const _sanitizeUnvisitedNodes = function _sanitizeUnvisitedNodes2(root, before) {
+      const visited = IN_PLACE_VISITED;
+      let original = null;
+      const getOriginal = () => {
+        if (!original) {
+          original = setCreate();
+          arrayForEach(before, (beforeNode) => {
+            setAdd(original, beforeNode);
+          });
+        }
+        return original;
+      };
+      for (let round2 = 0; ; round2++) {
+        const live = _collectLiveNodes(root);
+        const containers = [root];
+        let pending2 = false;
+        arrayForEach(live, (node2) => {
+          if (_readNodeType(node2) === NODE_TYPE.documentFragment) arrayPush(containers, node2);
+          else if (!pending2 && !setHas(visited, node2)) pending2 = setHas(getOriginal(), node2);
+        });
+        if (!pending2) return;
+        if (round2 >= MAX_UNVISITED_ROUNDS) throw typeErrorCreate("the tree kept changing during in-place sanitization; refusing to return it");
+        arrayForEach(containers, (container, index2) => {
+          _sanitizeUnvisitedIn(container, index2 > 0, root, getOriginal());
+        });
+      }
+    };
+    const _sanitizeUnvisitedIn = function _sanitizeUnvisitedIn2(container, inShadow, root, original) {
+      const iterator2 = _createNodeIterator(container);
+      let node2;
+      while (node2 = iterator2.nextNode()) {
+        if (!setHas(original, node2) || setHas(IN_PLACE_VISITED, node2)) continue;
+        if (inShadow) _executeHooks(hooks.uponSanitizeShadowNode, node2, null);
+        _sanitizeElements(node2, root);
+        _sanitizeAttributes(node2, root);
+        if (_isDocumentFragment(node2.content)) _sanitizeShadowDOM2(node2.content);
+      }
+    };
+    const _markVisited = function _markVisited2(node2) {
+      if (IN_PLACE_VISITED) setAdd(IN_PLACE_VISITED, node2);
     };
     const _isPatchLinkageAttribute = function _isPatchLinkageAttribute2(lcName, lcTag) {
       if (!SAFE_FOR_XML) return false;
@@ -44077,16 +44263,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _neutralizePatchLinkage = function _neutralizePatchLinkage2(root) {
       if (!SAFE_FOR_XML) return;
-      const stack2 = [root];
-      while (stack2.length > 0) {
-        const node2 = stack2.pop();
+      _walkTree(root, (node2) => {
         const nodeType = _readNodeType(node2);
         if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node2.data)) {
           try {
             remove2(node2);
           } catch (_2) {
           }
-          continue;
+          return false;
         }
         if (nodeType === NODE_TYPE.element) {
           const element = node2;
@@ -44097,9 +44281,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           } catch (_2) {
           }
         }
-        const childNodes = getChildNodes(node2);
-        if (childNodes) for (let i2 = childNodes.length - 1; i2 >= 0; --i2) stack2.push(childNodes[i2]);
-      }
+        return true;
+      });
     };
     const _initDocument = function _initDocument2(dirty) {
       let doc2 = null;
@@ -44139,6 +44322,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _scrubTemplateExpressions2 = function _scrubTemplateExpressions(node2) {
       var _node$querySelectorAl;
+      _scrubOwnCharacterData(node2);
+      const templates = (_node$querySelectorAl = node2.querySelectorAll) === null || _node$querySelectorAl === void 0 ? void 0 : _node$querySelectorAl.call(node2, "template");
+      if (templates) arrayForEach(templates, (tmpl) => {
+        if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
+      });
+    };
+    const _scrubOwnCharacterData = function _scrubOwnCharacterData2(node2) {
       node2.normalize();
       const doc2 = getOwnerDocument ? getOwnerDocument(node2) : node2.ownerDocument;
       const walker = createNodeIterator.call(doc2 || node2, node2, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
@@ -44147,10 +44337,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         currentNode.data = _stripTemplateExpressions(currentNode.data);
         currentNode = walker.nextNode();
       }
-      const templates = (_node$querySelectorAl = node2.querySelectorAll) === null || _node$querySelectorAl === void 0 ? void 0 : _node$querySelectorAl.call(node2, "template");
-      if (templates) arrayForEach(templates, (tmpl) => {
-        if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
-      });
     };
     const _isClobbered = function _isClobbered2(element) {
       const realTagName = getNodeName ? getNodeName(element) : null;
@@ -44182,7 +44368,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName) {
       if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
-      if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && LITERAL_TEXT_ELEMENTS[tagName] && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(LITERAL_TEXT_CLOSE[tagName], currentNode.textContent))) return true;
+      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && _readNodeType(currentNode) === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
       if (currentNode.nodeType === NODE_TYPE.processingInstruction) return true;
       if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
       return false;
@@ -44197,7 +44383,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _sanitizeDisallowedNode = function _sanitizeDisallowedNode2(currentNode, tagName, root) {
       if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) return false;
-      if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
+      if (KEEP_CONTENT && !FORBID_CONTENTS[tagName] && !FORBID_CONTENTS[stringToLowerCase(tagName)]) {
         const parentNode = getParentNode(currentNode);
         const childNodes = getChildNodes(currentNode);
         if (childNodes && parentNode) {
@@ -44221,6 +44407,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return true;
     };
     const _sanitizeElements = function _sanitizeElements2(currentNode, root) {
+      _markVisited(currentNode);
       _executeHooks(hooks.beforeSanitizeElements, currentNode, null);
       if (_handleHookDetachedNode(currentNode, root)) return true;
       if (_isClobbered(currentNode)) {
@@ -44314,6 +44501,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         return false;
       }
     };
+    const _isUnsafeAttributeValue = function _isUnsafeAttributeValue2(name2, value2) {
+      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) return true;
+      return stringToLowerCase(name2) === "attributename" && stringMatch(value2, "href") !== null;
+    };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
       if (_handleHookDetachedNode(currentNode, root)) return;
@@ -44347,11 +44538,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           value2 = SANITIZE_NAMED_PROPS_PREFIX + value2;
           recreatedNamedProp = true;
         }
-        if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) {
-          _removeAttribute(name2, currentNode, attr);
-          continue;
-        }
-        if (lcName === "attributename" && stringMatch(value2, "href")) {
+        if (_isUnsafeAttributeValue(name2, value2)) {
           _removeAttribute(name2, currentNode, attr);
           continue;
         }
@@ -44394,6 +44581,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
         }
       }
+      if (SAFE_FOR_TEMPLATES) _scrubOwnCharacterData(fragment);
       _executeHooks(hooks.afterSanitizeShadowDOM, fragment, null);
     };
     const _sanitizeAttachedShadowRoots = function _sanitizeAttachedShadowRoots2(root) {
@@ -44457,6 +44645,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (hooks.uponSanitizeAttribute.length > 0) ALLOWED_ATTR = clone$1(ALLOWED_ATTR);
       DOMPurify.removed = [];
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
+      let inPlaceNodes = [];
+      const outerVisited = IN_PLACE_VISITED;
       if (inPlace) {
         _neutralizePatchLinkage(dirty);
         const nn2 = _readNodeName(dirty);
@@ -44471,12 +44661,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           _neutralizeRoot(dirty);
           throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
         }
-        try {
-          _sanitizeAttachedShadowRoots(dirty);
-        } catch (error) {
-          _neutralizeRoot(dirty);
-          throw error;
-        }
+        inPlaceNodes = _collectLiveNodes(dirty);
+        IN_PLACE_VISITED = setCreate();
       } else if (_isNode(dirty)) {
         body = _initDocument("<!---->");
         importedNode = body.ownerDocument.importNode(dirty, true);
@@ -44492,30 +44678,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (body && FORCE_BODY) _forceRemove(body.firstChild);
       const walkRoot = inPlace ? dirty : body;
       try {
+        if (inPlace) _sanitizeAttachedShadowRoots(dirty);
         const nodeIterator = _createNodeIterator(walkRoot);
         while (currentNode = nodeIterator.nextNode()) {
           _sanitizeElements(currentNode, walkRoot);
           _sanitizeAttributes(currentNode, walkRoot);
           if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
         }
+        if (inPlace) _sanitizeUnvisitedNodes(dirty, inPlaceNodes);
       } catch (error) {
         if (inPlace) {
           _neutralizeRoot(dirty);
-          arrayForEach(DOMPurify.removed, (entry) => {
-            if (entry.element) _neutralizeSubtree(entry.element);
-          });
+          _neutralizeDiscarded(dirty, inPlaceNodes);
         }
         throw error;
+      } finally {
+        IN_PLACE_VISITED = outerVisited;
       }
       if (inPlace) {
-        let rootWasRemoved = false;
-        arrayForEach(DOMPurify.removed, (entry) => {
-          if (entry.element) {
-            if (entry.element === dirty) rootWasRemoved = true;
-            _neutralizeSubtree(entry.element);
-          }
-        });
-        if (rootWasRemoved) throw typeErrorCreate("a node selected for removal could not be safely returned; refusing to sanitize in place");
+        if (_neutralizeDiscarded(dirty, inPlaceNodes)) throw typeErrorCreate("a node selected for removal could not be safely returned; refusing to sanitize in place");
         if (SAFE_FOR_TEMPLATES) _scrubTemplateExpressions2(dirty);
         return dirty;
       }
@@ -44552,6 +44733,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!CONFIG) _parseConfig({});
       const lcTag = transformCaseFunc(tag);
       const lcName = transformCaseFunc(attr);
+      if (typeof value2 === "string" && (_isUnsafeAttributeValue(attr, value2) || !ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(SELF_CLOSING_TAG, value2))) return false;
       return _isValidAttribute(lcTag, lcName, value2);
     };
     DOMPurify.addHook = function(entryPoint, hookFunction) {
@@ -50828,6 +51010,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               startX -= worldWidth;
             }
           }
+          const userProjection2 = getUserProjection();
           this.hitDetectionImageData_ = createHitDetectionImageData(
             size2,
             transforms2,
@@ -50838,9 +51021,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             resolution,
             rotation,
             getSquaredTolerance(resolution, this.renderedPixelRatio_),
-            /** @type {import("../../proj/Projection.js").default|undefined} */
-            /** @type {unknown} */
-            null
+            userProjection2 ? (
+              /** @type {import("../../proj/Projection.js").default} */
+              projection
+            ) : (
+              /** @type {import("../../proj/Projection.js").default|undefined} */
+              /** @type {unknown} */
+              null
+            )
           );
         }
         resolve2(
@@ -51032,8 +51220,21 @@ Expected function or array of functions, received type ${typeof value2}.`
         resolution,
         pixelRatio
       );
+      const userProjection2 = getUserProjection();
       let userTransform;
-      {
+      if (userProjection2) {
+        for (let i2 = 0, ii2 = loadExtents.length; i2 < ii2; ++i2) {
+          const extent2 = loadExtents[i2];
+          const userExtent2 = toUserExtent(extent2);
+          vectorSource.loadFeatures(
+            userExtent2,
+            toUserResolution(resolution),
+            userProjection2
+          );
+        }
+        userTransform = /** @type {import("../../proj.js").TransformFunction|undefined} */
+        getTransformFromProjections(userProjection2, projection);
+      } else {
         for (let i2 = 0, ii2 = loadExtents.length; i2 < ii2; ++i2) {
           vectorSource.loadFeatures(loadExtents[i2], resolution, projection);
         }
@@ -58902,6 +59103,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           break;
       }
     });
+    if (!result.datumCode && (projjson.type === "GeographicCRS" || projjson.type === "GeodeticCRS") && projjson.id) {
+      result.datumCode = projjson.id.authority + "_" + projjson.id.code;
+    }
     if (result.latitude_of_false_origin !== void 0) {
       result.lat0 = result.latitude_of_false_origin;
     }
@@ -71098,6 +71302,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     return value2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
   const DEFAULT_PARCEL_FICHE_LEGEND_ZOOM = 17;
+  function parcelLegendScaleBand(zoom) {
+    if (!Number.isFinite(zoom)) return "highscale";
+    return zoom >= DEFAULT_PARCEL_FICHE_LEGEND_ZOOM ? "highscale" : "lowscale";
+  }
   function normalizeLayerNameForLegend(layerName) {
     return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
   }
@@ -71436,9 +71644,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (fichePayloadHasNonExecutoireDocument(data)) {
       parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML);
     }
-    parts.push(
-      '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>'
-    );
     const dus = collectProductionDocuments(normalizePartitionsMap$3(data.dus));
     const psmvs = collectProductionDocuments(normalizePartitionsMap$3(data.psmvs));
     const sups = collectProductionDocuments(normalizePartitionsMap$3(data.sups));
@@ -72119,9 +72324,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (documentFeatures.some((f2) => documentFeatureIsNonExecutoire(f2, lookup2)) || ficheApi && buildParcelDocumentsPresentationHtml(ficheApi).includes("ec-fiche-info__callout")) {
       parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML);
     }
-    parts.push(
-      '<p class="ec-fiche-info__intro">La parcelle est couverte par les documents suivants :</p>'
-    );
     const duTiles = isFicheDocumentFamilyVisible("du") ? [
       ...mecCatalogVisible ? buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) : [],
       ...buildDuDocumentTiles(documentFeatures, blockedParents, lookup2, ficheApi)
@@ -72136,9 +72338,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       mecCatalogVisible
     ) : [];
     if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
-      const presentation = buildParcelDocumentsPresentationHtml(ficheApi);
-      const sections = presentation.replace(/^[\s\S]*?<p class="ec-fiche-info__intro">[\s\S]*?<\/p>/, "").trim();
-      if (sections) parts.push(sections);
+      const presentation = buildParcelDocumentsPresentationHtml(ficheApi).trim();
+      if (presentation) parts.push(presentation);
       return parts.join("");
     }
     if (!duTiles.length && !supTiles.length && !scotTiles.length) {
@@ -72888,8 +73089,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (mode2 !== MAP_MODE_PARCEL) return selection;
     return applyParcelFicheDetailCache(selection);
   }
-  function applyMapPointResult(requestId, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker, silent) {
-    if (requestId !== mapPointRequestSeq) return null;
+  function applyMapPointResult(requestId2, lon, lat, mode2, selection, markerPlacedAtClick, skipLocationMarker, silent) {
+    if (requestId2 !== mapPointRequestSeq) return null;
     const resolved = withParcelDetailCache(selection, mode2);
     storeFicheInCache(mode2, lon, lat, resolved);
     if (!silent) {
@@ -72912,7 +73113,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return { territory, parcel };
   }
   async function loadFicheForMapPointImpl(params2) {
-    const requestId = ++mapPointRequestSeq;
+    const requestId2 = ++mapPointRequestSeq;
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
     const skipLocationMarker = params2.skipLocationMarker === true;
     const silent = params2.silent === true;
@@ -72925,7 +73126,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!apiUrl) {
       const body = params2.mode === MAP_MODE_PARCEL ? FICHE_PARCEL_UNAVAILABLE_BODY : FICHE_UNAVAILABLE_BODY;
       return applyMapPointResult(
-        requestId,
+        requestId2,
         params2.lon,
         params2.lat,
         params2.mode,
@@ -72938,7 +73139,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const payload = await fetchGpuFicheInfoPayload(params2);
     if (!payload) {
       return applyMapPointResult(
-        requestId,
+        requestId2,
         params2.lon,
         params2.lat,
         params2.mode,
@@ -72951,7 +73152,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const { territory, parcel } = storeBothModeSelectionsAtPoint(params2.lon, params2.lat, payload);
     const selection = params2.mode === MAP_MODE_PARCEL ? parcel : territory;
     return applyMapPointResult(
-      requestId,
+      requestId2,
       params2.lon,
       params2.lat,
       params2.mode,
@@ -73408,13 +73609,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     host.baseSearchEngine.container.addEventListener("submit", onSubmit, true);
     return () => host.baseSearchEngine.container.removeEventListener("submit", onSubmit, true);
   }
-  const _hoisted_1$n = {
+  const _hoisted_1$o = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const GPU_PIN_BLUE = "#000091";
-  const _sfc_main$n = /* @__PURE__ */ defineComponent({
+  const _sfc_main$o = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -73762,7 +73963,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$n);
+        return openBlock(), createElementBlock("span", _hoisted_1$o);
       };
     }
   });
@@ -74047,7 +74248,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return intersectsX && intersectsY;
     }
   };
-  const version$2 = "1.0.0-beta.15";
+  const version$2 = "1.0.0-beta.16";
   const Pkg = {
     version: version$2
   };
@@ -74879,12 +75080,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$m = {
+  const _hoisted_1$n = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$m = /* @__PURE__ */ defineComponent({
+  const _sfc_main$n = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -74900,7 +75101,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$m);
+        return openBlock(), createElementBlock("span", _hoisted_1$n);
       };
     }
   });
@@ -74926,12 +75127,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   const mapPrintModalKey = Symbol("mapPrintModal");
-  const _hoisted_1$l = {
+  const _hoisted_1$m = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$l = /* @__PURE__ */ defineComponent({
+  const _sfc_main$m = /* @__PURE__ */ defineComponent({
     __name: "MapPrintControl",
     setup(__props) {
       const printModal = inject(mapPrintModalKey, null);
@@ -74971,7 +75172,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       useOlControl(() => new MapPrintOlControl(openPrintModal));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$l);
+        return openBlock(), createElementBlock("span", _hoisted_1$m);
       };
     }
   });
@@ -75221,6 +75422,48 @@ Expected function or array of functions, received type ${typeof value2}.`
       height,
       stop
     };
+  }
+  const LEGEND_ZOOM_DEBOUNCE_MS = 150;
+  function mapZoomForLegend(map2) {
+    const z2 = map2.getView().getZoom();
+    if (z2 == null || Number.isNaN(z2)) return DEFAULT_PARCEL_FICHE_LEGEND_ZOOM;
+    return Math.round(z2);
+  }
+  function useMapLegendZoom(mapRef) {
+    const legendZoom = /* @__PURE__ */ ref(DEFAULT_PARCEL_FICHE_LEGEND_ZOOM);
+    let keys = [];
+    let debounceId = null;
+    function unbind() {
+      for (const key2 of keys) unByKey(key2);
+      keys = [];
+      if (debounceId) {
+        clearTimeout(debounceId);
+        debounceId = null;
+      }
+    }
+    function bindMap(map2) {
+      unbind();
+      legendZoom.value = mapZoomForLegend(map2);
+      const applyZoom = () => {
+        legendZoom.value = mapZoomForLegend(map2);
+      };
+      const applyZoomDebounced = () => {
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = setTimeout(applyZoom, LEGEND_ZOOM_DEBOUNCE_MS);
+      };
+      keys.push(map2.on("moveend", applyZoom));
+      keys.push(map2.getView().on("change:resolution", applyZoomDebounced));
+    }
+    watch(
+      mapRef,
+      (map2) => {
+        unbind();
+        if (map2) bindMap(map2);
+      },
+      { immediate: true }
+    );
+    onUnmounted(unbind);
+    return { legendZoom };
   }
   function _typeof$2(o2) {
     "@babel/helpers - typeof";
@@ -87204,12 +87447,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   const configStorage = /* @__PURE__ */ Object.create(null);
-  const fallBackAPISources = ["https://api.simplesvg.com", "https://api.unisvg.com"];
-  const fallBackAPI = [];
-  while (fallBackAPISources.length > 0) if (fallBackAPISources.length === 1) fallBackAPI.push(fallBackAPISources.shift());
-  else if (Math.random() > 0.5) fallBackAPI.push(fallBackAPISources.shift());
-  else fallBackAPI.push(fallBackAPISources.pop());
-  configStorage[""] = createAPIConfig({ resources: ["https://api.iconify.design"].concat(fallBackAPI) });
+  configStorage[""] = createAPIConfig({ resources: ["https://api.iconify.design"] });
   function addAPIProvider(provider, customConfig) {
     const config2 = createAPIConfig(customConfig);
     if (config2 === null) return false;
@@ -87680,9 +87918,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function parseLoaderResponse(storage2, icons, data) {
     function checkMissing() {
-      const pending = storage2.pendingIcons;
+      const pending2 = storage2.pendingIcons;
       icons.forEach((name2) => {
-        if (pending) pending.delete(name2);
+        if (pending2) pending2.delete(name2);
         if (!storage2.icons[name2]) storage2.missing.add(name2);
       });
     }
@@ -94722,32 +94960,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (cloned) targetMap2.addLayer(cloned);
     }
   }
-  function rebuildPrintPreviewMap(sourceMap, targetMap2) {
+  function rebuildPrintPreviewMap(sourceMap, targetMap2, options = {}) {
     targetMap2.getLayers().clear();
     copyVisibleMapLayers(sourceMap.getLayers().getArray(), targetMap2);
-    copyViewState(sourceMap.getView(), targetMap2.getView());
+    if (options.syncViewFromSource !== false) {
+      copyViewState(sourceMap.getView(), targetMap2.getView());
+    }
     targetMap2.renderSync();
   }
-  function waitForMapRender(map2, passes = 2, timeoutMs = 1e4) {
-    return new Promise((resolve2) => {
-      let done = 0;
-      const finish = () => {
-        map2.un("rendercomplete", onComplete);
-        resolve2();
-      };
-      const timer = typeof window !== "undefined" ? window.setTimeout(finish, timeoutMs) : void 0;
-      const onComplete = () => {
-        done += 1;
-        if (done >= passes) {
-          if (timer !== void 0) window.clearTimeout(timer);
-          finish();
-        }
-      };
-      map2.on("rendercomplete", onComplete);
-      map2.renderSync();
-    });
-  }
-  function mergeMapCanvases(mapViewport, targetCtx) {
+  function mergeMapLayerCanvases(mapViewport, targetCtx) {
     const canvases = mapViewport.querySelectorAll(".ol-layer canvas, canvas.ol-layer");
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
     targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
@@ -94780,40 +95001,243 @@ Expected function or array of functions, received type ${typeof value2}.`
     targetCtx.globalAlpha = 1;
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
   }
-  async function renderMapCanvasForExport(map2, widthPx, heightPx) {
-    const view = map2.getView();
-    const originalSize = map2.getSize();
-    const originalCenter = view.getCenter();
-    const originalResolution = view.getResolution();
-    const viewportEl = map2.getViewport();
-    if (!viewportEl) {
-      throw new Error("Viewport carte indisponible.");
+  function tileSourceFromLayer(layer) {
+    if (!(layer instanceof Layer) || !layer.getVisible()) return null;
+    if (layer instanceof TileLayer || layer instanceof VectorTileLayer) {
+      const source = layer.getSource();
+      if (source && typeof source.getTileGrid === "function") {
+        return source;
+      }
     }
-    const originalW = viewportEl.style.width;
-    const originalH = viewportEl.style.height;
-    const originalExtent = view.calculateExtent(originalSize ?? void 0);
-    const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = widthPx;
-    exportCanvas.height = heightPx;
+    return null;
+  }
+  function collectTileSources(map2) {
+    const sources = /* @__PURE__ */ new Set();
+    for (const layer of map2.getLayers().getArray()) {
+      const source = tileSourceFromLayer(layer);
+      if (source) sources.add(source);
+    }
+    return [...sources];
+  }
+  async function waitForMapExportReady(map2, options = {}) {
+    const timeoutMs = options.timeoutMs ?? 12e4;
+    const stablePasses = Math.max(1, options.stablePasses ?? 2);
+    const sources = collectTileSources(map2);
+    let pendingTiles = 0;
+    let loadedTiles = 0;
+    const sourceKeys = [];
+    const report = () => {
+      var _a2;
+      (_a2 = options.onProgress) == null ? void 0 : _a2.call(options, { pendingTiles, loadedTiles });
+    };
+    for (const source of sources) {
+      sourceKeys.push(
+        source.on("tileloadstart", () => {
+          pendingTiles += 1;
+          report();
+        })
+      );
+      const onTileDone = () => {
+        pendingTiles = Math.max(0, pendingTiles - 1);
+        loadedTiles += 1;
+        report();
+      };
+      sourceKeys.push(source.on("tileloadend", onTileDone));
+      sourceKeys.push(source.on("tileloaderror", onTileDone));
+    }
+    report();
     try {
-      map2.setSize([widthPx, heightPx]);
-      viewportEl.style.width = `${widthPx}px`;
-      viewportEl.style.height = `${heightPx}px`;
-      view.fit(originalExtent, { size: [widthPx, heightPx], nearest: true, duration: 0 });
-      await waitForMapRender(map2, 2);
-      const export2dContext = exportCanvas.getContext("2d");
-      if (!export2dContext) {
+      await new Promise((resolve2, reject) => {
+        let stableRenderCount = 0;
+        const onRenderComplete = () => {
+          if (pendingTiles > 0) {
+            stableRenderCount = 0;
+            map2.renderSync();
+            return;
+          }
+          stableRenderCount += 1;
+          if (stableRenderCount >= stablePasses) {
+            cleanup();
+            resolve2();
+          } else {
+            map2.renderSync();
+          }
+        };
+        const renderKey = map2.on("rendercomplete", onRenderComplete);
+        const cleanup = () => {
+          if (timer !== void 0) window.clearTimeout(timer);
+          unByKey(renderKey);
+        };
+        const timer = typeof window !== "undefined" ? window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Délai dépassé lors du chargement des tuiles cartographiques."));
+        }, timeoutMs) : void 0;
+        map2.renderSync();
+      });
+    } finally {
+      unByKey(sourceKeys);
+    }
+  }
+  function roundExtent(extent) {
+    return extent.map((value2) => value2.toFixed(2)).join(",");
+  }
+  function buildVisibleLayerFingerprint(sourceMap) {
+    const ids = [];
+    for (const layer of sourceMap.getLayers().getArray()) {
+      if (!layer.getVisible()) continue;
+      const id2 = layer.get("id") ?? layer.get("name") ?? layer.constructor.name;
+      ids.push(`${String(id2)}:${layer.getOpacity()}:${layer.getZIndex() ?? 0}`);
+    }
+    return ids.join("|");
+  }
+  function buildPrintMapRenderCacheKey(parts) {
+    return [
+      "map-v1",
+      parts.dpi,
+      parts.mapWidthPx,
+      parts.mapHeightPx,
+      roundExtent(parts.extent),
+      parts.rotation.toFixed(4),
+      parts.layerFingerprint
+    ].join(";");
+  }
+  const renderCache = new globalThis.Map();
+  function getCachedPrintMapCanvas(key2) {
+    var _a2;
+    const cached = renderCache.get(key2);
+    if (!cached) return null;
+    const copy = document.createElement("canvas");
+    copy.width = cached.width;
+    copy.height = cached.height;
+    (_a2 = copy.getContext("2d")) == null ? void 0 : _a2.drawImage(cached, 0, 0);
+    return copy;
+  }
+  function storePrintMapCanvasCache(key2, canvas) {
+    var _a2;
+    const stored = document.createElement("canvas");
+    stored.width = canvas.width;
+    stored.height = canvas.height;
+    (_a2 = stored.getContext("2d")) == null ? void 0 : _a2.drawImage(canvas, 0, 0);
+    renderCache.set(key2, stored);
+    if (renderCache.size > 4) {
+      const oldest = renderCache.keys().next().value;
+      if (oldest) renderCache.delete(oldest);
+    }
+  }
+  function clearPrintMapRenderCache() {
+    renderCache.clear();
+  }
+  let offscreenHost = null;
+  function getOffscreenPrintMapHost() {
+    if (typeof document === "undefined") {
+      throw new Error("Export carte indisponible hors navigateur.");
+    }
+    if (!offscreenHost) {
+      offscreenHost = document.createElement("div");
+      offscreenHost.setAttribute("aria-hidden", "true");
+      offscreenHost.style.cssText = "position:fixed;left:-100000px;top:0;overflow:hidden;visibility:hidden;pointer-events:none;";
+      document.body.appendChild(offscreenHost);
+    }
+    return offscreenHost;
+  }
+  async function renderOffscreenPrintMapCanvas(previewMap, options) {
+    var _a2, _b2, _c2, _d;
+    const { widthPx, heightPx, extent } = options;
+    if (widthPx < 16 || heightPx < 16) {
+      throw new Error("Dimensions carte invalides pour l’export (largeur ou hauteur nulle).");
+    }
+    if (options.cacheKey) {
+      const cached = getCachedPrintMapCanvas(options.cacheKey);
+      if (cached) {
+        (_a2 = options.onStage) == null ? void 0 : _a2.call(options, "Carte réutilisée depuis le cache…");
+        return cached;
+      }
+    }
+    const host = getOffscreenPrintMapHost();
+    host.style.width = `${widthPx}px`;
+    host.style.height = `${heightPx}px`;
+    const previewView = previewMap.getView();
+    const exportView = new View({
+      projection: previewView.getProjection(),
+      rotation: previewView.getRotation()
+    });
+    const exportMap = new Map$1({
+      target: host,
+      view: exportView,
+      controls: [],
+      interactions: []
+    });
+    try {
+      (_b2 = options.onStage) == null ? void 0 : _b2.call(options, "Préparation de la carte haute résolution…");
+      rebuildPrintPreviewMap(previewMap, exportMap, { syncViewFromSource: false });
+      exportMap.setSize([widthPx, heightPx]);
+      exportView.fit(extent, { size: [widthPx, heightPx], nearest: true, duration: 0 });
+      (_c2 = options.onStage) == null ? void 0 : _c2.call(options, "Chargement des tuiles cartographiques…");
+      await waitForMapExportReady(exportMap, {
+        timeoutMs: 12e4,
+        stablePasses: 2,
+        onProgress: ({ pendingTiles, loadedTiles }) => {
+          var _a3;
+          (_a3 = options.onTileProgress) == null ? void 0 : _a3.call(options, loadedTiles, pendingTiles);
+        }
+      });
+      (_d = options.onStage) == null ? void 0 : _d.call(options, "Rasterisation de la carte…");
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = widthPx;
+      exportCanvas.height = heightPx;
+      const exportCtx = exportCanvas.getContext("2d");
+      if (!exportCtx) {
         throw new Error("Impossible de récupérer le contexte 2D pour le canvas d’export.");
       }
-      mergeMapCanvases(viewportEl, export2dContext);
+      const viewportEl = exportMap.getViewport();
+      if (!viewportEl) {
+        throw new Error("Viewport carte indisponible.");
+      }
+      mergeMapLayerCanvases(viewportEl, exportCtx);
+      if (options.cacheKey) {
+        storePrintMapCanvasCache(options.cacheKey, exportCanvas);
+      }
       return exportCanvas;
     } finally {
-      map2.setSize(originalSize);
-      viewportEl.style.width = originalW;
-      viewportEl.style.height = originalH;
-      if (originalCenter) view.setCenter(originalCenter);
-      if (originalResolution) view.setResolution(originalResolution);
-      map2.renderSync();
+      exportMap.setTarget(void 0);
+      exportMap.dispose();
+    }
+  }
+  class WeightedExportProgress {
+    constructor(steps, onUpdate) {
+      __publicField(this, "completedWeight", 0);
+      __publicField(this, "currentStepWeight", 0);
+      __publicField(this, "currentLabel", "");
+      __publicField(this, "currentRatio", 0);
+      this.steps = steps;
+      this.onUpdate = onUpdate;
+    }
+    totalWeight() {
+      return this.steps.reduce((sum, step) => sum + step.weight, 0) || 1;
+    }
+    startStep(index2, label) {
+      var _a2;
+      this.currentStepWeight = ((_a2 = this.steps[index2]) == null ? void 0 : _a2.weight) ?? 0;
+      this.currentLabel = label;
+      this.currentRatio = 0;
+      this.tick(0);
+    }
+    setDetail(label) {
+      this.currentLabel = label;
+      this.tick(this.currentRatio);
+    }
+    tick(ratioInStep) {
+      const clamped = Math.min(1, Math.max(0, ratioInStep));
+      this.currentRatio = clamped;
+      const inStep = this.currentStepWeight * clamped;
+      const percent = (this.completedWeight + inStep) / this.totalWeight() * 100;
+      this.onUpdate(Math.round(percent), this.currentLabel);
+    }
+    endStep() {
+      this.completedWeight += this.currentStepWeight;
+      this.currentRatio = 1;
+      const percent = this.completedWeight / this.totalWeight() * 100;
+      this.onUpdate(Math.round(Math.min(100, percent)), this.currentLabel);
     }
   }
   function crc32(data) {
@@ -94841,11 +95265,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     dv.setUint32(8 + length, crc2, false);
     return chunk;
   }
-  async function injectDpiInPng(dataUrl, dpi) {
+  function injectDpiInPngBytes(bytes, dpi) {
     const ppm = Math.round(dpi / 0.0254);
-    const response = await fetch(dataUrl);
-    const buffer2 = await response.arrayBuffer();
-    const bytes = new Uint8Array(buffer2);
     const phys = new Uint8Array(9);
     const view = new DataView(phys.buffer);
     view.setUint32(0, ppm, false);
@@ -94856,7 +95277,32 @@ Expected function or array of functions, received type ${typeof value2}.`
     result.set(bytes.slice(0, 33));
     result.set(chunk, 33);
     result.set(bytes.slice(33), 33 + chunk.length);
-    return URL.createObjectURL(new Blob([result], { type: "image/png" }));
+    return result;
+  }
+  async function injectDpiInPng(dataUrl, dpi) {
+    const response = await fetch(dataUrl);
+    const buffer2 = await response.arrayBuffer();
+    const withDpi = injectDpiInPngBytes(new Uint8Array(buffer2), dpi);
+    return URL.createObjectURL(new Blob([withDpi], { type: "image/png" }));
+  }
+  function waitForMapRender(map2, passes = 2, timeoutMs = 1e4) {
+    return new Promise((resolve2) => {
+      let done = 0;
+      const finish = () => {
+        map2.un("rendercomplete", onComplete);
+        resolve2();
+      };
+      const timer = typeof window !== "undefined" ? window.setTimeout(finish, timeoutMs) : void 0;
+      const onComplete = () => {
+        done += 1;
+        if (done >= passes) {
+          if (timer !== void 0) window.clearTimeout(timer);
+          finish();
+        }
+      };
+      map2.on("rendercomplete", onComplete);
+      map2.renderSync();
+    });
   }
   function computeScaleCoeff(containerWidth, containerHeight, contentWidth, contentHeight) {
     const ratioBloc1 = containerWidth / containerHeight;
@@ -95008,58 +95454,25 @@ Expected function or array of functions, received type ${typeof value2}.`
     ctx.fillStyle = innerColor;
     ctx.fillText(scaleContent, innerX + innerWidth / 2, innerY + innerHeight / 2);
   }
-  function getRenderedLines(element, text2) {
-    const textNode = element.firstChild;
-    if (!textNode || textNode.nodeType !== Node.TEXT_NODE || !text2) {
-      return [text2];
-    }
-    const range = document.createRange();
-    const groupedChars = [];
-    let currentLineTop = null;
-    let currentLine = "";
-    for (let i2 = 0; i2 < text2.length; i2 += 1) {
-      range.setStart(textNode, i2);
-      range.setEnd(textNode, i2 + 1);
-      const rect = range.getBoundingClientRect();
-      if (!rect || rect.width === 0 && rect.height === 0) {
-        currentLine += text2[i2];
-        continue;
-      }
-      if (currentLineTop === null) currentLineTop = rect.top;
-      if (Math.abs(rect.top - currentLineTop) > 0.5) {
-        groupedChars.push(currentLine);
-        currentLine = "";
-        currentLineTop = rect.top;
-      }
-      currentLine += text2[i2];
-    }
-    if (currentLine) groupedChars.push(currentLine);
-    return groupedChars.length ? groupedChars : [text2];
-  }
-  function drawTitle(ctx, _canvasHeight, canvasWidth, printTitle, titleElement, dpiCoeff = 1) {
-    const style = getComputedStyle(titleElement);
-    const titleDivWidth = titleElement.clientWidth || canvasWidth / dpiCoeff;
-    const scaleX = titleDivWidth > 0 ? canvasWidth / (titleDivWidth * dpiCoeff) : 1;
-    const fontSizeValue = parseInt(style.fontSize, 10);
-    const fontSize2 = (fontSizeValue > 0 ? fontSizeValue : 16) * scaleX * dpiCoeff;
-    const lineHeight2 = parseInt(style.lineHeight, 10) * scaleX * dpiCoeff;
-    ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${fontSize2}px ${style.fontFamily}`;
-    ctx.fillStyle = style.color || "#3a3a3a";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    const lines = getRenderedLines(titleElement, printTitle);
-    let y2 = 10 * dpiCoeff;
-    for (const line of lines) {
-      ctx.fillText(line, canvasWidth / 2, y2, canvasWidth);
-      y2 += lineHeight2;
-    }
-  }
   const PRINT_PAGE_LABELS = {
     map: "Carte",
     ficheTerritory: "Fiche territoire",
     ficheParcel: "Fiche parcelle",
     legends: "Légendes"
   };
+  function countSupplementSlices(contentHeightPx, pageHeightPx) {
+    if (!Number.isFinite(contentHeightPx) || contentHeightPx <= 0) return 1;
+    if (!Number.isFinite(pageHeightPx) || pageHeightPx <= 0) return 1;
+    if (contentHeightPx <= pageHeightPx + 2) return 1;
+    let count = Math.ceil(contentHeightPx / pageHeightPx);
+    const minLastSlicePx = pageHeightPx * 0.04;
+    while (count > 1) {
+      const lastSliceHeight = contentHeightPx - (count - 1) * pageHeightPx;
+      if (lastSliceHeight >= minLastSlicePx) break;
+      count -= 1;
+    }
+    return Math.max(1, count);
+  }
   function buildPrintPreviewPages(options) {
     const pages = [
       {
@@ -95088,6 +95501,766 @@ Expected function or array of functions, received type ${typeof value2}.`
     appendSection("ficheParcel", options.includeParcelFiche, options.canParcel);
     appendSection("legends", options.includeLegends, options.canLegends);
     return pages;
+  }
+  const SUPPLEMENT_SLICE_CONTENT_INSET_MM = 1.6;
+  const PRINT_SUPPLEMENT_TITLE_FONT_MM = 4.5;
+  const PRINT_SUPPLEMENT_BLOCK_GAP_MM = 2;
+  const SUPPLEMENT_PAGINATION_MARKERS = [
+    ".ec-print-fiche__title",
+    ".ec-print-legends__title",
+    ".ec-print-fiche__section-title",
+    ".ec-print-legends__group-title",
+    ".ec-print-fiche__cadastre-headline",
+    ".ec-print-fiche__cadastre-dl",
+    ".ec-fiche-info__section-title",
+    ".ec-fiche-info__sup-group-title",
+    ".ec-fiche-info__rules-section-title",
+    ".ec-fiche-info__callout",
+    ".ec-print-fiche__footnote-callout",
+    ".ec-print-fiche__section--footnotes",
+    ".ec-fiche-info__rule-row",
+    ".ec-fiche-info__tile",
+    ".ec-fiche-info__doc-card",
+    ".ec-layer-legends__item"
+  ].join(", ");
+  const SUPPLEMENT_VISIBILITY_MARKERS = SUPPLEMENT_PAGINATION_MARKERS;
+  const SUPPLEMENT_VISIBILITY_RESET_MARKERS = `${SUPPLEMENT_VISIBILITY_MARKERS}, .ec-fiche-info__body, .ec-print-fiche__section`;
+  const LEGEND_ROW_TOP_TOLERANCE_PX = 10;
+  function computePrintSupplementInnerPx(paperWidthMm, paperHeightMm, marginMm, dpi) {
+    const paperWidthPx = convertMmToPx(paperWidthMm, dpi);
+    const paperHeightPx = convertMmToPx(paperHeightMm, dpi);
+    const marginPx = convertMmToPx(marginMm, dpi);
+    return {
+      paperWidthPx,
+      paperHeightPx,
+      marginPx,
+      innerWidthPx: Math.max(0, paperWidthPx - marginPx * 2),
+      innerHeightPx: Math.max(0, paperHeightPx - marginPx * 2)
+    };
+  }
+  function supplementSliceContentInsetPx(dpi) {
+    return convertMmToPx(SUPPLEMENT_SLICE_CONTENT_INSET_MM, dpi);
+  }
+  function supplementSliceLayoutHeightPx(innerHeightPx, dpi) {
+    const inset = supplementSliceContentInsetPx(dpi);
+    return Math.max(40, innerHeightPx - inset * 2);
+  }
+  function printSupplementCssVars(innerWidthPx, dpi) {
+    const px = (mm) => `${convertMmToPx(mm, dpi)}px`;
+    const legendImgMm = dpi >= HIGH_DPI_VALUE ? 13.2 : 11;
+    return {
+      "--print-inner-width": `${Math.max(innerWidthPx, 120)}px`,
+      "--print-body-font": px(2.8),
+      "--print-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
+      "--print-section-font": px(3.4),
+      "--print-small-font": px(2.4),
+      "--print-fiche-label-font": px(2.5),
+      "--print-fiche-desc-font": px(2.2),
+      "--print-img-max": px(16),
+      "--print-legend-img-max": px(legendImgMm),
+      "--print-block-gap": px(PRINT_SUPPLEMENT_BLOCK_GAP_MM),
+      "--print-map-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
+      "--print-supplement-slice-inset": px(SUPPLEMENT_SLICE_CONTENT_INSET_MM)
+    };
+  }
+  async function waitForPrintSupplementImages(root, options = {}) {
+    const timeoutMs = options.timeoutMs ?? 8e3;
+    const imgs = Array.from(root.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map(
+        (img) => new Promise((resolve2) => {
+          let settled = false;
+          const finish = (reason) => {
+            var _a2;
+            if (settled) return;
+            settled = true;
+            (_a2 = options.onImageSettled) == null ? void 0 : _a2.call(options, img, reason);
+            resolve2();
+          };
+          if (img.complete) {
+            finish("complete");
+            return;
+          }
+          const timer = window.setTimeout(() => finish("timeout"), timeoutMs);
+          const done = (reason) => {
+            window.clearTimeout(timer);
+            finish(reason);
+          };
+          img.addEventListener("load", () => done("load"), { once: true });
+          img.addEventListener("error", () => done("error"), { once: true });
+        })
+      )
+    );
+  }
+  function supplementMarkerElements(page, selectors) {
+    return Array.from(page.querySelectorAll(selectors)).filter(
+      (el2) => el2 instanceof HTMLElement
+    );
+  }
+  function supplementPaginationElements(page) {
+    return supplementMarkerElements(page, SUPPLEMENT_PAGINATION_MARKERS);
+  }
+  function supplementVisibilityElements(page) {
+    return supplementMarkerElements(page, SUPPLEMENT_VISIBILITY_MARKERS);
+  }
+  function elementTopInPage(el2, page, layoutScale = 1) {
+    const scale2 = layoutScale > 0 ? layoutScale : 1;
+    const pageRect = page.getBoundingClientRect();
+    const elRect = el2.getBoundingClientRect();
+    return (elRect.top - pageRect.top) / scale2;
+  }
+  function elementHeight(el2, layoutScale = 1) {
+    const scale2 = layoutScale > 0 ? layoutScale : 1;
+    const rect = el2.getBoundingClientRect();
+    return Math.max(el2.offsetHeight, rect.height / scale2, 0);
+  }
+  function queryHTMLElement(root, selector) {
+    const el2 = root.querySelector(selector);
+    return el2 instanceof HTMLElement ? el2 : null;
+  }
+  function paginationMarkerBottom(page) {
+    let markerBottom = 0;
+    for (const el2 of supplementPaginationElements(page)) {
+      const h2 = elementHeight(el2);
+      if (h2 < 0.5) continue;
+      markerBottom = Math.max(markerBottom, elementTopInPage(el2, page) + h2);
+    }
+    return markerBottom > 0 ? Math.ceil(markerBottom) : 0;
+  }
+  function resolveSupplementContentHeightForPage(page) {
+    const blocks = contentBlocksForPage(page);
+    const blockBottom = maxContentBottom(page, blocks);
+    const markerBottom = paginationMarkerBottom(page);
+    if (page.classList.contains("ec-print-fiche")) {
+      return Math.max(blockBottom, markerBottom, 1);
+    }
+    if (page.classList.contains("ec-print-legends")) {
+      const scrollBottom = Math.max(page.scrollHeight, page.offsetHeight, 1);
+      return Math.max(blockBottom, markerBottom, scrollBottom, 1);
+    }
+    return Math.max(blockBottom, markerBottom, page.scrollHeight, 1);
+  }
+  function measureSupplementContentHeight(root) {
+    const page = root.matches(".ec-print-supplement-page") ? root : queryHTMLElement(root, ".ec-print-supplement-page");
+    if (page) return resolveSupplementContentHeightForPage(page);
+    const content2 = queryHTMLElement(root, ".print-supplement-measure__content");
+    return Math.max((content2 == null ? void 0 : content2.scrollHeight) ?? 0, (content2 == null ? void 0 : content2.offsetHeight) ?? 0, root.scrollHeight, 1);
+  }
+  function resolveSupplementContentHeight(measureRoot) {
+    const page = queryHTMLElement(measureRoot, ".ec-print-supplement-page");
+    if (!page) return Math.max(1, measureSupplementContentHeight(measureRoot));
+    return resolveSupplementContentHeightForPage(page);
+  }
+  async function waitForSupplementPageHeightStable(page, options = {}) {
+    const timeoutMs = options.timeoutMs ?? 5e3;
+    const stableFrames = options.stableFrames ?? 4;
+    const deadline = performance.now() + timeoutMs;
+    let last = -1;
+    let stable = 0;
+    while (performance.now() < deadline) {
+      page.getBoundingClientRect();
+      const height = resolveSupplementContentHeightForPage(page);
+      if (last >= 0 && Math.abs(height - last) < 2) stable += 1;
+      else stable = 0;
+      last = height;
+      if (stable >= stableFrames) return height;
+      await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
+    }
+    return resolveSupplementContentHeightForPage(page);
+  }
+  async function waitForSupplementMeasureHeightStable(measureRoot, options) {
+    const page = queryHTMLElement(measureRoot, ".ec-print-supplement-page");
+    if (!page) return resolveSupplementContentHeight(measureRoot);
+    return waitForSupplementPageHeightStable(page, options);
+  }
+  function nonNestedMarkerElements(page) {
+    const all2 = supplementPaginationElements(page);
+    return all2.filter((el2) => !all2.some((other) => other !== el2 && other.contains(el2)));
+  }
+  function blockFromElement(el2, page, layoutScale = 1) {
+    const height = elementHeight(el2, layoutScale);
+    if (height < 0.5) return null;
+    const top = elementTopInPage(el2, page, layoutScale);
+    return { top, height, bottom: top + height };
+  }
+  function clusterLegendItemsIntoRows(page, itemElements, layoutScale = 1) {
+    const entries2 = itemElements.map((el2) => blockFromElement(el2, page, layoutScale)).filter((b3) => b3 !== null).sort((a3, b3) => a3.top - b3.top || a3.bottom - b3.bottom);
+    const rows = [];
+    for (const entry of entries2) {
+      const row = rows.find((r2) => Math.abs(r2.top - entry.top) <= LEGEND_ROW_TOP_TOLERANCE_PX);
+      if (row) {
+        const top = Math.min(row.top, entry.top);
+        const bottom = Math.max(row.bottom, entry.bottom);
+        row.top = top;
+        row.bottom = bottom;
+        row.height = bottom - top;
+      } else {
+        rows.push({ ...entry });
+      }
+    }
+    return rows;
+  }
+  function contentBlocksForPage(page, layoutScale = 1) {
+    const nonNested = nonNestedMarkerElements(page);
+    const legendItems = nonNested.filter((el2) => el2.classList.contains("ec-layer-legends__item"));
+    const otherElements = nonNested.filter((el2) => !el2.classList.contains("ec-layer-legends__item"));
+    const blocks = [];
+    for (const el2 of otherElements) {
+      const block = blockFromElement(el2, page, layoutScale);
+      if (block) blocks.push(block);
+    }
+    blocks.push(...clusterLegendItemsIntoRows(page, legendItems, layoutScale));
+    return blocks.sort((a3, b3) => a3.top - b3.top || a3.bottom - b3.bottom);
+  }
+  function ficheFootnoteBlockTop(page, layoutScale = 1) {
+    if (!page.classList.contains("ec-print-fiche")) return 0;
+    const section = page.querySelector(".ec-print-fiche__section--footnotes");
+    if (section instanceof HTMLElement) {
+      const block = blockFromElement(section, page, layoutScale);
+      if (block) return block.top;
+    }
+    let minTop = Infinity;
+    for (const el2 of page.querySelectorAll(".ec-print-fiche__footnote-callout")) {
+      if (!(el2 instanceof HTMLElement)) continue;
+      const block = blockFromElement(el2, page, layoutScale);
+      if (block) minTop = Math.min(minTop, block.top);
+    }
+    return Number.isFinite(minTop) ? minTop : 0;
+  }
+  function ficheMainContentBottomExcludingFootnotes(page, layoutScale = 1) {
+    if (!page.classList.contains("ec-print-fiche")) return 0;
+    let maxBottom = 0;
+    for (const el2 of supplementPaginationElements(page)) {
+      if (!(el2 instanceof HTMLElement)) continue;
+      if (el2.closest(".ec-print-fiche__section--footnotes")) continue;
+      if (el2.classList.contains("ec-print-fiche__footnote-callout")) continue;
+      const block = blockFromElement(el2, page, layoutScale);
+      if (block) maxBottom = Math.max(maxBottom, block.bottom);
+    }
+    return maxBottom;
+  }
+  function ficheFootnoteBlockBottom(page, layoutScale = 1) {
+    if (!page.classList.contains("ec-print-fiche")) return 0;
+    const section = page.querySelector(".ec-print-fiche__section--footnotes");
+    if (section instanceof HTMLElement) {
+      const block = blockFromElement(section, page, layoutScale);
+      if (block) return block.bottom;
+    }
+    let maxBottom = 0;
+    for (const el2 of page.querySelectorAll(".ec-print-fiche__footnote-callout")) {
+      if (!(el2 instanceof HTMLElement)) continue;
+      const block = blockFromElement(el2, page, layoutScale);
+      if (block) maxBottom = Math.max(maxBottom, block.bottom);
+    }
+    return maxBottom;
+  }
+  function finalizeFicheParcelFootnoteSlicePlan(page, plan, pageHeightPx) {
+    if (!page.classList.contains("ec-print-fiche")) return plan;
+    if (!page.querySelector(".ec-print-fiche__footnote-callout")) return plan;
+    const footTop = ficheFootnoteBlockTop(page);
+    const footBottom = ficheFootnoteBlockBottom(page);
+    if (footBottom < 1 || footTop < 1) return plan;
+    const epsilon = Math.max(4, pageHeightPx * 8e-3);
+    if (footBottom <= pageHeightPx + epsilon) return plan;
+    const splitAt = Math.max(0, footTop);
+    const starts = [...plan.sliceStarts];
+    if (plan.sliceCount < 2) {
+      return { sliceCount: 2, sliceStarts: [0, splitAt] };
+    }
+    const mainBottom = ficheMainContentBottomExcludingFootnotes(page);
+    if (mainBottom > 0 && mainBottom <= pageHeightPx + epsilon * 2) {
+      return { sliceCount: 2, sliceStarts: [0, splitAt] };
+    }
+    const contentStarts = starts.filter(
+      (start2) => start2 > 0 && start2 < splitAt - epsilon && (mainBottom < 1 || start2 <= mainBottom + epsilon)
+    );
+    const bodyStart = contentStarts.length ? contentStarts[contentStarts.length - 1] : null;
+    if (bodyStart == null) {
+      return { sliceCount: 2, sliceStarts: [0, splitAt] };
+    }
+    return { sliceCount: 3, sliceStarts: [0, bodyStart, splitAt] };
+  }
+  function ficheFootnotesVisibleForSlice(page, sliceStartPx, sliceEndPx, layoutScale = 1) {
+    if (!page.classList.contains("ec-print-fiche")) return false;
+    const footTop = ficheFootnoteBlockTop(page, layoutScale);
+    if (footTop < 1) return sliceEndPx > sliceStartPx + 8;
+    const epsilon = Math.max(4, (sliceEndPx - sliceStartPx) * 8e-3);
+    return footTop >= sliceStartPx - epsilon && footTop < sliceEndPx + epsilon;
+  }
+  function trimTrailingSupplementSliceStarts(page, plan, pageHeightPx) {
+    if (!page.classList.contains("ec-print-fiche")) return plan;
+    const contentBottom = Math.max(
+      resolveSupplementContentHeightForPage(page),
+      ficheFootnoteBlockBottom(page)
+    );
+    const epsilon = Math.max(4, pageHeightPx * 8e-3);
+    let starts = plan.sliceStarts.filter(
+      (start2, index2) => index2 === 0 || start2 < contentBottom - epsilon
+    );
+    starts = sanitizeSupplementSliceStarts(starts, pageHeightPx);
+    if (!starts.length) starts = [0];
+    return { sliceCount: starts.length, sliceStarts: starts };
+  }
+  function adjustCutForFicheFootnotes(page, sliceStartPx, cut, pageHeightPx, epsilon, layoutScale = 1) {
+    if (!page.classList.contains("ec-print-fiche")) return cut;
+    const footnotes = Array.from(page.querySelectorAll(".ec-print-fiche__footnote-callout")).filter(
+      (el2) => el2 instanceof HTMLElement
+    );
+    if (!footnotes.length) return cut;
+    let footTop = Infinity;
+    let footBottom = 0;
+    for (const el2 of footnotes) {
+      const block = blockFromElement(el2, page, layoutScale);
+      if (!block) continue;
+      footTop = Math.min(footTop, block.top);
+      footBottom = Math.max(footBottom, block.bottom);
+    }
+    if (!Number.isFinite(footTop)) return cut;
+    const sliceEndUniform = sliceStartPx + pageHeightPx;
+    const footnotesFitInSlice = footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + epsilon;
+    if (footnotesFitInSlice) return cut;
+    if (footTop > sliceStartPx + epsilon && footTop < cut + epsilon) {
+      return Math.min(cut, footTop);
+    }
+    if (footBottom > cut + epsilon && footTop < cut + epsilon) {
+      return Math.min(cut, footTop > sliceStartPx + epsilon ? footTop : cut);
+    }
+    return cut;
+  }
+  function adjustCutForLegendGroupTitles(page, sliceStart, cut, tailZoneStart, epsilon, layoutScale = 1) {
+    let nextCut = cut;
+    for (const group of page.querySelectorAll(".ec-print-legends__group")) {
+      const title2 = group.querySelector(".ec-print-legends__group-title");
+      if (!(title2 instanceof HTMLElement)) continue;
+      const titleBlock = blockFromElement(title2, page, layoutScale);
+      if (!titleBlock) continue;
+      const itemEls = Array.from(group.querySelectorAll(".ec-layer-legends__item")).filter(
+        (el2) => el2 instanceof HTMLElement
+      );
+      const rowBlocks = clusterLegendItemsIntoRows(page, itemEls, layoutScale);
+      const firstRow = rowBlocks[0];
+      if (!firstRow) continue;
+      const titleTop = titleBlock.top;
+      const titleBottom = titleBlock.bottom;
+      if (titleTop >= tailZoneStart && titleTop < nextCut - epsilon && firstRow.bottom > nextCut + epsilon) {
+        nextCut = Math.min(nextCut, titleTop);
+      }
+      if (titleBottom <= nextCut + epsilon && firstRow.top >= nextCut - epsilon && titleTop > sliceStart + epsilon) {
+        nextCut = Math.min(nextCut, titleTop);
+      }
+    }
+    return nextCut;
+  }
+  function maxContentBottom(page, blocks) {
+    let maxBottom = 0;
+    for (const b3 of blocks) maxBottom = Math.max(maxBottom, b3.bottom);
+    const scrollBottom = Math.max(page.scrollHeight, 1);
+    if (page.classList.contains("ec-print-legends")) {
+      return Math.max(maxBottom, scrollBottom);
+    }
+    return maxBottom > 0 ? maxBottom : scrollBottom;
+  }
+  function resolveSupplementSliceEndPx(page, sliceStartPx, pageHeightPx, layoutScale = 1) {
+    if (!Number.isFinite(pageHeightPx) || pageHeightPx <= 0) {
+      return sliceStartPx;
+    }
+    const epsilon = Math.max(4, pageHeightPx * 8e-3);
+    const uniformEnd = sliceStartPx + pageHeightPx;
+    const blocks = contentBlocksForPage(page, layoutScale);
+    let cut = uniformEnd;
+    const minTailRatio = 0.05;
+    const tailZoneStart = sliceStartPx + pageHeightPx * (1 - minTailRatio);
+    for (const block of blocks) {
+      if (block.top >= tailZoneStart && block.top < cut - epsilon && block.bottom > cut + epsilon && block.top > sliceStartPx + epsilon) {
+        cut = Math.min(cut, block.top);
+      }
+    }
+    for (const block of blocks) {
+      if (block.top >= cut - epsilon) break;
+      if (block.bottom > cut + epsilon && block.top > sliceStartPx + epsilon) {
+        cut = Math.min(cut, block.top);
+      }
+    }
+    cut = adjustCutForLegendGroupTitles(page, sliceStartPx, cut, tailZoneStart, epsilon, layoutScale);
+    cut = adjustCutForFicheFootnotes(page, sliceStartPx, cut, pageHeightPx, epsilon, layoutScale);
+    if (cut <= sliceStartPx + epsilon) {
+      cut = uniformEnd;
+    }
+    const minAdvancePx = pageHeightPx * 0.18;
+    if (cut - sliceStartPx < minAdvancePx) {
+      cut = uniformEnd;
+    }
+    return Math.min(cut, uniformEnd);
+  }
+  function resolveSupplementSliceStartPx(page, sliceIndex, pageHeightPx, layoutScale = 1) {
+    let start2 = 0;
+    for (let index2 = 0; index2 < sliceIndex; index2 += 1) {
+      start2 = resolveSupplementSliceEndPx(page, start2, pageHeightPx, layoutScale);
+    }
+    return start2;
+  }
+  function computeSupplementSlicePlan(page, pageHeightPx) {
+    if (!Number.isFinite(pageHeightPx) || pageHeightPx <= 0) {
+      return { sliceCount: 1, sliceStarts: [0] };
+    }
+    const blocks = contentBlocksForPage(page);
+    const maxBottom = maxContentBottom(page, blocks);
+    const epsilon = Math.max(4, pageHeightPx * 8e-3);
+    if (maxBottom <= pageHeightPx + epsilon) {
+      return { sliceCount: 1, sliceStarts: [0] };
+    }
+    const sliceStarts = [0];
+    let sliceStart = 0;
+    while (sliceStart + pageHeightPx < maxBottom - epsilon) {
+      const nextStart = resolveSupplementSliceEndPx(page, sliceStart, pageHeightPx);
+      if (nextStart >= maxBottom - epsilon) break;
+      if (sliceStarts[sliceStarts.length - 1] !== nextStart) {
+        sliceStarts.push(nextStart);
+      }
+      sliceStart = nextStart;
+    }
+    return { sliceCount: Math.max(1, sliceStarts.length), sliceStarts };
+  }
+  function sanitizeSupplementSliceStarts(sliceStarts, pageHeightPx) {
+    if (sliceStarts.length <= 1) return sliceStarts.length ? [...sliceStarts] : [0];
+    const minGapPx = pageHeightPx * 0.18;
+    const sanitized = [sliceStarts[0] ?? 0];
+    for (let index2 = 1; index2 < sliceStarts.length; index2 += 1) {
+      const start2 = sliceStarts[index2] ?? 0;
+      const previous = sanitized[sanitized.length - 1] ?? 0;
+      if (start2 - previous >= minGapPx - 0.5) {
+        sanitized.push(start2);
+      }
+    }
+    return sanitized;
+  }
+  function buildUniformSupplementSlicePlan(contentHeightPx, pageHeightPx) {
+    const sliceCount = countSupplementSlices(contentHeightPx, pageHeightPx);
+    const sliceStarts = [];
+    for (let index2 = 0; index2 < sliceCount; index2 += 1) {
+      sliceStarts.push(index2 * pageHeightPx);
+    }
+    return { sliceCount: Math.max(1, sliceStarts.length), sliceStarts };
+  }
+  function measureSupplementSlicePlanFromPage(page, pageHeightPx) {
+    const footnoteBottom = ficheFootnoteBlockBottom(page);
+    const contentHeight = Math.max(resolveSupplementContentHeightForPage(page), footnoteBottom);
+    let targetCount = countSupplementSlices(contentHeight, pageHeightPx);
+    if (footnoteBottom > pageHeightPx + 2) {
+      targetCount = Math.max(targetCount, 2);
+    }
+    let plan;
+    if (targetCount <= 1 && footnoteBottom <= pageHeightPx + 2) {
+      plan = { sliceCount: 1, sliceStarts: [0] };
+    } else {
+      const blockPlan = computeSupplementSlicePlan(page, pageHeightPx);
+      let starts = sanitizeSupplementSliceStarts(blockPlan.sliceStarts, pageHeightPx);
+      if (starts.length >= 2) {
+        plan = { sliceCount: starts.length, sliceStarts: starts };
+      } else {
+        const uniform = buildUniformSupplementSlicePlan(
+          Math.max(contentHeight, footnoteBottom),
+          pageHeightPx
+        );
+        starts = sanitizeSupplementSliceStarts(uniform.sliceStarts, pageHeightPx);
+        if (starts.length < 2 && footnoteBottom > pageHeightPx + 2) {
+          starts = [0, Math.max(0, ficheFootnoteBlockTop(page))];
+        }
+        plan = { sliceCount: Math.max(1, starts.length), sliceStarts: starts.length ? starts : [0] };
+      }
+    }
+    plan = finalizeFicheParcelFootnoteSlicePlan(page, plan, pageHeightPx);
+    if (page.classList.contains("ec-print-fiche")) {
+      plan = trimTrailingSupplementSliceStarts(page, plan, pageHeightPx);
+    }
+    return plan;
+  }
+  function measureSupplementSlicePlan(measureRoot, pageHeightPx) {
+    const page = queryHTMLElement(measureRoot, ".ec-print-supplement-page");
+    if (!page) return { sliceCount: 1, sliceStarts: [0] };
+    return measureSupplementSlicePlanFromPage(page, pageHeightPx);
+  }
+  function hideSupplementElementsForSlice(page, sliceStartPx, sliceEndPx, layoutScale = 1) {
+    if (!Number.isFinite(sliceEndPx) || sliceEndPx <= sliceStartPx + 0.5) return;
+    const sliceHeightPx = sliceEndPx - sliceStartPx;
+    const epsilon = Math.max(4, sliceHeightPx * 8e-3);
+    const shouldHide = (top, bottom) => {
+      if (bottom <= sliceStartPx + epsilon) return true;
+      if (top >= sliceEndPx - epsilon) return true;
+      return top < sliceEndPx - epsilon && bottom > sliceEndPx + epsilon;
+    };
+    for (const el2 of supplementVisibilityElements(page)) {
+      const top = elementTopInPage(el2, page, layoutScale);
+      const height = elementHeight(el2, layoutScale);
+      if (height < 0.5) continue;
+      const bottom = top + height;
+      el2.style.visibility = shouldHide(top, bottom) ? "hidden" : "";
+    }
+    const legendItems = supplementVisibilityElements(page).filter(
+      (el2) => el2.classList.contains("ec-layer-legends__item")
+    );
+    const rows = clusterLegendItemsIntoRows(page, legendItems, layoutScale);
+    for (const row of rows) {
+      if (!shouldHide(row.top, row.bottom)) continue;
+      for (const el2 of legendItems) {
+        const block = blockFromElement(el2, page, layoutScale);
+        if (!block) continue;
+        if (Math.abs(block.top - row.top) <= LEGEND_ROW_TOP_TOLERANCE_PX) {
+          el2.style.visibility = "hidden";
+        }
+      }
+    }
+  }
+  function resetSupplementElementVisibility(page) {
+    for (const el2 of supplementMarkerElements(page, SUPPLEMENT_VISIBILITY_RESET_MARKERS)) {
+      el2.style.visibility = "";
+    }
+  }
+  const PRINT_MAP_TITLE_MAX_CHARS = 100;
+  const PRINT_MAP_TITLE_MAX_HEIGHT_RATIO = 0.12;
+  const PRINT_MAP_MIN_MAP_HEIGHT_RATIO = 0.38;
+  const TITLE_BASE_FONT_MM = PRINT_SUPPLEMENT_TITLE_FONT_MM;
+  const TITLE_LINE_HEIGHT_RATIO = 1.35;
+  const TITLE_VERTICAL_PADDING_MM = PRINT_SUPPLEMENT_BLOCK_GAP_MM;
+  const TITLE_MAX_LINES = 3;
+  function normalizePrintMapTitle(raw, maxChars = PRINT_MAP_TITLE_MAX_CHARS) {
+    const trimmed = raw.trim();
+    if (trimmed.length <= maxChars) return trimmed;
+    return `${trimmed.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`;
+  }
+  function fontSizeMmForTitleLength(charCount) {
+    if (charCount <= 32) return TITLE_BASE_FONT_MM;
+    if (charCount <= 56) return TITLE_BASE_FONT_MM * 0.88;
+    if (charCount <= 80) return TITLE_BASE_FONT_MM * 0.76;
+    return TITLE_BASE_FONT_MM * 0.65;
+  }
+  function wrapPrintMapTitleLines(title2, printableWidthMm, fontSizeMm, maxLines = TITLE_MAX_LINES) {
+    if (!title2) return [];
+    const avgCharWidthMm = Math.max(0.35, fontSizeMm * 0.52);
+    const charsPerLine = Math.max(8, Math.floor(printableWidthMm / avgCharWidthMm));
+    const words = title2.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = "";
+    const pushLine = (line) => {
+      if (line) lines.push(line);
+    };
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length <= charsPerLine) {
+        current = candidate;
+        continue;
+      }
+      if (current) pushLine(current);
+      if (word.length > charsPerLine) {
+        for (let i2 = 0; i2 < word.length; i2 += charsPerLine) {
+          pushLine(word.slice(i2, i2 + charsPerLine));
+        }
+        current = "";
+      } else {
+        current = word;
+      }
+      if (lines.length >= maxLines) break;
+    }
+    if (lines.length < maxLines && current) pushLine(current);
+    if (lines.length > maxLines) {
+      const clipped = lines.slice(0, maxLines);
+      const last = clipped[maxLines - 1];
+      clipped[maxLines - 1] = last.length > 1 ? `${last.slice(0, Math.max(1, last.length - 1))}…` : "…";
+      return clipped;
+    }
+    return lines;
+  }
+  function computePrintMapTitleLayout(rawTitle, printableWidthMm, printableHeightMm, hasTitle) {
+    if (!hasTitle || printableWidthMm <= 0 || printableHeightMm <= 0) {
+      return {
+        displayTitle: "",
+        titleHeightMm: 0,
+        fontSizeMm: 0,
+        lineHeightMm: 0,
+        lineCount: 0
+      };
+    }
+    const displayTitle = normalizePrintMapTitle(rawTitle);
+    if (!displayTitle) {
+      return {
+        displayTitle: "",
+        titleHeightMm: 0,
+        fontSizeMm: 0,
+        lineHeightMm: 0,
+        lineCount: 0
+      };
+    }
+    const fontSizeMm = fontSizeMmForTitleLength(displayTitle.length);
+    const lineHeightMm = fontSizeMm * TITLE_LINE_HEIGHT_RATIO;
+    const lines = wrapPrintMapTitleLines(displayTitle, printableWidthMm, fontSizeMm);
+    const lineCount = Math.max(1, Math.min(TITLE_MAX_LINES, lines.length));
+    const maxTitleMm = printableHeightMm * PRINT_MAP_TITLE_MAX_HEIGHT_RATIO;
+    const minMapMm = printableHeightMm * PRINT_MAP_MIN_MAP_HEIGHT_RATIO;
+    const cappedByMap = Math.max(0, printableHeightMm - minMapMm);
+    const maxAllowedTitleMm = Math.min(maxTitleMm, cappedByMap);
+    let titleHeightMm = lineCount * lineHeightMm + TITLE_VERTICAL_PADDING_MM;
+    titleHeightMm = Math.min(titleHeightMm, maxAllowedTitleMm);
+    return {
+      displayTitle,
+      titleHeightMm,
+      fontSizeMm,
+      lineHeightMm,
+      lineCount
+    };
+  }
+  function drawPrintMapTitleOnCanvas(ctx, canvasWidth, canvasHeight, layout, dpi) {
+    if (!layout.displayTitle || canvasWidth <= 0 || canvasHeight <= 0) return;
+    const mmToPx = dpi / 25.4;
+    const fontSizePx = layout.fontSizeMm * mmToPx;
+    const lineHeightPx = layout.lineHeightMm * mmToPx;
+    const lines = wrapPrintMapTitleLines(layout.displayTitle, canvasWidth / mmToPx, layout.fontSizeMm);
+    ctx.fillStyle = "#161616";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.font = `normal normal 700 ${fontSizePx}px Marianne, arial, sans-serif`;
+    const paddingPx = TITLE_VERTICAL_PADDING_MM * mmToPx * 0.5;
+    let y2 = paddingPx;
+    for (const line of lines) {
+      if (y2 + lineHeightPx > canvasHeight) break;
+      ctx.fillText(line, canvasWidth / 2, y2, canvasWidth - paddingPx * 2);
+      y2 += lineHeightPx;
+    }
+  }
+  async function prewarmPrintMapRenderCache(params2) {
+    if (params2.mapWidthPx < 16 || params2.mapHeightPx < 16) return false;
+    const view = params2.previewMap.getView();
+    const layerFingerprint = buildVisibleLayerFingerprint(params2.previewMap);
+    const cacheKey = buildPrintMapRenderCacheKey({
+      dpi: params2.dpi,
+      mapWidthPx: params2.mapWidthPx,
+      mapHeightPx: params2.mapHeightPx,
+      extent: params2.extent,
+      layerFingerprint,
+      rotation: view.getRotation()
+    });
+    if (getCachedPrintMapCanvas(cacheKey)) return true;
+    const canvas = await renderOffscreenPrintMapCanvas(params2.previewMap, {
+      widthPx: params2.mapWidthPx,
+      heightPx: params2.mapHeightPx,
+      extent: params2.extent,
+      cacheKey
+    });
+    canvas.remove();
+    return true;
+  }
+  function isArrayBufferValue(value2) {
+    if (value2 instanceof ArrayBuffer) return true;
+    return Object.prototype.toString.call(value2) === "[object ArrayBuffer]";
+  }
+  let worker = null;
+  let requestId = 0;
+  const pending = /* @__PURE__ */ new Map();
+  function isWorkerResponsePayload(data) {
+    if (!data || typeof data !== "object") return false;
+    const record = data;
+    if (typeof record.id !== "number") return false;
+    if (record.ok === true) return isArrayBufferValue(record.buffer);
+    if (record.ok === false) return typeof record.error === "string";
+    return false;
+  }
+  function isTrustedPrintExportWorkerMessage(event) {
+    if (typeof globalThis.location !== "undefined") {
+      const origin = event.origin;
+      if (origin && origin !== "null" && origin !== globalThis.location.origin) {
+        return false;
+      }
+    }
+    return isWorkerResponsePayload(event.data);
+  }
+  function getPrintExportWorker() {
+    if (typeof Worker === "undefined") {
+      throw new Error("Web Workers indisponibles.");
+    }
+    if (!worker) {
+      const instance = new Worker(new URL(
+        /* @vite-ignore */
+        "/assets/printExport.worker-BQxaoHqJ.js",
+        _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href
+      ), {
+        type: "module"
+      });
+      instance.onmessage = (event) => {
+        if (!isTrustedPrintExportWorkerMessage(event)) return;
+        const data = event.data;
+        const handler = pending.get(data.id);
+        if (!handler) return;
+        pending.delete(data.id);
+        if (data.ok) handler.resolve(data.buffer);
+        else handler.reject(new Error(data.error));
+      };
+      instance.onerror = () => {
+        for (const [, handler] of pending) {
+          handler.reject(new Error("Erreur worker export."));
+        }
+        pending.clear();
+      };
+      worker = instance;
+    }
+    return worker;
+  }
+  const WORKER_TASK_TIMEOUT_MS = 3e5;
+  function runWorkerTask(request) {
+    return new Promise((resolve2, reject) => {
+      const timer = typeof window !== "undefined" ? window.setTimeout(() => {
+        pending.delete(request.id);
+        reject(new Error("Délai dépassé lors de l’encodage export."));
+      }, WORKER_TASK_TIMEOUT_MS) : void 0;
+      pending.set(request.id, {
+        resolve: (buffer2) => {
+          if (timer !== void 0) window.clearTimeout(timer);
+          resolve2(buffer2);
+        },
+        reject: (err) => {
+          if (timer !== void 0) window.clearTimeout(timer);
+          reject(err);
+        }
+      });
+      const transferables = [];
+      if ("png" in request && request.png) transferables.push(request.png);
+      if ("pages" in request) transferables.push(...request.pages);
+      getPrintExportWorker().postMessage(request, transferables);
+    });
+  }
+  async function canvasToPngBuffer(canvas) {
+    const blob = await new Promise((resolve2) => canvas.toBlob(resolve2, "image/png"));
+    if (!blob) throw new Error("Encodage PNG impossible.");
+    return blob.arrayBuffer();
+  }
+  async function encodePrintPngWithDpi(canvas, dpi) {
+    const png = await canvasToPngBuffer(canvas);
+    const id2 = ++requestId;
+    const buffer2 = await runWorkerTask({ id: id2, type: "png-dpi", png, dpi });
+    return new Blob([buffer2], { type: "image/png" });
+  }
+  async function encodePrintJpeg(canvas, quality = 0.95) {
+    const png = await canvasToPngBuffer(canvas);
+    const id2 = ++requestId;
+    const buffer2 = await runWorkerTask({ id: id2, type: "jpeg", png, quality });
+    return new Blob([buffer2], { type: "image/jpeg" });
+  }
+  async function encodePrintPdf(options) {
+    const pages = await Promise.all(options.canvases.map((canvas) => canvasToPngBuffer(canvas)));
+    const id2 = ++requestId;
+    const buffer2 = await runWorkerTask({
+      id: id2,
+      type: "pdf",
+      pages,
+      paperWidthMm: options.paperWidthMm,
+      paperHeightMm: options.paperHeightMm,
+      orientation: options.orientation,
+      fileName: "carte.pdf"
+    });
+    return new Blob([buffer2], { type: "application/pdf" });
+  }
+  function terminatePrintExportWorker() {
+    worker == null ? void 0 : worker.terminate();
+    worker = null;
+    pending.clear();
   }
   /*!
    * html2canvas 1.4.1 <https://html2canvas.hertzen.com>
@@ -102885,180 +104058,36 @@ Expected function or array of functions, received type ${typeof value2}.`
     __proto__: null,
     default: html2canvas
   }, Symbol.toStringTag, { value: "Module" }));
-  function buildSupplementRasterHost(contentRoot, sliceIndex, paperWidthPx, paperHeightPx, marginPx, innerWidthPx, innerHeightPx) {
-    const host = document.createElement("div");
-    host.style.position = "fixed";
-    host.style.left = "-10000px";
-    host.style.top = "0";
-    host.style.width = `${paperWidthPx}px`;
-    host.style.height = `${paperHeightPx}px`;
-    host.style.background = "#ffffff";
-    host.style.boxSizing = "border-box";
-    host.style.padding = `${marginPx}px`;
-    host.style.overflow = "hidden";
-    const viewport = document.createElement("div");
-    viewport.style.width = `${innerWidthPx}px`;
-    viewport.style.height = `${innerHeightPx}px`;
-    viewport.style.overflow = "hidden";
-    viewport.style.position = "relative";
-    viewport.style.background = "#ffffff";
-    const clone2 = contentRoot.cloneNode(true);
-    clone2.style.width = `${innerWidthPx}px`;
-    clone2.style.height = "auto";
-    clone2.style.maxHeight = "none";
-    clone2.style.overflow = "visible";
-    clone2.style.marginTop = `-${sliceIndex * innerHeightPx}px`;
-    viewport.appendChild(clone2);
-    host.appendChild(viewport);
-    return host;
-  }
-  async function rasterizeHostToCanvas(host, paperWidthPx, paperHeightPx) {
-    const shot = await html2canvas(host, {
-      backgroundColor: "#ffffff",
-      scale: 1,
-      width: paperWidthPx,
-      height: paperHeightPx,
-      useCORS: true,
-      logging: false
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = paperWidthPx;
-    canvas.height = paperHeightPx;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Contexte canvas indisponible.");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, paperWidthPx, paperHeightPx);
-    ctx.drawImage(shot, 0, 0, paperWidthPx, paperHeightPx);
-    return canvas;
-  }
-  async function rasterizePrintSupplementSlices(contentRoot, sliceCount, paperWidthMm, paperHeightMm, marginMm, dpi) {
+  async function rasterizePrintSupplementPreviewFrame(previewFrameEl, paperWidthMm, paperHeightMm, marginMm, dpi) {
     const paperWidthPx = convertMmToPx(paperWidthMm, dpi);
     const paperHeightPx = convertMmToPx(paperHeightMm, dpi);
     const marginPx = convertMmToPx(marginMm, dpi);
     const innerWidthPx = Math.max(0, paperWidthPx - marginPx * 2);
     const innerHeightPx = Math.max(0, paperHeightPx - marginPx * 2);
-    const count = Math.max(1, sliceCount);
-    const canvases = [];
-    for (let sliceIndex = 0; sliceIndex < count; sliceIndex += 1) {
-      const host = buildSupplementRasterHost(
-        contentRoot,
-        sliceIndex,
-        paperWidthPx,
-        paperHeightPx,
-        marginPx,
-        innerWidthPx,
-        innerHeightPx
-      );
-      document.body.appendChild(host);
-      try {
-        canvases.push(await rasterizeHostToCanvas(host, paperWidthPx, paperHeightPx));
-      } finally {
-        host.remove();
-      }
+    const rect = previewFrameEl.getBoundingClientRect();
+    const cssWidth = rect.width;
+    const cssHeight = rect.height;
+    if (cssWidth < 1 || cssHeight < 1) {
+      throw new Error("Cadre aperçu annexe indisponible.");
     }
-    return canvases;
-  }
-  const SUPPLEMENT_CONTENT_MARKERS = ".ec-print-fiche__title, .ec-print-legends__title, .ec-print-fiche__section, .ec-fiche-info__body, .ec-layer-legends__item";
-  function computePrintSupplementInnerPx(paperWidthMm, paperHeightMm, marginMm, dpi) {
-    const paperWidthPx = convertMmToPx(paperWidthMm, dpi);
-    const paperHeightPx = convertMmToPx(paperHeightMm, dpi);
-    const marginPx = convertMmToPx(marginMm, dpi);
-    return {
-      paperWidthPx,
-      paperHeightPx,
-      marginPx,
-      innerWidthPx: Math.max(0, paperWidthPx - marginPx * 2),
-      innerHeightPx: Math.max(0, paperHeightPx - marginPx * 2)
-    };
-  }
-  function printSupplementCssVars(innerWidthPx) {
-    const w2 = Math.max(innerWidthPx, 120);
-    return {
-      "--print-inner-width": `${w2}px`,
-      "--print-body-font": `${Math.max(9, Math.round(w2 * 0.028))}px`,
-      "--print-title-font": `${Math.max(13, Math.round(w2 * 0.044))}px`,
-      "--print-section-font": `${Math.max(11, Math.round(w2 * 0.035))}px`,
-      "--print-small-font": `${Math.max(8, Math.round(w2 * 0.024))}px`,
-      "--print-cadastre-font": `${Math.max(7, Math.round(w2 * 0.019))}px`,
-      "--print-cadastre-headline-font": `${Math.max(8, Math.round(w2 * 0.022))}px`,
-      "--print-img-max": `${Math.round(w2 * 0.16)}px`,
-      "--print-legend-img-max": `${Math.round(w2 * 0.11)}px`,
-      "--print-block-gap": `${Math.max(8, Math.round(w2 * 0.014))}px`,
-      "--print-map-title-font": `${Math.max(12, Math.round(w2 * 0.046))}px`
-    };
-  }
-  async function waitForPrintSupplementImages(root) {
-    const imgs = Array.from(root.querySelectorAll("img"));
-    await Promise.all(
-      imgs.map(
-        (img) => new Promise((resolve2) => {
-          if (img.complete) {
-            resolve2();
-            return;
-          }
-          img.addEventListener("load", () => resolve2(), { once: true });
-          img.addEventListener("error", () => resolve2(), { once: true });
-        })
-      )
-    );
-  }
-  function supplementContentElements(page) {
-    return Array.from(page.querySelectorAll(SUPPLEMENT_CONTENT_MARKERS)).filter(
-      (el2) => el2 instanceof HTMLElement
-    );
-  }
-  function elementTopInPage(el2, page) {
-    const pageRect = page.getBoundingClientRect();
-    const elRect = el2.getBoundingClientRect();
-    return elRect.top - pageRect.top;
-  }
-  function elementBottomInPage(el2, page) {
-    return elementTopInPage(el2, page) + el2.offsetHeight;
-  }
-  function measurePageContentHeight(page) {
-    let maxBottom = 0;
-    for (const el2 of supplementContentElements(page)) {
-      if (el2.offsetHeight < 0.5) continue;
-      maxBottom = Math.max(maxBottom, elementBottomInPage(el2, page));
-    }
-    if (maxBottom > 0) return Math.ceil(maxBottom);
-    const content2 = page.parentElement;
-    if (content2 == null ? void 0 : content2.classList.contains("print-supplement-measure__content")) {
-      return Math.max(content2.scrollHeight, page.offsetHeight, 1);
-    }
-    return Math.max(page.offsetHeight, 1);
-  }
-  function sliceHasVisibleContent(page, sliceIndex, pageHeightPx, minOverlapPx) {
-    const sliceStart = sliceIndex * pageHeightPx;
-    const sliceEnd = sliceStart + pageHeightPx;
-    for (const el2 of supplementContentElements(page)) {
-      if (el2.offsetHeight < 0.5) continue;
-      const top = elementTopInPage(el2, page);
-      const bottom = top + el2.offsetHeight;
-      const overlap = Math.min(bottom, sliceEnd) - Math.max(top, sliceStart);
-      if (overlap >= minOverlapPx) return true;
-    }
-    return false;
-  }
-  function queryHTMLElement(root, selector) {
-    const el2 = root.querySelector(selector);
-    return el2 instanceof HTMLElement ? el2 : null;
-  }
-  function countSupplementPageSlices(measureRoot, pageHeightPx) {
-    if (!Number.isFinite(pageHeightPx) || pageHeightPx <= 0) return 1;
-    const page = queryHTMLElement(measureRoot, ".ec-print-supplement-page");
-    if (!page) return 1;
-    const contentEl = queryHTMLElement(measureRoot, ".print-supplement-measure__content");
-    const fromLayout = measurePageContentHeight(page);
-    const fromScroll = (contentEl == null ? void 0 : contentEl.scrollHeight) ?? page.scrollHeight;
-    const contentHeight = fromLayout > 0 && fromScroll > fromLayout * 1.08 ? fromLayout : fromLayout > 0 ? Math.max(fromLayout, fromScroll) : fromScroll;
-    if (contentHeight <= pageHeightPx + 2) return 1;
-    let count = Math.ceil(contentHeight / pageHeightPx);
-    const minOverlapPx = Math.max(8, pageHeightPx * 0.02);
-    while (count > 1 && !sliceHasVisibleContent(page, count - 1, pageHeightPx, minOverlapPx)) {
-      count -= 1;
-    }
-    return Math.max(1, count);
+    const scale2 = innerWidthPx / cssWidth;
+    const shot = await html2canvas(previewFrameEl, {
+      backgroundColor: "#ffffff",
+      scale: scale2,
+      useCORS: true,
+      logging: false,
+      width: cssWidth,
+      height: cssHeight
+    });
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = paperWidthPx;
+    finalCanvas.height = paperHeightPx;
+    const ctx = finalCanvas.getContext("2d");
+    if (!ctx) throw new Error("Contexte canvas indisponible.");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, paperWidthPx, paperHeightPx);
+    ctx.drawImage(shot, marginPx, marginPx, innerWidthPx, innerHeightPx);
+    return finalCanvas;
   }
   function sanitizeFicheHtmlForPrint(html2) {
     if (!html2.trim()) return html2;
@@ -103066,6 +104095,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const tpl = document.createElement("template");
     tpl.innerHTML = html2;
     tpl.content.querySelectorAll(".ec-fiche-info__rule-doc").forEach((el2) => el2.remove());
+    tpl.content.querySelectorAll("hr").forEach((el2) => el2.remove());
     tpl.content.querySelectorAll("a").forEach((anchor) => {
       const tag = anchor.classList.contains("fr-tile") ? "div" : "span";
       const repl = document.createElement(tag);
@@ -103085,16 +104115,59 @@ Expected function or array of functions, received type ${typeof value2}.`
     const payload = raw._parcelFiche;
     return isGpuParcelFichePayload(payload) ? payload : null;
   }
-  function hasActiveMapSelection(selection) {
-    if (!selection || selection.loading === "data") return false;
-    return Boolean(selection.mapMode || selection.raw);
+  function gpuPointFromRaw(raw) {
+    const lon = raw.lon;
+    const lat = raw.lat;
+    if (typeof lon === "number" && typeof lat === "number") return { lon, lat };
+    return null;
+  }
+  function gpuPayloadFromSelection(selection) {
+    const raw = selection.raw;
+    return raw && isGpuFicheInfoPayload(raw) ? raw : null;
   }
   function isParcelFichePrintReady(selection) {
-    if (!selection || selection.parcelMissingAtPoint) return false;
-    return hasActiveMapSelection(selection);
+    var _a2, _b2;
+    if (!selection || selection.loading === "data" || selection.parcelMissingAtPoint) return false;
+    if (selection.cadastreReferences) return true;
+    if (((_a2 = selection.parcelInfosHtml) == null ? void 0 : _a2.trim()) || ((_b2 = selection.parcelDocumentsHtml) == null ? void 0 : _b2.trim())) return true;
+    if (parcelFichePayloadFromSelection(selection)) return true;
+    const payload = gpuPayloadFromSelection(selection);
+    if (payload && ficheHasParcelAtPoint(payload)) return true;
+    return selection.mapMode === MAP_MODE_PARCEL && Boolean(selection.raw);
   }
   function isTerritoryFichePrintReady(selection) {
-    return hasActiveMapSelection(selection);
+    var _a2, _b2;
+    if (!selection || selection.loading === "data") return false;
+    if ((((_a2 = selection.documentTabs) == null ? void 0 : _a2.length) ?? 0) > 0) return true;
+    if ((_b2 = selection.bodyHtml) == null ? void 0 : _b2.trim()) return true;
+    const payload = gpuPayloadFromSelection(selection);
+    if (payload && ficheHasTerritoryAtPoint(payload)) return true;
+    return selection.mapMode === MAP_MODE_TERRITORY && Boolean(selection.raw);
+  }
+  function normalizeFicheSelectionForPrint(selection, mode2) {
+    var _a2, _b2;
+    if (!selection) return null;
+    if (mode2 === MAP_MODE_PARCEL && isParcelFichePrintReady(selection)) {
+      if (selection.mapMode === MAP_MODE_PARCEL || selection.cadastreReferences || ((_a2 = selection.parcelInfosHtml) == null ? void 0 : _a2.trim()) || parcelFichePayloadFromSelection(selection)) {
+        return selection;
+      }
+      const payload = gpuPayloadFromSelection(selection);
+      const point = payload ? gpuPointFromRaw(selection.raw) : null;
+      if (payload && point && ficheHasParcelAtPoint(payload)) {
+        return ficheSelectionFromGpuApi(payload, MAP_MODE_PARCEL, point.lon, point.lat);
+      }
+      return selection;
+    }
+    if (mode2 === MAP_MODE_TERRITORY && isTerritoryFichePrintReady(selection)) {
+      if ((((_b2 = selection.documentTabs) == null ? void 0 : _b2.length) ?? 0) > 0) return selection;
+      const payload = gpuPayloadFromSelection(selection);
+      const point = payload ? gpuPointFromRaw(selection.raw) : null;
+      if (payload && point && ficheHasTerritoryAtPoint(payload)) {
+        return ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, point.lon, point.lat);
+      }
+      return selection;
+    }
+    return null;
   }
   function buildParcelInfosPrintHtml(selection, mapZoom) {
     var _a2;
@@ -103122,7 +104195,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     return docs ? sanitizeFicheHtmlForPrint(docs) : "";
   }
   function sanitizeTerritoryTabHtmlForPrint(html2) {
-    return sanitizeFicheHtmlForPrint(html2);
+    let out = sanitizeFicheHtmlForPrint(html2);
+    if (typeof document === "undefined") return out;
+    const tpl = document.createElement("template");
+    tpl.innerHTML = out;
+    tpl.content.querySelectorAll(".ec-fiche-info__sup-legal-link").forEach((el2) => el2.remove());
+    out = tpl.innerHTML;
+    return out;
   }
   function territoryPrintTitle(selection) {
     return (selection == null ? void 0 : selection.territoryTitle) ?? (selection == null ? void 0 : selection.title) ?? "Territoire";
@@ -103178,8 +104257,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function sanitizeDisplayHtml(html2, linkTargetBlank) {
     return purify_default.sanitize(html2, linkTargetBlank ? FICHE_LINK_SANITIZE : void 0);
   }
-  const _hoisted_1$k = ["innerHTML"];
-  const _sfc_main$k = /* @__PURE__ */ defineComponent({
+  const _hoisted_1$l = ["innerHTML"];
+  const _sfc_main$l = /* @__PURE__ */ defineComponent({
     __name: "SanitizedHtml",
     props: {
       html: {},
@@ -103189,18 +104268,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const safeHtml = computed(() => sanitizeDisplayHtml(props.html, props.linkTargetBlank));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$k);
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$l);
       };
     }
   });
-  const _hoisted_1$j = { class: "ec-print-supplement-page ec-print-fiche" };
-  const _hoisted_2$e = { class: "ec-print-fiche__title" };
-  const _hoisted_3$e = {
+  const _hoisted_1$k = { class: "ec-print-supplement-page ec-print-fiche" };
+  const _hoisted_2$f = { class: "ec-print-fiche__title" };
+  const _hoisted_3$f = {
     key: 0,
     class: "ec-print-fiche__sections"
   };
-  const _hoisted_4$e = { class: "ec-print-fiche__section-title" };
-  const _sfc_main$j = /* @__PURE__ */ defineComponent({
+  const _hoisted_4$f = {
+    key: 0,
+    class: "ec-print-fiche__section-title"
+  };
+  const _sfc_main$k = /* @__PURE__ */ defineComponent({
     __name: "MapPrintFicheTerritoryPage",
     props: {
       documentTabs: {},
@@ -103215,22 +104297,22 @@ Expected function or array of functions, received type ${typeof value2}.`
         }))
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("article", _hoisted_1$j, [
-          createBaseVNode("h2", _hoisted_2$e, toDisplayString(__props.title), 1),
-          __props.documentTabs.length ? (openBlock(), createElementBlock("div", _hoisted_3$e, [
+        return openBlock(), createElementBlock("article", _hoisted_1$k, [
+          createBaseVNode("h2", _hoisted_2$f, toDisplayString(__props.title), 1),
+          __props.documentTabs.length ? (openBlock(), createElementBlock("div", _hoisted_3$f, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(sanitizedTabs.value, (tab) => {
               return openBlock(), createElementBlock("section", {
                 key: tab.id,
                 class: "ec-print-fiche__section"
               }, [
-                createBaseVNode("h3", _hoisted_4$e, toDisplayString(tab.label), 1),
-                createVNode(_sfc_main$k, {
+                tab.label !== "Documents" ? (openBlock(), createElementBlock("h3", _hoisted_4$f, toDisplayString(tab.label), 1)) : createCommentVNode("", true),
+                createVNode(_sfc_main$l, {
                   class: "ec-fiche-info__body",
                   html: tab.bodyHtml
                 }, null, 8, ["html"])
               ]);
             }), 128))
-          ])) : (openBlock(), createBlock(_sfc_main$k, {
+          ])) : (openBlock(), createBlock(_sfc_main$l, {
             key: 1,
             class: "ec-fiche-info__body",
             html: unref(territoryEmptyFallbackHtml)()
@@ -103239,18 +104321,67 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _hoisted_1$i = { class: "ec-print-supplement-page ec-print-fiche" };
-  const _hoisted_2$d = { class: "ec-print-fiche__title" };
-  const _hoisted_3$d = { class: "ec-print-fiche__sections" };
-  const _hoisted_4$d = {
+  const PARCEL_FICHE_INFORMATIVE_NOTICE = "NB : Cette fiche a un caractère informatif et ne peut pas être considérée comme un document opposable.";
+  const PARCEL_FICHE_PROTECTED_SUP_NOTICE = "Certaines SUP dites « protégées » n’apparaissent pas à toutes les échelles sur la carte.";
+  const PRINT_FICHE_FOOTNOTE_CALLOUT_CLASS = "fr-callout ec-print-fiche__footnote-callout";
+  function frCalloutHtml(text2, options = {}) {
+    const rootClass = options.print ? PRINT_FICHE_FOOTNOTE_CALLOUT_CLASS : "fr-callout";
+    return `<div class="${rootClass}"><p class="fr-callout__text">${text2}</p></div>`;
+  }
+  function readFaqUrlFromConfig() {
+    var _a2, _b2;
+    const candidates = [config.faqUrl];
+    if (typeof window !== "undefined") {
+      const gpuConfig = (_b2 = (_a2 = window.gpu) == null ? void 0 : _a2.config) == null ? void 0 : _b2.faqUrl;
+      candidates.push(gpuConfig);
+    }
+    for (const raw of candidates) {
+      if (typeof raw !== "string") continue;
+      const trimmed = raw.trim();
+      if (trimmed.length) return trimmed;
+    }
+    return null;
+  }
+  function buildParcelFichePrintFootnotesHtml() {
+    return [
+      frCalloutHtml(escapeHtml(PARCEL_FICHE_INFORMATIVE_NOTICE), { print: true }),
+      frCalloutHtml(escapeHtml(PARCEL_FICHE_PROTECTED_SUP_NOTICE), { print: true })
+    ].join("");
+  }
+  function resolveParcelFicheFaqUrl() {
+    const raw = readFaqUrlFromConfig();
+    return raw ? resolveGpuSiteNavigationUrl(raw) : null;
+  }
+  function panelProtectedSupCalloutHtml() {
+    const faqUrl = resolveParcelFicheFaqUrl();
+    let protectedSupText = escapeHtml(PARCEL_FICHE_PROTECTED_SUP_NOTICE);
+    protectedSupText += " Pour plus d’informations, consultez la ";
+    if (faqUrl) {
+      protectedSupText += `<a class="fr-link" href="${escapeHtml(faqUrl)}">FAQ</a>.`;
+    } else {
+      protectedSupText += "FAQ.";
+    }
+    return frCalloutHtml(protectedSupText);
+  }
+  function buildParcelFichePanelFootnotesHtml() {
+    return [
+      frCalloutHtml(escapeHtml(PARCEL_FICHE_INFORMATIVE_NOTICE)),
+      panelProtectedSupCalloutHtml()
+    ].join("");
+  }
+  const _hoisted_1$j = { class: "ec-print-supplement-page ec-print-fiche" };
+  const _hoisted_2$e = { class: "ec-print-fiche__title" };
+  const _hoisted_3$e = { class: "ec-print-fiche__sections" };
+  const _hoisted_4$e = {
     key: 0,
-    class: "ec-print-fiche__section"
+    class: "ec-print-fiche__section ec-print-fiche__section--cadastre"
   };
   const _hoisted_5$c = { class: "ec-print-fiche__cadastre-headline" };
   const _hoisted_6$b = { class: "ec-print-fiche__cadastre-dl" };
   const _hoisted_7$9 = { class: "ec-print-fiche__section" };
-  const _hoisted_8$8 = { class: "ec-print-fiche__section" };
-  const _sfc_main$i = /* @__PURE__ */ defineComponent({
+  const _hoisted_8$8 = { class: "ec-print-fiche__section ec-print-fiche__section--documents" };
+  const _hoisted_9$8 = { class: "ec-print-fiche__section ec-print-fiche__section--footnotes" };
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "MapPrintFicheParcelPage",
     props: {
       title: {},
@@ -103259,11 +104390,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       cadastreReferences: {}
     },
     setup(__props) {
+      const parcelPrintFootnotesHtml = buildParcelFichePrintFootnotesHtml();
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("article", _hoisted_1$i, [
-          createBaseVNode("h2", _hoisted_2$d, toDisplayString(__props.title), 1),
-          createBaseVNode("div", _hoisted_3$d, [
-            __props.cadastreReferences ? (openBlock(), createElementBlock("section", _hoisted_4$d, [
+        return openBlock(), createElementBlock("article", _hoisted_1$j, [
+          createBaseVNode("h2", _hoisted_2$e, toDisplayString(__props.title), 1),
+          createBaseVNode("div", _hoisted_3$e, [
+            __props.cadastreReferences ? (openBlock(), createElementBlock("section", _hoisted_4$e, [
               _cache[0] || (_cache[0] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Références cadastrales", -1)),
               createBaseVNode("p", _hoisted_5$c, toDisplayString(__props.cadastreReferences.headline), 1),
               createBaseVNode("dl", _hoisted_6$b, [
@@ -103278,17 +104410,23 @@ Expected function or array of functions, received type ${typeof value2}.`
               ])
             ])) : createCommentVNode("", true),
             createBaseVNode("section", _hoisted_7$9, [
-              _cache[1] || (_cache[1] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Infos", -1)),
-              createVNode(_sfc_main$k, {
+              _cache[1] || (_cache[1] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Règles d’urbanisme", -1)),
+              createVNode(_sfc_main$l, {
                 class: "ec-fiche-info__body",
                 html: __props.infosHtml
               }, null, 8, ["html"])
             ]),
             createBaseVNode("section", _hoisted_8$8, [
-              _cache[2] || (_cache[2] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Documents", -1)),
-              createVNode(_sfc_main$k, {
-                class: "ec-fiche-info__body",
+              _cache[2] || (_cache[2] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Documents couvrant la parcelle", -1)),
+              createVNode(_sfc_main$l, {
+                class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
                 html: __props.documentsHtml || "<p>Aucun document.</p>"
+              }, null, 8, ["html"])
+            ]),
+            createBaseVNode("section", _hoisted_9$8, [
+              createVNode(_sfc_main$l, {
+                class: "ec-fiche-info__body",
+                html: unref(parcelPrintFootnotesHtml)
               }, null, 8, ["html"])
             ])
           ])
@@ -103296,73 +104434,82 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _hoisted_1$h = {
+  const _hoisted_1$i = {
     class: "ec-print-supplement-page ec-print-legends",
     "aria-labelledby": "ec-print-legends-title"
   };
-  const _hoisted_2$c = {
+  const _hoisted_2$d = {
     key: 0,
     class: "ec-layer-legends__hint"
   };
-  const _hoisted_3$c = {
+  const _hoisted_3$d = {
     key: 1,
+    class: "ec-layer-legends__hint"
+  };
+  const _hoisted_4$d = {
+    key: 2,
     class: "ec-print-legends__groups"
   };
-  const _hoisted_4$c = { class: "ec-print-legends__group-title" };
-  const _hoisted_5$b = {
+  const _hoisted_5$b = { class: "ec-print-legends__group-title" };
+  const _hoisted_6$a = {
     key: 0,
     class: "ec-layer-legends__list"
   };
-  const _hoisted_6$a = {
+  const _hoisted_7$8 = {
     class: "ec-layer-legends__symbols",
     "aria-hidden": "true"
   };
-  const _hoisted_7$8 = ["src"];
-  const _hoisted_8$7 = {
+  const _hoisted_8$7 = ["src"];
+  const _hoisted_9$7 = {
     key: 1,
     class: "ec-layer-legends__swatch"
   };
-  const _hoisted_9$7 = {
+  const _hoisted_10$7 = {
     key: 1,
     class: "ec-layer-legends__hint"
   };
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "MapPrintLegendsPage",
     props: {
       layers: {},
       mapZoom: {},
-      catalogEntryInZoomRange: { type: Function }
+      catalogEntryInZoomRange: { type: Function },
+      includeAllLegendLayers: { type: Boolean }
     },
     setup(__props) {
       const props = __props;
-      const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers));
-      function legendImageSrcs(leg) {
-        return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url));
-      }
+      const stackedLegendLayers = computed(() => dedupeLegendLayersForPanel(props.layers));
       function layerInZoomRange(layer) {
         return props.catalogEntryInZoomRange(layer.id, props.mapZoom);
       }
+      const displayLayers = computed(() => {
+        if (props.includeAllLegendLayers) return stackedLegendLayers.value;
+        return stackedLegendLayers.value.filter((layer) => layerInZoomRange(layer));
+      });
+      function legendImageSrcs(leg) {
+        return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url));
+      }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$h, [
+        return openBlock(), createElementBlock("section", _hoisted_1$i, [
           _cache[0] || (_cache[0] = createBaseVNode("h2", {
             id: "ec-print-legends-title",
             class: "ec-print-legends__title"
           }, "Légendes", -1)),
-          !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$c, " Aucune couche avec légende dans la pile. ")) : (openBlock(), createElementBlock("div", _hoisted_3$c, [
+          !stackedLegendLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$d, " Aucune couche avec légende dans la pile. ")) : !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_3$d, " Aucune légende visible au niveau de zoom de l’aperçu carte. ")) : (openBlock(), createElementBlock("div", _hoisted_4$d, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(displayLayers.value, (layer) => {
               var _a2;
               return openBlock(), createElementBlock("section", {
                 key: layer.id,
-                class: normalizeClass(["ec-print-legends__group", { "ec-not-in-zoom-range": !layerInZoomRange(layer) }])
+                class: "ec-print-legends__group"
               }, [
-                createBaseVNode("h3", _hoisted_4$c, toDisplayString(layer.title), 1),
-                ((_a2 = layer.legend) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("ul", _hoisted_5$b, [
+                createBaseVNode("h3", _hoisted_5$b, toDisplayString(layer.title), 1),
+                ((_a2 = layer.legend) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("ul", _hoisted_6$a, [
                   (openBlock(true), createElementBlock(Fragment, null, renderList(layer.legend, (leg) => {
                     return openBlock(), createElementBlock("li", {
                       key: leg.id,
                       class: "ec-layer-legends__item"
                     }, [
-                      createBaseVNode("span", _hoisted_6$a, [
+                      createBaseVNode("span", _hoisted_7$8, [
                         legendImageSrcs(leg).length ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(legendImageSrcs(leg), (src, imgIdx) => {
                           return openBlock(), createElementBlock("img", {
                             key: imgIdx,
@@ -103370,14 +104517,14 @@ Expected function or array of functions, received type ${typeof value2}.`
                             src,
                             alt: "",
                             crossorigin: "anonymous"
-                          }, null, 8, _hoisted_7$8);
-                        }), 128)) : (openBlock(), createElementBlock("span", _hoisted_8$7))
+                          }, null, 8, _hoisted_8$7);
+                        }), 128)) : (openBlock(), createElementBlock("span", _hoisted_9$7))
                       ]),
                       createBaseVNode("span", null, toDisplayString(leg.title), 1)
                     ]);
                   }), 128))
-                ])) : (openBlock(), createElementBlock("p", _hoisted_9$7, "Pas de légende pour cette couche."))
-              ], 2);
+                ])) : (openBlock(), createElementBlock("p", _hoisted_10$7, "Pas de légende pour cette couche."))
+              ]);
             }), 128))
           ]))
         ]);
@@ -103391,7 +104538,46 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const MapPrintLegendsPage = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-026fe7e6"]]);
+  const MapPrintLegendsPage = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-69d3a3f2"]]);
+  const _hoisted_1$h = {
+    class: "print-export-progress",
+    role: "status",
+    "aria-live": "polite",
+    "aria-busy": "true"
+  };
+  const _hoisted_2$c = ["aria-valuenow", "aria-valuetext"];
+  const _hoisted_3$c = { class: "print-export-progress__detail fr-text--sm fr-mt-2w" };
+  const _hoisted_4$c = { class: "print-export-progress__percent fr-text--xs fr-mt-1w" };
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+    __name: "PrintExportProgressOverlay",
+    props: {
+      percent: {},
+      detail: {}
+    },
+    setup(__props) {
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", _hoisted_1$h, [
+          _cache[0] || (_cache[0] = createBaseVNode("p", { class: "print-export-progress__title fr-text--md fr-mb-2w" }, "Traitement en cours…", -1)),
+          createBaseVNode("div", {
+            class: "print-export-progress__bar",
+            role: "progressbar",
+            "aria-valuenow": __props.percent,
+            "aria-valuemin": "0",
+            "aria-valuemax": "100",
+            "aria-valuetext": `${__props.percent} % — ${__props.detail}`
+          }, [
+            createBaseVNode("div", {
+              class: "print-export-progress__bar-fill",
+              style: normalizeStyle({ width: `${__props.percent}%` })
+            }, null, 4)
+          ], 8, _hoisted_2$c),
+          createBaseVNode("p", _hoisted_3$c, toDisplayString(__props.detail), 1),
+          createBaseVNode("p", _hoisted_4$c, toDisplayString(__props.percent) + " %", 1)
+        ]);
+      };
+    }
+  });
+  const PrintExportProgressOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-906753a4"]]);
   async function ensureModeSelection(mode2, zoom) {
     var _a2, _b2;
     let selection = getCachedFicheSelectionAtMarker(mode2);
@@ -103429,27 +104615,185 @@ Expected function or array of functions, received type ${typeof value2}.`
     ]);
     return { territory, parcel };
   }
-  const _hoisted_1$g = { class: "mt-10" };
+  function buildAnnexContentMeasureSnapshot(input) {
+    return {
+      territoryTabCount: input.territoryTabCount,
+      parcelInfosLength: input.parcelInfosLength,
+      parcelDocumentsLength: input.parcelDocumentsLength,
+      parcelLegendScale: input.parcelLegendScale,
+      legendsIncludeAll: input.legendsIncludeAll,
+      legendPreviewZoom: input.legendsIncludeAll ? null : input.legendPreviewZoom,
+      legendLayerIds: input.legendLayerIds,
+      legendItemCount: input.legendItemCount
+    };
+  }
+  function annexKindsToInvalidateForContentChange(previous, next) {
+    if (!previous) return [];
+    const kinds = [];
+    if (previous.territoryTabCount !== next.territoryTabCount) {
+      kinds.push("ficheTerritory");
+    }
+    if (previous.parcelInfosLength !== next.parcelInfosLength || previous.parcelDocumentsLength !== next.parcelDocumentsLength || previous.parcelLegendScale !== next.parcelLegendScale) {
+      kinds.push("ficheParcel");
+    }
+    if (previous.legendsIncludeAll !== next.legendsIncludeAll || previous.legendPreviewZoom !== next.legendPreviewZoom || previous.legendLayerIds !== next.legendLayerIds || previous.legendItemCount !== next.legendItemCount) {
+      kinds.push("legends");
+    }
+    return kinds;
+  }
+  function supplementContentSuffixForKind(kind, fingerprints) {
+    if (kind === "ficheTerritory") {
+      return `t:${fingerprints.territoryTabCount}`;
+    }
+    if (kind === "ficheParcel") {
+      return `p:${fingerprints.parcelInfosLength}:${fingerprints.parcelDocumentsLength}|${fingerprints.parcelLegendScale}`;
+    }
+    if (fingerprints.legendsIncludeAll) {
+      return `l:all:${fingerprints.legendLayerIds}|n:${fingerprints.legendItemCount}`;
+    }
+    return `l:${fingerprints.legendLayerIds}|n:${fingerprints.legendItemCount}|z:${fingerprints.legendPreviewZoom}`;
+  }
+  function buildSupplementSlicePlanCacheKey(kind, layout, contentSuffix) {
+    const { innerWidthPx, innerHeightPx } = layout.inner;
+    const layoutKey = [
+      "slice-v13",
+      kind,
+      layout.paperFormat,
+      layout.pageOrientation,
+      layout.marginMm,
+      layout.dpi,
+      innerWidthPx,
+      innerHeightPx
+    ].join("|");
+    return `${layoutKey}|${contentSuffix}`;
+  }
+  const PRINT_TEMPLATE_CUSTOM_ID = "custom";
+  const PRINT_TEMPLATE_LAYOUTS = [
+    {
+      id: "a4-apercu",
+      label: "A4 — Aperçu rapide (96 DPI, PNG)",
+      paperFormat: "A4",
+      pageOrientation: "portrait",
+      marginMm: 10,
+      dpi: BASE_DPI,
+      exportFormat: "PNG"
+    },
+    {
+      id: "a4-impression",
+      label: "A4 — Impression (300 DPI, PDF)",
+      paperFormat: "A4",
+      pageOrientation: "portrait",
+      marginMm: 10,
+      dpi: HIGH_DPI_VALUE,
+      exportFormat: "PDF"
+    },
+    {
+      id: "a4-paysage-apercu",
+      label: "A4 paysage — Aperçu rapide (96 DPI)",
+      paperFormat: "A4",
+      pageOrientation: "landscape",
+      marginMm: 10,
+      dpi: BASE_DPI,
+      exportFormat: "PNG"
+    },
+    {
+      id: "a3-apercu",
+      label: "A3 — Aperçu rapide (96 DPI)",
+      paperFormat: "A3",
+      pageOrientation: "portrait",
+      marginMm: 10,
+      dpi: BASE_DPI,
+      exportFormat: "PNG"
+    }
+  ];
+  function paperSizeMmForLayout(paperFormat, pageOrientation) {
+    const fmt = PAPER_FORMATS_MM[paperFormat];
+    if (pageOrientation === "landscape") {
+      return { width: fmt.height, height: fmt.width };
+    }
+    return fmt;
+  }
+  function measureContextForTemplate(template) {
+    return measureContextForFormLayout({
+      paperFormat: template.paperFormat,
+      pageOrientation: template.pageOrientation,
+      margin: template.marginMm,
+      dpi: template.dpi
+    });
+  }
+  function measureContextForFormLayout(form) {
+    const paper = paperSizeMmForLayout(form.paperFormat, form.pageOrientation);
+    const inner = computePrintSupplementInnerPx(paper.width, paper.height, form.margin, form.dpi);
+    return {
+      paperFormat: form.paperFormat,
+      pageOrientation: form.pageOrientation,
+      marginMm: form.margin,
+      dpi: form.dpi,
+      paperWidthMm: paper.width,
+      paperHeightMm: paper.height,
+      inner,
+      cssVars: printSupplementCssVars(inner.innerWidthPx, form.dpi)
+    };
+  }
+  function isPrintTemplateAvailable(template) {
+    if (template.dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(template.paperFormat)) {
+      return false;
+    }
+    return true;
+  }
+  function templateMatchesFormState(template, form) {
+    return template.paperFormat === form.paperFormat && template.pageOrientation === form.pageOrientation && template.marginMm === form.margin && template.dpi === form.dpi && template.exportFormat === form.format;
+  }
+  function findMatchingPrintTemplate(form) {
+    return PRINT_TEMPLATE_LAYOUTS.find(
+      (template) => isPrintTemplateAvailable(template) && templateMatchesFormState(template, form)
+    );
+  }
+  function applyPrintTemplateToForm(template, form) {
+    form.paperFormat = template.paperFormat;
+    form.pageOrientation = template.pageOrientation;
+    form.margin = template.marginMm;
+    form.dpi = template.dpi;
+    form.format = template.exportFormat;
+  }
+  const _hoisted_1$g = {
+    key: 0,
+    class: "fr-text--xs fr-mb-2w print-form__title-hint"
+  };
   const _hoisted_2$b = { class: "mt-10" };
   const _hoisted_3$b = { class: "mt-10" };
   const _hoisted_4$b = { class: "mt-10" };
   const _hoisted_5$a = { class: "mt-10" };
-  const _hoisted_6$9 = { class: "print-preview-container" };
-  const _hoisted_7$7 = { class: "print-preview-page" };
-  const _hoisted_8$6 = { class: "print-preview-supplement-viewport" };
-  const _hoisted_9$6 = { class: "print-supplement-scaler-clip" };
-  const _hoisted_10$6 = { class: "print-preview-pagination__label" };
-  const _hoisted_11$6 = {
+  const _hoisted_6$9 = { class: "mt-10" };
+  const _hoisted_7$7 = { class: "mt-10 ec-map-print-form__indent" };
+  const _hoisted_8$6 = { class: "print-preview-panel" };
+  const _hoisted_9$6 = { class: "print-preview-pagination__label" };
+  const _hoisted_10$6 = { class: "print-preview-container" };
+  const _hoisted_11$6 = { class: "print-preview-page" };
+  const _hoisted_12$6 = {
     key: 0,
-    class: "print-patience-overlay"
+    class: "print-preview-patience",
+    role: "status",
+    "aria-live": "polite",
+    "aria-busy": "true"
   };
   const title = "Imprimer une carte";
   const size = "xl";
+  const PREVIEW_COLUMN_ZOOM_MIN = 0.6;
+  const PREVIEW_COLUMN_ZOOM_MAX = 2.5;
+  const PREVIEW_COLUMN_ZOOM_STEP = 0.08;
+  const previewColumnGapPx = 8;
   const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "MapPrintModal",
     setup(__props, { expose: __expose }) {
+      function logPrintPreview(step, detail) {
+        return;
+      }
       const printModalOpened = /* @__PURE__ */ ref(false);
       const isExportInProgress = /* @__PURE__ */ ref(false);
+      const exportProgressPercent = /* @__PURE__ */ ref(0);
+      const exportProgressDetail = /* @__PURE__ */ ref("");
+      const isPreviewLayoutPending = /* @__PURE__ */ ref(false);
       let dismissGuardUntil = 0;
       function syncNativePrintDialog() {
         var _a2;
@@ -103463,7 +104807,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         dialog.classList.add("fr-modal--opened");
         document.body.classList.add("modal-open");
       }
-      function onModalPrintOpen() {
+      function applyPrintOpenOptions(options) {
+        if (!options) return;
+        if (options.hasTerritoryFiche !== void 0) {
+          printFormState.hasTerritoryFiche = options.hasTerritoryFiche;
+        }
+        if (options.hasParcelFiche !== void 0) printFormState.hasParcelFiche = options.hasParcelFiche;
+        if (options.hasLegends !== void 0) printFormState.hasLegends = options.hasLegends;
+        if (options.hasAllLegends !== void 0) printFormState.hasAllLegends = options.hasAllLegends;
+        if (!printFormState.hasLegends) printFormState.hasAllLegends = false;
+      }
+      function onModalPrintOpen(options) {
+        applyPrintOpenOptions(options);
         dismissGuardUntil = Date.now() + 500;
         printModalOpened.value = true;
         void nextTick(() => {
@@ -103480,6 +104835,13 @@ Expected function or array of functions, received type ${typeof value2}.`
           return;
         }
         isExportInProgress.value = false;
+        isPreviewLayoutPending.value = false;
+        printMapPrewarmGeneration += 1;
+        clearPrintMapRenderCache();
+        terminatePrintExportWorker();
+        printTemplatePrewarmGeneration += 1;
+        measureLayoutOverride.value = null;
+        previewColumnZoom.value = 1;
         printModalOpened.value = false;
         document.body.classList.remove("modal-open");
         (_a2 = sourceMapRef.value) == null ? void 0 : _a2.renderSync();
@@ -103496,24 +104858,45 @@ Expected function or array of functions, received type ${typeof value2}.`
       const supplementMeasureInnerRef = /* @__PURE__ */ ref(null);
       const measureKind = /* @__PURE__ */ ref(null);
       const supplementSliceCounts = /* @__PURE__ */ ref({});
+      const supplementSliceStarts = /* @__PURE__ */ ref({});
+      const supplementPreviewSliceStartPx = /* @__PURE__ */ ref(0);
+      const supplementSlicePlanByKey = new globalThis.Map();
+      let printTemplatePrewarmGeneration = 0;
+      const measureLayoutOverride = /* @__PURE__ */ ref(null);
+      const selectedPrintTemplateId = /* @__PURE__ */ ref("a4-apercu");
+      let applyingPrintTemplate = false;
       const previewPageIndex = /* @__PURE__ */ ref(0);
-      const mapTitle = /* @__PURE__ */ ref(null);
       const printPage = /* @__PURE__ */ ref(null);
       const printForm = /* @__PURE__ */ ref(null);
       const previewPaginationEl = /* @__PURE__ */ ref(null);
+      const previewZoomHostEl = /* @__PURE__ */ ref(null);
+      const previewColumnZoom = /* @__PURE__ */ ref(1);
       const previewMap = /* @__PURE__ */ shallowRef(null);
+      const { legendZoom: printPreviewLegendZoom } = useMapLegendZoom(previewMap);
       const printFormState = /* @__PURE__ */ reactive({
         hasScale: true,
         hasTitle: true,
         hasTerritoryFiche: false,
         hasParcelFiche: false,
         hasLegends: false,
+        hasAllLegends: false,
         printTitle: "Ma carte",
         pageOrientation: "portrait",
-        margin: 5,
+        margin: 10,
         paperFormat: "A4",
         dpi: BASE_DPI,
         format: "PNG"
+      });
+      const defaultPrintTemplate = PRINT_TEMPLATE_LAYOUTS.find((t2) => t2.id === "a4-apercu");
+      if (defaultPrintTemplate) {
+        applyPrintTemplateToForm(defaultPrintTemplate, printFormState);
+      }
+      const paperDimension = computed(() => {
+        const fmt = PAPER_FORMATS_MM[printFormState.paperFormat];
+        if (printFormState.pageOrientation === "landscape") {
+          return { width: fmt.height, height: fmt.width };
+        }
+        return fmt;
       });
       const panelSelection = computed(() => {
         var _a2;
@@ -103523,6 +104906,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         var _a2;
         return ((_a2 = printPanels.value) == null ? void 0 : _a2.legendLayers.value) ?? [];
       });
+      const panelLegendLayersAll = computed(() => {
+        var _a2;
+        return ((_a2 = printPanels.value) == null ? void 0 : _a2.legendLayersAll.value) ?? [];
+      });
+      const printLegendLayerSource = computed(
+        () => printFormState.hasLegends && printFormState.hasAllLegends ? panelLegendLayersAll.value : panelLegendLayers.value
+      );
       const panelMapZoom = computed(() => {
         var _a2;
         return ((_a2 = printPanels.value) == null ? void 0 : _a2.mapZoom.value) ?? 6;
@@ -103530,9 +104920,23 @@ Expected function or array of functions, received type ${typeof value2}.`
       const printFicheSelections = /* @__PURE__ */ ref(null);
       let printFicheLoadGeneration = 0;
       function mergeFicheSelectionForPrint(mode2, resolved, panel, isReady) {
-        if (resolved && isReady(resolved)) return resolved;
-        if ((panel == null ? void 0 : panel.mapMode) === mode2 && isReady(panel)) return panel;
-        return resolved ?? ((panel == null ? void 0 : panel.mapMode) === mode2 ? panel : null);
+        const candidates = [
+          resolved,
+          getCachedFicheSelectionAtMarker(mode2),
+          (panel == null ? void 0 : panel.mapMode) === mode2 ? panel : null,
+          panel
+        ];
+        for (const candidate of candidates) {
+          const normalized = normalizeFicheSelectionForPrint(candidate ?? null, mode2);
+          if (normalized && isReady(normalized)) return normalized;
+        }
+        return null;
+      }
+      function syncPrintFicheSelectionsFromCache() {
+        printFicheSelections.value = {
+          territory: getCachedFicheSelectionAtMarker(MAP_MODE_TERRITORY),
+          parcel: getCachedFicheSelectionAtMarker(MAP_MODE_PARCEL)
+        };
       }
       const territorySelectionForPrint = computed(
         () => {
@@ -103567,18 +104971,33 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       const canPrintParcelFiche = computed(() => isParcelFichePrintReady(parcelSelectionForPrint.value));
       const canPrintLegends = computed(() => {
-        const layers = dedupeLegendLayersForPanel(panelLegendLayers.value);
-        return layers.some((layer) => {
+        const zoom = printPreviewLegendZoom.value;
+        const filtered = dedupeLegendLayersForPanel(panelLegendLayers.value);
+        const all2 = dedupeLegendLayersForPanel(panelLegendLayersAll.value);
+        const hasFiltered = filtered.some(
+          (layer) => {
+            var _a2;
+            return (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0) > 0 && catalogEntryInZoomRangeForPrint(layer.id, zoom);
+          }
+        );
+        const hasAll = all2.some((layer) => {
           var _a2;
-          return (_a2 = layer.legend) == null ? void 0 : _a2.length;
+          return (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0) > 0;
         });
+        return hasFiltered || hasAll;
       });
+      watch(
+        () => printFormState.hasLegends,
+        (enabled) => {
+          if (!enabled) printFormState.hasAllLegends = false;
+        }
+      );
       const territoryDocumentTabs = computed(() => {
         var _a2;
         return ((_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.documentTabs) ?? [];
       });
       const parcelInfosHtml = computed(
-        () => buildParcelInfosPrintHtml(parcelSelectionForPrint.value, panelMapZoom.value)
+        () => buildParcelInfosPrintHtml(parcelSelectionForPrint.value, printPreviewLegendZoom.value)
       );
       const parcelDocumentsHtml = computed(
         () => buildParcelDocumentsPrintHtml(parcelSelectionForPrint.value)
@@ -103586,21 +105005,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       async function refreshPrintFicheSelections() {
         const generation = ++printFicheLoadGeneration;
         const result = await resolvePrintFicheSelections(panelMapZoom.value);
-        if (generation !== printFicheLoadGeneration) return;
+        if (generation !== printFicheLoadGeneration) {
+          return;
+        }
         printFicheSelections.value = result;
+        lastAnnexContentSnapshot = annexContentSnapshot.value;
         await remeasureSupplementPageCounts();
       }
-      const previewPrintableSizePx = computed(() => {
-        const w2 = previewDimensionPx.value.width;
-        const h2 = previewDimensionPx.value.height;
-        if (!w2 || !h2) return { width: 0, height: 0 };
-        const marginLeftRight = printFormState.margin / paperDimension.value.width * previewDimensionPx.value.width;
-        const marginTopBottom = printFormState.margin / paperDimension.value.height * previewDimensionPx.value.height;
-        return {
-          width: Math.max(0, w2 - marginLeftRight * 2),
-          height: Math.max(0, h2 - marginTopBottom * 2)
-        };
-      });
       const previewPages = computed(
         () => buildPrintPreviewPages({
           includeTerritoryFiche: printFormState.hasTerritoryFiche,
@@ -103625,86 +105036,330 @@ Expected function or array of functions, received type ${typeof value2}.`
           printFormState.hasTerritoryFiche,
           printFormState.hasParcelFiche,
           printFormState.hasLegends,
-          canPrintTerritoryFiche.value,
-          canPrintParcelFiche.value,
-          canPrintLegends.value
+          printFormState.hasAllLegends
         ],
         () => {
           previewPageIndex.value = 0;
-          void remeasureSupplementPageCounts();
         }
       );
+      const annexContentSnapshot = computed(
+        () => buildAnnexContentMeasureSnapshot({
+          territoryTabCount: territoryDocumentTabs.value.length,
+          parcelInfosLength: parcelInfosHtml.value.length,
+          parcelDocumentsLength: parcelDocumentsHtml.value.length,
+          parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
+          legendsIncludeAll: printFormState.hasAllLegends,
+          legendPreviewZoom: printPreviewLegendZoom.value,
+          legendLayerIds: printLegendLayerSource.value.map((layer) => layer.id).join(","),
+          legendItemCount: printLegendLayerSource.value.reduce(
+            (count, layer) => {
+              var _a2;
+              return count + (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0);
+            },
+            0
+          )
+        })
+      );
+      const supplementContentFingerprints = computed(() => ({
+        territoryTabCount: annexContentSnapshot.value.territoryTabCount,
+        parcelInfosLength: annexContentSnapshot.value.parcelInfosLength,
+        parcelDocumentsLength: annexContentSnapshot.value.parcelDocumentsLength,
+        parcelLegendScale: annexContentSnapshot.value.parcelLegendScale,
+        legendsIncludeAll: annexContentSnapshot.value.legendsIncludeAll,
+        legendPreviewZoom: annexContentSnapshot.value.legendPreviewZoom ?? 0,
+        legendLayerIds: annexContentSnapshot.value.legendLayerIds,
+        legendItemCount: annexContentSnapshot.value.legendItemCount
+      }));
+      let lastAnnexContentSnapshot = null;
+      function currentMeasureLayoutContext() {
+        return measureContextForFormLayout(printFormState);
+      }
+      function supplementSlicePlanCacheKey(kind) {
+        return buildSupplementSlicePlanCacheKey(
+          kind,
+          currentMeasureLayoutContext(),
+          supplementContentSuffixForKind(kind, supplementContentFingerprints.value)
+        );
+      }
+      function supplementSlicePlanCacheKeyForLayout(kind, layout) {
+        return buildSupplementSlicePlanCacheKey(
+          kind,
+          layout,
+          supplementContentSuffixForKind(kind, supplementContentFingerprints.value)
+        );
+      }
+      const printTemplateSelectOptions = computed(() => {
+        const presets = PRINT_TEMPLATE_LAYOUTS.filter(isPrintTemplateAvailable).map((template) => ({
+          value: template.id,
+          text: template.label
+        }));
+        return [...presets, { value: PRINT_TEMPLATE_CUSTOM_ID, text: "Personnalisé" }];
+      });
+      function syncSelectedPrintTemplateFromForm() {
+        if (applyingPrintTemplate) return;
+        const match2 = findMatchingPrintTemplate(printFormState);
+        selectedPrintTemplateId.value = (match2 == null ? void 0 : match2.id) ?? PRINT_TEMPLATE_CUSTOM_ID;
+      }
+      watch(selectedPrintTemplateId, (templateId) => {
+        if (templateId === PRINT_TEMPLATE_CUSTOM_ID) return;
+        const template = PRINT_TEMPLATE_LAYOUTS.find((entry) => entry.id === templateId);
+        if (!template || !isPrintTemplateAvailable(template)) return;
+        applyingPrintTemplate = true;
+        applyPrintTemplateToForm(template, printFormState);
+        applyingPrintTemplate = false;
+      });
+      watch(
+        () => [
+          printFormState.paperFormat,
+          printFormState.pageOrientation,
+          printFormState.margin,
+          printFormState.dpi,
+          printFormState.format
+        ],
+        () => syncSelectedPrintTemplateFromForm(),
+        { immediate: true }
+      );
+      function invalidateLegendsSlicePlanCache() {
+        for (const key2 of supplementSlicePlanByKey.keys()) {
+          if (key2.includes("|legends|")) supplementSlicePlanByKey.delete(key2);
+        }
+      }
+      function invalidateTerritorySlicePlanCache() {
+        for (const key2 of supplementSlicePlanByKey.keys()) {
+          if (key2.includes("|ficheTerritory|")) supplementSlicePlanByKey.delete(key2);
+        }
+      }
+      function invalidateParcelSlicePlanCache() {
+        for (const key2 of supplementSlicePlanByKey.keys()) {
+          if (key2.includes("|ficheParcel|")) supplementSlicePlanByKey.delete(key2);
+        }
+      }
+      function invalidateAnnexSlicePlanCacheForKinds(kinds) {
+        for (const kind of kinds) {
+          if (kind === "ficheTerritory") invalidateTerritorySlicePlanCache();
+          else if (kind === "ficheParcel") invalidateParcelSlicePlanCache();
+          else if (kind === "legends") invalidateLegendsSlicePlanCache();
+        }
+      }
       function goPreviewPage(delta) {
         const count = previewPages.value.length;
         if (count <= 1) return;
         previewPageIndex.value = (previewPageIndex.value + delta + count) % count;
       }
-      const supplementExportInner = computed(
-        () => computePrintSupplementInnerPx(
-          paperDimension.value.width,
-          paperDimension.value.height,
-          printFormState.margin,
-          printFormState.dpi
-        )
-      );
-      const supplementLayoutStyle = computed(
-        () => printSupplementCssVars(supplementExportInner.value.innerWidthPx)
-      );
-      const supplementPreviewScale = computed(() => {
-        const { innerWidthPx } = supplementExportInner.value;
-        const previewW = previewPrintableSizePx.value.width;
-        if (!innerWidthPx || !previewW) return 1;
-        return previewW / innerWidthPx;
-      });
-      const supplementPreviewScalerStyle = computed(() => ({
-        ...supplementLayoutStyle.value,
-        transform: `scale(${supplementPreviewScale.value})`
-      }));
-      const supplementContentOffsetStyle = computed(() => {
-        const page = currentPreviewPage.value;
-        if (!page || page.kind === "map") return {};
-        const { innerHeightPx } = supplementExportInner.value;
-        if (!innerHeightPx) return {};
-        return { marginTop: `-${page.sliceIndex * innerHeightPx}px` };
-      });
-      async function remeasureSupplementPageCounts() {
-        if (!printModalOpened.value) return;
-        const { innerWidthPx, innerHeightPx } = supplementExportInner.value;
-        if (innerWidthPx < 8 || innerHeightPx < 8) return;
-        const kinds = [];
-        if (printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value) {
-          kinds.push("ficheTerritory");
+      async function measureSlicePlanForKindInDom(kind, pageHeightPx, options = {}) {
+        measureKind.value = kind;
+        await nextTick();
+        await nextTick();
+        const measureRoot = supplementMeasureInnerRef.value;
+        if (measureRoot) {
+          const imgCount = measureRoot.querySelectorAll("img").length;
+          if (imgCount > 0) {
+            await waitForPrintSupplementImages(measureRoot, {
+              timeoutMs: options.imageTimeoutMs ?? 4e3
+            });
+          }
         }
-        if (printFormState.hasParcelFiche && canPrintParcelFiche.value) {
-          kinds.push("ficheParcel");
+        await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
+        await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
+        measureRoot == null ? void 0 : measureRoot.getBoundingClientRect();
+        if (measureRoot) {
+          await waitForSupplementMeasureHeightStable(measureRoot, {
+            timeoutMs: options.imageTimeoutMs ?? 4e3
+          });
         }
-        if (printFormState.hasLegends && canPrintLegends.value) {
-          kinds.push("legends");
-        }
-        if (!kinds.length) {
-          supplementSliceCounts.value = {};
+        return measureRoot ? measureSupplementSlicePlan(measureRoot, pageHeightPx) : { sliceCount: 1, sliceStarts: [0] };
+      }
+      function sliceStartsEqual(a3, b3) {
+        if (a3.length !== b3.length) return false;
+        return a3.every((value2, index2) => value2 === b3[index2]);
+      }
+      function applySupplementSlicePlanFromPreview(kind, plan) {
+        const current = supplementSliceCounts.value[kind] ?? 1;
+        const starts = supplementSliceStarts.value[kind] ?? [0];
+        if (plan.sliceCount === current && sliceStartsEqual(starts, plan.sliceStarts)) return;
+        if ((kind === "ficheParcel" || kind === "ficheTerritory") && plan.sliceCount < current) {
           return;
         }
-        if (typeof document !== "undefined" && document.fonts) {
-          await document.fonts.ready.catch(() => void 0);
-        }
-        const next = {
-          ...supplementSliceCounts.value
-        };
-        for (const kind of kinds) {
-          measureKind.value = kind;
-          await nextTick();
-          await nextTick();
-          const measureRoot = supplementMeasureInnerRef.value;
-          if (measureRoot) {
-            await waitForPrintSupplementImages(measureRoot);
+        supplementSlicePlanByKey.set(supplementSlicePlanCacheKey(kind), plan);
+        supplementSliceCounts.value = { ...supplementSliceCounts.value, [kind]: plan.sliceCount };
+        supplementSliceStarts.value = { ...supplementSliceStarts.value, [kind]: [...plan.sliceStarts] };
+      }
+      async function remeasureSupplementFromVisiblePreview() {
+        if (!printModalOpened.value || isPreviewLayoutPending.value || isExportInProgress.value) return;
+        const pageMeta = currentPreviewPage.value;
+        if (!pageMeta || pageMeta.kind === "map") return;
+        if (pageMeta.kind === "ficheParcel" || pageMeta.kind === "ficheTerritory") return;
+        if (pageMeta.kind === "legends" && printFormState.hasAllLegends) return;
+        const pageRoot = findSupplementPreviewPageRoot();
+        const sliceHeightPx = supplementSliceLayoutHeight.value;
+        if (!pageRoot || sliceHeightPx < 8) return;
+        await waitForPrintSupplementImages(pageRoot, { timeoutMs: 6e3 });
+        await waitForSupplementPageHeightStable(pageRoot, { timeoutMs: 4e3 });
+        const plan = measureSupplementSlicePlanFromPage(pageRoot, sliceHeightPx);
+        applySupplementSlicePlanFromPreview(pageMeta.kind, plan);
+      }
+      async function prewarmOtherPrintTemplateCaches() {
+        const generation = ++printTemplatePrewarmGeneration;
+        if (!printModalOpened.value) return;
+        const kinds = [];
+        if (canPrintTerritoryFiche.value) kinds.push("ficheTerritory");
+        if (canPrintParcelFiche.value) kinds.push("ficheParcel");
+        if (canPrintLegends.value) kinds.push("legends");
+        if (!kinds.length) return;
+        const current = currentMeasureLayoutContext();
+        const templates = PRINT_TEMPLATE_LAYOUTS.filter(isPrintTemplateAvailable);
+        for (const template of templates) {
+          if (generation !== printTemplatePrewarmGeneration || !printModalOpened.value) return;
+          const layout = measureContextForTemplate(template);
+          const isCurrentLayout = layout.paperFormat === current.paperFormat && layout.pageOrientation === current.pageOrientation && layout.marginMm === current.marginMm && layout.dpi === current.dpi;
+          if (isCurrentLayout) continue;
+          for (const kind of kinds) {
+            if (generation !== printTemplatePrewarmGeneration || !printModalOpened.value) return;
+            const cacheKey = supplementSlicePlanCacheKeyForLayout(kind, layout);
+            if (supplementSlicePlanByKey.has(cacheKey)) continue;
+            measureLayoutOverride.value = {
+              innerWidthPx: layout.inner.innerWidthPx,
+              innerHeightPx: layout.inner.innerHeightPx,
+              cssVars: layout.cssVars
+            };
+            logPrintPreview("préchauffage gabarit", { template: template.id });
+            try {
+              const plan = await measureSlicePlanForKindInDom(
+                kind,
+                supplementSliceLayoutHeightPx(layout.inner.innerHeightPx, layout.dpi),
+                { imageTimeoutMs: 2500 }
+              );
+              supplementSlicePlanByKey.set(cacheKey, plan);
+            } catch (err) {
+            }
           }
-          await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
-          await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
-          next[kind] = measureRoot ? countSupplementPageSlices(measureRoot, innerHeightPx) : 1;
         }
+        measureLayoutOverride.value = null;
         measureKind.value = null;
-        supplementSliceCounts.value = next;
+      }
+      function schedulePrintTemplatePrewarm() {
+        const run = () => {
+          void prewarmOtherPrintTemplateCaches();
+        };
+        if (typeof requestIdleCallback !== "undefined") {
+          requestIdleCallback(run, { timeout: 1e4 });
+        } else {
+          window.setTimeout(run, 400);
+        }
+      }
+      function schedulePrintMapPrewarm() {
+        const run = () => {
+          void runPrintMapPrewarm();
+        };
+        if (typeof requestIdleCallback !== "undefined") {
+          requestIdleCallback(run, { timeout: 2e4 });
+        } else {
+          window.setTimeout(run, 800);
+        }
+      }
+      async function runPrintMapPrewarm() {
+        var _a2;
+        const generation = ++printMapPrewarmGeneration;
+        if (!printModalOpened.value || isExportInProgress.value || isPreviewLayoutPending.value) return;
+        const map2 = previewMap.value;
+        if (!map2 || ((_a2 = currentPreviewPage.value) == null ? void 0 : _a2.kind) !== "map") return;
+        const mapSize = map2.getSize();
+        if (!mapSize || mapSize[0] < 16 || mapSize[1] < 16) return;
+        const dpiValue = printFormState.dpi;
+        const paperWidthPx = convertMmToPx(paperDimension.value.width, dpiValue);
+        const paperHeightPx = convertMmToPx(paperDimension.value.height, dpiValue);
+        const marginPx = convertMmToPx(printFormState.margin, dpiValue);
+        const printableHeightPx = Math.max(0, paperHeightPx - marginPx * 2);
+        const titleHeightPx = printFormState.hasTitle ? Math.round(
+          printMapTitleLayout.value.titleHeightMm / printableAreaMm.value.height * printableHeightPx
+        ) : 0;
+        const mapWidthPx = Math.max(0, paperWidthPx - marginPx * 2);
+        const mapHeightPx = Math.max(0, printableHeightPx - titleHeightPx);
+        if (mapHeightPx < 16 || mapWidthPx < 16) return;
+        const extent = map2.getView().calculateExtent(mapSize);
+        try {
+          await prewarmPrintMapRenderCache({
+            previewMap: map2,
+            dpi: dpiValue,
+            mapWidthPx,
+            mapHeightPx,
+            extent
+          });
+        } catch (err) {
+        }
+        if (generation !== printMapPrewarmGeneration) return;
+      }
+      async function remeasureSupplementPageCounts(options = {}) {
+        var _a2, _b2;
+        const blockPreview = options.blockPreview !== false;
+        if (isExportInProgress.value && blockPreview) {
+          return;
+        }
+        if (!printModalOpened.value) {
+          return;
+        }
+        const { innerWidthPx, innerHeightPx } = supplementExportInner.value;
+        if (innerWidthPx < 8 || innerHeightPx < 8) {
+          return;
+        }
+        const kinds = [];
+        if (canPrintTerritoryFiche.value) kinds.push("ficheTerritory");
+        if (canPrintParcelFiche.value) kinds.push("ficheParcel");
+        if (canPrintLegends.value) kinds.push("legends");
+        if (!kinds.length) {
+          supplementSliceCounts.value = {};
+          supplementSliceStarts.value = {};
+          return;
+        }
+        const kindsToMeasure = kinds.filter(
+          (kind) => !supplementSlicePlanByKey.has(supplementSlicePlanCacheKey(kind))
+        );
+        if (kindsToMeasure.length > 0 && blockPreview) {
+          isPreviewLayoutPending.value = true;
+        }
+        (_a2 = options.onStage) == null ? void 0 : _a2.call(options, "Analyse de la pagination des annexes…");
+        logPrintPreview("mesure: début", {
+          cacheHits: kinds.length - kindsToMeasure.length
+        });
+        try {
+          if (kindsToMeasure.length > 0 && typeof document !== "undefined" && document.fonts) {
+            logPrintPreview("mesure: attente polices…");
+            await document.fonts.ready.catch(() => void 0);
+            logPrintPreview("mesure: polices prêtes");
+          }
+          const nextCounts = {};
+          const nextStarts = {};
+          for (const kind of kinds) {
+            const cacheKey = supplementSlicePlanCacheKey(kind);
+            let plan = supplementSlicePlanByKey.get(cacheKey);
+            if (plan) {
+              logPrintPreview(`mesure: cache « ${kind} »`, plan);
+            } else {
+              logPrintPreview(`mesure: DOM « ${kind} »`);
+              (_b2 = options.onStage) == null ? void 0 : _b2.call(options, `Pagination « ${PRINT_PAGE_LABELS[kind]} »…`);
+              measureLayoutOverride.value = null;
+              plan = await measureSlicePlanForKindInDom(kind, supplementSliceLayoutHeight.value, {
+                imageTimeoutMs: 4e3
+              });
+              supplementSlicePlanByKey.set(cacheKey, plan);
+              logPrintPreview(`mesure: « ${kind} » calculé`, plan);
+            }
+            nextCounts[kind] = plan.sliceCount;
+            nextStarts[kind] = [...plan.sliceStarts];
+          }
+          measureKind.value = null;
+          supplementSliceCounts.value = nextCounts;
+          supplementSliceStarts.value = nextStarts;
+          logPrintPreview("mesure: terminée", { sliceCounts: { ...nextCounts } });
+        } catch (err) {
+          throw err;
+        } finally {
+          if (printModalOpened.value) {
+            isPreviewLayoutPending.value = false;
+            schedulePrintTemplatePrewarm();
+            schedulePrintMapPrewarm();
+          }
+        }
       }
       const catalogEntryInZoomRangeForPrint = (layerId, zoom) => {
         var _a2;
@@ -103713,6 +105368,38 @@ Expected function or array of functions, received type ${typeof value2}.`
       const previewMapHostSize = /* @__PURE__ */ reactive(
         useElementSize(previewMapEl, { width: 0, height: 0 }, { box: "border-box" })
       );
+      const previewZoomHostSize = /* @__PURE__ */ reactive(
+        useElementSize(previewZoomHostEl, { width: 0, height: 0 }, { box: "border-box" })
+      );
+      const previewColumnScaleSlotStyle = computed(() => {
+        const scale2 = previewColumnZoom.value;
+        const width = previewZoomHostSize.width;
+        const height = previewZoomHostSize.height;
+        if (width < 1 || height < 1) return void 0;
+        return {
+          width: `${Math.ceil(width * scale2)}px`,
+          height: `${Math.ceil(height * scale2)}px`
+        };
+      });
+      const previewColumnScaleInnerStyle = computed(() => ({
+        transform: `scale(${previewColumnZoom.value})`,
+        transformOrigin: "top center"
+      }));
+      function isWheelOverPreviewMap(target2) {
+        return target2 instanceof Element && Boolean(target2.closest(".ec-map-print-preview-map"));
+      }
+      function onPreviewColumnWheel(event) {
+        if (!printModalOpened.value || isPreviewLayoutPending.value) return;
+        if (isWheelOverPreviewMap(event.target)) return;
+        if (!event.ctrlKey) return;
+        event.preventDefault();
+        const direction2 = event.deltaY > 0 ? -1 : 1;
+        const next = previewColumnZoom.value + direction2 * PREVIEW_COLUMN_ZOOM_STEP;
+        previewColumnZoom.value = Math.min(
+          PREVIEW_COLUMN_ZOOM_MAX,
+          Math.max(PREVIEW_COLUMN_ZOOM_MIN, next)
+        );
+      }
       watch(
         () => [previewMapHostSize.width, previewMapHostSize.height],
         () => {
@@ -103755,36 +105442,38 @@ Expected function or array of functions, received type ${typeof value2}.`
         },
         { immediate: true }
       );
-      const paperDimension = computed(() => {
-        const fmt = PAPER_FORMATS_MM[printFormState.paperFormat];
-        if (printFormState.pageOrientation === "landscape") {
-          return { width: fmt.height, height: fmt.width };
-        }
-        return fmt;
-      });
       const printPageSize = /* @__PURE__ */ reactive(
         useElementSize(printPage, { width: 0, height: 0 }, { box: "border-box" })
       );
       const printFormSize = /* @__PURE__ */ reactive(
         useElementSize(printForm, { width: 0, height: 0 }, { box: "border-box" })
       );
-      const titleSize = /* @__PURE__ */ reactive(useElementSize(mapTitle, { width: 0, height: 0 }, { box: "border-box" }));
       const previewPaginationSize = /* @__PURE__ */ reactive(
         useElementSize(previewPaginationEl, { width: 0, height: 0 }, { box: "border-box" })
       );
+      const previewFrameMarginPx = {
+        top: 6,
+        bottom: 12,
+        horizontal: 10
+      };
       const previewPaginationReservePx = computed(() => {
-        if (previewPages.value.length <= 1) return 0;
         const measured = previewPaginationSize.height;
         const barHeight = measured > 4 ? measured : 48;
-        return barHeight + 8;
+        return barHeight + previewColumnGapPx;
+      });
+      const previewLayoutChromeReservePx = computed(() => {
+        const vertical = previewFrameMarginPx.top + previewFrameMarginPx.bottom + previewPaginationReservePx.value;
+        const horizontal = previewFrameMarginPx.horizontal * 2;
+        return { vertical, horizontal };
       });
       const paperDimensionPx = computed(() => ({
         width: paperDimension.value.width / COEFF_PX2MM,
         height: paperDimension.value.height / COEFF_PX2MM
       }));
       const paper2PreviewScaleCoeff = computed(() => {
-        const containerHeight = Math.max(0, printPageSize.height - previewPaginationReservePx.value);
-        const containerWidth = printPageSize.width - printFormSize.width;
+        const { vertical, horizontal } = previewLayoutChromeReservePx.value;
+        const containerHeight = Math.max(0, printPageSize.height - vertical);
+        const containerWidth = Math.max(0, printPageSize.width - printFormSize.width - horizontal);
         return computeScaleCoeff(
           containerWidth,
           containerHeight,
@@ -103796,16 +105485,199 @@ Expected function or array of functions, received type ${typeof value2}.`
         width: paperDimension.value.width - 2 * printFormState.margin,
         height: paperDimension.value.height - 2 * printFormState.margin
       }));
-      const titleHeightRatioInPreview = computed(() => {
-        if (!printFormState.hasTitle || previewDimensionPx.value.height <= 0) return 0;
-        const ratio = titleSize.height / previewDimensionPx.value.height;
-        return Math.max(0, Math.min(1, ratio));
-      });
-      const titleHeightMm = computed(() => printableAreaMm.value.height * titleHeightRatioInPreview.value);
       const previewDimensionPx = computed(() => ({
         width: paperDimensionPx.value.width * paper2PreviewScaleCoeff.value,
         height: paperDimensionPx.value.height * paper2PreviewScaleCoeff.value
       }));
+      const printMapTitleLayout = computed(
+        () => computePrintMapTitleLayout(
+          printFormState.printTitle,
+          printableAreaMm.value.width,
+          printableAreaMm.value.height,
+          printFormState.hasTitle
+        )
+      );
+      const titleHeightMm = computed(() => printMapTitleLayout.value.titleHeightMm);
+      const mapTitlePreviewStyle = computed(() => {
+        const layout = printMapTitleLayout.value;
+        const printableH = previewPrintableSizePx.value.height;
+        const printableAreaH = printableAreaMm.value.height;
+        if (!printFormState.hasTitle || !layout.titleHeightMm || !printableH || !printableAreaH) {
+          return void 0;
+        }
+        const mmToPreviewY = printableH / printableAreaH;
+        const heightPx = layout.titleHeightMm * mmToPreviewY;
+        const fontPx = layout.fontSizeMm * mmToPreviewY;
+        const lineHeightPx = layout.lineHeightMm * mmToPreviewY;
+        const blockGapPx = PRINT_SUPPLEMENT_BLOCK_GAP_MM * mmToPreviewY;
+        return {
+          height: `${heightPx}px`,
+          maxHeight: `${heightPx}px`,
+          fontSize: `${fontPx}px`,
+          lineHeight: `${lineHeightPx}px`,
+          marginBottom: `${blockGapPx}px`,
+          overflow: "hidden"
+        };
+      });
+      const previewMapMinHeightPx = computed(() => {
+        const printableH = previewPrintableSizePx.value.height;
+        const printableAreaH = printableAreaMm.value.height;
+        if (!printableH || !printableAreaH) return 48;
+        const minMapMm = printableAreaH * PRINT_MAP_MIN_MAP_HEIGHT_RATIO;
+        return Math.max(48, minMapMm / printableAreaH * printableH);
+      });
+      let printMapPrewarmGeneration = 0;
+      const previewPrintableSizePx = computed(() => {
+        const w2 = previewDimensionPx.value.width;
+        const h2 = previewDimensionPx.value.height;
+        if (!w2 || !h2) return { width: 0, height: 0 };
+        const marginLeftRight = printFormState.margin / paperDimension.value.width * previewDimensionPx.value.width;
+        const marginTopBottom = printFormState.margin / paperDimension.value.height * previewDimensionPx.value.height;
+        return {
+          width: Math.max(0, w2 - marginLeftRight * 2),
+          height: Math.max(0, h2 - marginTopBottom * 2)
+        };
+      });
+      const supplementExportInner = computed(
+        () => computePrintSupplementInnerPx(
+          paperDimension.value.width,
+          paperDimension.value.height,
+          printFormState.margin,
+          printFormState.dpi
+        )
+      );
+      const supplementSliceLayoutHeight = computed(
+        () => supplementSliceLayoutHeightPx(supplementExportInner.value.innerHeightPx, printFormState.dpi)
+      );
+      const supplementLayoutStyle = computed(
+        () => printSupplementCssVars(supplementExportInner.value.innerWidthPx, printFormState.dpi)
+      );
+      const measureExportInner = computed(() => {
+        if (measureLayoutOverride.value) {
+          return {
+            innerWidthPx: measureLayoutOverride.value.innerWidthPx,
+            innerHeightPx: measureLayoutOverride.value.innerHeightPx
+          };
+        }
+        return supplementExportInner.value;
+      });
+      const measureLayoutStyle = computed(
+        () => {
+          var _a2;
+          return ((_a2 = measureLayoutOverride.value) == null ? void 0 : _a2.cssVars) ?? supplementLayoutStyle.value;
+        }
+      );
+      const supplementPreviewFrame = computed(() => {
+        const { innerWidthPx, innerHeightPx } = supplementExportInner.value;
+        const previewW = previewPrintableSizePx.value.width;
+        if (!innerWidthPx || !innerHeightPx || !previewW) {
+          return { width: 0, height: 0, scale: 1, sliceHeightPx: innerHeightPx || 0 };
+        }
+        const scale2 = previewW / innerWidthPx;
+        const sliceH = supplementSliceLayoutHeight.value;
+        return {
+          width: previewW,
+          height: Math.max(sliceH, 1) * scale2,
+          scale: scale2,
+          sliceHeightPx: sliceH
+        };
+      });
+      const supplementPreviewScalerStyle = computed(() => {
+        const { innerWidthPx, innerHeightPx } = supplementExportInner.value;
+        const { scale: scale2 } = supplementPreviewFrame.value;
+        return {
+          ...supplementLayoutStyle.value,
+          width: `${innerWidthPx}px`,
+          height: `${innerHeightPx}px`,
+          overflow: "hidden",
+          transform: `scale(${scale2})`,
+          transformOrigin: "top left"
+        };
+      });
+      const supplementPreviewFrameStyle = computed(() => {
+        const { width, height } = supplementPreviewFrame.value;
+        if (!width || !height) return {};
+        return {
+          width: `${width}px`,
+          height: `${height}px`
+        };
+      });
+      const supplementContentOffsetStyle = computed(() => {
+        const page = currentPreviewPage.value;
+        if (!page || page.kind === "map") return {};
+        const offsetPx = supplementPreviewSliceStartPx.value;
+        if (!offsetPx) return {};
+        return { marginTop: `-${offsetPx}px` };
+      });
+      function findSupplementPreviewPageRoot() {
+        var _a2, _b2;
+        const fromContent = (_a2 = supplementContentRef.value) == null ? void 0 : _a2.closest(".ec-print-supplement-page");
+        if (fromContent instanceof HTMLElement) return fromContent;
+        const fromHost = (_b2 = supplementPreviewEl.value) == null ? void 0 : _b2.querySelector(".ec-print-supplement-page");
+        return fromHost instanceof HTMLElement ? fromHost : null;
+      }
+      function findSupplementPreviewFrameEl() {
+        var _a2;
+        const frame = (_a2 = supplementPreviewEl.value) == null ? void 0 : _a2.querySelector(".print-supplement-preview-frame");
+        return frame instanceof HTMLElement ? frame : null;
+      }
+      function applyCurrentSupplementSliceVisibility() {
+        const pageRoot = findSupplementPreviewPageRoot();
+        if (!pageRoot) return;
+        resetSupplementElementVisibility(pageRoot);
+        const page = currentPreviewPage.value;
+        if (!page || page.kind === "map") return;
+        const sliceHeightPx = supplementSliceLayoutHeight.value;
+        if (sliceHeightPx < 8) return;
+        const layoutScale = supplementPreviewFrame.value.scale * previewColumnZoom.value;
+        const storedStarts = supplementSliceStarts.value[page.kind];
+        let sliceStartPx = (storedStarts == null ? void 0 : storedStarts[page.sliceIndex]) ?? resolveSupplementSliceStartPx(pageRoot, page.sliceIndex, sliceHeightPx, layoutScale);
+        let sliceEndPx = (storedStarts == null ? void 0 : storedStarts[page.sliceIndex + 1]) ?? resolveSupplementSliceEndPx(pageRoot, sliceStartPx, sliceHeightPx, layoutScale);
+        if ((storedStarts == null ? void 0 : storedStarts[page.sliceIndex + 1]) === void 0 && (storedStarts == null ? void 0 : storedStarts.length)) {
+          sliceEndPx = resolveSupplementSliceEndPx(pageRoot, sliceStartPx, sliceHeightPx, layoutScale);
+        }
+        supplementPreviewSliceStartPx.value = sliceStartPx;
+        hideSupplementElementsForSlice(pageRoot, sliceStartPx, sliceEndPx, layoutScale);
+        if (page.kind === "ficheParcel") {
+          const footnoteEls = pageRoot.querySelectorAll(
+            ".ec-print-fiche__section--footnotes, .ec-print-fiche__footnote-callout"
+          );
+          const showFootnotes = ficheFootnotesVisibleForSlice(
+            pageRoot,
+            sliceStartPx,
+            sliceEndPx,
+            layoutScale
+          );
+          for (const el2 of footnoteEls) {
+            if (el2 instanceof HTMLElement) {
+              el2.style.visibility = showFootnotes ? "" : "hidden";
+            }
+          }
+        }
+      }
+      watch(
+        () => {
+          var _a2;
+          return [
+            (_a2 = currentPreviewPage.value) == null ? void 0 : _a2.id,
+            supplementSliceStarts.value,
+            isPreviewLayoutPending.value,
+            supplementExportInner.value.innerHeightPx,
+            supplementSliceLayoutHeight.value,
+            supplementPreviewFrame.value.scale,
+            previewColumnZoom.value
+          ];
+        },
+        () => {
+          if (isPreviewLayoutPending.value) return;
+          void nextTick(() => {
+            requestAnimationFrame(() => {
+              applyCurrentSupplementSliceVisibility();
+              void remeasureSupplementFromVisiblePreview();
+            });
+          });
+        }
+      );
       const cssPreviewDimensionPx = computed(() => ({
         width: `${previewDimensionPx.value.width}px`,
         height: `${previewDimensionPx.value.height}px`
@@ -103820,84 +105692,171 @@ Expected function or array of functions, received type ${typeof value2}.`
           bottom: `${topBottomPx}px`
         };
       });
-      watchDebounced(
+      const previewLayoutMeasureDeps = computed(
         () => [
-          previewPrintableSizePx.value.width,
-          previewPrintableSizePx.value.height,
           printFormState.paperFormat,
           printFormState.pageOrientation,
           printFormState.margin,
-          paper2PreviewScaleCoeff.value,
           printFormState.dpi,
           supplementExportInner.value.innerWidthPx,
-          territoryDocumentTabs.value.length,
-          parcelInfosHtml.value.length,
-          parcelDocumentsHtml.value.length,
-          panelLegendLayers.value.length
-        ],
+          supplementExportInner.value.innerHeightPx
+        ]
+      );
+      watch(previewLayoutMeasureDeps, () => {
+        if (!printModalOpened.value) return;
+      });
+      watchDebounced(
+        previewLayoutMeasureDeps,
         () => {
+          if (!printModalOpened.value) return;
+          supplementSlicePlanByKey.clear();
           void remeasureSupplementPageCounts();
         },
         { debounce: 120, maxWait: 400 }
       );
-      let sourceViewListeners = [];
-      function clearSourceViewListeners() {
-        unByKey(sourceViewListeners);
-        sourceViewListeners = [];
+      watchDebounced(
+        annexContentSnapshot,
+        (next) => {
+          if (!printModalOpened.value || isExportInProgress.value) return;
+          const kinds = annexKindsToInvalidateForContentChange(lastAnnexContentSnapshot, next);
+          lastAnnexContentSnapshot = next;
+          if (!kinds.length) return;
+          invalidateAnnexSlicePlanCacheForKinds(kinds);
+          void remeasureSupplementPageCounts({ blockPreview: false });
+        },
+        { debounce: 280, maxWait: 700 }
+      );
+      let previewViewCustomizationListeners = [];
+      const previewMapViewCustomized = /* @__PURE__ */ ref(false);
+      let suppressPreviewViewCustomizationTracking = 0;
+      function clearPreviewViewCustomizationListeners() {
+        unByKey(previewViewCustomizationListeners);
+        previewViewCustomizationListeners = [];
       }
-      function destroyPreviewMap() {
-        var _a2, _b2;
-        clearSourceViewListeners();
-        (_a2 = previewMap.value) == null ? void 0 : _a2.setTarget(void 0);
-        (_b2 = previewMap.value) == null ? void 0 : _b2.dispose();
-        previewMap.value = null;
+      function runWithoutPreviewViewCustomizationTracking(fn2) {
+        suppressPreviewViewCustomizationTracking += 1;
+        try {
+          fn2();
+        } finally {
+          void nextTick(() => {
+            suppressPreviewViewCustomizationTracking = Math.max(
+              0,
+              suppressPreviewViewCustomizationTracking - 1
+            );
+          });
+        }
       }
-      function syncPreviewFromSource() {
-        const source = sourceMapRef.value;
+      function markPreviewMapViewCustomized() {
+        if (suppressPreviewViewCustomizationTracking > 0) return;
+        if (isExportInProgress.value) return;
+        previewMapViewCustomized.value = true;
+      }
+      function attachPreviewViewCustomizationListeners() {
+        clearPreviewViewCustomizationListeners();
         const preview = previewMap.value;
-        if (!source || !preview) return;
-        copyViewState(source.getView(), preview.getView());
-        preview.renderSync();
-      }
-      function attachSourceViewListeners() {
-        clearSourceViewListeners();
-        const source = sourceMapRef.value;
-        if (!source) return;
-        const view = source.getView();
-        const handler = () => syncPreviewFromSource();
-        sourceViewListeners = [
+        if (!preview) return;
+        const view = preview.getView();
+        const handler = () => markPreviewMapViewCustomized();
+        previewViewCustomizationListeners = [
           view.on("change:center", handler),
           view.on("change:resolution", handler),
           view.on("change:rotation", handler)
         ];
       }
+      let printPreviewSessionSourceViewKey = "";
+      let printPreviewSessionViewCustomized = false;
+      function computeSourceMapViewKey() {
+        const source = sourceMapRef.value;
+        if (!source) return "";
+        const view = source.getView();
+        const center = view.getCenter();
+        const resolution = view.getResolution();
+        return [
+          (center == null ? void 0 : center.map((value2) => value2.toFixed(2)).join(",")) ?? "",
+          (resolution == null ? void 0 : resolution.toFixed(8)) ?? "",
+          view.getRotation().toFixed(6),
+          buildVisibleLayerFingerprint(source)
+        ].join("|");
+      }
+      function detachPreviewMap() {
+        var _a2;
+        clearPreviewViewCustomizationListeners();
+        (_a2 = previewMap.value) == null ? void 0 : _a2.setTarget(void 0);
+      }
+      function destroyPreviewMap() {
+        var _a2, _b2;
+        clearPreviewViewCustomizationListeners();
+        previewMapViewCustomized.value = false;
+        (_a2 = previewMap.value) == null ? void 0 : _a2.setTarget(void 0);
+        (_b2 = previewMap.value) == null ? void 0 : _b2.dispose();
+        previewMap.value = null;
+      }
+      function syncPreviewFromSource() {
+        if (isExportInProgress.value) return;
+        const source = sourceMapRef.value;
+        const preview = previewMap.value;
+        if (!source || !preview) return;
+        runWithoutPreviewViewCustomizationTracking(() => {
+          copyViewState(source.getView(), preview.getView());
+          preview.renderSync();
+        });
+        previewMapViewCustomized.value = false;
+      }
+      function replacerPreviewMapFromSource() {
+        syncPreviewFromSource();
+      }
+      function createScaleLineControl() {
+        return new ScaleLine({
+          units: "metric",
+          minWidth: 100,
+          bar: false
+        });
+      }
       function createPreviewControls() {
         const controls = [new Attribution({ collapsible: false })];
         if (printFormState.hasScale) {
-          controls.push(
-            new ScaleLine({
-              units: "metric",
-              minWidth: 100,
-              bar: false
-            })
-          );
+          controls.push(createScaleLineControl());
         }
         return controls;
+      }
+      function syncPreviewScaleLineControl() {
+        const map2 = previewMap.value;
+        if (!map2) return;
+        const controls = map2.getControls().getArray();
+        for (const control of controls) {
+          if (control instanceof ScaleLine) {
+            map2.removeControl(control);
+          }
+        }
+        if (printFormState.hasScale) {
+          map2.addControl(createScaleLineControl());
+        }
+        configureDisplayOnlyOlControls(map2);
+        map2.renderSync();
       }
       function wirePreviewMapDisplayControls(map2) {
         configureDisplayOnlyOlControls(map2);
         map2.getControls().on("add", () => configureDisplayOnlyOlControls(map2));
       }
       async function ensurePreviewMap(forceRecreate = false) {
+        if (isExportInProgress.value && !forceRecreate) {
+          return previewMap.value;
+        }
         const source = sourceMapRef.value;
         const target2 = previewMapEl.value;
-        if (!source || !target2) return null;
+        if (!source || !target2) {
+          return null;
+        }
         if (previewMap.value && !forceRecreate) {
-          rebuildPrintPreviewMap(source, previewMap.value);
+          if (previewMap.value.getTargetElement() !== target2) {
+            previewMap.value.setTarget(target2);
+            attachPreviewViewCustomizationListeners();
+          }
+          rebuildPrintPreviewMap(source, previewMap.value, { syncViewFromSource: false });
           previewMap.value.updateSize();
           previewMap.value.renderSync();
-          await waitForMapRender(previewMap.value, 2);
           sanitizePrintPreviewAttributions(previewMapEl.value);
+          schedulePrintMapPrewarm();
           return previewMap.value;
         }
         destroyPreviewMap();
@@ -103912,34 +105871,113 @@ Expected function or array of functions, received type ${typeof value2}.`
           }),
           controls: createPreviewControls()
         });
-        rebuildPrintPreviewMap(source, map2);
+        runWithoutPreviewViewCustomizationTracking(() => {
+          rebuildPrintPreviewMap(source, map2, { syncViewFromSource: forceRecreate });
+        });
         previewMap.value = map2;
         wirePreviewMapDisplayControls(map2);
-        attachSourceViewListeners();
+        attachPreviewViewCustomizationListeners();
+        if (forceRecreate) {
+          previewMapViewCustomized.value = false;
+        }
         await nextTick();
         map2.updateSize();
         await waitForMapRender(map2, 2);
         sanitizePrintPreviewAttributions(previewMapEl.value);
+        schedulePrintMapPrewarm();
         return map2;
       }
+      function previewNeedsSourceViewResync(sourceViewKey) {
+        return Boolean(previewMap.value) && !printPreviewSessionViewCustomized && Boolean(printPreviewSessionSourceViewKey) && sourceViewKey !== printPreviewSessionSourceViewKey;
+      }
+      async function preparePreviewMapOnModalOpen() {
+        const sourceViewKey = computeSourceMapViewKey();
+        const reusePreviewMap = Boolean(previewMap.value);
+        const needsViewResync = previewNeedsSourceViewResync(sourceViewKey);
+        if (!reusePreviewMap) {
+          await ensurePreviewMap(true);
+          printPreviewSessionSourceViewKey = sourceViewKey;
+          return;
+        }
+        const source = sourceMapRef.value;
+        const target2 = previewMapEl.value;
+        const preview = previewMap.value;
+        if (!source || !target2 || !preview) {
+          await ensurePreviewMap(true);
+          printPreviewSessionSourceViewKey = sourceViewKey;
+          return;
+        }
+        if (preview.getTargetElement() !== target2) {
+          preview.setTarget(target2);
+          attachPreviewViewCustomizationListeners();
+        }
+        if (needsViewResync) {
+          isPreviewLayoutPending.value = true;
+          try {
+            syncPreviewFromSource();
+            rebuildPrintPreviewMap(source, preview, { syncViewFromSource: false });
+            preview.updateSize();
+            preview.renderSync();
+            await waitForMapRender(preview, 2);
+            sanitizePrintPreviewAttributions(previewMapEl.value);
+          } finally {
+            isPreviewLayoutPending.value = false;
+          }
+        } else {
+          rebuildPrintPreviewMap(source, preview, { syncViewFromSource: false });
+          preview.updateSize();
+          preview.renderSync();
+          sanitizePrintPreviewAttributions(previewMapEl.value);
+        }
+        printPreviewSessionSourceViewKey = sourceViewKey;
+        schedulePrintMapPrewarm();
+      }
+      watchDebounced(
+        () => [
+          printModalOpened.value,
+          isPreviewLayoutPending.value,
+          printFormState.dpi,
+          printFormState.margin,
+          printFormState.hasTitle,
+          printFormState.printTitle,
+          printFormState.paperFormat,
+          printFormState.pageOrientation,
+          previewPageIndex.value,
+          previewMapViewCustomized.value
+        ],
+        () => {
+          if (printModalOpened.value && !isPreviewLayoutPending.value) schedulePrintMapPrewarm();
+        },
+        { debounce: 1500 }
+      );
       watch(printModalOpened, async (isOpen) => {
         if (!isOpen) {
           printFicheLoadGeneration += 1;
           printFicheSelections.value = null;
-          destroyPreviewMap();
+          clearPrintMapRenderCache();
+          printPreviewSessionViewCustomized = previewMapViewCustomized.value;
+          printPreviewSessionSourceViewKey = computeSourceMapViewKey();
+          detachPreviewMap();
+          isPreviewLayoutPending.value = false;
+          lastAnnexContentSnapshot = null;
           return;
         }
-        await nextTick();
-        syncNativePrintDialog();
-        await ensurePreviewMap(true);
-        syncNativePrintDialog();
-        void refreshPrintFicheSelections();
+        try {
+          syncPrintFicheSelectionsFromCache();
+          await nextTick();
+          syncNativePrintDialog();
+          await preparePreviewMapOnModalOpen();
+          syncNativePrintDialog();
+          await refreshPrintFicheSelections();
+        } catch (err) {
+          isPreviewLayoutPending.value = false;
+        }
       });
       watch(
-        () => [printFormState.hasScale, printFormState.hasTitle, printFormState.margin],
+        () => printFormState.hasScale,
         () => {
           if (!printModalOpened.value) return;
-          void nextTick().then(() => ensurePreviewMap(true));
+          void nextTick(() => syncPreviewScaleLineControl());
         }
       );
       watch(
@@ -103959,6 +105997,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       onUnmounted(() => destroyPreviewMap());
       function getPrintMapInstance() {
+        if (printModalOpened.value) return previewMap.value;
         return previewMap.value ?? sourceMapRef.value;
       }
       function triggerDownload(fileName, url) {
@@ -103983,24 +106022,78 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return savedIndex;
       }
-      async function buildRasterExportCanvas() {
+      function buildExportProgressSteps() {
+        const steps = [];
+        if (previewPages.value.some((page) => page.kind === "map")) {
+          steps.push({ weight: 55 });
+        }
+        const annexCount = previewPages.value.filter((page) => page.kind !== "map").length;
+        if (annexCount > 0) {
+          const each = 35 / annexCount;
+          for (let i2 = 0; i2 < annexCount; i2 += 1) steps.push({ weight: each });
+        }
+        steps.push({ weight: 10 });
+        return steps;
+      }
+      function syncExportProgressUi(percent, detail) {
+        exportProgressPercent.value = percent;
+        exportProgressDetail.value = detail;
+      }
+      async function buildRasterExportCanvas(progress, stepIndex, pagePrefix = "") {
+        const prefix = pagePrefix ? `${pagePrefix} — ` : "";
+        progress.startStep(stepIndex, `${prefix}Préparation de la page carte…`);
+        progress.tick(0.02);
+        progress.setDetail(`${prefix}Affichage de l’aperçu carte…`);
         const restorePreviewIndex = await ensureMapPreviewPageVisibleForExport();
+        progress.tick(0.05);
+        progress.setDetail(`${prefix}Calcul des dimensions d’export…`);
         const dpiValue = printFormState.dpi;
-        const dpiCoeff = dpiValue / BASE_DPI;
         const paperWidthPx = convertMmToPx(paperDimension.value.width, dpiValue);
         const paperHeightPx = convertMmToPx(paperDimension.value.height, dpiValue);
         const marginPx = convertMmToPx(printFormState.margin, dpiValue);
-        const titleHeightPx = printFormState.hasTitle ? Math.round(titleHeightMm.value / paperDimension.value.height * paperHeightPx) : 0;
+        const printableHeightPx = Math.max(0, paperHeightPx - marginPx * 2);
+        const titleHeightPx = printFormState.hasTitle ? Math.round(titleHeightMm.value / printableAreaMm.value.height * printableHeightPx) : 0;
         const mapWidthPx = Math.max(0, paperWidthPx - marginPx * 2);
-        const mapHeightPx = Math.max(0, paperHeightPx - marginPx * 2 - titleHeightPx);
+        const mapHeightPx = Math.max(0, printableHeightPx - titleHeightPx);
+        if (mapHeightPx < 16 || mapWidthPx < 16) {
+          throw new Error(
+            "Zone carte insuffisante pour l’export. Réduisez le titre, les marges ou choisissez un format plus grand."
+          );
+        }
         const mapElement = previewMapEl.value;
         const scaleSnapshot = printFormState.hasScale && dpiValue === HIGH_DPI_VALUE && mapElement ? captureScaleLineSnapshot(mapElement, paper2PreviewScaleCoeff.value) : null;
         const map2 = getPrintMapInstance();
         if (!map2) throw new Error("Carte indisponible pour l’export.");
-        syncPreviewFromSource();
+        progress.setDetail(`${prefix}Synchronisation de la vue carte…`);
+        progress.tick(0.08);
         await waitForMapRender(map2, 2);
         sanitizePrintPreviewAttributions(previewMapEl.value);
-        const mapCanvas = await renderMapCanvasForExport(map2, mapWidthPx, mapHeightPx);
+        const previewSize = map2.getSize();
+        const mapExtent = map2.getView().calculateExtent(previewSize ?? void 0);
+        const mapCacheKey = buildPrintMapRenderCacheKey({
+          dpi: dpiValue,
+          mapWidthPx,
+          mapHeightPx,
+          extent: mapExtent,
+          layerFingerprint: buildVisibleLayerFingerprint(map2),
+          rotation: map2.getView().getRotation()
+        });
+        const mapCanvas = await renderOffscreenPrintMapCanvas(map2, {
+          widthPx: mapWidthPx,
+          heightPx: mapHeightPx,
+          extent: mapExtent,
+          cacheKey: mapCacheKey,
+          onStage: (label) => {
+            progress.setDetail(`${prefix}${label}`);
+          },
+          onTileProgress: (loadedTiles, pendingTiles) => {
+            const total = loadedTiles + pendingTiles;
+            const ratio = total > 0 ? loadedTiles / total : 0;
+            progress.tick(0.15 + ratio * 0.65);
+          }
+        });
+        progress.setDetail(`${prefix}Composition (titre, échelle, attributions)…`);
+        progress.tick(0.85);
         const finalWidthPx = mapWidthPx + marginPx * 2;
         const finalHeightPx = mapHeightPx + titleHeightPx + marginPx * 2;
         const finalCanvas = document.createElement("canvas");
@@ -104012,19 +106105,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         finalCtx.fillRect(0, 0, finalWidthPx, finalHeightPx);
         finalCtx.drawImage(mapCanvas, marginPx, marginPx + titleHeightPx);
         mapCanvas.remove();
-        if (printFormState.hasTitle && mapTitle.value) {
+        if (printFormState.hasTitle && printMapTitleLayout.value.displayTitle) {
           const titleCanvas = document.createElement("canvas");
           titleCanvas.width = mapWidthPx;
           titleCanvas.height = titleHeightPx;
           const titleCtx = titleCanvas.getContext("2d");
           if (titleCtx) {
-            drawTitle(
+            drawPrintMapTitleOnCanvas(
               titleCtx,
-              titleHeightPx,
               mapWidthPx,
-              printFormState.printTitle,
-              mapTitle.value,
-              dpiCoeff
+              titleHeightPx,
+              printMapTitleLayout.value,
+              dpiValue
             );
             finalCtx.drawImage(titleCanvas, marginPx, marginPx);
           }
@@ -104053,63 +106145,64 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         previewPageIndex.value = restorePreviewIndex;
         await nextTick();
+        progress.tick(1);
+        progress.endStep();
         return { dpiValue, finalCanvas };
       }
-      async function buildSupplementExportCanvasesByKind() {
-        const byKind = {};
-        const sections = [
-          {
-            kind: "ficheTerritory",
-            enabled: printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value
-          },
-          {
-            kind: "ficheParcel",
-            enabled: printFormState.hasParcelFiche && canPrintParcelFiche.value
-          },
-          { kind: "legends", enabled: printFormState.hasLegends && canPrintLegends.value }
-        ];
-        for (const { kind, enabled } of sections) {
-          if (!enabled) continue;
-          const sliceCount = supplementSliceCounts.value[kind] ?? 1;
-          measureKind.value = kind;
-          await nextTick();
-          const measureRoot = supplementMeasureInnerRef.value;
-          if (measureRoot) {
-            await waitForPrintSupplementImages(measureRoot);
-          }
-          await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
-          const pageEl = measureRoot == null ? void 0 : measureRoot.querySelector(".ec-print-supplement-page");
-          if (!pageEl) continue;
-          byKind[kind] = await rasterizePrintSupplementSlices(
-            pageEl,
-            sliceCount,
-            paperDimension.value.width,
-            paperDimension.value.height,
-            printFormState.margin,
-            printFormState.dpi
-          );
-        }
-        measureKind.value = null;
-        return byKind;
+      async function exportSupplementPageFromPreview(onStage) {
+        const pageMeta = currentPreviewPage.value;
+        if (!pageMeta || pageMeta.kind === "map") return null;
+        onStage == null ? void 0 : onStage("Préparation de l’aperçu…");
+        await nextTick();
+        await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
+        const pageRoot = findSupplementPreviewPageRoot();
+        const previewFrame = findSupplementPreviewFrameEl();
+        if (!pageRoot || !previewFrame) return null;
+        onStage == null ? void 0 : onStage("Chargement des images…");
+        await waitForPrintSupplementImages(pageRoot, { timeoutMs: 8e3 });
+        applyCurrentSupplementSliceVisibility();
+        await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
+        onStage == null ? void 0 : onStage("Capture de la page…");
+        return rasterizePrintSupplementPreviewFrame(
+          previewFrame,
+          paperDimension.value.width,
+          paperDimension.value.height,
+          printFormState.margin,
+          printFormState.dpi
+        );
       }
-      async function captureAllExportCanvases() {
-        var _a2;
+      async function captureAllExportCanvases(progress) {
         const savedIndex = previewPageIndex.value;
         const canvases = [];
         let mapCanvas = null;
+        let progressStep = 0;
+        const totalPages = previewPages.value.length;
         try {
-          const supplementByKind = await buildSupplementExportCanvasesByKind();
-          for (const page of previewPages.value) {
+          for (let index2 = 0; index2 < previewPages.value.length; index2 += 1) {
+            const page = previewPages.value[index2];
+            if (!page) continue;
+            const pagePrefix = `Page ${index2 + 1}/${totalPages}`;
             if (page.kind === "map") {
               if (!mapCanvas) {
-                const { finalCanvas } = await buildRasterExportCanvas();
-                mapCanvas = finalCanvas;
+                mapCanvas = (await buildRasterExportCanvas(progress, progressStep, pagePrefix)).finalCanvas;
+                progressStep += 1;
               }
-              canvases.push(mapCanvas);
+              if (mapCanvas) canvases.push(mapCanvas);
               continue;
             }
-            const slice = (_a2 = supplementByKind[page.kind]) == null ? void 0 : _a2[page.sliceIndex];
-            if (slice) canvases.push(slice);
+            previewPageIndex.value = index2;
+            progress.startStep(progressStep, `${pagePrefix} — ${page.label}…`);
+            progress.tick(0.03);
+            const sliceCanvas = await exportSupplementPageFromPreview((detail) => {
+              progress.setDetail(`${pagePrefix} — ${detail}`);
+              if (detail.startsWith("Chargement")) progress.tick(0.4);
+              else if (detail.startsWith("Capture")) progress.tick(0.72);
+              else progress.tick(0.12);
+            });
+            progress.tick(1);
+            progress.endStep();
+            progressStep += 1;
+            if (sliceCanvas) canvases.push(sliceCanvas);
           }
         } finally {
           previewPageIndex.value = savedIndex;
@@ -104117,60 +106210,133 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return canvases;
       }
-      async function exportRasterCanvases(canvases) {
+      async function exportRasterCanvases(canvases, progress) {
         const dpiValue = printFormState.dpi;
         const ext = printFormState.format === "JPEG" ? "jpeg" : "png";
         for (let i2 = 0; i2 < canvases.length; i2 += 1) {
           const canvas = canvases[i2];
           const suffix = canvases.length > 1 ? ` - page ${i2 + 1}` : "";
           const fileName = `carte${suffix}.${ext}`;
-          if (printFormState.format === "PNG") {
-            const finalUrl = await injectDpiInPng(canvas.toDataURL("image/png"), dpiValue);
-            triggerDownload(fileName, finalUrl);
-          } else {
-            triggerDownload(fileName, canvas.toDataURL("image/jpeg", 0.95));
+          const encodeLabel = printFormState.format === "PNG" ? `Encodage PNG${canvases.length > 1 ? ` (${i2 + 1}/${canvases.length})` : ""}…` : `Encodage JPEG${canvases.length > 1 ? ` (${i2 + 1}/${canvases.length})` : ""}…`;
+          progress.setDetail(encodeLabel);
+          progress.tick(canvases.length > 0 ? i2 / canvases.length * 0.85 : 0);
+          try {
+            if (printFormState.format === "PNG") {
+              const blob = await encodePrintPngWithDpi(canvas, dpiValue);
+              triggerDownload(fileName, URL.createObjectURL(blob));
+            } else {
+              const blob = await encodePrintJpeg(canvas, 0.95);
+              triggerDownload(fileName, URL.createObjectURL(blob));
+            }
+          } catch {
+            if (printFormState.format === "PNG") {
+              const finalUrl = await injectDpiInPng(canvas.toDataURL("image/png"), dpiValue);
+              triggerDownload(fileName, finalUrl);
+            } else {
+              triggerDownload(fileName, canvas.toDataURL("image/jpeg", 0.95));
+            }
           }
           canvas.remove();
         }
+        progress.tick(0.95);
       }
-      function exportPdfFromCanvases(pages) {
-        const doc2 = new E$1({
-          orientation: printFormState.pageOrientation,
-          unit: "mm",
-          format: [paperDimension.value.width, paperDimension.value.height]
-        });
-        for (let i2 = 0; i2 < pages.length; i2 += 1) {
-          if (i2 > 0) {
-            doc2.addPage(
-              [paperDimension.value.width, paperDimension.value.height],
-              printFormState.pageOrientation
+      async function exportPdfFromCanvases(pages, progress) {
+        const fileName = pages.length > 1 ? "carte-et-annexes.pdf" : "carte.pdf";
+        progress.setDetail(
+          pages.length > 1 ? `Assemblage PDF (${pages.length} pages)…` : "Génération du PDF…"
+        );
+        progress.tick(0.1);
+        try {
+          const blob = await encodePrintPdf({
+            canvases: pages,
+            paperWidthMm: paperDimension.value.width,
+            paperHeightMm: paperDimension.value.height,
+            orientation: printFormState.pageOrientation
+          });
+          progress.setDetail("Finalisation du PDF…");
+          progress.tick(0.85);
+          triggerDownload(fileName, URL.createObjectURL(blob));
+        } catch {
+          progress.setDetail("Assemblage PDF (mode secours)…");
+          const doc2 = new E$1({
+            orientation: printFormState.pageOrientation,
+            unit: "mm",
+            format: [paperDimension.value.width, paperDimension.value.height]
+          });
+          for (let i2 = 0; i2 < pages.length; i2 += 1) {
+            if (i2 > 0) {
+              doc2.addPage(
+                [paperDimension.value.width, paperDimension.value.height],
+                printFormState.pageOrientation
+              );
+            }
+            doc2.addImage(
+              pages[i2].toDataURL("image/png"),
+              "PNG",
+              0,
+              0,
+              paperDimension.value.width,
+              paperDimension.value.height
             );
           }
-          doc2.addImage(
-            pages[i2].toDataURL("image/png"),
-            "PNG",
-            0,
-            0,
-            paperDimension.value.width,
-            paperDimension.value.height
-          );
+          doc2.save(fileName);
         }
-        doc2.save(pages.length > 1 ? "carte-et-annexes.pdf" : "carte.pdf");
         for (const canvas of pages) canvas.remove();
+      }
+      async function syncAnnexPaginationForExport(onStage) {
+        const hasAnnex = printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value || printFormState.hasParcelFiche && canPrintParcelFiche.value || printFormState.hasLegends && canPrintLegends.value;
+        if (!hasAnnex) {
+          onStage("Aucune annexe à synchroniser.", 8);
+          return;
+        }
+        onStage("Synchronisation des annexes avec la vue carte…", 2);
+        if (printFormState.hasLegends && canPrintLegends.value) {
+          invalidateLegendsSlicePlanCache();
+        }
+        let stagePercent = 3;
+        await remeasureSupplementPageCounts({
+          blockPreview: false,
+          onStage: (label) => {
+            stagePercent = Math.min(7, stagePercent + 1);
+            onStage(label, stagePercent);
+          }
+        });
+        onStage("Pagination des annexes à jour.", 8);
       }
       async function onClickExportMap() {
         if (isExportInProgress.value) return;
         isExportInProgress.value = true;
+        exportProgressPercent.value = 1;
+        exportProgressDetail.value = "Préparation de l’export…";
+        const savedPreviewPageIndex = previewPageIndex.value;
+        const finalizeStepIndexRef = { value: 0 };
         try {
-          const canvases = previewPages.value.length > 1 ? await captureAllExportCanvases() : [(await buildRasterExportCanvas()).finalCanvas];
+          await syncAnnexPaginationForExport((label, percent) => {
+            syncExportProgressUi(percent, label);
+          });
+          const progressSteps = buildExportProgressSteps();
+          const progress = new WeightedExportProgress(progressSteps, syncExportProgressUi);
+          finalizeStepIndexRef.value = progressSteps.length - 1;
+          const canvases = await captureAllExportCanvases(progress);
           if (!canvases.length) return;
+          progress.startStep(finalizeStepIndexRef.value, "Génération du fichier…");
+          progress.tick(0.02);
           if (printFormState.format === "PDF") {
-            exportPdfFromCanvases(canvases);
-            return;
+            await exportPdfFromCanvases(canvases, progress);
+          } else {
+            await exportRasterCanvases(canvases, progress);
           }
-          await exportRasterCanvases(canvases);
+          progress.endStep();
+          syncExportProgressUi(100, "Export terminé.");
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Export impossible. Réessayez avec un titre plus court.";
+          syncExportProgressUi(exportProgressPercent.value, message);
         } finally {
+          previewPageIndex.value = savedPreviewPageIndex;
+          await nextTick();
           isExportInProgress.value = false;
+          exportProgressPercent.value = 0;
+          exportProgressDetail.value = "";
         }
       }
       return (_ctx, _cache) => {
@@ -104195,9 +106361,16 @@ Expected function or array of functions, received type ${typeof value2}.`
                     ref: printForm,
                     class: "print-form"
                   }, [
+                    createVNode(unref(ln), {
+                      modelValue: selectedPrintTemplateId.value,
+                      "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => selectedPrintTemplateId.value = $event),
+                      label: "Modèle d'impression",
+                      options: printTemplateSelectOptions.value,
+                      class: "mb-20"
+                    }, null, 8, ["modelValue", "options"]),
                     createVNode(unref(yc), {
                       modelValue: printFormState.pageOrientation,
-                      "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => printFormState.pageOrientation = $event),
+                      "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => printFormState.pageOrientation = $event),
                       inline: false,
                       options: pageOrientationOptions,
                       small: false,
@@ -104206,13 +106379,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                     }, null, 8, ["modelValue"]),
                     createVNode(unref(ln), {
                       modelValue: printFormState.paperFormat,
-                      "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => printFormState.paperFormat = $event),
+                      "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => printFormState.paperFormat = $event),
                       label: "Dimensions",
                       options: paperFormatOptions.value
                     }, null, 8, ["modelValue", "options"]),
                     createVNode(unref(ln), {
                       modelValue: printFormState.margin,
-                      "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => printFormState.margin = $event),
+                      "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => printFormState.margin = $event),
                       modelModifiers: { number: true },
                       label: "Marge",
                       options: [
@@ -104223,194 +106396,244 @@ Expected function or array of functions, received type ${typeof value2}.`
                     }, null, 8, ["modelValue"]),
                     createVNode(unref(Sa), {
                       modelValue: printFormState.printTitle,
-                      "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => printFormState.printTitle = $event),
+                      "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => printFormState.printTitle = $event),
                       disabled: !printFormState.hasTitle,
+                      maxlength: unref(PRINT_MAP_TITLE_MAX_CHARS),
                       label: "Titre de la carte",
                       "label-visible": "",
                       name: "titre",
                       class: "mb-10"
-                    }, null, 8, ["modelValue", "disabled"]),
-                    createBaseVNode("div", _hoisted_1$g, [
-                      createVNode(unref(Dt), {
-                        modelValue: printFormState.hasTitle,
-                        "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => printFormState.hasTitle = $event),
-                        value: true,
-                        name: "ec-map-print-has-title",
-                        label: printFormState.hasTitle ? "Désactiver le titre" : "Activer le titre"
-                      }, null, 8, ["modelValue", "label"])
-                    ]),
+                    }, null, 8, ["modelValue", "disabled", "maxlength"]),
+                    printFormState.hasTitle ? (openBlock(), createElementBlock("p", _hoisted_1$g, " 100 caractères maximum. Un titre long réduit automatiquement la taille du texte. ")) : createCommentVNode("", true),
                     createBaseVNode("div", _hoisted_2$b, [
                       createVNode(unref(Dt), {
-                        modelValue: printFormState.hasScale,
-                        "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => printFormState.hasScale = $event),
+                        modelValue: printFormState.hasTitle,
+                        "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => printFormState.hasTitle = $event),
                         value: true,
-                        name: "ec-map-print-has-scale",
-                        label: printFormState.hasScale ? "Désactiver l'échelle" : "Afficher l'échelle"
-                      }, null, 8, ["modelValue", "label"])
+                        name: "ec-map-print-has-title",
+                        label: "Afficher le titre"
+                      }, null, 8, ["modelValue"])
                     ]),
                     createBaseVNode("div", _hoisted_3$b, [
                       createVNode(unref(Dt), {
+                        modelValue: printFormState.hasScale,
+                        "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => printFormState.hasScale = $event),
+                        value: true,
+                        name: "ec-map-print-has-scale",
+                        label: "Afficher l'échelle"
+                      }, null, 8, ["modelValue"])
+                    ]),
+                    createBaseVNode("div", _hoisted_4$b, [
+                      createVNode(unref(Dt), {
                         modelValue: printFormState.hasTerritoryFiche,
-                        "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => printFormState.hasTerritoryFiche = $event),
+                        "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => printFormState.hasTerritoryFiche = $event),
                         value: true,
                         name: "ec-map-print-fiche-territoire",
                         disabled: !canPrintTerritoryFiche.value,
                         label: "Afficher la fiche info territoire"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createBaseVNode("div", _hoisted_4$b, [
+                    createBaseVNode("div", _hoisted_5$a, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasParcelFiche,
-                        "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => printFormState.hasParcelFiche = $event),
+                        "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => printFormState.hasParcelFiche = $event),
                         value: true,
                         name: "ec-map-print-fiche-parcelle",
                         disabled: !canPrintParcelFiche.value,
                         label: "Afficher la fiche info parcelle"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createBaseVNode("div", _hoisted_5$a, [
+                    createBaseVNode("div", _hoisted_6$9, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasLegends,
-                        "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => printFormState.hasLegends = $event),
+                        "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => printFormState.hasLegends = $event),
                         value: true,
                         name: "ec-map-print-legends",
                         disabled: !canPrintLegends.value,
                         label: "Afficher la légende"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
+                    createBaseVNode("div", _hoisted_7$7, [
+                      createVNode(unref(Dt), {
+                        modelValue: printFormState.hasAllLegends,
+                        "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => printFormState.hasAllLegends = $event),
+                        value: true,
+                        name: "ec-map-print-all-legends",
+                        disabled: !printFormState.hasLegends,
+                        label: "Toutes les légendes"
+                      }, null, 8, ["modelValue", "disabled"])
+                    ]),
                     createVNode(unref(ln), {
                       modelValue: printFormState.format,
-                      "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => printFormState.format = $event),
+                      "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => printFormState.format = $event),
                       label: "Format d'export",
                       options: ["PDF", "PNG", "JPEG"]
                     }, null, 8, ["modelValue"]),
                     createVNode(unref(ln), {
                       modelValue: printFormState.dpi,
-                      "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => printFormState.dpi = $event),
+                      "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => printFormState.dpi = $event),
                       modelModifiers: { number: true },
                       label: "Résolution",
                       options: dpiOptions.value
                     }, null, 8, ["modelValue", "options"]),
                     createVNode(unref(nt), {
+                      id: "print-page-reset-map-view",
+                      class: "print-form__replacer-carte",
+                      label: "Replacer la carte",
+                      title: "Replacer la carte",
+                      secondary: "",
+                      disabled: !previewMapViewCustomized.value || isExportInProgress.value || isPreviewLayoutPending.value || !previewMap.value,
+                      icon: "",
+                      onClick: replacerPreviewMapFromSource
+                    }, null, 8, ["disabled"]),
+                    createVNode(unref(nt), {
                       id: "print-page-export",
-                      label: isExportInProgress.value ? "Traitement en cours..." : "Imprimer la carte",
-                      title: isExportInProgress.value ? "Traitement en cours..." : "Imprimer la carte",
-                      disabled: isExportInProgress.value,
+                      label: isExportInProgress.value ? "Traitement en cours..." : "Exporter",
+                      title: isExportInProgress.value ? "Traitement en cours..." : "Exporter",
+                      disabled: isExportInProgress.value || isPreviewLayoutPending.value,
                       icon: "",
                       "no-outline": "",
                       onClick: onClickExportMap
                     }, null, 8, ["label", "title", "disabled"])
                   ], 512),
-                  createBaseVNode("div", {
-                    class: normalizeClass(["print-preview-column", { "print-preview-column--paginated": previewPages.value.length > 1 }])
-                  }, [
-                    createBaseVNode("div", _hoisted_6$9, [
-                      createBaseVNode("div", {
-                        class: "print-preview",
-                        style: normalizeStyle({
-                          width: cssPreviewDimensionPx.value.width,
-                          height: cssPreviewDimensionPx.value.height,
-                          paddingLeft: cssPreviewPaddingPx.value.left,
-                          paddingRight: cssPreviewPaddingPx.value.right,
-                          paddingTop: cssPreviewPaddingPx.value.top,
-                          paddingBottom: cssPreviewPaddingPx.value.bottom,
-                          ...supplementLayoutStyle.value
-                        })
-                      }, [
-                        withDirectives(createBaseVNode("div", _hoisted_7$7, [
-                          printFormState.hasTitle ? (openBlock(), createElementBlock("div", {
-                            key: 0,
-                            id: "map-title",
-                            ref_key: "mapTitle",
-                            ref: mapTitle,
-                            class: "map-title"
-                          }, toDisplayString(printFormState.printTitle), 513)) : createCommentVNode("", true),
-                          printModalOpened.value ? (openBlock(), createElementBlock("div", {
-                            key: 1,
-                            ref_key: "previewMapEl",
-                            ref: previewMapEl,
-                            class: "map ec-map-print-preview-map"
-                          }, null, 512)) : createCommentVNode("", true)
-                        ], 512), [
-                          [vShow, ((_a2 = currentPreviewPage.value) == null ? void 0 : _a2.kind) === "map"]
-                        ]),
-                        withDirectives(createBaseVNode("div", {
-                          ref_key: "supplementPreviewEl",
-                          ref: supplementPreviewEl,
-                          class: "print-preview-page print-preview-page--supplement"
-                        }, [
-                          createBaseVNode("div", _hoisted_8$6, [
-                            createBaseVNode("div", _hoisted_9$6, [
-                              createBaseVNode("div", {
-                                class: "print-supplement-layout-root",
-                                style: normalizeStyle(supplementPreviewScalerStyle.value)
-                              }, [
-                                createBaseVNode("div", {
-                                  ref_key: "supplementContentRef",
-                                  ref: supplementContentRef,
-                                  class: "print-preview-supplement-content",
-                                  style: normalizeStyle(supplementContentOffsetStyle.value)
-                                }, [
-                                  printModalOpened.value && ((_b2 = currentPreviewPage.value) == null ? void 0 : _b2.kind) === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$j, {
-                                    key: 0,
-                                    "document-tabs": territoryDocumentTabs.value,
-                                    title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
-                                  }, null, 8, ["document-tabs", "title"])) : createCommentVNode("", true),
-                                  printModalOpened.value && ((_c2 = currentPreviewPage.value) == null ? void 0 : _c2.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$i, {
-                                    key: 1,
-                                    title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
-                                    "infos-html": parcelInfosHtml.value,
-                                    "documents-html": parcelDocumentsHtml.value,
-                                    "cadastre-references": parcelCadastreReferences.value
-                                  }, null, 8, ["title", "infos-html", "documents-html", "cadastre-references"])) : createCommentVNode("", true),
-                                  printModalOpened.value && ((_d = currentPreviewPage.value) == null ? void 0 : _d.kind) === "legends" ? (openBlock(), createBlock(MapPrintLegendsPage, {
-                                    key: 2,
-                                    layers: panelLegendLayers.value,
-                                    "map-zoom": panelMapZoom.value,
-                                    "catalog-entry-in-zoom-range": catalogEntryInZoomRangeForPrint
-                                  }, null, 8, ["layers", "map-zoom"])) : createCommentVNode("", true)
-                                ], 4)
-                              ], 4)
-                            ])
-                          ])
-                        ], 512), [
-                          [vShow, ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) !== "map"]
-                        ])
-                      ], 4)
-                    ]),
-                    previewPages.value.length > 1 ? (openBlock(), createElementBlock("nav", {
-                      key: 0,
+                  createBaseVNode("div", _hoisted_8$6, [
+                    createBaseVNode("nav", {
                       ref_key: "previewPaginationEl",
                       ref: previewPaginationEl,
                       class: "print-preview-pagination",
                       "aria-label": "Pages à imprimer"
                     }, [
-                      createBaseVNode("button", {
+                      previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
+                        key: 0,
                         type: "button",
                         class: "fr-btn fr-btn--tertiary fr-btn--sm",
                         "aria-label": "Page précédente",
-                        onClick: _cache[11] || (_cache[11] = ($event) => goPreviewPage(-1))
-                      }, [..._cache[13] || (_cache[13] = [
+                        onClick: _cache[13] || (_cache[13] = ($event) => goPreviewPage(-1))
+                      }, [..._cache[15] || (_cache[15] = [
                         createBaseVNode("span", {
                           class: "fr-icon-arrow-left-s-line",
                           "aria-hidden": "true"
                         }, null, -1)
-                      ])]),
-                      createBaseVNode("span", _hoisted_10$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_f = currentPreviewPage.value) == null ? void 0 : _f.label), 1),
-                      createBaseVNode("button", {
+                      ])])) : createCommentVNode("", true),
+                      createBaseVNode("span", _hoisted_9$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_a2 = currentPreviewPage.value) == null ? void 0 : _a2.label), 1),
+                      previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
+                        key: 1,
                         type: "button",
                         class: "fr-btn fr-btn--tertiary fr-btn--sm",
                         "aria-label": "Page suivante",
-                        onClick: _cache[12] || (_cache[12] = ($event) => goPreviewPage(1))
-                      }, [..._cache[14] || (_cache[14] = [
+                        onClick: _cache[14] || (_cache[14] = ($event) => goPreviewPage(1))
+                      }, [..._cache[16] || (_cache[16] = [
                         createBaseVNode("span", {
                           class: "fr-icon-arrow-right-s-line",
                           "aria-hidden": "true"
                         }, null, -1)
-                      ])])
-                    ], 512)) : createCommentVNode("", true)
-                  ], 2),
-                  isExportInProgress.value ? (openBlock(), createElementBlock("div", _hoisted_11$6, "Traitement en cours…")) : createCommentVNode("", true)
+                      ])])) : createCommentVNode("", true)
+                    ], 512),
+                    createBaseVNode("div", {
+                      class: "print-preview-column",
+                      title: "Ctrl + molette : zoomer l’aperçu (hors carte)",
+                      onWheel: onPreviewColumnWheel
+                    }, [
+                      createBaseVNode("div", {
+                        class: normalizeClass(["print-preview-column__viewport", { "print-preview-column__viewport--pending": isPreviewLayoutPending.value }])
+                      }, [
+                        createBaseVNode("div", {
+                          class: "print-preview-column__scale-slot",
+                          style: normalizeStyle(previewColumnScaleSlotStyle.value)
+                        }, [
+                          createBaseVNode("div", {
+                            ref_key: "previewZoomHostEl",
+                            ref: previewZoomHostEl,
+                            class: "print-preview-column__scale-inner",
+                            style: normalizeStyle(previewColumnScaleInnerStyle.value)
+                          }, [
+                            createBaseVNode("div", _hoisted_10$6, [
+                              createBaseVNode("div", {
+                                class: "print-preview",
+                                style: normalizeStyle({
+                                  width: cssPreviewDimensionPx.value.width,
+                                  height: cssPreviewDimensionPx.value.height,
+                                  paddingLeft: cssPreviewPaddingPx.value.left,
+                                  paddingRight: cssPreviewPaddingPx.value.right,
+                                  paddingTop: cssPreviewPaddingPx.value.top,
+                                  paddingBottom: cssPreviewPaddingPx.value.bottom,
+                                  ...supplementLayoutStyle.value
+                                })
+                              }, [
+                                withDirectives(createBaseVNode("div", _hoisted_11$6, [
+                                  printFormState.hasTitle ? (openBlock(), createElementBlock("div", {
+                                    key: 0,
+                                    id: "map-title",
+                                    class: "map-title",
+                                    style: normalizeStyle(mapTitlePreviewStyle.value)
+                                  }, toDisplayString(printMapTitleLayout.value.displayTitle), 5)) : createCommentVNode("", true),
+                                  printModalOpened.value ? (openBlock(), createElementBlock("div", {
+                                    key: 1,
+                                    ref_key: "previewMapEl",
+                                    ref: previewMapEl,
+                                    class: "map ec-map-print-preview-map",
+                                    style: normalizeStyle({ minHeight: `${previewMapMinHeightPx.value}px` })
+                                  }, null, 4)) : createCommentVNode("", true)
+                                ], 512), [
+                                  [vShow, ((_b2 = currentPreviewPage.value) == null ? void 0 : _b2.kind) === "map"]
+                                ]),
+                                withDirectives(createBaseVNode("div", {
+                                  ref_key: "supplementPreviewEl",
+                                  ref: supplementPreviewEl,
+                                  class: "print-preview-page print-preview-page--supplement"
+                                }, [
+                                  createBaseVNode("div", {
+                                    class: "print-supplement-preview-frame",
+                                    style: normalizeStyle(supplementPreviewFrameStyle.value)
+                                  }, [
+                                    createBaseVNode("div", {
+                                      class: "print-supplement-layout-root",
+                                      style: normalizeStyle(supplementPreviewScalerStyle.value)
+                                    }, [
+                                      createBaseVNode("div", {
+                                        ref_key: "supplementContentRef",
+                                        ref: supplementContentRef,
+                                        class: "print-preview-supplement-content",
+                                        style: normalizeStyle(supplementContentOffsetStyle.value)
+                                      }, [
+                                        printModalOpened.value && ((_c2 = currentPreviewPage.value) == null ? void 0 : _c2.kind) === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
+                                          key: 0,
+                                          "document-tabs": territoryDocumentTabs.value,
+                                          title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
+                                        }, null, 8, ["document-tabs", "title"])) : createCommentVNode("", true),
+                                        printModalOpened.value && ((_d = currentPreviewPage.value) == null ? void 0 : _d.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
+                                          key: 1,
+                                          title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
+                                          "infos-html": parcelInfosHtml.value,
+                                          "documents-html": parcelDocumentsHtml.value,
+                                          "cadastre-references": parcelCadastreReferences.value
+                                        }, null, 8, ["title", "infos-html", "documents-html", "cadastre-references"])) : createCommentVNode("", true),
+                                        printModalOpened.value && ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) === "legends" ? (openBlock(), createBlock(MapPrintLegendsPage, {
+                                          key: 2,
+                                          layers: printLegendLayerSource.value,
+                                          "map-zoom": unref(printPreviewLegendZoom),
+                                          "catalog-entry-in-zoom-range": catalogEntryInZoomRangeForPrint,
+                                          "include-all-legend-layers": printFormState.hasAllLegends
+                                        }, null, 8, ["layers", "map-zoom", "include-all-legend-layers"])) : createCommentVNode("", true)
+                                      ], 4)
+                                    ], 4)
+                                  ], 4)
+                                ], 512), [
+                                  [vShow, ((_f = currentPreviewPage.value) == null ? void 0 : _f.kind) !== "map"]
+                                ])
+                              ], 4)
+                            ])
+                          ], 4)
+                        ], 4),
+                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_12$6, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
+                      ], 2)
+                    ], 32)
+                  ]),
+                  isExportInProgress.value ? (openBlock(), createBlock(PrintExportProgressOverlay, {
+                    key: 0,
+                    percent: exportProgressPercent.value,
+                    detail: exportProgressDetail.value
+                  }, null, 8, ["percent", "detail"])) : createCommentVNode("", true)
                 ], 512)
               ];
             }),
@@ -104425,23 +106648,22 @@ Expected function or array of functions, received type ${typeof value2}.`
             createBaseVNode("div", {
               class: "print-supplement-measure__viewport",
               style: normalizeStyle({
-                width: `${supplementExportInner.value.innerWidthPx}px`,
-                height: `${supplementExportInner.value.innerHeightPx}px`
+                width: `${measureExportInner.value.innerWidthPx}px`
               })
             }, [
               createBaseVNode("div", {
                 class: "print-supplement-measure__content",
                 style: normalizeStyle({
-                  ...supplementLayoutStyle.value,
-                  width: `${supplementExportInner.value.innerWidthPx}px`
+                  ...measureLayoutStyle.value,
+                  width: `${measureExportInner.value.innerWidthPx}px`
                 })
               }, [
-                measureKind.value === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$j, {
+                measureKind.value === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
                   key: 0,
                   "document-tabs": territoryDocumentTabs.value,
                   title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
                 }, null, 8, ["document-tabs", "title"])) : createCommentVNode("", true),
-                measureKind.value === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$i, {
+                measureKind.value === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
                   key: 1,
                   title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
                   "infos-html": parcelInfosHtml.value,
@@ -104450,10 +106672,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }, null, 8, ["title", "infos-html", "documents-html", "cadastre-references"])) : createCommentVNode("", true),
                 measureKind.value === "legends" ? (openBlock(), createBlock(MapPrintLegendsPage, {
                   key: 2,
-                  layers: panelLegendLayers.value,
-                  "map-zoom": panelMapZoom.value,
-                  "catalog-entry-in-zoom-range": catalogEntryInZoomRangeForPrint
-                }, null, 8, ["layers", "map-zoom"])) : createCommentVNode("", true)
+                  layers: printLegendLayerSource.value,
+                  "map-zoom": unref(printPreviewLegendZoom),
+                  "catalog-entry-in-zoom-range": catalogEntryInZoomRangeForPrint,
+                  "include-all-legend-layers": printFormState.hasAllLegends
+                }, null, 8, ["layers", "map-zoom", "include-all-legend-layers"])) : createCommentVNode("", true)
               ], 4)
             ], 4)
           ], 512)
@@ -104461,7 +106684,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-19907def"]]);
+  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-ae0a4d36"]]);
   const exceptions = ["GPoverviewMap", "GPfullScreen"];
   const gfiIncompatiblePanels = ["GPdrawing", "GPisochron", "GPmeasureArea", "GPmeasureAzimuth", "GPmeasureLength", "GProute", "GPelevationPath", "GPpanoramax", "GPreporting"];
   var gfiActiveBeforePanel = false;
@@ -108942,6 +111165,10 @@ Expected function or array of functions, received type ${typeof value2}.`
               Math.sqrt(squaredLength),
               this.geometryLayout_
             );
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              circle.transform(projection, userProjection2);
+            }
             return circle;
           });
         } else {
@@ -109979,6 +112206,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       } else {
         geometry = new Polygon(boxCoordinates);
       }
+      const userProjection2 = getUserProjection();
+      if (userProjection2) {
+        geometry.transform(projection, userProjection2);
+      }
       return geometry;
     };
   }
@@ -110575,6 +112806,18 @@ Expected function or array of functions, received type ${typeof value2}.`
         /** @type {import("../geom/Geometry.js").default} */
         geometry
       );
+      const userProjection2 = getUserProjection();
+      if (userProjection2 && this.getMap()) {
+        const projection = (
+          /** @type {import("../Map.js").default} */
+          this.getMap().getView().getProjection()
+        );
+        circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        circleGeometry = fromCircle(
+          /** @type {import("../geom/Circle.js").default} */
+          circleGeometry
+        ).transform(projection, userProjection2);
+      }
       this.rBush_.insert(circleGeometry.getExtent(), circumferenceSegmentData);
     }
     /**
@@ -110658,7 +112901,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!vertexFeature) {
         return;
       }
-      this.getMap().getView().getProjection();
+      const projection = (
+        /** @type {import("../Map.js").default} */
+        this.getMap().getView().getProjection()
+      );
       const insertVertices = [];
       const vertex = (
         /** @type {Point} */
@@ -110683,7 +112929,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (segmentDataMatch.geometry.getType() === "Circle" && segmentDataMatch.index === CIRCLE_CIRCUMFERENCE_INDEX) {
           const closestVertex = closestOnSegmentData(
             pixelCoordinate,
-            segmentDataMatch
+            segmentDataMatch,
+            projection
           );
           if (this.coordinatesEqual_(closestVertex, vertex) && !componentSegments[uid2][0]) {
             this.dragSegments_.push([segmentDataMatch, 0]);
@@ -111204,11 +113451,20 @@ Expected function or array of functions, received type ${typeof value2}.`
             this.changingFeature_ = false;
           } else {
             this.changingFeature_ = true;
-            this.getMap().getView().getProjection();
+            const projection = (
+              /** @type {import("../Map.js").default} */
+              this.getMap().getView().getProjection()
+            );
             let radius = distance$1(
               fromUserCoordinate(circle.getCenter()),
               fromUserCoordinate(vertex)
             );
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              const circleGeometry = circle.clone().transform(userProjection2, projection);
+              circleGeometry.setRadius(radius);
+              radius = circleGeometry.transform(projection, userProjection2).getRadius();
+            }
             circle.setRadius(radius);
             this.changingFeature_ = false;
           }
@@ -111336,6 +113592,15 @@ Expected function or array of functions, received type ${typeof value2}.`
           circumferenceSegmentData.segment[1] = coordinates2;
           this.rBush_.update(createOrUpdateFromCoordinate(coordinates2), centerSegmentData);
           let circleGeometry = circle;
+          const userProjection2 = getUserProjection();
+          if (userProjection2) {
+            const projection = evt.map.getView().getProjection();
+            circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+            circleGeometry = fromCircle(circleGeometry).transform(
+              projection,
+              userProjection2
+            );
+          }
           this.rBush_.update(
             circleGeometry.getExtent(),
             circumferenceSegmentData
@@ -111383,9 +113648,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         this.getMap()
       );
       const pixel = map2.getPixelFromCoordinate(pixelCoordinate);
-      map2.getView().getProjection();
+      const projection = map2.getView().getProjection();
       const sortByDistance = (a3, b3) => {
-        return projectedDistanceToSegmentDataSquared(pixelCoordinate, a3) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b3);
+        return projectedDistanceToSegmentDataSquared(pixelCoordinate, a3, projection) - projectedDistanceToSegmentDataSquared(pixelCoordinate, b3, projection);
       };
       let nodes;
       let hitPointGeometry;
@@ -111439,7 +113704,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (nodes && nodes.length > 0) {
         const node2 = nodes.sort(sortByDistance)[0];
         const closestSegment = node2.segment;
-        let vertex = closestOnSegmentData(pixelCoordinate, node2);
+        let vertex = closestOnSegmentData(pixelCoordinate, node2, projection);
         const vertexPixel = map2.getPixelFromCoordinate(vertex);
         let dist = distance$1(pixel, vertexPixel);
         if (hitPointGeometry || dist <= this.pixelTolerance_) {
@@ -112003,6 +114268,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         geometry
       );
       if (segmentData.index === CIRCLE_CIRCUMFERENCE_INDEX) {
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        }
         const distanceToCenterSquared = squaredDistance(
           circleGeometry.getCenter(),
           fromUserCoordinate(pointCoordinates)
@@ -112023,6 +114292,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         /** @type {import("../geom/Circle.js").default} */
         geometry
       );
+      const userProjection2 = getUserProjection();
+      if (userProjection2) {
+        circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+      }
       return toUserCoordinate(
         circleGeometry.getClosestPoint(
           fromUserCoordinate(pointCoordinates)
@@ -112084,7 +114357,14 @@ Expected function or array of functions, received type ${typeof value2}.`
        */
       Circle(geometry, projection) {
         let circleGeometry = geometry;
+        const userProjection2 = getUserProjection();
+        if (userProjection2) {
+          circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+        }
         const polygon = fromCircle(circleGeometry);
+        if (userProjection2) {
+          polygon.transform(projection, userProjection2);
+        }
         return GEOMETRY_SEGMENTERS.Polygon(polygon);
       },
       /**
@@ -112583,7 +114863,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @return {SnappedInfo|null} Snap result
      */
     snapTo(pixel, pixelCoordinate, map2) {
-      map2.getView().getProjection();
+      const projection = map2.getView().getProjection();
       const projectedCoordinate = fromUserCoordinate(pixelCoordinate);
       const resolution = map2.getView().getResolution();
       if (resolution === void 0) {
@@ -112658,6 +114938,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           const segmentGeometry = segmentData.feature.getGeometry();
           if (segmentGeometry && segmentGeometry.getType() === "Circle") {
             let circleGeometry = segmentGeometry;
+            const userProjection2 = getUserProjection();
+            if (userProjection2) {
+              circleGeometry = circleGeometry.clone().transform(userProjection2, projection);
+            }
             vertex = closestOnCircle(
               projectedCoordinate,
               /** @type {import("../geom/Circle.js").default} */
@@ -116499,7 +118783,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     } else if (options.octal && octRegex.test(trimmedStr)) {
       return parse_int(trimmedStr, 8);
     } else if (!isFinite(trimmedStr)) {
-      return handleInfinity(str, Number(trimmedStr), options);
+      const num = Number(trimmedStr);
+      if (Number.isNaN(num)) return str;
+      return handleInfinity(str, num, options);
     } else if (trimmedStr.includes("e") || trimmedStr.includes("E")) {
       return resolveEnotation(str, trimmedStr, options);
     } else {
@@ -116510,8 +118796,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         let numTrimmedByZeros = trimZeros(match2[3]);
         const decimalAdjacentToLeadingZeros = sign2 ? (
           // 0., -00., 000.
-          str[leadingZeros.length + 1] === "."
-        ) : str[leadingZeros.length] === ".";
+          trimmedStr[leadingZeros.length + 1] === "."
+        ) : trimmedStr[leadingZeros.length] === ".";
         if (!options.leadingZeros && (leadingZeros.length > 1 || leadingZeros.length === 1 && !decimalAdjacentToLeadingZeros)) {
           return str;
         } else {
@@ -116549,14 +118835,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       const leadingZeros = notation[2];
       const eAdjacentToLeadingZeros = sign2 ? (
         // 0E.
-        str[leadingZeros.length + 1] === eChar
-      ) : str[leadingZeros.length] === eChar;
+        trimmedStr[leadingZeros.length + 1] === eChar
+      ) : trimmedStr[leadingZeros.length] === eChar;
       if (leadingZeros.length > 1 && eAdjacentToLeadingZeros) return str;
       else if (leadingZeros.length === 1 && (notation[3].startsWith(`.${eChar}`) || notation[3][0] === eChar)) {
         return Number(trimmedStr);
       } else if (leadingZeros.length > 0) {
         if (options.leadingZeros && !eAdjacentToLeadingZeros) {
-          trimmedStr = (notation[1] || "") + notation[3];
           return Number(trimmedStr);
         } else return str;
       } else {
@@ -124312,6 +126597,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return false;
   }
+  function collectCheckedOnlyLegendNodes(roots, checkedById) {
+    const out = [];
+    function walk(nodes) {
+      var _a2;
+      for (const node2 of nodes) {
+        if (node2.gpuOnlyLegend && ((_a2 = node2.legend) == null ? void 0 : _a2.length) && Boolean(checkedById[node2.id])) {
+          out.push(node2);
+        }
+        walk(catalogChildNodes(node2));
+      }
+    }
+    walk(roots);
+    return out;
+  }
   function collectActiveOnlyLegendNodesForLegendsPanel(roots, checkedById, mapVisibilityById) {
     const out = [];
     function walk(nodes) {
@@ -124874,6 +127173,24 @@ Expected function or array of functions, received type ${typeof value2}.`
       }));
       return [...fromStack, ...onlyLegendRows];
     });
+    const legendLayersAll = computed(() => {
+      const fromStack = layers.value.filter((l2) => {
+        var _a2;
+        return l2.inStack && (((_a2 = l2.legend) == null ? void 0 : _a2.length) ?? 0) > 0;
+      });
+      const seen = new Set(fromStack.map((l2) => l2.id));
+      const onlyLegendRows = collectCheckedOnlyLegendNodes(nodes.value, catalogChecked.value).filter((node2) => !seen.has(node2.id)).map((node2) => ({
+        id: node2.id,
+        title: node2.title,
+        inStack: false,
+        visible: true,
+        opacity: catalogNodeOpacityPercent(node2),
+        grayscale: false,
+        forceOpacity: false,
+        legend: node2.legend
+      }));
+      return [...fromStack, ...onlyLegendRows];
+    });
     const catalogCheckedById = computed(() => {
       const out = { ...catalogChecked.value };
       for (const node2 of treeIndex.nodesById.values()) {
@@ -125039,6 +127356,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       layers,
       stackLayers,
       legendLayers,
+      legendLayersAll,
       catalogCheckedById,
       setCatalogChecked,
       setInStack,
@@ -125057,48 +127375,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       syncCatalogCheckedFromTreeVisible,
       catalogEntryInZoomRange
     };
-  }
-  const LEGEND_ZOOM_DEBOUNCE_MS = 150;
-  function mapZoomForLegend(map2) {
-    const z2 = map2.getView().getZoom();
-    if (z2 == null || Number.isNaN(z2)) return DEFAULT_PARCEL_FICHE_LEGEND_ZOOM;
-    return Math.round(z2);
-  }
-  function useMapLegendZoom(mapRef) {
-    const legendZoom = /* @__PURE__ */ ref(DEFAULT_PARCEL_FICHE_LEGEND_ZOOM);
-    let keys = [];
-    let debounceId = null;
-    function unbind() {
-      for (const key2 of keys) unByKey(key2);
-      keys = [];
-      if (debounceId) {
-        clearTimeout(debounceId);
-        debounceId = null;
-      }
-    }
-    function bindMap(map2) {
-      unbind();
-      legendZoom.value = mapZoomForLegend(map2);
-      const applyZoom = () => {
-        legendZoom.value = mapZoomForLegend(map2);
-      };
-      const applyZoomDebounced = () => {
-        if (debounceId) clearTimeout(debounceId);
-        debounceId = setTimeout(applyZoom, LEGEND_ZOOM_DEBOUNCE_MS);
-      };
-      keys.push(map2.on("moveend", applyZoom));
-      keys.push(map2.getView().on("change:resolution", applyZoomDebounced));
-    }
-    watch(
-      mapRef,
-      (map2) => {
-        unbind();
-        if (map2) bindMap(map2);
-      },
-      { immediate: true }
-    );
-    onUnmounted(unbind);
-    return { legendZoom };
   }
   const _hoisted_1$d = { class: "ec-fiche-cadastre-modal__panel" };
   const _hoisted_2$a = { class: "ec-fiche-cadastre-modal__header" };
@@ -125330,28 +127606,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 2,
     class: "ec-fiche-info__error"
   };
-  const _hoisted_21$1 = {
+  const _hoisted_21$1 = { class: "ec-fiche-info__parcel-footnotes" };
+  const _hoisted_22$1 = {
     key: 3,
     class: "ec-fiche-info__inner ec-fiche-info__inner--territory"
   };
-  const _hoisted_22$1 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_23$1 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_24$1 = { class: "ec-fiche-info__title" };
-  const _hoisted_25$1 = {
+  const _hoisted_23$1 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_24$1 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_25$1 = { class: "ec-fiche-info__territory-head" };
+  const _hoisted_26$1 = { class: "ec-fiche-info__title" };
+  const _hoisted_27 = ["disabled"];
+  const _hoisted_28 = {
     key: 1,
     class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_26$1 = {
+  const _hoisted_29 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_27 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_28 = {
+  const _hoisted_30 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_31 = {
     key: 4,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_29 = { class: "ec-fiche-info__title" };
+  const _hoisted_32 = { class: "ec-fiche-info__title" };
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -125360,6 +127639,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(__props) {
       const props = __props;
       const mapMode = useMapMode();
+      const printModal = inject(mapPrintModalKey, null);
       const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
       const { legendZoom } = useMapLegendZoom(mapRef);
       const configLoading = computed(() => gpuClientConfigStatus.value === "loading");
@@ -125500,16 +127780,22 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       function printParcelFiche() {
-        const html2 = activeParcelTab.value === "documents" ? parcelDocumentsDisplayHtml.value : parcelInfosDisplayHtml.value;
-        if (!html2 || typeof window === "undefined") return;
-        const w2 = window.open("", "_blank", "noopener,noreferrer");
-        if (!w2) return;
-        w2.document.write(
-          `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiche parcelle</title></head><body>${html2}</body></html>`
-        );
-        w2.document.close();
-        w2.focus();
-        w2.print();
+        if (!printModal) return;
+        printModal.open({
+          hasParcelFiche: true,
+          hasTerritoryFiche: false,
+          hasLegends: false,
+          hasAllLegends: false
+        });
+      }
+      function printTerritoryFiche() {
+        if (!printModal) return;
+        printModal.open({
+          hasTerritoryFiche: true,
+          hasParcelFiche: false,
+          hasLegends: false,
+          hasAllLegends: false
+        });
       }
       function parcelFichePayloadFromSelection2(selection) {
         const raw = selection == null ? void 0 : selection.raw;
@@ -125546,12 +127832,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           return ((_a2 = props.selection) == null ? void 0 : _a2.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? "";
         }
       );
+      const parcelPanelFootnotesHtml = computed(() => {
+        void gpuClientConfigStatus.value;
+        return buildParcelFichePanelFootnotesHtml();
+      });
       return (_ctx, _cache) => {
         var _a2, _b2, _c2, _d, _e2, _f, _g, _h, _i2;
         return openBlock(), createElementBlock("article", {
           class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }])
         }, [
-          configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$k, {
+          configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
             key: 0,
             class: "ec-fiche-info__body",
             html: unref(FICHE_LOADING_SPINNER_HTML),
@@ -125559,7 +127849,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "link-target-blank": ""
           }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_1$c, [
             createBaseVNode("h2", _hoisted_2$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
-            createVNode(_sfc_main$k, {
+            createVNode(_sfc_main$l, {
               class: "ec-fiche-info__body",
               html: emptyBodyHtml.value,
               "link-target-blank": ""
@@ -125639,12 +127929,12 @@ Expected function or array of functions, received type ${typeof value2}.`
                 tabindex: activeParcelTab.value === "infos" ? 0 : -1
               }, [
                 (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_14$3, [
-                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$k, {
+                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 0,
                     class: "ec-fiche-info__body",
                     html: unref(FICHE_LOADING_SPINNER_HTML),
                     "link-target-blank": ""
-                  }, null, 8, ["html"])) : ((_c2 = __props.selection) == null ? void 0 : _c2.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$k, {
+                  }, null, 8, ["html"])) : ((_c2 = __props.selection) == null ? void 0 : _c2.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 1,
                     class: "ec-fiche-info__body",
                     html: __props.selection.parcelInfosHtml,
@@ -125668,7 +127958,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       createTextVNode(" Imprimer ", -1)
                     ])], 8, _hoisted_17$2)
                   ]),
-                  createVNode(_sfc_main$k, {
+                  createVNode(_sfc_main$l, {
                     class: "ec-fiche-info__body",
                     html: parcelInfosDisplayHtml.value,
                     "link-target-blank": ""
@@ -125683,27 +127973,34 @@ Expected function or array of functions, received type ${typeof value2}.`
                 tabindex: activeParcelTab.value === "documents" ? 0 : -1
               }, [
                 (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_19$1, [
-                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$k, {
+                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 0,
                     class: "ec-fiche-info__body",
                     html: unref(FICHE_LOADING_SPINNER_HTML),
                     "link-target-blank": ""
-                  }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$k, {
+                  }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 1,
                     class: "ec-fiche-info__body",
                     html: parcelDocumentsDisplayHtml.value,
                     "link-target-blank": ""
                   }, null, 8, ["html"])) : createCommentVNode("", true),
                   parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_20$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
-                ])) : (openBlock(), createBlock(_sfc_main$k, {
+                ])) : (openBlock(), createBlock(_sfc_main$l, {
                   key: 1,
-                  class: "ec-fiche-info__body",
+                  class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
                   html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>",
                   "link-target-blank": ""
                 }, null, 8, ["html"]))
               ], 10, _hoisted_18$2)
+            ]),
+            createBaseVNode("div", _hoisted_21$1, [
+              createVNode(_sfc_main$l, {
+                class: "ec-fiche-info__body",
+                html: parcelPanelFootnotesHtml.value,
+                "link-target-blank": ""
+              }, null, 8, ["html"])
             ])
-          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_21$1, [
+          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_22$1, [
             ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e2 = __props.selection) == null ? void 0 : _e2.parcelLabel) ? (openBlock(), createElementBlock("button", {
               key: 0,
               type: "button",
@@ -125720,8 +128017,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
               ], 64))
             ])) : createCommentVNode("", true),
-            createBaseVNode("header", _hoisted_22$1, [
-              createBaseVNode("div", _hoisted_23$1, [
+            createBaseVNode("header", _hoisted_23$1, [
+              createBaseVNode("div", _hoisted_24$1, [
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
@@ -125735,9 +128032,24 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ])])
               ])
             ]),
-            createBaseVNode("h2", _hoisted_24$1, toDisplayString(territoryTitle.value), 1),
-            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_25$1, [
-              createBaseVNode("ul", _hoisted_26$1, [
+            createBaseVNode("div", _hoisted_25$1, [
+              createBaseVNode("h2", _hoisted_26$1, toDisplayString(territoryTitle.value), 1),
+              createBaseVNode("button", {
+                type: "button",
+                class: "fr-btn fr-btn--secondary fr-btn--sm",
+                disabled: !documentTabs.value.length,
+                title: "Imprimer la fiche territoire",
+                onClick: printTerritoryFiche
+              }, [..._cache[11] || (_cache[11] = [
+                createBaseVNode("span", {
+                  class: "ri-printer-line",
+                  "aria-hidden": "true"
+                }, null, -1),
+                createTextVNode(" Imprimer ", -1)
+              ])], 8, _hoisted_27)
+            ]),
+            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_28, [
+              createBaseVNode("ul", _hoisted_29, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                   var _a3;
                   return openBlock(), createElementBlock("li", {
@@ -125752,13 +128064,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "aria-selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id,
                       "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
                       onClick: ($event) => selectDocTab(tab.id)
-                    }, toDisplayString(tab.label), 9, _hoisted_27)
+                    }, toDisplayString(tab.label), 9, _hoisted_30)
                   ]);
                 }), 128))
               ]),
               (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                 var _a3, _b3;
-                return openBlock(), createBlock(_sfc_main$k, {
+                return openBlock(), createBlock(_sfc_main$l, {
                   id: `ec-fiche-doc-panel-${tab.id}`,
                   key: tab.id,
                   class: normalizeClass(["fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel", { "fr-tabs__panel--selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id }]),
@@ -125769,15 +128081,15 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "link-target-blank": ""
                 }, null, 8, ["id", "class", "aria-labelledby", "tabindex", "html"]);
               }), 128))
-            ])) : (openBlock(), createBlock(_sfc_main$k, {
+            ])) : (openBlock(), createBlock(_sfc_main$l, {
               key: 2,
               class: "ec-fiche-info__body",
               html: emptyBodyHtml.value,
               "link-target-blank": ""
             }, null, 8, ["html"]))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_28, [
-            createBaseVNode("h2", _hoisted_29, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
-            createVNode(_sfc_main$k, {
+          ])) : (openBlock(), createElementBlock("div", _hoisted_31, [
+            createBaseVNode("h2", _hoisted_32, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
+            createVNode(_sfc_main$l, {
               class: "ec-fiche-info__body",
               html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
               "link-target-blank": ""
@@ -126218,7 +128530,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "ec-base-radio-list__details-slot"
                   }, [
                     createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
-                    createVNode(_sfc_main$k, {
+                    createVNode(_sfc_main$l, {
                       class: "ec-base-radio-list__desc",
                       html: preset.description
                     }, null, 8, ["html"])
@@ -127353,6 +129665,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const {
         layers,
         legendLayers,
+        legendLayersAll,
         catalogCheckedById,
         catalogEntryInZoomRange,
         setCatalogChecked,
@@ -127480,6 +129793,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const mapPrintPanelsCtx = {
         selection,
         legendLayers,
+        legendLayersAll,
         mapZoom,
         catalogEntryInZoomRange
       };
@@ -128566,9 +130880,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const mapShellRef = /* @__PURE__ */ ref(null);
       const printModalRef = /* @__PURE__ */ ref(null);
       provide(mapPrintModalKey, {
-        open: () => {
+        open: (options) => {
           var _a3;
-          return (_a3 = printModalRef.value) == null ? void 0 : _a3.open();
+          return (_a3 = printModalRef.value) == null ? void 0 : _a3.open(options);
         },
         close: () => {
           var _a3;
@@ -128673,7 +130987,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$r, {
+          createVNode(_sfc_main$s, {
             ref_key: "mapShellRef",
             ref: mapShellRef,
             layers: baseLayers.value,
@@ -128691,19 +131005,19 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-map-hooks": layerMapHooks,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$n, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$o, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
               createVNode(_sfc_main$3),
               createVNode(_sfc_main$2, {
                 "skip-marker-restore": Boolean(initialSearch.value)
               }, null, 8, ["skip-marker-restore"]),
               createVNode(_sfc_main$4),
               createVNode(_sfc_main$e),
-              createVNode(_sfc_main$l),
               createVNode(_sfc_main$m),
+              createVNode(_sfc_main$n),
               createVNode(_sfc_main$f),
+              createVNode(_sfc_main$r),
               createVNode(_sfc_main$q),
               createVNode(_sfc_main$p),
-              createVNode(_sfc_main$o),
               createVNode(MapPrintModal, {
                 ref_key: "printModalRef",
                 ref: printModalRef
@@ -128715,7 +131029,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-51cda3bd"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-7dc1461f"]]);
   const LOADED = /* @__PURE__ */ new Set();
   function demoExternalBaseUrl() {
     const base = "/";
@@ -129792,10 +132106,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     var SHARED = "__core-js_shared__";
     var store = sharedStore.exports = globalThis2[SHARED] || defineGlobalProperty2(SHARED, {});
     (store.versions || (store.versions = [])).push({
-      version: "3.50.0",
+      version: "3.51.0",
       mode: IS_PURE ? "pure" : "global",
       copyright: "© 2013–2025 Denis Pushkarev (zloirock.ru), 2025–2026 CoreJS Company (core-js.io). All rights reserved.",
-      license: "https://github.com/zloirock/core-js/blob/v3.50.0/LICENSE",
+      license: "https://github.com/zloirock/core-js/blob/v3.51.0/LICENSE",
       source: "https://github.com/zloirock/core-js"
     });
     return sharedStore.exports;

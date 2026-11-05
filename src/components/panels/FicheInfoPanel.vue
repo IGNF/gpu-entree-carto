@@ -3,6 +3,7 @@
  * Contenu onglet fiche info — modes Parcelle / Territoire (gpu-client / Figma).
  */
 import { computed, inject, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import { mapPrintModalKey } from '@/map/mapPrintModalContext'
 import { useMapLegendZoom } from '@/composables/useMapLegendZoom'
 import type Map from 'ol/Map'
 import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
@@ -23,7 +24,9 @@ import {
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
+import { buildParcelFichePanelFootnotesHtml } from '@/lib/fiche/ficheParcelCallouts'
 import '@gouvfr/dsfr/dist/component/tab/tab.min.css'
+import '@gouvfr/dsfr/dist/component/callout/callout.min.css'
 import '@gouvfr/dsfr/dist/component/button/button.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
@@ -35,6 +38,7 @@ const props = defineProps<{
 }>()
 
 const mapMode = useMapMode()
+const printModal = inject(mapPrintModalKey, null)
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
 const { legendZoom } = useMapLegendZoom(mapRef)
 
@@ -173,19 +177,23 @@ async function loadParcelDetail(): Promise<void> {
 }
 
 function printParcelFiche(): void {
-  const html =
-    activeParcelTab.value === 'documents'
-      ? parcelDocumentsDisplayHtml.value
-      : parcelInfosDisplayHtml.value
-  if (!html || typeof window === 'undefined') return
-  const w = window.open('', '_blank', 'noopener,noreferrer')
-  if (!w) return
-  w.document.write(
-    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiche parcelle</title></head><body>${html}</body></html>`,
-  )
-  w.document.close()
-  w.focus()
-  w.print()
+  if (!printModal) return
+  printModal.open({
+    hasParcelFiche: true,
+    hasTerritoryFiche: false,
+    hasLegends: false,
+    hasAllLegends: false,
+  })
+}
+
+function printTerritoryFiche(): void {
+  if (!printModal) return
+  printModal.open({
+    hasTerritoryFiche: true,
+    hasParcelFiche: false,
+    hasLegends: false,
+    hasAllLegends: false,
+  })
 }
 
 function parcelFichePayloadFromSelection(
@@ -225,6 +233,11 @@ const parcelDocumentsDisplayHtml = computed((): string => {
 const emptyBodyHtml = computed(
   () => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? '',
 )
+
+const parcelPanelFootnotesHtml = computed(() => {
+  void gpuClientConfigStatus.value
+  return buildParcelFichePanelFootnotesHtml()
+})
 </script>
 
 <template>
@@ -385,11 +398,19 @@ const emptyBodyHtml = computed(
           </div>
           <SanitizedHtml
             v-else
-            class="ec-fiche-info__body"
+            class="ec-fiche-info__body ec-fiche-info__body--parcel-documents"
             :html="parcelDocumentsDisplayHtml || '<p>Aucun document.</p>'"
             link-target-blank
           />
         </div>
+      </div>
+
+      <div class="ec-fiche-info__parcel-footnotes">
+        <SanitizedHtml
+          class="ec-fiche-info__body"
+          :html="parcelPanelFootnotesHtml"
+          link-target-blank
+        />
       </div>
     </div>
 
@@ -425,7 +446,19 @@ const emptyBodyHtml = computed(
         </div>
       </header>
 
-      <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
+      <div class="ec-fiche-info__territory-head">
+        <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
+        <button
+          type="button"
+          class="fr-btn fr-btn--secondary fr-btn--sm"
+          :disabled="!documentTabs.length"
+          title="Imprimer la fiche territoire"
+          @click="printTerritoryFiche"
+        >
+          <span class="ri-printer-line" aria-hidden="true" />
+          Imprimer
+        </button>
+      </div>
 
       <div v-if="documentTabs.length" class="fr-tabs ec-fiche-info__tabs">
         <ul class="fr-tabs__list" role="tablist" aria-label="Documents et procédures">
