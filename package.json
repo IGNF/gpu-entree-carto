@@ -84,7 +84,7 @@
     "vite": "^6.4.4",
     "vitest": "^4.1.12",
     "vue-eslint-parser": "^10.4.0",
-    "vue-tsc": "^3.3.12"
+    "vue-tsc": "^3.3.14"
   },
   "allowScripts": {
     "@gouvfr/dsfr@1.15.4": true,
