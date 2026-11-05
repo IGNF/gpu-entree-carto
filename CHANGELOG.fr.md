@@ -60,6 +60,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Territoires (geopf)** — ouverture du panneau sans `TypeError` lorsque la barre basse contient aussi `MapPrintControl` (patch build `PanelManager.js` / `Widget.js` dans `vite.geopfPlugins.ts`).
 - **Impression carte** — style bouton DSFR/geopf ; slot barre basse mobile ; hauteur colonne croquis ; modale réalignée sur cartes.gouv `PrintModal` (`DsfrModal`, `open`/`close` exposés, montage permanent) ; prévisualisation par clone OL (embed).
 - **Démarrage document (démo)** — `/map` avec `DEMO_CONFIG.document` : recentrage + WMS preview uniquement (aligné gpu-site) ; plus d’ouverture auto de la fiche ni cerise au centre de l’emprise.
 - **Prévisualisation document (embed gpu-site)** — `createStandardViewer` recopie `params.document` dans `config.document` pour conserver les couches WMS validation (`_previsu`, filtre partition) après rechargement du registre WMS par `TabPanelsControl` (auparavant tuiles production sur gpu-site alors que la démo Vite affichait correctement le preview).

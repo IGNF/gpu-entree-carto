@@ -1,5 +1,5 @@
 import type { PreRenderedAsset } from 'rollup'
-import type { BuildOptions as EsbuildOptions } from 'esbuild'
+import type { ESBuildOptions } from 'vite'
 
 /** Workers (export PDF) : format ES requis si le worker importe pdf-lib (pas IIFE multi-chunks). */
 export const vitePrintWorkerBuildOptions = {
@@ -10,7 +10,7 @@ export const vitePrintWorkerBuildOptions = {
  * Option Vite racine `esbuild` (pas `build.esbuild`) : utilisée aussi pour la minification
  * des bundles IIFE `.min.js` — retire console.* (deps geopf / OL inclus) et debugger.
  */
-export function libMinifyEsbuildOptions(minify: boolean): EsbuildOptions | false | undefined {
+export function libMinifyEsbuildOptions(minify: boolean): ESBuildOptions | false | undefined {
   if (!minify) return undefined
   return { drop: ['console', 'debugger'] }
 }

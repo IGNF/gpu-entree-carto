@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
-import { patchGeopfSearchEval } from './vite.geopfPlugins'
+import { patchGeopfPanelManager, patchGeopfSearchEval } from './vite.geopfPlugins'
 import { stubDsfrIconsCss } from './vite/stubDsfrIconsCss'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
@@ -8,7 +8,7 @@ import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOpt
 const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
-  plugins: [patchGeopfSearchEval(), stubDsfrIconsCss()],
+  plugins: [patchGeopfSearchEval(), patchGeopfPanelManager(), stubDsfrIconsCss()],
   esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {

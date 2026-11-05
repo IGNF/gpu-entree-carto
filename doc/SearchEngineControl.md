@@ -9,7 +9,7 @@ Full Géoplateforme search bar (`SearchEngineAdvanced`): places, geolocation, ad
 **Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `SearchEngine.vue` (clone `cartes.gouv.fr-entree-carto`)  
 **Dependency:** `geopf-extensions-openlayers` (`SearchEngineAdvanced`, `InseeAdvancedSearch`, `LocationAdvancedSearch`, `CoordinateAdvancedSearch`, `ParcelAdvancedSearch`)
 
-At build time, Vite plugin `patchGeopfSearchEval` (`vite.geopfPlugins.ts`) replaces `eval` in `Services/Search.js` (upstream) with a string assignment — our service URLs are fixed HTTPS endpoints.
+At build time, `vite.geopfPlugins.ts` applies upstream fixes: `patchGeopfSearchEval` replaces `eval` in `Services/Search.js` with a string assignment (fixed HTTPS service URLs); `patchGeopfPanelManager` skips DOM nodes without a geopf-style id (`GP…-123456`) in `PanelManager.js` when entree-carto controls (e.g. map print) share the same `.position-container-*` slot.
 
 ## Props
 

@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { demoManualChunks } from './vite.manualChunks'
 import { patchDemoConfigForPages, serveDistLibAssets } from './vite.demoPlugins'
-import { patchGeopfSearchEval } from './vite.geopfPlugins'
+import { patchGeopfPanelManager, patchGeopfSearchEval } from './vite.geopfPlugins'
 import { vitePrintWorkerBuildOptions } from './vite/libBuildOptions'
 
 /**
@@ -20,7 +20,13 @@ function pagesBase(): string {
 export default defineConfig({
   ...vitePrintWorkerBuildOptions,
   base: pagesBase(),
-  plugins: [patchGeopfSearchEval(), serveDistLibAssets(), patchDemoConfigForPages(), vue()],
+  plugins: [
+    patchGeopfSearchEval(),
+    patchGeopfPanelManager(),
+    serveDistLibAssets(),
+    patchDemoConfigForPages(),
+    vue(),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
