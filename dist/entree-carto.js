@@ -70843,6 +70843,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const hay = catalogHaystack(entry);
     if (family === "scot") {
       if (id2.includes("mec") || path.includes("/mec")) return false;
+      if (!id2.includes("--")) return false;
       return id2.includes("scot") || path.includes("/scot") || hay.includes("dev-scot");
     }
     if (family === "sup") {
@@ -70862,7 +70863,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!branch) continue;
       if (!catalogChecked[root.id]) continue;
       if (branch === "sup") result.sup = true;
-      else if (branch === "scot") result.scot = true;
       else if (branch === "du-overview" || branch === "du-detail") result.du = true;
     }
   }
@@ -70931,8 +70931,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     du: "du",
     psmv: "psmv",
     sup: "sup",
-    scot: "scot",
-    procedures: "mec"
+    scot: "scot"
   };
   function filterFicheDocumentTabsByCatalog(tabs) {
     return tabs.filter((tab) => {
@@ -71727,6 +71726,47 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (bodyHtml.includes("ec-fiche-info__callout")) return bodyHtml;
     return FICHE_NON_EXECUTOIRE_CALLOUT_HTML + bodyHtml;
   }
+  function ficheProcedureCatalogFamiliesForDocumentKey(documentKey, documentType) {
+    const key2 = documentKey.trim();
+    if (!key2) return ["du"];
+    const dt2 = (documentType ?? "").trim().toUpperCase();
+    if (/^MEC_/i.test(key2)) {
+      const stripped = key2.replace(/^MEC(_\d+)?_/i, "");
+      return uniqueFamilies(["mec", ...plainDocumentKeyFamilies(stripped, dt2)]);
+    }
+    return uniqueDocumentKeyFamilies(key2, documentType);
+  }
+  function isFicheProcedureVisibleForDocumentKey(documentKey, documentType) {
+    const families = ficheProcedureCatalogFamiliesForDocumentKey(documentKey, documentType);
+    return families.every((f2) => isFicheDocumentFamilyVisible(f2));
+  }
+  function isFicheMecTerritoryPartitionCatalogVisible(mapKind) {
+    if (mapKind === "mecsDu") {
+      return isFicheDocumentFamilyVisible("du") && isFicheDocumentFamilyVisible("mec");
+    }
+    return isFicheDocumentFamilyVisible("scot") && isFicheDocumentFamilyVisible("mec");
+  }
+  function uniqueDocumentKeyFamilies(documentKey, documentType) {
+    return uniqueFamilies(
+      plainDocumentKeyFamilies(documentKey.trim(), (documentType ?? "").trim().toUpperCase())
+    );
+  }
+  function uniqueFamilies(families) {
+    return [...new Set(families)];
+  }
+  function plainDocumentKeyFamilies(documentKey, documentTypeUpper) {
+    if (documentTypeUpper.includes("SCOT")) return ["scot"];
+    if (documentTypeUpper.includes("PSMV")) return ["psmv"];
+    if (documentTypeUpper.includes("SUP")) return ["sup"];
+    const key2 = documentKey.trim();
+    const upper = key2.toUpperCase();
+    if (/_SCOT/i.test(key2) || /\bSCOT\b/.test(upper)) return ["scot"];
+    if (/_PSMV/i.test(key2) || /\bPSMV\b/.test(upper)) return ["psmv"];
+    if (/^SUP_/i.test(key2) || /^\d+_SUP_/i.test(key2) || /_\d+_SUP_/i.test(key2) || /_SUP_/i.test(key2)) {
+      return ["sup"];
+    }
+    return ["du"];
+  }
   const MEC_DOCUMENT_NOTICE = "Une ou plusieurs zones de ce document ont été modifiées par une procédure de mise en compatibilité.";
   function normalizePartitionsMap$2(value2) {
     if (!value2 || Array.isArray(value2)) return {};
@@ -71834,8 +71874,18 @@ Expected function or array of functions, received type ${typeof value2}.`
   function buildMecTerritoryProceduresHtml(data) {
     var _a2, _b, _c2, _d, _e2, _f;
     const tiles = [];
-    for (const map2 of [normalizePartitionsMap$2(data.mecsDu), normalizePartitionsMap$2(data.mecsScot)]) {
-      for (const partition of Object.values(map2)) {
+    const mecsDu = normalizePartitionsMap$2(data.mecsDu);
+    if (isFicheMecTerritoryPartitionCatalogVisible("mecsDu")) {
+      for (const partition of Object.values(mecsDu)) {
+        const doc2 = pickProductionDocument$1(partition.documents);
+        if (!doc2) continue;
+        const tile = mecProcedureTileHtmlFromGpuDocument(doc2);
+        if (tile) tiles.push(tile);
+      }
+    }
+    const mecsScot = normalizePartitionsMap$2(data.mecsScot);
+    if (isFicheMecTerritoryPartitionCatalogVisible("mecsScot")) {
+      for (const partition of Object.values(mecsScot)) {
         const doc2 = pickProductionDocument$1(partition.documents);
         if (!doc2) continue;
         const tile = mecProcedureTileHtmlFromGpuDocument(doc2);
@@ -71846,6 +71896,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const [docName, list] of Object.entries(pbd)) {
       if (!/^MEC_/i.test(docName)) continue;
       for (const procedure of list) {
+        if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue;
         const title2 = ((_a2 = procedure.name) == null ? void 0 : _a2.trim()) || ((_c2 = (_b = procedure.procedureType) == null ? void 0 : _b.title) == null ? void 0 : _c2.trim()) || ((_d = procedure.documentName) == null ? void 0 : _d.trim()) || "Procédure MEC";
         tiles.push(
           procedureTileHtml({
@@ -72487,9 +72538,11 @@ Expected function or array of functions, received type ${typeof value2}.`
   function collectInProgressProcedures(proceduresByDocument) {
     if (!proceduresByDocument) return [];
     const out = [];
-    for (const list of Object.values(proceduresByDocument)) {
+    for (const [docKey, list] of Object.entries(proceduresByDocument)) {
       for (const procedure of list) {
-        if (procedure.inProgress === true) out.push(procedure);
+        if (procedure.inProgress !== true) continue;
+        if (!isFicheProcedureVisibleForDocumentKey(docKey, procedure.documentType)) continue;
+        out.push(procedure);
       }
     }
     return out;
@@ -72548,6 +72601,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const [docName, list] of Object.entries(proceduresByDocument)) {
       if (!/^MEC_/i.test(docName)) continue;
       for (const procedure of list) {
+        if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue;
         out.push(procedure);
       }
     }
@@ -72674,7 +72728,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!procedureTiles.some((p5) => p5.id === mecProc.id)) procedureTiles.push(mecProc);
     }
     const mecProceduresHtml = buildMecTerritoryProceduresHtml(data);
-    if (isFicheDocumentFamilyVisible("mec") && (procedureTiles.length || mecProceduresHtml)) {
+    if (procedureTiles.length || mecProceduresHtml) {
       let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : "";
       if (mecProceduresHtml) bodyHtml += mecProceduresHtml;
       if (territory) {

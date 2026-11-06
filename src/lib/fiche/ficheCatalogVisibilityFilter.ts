@@ -40,6 +40,12 @@ function catalogEntryMatchesFamily(
 
   if (family === 'scot') {
     if (id.includes('mec') || path.includes('/mec')) return false
+    /**
+     * Exclure la racine virtual seule (`dev-scot`, pas de `--`) : elle peut rester cochée
+     * lorsque seul un enfant MEC scot est actif (tuile document SCoT WFS décochée).
+     * Les vraies lignes document passent par un chemin imbriqué → id `…--…` (ex. `dev-scot--dev-scot`).
+     */
+    if (!id.includes('--')) return false
     return id.includes('scot') || path.includes('/scot') || hay.includes('dev-scot')
   }
   if (family === 'sup') {
@@ -76,7 +82,11 @@ function applyRootCatalogBranches(
     if (!branch) continue
     if (!catalogChecked[root.id]) continue
     if (branch === 'sup') result.sup = true
-    else if (branch === 'scot') result.scot = true
+    /**
+     * Ne pas déduire `scot` depuis la seule racine « schéma de cohérence » : le groupe gpu-client
+     * peut rester coché alors que seule la sous-couche MEC scot est active (la tuile SCoT WFS est décochée).
+     * La visibilité SCoT repose sur {@link catalogEntryMatchesFamily}… `scot` + cases feuilles cochées.
+     */
     else if (branch === 'du-overview' || branch === 'du-detail') result.du = true
   }
 }
@@ -167,12 +177,12 @@ export function isFicheDocumentFamilyVisible(family: FicheDocumentFamily): boole
   return familyVisibleFromPermalink(family)
 }
 
+/** Onglet « procedures » n’est pas listé ici : il agrège plusieurs familles (filtré dans la fiche). */
 const TAB_FAMILY: Record<string, FicheDocumentFamily> = {
   du: 'du',
   psmv: 'psmv',
   sup: 'sup',
   scot: 'scot',
-  procedures: 'mec',
 }
 
 export function filterFicheDocumentTabsByCatalog<

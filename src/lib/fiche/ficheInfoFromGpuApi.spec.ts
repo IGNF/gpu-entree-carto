@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY } from '@/lib/map/mapMode'
+import { setFicheCatalogFamilyVisibility } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 
 const samplePayload = {
@@ -60,6 +61,14 @@ describe('isGpuFicheInfoPayload', () => {
 })
 
 describe('ficheSelectionFromGpuApi', () => {
+  beforeEach(() => {
+    setFicheCatalogFamilyVisibility(null)
+  })
+
+  afterEach(() => {
+    setFicheCatalogFamilyVisibility(null)
+  })
+
   it('mode territoire : commune + onglets DU, SUP et procédures', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_TERRITORY, 2.33, 48.96)
     expect(sel.title).toBe('Deuil-la-Barre (95197)')
@@ -71,6 +80,34 @@ describe('ficheSelectionFromGpuApi', () => {
       "Procédure d'elaboration approuvée le 21/01/2020",
     )
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
+  })
+
+  it('mode territoire : onglet Procédures sans procédures SCOT si SCoT masqué au catalogue', () => {
+    const payload = {
+      ...samplePayload,
+      proceduresByDocument: {
+        ...samplePayload.proceduresByDocument,
+        '200051183_SCOT_20251010': [
+          {
+            inProgress: true,
+            procedureType: { title: 'Élaboration' },
+            documentName: '200051183_SCOT_20251010',
+          },
+        ],
+      },
+    }
+    setFicheCatalogFamilyVisibility({
+      du: true,
+      psmv: true,
+      sup: true,
+      scot: false,
+      mec: true,
+    })
+    const sel = ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, 2.33, 48.96)
+    const procTab = sel.documentTabs?.find((t) => t.id === 'procedures')
+    expect(procTab).toBeDefined()
+    expect(procTab?.bodyHtml).toContain('Révision')
+    expect(procTab?.bodyHtml).not.toContain('Élaboration')
   })
 
   it('mode territoire : encart non exécutoire seulement sur l’onglet document concerné', () => {

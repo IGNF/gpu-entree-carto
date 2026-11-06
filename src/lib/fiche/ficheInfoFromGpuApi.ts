@@ -20,6 +20,7 @@ import {
   applyCatalogVisibilityToFicheSelection,
   isFicheDocumentFamilyVisible,
 } from '@/lib/fiche/ficheCatalogVisibilityFilter'
+import { isFicheProcedureVisibleForDocumentKey } from '@/lib/fiche/ficheProcedureCatalogFamilies'
 import {
   documentTileHrefFromApiFields,
   documentTilesListHtml,
@@ -175,9 +176,11 @@ function collectInProgressProcedures(
 ): GpuFicheProcedure[] {
   if (!proceduresByDocument) return []
   const out: GpuFicheProcedure[] = []
-  for (const list of Object.values(proceduresByDocument)) {
+  for (const [docKey, list] of Object.entries(proceduresByDocument)) {
     for (const procedure of list) {
-      if (procedure.inProgress === true) out.push(procedure)
+      if (procedure.inProgress !== true) continue
+      if (!isFicheProcedureVisibleForDocumentKey(docKey, procedure.documentType)) continue
+      out.push(procedure)
     }
   }
   return out
@@ -249,6 +252,7 @@ function collectMecProcedures(
   for (const [docName, list] of Object.entries(proceduresByDocument)) {
     if (!/^MEC_/i.test(docName)) continue
     for (const procedure of list) {
+      if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue
       out.push(procedure)
     }
   }
@@ -402,7 +406,7 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     if (!procedureTiles.some((p) => p.id === mecProc.id)) procedureTiles.push(mecProc)
   }
   const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
-  if (isFicheDocumentFamilyVisible('mec') && (procedureTiles.length || mecProceduresHtml)) {
+  if (procedureTiles.length || mecProceduresHtml) {
     let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : ''
     if (mecProceduresHtml) bodyHtml += mecProceduresHtml
     if (territory) {
