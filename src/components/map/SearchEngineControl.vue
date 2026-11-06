@@ -36,6 +36,9 @@ import {
   searchEngineLayerHostRef,
 } from '@/lib/map/searchResultGraphics'
 import { DEFAULT_MAP_MODE, normalizeMapMode, type MapModeId } from '@/lib/map/mapMode'
+
+/** Plafond zoom `view.fit` après recherche — au-dessus de 15 les petites emprises (ex. rivière, pont) restent visibles en entier. */
+const SEARCH_RESULT_FIT_MAX_ZOOM = 19
 import { setMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import {
   bindPlaceSearchSubmitReplay,
@@ -297,7 +300,7 @@ function animateViewToPlaceExtent(control: SearchEngineAdvancedLike, extent: Ext
   if (!map || !extent || isEmpty(extent)) return
   animateViewFit(map, extent, {
     padding: defaultMapViewFitPadding(),
-    maxZoom: 15,
+    maxZoom: SEARCH_RESULT_FIT_MAX_ZOOM,
   })
 }
 

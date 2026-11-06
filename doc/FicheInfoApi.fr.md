@@ -67,8 +67,10 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 ## Comportement entree-carto
 
 - Plus de repli APICarto dans le navigateur.
-- Après chaque réponse OK, cache **territoire et parcelle** au point cerise (changement de mode sans refetch).
-- Caches par identifiants territoire / parcelle (`ficheInfoSelectionCache.ts`).
+- Appels **par mode** (`apiFicheInfoTerritoireUrl` / `apiFicheInfoParcelleUrl`) ; repli `apiFicheInfoCombinedUrl` si besoin.
+- **Vue territoire** : après `/territoire`, appel silencieux `/parcelle` (ou cache parcelle au même point) pour fusionner les métadonnées parcelle du CTA retour, sans remplacer les onglets documents territoire.
+- Cache **par mode** au point cerise (`ficheInfoService.ts`) ; changement de mode = requête de l’autre vue si absente du cache.
+- Annulation du `fetch` précédent au clic suivant (`AbortController` + paramètres `client` / `seq`).
 - Présentation : tuiles DSFR horizontales (`ficheDocumentTiles.ts`).
 
 Voir aussi [FicheInfo](./FicheInfo.fr.md).

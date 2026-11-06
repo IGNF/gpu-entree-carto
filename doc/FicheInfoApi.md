@@ -67,8 +67,10 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 ## entree-carto behaviour
 
 - No APICarto fallback in the browser.
-- After each successful fetch, **both** territory and parcel selections are cached at the cherry point (mode switch without refetch).
-- Selection caches keyed by territory / parcel id (`ficheInfoSelectionCache.ts`).
+- **Per-mode** requests (`apiFicheInfoTerritoireUrl` / `apiFicheInfoParcelleUrl`); falls back to `apiFicheInfoCombinedUrl` when needed.
+- **Territory view**: after `/territoire`, a silent `/parcelle` request (or parcel cache at the same point) merges parcel metadata for the back-to-parcel CTA without replacing territory document tabs.
+- **Per-mode** cache at the cherry point (`ficheInfoService.ts`); switching mode fetches the other view when not cached.
+- Previous in-flight `fetch` aborted on the next click (`AbortController` plus `client` / `seq` query params).
 - Presentation: DSFR horizontal tiles (`ficheDocumentTiles.ts`).
 
 See also [FicheInfo](./FicheInfo.md).

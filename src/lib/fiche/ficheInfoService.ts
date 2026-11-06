@@ -6,7 +6,10 @@ import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
 import { watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { escapeHtml, FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
-import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
+import {
+  whenGpuClientConfigReady,
+  waitUntilGpuClientConfigScriptSettled,
+} from '@/lib/demo/gpuClientConfigState'
 import {
   finalizeGpuClientConfigStateIfInjected,
   syncEntreeConfigFromGpuScript,
@@ -14,13 +17,15 @@ import {
 import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
 import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
-import { fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
+import { abortInflightFicheInfoFetch, fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
 import {
   ficheSelectionFromGpuApi,
   isGpuFicheInfoPayload,
   refreshFicheSelectionCatalogVisibility,
+  type GpuFicheInfoPayload,
 } from '@/lib/fiche/ficheInfoFromGpuApi'
-import { rememberFicheSelectionCaches } from '@/lib/fiche/ficheInfoSelectionCache'
+import { ficheHasParcelAtPoint } from '@/lib/fiche/ficheAvailability'
+import { mergeParcelHintIntoTerritoryPayload } from '@/lib/fiche/ficheInfoTerritoryParcelHint'
 import {
   applyParcelFicheDetailCache,
   getParcelFicheDetailCache,
@@ -41,6 +46,8 @@ const FICHE_PARCEL_UNAVAILABLE_BODY =
 
 /** Ignore les réponses API arrivées après un clic plus récent. */
 let mapPointRequestSeq = 0
+
+let mapPointFetchAbort: AbortController | null = null
 
 const FICHE_POINT_EPS = 1e-7
 
@@ -270,17 +277,35 @@ function selectionFromGpuPayload(
   return ficheSelectionFromGpuApi(data, mode, lon, lat)
 }
 
-function storeBothModeSelectionsAtPoint(
-  lon: number,
-  lat: number,
-  data: Parameters<typeof ficheSelectionFromGpuApi>[0],
-): { territory: FicheInfoSelection; parcel: FicheInfoSelection } {
-  const territory = selectionFromGpuPayload(data, MAP_MODE_TERRITORY, lon, lat)
-  const parcel = selectionFromGpuPayload(data, MAP_MODE_PARCEL, lon, lat)
-  rememberFicheSelectionCaches(data, territory, parcel)
-  storeFicheInCache(MAP_MODE_TERRITORY, lon, lat, territory)
-  storeFicheInCache(MAP_MODE_PARCEL, lon, lat, parcel)
-  return { territory, parcel }
+async function enrichTerritoryPayloadWithParcelAtPoint(
+  params: { lon: number; lat: number; zoom: number },
+  territoryPayload: GpuFicheInfoPayload,
+  requestId: number,
+  abortSignal: AbortSignal,
+): Promise<GpuFicheInfoPayload> {
+  if (ficheHasParcelAtPoint(territoryPayload)) return territoryPayload
+
+  const cachedParcel = cachedFicheForMode(MAP_MODE_PARCEL, params.lon, params.lat)
+  const cachedRaw = cachedParcel?.raw
+  if (cachedRaw && isGpuFicheInfoPayload(cachedRaw)) {
+    return mergeParcelHintIntoTerritoryPayload(territoryPayload, cachedRaw)
+  }
+
+  const parcelPayload = await fetchGpuFicheInfoPayload({
+    ...params,
+    mode: MAP_MODE_PARCEL,
+    abortSignal,
+  })
+  if (abortSignal.aborted || requestId !== mapPointRequestSeq) return territoryPayload
+  if (!parcelPayload || !ficheHasParcelAtPoint(parcelPayload)) return territoryPayload
+
+  storeFicheInCache(
+    MAP_MODE_PARCEL,
+    params.lon,
+    params.lat,
+    selectionFromGpuPayload(parcelPayload, MAP_MODE_PARCEL, params.lon, params.lat),
+  )
+  return mergeParcelHintIntoTerritoryPayload(territoryPayload, parcelPayload)
 }
 
 async function loadFicheForMapPointImpl(params: {
@@ -294,6 +319,10 @@ async function loadFicheForMapPointImpl(params: {
   silent?: boolean
 }): Promise<FicheInfoSelection | null> {
   const requestId = ++mapPointRequestSeq
+  mapPointFetchAbort?.abort()
+  abortInflightFicheInfoFetch()
+  mapPointFetchAbort = new AbortController()
+  const fetchAbortSignal = mapPointFetchAbort.signal
   const markerPlacedAtClick = params.markerPlacedAtClick === true
   const skipLocationMarker = params.skipLocationMarker === true
   const silent = params.silent === true
@@ -303,6 +332,9 @@ async function loadFicheForMapPointImpl(params: {
   if (!silent) {
     showLoading(loadingTitle)
   }
+
+  await waitUntilGpuClientConfigScriptSettled()
+  finalizeGpuClientConfigStateIfInjected()
 
   const apiUrl = resolveApiFicheInfoUrl()
   if (!apiUrl) {
@@ -320,7 +352,8 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
-  const payload = await fetchGpuFicheInfoPayload(params)
+  let payload = await fetchGpuFicheInfoPayload({ ...params, abortSignal: fetchAbortSignal })
+  if (fetchAbortSignal.aborted || requestId !== mapPointRequestSeq) return null
   if (!payload) {
     return applyMapPointResult(
       requestId,
@@ -334,8 +367,18 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
-  const { territory, parcel } = storeBothModeSelectionsAtPoint(params.lon, params.lat, payload)
-  const selection = params.mode === MAP_MODE_PARCEL ? parcel : territory
+  if (params.mode === MAP_MODE_TERRITORY) {
+    payload = await enrichTerritoryPayloadWithParcelAtPoint(
+      { lon: params.lon, lat: params.lat, zoom: params.zoom },
+      payload,
+      requestId,
+      fetchAbortSignal,
+    )
+    if (fetchAbortSignal.aborted || requestId !== mapPointRequestSeq) return null
+  }
+
+  const selection = selectionFromGpuPayload(payload, params.mode, params.lon, params.lat)
+  storeFicheInCache(params.mode, params.lon, params.lat, selection)
   return applyMapPointResult(
     requestId,
     params.lon,
@@ -363,7 +406,7 @@ export function loadFicheForMapPoint(params: {
 }): Promise<FicheInfoSelection | null> {
   return new Promise((resolve) => {
     whenGpuClientConfigReady(() => {
-      void loadFicheForMapPointImpl(params).then(resolve)
+      void loadFicheForMapPointImpl(params).then(resolve, () => resolve(null))
     })
   })
 }

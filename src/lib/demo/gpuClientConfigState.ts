@@ -1,4 +1,4 @@
-import { shallowRef } from 'vue'
+import { shallowRef, watch } from 'vue'
 import config from '@/lib/config'
 
 /** État du chargement de `gpu-client-config.js` (démo / gpu-site). */
@@ -75,4 +75,26 @@ export function whenGpuClientConfigReady(fn: () => void): void {
     return
   }
   readyQueue.push(fn)
+}
+
+/**
+ * Démo / carte : quand `prepareDemoEnvironment` charge encore `gpu-client-config.js`
+ * (`status === 'loading'`), attend la fin pour que `config.apiFicheInfoUrl` soit présent
+ * avant le premier `loadFicheForMapPoint` (ex. handoff accueil → SearchEngine).
+ */
+export async function waitUntilGpuClientConfigScriptSettled(): Promise<void> {
+  trySettleGpuClientConfigFromWindow()
+  if (gpuClientConfigStatus.value !== 'loading') return
+  await new Promise<void>((resolve) => {
+    const stop = watch(
+      gpuClientConfigStatus,
+      (s) => {
+        if (s !== 'loading') {
+          stop()
+          resolve()
+        }
+      },
+      { immediate: true },
+    )
+  })
 }

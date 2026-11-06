@@ -25,8 +25,8 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 ## Flux localisation
 
 1. Recherche validée sur `/` (`LocationSearchWidget` ou `mountSearchEngine` selon `demo-config`)
-2. `prepareLocationHandoff` (objet `StandardViewerSearch` en mémoire) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
-3. `DemoView` lit `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
+2. `prepareLocationHandoff` (`{ search, mapMode }` en mémoire ; `mapMode` dérivé du sous-type lieu et de la couche geopf, ex. `StreetAddress` → parcelle) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
+3. `DemoView` lit `takeLocationHandoff()` → `provideMapMode` + `SearchEngineControl.initialSearch` (`search` ; le mode permalink reste prioritaire)
 
 Sur **gpu-site** (pages distinctes) : `mode: 'redirect'` + formulaire POST (`municipality`, `position_x`, …) puis injection serveur de `params.search`.
 

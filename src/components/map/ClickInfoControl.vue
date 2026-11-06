@@ -14,7 +14,6 @@ import { sketchToolEngagedRef } from '@/composables/sketchToolEngaged'
 import { tryUseMapMode } from '@/composables/mapMode'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { loadFicheForMapPoint } from '@/lib/fiche/ficheInfoService'
-import { setMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import {
   empriseTargetKeyForPoint,
   ensureModeEmpriseForMapPoint,
@@ -70,8 +69,6 @@ function onMapClick(evt: MapBrowserEvent): void {
     origin: 'ficheInfo',
     center: false,
   })
-  setMapPermalinkMarker(lon, lat)
-  ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey)
   void loadFicheForMapPoint({
     lon,
     lat,
@@ -79,6 +76,7 @@ function onMapClick(evt: MapBrowserEvent): void {
     zoom,
     markerPlacedAtClick: true,
   })
+  ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey)
 }
 
 function syncCursor(map: Map | null): void {

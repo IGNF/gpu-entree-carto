@@ -1,40 +1,49 @@
 import config from '@/lib/config'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import type { MapModeId } from '@/lib/map/mapMode'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
 import {
   legacyFicheModeValue,
-  resolveFicheInfoEndpointUrl,
   resolveFicheInfoFetchUrl,
   shouldAppendLegacyFicheModeParam,
 } from '@/lib/fiche/ficheInfoApiUrls'
 import { isGpuFicheInfoPayload, type GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
-import {
-  parcelCacheKeyFromPayload,
-  territoryCacheKeyFromPayload,
-} from '@/lib/fiche/ficheInfoSelectionCache'
-
-let lastKnownParcelCacheKey: string | null = null
-let lastKnownTerritoryCacheKey: string | null = null
 
 const inflightPayloadByPoint = new Map<string, Promise<GpuFicheInfoPayload | null>>()
 
-function fichePayloadInflightKey(lon: number, lat: number, zoom: number): string {
-  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}`
+let activeNetworkAbort: AbortController | null = null
+
+export class FicheInfoFetchAborted extends Error {
+  override name = 'FicheInfoFetchAborted'
 }
 
-export function rememberFicheInfoCacheKeysFromPayload(data: GpuFicheInfoPayload): void {
-  lastKnownParcelCacheKey = parcelCacheKeyFromPayload(data)
-  lastKnownTerritoryCacheKey = territoryCacheKeyFromPayload(data)
+function fichePayloadInflightKey(lon: number, lat: number, zoom: number, mode: MapModeId): string {
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}`
 }
 
-function appendClientCacheHints(url: URL, mode: MapModeId): void {
-  if (mode === MAP_MODE_PARCEL && lastKnownParcelCacheKey) {
-    url.searchParams.set('knownParcelId', lastKnownParcelCacheKey)
+function takeoverFicheNetworkSignal(external?: AbortSignal): AbortSignal {
+  activeNetworkAbort?.abort()
+  activeNetworkAbort = new AbortController()
+  const { signal } = activeNetworkAbort
+  if (external) {
+    if (external.aborted) {
+      activeNetworkAbort.abort()
+    } else {
+      external.addEventListener('abort', () => activeNetworkAbort?.abort(), { once: true })
+    }
   }
-  if (mode === MAP_MODE_TERRITORY && lastKnownTerritoryCacheKey) {
-    url.searchParams.set('knownGridInsee', lastKnownTerritoryCacheKey.split('|')[0] ?? '')
-  }
+  return signal
+}
+
+function clearInflightFichePayloads(): void {
+  inflightPayloadByPoint.clear()
+}
+
+/** Annule le fetch réseau en cours (clic suivant) et vide les promesses partagées. */
+export function abortInflightFicheInfoFetch(): void {
+  activeNetworkAbort?.abort()
+  activeNetworkAbort = null
+  clearInflightFichePayloads()
 }
 
 export async function fetchGpuFicheInfoPayload(params: {
@@ -42,42 +51,44 @@ export async function fetchGpuFicheInfoPayload(params: {
   lat: number
   zoom: number
   mode: MapModeId
+  abortSignal?: AbortSignal
 }): Promise<GpuFicheInfoPayload | null> {
   if (typeof window === 'undefined') return null
 
-  const inflightKey = fichePayloadInflightKey(params.lon, params.lat, params.zoom)
+  const inflightKey = fichePayloadInflightKey(params.lon, params.lat, params.zoom, params.mode)
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
 
-  const promise = fetchGpuFicheInfoPayloadImpl(params).finally(() => {
+  const signal = takeoverFicheNetworkSignal(params.abortSignal)
+
+  const promise = fetchGpuFicheInfoPayloadImpl(params, signal).finally(() => {
     inflightPayloadByPoint.delete(inflightKey)
+    if (activeNetworkAbort?.signal === signal) {
+      activeNetworkAbort = null
+    }
   })
   inflightPayloadByPoint.set(inflightKey, promise)
   return promise
 }
 
-async function fetchGpuFicheInfoPayloadImpl(params: {
-  lon: number
-  lat: number
-  zoom: number
-  mode: MapModeId
-}): Promise<GpuFicheInfoPayload | null> {
-  const primary = resolveFicheInfoFetchUrl(params.mode)
-  const combined = resolveFicheInfoEndpointUrl('combined')
-  const urls = [primary, combined].filter((u, i, arr): u is string =>
-    Boolean(u && arr.indexOf(u) === i),
-  )
-
-  for (const fetchBase of urls) {
-    const payload = await fetchGpuFicheInfoPayloadFromUrl(fetchBase, params)
-    if (payload) return payload
-  }
-  return null
+async function fetchGpuFicheInfoPayloadImpl(
+  params: {
+    lon: number
+    lat: number
+    zoom: number
+    mode: MapModeId
+  },
+  signal: AbortSignal,
+): Promise<GpuFicheInfoPayload | null> {
+  const fetchBase = resolveFicheInfoFetchUrl(params.mode)
+  if (!fetchBase) return null
+  return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params, signal)
 }
 
 async function fetchGpuFicheInfoPayloadFromUrl(
   fetchBase: string,
   params: { lon: number; lat: number; zoom: number; mode: MapModeId },
+  signal: AbortSignal,
 ): Promise<GpuFicheInfoPayload | null> {
   const resolved = resolveConfigUrlForFetch(fetchBase)
   const url = resolved.startsWith('/')
@@ -85,7 +96,6 @@ async function fetchGpuFicheInfoPayloadFromUrl(
     : new URL(resolved)
 
   appendFicheInfoQueryParams(url, params)
-  appendClientCacheHints(url, params.mode)
 
   if (shouldAppendLegacyFicheModeParam(resolved)) {
     url.searchParams.set('mode', legacyFicheModeValue(params.mode))
@@ -105,13 +115,16 @@ async function fetchGpuFicheInfoPayloadFromUrl(
   }
 
   try {
-    const res = await fetch(url.toString(), { credentials: 'same-origin' })
+    const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
+    if (res.status === 204) return null
     if (!res.ok) return null
     const data: unknown = await res.json()
     if (!isGpuFicheInfoPayload(data)) return null
-    rememberFicheInfoCacheKeysFromPayload(data)
     return data
-  } catch {
+  } catch (err) {
+    if (signal.aborted) return null
+    if (err instanceof DOMException && err.name === 'AbortError') return null
+    if (err instanceof Error && err.name === 'AbortError') return null
     return null
   }
 }

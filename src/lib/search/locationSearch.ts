@@ -4,6 +4,12 @@ import { LOCATION_SEARCH_ANIMATION_MS } from '@/lib/map/animateViewFit'
 import { easeOut } from 'ol/easing'
 import type Feature from 'ol/Feature'
 import type { StandardViewerSearch } from '@/lib/types'
+import {
+  DEFAULT_MAP_MODE,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
 
 /** Zoom selon le type de résultat (comportement gpu-client LocateControl). */
 export function zoomForLocationSearch(search: { type?: string; poiType?: string[] }): number {
@@ -49,7 +55,90 @@ export interface LocationPayload {
   position: { x: number; y: number }
   type?: string
   kind?: string
+  /** Sous-type lieu (`municipality`, `housenumber`, …) — geopf feature / autocomplete. */
+  placeKind?: string
   poiType?: string[]
+}
+
+const PLACE_KIND_TERRITORY = new Set(['municipality'])
+const PLACE_KIND_PARCEL = new Set(['housenumber', 'street', 'locality'])
+
+/** Couche / index géocodage geopf — pas un `kind` de lieu (`municipality`, `street`, …). */
+const GEOCODING_LAYER_TYPES = new Set([
+  'streetaddress',
+  'positionofinterest',
+  'cadastralparcel',
+  'location',
+])
+
+function isGeocodingLayerType(raw: string | undefined | null): boolean {
+  if (!raw) return false
+  return GEOCODING_LAYER_TYPES.has(raw.trim().toLowerCase())
+}
+
+/**
+ * Mode carte par défaut après recherche accueil (SearchEngine standalone) selon le sous-type lieu geopf.
+ */
+export function inferMapModeFromPlaceKind(placeKind: string | undefined | null): MapModeId {
+  const explicit = inferMapModeFromPlaceKindExplicit(placeKind)
+  return explicit ?? DEFAULT_MAP_MODE
+}
+
+/** `null` = pas de signal lieu (utiliser la couche `type` : StreetAddress, …). */
+function inferMapModeFromPlaceKindExplicit(placeKind: string | undefined | null): MapModeId | null {
+  const k = (placeKind ?? '').trim().toLowerCase()
+  if (!k || isGeocodingLayerType(k)) return null
+  if (PLACE_KIND_TERRITORY.has(k)) return MAP_MODE_TERRITORY
+  if (PLACE_KIND_PARCEL.has(k)) return MAP_MODE_PARCEL
+  return null
+}
+
+/**
+ * Combine `placeKind` (properties) et la couche geopf (`StreetAddress` → adresse/rue → parcelle).
+ */
+export function inferMapModeFromLocationPayload(location: LocationPayload): MapModeId {
+  const fromPlaceKind = inferMapModeFromPlaceKindExplicit(location.placeKind)
+  if (fromPlaceKind != null) return fromPlaceKind
+
+  const t = (location.type ?? '').trim().toLowerCase()
+  if (t === 'streetaddress' || t === 'cadastralparcel') return MAP_MODE_PARCEL
+  if (t === 'positionofinterest') return MAP_MODE_TERRITORY
+
+  return DEFAULT_MAP_MODE
+}
+
+/**
+ * Type de lieu BAN / géocodage (`municipality`, `street`, `housenumber`, …) — prioritaire sur `kind`
+ * et sur la couche SearchEngine (`StreetAddress`, …). Voir réponses GeoJSON du service géocodage géopf.
+ */
+function pickPlaceKindFromGeopfItem(item: {
+  kind?: string
+  type?: string
+  properties?: { type?: string }
+}): string | undefined {
+  const p = item.properties
+  if (p && typeof p.type === 'string' && p.type.trim()) return p.type
+  if (typeof item.kind === 'string' && item.kind.trim()) return item.kind
+  if (typeof item.type === 'string' && item.type.trim() && !isGeocodingLayerType(item.type)) {
+    return item.type
+  }
+  return undefined
+}
+
+function pickPlaceKindFromGeopfFeature(feature: Feature): string | undefined {
+  const props = feature.get('properties')
+  if (props && typeof props === 'object' && props !== null) {
+    const p = props as { type?: string; kind?: string }
+    if (typeof p.type === 'string' && p.type.trim()) return p.type
+    if (typeof p.kind === 'string' && p.kind.trim()) return p.kind
+  }
+  const kind = feature.get('kind')
+  if (typeof kind === 'string' && kind.trim()) return kind
+  const typeTop = feature.get('type')
+  if (typeof typeTop === 'string' && typeTop.trim() && !isGeocodingLayerType(typeTop)) {
+    return typeTop
+  }
+  return undefined
 }
 
 export function toLocationRedirectParams(location: LocationPayload): LocationRedirectParams {
@@ -68,6 +157,7 @@ export function locationFromGeopfSelect(event: {
     fullText?: string
     type?: string
     kind?: string
+    properties?: { type?: string }
     poiType?: string[]
     position?: { x?: number; y?: number }
   }
@@ -76,11 +166,13 @@ export function locationFromGeopfSelect(event: {
   const x = Number(item?.position?.x)
   const y = Number(item?.position?.y)
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  const placeKind = item ? pickPlaceKindFromGeopfItem(item) : undefined
   return {
     fullText: item?.fullText || event.title || '',
     position: { x, y },
     type: item?.type,
     kind: item?.kind,
+    placeKind,
     poiType: item?.poiType,
   }
 }
@@ -117,10 +209,15 @@ export function locationFromGeopfFeature(
       .replace(/\s+/g, ' ')
       .trim() || String(feature.get('fullText') ?? feature.get('label') ?? 'Localisation')
 
+  const placeKind = pickPlaceKindFromGeopfFeature(feature)
+  const geocodingLayerType = String(feature.get('type') ?? fallbackType)
+
   return {
     fullText: label,
     position: { x: lon, y: lat },
-    type: String(feature.get('type') ?? fallbackType),
+    /** Couche SearchEngine / geopf (`StreetAddress`, …), pas le type BAN (`placeKind`). */
+    type: geocodingLayerType,
+    placeKind,
   }
 }
 
@@ -179,21 +276,28 @@ export function redirectToMapWithLocation(
   form.submit()
 }
 
-/** Handoff SPA synchrone : objet déjà au format `initialSearch` (pas de sérialisation). */
-let pendingLocationSearch: StandardViewerSearch | null = null
+/** Handoff SPA synchrone : recherche + mode carte dérivé du sous-type lieu geopf. */
+export type LocationSearchHandoff = {
+  search: StandardViewerSearch
+  mapMode: MapModeId
+}
+
+let pendingLocationHandoff: LocationSearchHandoff | null = null
 
 /** Enregistre la localisation pour la prochaine vue carte (même document SPA). */
-export function prepareLocationHandoff(location: LocationPayload): StandardViewerSearch {
+export function prepareLocationHandoff(location: LocationPayload): LocationSearchHandoff {
   const search = locationPayloadToSearch(location)
-  pendingLocationSearch = search
-  return search
+  const mapMode = inferMapModeFromLocationPayload(location)
+  const handoff: LocationSearchHandoff = { search, mapMode }
+  pendingLocationHandoff = handoff
+  return handoff
 }
 
 /** Lit et consomme le handoff (une seule fois). */
-export function takeLocationHandoff(): StandardViewerSearch | null {
-  const search = pendingLocationSearch
-  pendingLocationSearch = null
-  return search
+export function takeLocationHandoff(): LocationSearchHandoff | null {
+  const handoff = pendingLocationHandoff
+  pendingLocationHandoff = null
+  return handoff
 }
 
 /** Payload localisation → prop `initialSearch` du SearchEngineControl. */
@@ -202,6 +306,7 @@ export function locationPayloadToSearch(location: LocationPayload): StandardView
     fullText: location.fullText,
     type: location.type,
     kind: location.kind,
+    placeKind: location.placeKind,
     poiType: location.poiType,
     position: location.position,
   }

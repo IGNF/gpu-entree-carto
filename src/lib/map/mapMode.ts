@@ -44,6 +44,13 @@ export function readMapModeFromLocation(
   )
 }
 
+/** `mode` présent dans le fragment ou la query — sinon `null` (ne pas confondre avec le défaut territoire). */
+export function readExplicitMapModeFromLocation(
+  loc: Pick<Location, 'search' | 'hash'> = window.location,
+): MapModeId | null {
+  return readMapModeFromPermalinkHash(loc.hash) ?? readMapModeFromSearchParams(loc.search) ?? null
+}
+
 /** Retire `mode` de la query (legacy) après migration vers le fragment `#`. */
 export function stripMapModeFromSearchParams(loc: Pick<Location, 'href'> = window.location): void {
   if (typeof window === 'undefined') return

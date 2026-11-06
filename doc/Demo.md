@@ -25,8 +25,8 @@ Like gpu-client `exemple-config.js`: edit **`public/js/demo-config.js`** (`windo
 ## Location flow
 
 1. Validated search on `/` (`LocationSearchWidget` or `mountSearchEngine` per `demo-config`)
-2. `prepareLocationHandoff` (`StandardViewerSearch` object in memory) + `router.push({ name: 'map' })` — **no** query, POST, or `sessionStorage`
-3. `DemoView` reads `takeLocationHandoff()` → `SearchEngineControl.initialSearch`
+2. `prepareLocationHandoff` (`{ search, mapMode }` in memory; `mapMode` from geopf place kind and layer e.g. `StreetAddress` → parcel) + `router.push({ name: 'map' })` — **no** query, POST, or `sessionStorage`
+3. `DemoView` reads `takeLocationHandoff()` → `provideMapMode` + `SearchEngineControl.initialSearch` (`search`; permalink mode still wins)
 
 On **gpu-site** (separate pages): `mode: 'redirect'` + POST form (`municipality`, `position_x`, …) then server injection of `params.search`.
 

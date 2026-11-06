@@ -51163,6 +51163,40 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
     };
   }
+  const GEOCODING_LAYER_TYPES = /* @__PURE__ */ new Set([
+    "streetaddress",
+    "positionofinterest",
+    "cadastralparcel",
+    "location"
+  ]);
+  function isGeocodingLayerType(raw) {
+    if (!raw) return false;
+    return GEOCODING_LAYER_TYPES.has(raw.trim().toLowerCase());
+  }
+  function pickPlaceKindFromGeopfItem(item) {
+    const p = item.properties;
+    if (p && typeof p.type === "string" && p.type.trim()) return p.type;
+    if (typeof item.kind === "string" && item.kind.trim()) return item.kind;
+    if (typeof item.type === "string" && item.type.trim() && !isGeocodingLayerType(item.type)) {
+      return item.type;
+    }
+    return void 0;
+  }
+  function pickPlaceKindFromGeopfFeature(feature) {
+    const props = feature.get("properties");
+    if (props && typeof props === "object" && props !== null) {
+      const p = props;
+      if (typeof p.type === "string" && p.type.trim()) return p.type;
+      if (typeof p.kind === "string" && p.kind.trim()) return p.kind;
+    }
+    const kind = feature.get("kind");
+    if (typeof kind === "string" && kind.trim()) return kind;
+    const typeTop = feature.get("type");
+    if (typeof typeTop === "string" && typeTop.trim() && !isGeocodingLayerType(typeTop)) {
+      return typeTop;
+    }
+    return void 0;
+  }
   function toLocationRedirectParams(location) {
     return {
       municipality: location.fullText,
@@ -51177,11 +51211,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const x = Number((_a = item == null ? void 0 : item.position) == null ? void 0 : _a.x);
     const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const placeKind = item ? pickPlaceKindFromGeopfItem(item) : void 0;
     return {
       fullText: (item == null ? void 0 : item.fullText) || event.title || "",
       position: { x, y },
       type: item == null ? void 0 : item.type,
       kind: item == null ? void 0 : item.kind,
+      placeKind,
       poiType: item == null ? void 0 : item.poiType
     };
   }
@@ -51203,10 +51239,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
     const infoPopup = String(feature.get("infoPopup") ?? "");
     const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
+    const placeKind = pickPlaceKindFromGeopfFeature(feature);
+    const geocodingLayerType = String(feature.get("type") ?? fallbackType);
     return {
       fullText: label,
       position: { x: lon, y: lat },
-      type: String(feature.get("type") ?? fallbackType)
+      /** Couche SearchEngine / geopf (`StreetAddress`, …), pas le type BAN (`placeKind`). */
+      type: geocodingLayerType,
+      placeKind
     };
   }
   function locationFromGeolocation(coordinates2, label = "Ma localisation") {

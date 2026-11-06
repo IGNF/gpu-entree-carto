@@ -26,7 +26,7 @@ Monte le **même** contrôle que la carte (`SearchEngineAdvanced`) hors `MapShel
 - UX identique à la carte : autocomplete, **Avancée** (INSEE, lieux, coords, parcelles), **Me géolocaliser**
 - Carte OL minimale invisible (requis par geopf pour coords / géoloc / marqueurs)
 - **`redirect`** : formulaire `municipality` / `position_x` / `position_y` / `type` (compat gpu-site)
-- **`emit`** (démo SPA) : `onSelect` + `prepareLocationHandoff` / `router.push` — objet `StandardViewerSearch` en mémoire, sans query ni POST
+- **`emit`** (démo SPA) : `onSelect` + `prepareLocationHandoff` / `router.push` — handoff `{ search, mapMode }` en mémoire (sans query ni POST). `mapMode` s’appuie sur **`properties.type`** du résultat géocodage (types BAN : `municipality`, `street`, `housenumber`, … — voir [recherche géocodage](https://data.geopf.fr/geocodage/search)) quand il est présent, puis sur la couche SearchEngine (`StreetAddress` → parcelle, `PositionOfInterest` → territoire) si `placeKind` manque ; le permalink / `#mlon` reste prioritaire sur `/map`.
 - **Me géolocaliser** → `type: 'geolocate'`, coords EPSG:4326 ; sur la carte, [SearchEngineControl](./SearchEngineControl.fr.md) repose le marker + ouvre la fiche (sans re-géocoder le libellé)
 - Écoute : `select`, `search`, `searchengineadvanced:geolocation:click` + `search` des forms avancés
 - Suggestions en `position: fixed` ; panneau **Avancée** en `position: absolute` (100 % du widget) — `attachStandalonePopoverSync`, visibles malgré `overflow` des bannières gpu-site
@@ -43,7 +43,7 @@ gpu.mountSearchEngine(el, {
     router.push({ name: 'map' })
   },
 })
-// Sur /map : takeLocationHandoff() → SearchEngineControl initialSearch
+// Sur /map : takeLocationHandoff() → { search, mapMode } → SearchEngineControl initialSearch + mode par défaut
 ```
 
 ## Exemple gpu-site
