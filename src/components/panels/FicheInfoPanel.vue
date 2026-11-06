@@ -80,10 +80,25 @@ const parcelTabLoading = ref(false)
 const parcelTabError = ref<string | null>(null)
 const cadastreModalOpen = ref(false)
 
-function parcelFicheKey(selection: FicheInfoSelection | null): string {
+/** Identifiant gpu-site résolu — requis pour `loadParcelFicheDetail` (ne pas retomber sur le libellé). */
+function parcelDetailLoadKey(selection: FicheInfoSelection | null): string {
   if (!selection) return ''
   const raw = selection.raw && typeof selection.raw === 'object' ? selection.raw : null
-  return resolveParcelIdFromRaw(raw) ?? selection.parcelLabel ?? selection.title ?? ''
+  return resolveParcelIdFromRaw(raw) ?? ''
+}
+
+/** Changement de résultat fiche (id parcelle ou point) → réinitialiser onglets / erreurs. */
+function parcelPanelIdentityKey(selection: FicheInfoSelection | null): string {
+  if (!selection) return ''
+  const id = parcelDetailLoadKey(selection)
+  if (id) return id
+  const raw = selection.raw && typeof selection.raw === 'object' ? selection.raw : null
+  const lon = raw?.lon
+  const lat = raw?.lat
+  if (typeof lon === 'number' && typeof lat === 'number') {
+    return `pt:${lon}|${lat}`
+  }
+  return selection.parcelLabel ?? selection.title ?? ''
 }
 
 const parcelDetailReady = computed(() => {
@@ -97,11 +112,11 @@ watch(
     const record = raw && typeof raw === 'object' ? raw : null
     syncFicheGeometryHighlight(mapRef.value, record)
   },
-  { immediate: true, deep: true },
+  { immediate: true },
 )
 
 watch(
-  () => parcelFicheKey(props.selection),
+  () => parcelPanelIdentityKey(props.selection),
   (next, prev) => {
     if (next === prev) return
     activeParcelTab.value = 'infos'
@@ -112,7 +127,12 @@ watch(
 )
 
 watch(
-  () => [parcelFicheKey(props.selection), parcelDetailReady.value, showParcelLayout.value] as const,
+  () =>
+    [
+      parcelDetailLoadKey(props.selection),
+      parcelDetailReady.value,
+      showParcelLayout.value,
+    ] as const,
   ([key, ready, parcelMode]) => {
     if (!parcelMode || !key || ready || props.selection?.parcelMissingAtPoint) return
     void loadParcelDetail()
@@ -477,15 +497,13 @@ const parcelPanelFootnotesHtml = computed(() => {
           </li>
         </ul>
         <SanitizedHtml
-          v-for="tab in documentTabs"
-          :id="`ec-fiche-doc-panel-${tab.id}`"
-          :key="tab.id"
-          class="fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel"
-          :class="{ 'fr-tabs__panel--selected': activeDocTab?.id === tab.id }"
+          v-if="activeDocTab"
+          :id="`ec-fiche-doc-panel-${activeDocTab.id}`"
+          class="fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel fr-tabs__panel--selected"
           role="tabpanel"
-          :aria-labelledby="`ec-fiche-doc-tab-${tab.id}`"
-          :tabindex="activeDocTab?.id === tab.id ? 0 : -1"
-          :html="tab.bodyHtml"
+          :aria-labelledby="`ec-fiche-doc-tab-${activeDocTab.id}`"
+          tabindex="0"
+          :html="activeDocTab.bodyHtml"
           link-target-blank
         />
       </div>

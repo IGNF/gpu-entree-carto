@@ -19,8 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dependencies** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`); see [DEPENDENCIES](./DEPENDENCIES.md).
+- **SearchEngine (map)** — fly-to extent after place search uses `maxZoom` **19** instead of **15** so narrow / small `trueGeometry` features (rivers, bridges, linear POIs) frame large enough on screen.
+- **Demo home SearchEngine handoff** — `prepareLocationHandoff` stores `{ search, mapMode }`; **`properties.type`** from geocoding results (BAN `municipality`, `street`, …) takes priority over `kind` and SearchEngine layer when inferring mode; geocoding layer **`StreetAddress`** / **`PositionOfInterest`** still used when `placeKind` is absent; **only an explicit `mode` in the URL/hash** overrides the handoff (plain `/map` no longer forces the default territory mode via `readMapModeFromLocation`); minified `createStandardViewer` receives `mode` from the same resolution.
+- **Fiche info panel (parcel)** — deferred Infos/Documents fetch runs only when `resolveParcelIdFromRaw` returns an id (no fallback on display title); fixes spurious “Identifiant parcelle indisponible” after SearchEngine history replay when the API payload had not yet exposed parcel fields.
+- **Fiche info (demo)** — first fiche load after home → map SearchEngine handoff waits for `gpu-client-config.js` to finish loading before treating `apiFicheInfoUrl` as missing (avoids “Indisponibilité du service” and empty parcel cache when the map mounts while config is still `loading`).
+- **Parcel fiche** — `resolveParcelIdFromRaw` accepts CNIG IDU strings (no underscores, e.g. `95197000AK0432`) and maps them to the gpu-site parcel key so SearchEngine + parcel detail load works when the API only returns IDU-style ids.
+- **Fiche info (map)** — v2 fetch per mode (`/territoire`, `/parcelle`), abort in-flight fetch on next click, per-mode point cache, `shallowRef` selection, territory tabs rendered on demand, parcel detail cache capped at 50 entries; territory load merges parcel-at-point metadata (silent `/parcelle` or cache) for the back-to-parcel CTA; back-parcel label without trailing period when no parcel.
 - **gpu-site config / demo** — API routes in `gpu_client_config.js.twig` use Symfony `path()`; entree-carto canonicalizes the config script URL (Vite proxy → gpu-site host) when resolving relative `*Url` fields.
-- **gpu-site integration** — lib build `base: './'`: print worker `assets/printExport.worker-*.js` resolves from the script URL; integration doc (webpack copy).
+- **gpu-site integration** — print worker `assets/printExport.worker-embed.js` (esbuild) resolves from `entree-carto.min.js` URL (not `/map/assets/` via `document.baseURI`); webpack copy `printExport.worker*.js`.
 - **Map print** — PNG DPI fallback without `fetch(data:…)` (strict embed `connect-src` CSP).
 - **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
 - **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.

@@ -10,6 +10,7 @@ import {
   onMounted,
   onUnmounted,
   provide,
+  markRaw,
   ref,
   shallowRef,
   toRef,
@@ -107,7 +108,14 @@ let olControl: Control | null = null
 
 const isOpen = ref(false)
 const activeTab = ref<number | null>(null)
-const selection = ref<FicheInfoSelection | null>(null)
+const selection = shallowRef<FicheInfoSelection | null>(null)
+
+function storeFicheSelection(next: FicheInfoSelection): FicheInfoSelection {
+  if (next.raw && typeof next.raw === 'object') {
+    return { ...next, raw: markRaw({ ...next.raw }) }
+  }
+  return next
+}
 
 const { layoutMode, refreshLayoutMetrics } = useTabPanelsLayout(shellEl)
 const {
@@ -233,12 +241,12 @@ function onTabClick(index: number) {
 }
 
 function showSelection(next: FicheInfoSelection) {
-  selection.value = next
+  selection.value = storeFicheSelection(next)
   openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP)
 }
 
 function updateSelection(next: FicheInfoSelection) {
-  selection.value = next
+  selection.value = storeFicheSelection(next)
 }
 
 function openLegendForLayer(layerId: string) {

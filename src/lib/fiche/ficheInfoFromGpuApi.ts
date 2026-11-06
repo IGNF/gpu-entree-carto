@@ -4,6 +4,7 @@ import {
   ficheHasParcelAtPoint,
   ficheHasTerritoryAtPoint,
   NO_PARCEL_AT_POINT_MESSAGE,
+  NO_PARCEL_AT_POINT_SWITCH_LABEL,
 } from '@/lib/fiche/ficheAvailability'
 import {
   buildDocumentTypeTabTilesHtml,
@@ -27,8 +28,6 @@ import {
   procedureTileHref,
 } from '@/lib/fiche/ficheDocumentTiles'
 import {
-  buildParcelDocumentsHtmlFromFiche,
-  buildParcelInfosHtmlFromFiche,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
@@ -488,7 +487,7 @@ export function ficheSelectionFromGpuApi(
     : NO_PARCEL_AT_POINT_MESSAGE
   const parcelSwitchLabel = hasParcel
     ? parcelShortLabel(parcel) || 'Parcelle'
-    : NO_PARCEL_AT_POINT_MESSAGE
+    : NO_PARCEL_AT_POINT_SWITCH_LABEL
   const documentTabs = mode === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode) : undefined
   const bodyHtml =
     mode === MAP_MODE_TERRITORY && !documentTabs?.length ? fallbackBodyHtml(data) : undefined
@@ -521,8 +520,6 @@ export function ficheSelectionFromGpuApi(
     } else {
       const parcelFiche = extractParcelFichePayload(data)
       if (parcelFiche) {
-        base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche)
-        base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data)
         base.raw = { ...base.raw, _parcelFiche: parcelFiche }
       } else {
         base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)

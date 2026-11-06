@@ -65,17 +65,23 @@ export function resolveFicheInfoEndpointUrl(kind: FicheInfoEndpointKind): string
 }
 
 export function resolveFicheInfoFetchUrl(mode: MapModeId): string | null {
-  const preferCombined = readConfigUrl('apiFicheInfoCombinedUrl')
-  if (preferCombined) return preferCombined
+  const kind = mode === MAP_MODE_TERRITORY ? 'territoire' : 'parcelle'
+  const explicitSplit = readConfigUrl(
+    mode === MAP_MODE_TERRITORY ? 'apiFicheInfoTerritoireUrl' : 'apiFicheInfoParcelleUrl',
+  )
+  if (explicitSplit) return explicitSplit
 
   const base = readConfigUrl('apiFicheInfoUrl')
   if (base && ficheInfoUsesV2SplitEndpoints(base)) {
-    return resolveFicheInfoEndpointUrl('combined')
+    return resolveFicheInfoEndpointUrl(kind)
   }
+
+  const combined = readConfigUrl('apiFicheInfoCombinedUrl')
+  if (combined) return combined
 
   if (base) return normalizeBaseUrl(base)
 
-  return resolveFicheInfoEndpointUrl(mode === MAP_MODE_TERRITORY ? 'territoire' : 'parcelle')
+  return resolveFicheInfoEndpointUrl(kind)
 }
 
 /** Legacy : ajouter `mode` en query ; v2 : chemin suffit. */

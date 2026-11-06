@@ -26,7 +26,7 @@ Mounts the **same** control as on the map (`SearchEngineAdvanced`) outside `MapS
 - Same UX as the map: autocomplete, **Advanced** (INSEE, places, coords, parcels), **Locate me**
 - Minimal invisible OL map (required by geopf for coords / geoloc / markers)
 - **`redirect`**: form fields `municipality` / `position_x` / `position_y` / `type` (gpu-site compatible)
-- **`emit`** (SPA demo): `onSelect` + `prepareLocationHandoff` / `router.push` — `StandardViewerSearch` object in memory, no query or POST
+- **`emit`** (SPA demo): `onSelect` + `prepareLocationHandoff` / `router.push` — handoff `{ search, mapMode }` in memory (no query or POST). `mapMode` uses the geocoding result’s **`properties.type`** (BAN types: `municipality`, `street`, `housenumber`, … — see [geocoding search](https://data.geopf.fr/geocodage/search)) when present, then falls back to SearchEngine layer (`StreetAddress` → parcel, `PositionOfInterest` → territory) if `placeKind` is missing; permalink / `#mlon` still wins on `/map`.
 - **Locate me** → `type: 'geolocate'`, EPSG:4326 coords; on the map, [SearchEngineControl](./SearchEngineControl.md) replaces the marker + opens the info tab (without re-geocoding the label)
 - Listens: `select`, `search`, `searchengineadvanced:geolocation:click` + advanced forms `search`
 - Suggestions use `position: fixed`; **Advanced** panel uses `position: absolute` (100% of widget) — `attachStandalonePopoverSync`, visible despite gpu-site banner `overflow`
@@ -43,7 +43,7 @@ gpu.mountSearchEngine(el, {
     router.push({ name: 'map' })
   },
 })
-// On /map: takeLocationHandoff() → SearchEngineControl initialSearch
+// On /map: takeLocationHandoff() → { search, mapMode } → SearchEngineControl initialSearch + default mode
 ```
 
 ## gpu-site example

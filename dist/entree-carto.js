@@ -24329,8 +24329,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const aa2 = r1 * Math.sin(alpha);
       const bb = Math.sqrt(r1 * r1 - aa2 * aa2);
-      const dd2 = r2 - bb;
-      const ee = Math.sqrt(aa2 * aa2 + dd2 * dd2);
+      const dd = r2 - bb;
+      const ee = Math.sqrt(aa2 * aa2 + dd * dd);
       const innerMiterRatio = ee / aa2;
       if (innerMiterRatio <= miterLimit) {
         const innerLength = innerMiterRatio * strokeWidth / 2 - r2 - r1;
@@ -47733,7 +47733,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let i2 = 0;
       const ii2 = instructions.length;
       let d = 0;
-      let dd2;
+      let dd;
       const offsetCoords = (
         /** @type {Array<number>} */
         []
@@ -47819,7 +47819,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.CUSTOM:
             d = /** @type {number} */
             instruction[1];
-            dd2 = instruction[2];
+            dd = instruction[2];
             const geometry = (
               /** @type {import("../../geom/SimpleGeometry.js").default} */
               instruction[3]
@@ -47834,7 +47834,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
             const coords = coordinateCache[i2];
             if (fn2) {
-              fn2(pixelCoordinates, d, dd2, 2, coords);
+              fn2(pixelCoordinates, d, dd, 2, coords);
             } else {
               coords[0] = pixelCoordinates[d];
               coords[1] = pixelCoordinates[d + 1];
@@ -47849,7 +47849,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.DRAW_IMAGE:
             d = /** @type {number} */
             instruction[1];
-            dd2 = /** @type {number} */
+            dd = /** @type {number} */
             instruction[2];
             image2 = /** @type {HTMLCanvasElement|HTMLVideoElement|HTMLImageElement} */
             instruction[3];
@@ -47952,7 +47952,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               rotation -= viewRotation;
             }
             let widthIndex = 0;
-            for (; d < dd2; d += 2) {
+            for (; d < dd; d += 2) {
               if (geometryWidths && geometryWidths[widthIndex++] < width / this.pixelRatio) {
                 continue;
               }
@@ -47987,7 +47987,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               if (declutterTree) {
                 let imageArgs, imageDeclutterMode, imageDeclutterBox;
                 if (declutterImageWithText) {
-                  const index2 = dd2 - d;
+                  const index2 = dd - d;
                   if (!declutterImageWithText[index2]) {
                     declutterImageWithText[index2] = {
                       args,
@@ -48270,7 +48270,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.MOVE_TO_LINE_TO:
             d = /** @type {number} */
             instruction[1];
-            dd2 = /** @type {number} */
+            dd = /** @type {number} */
             instruction[2];
             lineOffsetPx = /** @type {number|undefined} */
             instruction[3];
@@ -48280,11 +48280,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 /** @type {boolean|undefined} */
                 instruction[4] ?? false
               );
-              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd2 - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd2 - 1]) < 1e-6;
+              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd - 1]) < 1e-6;
               offsetLineString(
                 pixelCoordinates,
                 d,
-                dd2,
+                dd,
                 2,
                 lineOffsetPx,
                 isClosedLine,
@@ -48297,7 +48297,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             } else {
               lineCoords = pixelCoordinates;
               lineStart = d;
-              lineEnd = dd2;
+              lineEnd = dd;
             }
             x = lineCoords[lineStart];
             y = lineCoords[lineStart + 1];
@@ -62378,9 +62378,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     var y = p5.y / this.a;
     var phi, lam;
     if (this.sphere) {
-      var dd2 = y + this.lat0;
-      phi = Math.asin(Math.sin(dd2) * Math.cos(x));
-      lam = Math.atan2(Math.tan(x), Math.cos(dd2));
+      var dd = y + this.lat0;
+      phi = Math.asin(Math.sin(dd) * Math.cos(x));
+      lam = Math.atan2(Math.tan(x), Math.cos(dd));
     } else {
       var ml1 = this.ml0 / this.a + y;
       var phi1 = imlfn(ml1, this.e0, this.e1, this.e2, this.e3);
@@ -65498,11 +65498,11 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @returns {Number} decimal coordinate
      */
     dmsToDecimal(degrees, minutes, seconds, hemispheres) {
-      var dd2 = degrees + minutes / 60 + seconds / (60 * 60);
+      var dd = degrees + minutes / 60 + seconds / (60 * 60);
       if (hemispheres == "S" || hemispheres == "O") {
-        dd2 = dd2 * -1;
+        dd = dd * -1;
       }
-      return dd2;
+      return dd;
     },
     /**
      * ol coordinate to decimal
@@ -67483,6 +67483,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       return;
     }
     readyQueue.push(fn2);
+  }
+  async function waitUntilGpuClientConfigScriptSettled() {
+    trySettleGpuClientConfigFromWindow();
+    if (gpuClientConfigStatus.value !== "loading") return;
+    await new Promise((resolve2) => {
+      const stop = watch(
+        gpuClientConfigStatus,
+        (s) => {
+          if (s !== "loading") {
+            stop();
+            resolve2();
+          }
+        },
+        { immediate: true }
+      );
+    });
   }
   const GPU_FORCE_OPACITY_PERCENT = 100;
   function catalogNodeOpacityPercent(node) {
@@ -70715,14 +70731,19 @@ Expected function or array of functions, received type ${typeof value2}.`
     return `${normalized}/${suffix}`;
   }
   function resolveFicheInfoFetchUrl(mode2) {
-    const preferCombined = readConfigUrl("apiFicheInfoCombinedUrl");
-    if (preferCombined) return preferCombined;
+    const kind = mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle";
+    const explicitSplit = readConfigUrl(
+      mode2 === MAP_MODE_TERRITORY ? "apiFicheInfoTerritoireUrl" : "apiFicheInfoParcelleUrl"
+    );
+    if (explicitSplit) return explicitSplit;
     const base = readConfigUrl("apiFicheInfoUrl");
     if (base && ficheInfoUsesV2SplitEndpoints(base)) {
-      return resolveFicheInfoEndpointUrl("combined");
+      return resolveFicheInfoEndpointUrl(kind);
     }
+    const combined = readConfigUrl("apiFicheInfoCombinedUrl");
+    if (combined) return combined;
     if (base) return normalizeBaseUrl(base);
-    return resolveFicheInfoEndpointUrl(mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle");
+    return resolveFicheInfoEndpointUrl(kind);
   }
   function shouldAppendLegacyFicheModeParam(resolvedUrl) {
     return !resolvedUrl.includes("fiche-info-v2");
@@ -70790,7 +70811,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     return idu;
   }
   const NO_PARCEL_AT_POINT_MESSAGE = "Pas de parcelle à cet emplacement.";
+  const NO_PARCEL_AT_POINT_SWITCH_LABEL = "Pas de parcelle à cet emplacement";
   function ficheHasParcelAtPoint(data) {
+    if (typeof data.territoryParcelId === "string" && data.territoryParcelId.trim()) return true;
     if (typeof data.parcelId === "string" && data.parcelId.trim()) return true;
     if (data.parcelGeometry) return true;
     const parcel = data.parcel;
@@ -72478,9 +72501,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const iso = Date.parse(value2);
     if (Number.isFinite(iso)) {
       const d = new Date(iso);
-      const dd2 = String(d.getDate()).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
-      return `${dd2}/${mm}/${d.getFullYear()}`;
+      return `${dd}/${mm}/${d.getFullYear()}`;
     }
     return value2;
   }
@@ -72724,7 +72747,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const parcel = data.parcel ?? null;
     const territoryTitle = hasTerritory ? municipalityTitle(data) : "Territoire";
     const parcelLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_MESSAGE;
-    const parcelSwitchLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_MESSAGE;
+    const parcelSwitchLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_SWITCH_LABEL;
     const documentTabs = mode2 === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode2) : void 0;
     const bodyHtml = mode2 === MAP_MODE_TERRITORY && !(documentTabs == null ? void 0 : documentTabs.length) ? fallbackBodyHtml(data) : void 0;
     const absorbedHtml = absorbedMunicipalityHint(data);
@@ -72750,8 +72773,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       } else {
         const parcelFiche = extractParcelFichePayload(data);
         if (parcelFiche) {
-          base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche);
-          base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data);
           base.raw = { ...base.raw, _parcelFiche: parcelFiche };
         } else {
           base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data);
@@ -72804,6 +72825,101 @@ Expected function or array of functions, received type ${typeof value2}.`
       parcelDocumentsHtml: rebuilt.parcelDocumentsHtml
     };
   }
+  const inflightPayloadByPoint = /* @__PURE__ */ new Map();
+  let activeNetworkAbort = null;
+  function fichePayloadInflightKey(lon, lat, zoom, mode2) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}`;
+  }
+  function takeoverFicheNetworkSignal(external) {
+    activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort();
+    activeNetworkAbort = new AbortController();
+    const { signal } = activeNetworkAbort;
+    if (external) {
+      if (external.aborted) {
+        activeNetworkAbort.abort();
+      } else {
+        external.addEventListener("abort", () => activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort(), { once: true });
+      }
+    }
+    return signal;
+  }
+  function clearInflightFichePayloads() {
+    inflightPayloadByPoint.clear();
+  }
+  function abortInflightFicheInfoFetch() {
+    activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort();
+    activeNetworkAbort = null;
+    clearInflightFichePayloads();
+  }
+  async function fetchGpuFicheInfoPayload(params2) {
+    if (typeof window === "undefined") return null;
+    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom, params2.mode);
+    const existing = inflightPayloadByPoint.get(inflightKey);
+    if (existing) return existing;
+    const signal = takeoverFicheNetworkSignal(params2.abortSignal);
+    const promise = fetchGpuFicheInfoPayloadImpl(params2, signal).finally(() => {
+      inflightPayloadByPoint.delete(inflightKey);
+      if ((activeNetworkAbort == null ? void 0 : activeNetworkAbort.signal) === signal) {
+        activeNetworkAbort = null;
+      }
+    });
+    inflightPayloadByPoint.set(inflightKey, promise);
+    return promise;
+  }
+  async function fetchGpuFicheInfoPayloadImpl(params2, signal) {
+    const fetchBase = resolveFicheInfoFetchUrl(params2.mode);
+    if (!fetchBase) return null;
+    return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal);
+  }
+  async function fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal) {
+    const resolved = resolveConfigUrlForFetch(fetchBase);
+    const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
+    appendFicheInfoQueryParams(url, params2);
+    if (shouldAppendLegacyFicheModeParam(resolved)) {
+      url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
+    }
+    const preferCombined = Boolean(
+      "apiFicheInfoPreferCombined" in config && config.apiFicheInfoPreferCombined
+    );
+    if (preferCombined && url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
+      url.searchParams.set("scope", "both");
+    }
+    try {
+      const res = await fetch(url.toString(), { credentials: "same-origin", signal });
+      if (res.status === 204) return null;
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!isGpuFicheInfoPayload(data)) return null;
+      return data;
+    } catch (err) {
+      if (signal.aborted) return null;
+      if (err instanceof DOMException && err.name === "AbortError") return null;
+      if (err instanceof Error && err.name === "AbortError") return null;
+      return null;
+    }
+  }
+  function mergeParcelHintIntoTerritoryPayload(territory, parcelScope) {
+    if (ficheHasParcelAtPoint(territory)) return territory;
+    if (!ficheHasParcelAtPoint(parcelScope)) return territory;
+    const merged = { ...territory };
+    if (parcelScope.parcel) merged.parcel = parcelScope.parcel;
+    if (typeof parcelScope.parcelId === "string" && parcelScope.parcelId.trim()) {
+      merged.parcelId = parcelScope.parcelId;
+    }
+    if (parcelScope.parcelGeometry) merged.parcelGeometry = parcelScope.parcelGeometry;
+    if (typeof parcelScope.territoryParcelId === "string" && parcelScope.territoryParcelId.trim()) {
+      merged.territoryParcelId = parcelScope.territoryParcelId;
+    }
+    return merged;
+  }
+  function parcelGpuIdFromCadastralIdu(raw) {
+    const s = raw.trim();
+    if (!s || s.includes("_")) return null;
+    const m = /^(\d{2})(\d{3})(\d{3})([A-Za-z]{2})(\d{4})$/.exec(s);
+    if (!m) return null;
+    const [, dep, com, arr, section, numero] = m;
+    return `${dep}_${com}_${arr}_000_${section.toUpperCase()}_${numero}`;
+  }
   const PARCEL_ID_FIELDS = [
     "code_dep",
     "code_com",
@@ -72822,15 +72938,33 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return parts.join("_");
   }
+  function normalizeParcelIdCandidate(value2) {
+    const t = value2.trim();
+    if (!t) return null;
+    if (t.includes("_")) return t;
+    const fromIdu = parcelGpuIdFromCadastralIdu(t);
+    return fromIdu ?? null;
+  }
   function resolveParcelIdFromRaw(raw) {
     var _a2;
     if (!raw) return null;
     const direct = raw.parcelId;
-    if (typeof direct === "string" && direct.includes("_")) return direct;
+    if (typeof direct === "string") {
+      const n = normalizeParcelIdCandidate(direct);
+      if (n) return n;
+    }
     const parcel = raw.parcel;
     if (parcel && typeof parcel === "object") {
       const p5 = parcel;
-      if (typeof p5.id === "string" && p5.id.includes("_")) return p5.id;
+      if (typeof p5.id === "string") {
+        const n = normalizeParcelIdCandidate(p5.id);
+        if (n) return n;
+      }
+      const idu = p5.idu;
+      if (typeof idu === "string") {
+        const n = normalizeParcelIdCandidate(idu);
+        if (n) return n;
+      }
       const fromProps = buildParcelIdFromProperties(p5);
       if (fromProps) return fromProps;
       const fc2 = p5.features;
@@ -72838,104 +72972,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         const feat = fc2[0];
         const fromFeat = buildParcelIdFromProperties(feat.properties);
         if (fromFeat) return fromFeat;
-        if (typeof ((_a2 = feat.properties) == null ? void 0 : _a2.id) === "string") return feat.properties.id;
+        if (typeof ((_a2 = feat.properties) == null ? void 0 : _a2.id) === "string") {
+          const n = normalizeParcelIdCandidate(feat.properties.id);
+          if (n) return n;
+        }
       }
     }
-    if (typeof raw.id === "string" && raw.id.includes("_")) return raw.id;
+    if (typeof raw.id === "string") {
+      const n = normalizeParcelIdCandidate(raw.id);
+      if (n) return n;
+    }
+    const territoryPid = raw.territoryParcelId;
+    if (typeof territoryPid === "string") {
+      const n = normalizeParcelIdCandidate(territoryPid);
+      if (n) return n;
+    }
     return buildParcelIdFromProperties(raw);
   }
-  function territoryCacheKeyFromPayload(data) {
-    var _a2, _b, _c2, _d;
-    const insee = (_b = (_a2 = data.grid) == null ? void 0 : _a2.insee) == null ? void 0 : _b.trim();
-    const name2 = (_d = (_c2 = data.grid) == null ? void 0 : _c2.name) == null ? void 0 : _d.trim();
-    if (!insee && !name2) return null;
-    return `${insee ?? ""}|${name2 ?? ""}`;
-  }
-  function parcelCacheKeyFromPayload(data) {
-    const extended = data;
-    return resolveParcelIdFromRaw({
-      parcel: data.parcel ?? void 0,
-      parcelId: extended.parcelId
-    });
-  }
-  const territorySelectionByKey = /* @__PURE__ */ new Map();
-  const parcelSelectionByKey = /* @__PURE__ */ new Map();
-  function rememberFicheSelectionCaches(data, territorySelection, parcelSelection) {
-    const tKey = territoryCacheKeyFromPayload(data);
-    if (tKey && territorySelection) {
-      territorySelectionByKey.set(tKey, territorySelection);
-    }
-    const pKey = parcelCacheKeyFromPayload(data);
-    if (pKey && parcelSelection) {
-      parcelSelectionByKey.set(pKey, parcelSelection);
-    }
-  }
-  let lastKnownParcelCacheKey = null;
-  let lastKnownTerritoryCacheKey = null;
-  const inflightPayloadByPoint = /* @__PURE__ */ new Map();
-  function fichePayloadInflightKey(lon, lat, zoom) {
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}`;
-  }
-  function rememberFicheInfoCacheKeysFromPayload(data) {
-    lastKnownParcelCacheKey = parcelCacheKeyFromPayload(data);
-    lastKnownTerritoryCacheKey = territoryCacheKeyFromPayload(data);
-  }
-  function appendClientCacheHints(url, mode2) {
-    if (mode2 === MAP_MODE_PARCEL && lastKnownParcelCacheKey) {
-      url.searchParams.set("knownParcelId", lastKnownParcelCacheKey);
-    }
-    if (mode2 === MAP_MODE_TERRITORY && lastKnownTerritoryCacheKey) {
-      url.searchParams.set("knownGridInsee", lastKnownTerritoryCacheKey.split("|")[0] ?? "");
-    }
-  }
-  async function fetchGpuFicheInfoPayload(params2) {
-    if (typeof window === "undefined") return null;
-    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom);
-    const existing = inflightPayloadByPoint.get(inflightKey);
-    if (existing) return existing;
-    const promise = fetchGpuFicheInfoPayloadImpl(params2).finally(() => {
-      inflightPayloadByPoint.delete(inflightKey);
-    });
-    inflightPayloadByPoint.set(inflightKey, promise);
-    return promise;
-  }
-  async function fetchGpuFicheInfoPayloadImpl(params2) {
-    const primary = resolveFicheInfoFetchUrl(params2.mode);
-    const combined = resolveFicheInfoEndpointUrl("combined");
-    const urls = [primary, combined].filter(
-      (u2, i2, arr) => Boolean(u2 && arr.indexOf(u2) === i2)
-    );
-    for (const fetchBase of urls) {
-      const payload = await fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2);
-      if (payload) return payload;
-    }
-    return null;
-  }
-  async function fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2) {
-    const resolved = resolveConfigUrlForFetch(fetchBase);
-    const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
-    appendFicheInfoQueryParams(url, params2);
-    appendClientCacheHints(url, params2.mode);
-    if (shouldAppendLegacyFicheModeParam(resolved)) {
-      url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
-    }
-    const preferCombined = Boolean(
-      "apiFicheInfoPreferCombined" in config && config.apiFicheInfoPreferCombined
-    );
-    if (preferCombined && url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
-      url.searchParams.set("scope", "both");
-    }
-    try {
-      const res = await fetch(url.toString(), { credentials: "same-origin" });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!isGpuFicheInfoPayload(data)) return null;
-      rememberFicheInfoCacheKeysFromPayload(data);
-      return data;
-    } catch {
-      return null;
-    }
-  }
+  const PARCEL_DETAIL_CACHE_MAX = 50;
   const parcelDetailById = /* @__PURE__ */ new Map();
   function parcelIdFromSelection(selection) {
     if (!(selection == null ? void 0 : selection.raw) || typeof selection.raw !== "object") return null;
@@ -72945,7 +72999,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     return parcelDetailById.get(parcelId) ?? null;
   }
   function storeParcelFicheDetailCache(entry) {
+    if (parcelDetailById.has(entry.parcelId)) {
+      parcelDetailById.delete(entry.parcelId);
+    }
     parcelDetailById.set(entry.parcelId, entry);
+    while (parcelDetailById.size > PARCEL_DETAIL_CACHE_MAX) {
+      const oldest = parcelDetailById.keys().next().value;
+      if (oldest === void 0) break;
+      parcelDetailById.delete(oldest);
+    }
   }
   function applyParcelFicheDetailCache(selection) {
     const parcelId = parcelIdFromSelection(selection);
@@ -72967,6 +73029,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
   const FICHE_PARCEL_UNAVAILABLE_BODY = "<p>Indisponibilité du service fiche parcelle (API gpu-site requise).</p>";
   let mapPointRequestSeq = 0;
+  let mapPointFetchAbort = null;
   const FICHE_POINT_EPS = 1e-7;
   let fichePointCache = null;
   function sameMapPoint(a3, b) {
@@ -73130,16 +73193,34 @@ Expected function or array of functions, received type ${typeof value2}.`
   function selectionFromGpuPayload(data, mode2, lon, lat) {
     return ficheSelectionFromGpuApi(data, mode2, lon, lat);
   }
-  function storeBothModeSelectionsAtPoint(lon, lat, data) {
-    const territory = selectionFromGpuPayload(data, MAP_MODE_TERRITORY, lon, lat);
-    const parcel = selectionFromGpuPayload(data, MAP_MODE_PARCEL, lon, lat);
-    rememberFicheSelectionCaches(data, territory, parcel);
-    storeFicheInCache(MAP_MODE_TERRITORY, lon, lat, territory);
-    storeFicheInCache(MAP_MODE_PARCEL, lon, lat, parcel);
-    return { territory, parcel };
+  async function enrichTerritoryPayloadWithParcelAtPoint(params2, territoryPayload, requestId2, abortSignal) {
+    if (ficheHasParcelAtPoint(territoryPayload)) return territoryPayload;
+    const cachedParcel = cachedFicheForMode(MAP_MODE_PARCEL, params2.lon, params2.lat);
+    const cachedRaw = cachedParcel == null ? void 0 : cachedParcel.raw;
+    if (cachedRaw && isGpuFicheInfoPayload(cachedRaw)) {
+      return mergeParcelHintIntoTerritoryPayload(territoryPayload, cachedRaw);
+    }
+    const parcelPayload = await fetchGpuFicheInfoPayload({
+      ...params2,
+      mode: MAP_MODE_PARCEL,
+      abortSignal
+    });
+    if (abortSignal.aborted || requestId2 !== mapPointRequestSeq) return territoryPayload;
+    if (!parcelPayload || !ficheHasParcelAtPoint(parcelPayload)) return territoryPayload;
+    storeFicheInCache(
+      MAP_MODE_PARCEL,
+      params2.lon,
+      params2.lat,
+      selectionFromGpuPayload(parcelPayload, MAP_MODE_PARCEL, params2.lon, params2.lat)
+    );
+    return mergeParcelHintIntoTerritoryPayload(territoryPayload, parcelPayload);
   }
   async function loadFicheForMapPointImpl(params2) {
     const requestId2 = ++mapPointRequestSeq;
+    mapPointFetchAbort == null ? void 0 : mapPointFetchAbort.abort();
+    abortInflightFicheInfoFetch();
+    mapPointFetchAbort = new AbortController();
+    const fetchAbortSignal = mapPointFetchAbort.signal;
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
     const skipLocationMarker = params2.skipLocationMarker === true;
     const silent = params2.silent === true;
@@ -73148,6 +73229,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!silent) {
       showLoading(loadingTitle);
     }
+    await waitUntilGpuClientConfigScriptSettled();
+    finalizeGpuClientConfigStateIfInjected();
     const apiUrl = resolveApiFicheInfoUrl();
     if (!apiUrl) {
       const body = params2.mode === MAP_MODE_PARCEL ? FICHE_PARCEL_UNAVAILABLE_BODY : FICHE_UNAVAILABLE_BODY;
@@ -73162,7 +73245,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
-    const payload = await fetchGpuFicheInfoPayload(params2);
+    let payload = await fetchGpuFicheInfoPayload({ ...params2, abortSignal: fetchAbortSignal });
+    if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
     if (!payload) {
       return applyMapPointResult(
         requestId2,
@@ -73175,8 +73259,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
-    const { territory, parcel } = storeBothModeSelectionsAtPoint(params2.lon, params2.lat, payload);
-    const selection = params2.mode === MAP_MODE_PARCEL ? parcel : territory;
+    if (params2.mode === MAP_MODE_TERRITORY) {
+      payload = await enrichTerritoryPayloadWithParcelAtPoint(
+        { lon: params2.lon, lat: params2.lat, zoom: params2.zoom },
+        payload,
+        requestId2,
+        fetchAbortSignal
+      );
+      if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
+    }
+    const selection = selectionFromGpuPayload(payload, params2.mode, params2.lon, params2.lat);
+    storeFicheInCache(params2.mode, params2.lon, params2.lat, selection);
     return applyMapPointResult(
       requestId2,
       params2.lon,
@@ -73191,7 +73284,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function loadFicheForMapPoint(params2) {
     return new Promise((resolve2) => {
       whenGpuClientConfigReady(() => {
-        void loadFicheForMapPointImpl(params2).then(resolve2);
+        void loadFicheForMapPointImpl(params2).then(resolve2, () => resolve2(null));
       });
     });
   }
@@ -73488,15 +73581,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return features;
   }
-  function cacheBothModeEmprisesFromPayload(lon, lat, payload) {
-    storeEmpriseInCache(lon, lat, MAP_MODE_PARCEL, featuresFromFichePayload(payload, MAP_MODE_PARCEL));
-    storeEmpriseInCache(
-      lon,
-      lat,
-      MAP_MODE_TERRITORY,
-      featuresFromFichePayload(payload, MAP_MODE_TERRITORY)
-    );
-  }
   async function fetchModeEmpriseFeatures(lon, lat, mode2, zoom) {
     if (typeof window === "undefined") return [];
     return new Promise((resolve2) => {
@@ -73506,9 +73590,9 @@ Expected function or array of functions, received type ${typeof value2}.`
             resolve2([]);
             return;
           }
-          cacheBothModeEmprisesFromPayload(lon, lat, payload);
+          storeEmpriseInCache(lon, lat, mode2, featuresFromFichePayload(payload, mode2));
           resolve2(featuresFromFichePayload(payload, mode2));
-        });
+        }).catch(() => resolve2([]));
       });
     });
   }
@@ -73640,6 +73724,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     hidden: "",
     "aria-hidden": "true"
   };
+  const SEARCH_RESULT_FIT_MAX_ZOOM = 19;
   const GPU_PIN_BLUE = "#000091";
   const _sfc_main$o = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
@@ -73809,7 +73894,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!map2 || !extent || isEmpty(extent)) return;
         animateViewFit(map2, extent, {
           padding: defaultMapViewFitPadding(),
-          maxZoom: 15
+          maxZoom: SEARCH_RESULT_FIT_MAX_ZOOM
         });
       }
       function resolveMapModeForEmprise() {
@@ -75364,14 +75449,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         observer = void 0;
       }
     };
-    const stopWatch = watch(computed(() => {
+    const targets = computed(() => {
       const _targets = toValue$1(target2);
       return Array.isArray(_targets) ? _targets.map((el2) => unrefElement(el2)) : [unrefElement(_targets)];
-    }), (els) => {
+    });
+    const stopWatch = watch(targets, (els) => {
       cleanup();
       if (isSupported2.value && window2) {
         observer = new ResizeObserver(callback);
-        for (const _el of els) if (_el) observer.observe(_el, observerOptions);
+        for (const _el of els) if (_el instanceof Element) observer.observe(_el, observerOptions);
       }
     }, {
       immediate: true,
@@ -75418,19 +75504,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }, options);
     tryOnMounted(() => {
       const ele = unrefElement(target2);
-      if (ele && "offsetWidth" in ele) if (box === "content-box" && window2) {
-        const cs2 = window2.getComputedStyle(ele);
-        const padX = Number.parseFloat(cs2.paddingLeft) + Number.parseFloat(cs2.paddingRight);
-        const padY = Number.parseFloat(cs2.paddingTop) + Number.parseFloat(cs2.paddingBottom);
-        const bdX = Number.parseFloat(cs2.borderLeftWidth) + Number.parseFloat(cs2.borderRightWidth);
-        const bdY = Number.parseFloat(cs2.borderTopWidth) + Number.parseFloat(cs2.borderBottomWidth);
-        width.value = ele.offsetWidth - padX - bdX;
-        height.value = ele.offsetHeight - padY - bdY;
-      } else {
-        width.value = ele.offsetWidth;
-        height.value = ele.offsetHeight;
-      }
-      else if (ele) {
+      if (ele && "offsetWidth" in ele) {
+        if (box === "content-box" && window2) {
+          const cs2 = window2.getComputedStyle(ele);
+          const padX = Number.parseFloat(cs2.paddingLeft) + Number.parseFloat(cs2.paddingRight);
+          const padY = Number.parseFloat(cs2.paddingTop) + Number.parseFloat(cs2.paddingBottom);
+          const bdX = Number.parseFloat(cs2.borderLeftWidth) + Number.parseFloat(cs2.borderRightWidth);
+          const bdY = Number.parseFloat(cs2.borderTopWidth) + Number.parseFloat(cs2.borderBottomWidth);
+          width.value = ele.offsetWidth - padX - bdX;
+          height.value = ele.offsetHeight - padY - bdY;
+        } else {
+          width.value = ele.offsetWidth;
+          height.value = ele.offsetHeight;
+        }
+      } else if (ele) {
         width.value = initialSize.width;
         height.value = initialSize.height;
       }
@@ -75906,15 +75993,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       resources,
       path: source.path || "/",
       maxURL: source.maxURL || 500,
-      rotate: source.rotate || 750,
-      timeout: source.timeout || 5e3,
+      rotate: source.rotate || 2e3,
+      timeout: source.timeout || 1e4,
       random: source.random === true,
       index: source.index || 0,
       dataAfterTimeout: source.dataAfterTimeout !== false
     };
   }
   const configStorage = /* @__PURE__ */ Object.create(null);
-  configStorage[""] = createAPIConfig({ resources: ["https://api.iconify.design"] });
+  configStorage[""] = createAPIConfig({ resources: ["https://api.iconify.design", "https://api2.iconify.design"] });
   function addAPIProvider(provider, customConfig) {
     const config2 = createAPIConfig(customConfig);
     if (config2 === null) return false;
@@ -78002,6 +78089,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       sortableRows: { type: [Boolean, Array] },
       sorted: {},
       sortFn: {},
+      manualSort: { type: Boolean },
       verticalBorders: { type: Boolean },
       bottomCaption: { type: Boolean },
       noCaption: { type: Boolean },
@@ -78091,6 +78179,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (P(e3)) return T2.value === e3.key ? D.value ? "descending" : "ascending" : "none";
       }
       let L2 = computed(() => {
+        if (r.manualSort) return r.rows.slice();
         let e3 = T2.value ? r.rows.slice().sort(r.sortFn ?? ee) : r.rows.slice();
         return D.value && e3.reverse(), e3;
       }), te = computed(() => j.value.map((e3) => e3.key)), z2 = computed(() => te.value.findIndex((e3) => e3 === r.rowKey)), B = computed(() => {
@@ -78317,7 +78406,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         ])) : createCommentVNode("", true)], true)], true)], 2)) : createCommentVNode("", true)
       ], 2));
     }
-  }), [["__scopeId", "data-v-bfd2d4f3"]]), Mn = { class: "fr-container flex" }, Nn = { class: "half" }, Pn = { class: "fr-h1" }, Fn = { class: "flex fr-my-md-3w" }, In = { class: "fr-h6" }, Ln = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-5bf78c74"]]), Mn = { class: "fr-container flex" }, Nn = { class: "half" }, Pn = { class: "fr-h1" }, Fn = { class: "flex fr-my-md-3w" }, In = { class: "fr-h6" }, Ln = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrErrorPage",
     props: {
       title: { default: "Page non trouvée" },
@@ -78478,27 +78567,25 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, toDisplayString(e2.error ?? e2.validMessage), 9, $n)) : createCommentVNode("", true)])) : createCommentVNode("", true)
       ], 2));
     }
-  }), tr = { class: "fr-follow__newsletter" }, nr = { class: "fr-h5 fr-follow__title" }, rr = { class: "fr-text--sm fr-follow__desc" }, ir = { key: 0 }, ar = ["title"], or = { key: 1 }, sr = {
-    class: "fr-label",
-    for: "newsletter-email"
-  }, cr = { class: "fr-input-wrap fr-input-wrap--addon" }, lr = ["title", "placeholder"], ur = ["title"], dr = {
+  }), tr = { class: "fr-follow__newsletter" }, nr = { class: "fr-h5 fr-follow__title" }, rr = { class: "fr-text--sm fr-follow__desc" }, ir = { key: 0 }, ar = ["title"], or = { key: 1 }, sr = ["for"], cr = { class: "fr-input-wrap fr-input-wrap--addon" }, lr = [
+    "id",
+    "aria-describedby",
+    "aria-invalid",
+    "title",
+    "placeholder"
+  ], ur = ["id", "title"], dr = {
     key: 0,
     class: "fr-messages-group",
     role: "alert"
-  }, fr = {
-    id: "newsletter-email-desc-error",
-    class: "fr-error-text"
-  }, pr = {
-    id: "fr-newsletter-hint-text",
-    class: "fr-hint-text"
-  }, mr = /* @__PURE__ */ defineComponent({
+  }, fr = ["id"], pr = ["id"], mr = /* @__PURE__ */ defineComponent({
     __name: "DsfrNewsLetter",
     props: /* @__PURE__ */ mergeModels({
+      id: { default: () => Z$1("newsletter", "email") },
       title: { default: "Abonnez-vous à notre lettre d’information" },
       description: { default: "" },
       email: { default: "" },
       error: { default: "" },
-      labelEmail: { default: "Votre adresse électronique (ex. : prenom.nom@example.com)" },
+      labelEmail: { default: "Votre adresse électronique (ex. : prenom.nom@example.com)" },
       placeholder: { default: "prenom.nom@example.com" },
       hintText: { default: "" },
       inputTitle: { default: "Adresse courriel" },
@@ -78524,32 +78611,43 @@ Expected function or array of functions, received type ${typeof value2}.`
     }),
     emits: ["update:email"],
     setup(e2) {
-      let t = useModel(e2, "email");
-      return (n, r) => (openBlock(), createElementBlock("div", tr, [createBaseVNode("div", null, [createBaseVNode("h3", nr, toDisplayString(e2.title), 1), createBaseVNode("p", rr, toDisplayString(e2.description), 1)]), e2.onlyCallout ? (openBlock(), createElementBlock("div", ir, [createBaseVNode("button", {
+      let t = e2, n = useModel(e2, "email"), r = computed(() => `${t.id}-button`), i2 = computed(() => `${t.id}-hint`), o = computed(() => `${t.id}-desc-error`), u2 = computed(() => t.error ? o.value : t.hintText ? i2.value : void 0);
+      return (t2, a3) => (openBlock(), createElementBlock("div", tr, [createBaseVNode("div", null, [createBaseVNode("h3", nr, toDisplayString(e2.title), 1), createBaseVNode("p", rr, toDisplayString(e2.description), 1)]), e2.onlyCallout ? (openBlock(), createElementBlock("div", ir, [createBaseVNode("button", {
         class: "fr-btn",
         title: e2.buttonTitle,
-        onClick: r[0] || (r[0] = (t2) => e2.buttonAction ? e2.buttonAction(t2) : () => {
+        onClick: a3[0] || (a3[0] = (t3) => e2.buttonAction ? e2.buttonAction(t3) : () => {
         })
-      }, toDisplayString(e2.buttonText), 9, ar)])) : (openBlock(), createElementBlock("div", or, [createBaseVNode("form", { onSubmit: r[2] || (r[2] = withModifiers((n2) => e2.onSubmit(t.value), ["prevent"])) }, [
-        createBaseVNode("label", sr, toDisplayString(e2.labelEmail), 1),
+      }, toDisplayString(e2.buttonText), 9, ar)])) : (openBlock(), createElementBlock("div", or, [createBaseVNode("form", { onSubmit: a3[2] || (a3[2] = withModifiers((t3) => e2.onSubmit(n.value), ["prevent"])) }, [
+        createBaseVNode("label", {
+          class: "fr-label",
+          for: e2.id
+        }, toDisplayString(e2.labelEmail), 9, sr),
         createBaseVNode("div", cr, [withDirectives(createBaseVNode("input", {
-          id: "newsletter-email",
-          "onUpdate:modelValue": r[1] || (r[1] = (e3) => t.value = e3),
-          class: "fr-input",
-          "aria-describedby": "fr-newsletter-hint-text",
+          id: e2.id,
+          "onUpdate:modelValue": a3[1] || (a3[1] = (e3) => n.value = e3),
+          class: normalizeClass(["fr-input", { "fr-input--error": e2.error }]),
+          "aria-describedby": u2.value,
+          "aria-invalid": e2.error ? true : void 0,
           title: e2.inputTitle || e2.labelEmail,
           placeholder: e2.placeholder || e2.labelEmail,
           type: "email",
           name: "newsletter-email",
           autocomplete: "email"
-        }, null, 8, lr), [[vModelText, t.value]]), createBaseVNode("button", {
-          id: "newsletter-button",
+        }, null, 10, lr), [[vModelText, n.value]]), createBaseVNode("button", {
+          id: r.value,
           class: "fr-btn",
           title: e2.buttonTitle,
           type: "submit"
         }, toDisplayString(e2.buttonText), 9, ur)]),
-        e2.error ? (openBlock(), createElementBlock("div", dr, [createBaseVNode("p", fr, toDisplayString(e2.error), 1)])) : createCommentVNode("", true),
-        createBaseVNode("p", pr, toDisplayString(e2.hintText), 1)
+        e2.error ? (openBlock(), createElementBlock("div", dr, [createBaseVNode("p", {
+          id: o.value,
+          class: "fr-error-text"
+        }, toDisplayString(e2.error), 9, fr)])) : createCommentVNode("", true),
+        e2.hintText ? (openBlock(), createElementBlock("p", {
+          key: 1,
+          id: i2.value,
+          class: "fr-hint-text"
+        }, toDisplayString(e2.hintText), 9, pr)) : createCommentVNode("", true)
       ], 32)]))]));
     }
   }), hr = { class: "fr-follow__social" }, gr = {
@@ -81070,12 +81168,124 @@ Expected function or array of functions, received type ${typeof value2}.`
         onClick: n[0] || (n[0] = (e3) => t.$emit("close"))
       }, " Masquer le message ")) : createCommentVNode("", true)])])], 2));
     }
-  }), ds = ["aria-label"], fs = { class: "fr-content-media__img" }, ps = [
+  }), ds = /^data:image\/svg\+xml(?:;([^,]*))?,(.*)$/i, fs = "script,foreignObject,iframe,object,embed,audio,video,canvas", ps = /^on/i, ms = /^artwork-(?:decorative|minor|major)$/, hs = (e2, t) => e2.toLowerCase().split(";").filter(Boolean).includes("base64") ? globalThis.atob(t) : decodeURIComponent(t), gs = (e2) => {
+    e2.querySelectorAll(fs).forEach((e3) => e3.remove()), [e2, ...Array.from(e2.querySelectorAll("*"))].forEach((e3) => {
+      Array.from(e3.attributes).forEach((t) => {
+        let n = t.name.toLowerCase(), r = t.value.trim();
+        if (ps.test(n) || n === "src" || n === "style") {
+          e3.removeAttribute(t.name);
+          return;
+        }
+        if (r.toLowerCase().includes("javascript:")) {
+          e3.removeAttribute(t.name);
+          return;
+        }
+        (n === "href" || n === "xlink:href") && !r.startsWith("#") && e3.removeAttribute(t.name);
+      });
+    });
+  }, _s = (e2, t) => {
+    let n = /* @__PURE__ */ new Map();
+    e2.querySelectorAll("[id]").forEach((e3) => {
+      let r = e3.getAttribute("id");
+      if (!r || !ms.test(r)) return;
+      let i2 = `${r}-${t}`;
+      n.set(r, i2), e3.setAttribute("id", i2);
+    }), n.size !== 0 && e2.querySelectorAll("*").forEach((e3) => {
+      Array.from(e3.attributes).forEach((t2) => {
+        let r = t2.value;
+        n.forEach((e4, t3) => {
+          r = r.replaceAll(`#${t3}`, `#${e4}`).replaceAll(`url(#${t3})`, `url(#${e4})`);
+        }), r !== t2.value && e3.setAttribute(t2.name, r);
+      });
+    });
+  }, vs = (e2, t) => {
+    if (!e2 || !globalThis.DOMParser || !globalThis.XMLSerializer) return "";
+    let n = e2.match(ds);
+    if (!n) return "";
+    try {
+      let e3 = hs(n[1] ?? "", n[2] ?? ""), r = new DOMParser().parseFromString(e3, "image/svg+xml").documentElement;
+      return r.tagName.toLowerCase() === "svg" ? (gs(r), _s(r, t), new XMLSerializer().serializeToString(r)) : "";
+    } catch {
+      return "";
+    }
+  }, ys = ["src", "title"], bs = ["title", "innerHTML"], xs = ["src", "title"], Ss = { key: 0 }, Cs = ["href"], ws = ["href"], Ts = ["href"], Es = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+    __name: "DsfrPictogram",
+    props: {
+      imgSrc: { default: void 0 },
+      svgPath: { default: void 0 },
+      svgAttrs: { default: () => ({
+        viewBox: "0 0 80 80",
+        width: "80px",
+        height: "80px"
+      }) },
+      title: { default: void 0 }
+    },
+    setup(e2) {
+      let t = e2, n = /^data:image\/svg\+xml(?:;[^,]*)?,/i, r = {
+        viewBox: "0 0 80 80",
+        width: "80px",
+        height: "80px"
+      }, i2 = Z$1("pictogram", "artwork").replace(/[^\w-]/g, "_"), o = computed(() => {
+        var _a2;
+        return !!((_a2 = t.svgPath) == null ? void 0 : _a2.match(n));
+      }), u2 = computed(() => vs(t.svgPath, i2)), d = (e3) => typeof e3 == "string" || typeof e3 == "number" ? e3 : void 0, f2 = computed(() => {
+        let e3 = {
+          ...r,
+          ...t.svgAttrs
+        };
+        return {
+          width: d(e3.width),
+          height: d(e3.height)
+        };
+      });
+      return (t2, n2) => e2.imgSrc ? (openBlock(), createElementBlock("img", {
+        key: 0,
+        src: e2.imgSrc,
+        class: "fr-artwork",
+        alt: "",
+        title: e2.title
+      }, null, 8, ys)) : u2.value ? (openBlock(), createElementBlock("span", {
+        key: 1,
+        "aria-hidden": "true",
+        class: "fr-artwork fr-artwork--inline",
+        style: normalizeStyle(f2.value),
+        title: e2.title,
+        innerHTML: u2.value
+      }, null, 12, bs)) : o.value ? (openBlock(), createElementBlock("img", {
+        key: 2,
+        src: e2.svgPath,
+        class: "fr-artwork",
+        alt: "",
+        title: e2.title
+      }, null, 8, xs)) : e2.svgPath ? (openBlock(), createElementBlock("svg", mergeProps({
+        key: 3,
+        "aria-hidden": "true",
+        class: "fr-artwork"
+      }, {
+        ...r,
+        ...e2.svgAttrs
+      }), [
+        e2.title ? (openBlock(), createElementBlock("title", Ss, toDisplayString(e2.title), 1)) : createCommentVNode("", true),
+        createBaseVNode("use", {
+          class: "fr-artwork-decorative",
+          href: `${e2.svgPath}#artwork-decorative`
+        }, null, 8, Cs),
+        createBaseVNode("use", {
+          class: "fr-artwork-minor",
+          href: `${e2.svgPath}#artwork-minor`
+        }, null, 8, ws),
+        createBaseVNode("use", {
+          class: "fr-artwork-major",
+          href: `${e2.svgPath}#artwork-major`
+        }, null, 8, Ts)
+      ], 16)) : createCommentVNode("", true);
+    }
+  }), [["__scopeId", "data-v-644b52dd"]]), Ds = ["aria-label"], Os = { class: "fr-content-media__img" }, ks = [
     "src",
     "alt",
     "title",
     "ratio"
-  ], ms = { class: "fr-content-media__caption" }, hs = /* @__PURE__ */ defineComponent({
+  ], As = { class: "fr-content-media__caption" }, js = /* @__PURE__ */ defineComponent({
     __name: "DsfrPicture",
     props: {
       alt: { default: "" },
@@ -81093,19 +81303,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         }]),
         role: "group",
         "aria-label": e2.legend
-      }, [createBaseVNode("div", fs, [renderSlot(t.$slots, "default", {}, () => [e2.src ? (openBlock(), createElementBlock("img", {
+      }, [createBaseVNode("div", Os, [renderSlot(t.$slots, "default", {}, () => [e2.src ? (openBlock(), createElementBlock("img", {
         key: 0,
         src: e2.src,
         class: normalizeClass(["fr-responsive-img", `fr-ratio-${e2.ratio}`]),
         alt: e2.alt,
         title: e2.title,
         ratio: e2.ratio
-      }, null, 10, ps)) : createCommentVNode("", true)])]), createBaseVNode("figcaption", ms, toDisplayString(e2.legend), 1)], 10, ds));
+      }, null, 10, ks)) : createCommentVNode("", true)])]), createBaseVNode("figcaption", As, toDisplayString(e2.legend), 1)], 10, Ds));
     }
-  }), gs = ["cite"], _s = { class: "fr-quote__author" }, vs = { class: "fr-quote__source" }, ys = ["href"], bs = {
+  }), Ms = ["cite"], Ns = { class: "fr-quote__author" }, Ps = { class: "fr-quote__source" }, Fs = ["href"], Is = {
     key: 0,
     class: "fr-quote__image"
-  }, xs = ["src"], Ss = /* @__PURE__ */ defineComponent({
+  }, Ls = ["src"], Rs = /* @__PURE__ */ defineComponent({
     __name: "DsfrQuote",
     props: {
       quote: { default: void 0 },
@@ -81121,77 +81331,37 @@ Expected function or array of functions, received type ${typeof value2}.`
       return (n, r) => (openBlock(), createElementBlock("figure", { class: normalizeClass(["fr-quote fr-quote--column", { [`fr-quote--${e2.accent}`]: e2.accent }]) }, [e2.quote ? (openBlock(), createElementBlock("blockquote", {
         key: 0,
         cite: e2.sourceUrl
-      }, [createBaseVNode("p", { class: normalizeClass(`fr-text--${e2.size}`) }, " «" + toDisplayString(" ") + toDisplayString(e2.quote) + toDisplayString(" ") + "» ", 3)], 8, gs)) : createCommentVNode("", true), createBaseVNode("figcaption", null, [
-        createBaseVNode("p", _s, toDisplayString(e2.author), 1),
-        createBaseVNode("ul", vs, [createBaseVNode("li", null, [createBaseVNode("cite", null, toDisplayString(e2.source), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.details, (e3, n2) => (openBlock(), createElementBlock("li", { key: n2 }, [typeof e3 == "object" ? (openBlock(), createElementBlock("a", {
+      }, [createBaseVNode("p", { class: normalizeClass(`fr-text--${e2.size}`) }, " «" + toDisplayString(" ") + toDisplayString(e2.quote) + toDisplayString(" ") + "» ", 3)], 8, Ms)) : createCommentVNode("", true), createBaseVNode("figcaption", null, [
+        createBaseVNode("p", Ns, toDisplayString(e2.author), 1),
+        createBaseVNode("ul", Ps, [createBaseVNode("li", null, [createBaseVNode("cite", null, toDisplayString(e2.source), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.details, (e3, n2) => (openBlock(), createElementBlock("li", { key: n2 }, [typeof e3 == "object" ? (openBlock(), createElementBlock("a", {
           key: 0,
           target: "_blank",
           rel: "noopener noreferrer",
           href: e3.url
-        }, toDisplayString(e3.label), 9, ys)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(e3), 1)], 64))]))), 128))]),
-        e2.quoteImage ? (openBlock(), createElementBlock("div", bs, [createBaseVNode("img", {
+        }, toDisplayString(e3.label), 9, Fs)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(e3), 1)], 64))]))), 128))]),
+        e2.quoteImage ? (openBlock(), createElementBlock("div", Is, [createBaseVNode("img", {
           src: e2.quoteImage,
           class: "fr-responsive-img",
           alt: ""
-        }, null, 8, xs)])) : createCommentVNode("", true)
+        }, null, 8, Ls)])) : createCommentVNode("", true)
       ])], 2));
     }
-  }), Cs = /^data:image\/svg\+xml(?:;([^,]*))?,(.*)$/i, ws = "script,foreignObject,iframe,object,embed,audio,video,canvas", Ts = /^on/i, Es = /^artwork-(?:decorative|minor|major)$/, Ds = (e2, t) => e2.toLowerCase().split(";").filter(Boolean).includes("base64") ? globalThis.atob(t) : decodeURIComponent(t), Os = (e2) => {
-    e2.querySelectorAll(ws).forEach((e3) => e3.remove()), [e2, ...Array.from(e2.querySelectorAll("*"))].forEach((e3) => {
-      Array.from(e3.attributes).forEach((t) => {
-        let n = t.name.toLowerCase(), r = t.value.trim();
-        if (Ts.test(n) || n === "src" || n === "style") {
-          e3.removeAttribute(t.name);
-          return;
-        }
-        if (r.toLowerCase().includes("javascript:")) {
-          e3.removeAttribute(t.name);
-          return;
-        }
-        (n === "href" || n === "xlink:href") && !r.startsWith("#") && e3.removeAttribute(t.name);
-      });
-    });
-  }, ks = (e2, t) => {
-    let n = /* @__PURE__ */ new Map();
-    e2.querySelectorAll("[id]").forEach((e3) => {
-      let r = e3.getAttribute("id");
-      if (!r || !Es.test(r)) return;
-      let i2 = `${r}-${t}`;
-      n.set(r, i2), e3.setAttribute("id", i2);
-    }), n.size !== 0 && e2.querySelectorAll("*").forEach((e3) => {
-      Array.from(e3.attributes).forEach((t2) => {
-        let r = t2.value;
-        n.forEach((e4, t3) => {
-          r = r.replaceAll(`#${t3}`, `#${e4}`).replaceAll(`url(#${t3})`, `url(#${e4})`);
-        }), r !== t2.value && e3.setAttribute(t2.name, r);
-      });
-    });
-  }, As = (e2, t) => {
-    if (!e2 || !globalThis.DOMParser || !globalThis.XMLSerializer) return "";
-    let n = e2.match(Cs);
-    if (!n) return "";
-    try {
-      let e3 = Ds(n[1] ?? "", n[2] ?? ""), r = new DOMParser().parseFromString(e3, "image/svg+xml").documentElement;
-      return r.tagName.toLowerCase() === "svg" ? (Os(r), ks(r, t), new XMLSerializer().serializeToString(r)) : "";
-    } catch {
-      return "";
-    }
-  }, js = [
+  }), zs = [
     "id",
     "name",
     "value",
     "checked",
     "disabled"
-  ], Ms = ["for"], Ns = {
+  ], Bs = ["for"], Vs = {
     key: 0,
     class: "required"
-  }, Ps = {
+  }, Hs = {
     key: 0,
     class: "fr-hint-text"
-  }, Fs = {
+  }, Us = {
     key: 0,
     class: "fr-radio-rich__pictogram"
-  }, Is = ["src", "title"], Ls = ["innerHTML"], Rs = ["src", "title"], zs = { key: 0 }, Bs = ["href"], Vs = ["href"], Hs = ["href"], Us = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Ws = /* @__PURE__ */ defineComponent({
     __name: "DsfrRadioButton",
     props: {
       id: { default: () => Z$1("basic", "radio") },
@@ -81229,16 +81399,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["update:modelValue"],
     setup(e2) {
-      let t = e2, n = /^data:image\/svg\+xml(?:;[^,]*)?,/i, r = {
-        viewBox: "0 0 80 80",
-        width: "80px",
-        height: "80px"
-      }, i2 = computed(() => t.rich || !!t.img || !!t.svgPath), o = computed(() => {
-        var _a2;
-        return !!((_a2 = t.svgPath) == null ? void 0 : _a2.match(n));
-      }), d = Z$1("radio", "artwork").replace(/[^\w-]/g, "_"), f2 = computed(() => As(t.svgPath, d));
-      return (t2, n2) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-fieldset__element", { "fr-fieldset__element--inline": e2.inline }]) }, [createBaseVNode("div", { class: normalizeClass(["fr-radio-group", {
-        "fr-radio-rich": i2.value,
+      let t = e2, n = computed(() => t.rich || !!t.img || !!t.svgPath);
+      return (t2, r) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-fieldset__element", { "fr-fieldset__element--inline": e2.inline }]) }, [createBaseVNode("div", { class: normalizeClass(["fr-radio-group", {
+        "fr-radio-rich": n.value,
         "fr-radio-group--sm": e2.small
       }]) }, [
         createBaseVNode("input", mergeProps({
@@ -81248,65 +81411,37 @@ Expected function or array of functions, received type ${typeof value2}.`
           value: e2.value,
           checked: e2.modelValue === e2.value,
           disabled: e2.disabled
-        }, t2.$attrs, { onClick: n2[0] || (n2[0] = (n3) => t2.$emit("update:modelValue", e2.value)) }), null, 16, js),
+        }, t2.$attrs, { onClick: r[0] || (r[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, zs),
         createBaseVNode("label", {
           for: e2.id,
           class: "fr-label"
-        }, [renderSlot(t2.$slots, "label", { label: e2.label }, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", Ns, " *")) : createCommentVNode("", true)], true)], true), e2.hint ? (openBlock(), createElementBlock("span", Ps, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, Ms),
-        e2.img || e2.svgPath ? (openBlock(), createElementBlock("div", Fs, [e2.img ? (openBlock(), createElementBlock("img", {
-          key: 0,
-          src: e2.img,
-          class: "fr-artwork",
-          alt: "",
+        }, [renderSlot(t2.$slots, "label", { label: e2.label }, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", Vs, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", Hs, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, Bs),
+        e2.img || e2.svgPath ? (openBlock(), createElementBlock("div", Us, [createVNode(Es, {
+          "img-src": e2.img,
+          "svg-path": e2.svgPath,
+          "svg-attrs": e2.svgAttrs,
           title: e2.imgTitle
-        }, null, 8, Is)) : f2.value ? (openBlock(), createElementBlock("span", {
-          key: 1,
-          "aria-hidden": "true",
-          class: "fr-artwork fr-artwork--inline",
-          innerHTML: f2.value
-        }, null, 8, Ls)) : o.value ? (openBlock(), createElementBlock("img", {
-          key: 2,
-          src: e2.svgPath,
-          class: "fr-artwork",
-          alt: "",
-          title: e2.imgTitle
-        }, null, 8, Rs)) : (openBlock(), createElementBlock("svg", mergeProps({
-          key: 3,
-          "aria-hidden": "true",
-          class: "fr-artwork"
-        }, {
-          ...r,
-          ...e2.svgAttrs
-        }), [
-          e2.imgTitle ? (openBlock(), createElementBlock("title", zs, toDisplayString(e2.imgTitle), 1)) : createCommentVNode("", true),
-          createBaseVNode("use", {
-            class: "fr-artwork-decorative",
-            href: `${e2.svgPath}#artwork-decorative`
-          }, null, 8, Bs),
-          createBaseVNode("use", {
-            class: "fr-artwork-minor",
-            href: `${e2.svgPath}#artwork-minor`
-          }, null, 8, Vs),
-          createBaseVNode("use", {
-            class: "fr-artwork-major",
-            href: `${e2.svgPath}#artwork-major`
-          }, null, 8, Hs)
-        ], 16))])) : createCommentVNode("", true)
+        }, null, 8, [
+          "img-src",
+          "svg-path",
+          "svg-attrs",
+          "title"
+        ])])) : createCommentVNode("", true)
       ], 2)], 2));
     }
-  }), [["__scopeId", "data-v-2dd9efb8"]]), Ws = { class: "fr-form-group" }, Gs = [
+  }), Gs = { class: "fr-form-group" }, Ks = [
     "disabled",
     "aria-labelledby",
     "aria-describedby",
     "aria-invalid",
     "role"
-  ], Ks = ["id"], qs = {
+  ], qs = ["id"], Js = {
     key: 0,
     class: "fr-hint-text"
-  }, Js = {
+  }, Ys = {
     key: 0,
     class: "required"
-  }, Ys = ["id"], Xs = /* @__PURE__ */ defineComponent({
+  }, Xs = ["id"], Zs = /* @__PURE__ */ defineComponent({
     __name: "DsfrRadioButtonSet",
     props: {
       titleId: { default: () => Z$1("radio-button", "group") },
@@ -81333,7 +81468,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let r = e2, i2 = n, d = computed(() => r.errorMessage || r.validMessage), f2 = computed(() => r.errorMessage ? "fr-error-text" : "fr-valid-text"), p5 = (e3) => {
         e3 !== r.modelValue && i2("update:modelValue", e3);
       }, m = computed(() => d.value ? `messages-${r.titleId}` : void 0);
-      return (n2, r2) => (openBlock(), createElementBlock("div", Ws, [createBaseVNode("fieldset", {
+      return (n2, r2) => (openBlock(), createElementBlock("div", Gs, [createBaseVNode("fieldset", {
         class: normalizeClass(["fr-fieldset", {
           "fr-fieldset--error": e2.errorMessage,
           "fr-fieldset--valid": e2.validMessage
@@ -81350,10 +81485,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-fieldset__legend fr-fieldset__legend--regular"
         }, [renderSlot(n2.$slots, "legend", {}, () => [
           createTextVNode(toDisplayString(e2.legend) + " ", 1),
-          e2.hint || n2.$slots.hint ? (openBlock(), createElementBlock("span", qs, [renderSlot(n2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(e2.hint), 1)])])) : createCommentVNode("", true),
-          renderSlot(n2.$slots, "required-tip", {}, () => [e2.required ? (openBlock(), createElementBlock("span", Js, " *")) : createCommentVNode("", true)])
-        ])], 8, Ks)) : createCommentVNode("", true),
-        renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(Us, mergeProps({
+          e2.hint || n2.$slots.hint ? (openBlock(), createElementBlock("span", Js, [renderSlot(n2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(e2.hint), 1)])])) : createCommentVNode("", true),
+          renderSlot(n2.$slots, "required-tip", {}, () => [e2.required ? (openBlock(), createElementBlock("span", Ys, " *")) : createCommentVNode("", true)])
+        ])], 8, qs)) : createCommentVNode("", true),
+        renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(Ws, mergeProps({
           key: typeof t.value == "boolean" ? n3 : t.value || n3,
           name: e2.name,
           "aria-disabled": t.disabled
@@ -81377,16 +81512,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-messages-group",
           "aria-live": "assertive",
           role: "alert"
-        }, [createBaseVNode("p", { class: normalizeClass(["fr-message fr-message--info flex items-center", f2.value]) }, toDisplayString(d.value), 3)], 8, Ys)) : createCommentVNode("", true)
-      ], 10, Gs)]));
+        }, [createBaseVNode("p", { class: normalizeClass(["fr-message fr-message--info flex items-center", f2.value]) }, toDisplayString(d.value), 3)], 8, Xs)) : createCommentVNode("", true)
+      ], 10, Ks)]));
     }
-  }), Zs = ["id"], Qs = ["id"], $s = {
+  }), Qs = ["id"], $s = ["id"], ec = {
     key: 0,
     class: "required"
-  }, ec = {
+  }, tc = {
     key: 0,
     class: "fr-hint-text"
-  }, tc = ["data-fr-prefix", "data-fr-suffix"], nc = [
+  }, nc = ["data-fr-prefix", "data-fr-suffix"], rc = [
     "id",
     "min",
     "max",
@@ -81396,7 +81531,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], rc = [
+  ], ic = [
     "id",
     "min",
     "max",
@@ -81406,17 +81541,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], ic = {
+  ], ac = {
     key: 1,
     class: "fr-range__min",
     "aria-hidden": "true",
     "data-fr-js-range-limit": "true"
-  }, ac = {
+  }, oc = {
     key: 2,
     class: "fr-range__max",
     "aria-hidden": "true",
     "data-fr-js-range-limit": "true"
-  }, oc = ["id"], sc = ["id"], cc = /* @__PURE__ */ defineComponent({
+  }, sc = ["id"], cc = ["id"], lc = /* @__PURE__ */ defineComponent({
     __name: "DsfrRange",
     props: {
       id: { default: () => Z$1("range") },
@@ -81471,7 +81606,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         createBaseVNode("label", {
           id: `${e2.id}-label`,
           class: "fr-label"
-        }, [renderSlot(t2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", $s, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", ec, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, Qs),
+        }, [renderSlot(t2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", ec, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", tc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, $s),
         createBaseVNode("div", {
           class: normalizeClass(["fr-range", {
             "fr-range--sm": e2.small,
@@ -81505,7 +81640,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               var _a2;
               return r("update:lowerValue", +((_a2 = e3.target) == null ? void 0 : _a2.value));
             })
-          }, null, 40, nc)) : createCommentVNode("", true),
+          }, null, 40, rc)) : createCommentVNode("", true),
           createBaseVNode("input", {
             id: e2.id,
             ref_key: "input",
@@ -81523,10 +81658,10 @@ Expected function or array of functions, received type ${typeof value2}.`
               var _a2;
               return r("update:modelValue", +((_a2 = e3.target) == null ? void 0 : _a2.value));
             })
-          }, null, 40, rc),
-          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", ic, toDisplayString(e2.min), 1)),
-          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", ac, toDisplayString(e2.max), 1))
-        ], 14, tc),
+          }, null, 40, ic),
+          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", ac, toDisplayString(e2.min), 1)),
+          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", oc, toDisplayString(e2.max), 1))
+        ], 14, nc),
         e2.message || t2.$slots.messages ? (openBlock(), createElementBlock("div", {
           key: 0,
           id: `${e2.id}-messages`,
@@ -81537,17 +81672,17 @@ Expected function or array of functions, received type ${typeof value2}.`
           key: 0,
           id: `${e2.id}-message-error`,
           class: "fr-message fr-message--error"
-        }, toDisplayString(e2.message), 9, sc)) : createCommentVNode("", true)])], 8, oc)) : createCommentVNode("", true)
-      ], 10, Zs));
+        }, toDisplayString(e2.message), 9, cc)) : createCommentVNode("", true)])], 8, sc)) : createCommentVNode("", true)
+      ], 10, Qs));
     }
-  }), lc = { class: "fr-segmented__element" }, uc = [
+  }), uc = { class: "fr-segmented__element" }, dc = [
     "id",
     "name",
     "value",
     "checked",
     "disabled",
     "aria-disabled"
-  ], dc = ["for"], fc = { key: 1 }, pc = /* @__PURE__ */ defineComponent({
+  ], fc = ["for"], pc = { key: 1 }, mc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSegmented",
     props: {
       id: { default: () => Z$1("segmented") },
@@ -81561,7 +81696,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     emits: ["update:modelValue"],
     setup(e2) {
       let t = e2, n = computed(() => typeof t.icon == "string" ? { name: t.icon } : t.icon), r = computed(() => t.icon && typeof t.icon == "string" && t.icon.startsWith("fr-") ? t.icon : "");
-      return (t2, i2) => (openBlock(), createElementBlock("div", lc, [createBaseVNode("input", mergeProps({
+      return (t2, i2) => (openBlock(), createElementBlock("div", uc, [createBaseVNode("input", mergeProps({
         id: e2.id,
         type: "radio",
         name: e2.name,
@@ -81569,19 +81704,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         checked: e2.modelValue === e2.value,
         disabled: e2.disabled,
         "aria-disabled": e2.disabled
-      }, t2.$attrs, { onClick: i2[0] || (i2[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, uc), createBaseVNode("label", {
+      }, t2.$attrs, { onClick: i2[0] || (i2[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, dc), createBaseVNode("label", {
         for: e2.id,
         class: normalizeClass(["fr-label", { [r.value]: r.value }])
       }, [
         e2.icon && !r.value ? (openBlock(), createBlock($, normalizeProps(mergeProps({ key: 0 }, n.value)), null, 16)) : createCommentVNode("", true),
-        e2.icon ? (openBlock(), createElementBlock("span", fc, " ")) : createCommentVNode("", true),
+        e2.icon ? (openBlock(), createElementBlock("span", pc, " ")) : createCommentVNode("", true),
         createTextVNode(" " + toDisplayString(e2.label), 1)
-      ], 10, dc)]));
+      ], 10, fc)]));
     }
-  }), mc = { class: "fr-form-group" }, hc = ["disabled"], gc = ["id"], _c = {
+  }), hc = { class: "fr-form-group" }, gc = ["disabled"], _c = ["id"], vc = {
     key: 0,
     class: "fr-hint-text"
-  }, vc = { class: "fr-segmented__elements" }, yc = /* @__PURE__ */ defineComponent({
+  }, yc = { class: "fr-segmented__elements" }, bc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSegmentedSet",
     props: {
       titleId: { default: () => Z$1("segmented-button", "set") },
@@ -81599,7 +81734,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let r = e2, i2 = n, a3 = (e3) => {
         e3 !== r.modelValue && i2("update:modelValue", e3);
       };
-      return (n2, r2) => (openBlock(), createElementBlock("div", mc, [createBaseVNode("fieldset", {
+      return (n2, r2) => (openBlock(), createElementBlock("div", hc, [createBaseVNode("fieldset", {
         class: normalizeClass(["fr-segmented", {
           "fr-segmented--sm": e2.small,
           "fr-segmented--no-legend": !e2.legend
@@ -81609,7 +81744,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         key: 0,
         id: e2.titleId,
         class: normalizeClass(["fr-segmented__legend", { "fr-segmented__legend--inline": e2.inline }])
-      }, [renderSlot(n2.$slots, "legend", {}, () => [createTextVNode(toDisplayString(e2.legend), 1)]), e2.hint ? (openBlock(), createElementBlock("span", _c, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, gc)) : createCommentVNode("", true), createBaseVNode("div", vc, [renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(pc, mergeProps({
+      }, [renderSlot(n2.$slots, "legend", {}, () => [createTextVNode(toDisplayString(e2.legend), 1)]), e2.hint ? (openBlock(), createElementBlock("span", vc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, _c)) : createCommentVNode("", true), createBaseVNode("div", yc, [renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(mc, mergeProps({
         key: t.value || n3,
         name: e2.name || t.name
       }, { ref_for: true }, {
@@ -81618,13 +81753,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, {
         "model-value": e2.modelValue,
         "onUpdate:modelValue": r2[0] || (r2[0] = (e3) => a3(e3))
-      }), null, 16, ["name", "model-value"]))), 128))])])], 10, hc)]));
+      }), null, 16, ["name", "model-value"]))), 128))])])], 10, gc)]));
     }
-  }), bc = { class: "fr-share" }, xc = { class: "fr-share__title" }, Sc = { class: "fr-btns-group" }, Cc = [
+  }), xc = { class: "fr-share" }, Sc = { class: "fr-share__title" }, Cc = { class: "fr-btns-group" }, wc = [
     "title",
     "href",
     "onClick"
-  ], wc = { key: 0 }, Tc = ["href", "title"], Ec = ["title"], Dc = /* @__PURE__ */ defineComponent({
+  ], Tc = { key: 0 }, Ec = ["href", "title"], Dc = ["title"], Oc = /* @__PURE__ */ defineComponent({
     __name: "DsfrShare",
     props: {
       title: { default: "Partager la page" },
@@ -81641,7 +81776,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
       return (i2, a3) => {
         var _a2;
-        return openBlock(), createElementBlock("div", bc, [createBaseVNode("p", xc, toDisplayString(e2.title), 1), createBaseVNode("ul", Sc, [
+        return openBlock(), createElementBlock("div", xc, [createBaseVNode("p", Sc, toDisplayString(e2.title), 1), createBaseVNode("ul", Cc, [
           (openBlock(true), createElementBlock(Fragment, null, renderList(e2.networks, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
             class: normalizeClass(`fr-btn fr-btn--${e3.name}`),
             title: `${e3.label} - nouvelle fenêtre`,
@@ -81649,27 +81784,27 @@ Expected function or array of functions, received type ${typeof value2}.`
             target: "_blank",
             rel: "noopener noreferrer",
             onClick: withModifiers((t2) => r(e3), ["prevent"])
-          }, toDisplayString(e3.label), 11, Cc)]))), 128)),
-          ((_a2 = e2.mail) == null ? void 0 : _a2.to) ? (openBlock(), createElementBlock("li", wc, [createBaseVNode("a", {
+          }, toDisplayString(e3.label), 11, wc)]))), 128)),
+          ((_a2 = e2.mail) == null ? void 0 : _a2.to) ? (openBlock(), createElementBlock("li", Tc, [createBaseVNode("a", {
             class: "fr-btn fr-btn--mail",
             href: e2.mail.to,
             title: `${e2.mail.label} - nouvelle fenêtre`,
             target: "_blank",
             rel: "noopener noreferrer"
-          }, toDisplayString(e2.mail.label), 9, Tc)])) : createCommentVNode("", true),
+          }, toDisplayString(e2.mail.label), 9, Ec)])) : createCommentVNode("", true),
           createBaseVNode("li", null, [createBaseVNode("button", {
             class: "fr-btn fr-btn--copy",
             title: e2.copyLabel,
             onClick: a3[0] || (a3[0] = (e3) => n())
-          }, toDisplayString(e2.copyLabel), 9, Ec)])
+          }, toDisplayString(e2.copyLabel), 9, Dc)])
         ])]);
       };
     }
-  }), Oc = [
+  }), kc = [
     "aria-current",
     "aria-expanded",
     "aria-controls"
-  ], kc = /* @__PURE__ */ defineComponent({
+  ], Ac = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuButton",
     props: {
       active: { type: Boolean },
@@ -81684,15 +81819,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-expanded": !!e2.expanded,
         "aria-controls": e2.controlId,
         onClick: n[0] || (n[0] = (n2) => t.$emit("toggleExpand", e2.controlId))
-      }, [renderSlot(t.$slots, "default")], 8, Oc));
+      }, [renderSlot(t.$slots, "default")], 8, kc));
     }
-  }), Ac = /* @__PURE__ */ defineComponent({
+  }), jc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuListItem",
     props: { active: { type: Boolean } },
     setup(e2) {
       return (t, n) => (openBlock(), createElementBlock("li", { class: normalizeClass(["fr-sidemenu__item", { "fr-sidemenu__item--active": e2.active }]) }, [renderSlot(t.$slots, "default")], 2));
     }
-  }), jc = ["id"], Mc = { class: "fr-sidemenu__list" }, Nc = /* @__PURE__ */ defineComponent({
+  }), Mc = ["id"], Nc = { class: "fr-sidemenu__list" }, Pc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuList",
     props: {
       id: {},
@@ -81722,7 +81857,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-collapse--expanded": unref(p5)
           }),
           onTransitionend: r2[1] || (r2[1] = (t) => unref(h2)(!!e2.expanded, e2.focusOnExpanding))
-        }, [createBaseVNode("ul", Mc, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menuItems, (e3, n3) => (openBlock(), createBlock(Ac, {
+        }, [createBaseVNode("ul", Nc, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menuItems, (e3, n3) => (openBlock(), createBlock(jc, {
           key: n3,
           active: e3.active
         }, {
@@ -81733,7 +81868,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           }, { ref_for: true }, y(e3.to)), {
             default: withCtx(() => [createTextVNode(toDisplayString(e3.text), 1)]),
             _: 2
-          }, 1040, ["aria-current"])), e3.menuItems ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(kc, {
+          }, 1040, ["aria-current"])), e3.menuItems ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(Ac, {
             active: !!e3.active,
             expanded: !!e3.expanded,
             "control-id": e3.id,
@@ -81759,10 +81894,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             "menu-items"
           ])) : createCommentVNode("", true)], 64)) : createCommentVNode("", true)]),
           _: 2
-        }, 1032, ["active"]))), 128))])], 42, jc);
+        }, 1032, ["active"]))), 128))])], 42, Mc);
       };
     }
-  }), Pc = ["aria-labelledby"], Fc = { class: "fr-sidemenu__inner" }, Ic = ["aria-controls", "aria-expanded"], Lc = ["id"], Rc = /* @__PURE__ */ defineComponent({
+  }), Fc = ["aria-labelledby"], Ic = { class: "fr-sidemenu__inner" }, Lc = ["aria-controls", "aria-expanded"], Rc = ["id"], zc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenu",
     props: {
       buttonLabel: { default: "Dans cette rubrique" },
@@ -81785,12 +81920,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       }), (t2, s2) => (openBlock(), createElementBlock("nav", {
         class: "fr-sidemenu",
         "aria-labelledby": e2.id
-      }, [createBaseVNode("div", Fc, [createBaseVNode("button", {
+      }, [createBaseVNode("div", Ic, [createBaseVNode("button", {
         class: "fr-sidemenu__btn",
         "aria-controls": e2.id,
         "aria-expanded": p5.value,
         onClick: s2[0] || (s2[0] = withModifiers((e3) => p5.value = !p5.value, ["prevent", "stop"]))
-      }, toDisplayString(e2.buttonLabel), 9, Ic), createBaseVNode("div", {
+      }, toDisplayString(e2.buttonLabel), 9, Lc), createBaseVNode("div", {
         id: e2.id,
         ref_key: "collapse",
         ref: r,
@@ -81802,13 +81937,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, [(openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-sidemenu__title" }, {
         default: withCtx(() => [createTextVNode(toDisplayString(e2.headingTitle), 1)]),
         _: 1
-      })), renderSlot(t2.$slots, "default", {}, () => [createVNode(Nc, {
+      })), renderSlot(t2.$slots, "default", {}, () => [createVNode(Pc, {
         id: e2.sideMenuListId,
         "menu-items": e2.menuItems,
         onToggleExpand: s2[1] || (s2[1] = (e3) => n("toggleExpand", e3))
-      }, null, 8, ["id", "menu-items"])])], 42, Lc)])], 8, Pc));
+      }, null, 8, ["id", "menu-items"])])], 42, Rc)])], 8, Fc));
     }
-  }), zc = /* @__PURE__ */ defineComponent({
+  }), Bc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuLink",
     props: {
       active: { type: Boolean },
@@ -81824,11 +81959,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         _: 3
       }, 16, ["aria-current"]));
     }
-  }), Bc = { class: "fr-skiplinks" }, Vc = {
+  }), Vc = { class: "fr-skiplinks" }, Hc = {
     class: "fr-container",
     role: "navigation",
     "aria-label": "Accès rapide"
-  }, Hc = { class: "fr-skiplinks__list" }, Uc = ["href", "onClick"], Wc = /* @__PURE__ */ defineComponent({
+  }, Uc = { class: "fr-skiplinks__list" }, Wc = ["href", "onClick"], Gc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSkipLinks",
     props: { links: {} },
     setup(e2) {
@@ -81836,56 +81971,56 @@ Expected function or array of functions, received type ${typeof value2}.`
         var _a2;
         (_a2 = document.getElementById(e3)) == null ? void 0 : _a2.focus();
       };
-      return (r, i2) => (openBlock(), createElementBlock("div", Bc, [createBaseVNode("nav", Vc, [createBaseVNode("ul", Hc, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3) => (openBlock(), createElementBlock("li", { key: e3.id }, [createBaseVNode("a", {
+      return (r, i2) => (openBlock(), createElementBlock("div", Vc, [createBaseVNode("nav", Hc, [createBaseVNode("ul", Uc, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3) => (openBlock(), createElementBlock("li", { key: e3.id }, [createBaseVNode("a", {
         class: "fr-link",
         href: `#${e3.id}`,
         onClick: (t) => n(e3.id)
-      }, toDisplayString(e3.text), 9, Uc)]))), 128))])])]));
+      }, toDisplayString(e3.text), 9, Wc)]))), 128))])])]));
     }
-  }), Gc = { class: "fr-stepper" }, Kc = { class: "fr-stepper__title" }, qc = { class: "fr-stepper__state" }, Jc = ["data-fr-current-step", "data-fr-steps"], Yc = { class: "fr-stepper__details" }, Xc = {
+  }), Kc = { class: "fr-stepper" }, qc = { class: "fr-stepper__title" }, Jc = { class: "fr-stepper__state" }, Yc = ["data-fr-current-step", "data-fr-steps"], Xc = { class: "fr-stepper__details" }, Zc = {
     key: 0,
     class: "fr-text--bold"
-  }, Zc = /* @__PURE__ */ defineComponent({
+  }, Qc = /* @__PURE__ */ defineComponent({
     __name: "DsfrStepper",
     props: {
       steps: { default: () => [] },
       currentStep: { default: 1 }
     },
     setup(e2) {
-      return (t, n) => (openBlock(), createElementBlock("div", Gc, [
-        createBaseVNode("h2", Kc, [createTextVNode(toDisplayString(e2.steps[e2.currentStep - 1]) + " ", 1), createBaseVNode("span", qc, "Étape " + toDisplayString(e2.currentStep) + " sur " + toDisplayString(e2.steps.length), 1)]),
+      return (t, n) => (openBlock(), createElementBlock("div", Kc, [
+        createBaseVNode("h2", qc, [createTextVNode(toDisplayString(e2.steps[e2.currentStep - 1]) + " ", 1), createBaseVNode("span", Jc, "Étape " + toDisplayString(e2.currentStep) + " sur " + toDisplayString(e2.steps.length), 1)]),
         createBaseVNode("div", {
           class: "fr-stepper__steps",
           "data-fr-current-step": e2.currentStep,
           "data-fr-steps": e2.steps.length
-        }, null, 8, Jc),
-        createBaseVNode("p", Yc, [e2.currentStep < e2.steps.length ? (openBlock(), createElementBlock("span", Xc, "Étape suivante :")) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(e2.steps[e2.currentStep]), 1)])
+        }, null, 8, Yc),
+        createBaseVNode("p", Xc, [e2.currentStep < e2.steps.length ? (openBlock(), createElementBlock("span", Zc, "Étape suivante :")) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(e2.steps[e2.currentStep]), 1)])
       ]));
     }
-  }), Qc = {
+  }), $c = {
     class: "fr-summary",
     role: "navigation",
     "aria-labelledby": "fr-summary-title"
-  }, $c = {
+  }, el = {
     id: "fr-summary-title",
     class: "fr-summary__title"
-  }, el = { class: "fr-summary__list" }, tl = ["href"], nl = /* @__PURE__ */ defineComponent({
+  }, tl = { class: "fr-summary__list" }, nl = ["href"], rl = /* @__PURE__ */ defineComponent({
     __name: "DsfrSummary",
     props: {
       title: { default: "Sommaire" },
       anchors: { default: () => [] }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("nav", Qc, [createBaseVNode("h2", $c, toDisplayString(e2.title), 1), createBaseVNode("ol", el, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.anchors, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
+      return (n, r) => (openBlock(), createElementBlock("nav", $c, [createBaseVNode("h2", el, toDisplayString(e2.title), 1), createBaseVNode("ol", tl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.anchors, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
         class: "fr-summary__link",
         href: e3.link
-      }, toDisplayString(e3.name), 9, tl)]))), 128))])]));
+      }, toDisplayString(e3.name), 9, nl)]))), 128))])]));
     }
-  }), rl = [
+  }), il = [
     "id",
     "aria-labelledby",
     "tabindex"
-  ], il = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  ], al = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTabContent",
     props: {
       panelId: {},
@@ -81910,24 +82045,24 @@ Expected function or array of functions, received type ${typeof value2}.`
           role: "tabpanel",
           "aria-labelledby": e2.tabId,
           tabindex: unref(i2) ? 0 : -1
-        }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 10, rl), [[vShow, unref(i2)]])]),
+        }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 10, il), [[vShow, unref(i2)]])]),
         _: 3
       }));
     }
-  }), [["__scopeId", "data-v-d925618f"]]), al = { role: "presentation" }, ol = [
+  }), [["__scopeId", "data-v-d925618f"]]), ol = { role: "presentation" }, sl = [
     "id",
     "data-testid",
     "tabindex",
     "aria-selected",
     "aria-controls"
-  ], sl = {
+  ], cl = {
     key: 0,
     style: {
       "margin-left": "-0.25rem",
       "margin-right": "0.5rem",
       "font-size": "0.95rem"
     }
-  }, cl = /* @__PURE__ */ defineComponent({
+  }, ll = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrTabItem",
     props: {
@@ -81957,7 +82092,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return watch(u2, () => {
         var _a2;
         u2.value && ((_a2 = f2.value) == null ? void 0 : _a2.focus());
-      }), (t2, n2) => (openBlock(), createElementBlock("li", al, [createBaseVNode("button", mergeProps(t2.$attrs, {
+      }), (t2, n2) => (openBlock(), createElementBlock("li", ol, [createBaseVNode("button", mergeProps(t2.$attrs, {
         id: e2.tabId,
         ref_key: "button",
         ref: i2,
@@ -81970,9 +82105,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-controls": e2.panelId,
         onClick: n2[0] || (n2[0] = withModifiers((n3) => t2.$emit("click", e2.tabId), ["prevent"])),
         onKeydown: n2[1] || (n2[1] = (e3) => o(e3))
-      }), [e2.icon ? (openBlock(), createElementBlock("span", sl, [createVNode($, { name: e2.icon }, null, 8, ["name"])])) : createCommentVNode("", true), renderSlot(t2.$slots, "default")], 16, ol)]));
+      }), [e2.icon ? (openBlock(), createElementBlock("span", cl, [createVNode($, { name: e2.icon }, null, 8, ["name"])])) : createCommentVNode("", true), renderSlot(t2.$slots, "default")], 16, sl)]));
     }
-  }), ll = /* @__PURE__ */ defineComponent({
+  }), ul = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableHeader",
     props: {
       header: { default: "" },
@@ -81990,17 +82125,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, null, 2)) : createCommentVNode("", true)
       ], 16));
     }
-  }), ul = { key: 0 }, dl = /* @__PURE__ */ defineComponent({
+  }), dl = { key: 0 }, fl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableHeaders",
     props: { headers: {} },
     setup(e2) {
-      return (n, r) => e2.headers ? (openBlock(), createElementBlock("tr", ul, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.headers, (e3, t) => (openBlock(), createBlock(ll, {
+      return (n, r) => e2.headers ? (openBlock(), createElementBlock("tr", dl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.headers, (e3, t) => (openBlock(), createBlock(ul, {
         key: t,
         header: (typeof e3 == "object" ? e3 : {}).text || e3,
         "header-attrs": e3.headerAttrs
       }, null, 8, ["header", "header-attrs"]))), 128))])) : createCommentVNode("", true);
     }
-  }), fl = /* @__PURE__ */ defineComponent({
+  }), pl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableCell",
     props: {
       field: {},
@@ -82022,24 +82157,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         _: 1
       }, 16)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(i2.value ? e2.field : e2.field.text), 1)], 64))], 16));
     }
-  }), pl = /* @__PURE__ */ defineComponent({
+  }), ml = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableRow",
     props: {
       rowData: { default: () => [] },
       rowAttrs: { default: () => ({}) }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("tr", normalizeProps(guardReactiveProps(e2.rowAttrs)), [renderSlot(n.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.rowData, (e3, t) => (openBlock(), createBlock(fl, {
+      return (n, r) => (openBlock(), createElementBlock("tr", normalizeProps(guardReactiveProps(e2.rowAttrs)), [renderSlot(n.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.rowData, (e3, t) => (openBlock(), createBlock(pl, {
         key: t,
         field: e3 ?? "",
         "cell-attrs": typeof e3 == "object" && e3 && !e3.component ? e3.cellAttrs : {}
       }, null, 8, ["field", "cell-attrs"]))), 128))], 16));
     }
-  }), ml = { class: "caption" }, hl = { key: 1 }, gl = ["colspan"], _l = { class: "flex justify-right" }, vl = { class: "self-center" }, yl = ["for"], bl = ["id"], xl = ["value"], Sl = {
+  }), hl = { class: "caption" }, gl = { key: 1 }, _l = ["colspan"], vl = { class: "flex justify-right" }, yl = { class: "self-center" }, bl = ["for"], xl = ["id"], Sl = ["value"], Cl = {
     class: "flex ml-1",
     "aria-live": "polite",
     "aria-atomic": "true"
-  }, Cl = { class: "self-center fr-m-0" }, wl = { class: "flex ml-1" }, Tl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, wl = { class: "self-center fr-m-0" }, Tl = { class: "flex ml-1" }, El = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTable",
     props: {
       title: {},
@@ -82072,8 +82207,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         d.value = m.value, i2("update:currentPage");
       };
       return (n2, r2) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-table", { "fr-table--no-caption": e2.noCaption }]) }, [createBaseVNode("table", null, [
-        createBaseVNode("caption", ml, toDisplayString(e2.title), 1),
-        createBaseVNode("thead", null, [renderSlot(n2.$slots, "header", {}, () => [e2.headers && e2.headers.length ? (openBlock(), createBlock(dl, {
+        createBaseVNode("caption", hl, toDisplayString(e2.title), 1),
+        createBaseVNode("thead", null, [renderSlot(n2.$slots, "header", {}, () => [e2.headers && e2.headers.length ? (openBlock(), createBlock(fl, {
           key: 0,
           headers: e2.headers
         }, null, 8, ["headers"])) : createCommentVNode("", true)], true)]),
@@ -82081,14 +82216,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           renderSlot(n2.$slots, "default", {}, void 0, true),
           e2.rows && e2.rows.length ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(v.value, (t, n3) => {
             var _a2, _b;
-            return openBlock(), createBlock(pl, {
+            return openBlock(), createBlock(ml, {
               key: e2.rowKey && u2(t) ? typeof e2.rowKey == "string" ? (_b = (_a2 = u2(t)) == null ? void 0 : _a2[e2.headers.indexOf(e2.rowKey)]) == null ? void 0 : _b.toString() : e2.rowKey(u2(t) ?? []) : n3,
               "row-data": u2(t),
               "row-attrs": "rowAttrs" in t ? t.rowAttrs : {}
             }, null, 8, ["row-data", "row-attrs"]);
           }), 128)) : createCommentVNode("", true),
-          e2.pagination ? (openBlock(), createElementBlock("tr", hl, [createBaseVNode("td", { colspan: e2.headers.length }, [createBaseVNode("div", _l, [
-            createBaseVNode("div", vl, [createBaseVNode("label", { for: unref(f2) }, "Résultats par page : ", 8, yl), withDirectives(createBaseVNode("select", {
+          e2.pagination ? (openBlock(), createElementBlock("tr", gl, [createBaseVNode("td", { colspan: e2.headers.length }, [createBaseVNode("div", vl, [
+            createBaseVNode("div", yl, [createBaseVNode("label", { for: unref(f2) }, "Résultats par page : ", 8, bl), withDirectives(createBaseVNode("select", {
               id: unref(f2),
               "onUpdate:modelValue": r2[0] || (r2[0] = (e3) => p5.value = e3),
               title: "Résultats par page - le nombre résultats est mis à jour dès sélection d’une valeur",
@@ -82096,9 +82231,9 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, [(openBlock(), createElementBlock(Fragment, null, renderList(h2, (e3, t) => createBaseVNode("option", {
               key: t,
               value: e3
-            }, toDisplayString(e3), 9, xl)), 64))], 40, bl), [[vModelSelect, p5.value]])]),
-            createBaseVNode("div", Sl, [createBaseVNode("p", Cl, " Page " + toDisplayString(d.value) + " sur " + toDisplayString(m.value), 1)]),
-            createBaseVNode("div", wl, [
+            }, toDisplayString(e3), 9, Sl)), 64))], 40, xl), [[vModelSelect, p5.value]])]),
+            createBaseVNode("div", Cl, [createBaseVNode("p", wl, " Page " + toDisplayString(d.value) + " sur " + toDisplayString(m.value), 1)]),
+            createBaseVNode("div", Tl, [
               createBaseVNode("button", {
                 class: "fr-icon-arrow-left-s-first-line",
                 onClick: r2[2] || (r2[2] = (e3) => y())
@@ -82116,11 +82251,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 onClick: r2[5] || (r2[5] = (e3) => C())
               }, [...r2[9] || (r2[9] = [createBaseVNode("span", { class: "fr-sr-only" }, "Dernière page du tableau", -1)])])
             ])
-          ])], 8, gl)])) : createCommentVNode("", true)
+          ])], 8, _l)])) : createCommentVNode("", true)
         ])
       ])], 2));
     }
-  }), [["__scopeId", "data-v-3619f971"]]), El = ["aria-label"], Dl = 16, Ol = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-3619f971"]]), Dl = ["aria-label"], Ol = 16, kl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTabs",
     props: {
       modelValue: { default: 0 },
@@ -82156,11 +82291,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       let h2 = /* @__PURE__ */ ref(null), g = /* @__PURE__ */ ref(null), _ = /* @__PURE__ */ ref(false), v = /* @__PURE__ */ ref(false), y = /* @__PURE__ */ ref(false), x = () => {
         let e3 = g.value;
         if (!e3) return;
-        let t = Math.abs(e3.scrollLeft), n2 = getComputedStyle(e3).direction === "rtl", r2 = t <= Dl, i3 = t >= e3.scrollWidth - e3.clientWidth - Dl;
+        let t = Math.abs(e3.scrollLeft), n2 = getComputedStyle(e3).direction === "rtl", r2 = t <= Ol, i3 = t >= e3.scrollWidth - e3.clientWidth - Ol;
         n2 ? (y.value = !r2, v.value = !i3) : (v.value = !r2, y.value = !i3);
       }, C = () => {
         let e3 = g.value;
-        e3 && (_.value = e3.scrollWidth > e3.clientWidth + Dl, _.value ? x() : (v.value = false, y.value = false));
+        e3 && (_.value = e3.scrollWidth > e3.clientWidth + Ol, _.value ? x() : (v.value = false, y.value = false));
       }, j = /* @__PURE__ */ reactive({}), M5 = (e3) => {
         if (j[e3]) return j[e3];
         let t = Z$1("tab");
@@ -82215,7 +82350,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           role: "tablist",
           "aria-label": e2.tabListName,
           onScroll: x
-        }, [renderSlot(n2.$slots, "tab-items", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabTitles, (e3, t) => (openBlock(), createBlock(cl, {
+        }, [renderSlot(n2.$slots, "tab-items", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabTitles, (e3, t) => (openBlock(), createBlock(ll, {
           key: t,
           icon: e3.icon,
           "panel-id": e3.panelId || `${M5(t)}-panel`,
@@ -82233,10 +82368,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           "panel-id",
           "tab-id",
           "onClick"
-        ]))), 128))])], 42, El),
+        ]))), 128))])], 42, Dl),
         (openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabContents, (t, n3) => {
           var _a2, _b, _c2, _d;
-          return openBlock(), createBlock(il, {
+          return openBlock(), createBlock(al, {
             key: n3,
             "panel-id": ((_b = (_a2 = e2.tabTitles) == null ? void 0 : _a2[n3]) == null ? void 0 : _b.panelId) || `${M5(n3)}-panel`,
             "tab-id": ((_d = (_c2 = e2.tabTitles) == null ? void 0 : _c2[n3]) == null ? void 0 : _d.tabId) || M5(n3)
@@ -82248,7 +82383,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         renderSlot(n2.$slots, "default")
       ], 4));
     }
-  }), kl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), Al = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTag",
     props: {
       label: { default: void 0 },
@@ -82302,7 +82437,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-pressed"
       ]));
     }
-  }), [["__scopeId", "data-v-e5e13669"]]), Al = { class: "fr-tags-group" }, jl = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-e5e13669"]]), jl = { class: "fr-tags-group" }, Ml = /* @__PURE__ */ defineComponent({
     __name: "DsfrTags",
     props: {
       tags: { default: () => [] },
@@ -82324,9 +82459,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           i2("update:modelValue", t2);
         }
       }
-      return (n2, r2) => (openBlock(), createElementBlock("ul", Al, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tags, (t, n3) => {
+      return (n2, r2) => (openBlock(), createElementBlock("ul", jl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tags, (t, n3) => {
         var _a2;
-        return openBlock(), createElementBlock("li", { key: n3 }, [t.selectable ? (openBlock(), createBlock(kl, mergeProps({
+        return openBlock(), createElementBlock("li", { key: n3 }, [t.selectable ? (openBlock(), createBlock(Al, mergeProps({
           key: 0,
           ref_for: true
         }, t, {
@@ -82334,25 +82469,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           selected: ((_a2 = e2.modelValue) == null ? void 0 : _a2.includes(t.value)) || false,
           value: t.value,
           onSelect: r2[0] || (r2[0] = (e3) => a3(e3))
-        }), null, 16, ["selected", "value"])) : (openBlock(), createBlock(kl, mergeProps({
+        }), null, 16, ["selected", "value"])) : (openBlock(), createBlock(Al, mergeProps({
           key: 1,
           ref_for: true
         }, t), null, 16))]);
       }), 128))]));
     }
-  }), Ml = { class: "fr-tile__body" }, Nl = { class: "fr-tile__content" }, Pl = ["download", "href"], Fl = {
+  }), Nl = { class: "fr-tile__body" }, Pl = { class: "fr-tile__content" }, Fl = ["download", "href"], Il = {
     key: 0,
     class: "fr-tile__desc"
-  }, Il = {
+  }, Ll = {
     key: 1,
     class: "fr-tile__detail"
-  }, Ll = {
+  }, Rl = {
     key: 2,
     class: "fr-tile__start"
-  }, Rl = { class: "fr-tile__header" }, zl = {
+  }, zl = { class: "fr-tile__header" }, Bl = {
     key: 0,
     class: "fr-tile__pictogram"
-  }, Bl = ["src"], Vl = ["innerHTML"], Hl = ["src"], Ul = ["href"], Wl = ["href"], Gl = ["href"], Kl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Vl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTile",
     props: {
       title: { default: "Titre de la tuile" },
@@ -82387,16 +82522,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       titleLinkAttrs: { default: () => ({}) }
     },
     setup(e2) {
-      let t = e2, n = /^data:image\/svg\+xml(?:;[^,]*)?,/i, r = {
-        viewBox: "0 0 80 80",
-        width: "80px",
-        height: "80px"
-      }, i2 = computed(() => typeof t.to == "string" && t.to.startsWith("http")), d = computed(() => {
-        var _a2;
-        return !!((_a2 = t.svgPath) == null ? void 0 : _a2.match(n));
-      }), f2 = Z$1("tile", "artwork").replace(/[^\w-]/g, "_"), p5 = computed(() => As(t.svgPath, f2));
-      return (t2, n2) => {
-        let a3 = resolveComponent("RouterLink");
+      let t = e2, n = computed(() => typeof t.to == "string" && t.to.startsWith("http"));
+      return (t2, r) => {
+        let i2 = resolveComponent("RouterLink");
         return openBlock(), createElementBlock("div", { class: normalizeClass(["fr-tile fr-enlarge-link", [{
           "fr-tile--disabled": e2.disabled,
           "fr-tile--sm": e2.small === true,
@@ -82411,16 +82539,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           "fr-tile--shadow": e2.shadow,
           "fr-tile--grey": e2.grey,
           "fr-enlarge-button": e2.enlarge
-        }]]) }, [createBaseVNode("div", Ml, [createBaseVNode("div", Nl, [
+        }]]) }, [createBaseVNode("div", Nl, [createBaseVNode("div", Pl, [
           (openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-tile__title" }, {
-            default: withCtx(() => [i2.value ? (openBlock(), createElementBlock("a", mergeProps({
+            default: withCtx(() => [n.value ? (openBlock(), createElementBlock("a", mergeProps({
               key: 0,
               class: "fr-tile__link",
               target: "_blank",
               rel: "noopener noreferrer",
               download: e2.download,
               href: e2.disabled ? "" : e2.to
-            }, e2.titleLinkAttrs), toDisplayString(e2.title), 17, Pl)) : createCommentVNode("", true), i2.value ? createCommentVNode("", true) : (openBlock(), createBlock(a3, mergeProps({
+            }, e2.titleLinkAttrs), toDisplayString(e2.title), 17, Fl)) : createCommentVNode("", true), n.value ? createCommentVNode("", true) : (openBlock(), createBlock(i2, mergeProps({
               key: 1,
               download: e2.download,
               class: "fr-tile__link",
@@ -82431,64 +82559,37 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, 16, ["download", "to"]))]),
             _: 1
           })),
-          e2.description ? (openBlock(), createElementBlock("p", Fl, toDisplayString(e2.description), 1)) : createCommentVNode("", true),
-          e2.details ? (openBlock(), createElementBlock("p", Il, toDisplayString(e2.details), 1)) : createCommentVNode("", true),
-          t2.$slots["start-details"] ? (openBlock(), createElementBlock("div", Ll, [renderSlot(t2.$slots, "start-details", {}, void 0, true)])) : createCommentVNode("", true)
-        ])]), createBaseVNode("div", Rl, [renderSlot(t2.$slots, "header", {}, void 0, true), e2.imgSrc || e2.svgPath ? (openBlock(), createElementBlock("div", zl, [e2.imgSrc ? (openBlock(), createElementBlock("img", {
-          key: 0,
-          src: e2.imgSrc,
-          class: "fr-artwork",
-          alt: ""
-        }, null, 8, Bl)) : p5.value ? (openBlock(), createElementBlock("span", {
-          key: 1,
-          "aria-hidden": "true",
-          class: "fr-artwork fr-artwork--inline",
-          innerHTML: p5.value
-        }, null, 8, Vl)) : d.value ? (openBlock(), createElementBlock("img", {
-          key: 2,
-          src: e2.svgPath,
-          class: "fr-artwork",
-          alt: ""
-        }, null, 8, Hl)) : (openBlock(), createElementBlock("svg", mergeProps({
-          key: 3,
-          "aria-hidden": "true",
-          class: "fr-artwork"
-        }, {
-          ...r,
-          ...e2.svgAttrs
-        }), [
-          createBaseVNode("use", {
-            class: "fr-artwork-decorative",
-            href: `${e2.svgPath}#artwork-decorative`
-          }, null, 8, Ul),
-          createBaseVNode("use", {
-            class: "fr-artwork-minor",
-            href: `${e2.svgPath}#artwork-minor`
-          }, null, 8, Wl),
-          createBaseVNode("use", {
-            class: "fr-artwork-major",
-            href: `${e2.svgPath}#artwork-major`
-          }, null, 8, Gl)
-        ], 16))])) : createCommentVNode("", true)])], 2);
+          e2.description ? (openBlock(), createElementBlock("p", Il, toDisplayString(e2.description), 1)) : createCommentVNode("", true),
+          e2.details ? (openBlock(), createElementBlock("p", Ll, toDisplayString(e2.details), 1)) : createCommentVNode("", true),
+          t2.$slots["start-details"] ? (openBlock(), createElementBlock("div", Rl, [renderSlot(t2.$slots, "start-details", {}, void 0, true)])) : createCommentVNode("", true)
+        ])]), createBaseVNode("div", zl, [renderSlot(t2.$slots, "header", {}, void 0, true), e2.imgSrc || e2.svgPath ? (openBlock(), createElementBlock("div", Bl, [createVNode(Es, {
+          "img-src": e2.imgSrc,
+          "svg-path": e2.svgPath,
+          "svg-attrs": e2.svgAttrs
+        }, null, 8, [
+          "img-src",
+          "svg-path",
+          "svg-attrs"
+        ])])) : createCommentVNode("", true)])], 2);
       };
     }
-  }), [["__scopeId", "data-v-9499b41d"]]), ql = { class: "fr-grid-row fr-grid-row--gutters" }, Jl = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-711ef506"]]), Hl = { class: "fr-grid-row fr-grid-row--gutters" }, Ul = /* @__PURE__ */ defineComponent({
     __name: "DsfrTiles",
     props: {
       tiles: { default: () => [] },
       horizontal: { type: Boolean }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("div", ql, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tiles, (t, n2) => (openBlock(), createElementBlock("div", {
+      return (n, r) => (openBlock(), createElementBlock("div", Hl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tiles, (t, n2) => (openBlock(), createElementBlock("div", {
         key: n2,
         class: normalizeClass({
           [t.containerClass ?? "no-class"]: t.containerClass,
           "fr-col-6 fr-col-md-4 fr-col-lg-3": !t.containerClass && !e2.horizontal,
           "fr-col-12": e2.horizontal
         })
-      }, [createVNode(Kl, mergeProps({ horizontal: e2.horizontal }, { ref_for: true }, t), null, 16, ["horizontal"])], 2))), 128))]));
+      }, [createVNode(Vl, mergeProps({ horizontal: e2.horizontal }, { ref_for: true }, t), null, 16, ["horizontal"])], 2))), 128))]));
     }
-  }), Yl = [
+  }), Wl = [
     "id",
     "disabled",
     "aria-disabled",
@@ -82496,12 +82597,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     "data-testid",
     "aria-describedby",
     "name"
-  ], Xl = [
+  ], Gl = [
     "id",
     "for",
     "data-fr-checked-label",
     "data-fr-unchecked-label"
-  ], Zl = ["id"], Ql = ["id"], $l = ["id"], eu = /* @__PURE__ */ defineComponent({
+  ], Kl = ["id"], ql = ["id"], Jl = ["id"], Yl = /* @__PURE__ */ defineComponent({
     __name: "DsfrToggleSwitch",
     props: {
       modelValue: { type: Boolean },
@@ -82549,7 +82650,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           "aria-describedby": i2.value,
           name: e2.name,
           onInput: n2[0] || (n2[0] = (e3) => r("update:modelValue", e3.target.checked))
-        }, null, 40, Yl),
+        }, null, 40, Wl),
         createBaseVNode("label", {
           id: i2.value,
           class: "fr-toggle__label",
@@ -82557,12 +82658,12 @@ Expected function or array of functions, received type ${typeof value2}.`
           "data-fr-checked-label": e2.noText ? void 0 : e2.activeText,
           "data-fr-unchecked-label": e2.noText ? void 0 : e2.inactiveText,
           style: { "--toggle-status-width": "3.55208125rem" }
-        }, toDisplayString(e2.label), 9, Xl),
+        }, toDisplayString(e2.label), 9, Gl),
         e2.hint ? (openBlock(), createElementBlock("p", {
           key: 0,
           id: `${e2.inputId}-hint-text`,
           class: "fr-hint-text"
-        }, toDisplayString(e2.hint), 9, Zl)) : createCommentVNode("", true),
+        }, toDisplayString(e2.hint), 9, Kl)) : createCommentVNode("", true),
         e2.status ? (openBlock(), createElementBlock("div", {
           key: 1,
           id: `${i2.value}-messages`,
@@ -82574,14 +82675,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-message--error": e2.status === "error",
             "fr-message--valid": e2.status === "valid"
           }])
-        }, toDisplayString(o.value), 11, $l)], 8, Ql)) : createCommentVNode("", true)
+        }, toDisplayString(o.value), 11, Jl)], 8, ql)) : createCommentVNode("", true)
       ], 2));
     }
-  }), tu = [
+  }), Xl = [
     "disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], nu = ["id"], ru = { class: "fr-fieldset__element" }, iu = { class: "fr-toggle__list" }, au = ["id"], ou = ["id"], su = /* @__PURE__ */ defineComponent({
+  ], Zl = ["id"], Ql = { class: "fr-fieldset__element" }, $l = { class: "fr-toggle__list" }, eu = ["id"], tu = ["id"], nu = /* @__PURE__ */ defineComponent({
     __name: "DsfrToggleSwitchGroup",
     props: {
       id: { default: () => Z$1("toggle-group") },
@@ -82617,8 +82718,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         createBaseVNode("legend", {
           id: `${e2.id}-legend`,
           class: "fr-fieldset__legend"
-        }, toDisplayString(e2.legend), 9, nu),
-        createBaseVNode("div", ru, [createBaseVNode("ul", iu, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createVNode(eu, mergeProps({ ref_for: true }, t, {
+        }, toDisplayString(e2.legend), 9, Zl),
+        createBaseVNode("div", Ql, [createBaseVNode("ul", $l, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createVNode(Yl, mergeProps({ ref_for: true }, t, {
           "input-id": t.resolvedInputId,
           disabled: e2.disabled || t.disabled,
           "border-bottom": e2.borders,
@@ -82644,10 +82745,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-message--error": e2.status === "error",
             "fr-message--valid": e2.status === "valid"
           }])
-        }, toDisplayString(r.value), 11, ou)) : createCommentVNode("", true)], 8, au)
-      ], 10, tu));
+        }, toDisplayString(r.value), 11, tu)) : createCommentVNode("", true)], 8, eu)
+      ], 10, Xl));
     }
-  }), cu = ["id"], lu = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), ru = ["id"], iu = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTooltip",
     props: {
       content: {},
@@ -82727,9 +82828,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         style: normalizeStyle(g.value),
         role: "tooltip",
         "aria-hidden": "true"
-      }, toDisplayString(e2.content), 15, cu)], 64));
+      }, toDisplayString(e2.content), 15, ru)], 64));
     }
-  }), [["__scopeId", "data-v-bafa0f64"]]), uu = { class: "fr-transcription" }, du = ["aria-expanded", "aria-controls"], fu = ["id"], pu = ["id", "aria-labelledby"], mu = { class: "fr-container fr-container--fluid fr-container-md" }, hu = { class: "fr-grid-row fr-grid-row--center" }, gu = { class: "fr-col-12 fr-col-md-10 fr-col-lg-8" }, _u = { class: "fr-modal__body" }, vu = { class: "fr-modal__header" }, yu = ["aria-controls"], bu = { class: "fr-modal__content" }, xu = ["id"], Su = { class: "fr-transcription__footer" }, Cu = { class: "fr-transcription__actions-group" }, wu = ["aria-controls"], Tu = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-bafa0f64"]]), au = { class: "fr-transcription" }, ou = ["aria-expanded", "aria-controls"], su = ["id"], cu = ["id", "aria-labelledby"], lu = { class: "fr-container fr-container--fluid fr-container-md" }, uu = { class: "fr-grid-row fr-grid-row--center" }, du = { class: "fr-col-12 fr-col-md-10 fr-col-lg-8" }, fu = { class: "fr-modal__body" }, pu = { class: "fr-modal__header" }, mu = ["aria-controls"], hu = { class: "fr-modal__content" }, gu = ["id"], _u = { class: "fr-transcription__footer" }, vu = { class: "fr-transcription__actions-group" }, yu = ["aria-controls"], bu = /* @__PURE__ */ defineComponent({
     __name: "DsfrTranscription",
     props: {
       id: { default: () => Z$1("transcription") },
@@ -82740,13 +82841,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       let t = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: f2, onTransitionEnd: p5 } = J(), m = /* @__PURE__ */ ref(false), h2 = /* @__PURE__ */ ref(false), g = computed(() => `fr-transcription__modal-${t.id}`), _ = computed(() => `fr-transcription__collapse-${t.id}`);
       return watch(h2, (e3, t2) => {
         e3 !== t2 && f2(e3);
-      }), (t2, a3) => (openBlock(), createElementBlock("div", uu, [
+      }), (t2, a3) => (openBlock(), createElementBlock("div", au, [
         createBaseVNode("button", {
           class: "fr-transcription__btn",
           "aria-expanded": h2.value,
           "aria-controls": _.value,
           onClick: a3[0] || (a3[0] = (e3) => h2.value = !h2.value)
-        }, " Transcription ", 8, du),
+        }, " Transcription ", 8, ou),
         createBaseVNode("div", {
           id: _.value,
           ref_key: "collapse",
@@ -82761,24 +82862,24 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-modal",
           role: "dialog",
           "aria-labelledby": `${g.value}-title`
-        }, [createBaseVNode("div", mu, [createBaseVNode("div", hu, [createBaseVNode("div", gu, [createBaseVNode("div", _u, [
-          createBaseVNode("div", vu, [createBaseVNode("button", {
+        }, [createBaseVNode("div", lu, [createBaseVNode("div", uu, [createBaseVNode("div", du, [createBaseVNode("div", fu, [
+          createBaseVNode("div", pu, [createBaseVNode("button", {
             class: "fr-btn--close fr-btn",
             "aria-controls": g.value,
             title: "Fermer"
-          }, " Fermer ", 8, yu)]),
-          createBaseVNode("div", bu, [createBaseVNode("h1", {
+          }, " Fermer ", 8, mu)]),
+          createBaseVNode("div", hu, [createBaseVNode("h1", {
             id: `${g.value}-title`,
             class: "fr-modal__title"
-          }, toDisplayString(e2.title), 9, xu), createTextVNode(" " + toDisplayString(e2.content), 1)]),
-          createBaseVNode("div", Su, [createBaseVNode("div", Cu, [createBaseVNode("button", {
+          }, toDisplayString(e2.title), 9, gu), createTextVNode(" " + toDisplayString(e2.content), 1)]),
+          createBaseVNode("div", _u, [createBaseVNode("div", vu, [createBaseVNode("button", {
             class: "fr-btn fr-btn--fullscreen",
             "aria-controls": g.value,
             "data-fr-opened": "false",
             title: "",
             onClick: a3[1] || (a3[1] = (e3) => m.value = true)
-          }, " Agrandir ", 8, wu)])])
-        ])])])])], 8, pu)], 42, fu),
+          }, " Agrandir ", 8, yu)])])
+        ])])])])], 8, cu)], 42, su),
         (openBlock(), createBlock(Teleport, { to: "body" }, [createVNode(xo, {
           title: e2.title,
           opened: m.value,
@@ -82789,7 +82890,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, 8, ["title", "opened"])]))
       ]));
     }
-  }), Eu = ["src", "aria-labelledby"], Du = ["id"], Ou = /* @__PURE__ */ defineComponent({
+  }), xu = ["src", "aria-labelledby"], Su = ["id"], Cu = /* @__PURE__ */ defineComponent({
     __name: "DsfrVideo",
     props: {
       ariaLabelledbyId: {},
@@ -82812,50 +82913,50 @@ Expected function or array of functions, received type ${typeof value2}.`
         width: "100%",
         height: "100%",
         allow: "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-      }, null, 8, Eu)], 2), createBaseVNode("div", {
+      }, null, 8, xu)], 2), createBaseVNode("div", {
         id: `${unref(n)}-caption`,
         class: "fr-content-media__caption"
-      }, toDisplayString(e2.legend), 9, Du)], 2), createVNode(Tu, {
+      }, toDisplayString(e2.legend), 9, Su)], 2), createVNode(bu, {
         title: e2.transcriptionTitle,
         content: e2.transcriptionContent
       }, null, 8, ["title", "content"])], 64));
     }
-  }), ku = Object.freeze({
+  }), wu = Object.freeze({
     left: 0,
     top: 0,
     width: 16,
     height: 16
-  }), Au = Object.freeze({
+  }), Tu = Object.freeze({
     rotate: 0,
     vFlip: false,
     hFlip: false
-  }), ju = Object.freeze({
-    ...ku,
-    ...Au
+  }), Eu = Object.freeze({
+    ...wu,
+    ...Tu
   });
   Object.freeze({
-    ...ju,
+    ...Eu,
     body: "",
     hidden: false
-  }), { ...ku };
-  var Mu = Object.freeze({
+  }), { ...wu };
+  var Du = Object.freeze({
     width: null,
     height: null
-  }), Nu = Object.freeze({
-    ...Mu,
-    ...Au
+  }), Ou = Object.freeze({
+    ...Du,
+    ...Tu
   });
-  function Pu(e2, t) {
+  function ku(e2, t) {
     let n = { ...e2 };
     for (let e3 in t) {
       let r = t[e3], i2 = typeof r;
-      e3 in Mu ? (r === null || r && (i2 === "string" || i2 === "number")) && (n[e3] = r) : i2 === typeof n[e3] && (n[e3] = e3 === "rotate" ? r % 4 : r);
+      e3 in Du ? (r === null || r && (i2 === "string" || i2 === "number")) && (n[e3] = r) : i2 === typeof n[e3] && (n[e3] = e3 === "rotate" ? r % 4 : r);
     }
     return n;
   }
-  var Fu = /[\s,]+/;
-  function Iu(e2, t) {
-    t.split(Fu).forEach((t2) => {
+  var Au = /[\s,]+/;
+  function ju(e2, t) {
+    t.split(Au).forEach((t2) => {
       switch (t2.trim()) {
         case "horizontal":
           e2.hFlip = true;
@@ -82865,7 +82966,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     });
   }
-  function Lu(e2, t = 0) {
+  function Mu(e2, t = 0) {
     let n = e2.replace(/^-?[0-9.]*/, "");
     function r(e3) {
       for (; e3 < 0; ) e3 += 4;
@@ -82891,14 +82992,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return t;
   }
-  var Ru = /(-?[0-9.]*[0-9]+[0-9.]*)/g, zu = /^-?[0-9.]*[0-9]+[0-9.]*$/g;
-  function Bu(e2, t, n) {
+  var Nu = /(-?[0-9.]*[0-9]+[0-9.]*)/g, Pu = /^-?[0-9.]*[0-9]+[0-9.]*$/g;
+  function Fu(e2, t, n) {
     if (t === 1) return e2;
     if (n || (n = 100), typeof e2 == "number") return Math.ceil(e2 * t * n) / n;
     if (typeof e2 != "string") return e2;
-    let r = e2.split(Ru);
+    let r = e2.split(Nu);
     if (r === null || !r.length) return e2;
-    let i2 = [], a3 = r.shift(), o = zu.test(a3);
+    let i2 = [], a3 = r.shift(), o = Pu.test(a3);
     for (; ; ) {
       if (o) {
         let e3 = parseFloat(a3);
@@ -82908,7 +83009,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       o = !o;
     }
   }
-  function Vu(e2, t = "defs") {
+  function Iu(e2, t = "defs") {
     let n = "", r = e2.indexOf("<" + t);
     for (; r >= 0; ) {
       let i2 = e2.indexOf(">", r), a3 = e2.indexOf("</" + t);
@@ -82922,20 +83023,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       content: e2
     };
   }
-  function Hu(e2, t) {
+  function Lu(e2, t) {
     return e2 ? "<defs>" + e2 + "</defs>" + t : t;
   }
-  function Uu(e2, t, n) {
-    let r = Vu(e2);
-    return Hu(r.defs, t + r.content + n);
+  function Ru(e2, t, n) {
+    let r = Iu(e2);
+    return Lu(r.defs, t + r.content + n);
   }
-  var Wu = (e2) => e2 === "unset" || e2 === "undefined" || e2 === "none";
-  function Gu(e2, t) {
+  var zu = (e2) => e2 === "unset" || e2 === "undefined" || e2 === "none";
+  function Bu(e2, t) {
     let n = {
-      ...ju,
+      ...Eu,
       ...e2
     }, r = {
-      ...Nu,
+      ...Ou,
       ...t
     }, i2 = {
       left: n.left,
@@ -82957,12 +83058,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         case 3:
           s2 = i2.width / 2 + i2.left, t2.unshift("rotate(-90 " + s2.toString() + " " + s2.toString() + ")");
       }
-      o2 % 2 == 1 && (i2.left !== i2.top && (s2 = i2.left, i2.left = i2.top, i2.top = s2), i2.width !== i2.height && (s2 = i2.width, i2.width = i2.height, i2.height = s2)), t2.length && (a3 = Uu(a3, '<g transform="' + t2.join(" ") + '">', "</g>"));
+      o2 % 2 == 1 && (i2.left !== i2.top && (s2 = i2.left, i2.left = i2.top, i2.top = s2), i2.width !== i2.height && (s2 = i2.width, i2.width = i2.height, i2.height = s2)), t2.length && (a3 = Ru(a3, '<g transform="' + t2.join(" ") + '">', "</g>"));
     });
     let o = r.width, s = r.height, c = i2.width, l = i2.height, u2, d;
-    o === null ? (d = s === null ? "1em" : s === "auto" ? l : s, u2 = Bu(d, c / l)) : (u2 = o === "auto" ? c : o, d = s === null ? Bu(u2, l / c) : s === "auto" ? l : s);
+    o === null ? (d = s === null ? "1em" : s === "auto" ? l : s, u2 = Fu(d, c / l)) : (u2 = o === "auto" ? c : o, d = s === null ? Fu(u2, l / c) : s === "auto" ? l : s);
     let f2 = {}, p5 = (e3, t2) => {
-      Wu(t2) || (f2[e3] = t2.toString());
+      zu(t2) || (f2[e3] = t2.toString());
     };
     p5("width", u2), p5("height", d);
     let m = [
@@ -82977,67 +83078,67 @@ Expected function or array of functions, received type ${typeof value2}.`
       body: a3
     };
   }
-  var Ku = /\sid="(\S+)"/g, qu = /* @__PURE__ */ new Map();
-  function Ju(e2) {
+  var Vu = /\sid="(\S+)"/g, Hu = /* @__PURE__ */ new Map();
+  function Uu(e2) {
     e2 = e2.replace(/[0-9]+$/, "") || "a";
-    let t = qu.get(e2) || 0;
-    return qu.set(e2, t + 1), t ? `${e2}${t}` : e2;
+    let t = Hu.get(e2) || 0;
+    return Hu.set(e2, t + 1), t ? `${e2}${t}` : e2;
   }
-  function Yu(e2) {
+  function Wu(e2) {
     let t = [], n;
-    for (; n = Ku.exec(e2); ) t.push(n[1]);
+    for (; n = Vu.exec(e2); ) t.push(n[1]);
     if (!t.length) return e2;
     let r = "suffix" + (Math.random() * 16777216 | Date.now()).toString(16);
     return t.forEach((t2) => {
-      let n2 = Ju(t2), i2 = t2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let n2 = Uu(t2), i2 = t2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       e2 = e2.replace(RegExp('([#;"])(' + i2 + ')([")]|\\.[a-z])', "g"), "$1" + n2 + r + "$3");
     }), e2 = e2.replace(new RegExp(r, "g"), ""), e2;
   }
-  function Xu(e2, t) {
+  function Gu(e2, t) {
     let n = e2.indexOf("xlink:") === -1 ? "" : ' xmlns:xlink="http://www.w3.org/1999/xlink"';
     for (let e3 in t) n += " " + e3 + '="' + t[e3] + '"';
     return '<svg xmlns="http://www.w3.org/2000/svg"' + n + ">" + e2 + "</svg>";
   }
-  function Zu(e2) {
+  function Ku(e2) {
     return e2.replace(/"/g, "'").replace(/%/g, "%25").replace(/#/g, "%23").replace(/</g, "%3C").replace(/>/g, "%3E").replace(/\s+/g, " ");
   }
-  function Qu(e2) {
-    return "data:image/svg+xml," + Zu(e2);
+  function qu(e2) {
+    return "data:image/svg+xml," + Ku(e2);
   }
-  function $u(e2) {
-    return 'url("' + Qu(e2) + '")';
+  function Ju(e2) {
+    return 'url("' + qu(e2) + '")';
   }
-  var ed = {
-    ...Nu,
+  var Yu = {
+    ...Ou,
     inline: false
-  }, td = {
+  }, Xu = {
     xmlns: "http://www.w3.org/2000/svg",
     "xmlns:xlink": "http://www.w3.org/1999/xlink",
     "aria-hidden": true,
     role: "img"
-  }, nd = { display: "inline-block" }, rd = { backgroundColor: "currentColor" }, id = { backgroundColor: "transparent" }, ad = {
+  }, Zu = { display: "inline-block" }, Qu = { backgroundColor: "currentColor" }, $u = { backgroundColor: "transparent" }, ed = {
     Image: "var(--svg)",
     Repeat: "no-repeat",
     Size: "100% 100%"
-  }, od = {
-    webkitMask: rd,
-    mask: rd,
-    background: id
+  }, td = {
+    webkitMask: Qu,
+    mask: Qu,
+    background: $u
   };
-  for (let e2 in od) {
-    let t = od[e2];
-    for (let n in ad) t[e2 + n] = ad[n];
+  for (let e2 in td) {
+    let t = td[e2];
+    for (let n in ed) t[e2 + n] = ed[n];
   }
-  var sd = {};
+  var nd = {};
   ["horizontal", "vertical"].forEach((e2) => {
     let t = e2.slice(0, 1) + "Flip";
-    sd[e2 + "-flip"] = t, sd[e2.slice(0, 1) + "-flip"] = t, sd[e2 + "Flip"] = t;
+    nd[e2 + "-flip"] = t, nd[e2.slice(0, 1) + "-flip"] = t, nd[e2 + "Flip"] = t;
   });
-  function cd(e2) {
+  function rd(e2) {
     return e2 + (e2.match(/^[-0-9.]+$/) ? "px" : "");
   }
-  var ld = (e2, t) => {
-    let n = Pu(ed, t), r = { ...td }, i2 = t.mode || "svg", a3 = {}, o = t.style, s = typeof o == "object" && !(o instanceof Array) ? o : {};
+  var id = (e2, t) => {
+    let n = ku(Yu, t), r = { ...Xu }, i2 = t.mode || "svg", a3 = {}, o = t.style, s = typeof o == "object" && !(o instanceof Array) ? o : {};
     for (let e3 in t) {
       let i3 = t[e3];
       if (i3 !== void 0) switch (e3) {
@@ -83054,47 +83155,47 @@ Expected function or array of functions, received type ${typeof value2}.`
           n[e3] = i3 === true || i3 === "true" || i3 === 1;
           break;
         case "flip":
-          typeof i3 == "string" && Iu(n, i3);
+          typeof i3 == "string" && ju(n, i3);
           break;
         case "color":
           a3.color = i3;
           break;
         case "rotate":
-          typeof i3 == "string" ? n[e3] = Lu(i3) : typeof i3 == "number" && (n[e3] = i3);
+          typeof i3 == "string" ? n[e3] = Mu(i3) : typeof i3 == "number" && (n[e3] = i3);
           break;
         case "ariaHidden":
         case "aria-hidden":
           i3 !== true && i3 !== "true" && delete r["aria-hidden"];
           break;
         default: {
-          let t2 = sd[e3];
-          t2 ? (i3 === true || i3 === "true" || i3 === 1) && (n[t2] = true) : ed[e3] === void 0 && (r[e3] = i3);
+          let t2 = nd[e3];
+          t2 ? (i3 === true || i3 === "true" || i3 === 1) && (n[t2] = true) : Yu[e3] === void 0 && (r[e3] = i3);
         }
       }
     }
-    let c = Gu(e2, n), l = c.attributes;
+    let c = Bu(e2, n), l = c.attributes;
     if (n.inline && (a3.verticalAlign = "-0.125em"), i2 === "svg") return r.style = {
       ...a3,
       ...s
-    }, Object.assign(r, l), r.innerHTML = Yu(c.body), h("svg", r);
-    let { body: u2, width: d, height: f2 } = e2, p5 = i2 === "mask" || i2 !== "bg" && u2.indexOf("currentColor") !== -1, h$1 = Xu(u2, {
+    }, Object.assign(r, l), r.innerHTML = Wu(c.body), h("svg", r);
+    let { body: u2, width: d, height: f2 } = e2, p5 = i2 === "mask" || i2 !== "bg" && u2.indexOf("currentColor") !== -1, h$1 = Gu(u2, {
       ...l,
       width: d + "",
       height: f2 + ""
     });
     return r.style = {
       ...a3,
-      "--svg": $u(h$1),
-      width: cd(l.width),
-      height: cd(l.height),
-      ...nd,
-      ...p5 ? rd : id,
+      "--svg": Ju(h$1),
+      width: rd(l.width),
+      height: rd(l.height),
+      ...Zu,
+      ...p5 ? Qu : $u,
       ...s
     }, h("span", r);
-  }, ud = /* @__PURE__ */ Object.create(null), dd = /* @__PURE__ */ defineComponent((e2, t) => () => {
-    let n = e2.icon, r = typeof n == "string" ? ud[n] : typeof n == "object" ? n : null;
-    return typeof r != "object" || !r || typeof r.body != "string" ? renderSlot(t.slots, "default") : ld({
-      ...ju,
+  }, ad = /* @__PURE__ */ Object.create(null), od = /* @__PURE__ */ defineComponent((e2, t) => () => {
+    let n = e2.icon, r = typeof n == "string" ? ad[n] : typeof n == "object" ? n : null;
+    return typeof r != "object" || !r || typeof r.body != "string" ? renderSlot(t.slots, "default") : id({
+      ...Eu,
       ...r
     }, e2);
   }, { props: [
@@ -83116,7 +83217,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "ariaHidden",
     "customise",
     "title"
-  ] }), fd = /* @__PURE__ */ defineComponent({
+  ] }), sd = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "VIconOffline",
     props: {
@@ -83126,7 +83227,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(e2) {
       let t = e2, n = inject(fe, []), r = computed(() => Ze(t.name, n));
-      return (t2, n2) => r.value ? (openBlock(), createBlock(unref(dd), mergeProps({ key: 0 }, t2.$attrs, {
+      return (t2, n2) => r.value ? (openBlock(), createBlock(unref(od), mergeProps({ key: 0 }, t2.$attrs, {
         icon: r.value,
         "aria-hidden": !(e2.label || e2.title),
         "aria-label": e2.label ?? e2.title,
@@ -83139,7 +83240,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "title"
       ])) : createCommentVNode("", true);
     }
-  }), pd = /* @__PURE__ */ le({
+  }), cd = /* @__PURE__ */ le({
     DsfrAccordion: () => Ne,
     DsfrAccordionsGroup: () => Fe,
     DsfrAlert: () => Ve,
@@ -83186,58 +83287,59 @@ Expected function or array of functions, received type ${typeof value2}.`
     DsfrNewsLetter: () => mr,
     DsfrNotice: () => us,
     DsfrPagination: () => Qt,
-    DsfrPicture: () => hs,
-    DsfrQuote: () => Ss,
-    DsfrRadioButton: () => Us,
-    DsfrRadioButtonSet: () => Xs,
-    DsfrRange: () => cc,
+    DsfrPictogram: () => Es,
+    DsfrPicture: () => js,
+    DsfrQuote: () => Rs,
+    DsfrRadioButton: () => Ws,
+    DsfrRadioButtonSet: () => Zs,
+    DsfrRange: () => lc,
     DsfrSearchBar: () => wa,
-    DsfrSegmented: () => pc,
-    DsfrSegmentedSet: () => yc,
+    DsfrSegmented: () => mc,
+    DsfrSegmentedSet: () => bc,
     DsfrSelect: () => ln,
-    DsfrShare: () => Dc,
-    DsfrSideMenu: () => Rc,
-    DsfrSideMenuButton: () => kc,
-    DsfrSideMenuLink: () => zc,
-    DsfrSideMenuList: () => Nc,
-    DsfrSideMenuListItem: () => Ac,
-    DsfrSkipLinks: () => Wc,
+    DsfrShare: () => Oc,
+    DsfrSideMenu: () => zc,
+    DsfrSideMenuButton: () => Ac,
+    DsfrSideMenuLink: () => Bc,
+    DsfrSideMenuList: () => Pc,
+    DsfrSideMenuListItem: () => jc,
+    DsfrSkipLinks: () => Gc,
     DsfrSocialNetworkIcon: () => ue,
     DsfrSocialNetworks: () => vr,
-    DsfrStepper: () => Zc,
-    DsfrSummary: () => nl,
-    DsfrTabContent: () => il,
-    DsfrTabItem: () => cl,
-    DsfrTable: () => Tl,
-    DsfrTableCell: () => fl,
-    DsfrTableHeader: () => ll,
-    DsfrTableHeaders: () => dl,
-    DsfrTableRow: () => pl,
-    DsfrTabs: () => Ol,
-    DsfrTag: () => kl,
-    DsfrTags: () => jl,
-    DsfrTile: () => Kl,
-    DsfrTiles: () => Jl,
-    DsfrToggleSwitch: () => eu,
-    DsfrToggleSwitchGroup: () => su,
-    DsfrTooltip: () => lu,
-    DsfrTranscription: () => Tu,
-    DsfrVideo: () => Ou,
+    DsfrStepper: () => Qc,
+    DsfrSummary: () => rl,
+    DsfrTabContent: () => al,
+    DsfrTabItem: () => ll,
+    DsfrTable: () => El,
+    DsfrTableCell: () => pl,
+    DsfrTableHeader: () => ul,
+    DsfrTableHeaders: () => fl,
+    DsfrTableRow: () => ml,
+    DsfrTabs: () => kl,
+    DsfrTag: () => Al,
+    DsfrTags: () => Ml,
+    DsfrTile: () => Vl,
+    DsfrTiles: () => Ul,
+    DsfrToggleSwitch: () => Yl,
+    DsfrToggleSwitchGroup: () => nu,
+    DsfrTooltip: () => iu,
+    DsfrTranscription: () => bu,
+    DsfrVideo: () => Cu,
     VIcon: () => $,
-    VIconOffline: () => fd,
+    VIconOffline: () => sd,
     registerAccordionKey: () => K,
     registerNavigationLinkKey: () => q,
     registerTabKey: () => de,
     vueDsfrIconCollectionsKey: () => fe,
     vueDsfrPreferOfflineIconsKey: () => pe
   });
-  function md(e2, t = {}) {
+  function ld(e2, t = {}) {
     return { install(n) {
-      n.provide(fe, e2), n.provide(pe, t.preferOffline ?? false), n.component("VIconOffline") || n.component("VIconOffline", fd);
+      n.provide(fe, e2), n.provide(pe, t.preferOffline ?? false), n.component("VIconOffline") || n.component("VIconOffline", sd);
     } };
   }
-  var hd = { install: (e2, { components: t } = {}) => {
-    Object.entries(pd).forEach(([n, r]) => {
+  var ud = { install: (e2, { components: t } = {}) => {
+    Object.entries(cd).forEach(([n, r]) => {
       (t === void 0 || t === "all" || t.map(({ name: e3 }) => e3).includes(n)) && e2.component(n, r);
     }), e2.component("VIcon", $);
   } };
@@ -83290,50 +83392,51 @@ Expected function or array of functions, received type ${typeof value2}.`
     DsfrNewsLetter: mr,
     DsfrNotice: us,
     DsfrPagination: Qt,
-    DsfrPicture: hs,
-    DsfrQuote: Ss,
-    DsfrRadioButton: Us,
-    DsfrRadioButtonSet: Xs,
-    DsfrRange: cc,
+    DsfrPictogram: Es,
+    DsfrPicture: js,
+    DsfrQuote: Rs,
+    DsfrRadioButton: Ws,
+    DsfrRadioButtonSet: Zs,
+    DsfrRange: lc,
     DsfrSearchBar: wa,
-    DsfrSegmented: pc,
-    DsfrSegmentedSet: yc,
+    DsfrSegmented: mc,
+    DsfrSegmentedSet: bc,
     DsfrSelect: ln,
-    DsfrShare: Dc,
-    DsfrSideMenu: Rc,
-    DsfrSideMenuButton: kc,
-    DsfrSideMenuLink: zc,
-    DsfrSideMenuList: Nc,
-    DsfrSideMenuListItem: Ac,
-    DsfrSkipLinks: Wc,
+    DsfrShare: Oc,
+    DsfrSideMenu: zc,
+    DsfrSideMenuButton: Ac,
+    DsfrSideMenuLink: Bc,
+    DsfrSideMenuList: Pc,
+    DsfrSideMenuListItem: jc,
+    DsfrSkipLinks: Gc,
     DsfrSocialNetworkIcon: ue,
     DsfrSocialNetworks: vr,
-    DsfrStepper: Zc,
-    DsfrSummary: nl,
-    DsfrTabContent: il,
-    DsfrTabItem: cl,
-    DsfrTable: Tl,
-    DsfrTableCell: fl,
-    DsfrTableHeader: ll,
-    DsfrTableHeaders: dl,
-    DsfrTableRow: pl,
-    DsfrTabs: Ol,
-    DsfrTag: kl,
-    DsfrTags: jl,
-    DsfrTile: Kl,
-    DsfrTiles: Jl,
-    DsfrToggleSwitch: eu,
-    DsfrToggleSwitchGroup: su,
-    DsfrTooltip: lu,
-    DsfrTranscription: Tu,
-    DsfrVideo: Ou,
+    DsfrStepper: Qc,
+    DsfrSummary: rl,
+    DsfrTabContent: al,
+    DsfrTabItem: ll,
+    DsfrTable: El,
+    DsfrTableCell: pl,
+    DsfrTableHeader: ul,
+    DsfrTableHeaders: fl,
+    DsfrTableRow: ml,
+    DsfrTabs: kl,
+    DsfrTag: Al,
+    DsfrTags: Ml,
+    DsfrTile: Vl,
+    DsfrTiles: Ul,
+    DsfrToggleSwitch: Yl,
+    DsfrToggleSwitchGroup: nu,
+    DsfrTooltip: iu,
+    DsfrTranscription: bu,
+    DsfrVideo: Cu,
     LIGHT_SCHEME: X,
     SYSTEM_SCHEME: _e,
     VIcon: $,
-    VIconOffline: fd,
+    VIconOffline: sd,
     alphanum: Te,
-    createVueDsfrIconPlugin: md,
-    default: hd,
+    createVueDsfrIconPlugin: ld,
+    default: ud,
     getRandomAlphaNum: Ee,
     getRandomId: Oe,
     getRandomString: De,
@@ -84633,6 +84736,39 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (value2 instanceof ArrayBuffer) return true;
     return Object.prototype.toString.call(value2) === "[object ArrayBuffer]";
   }
+  const ENTREE_PRINT_WORKER_ASSET = "assets/printExport.worker-embed.js";
+  function entreeCartoScriptSrc() {
+    if (typeof document === "undefined") return null;
+    const candidates = [
+      document.querySelector('script[src*="entree-carto.min.js"]'),
+      document.querySelector('script[src*="entree-carto.js"]')
+    ];
+    for (const el2 of candidates) {
+      if (!(el2 == null ? void 0 : el2.src)) continue;
+      const src = el2.src.split("?")[0];
+      if (/entree-carto(\.min)?\.js$/i.test(src.split("/").pop() ?? "")) {
+        return src;
+      }
+    }
+    return null;
+  }
+  function resolveAgainstEntreeCartoScript(assetPath) {
+    const scriptSrc = entreeCartoScriptSrc();
+    if (scriptSrc) {
+      return new URL(assetPath, scriptSrc).href;
+    }
+    const scriptDir = config.scriptDir;
+    if (typeof scriptDir === "string" && scriptDir.length > 1 && scriptDir !== "/") {
+      const base = scriptDir.endsWith("/") ? scriptDir : `${scriptDir}/`;
+      return new URL(assetPath, base).href;
+    }
+    return null;
+  }
+  function resolvePrintExportWorkerUrl() {
+    const resolved = resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET);
+    if (resolved) return resolved;
+    return new URL("data:video/mp2t;base64,aW1wb3J0IHsgUERGRG9jdW1lbnQgfSBmcm9tICdwZGYtbGliJwppbXBvcnQgeyBpbmplY3REcGlJblBuZ0J5dGVzIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3BuZ0RwaScKaW1wb3J0IHsgaXNBcnJheUJ1ZmZlclZhbHVlIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3ByaW50RXhwb3J0VHJhbnNmZXInCgovKiogUG9pbnRzIFBERiAoMS83MiBpbikgZGVwdWlzIG1pbGxpbcOodHJlcyBwYXBpZXIuICovCmNvbnN0IE1NX1RPX1BUID0gNzIgLyAyNS40Cgp0eXBlIFdvcmtlclJlcXVlc3QgPQogIHwgewogICAgICBpZDogbnVtYmVyCiAgICAgIHR5cGU6ICdwbmctZHBpJwogICAgICBwbmc6IEFycmF5QnVmZmVyCiAgICAgIGRwaTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ2pwZWcnCiAgICAgIHBuZzogQXJyYXlCdWZmZXIKICAgICAgcXVhbGl0eTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ3BkZicKICAgICAgcGFnZXM6IEFycmF5QnVmZmVyW10KICAgICAgcGFwZXJXaWR0aE1tOiBudW1iZXIKICAgICAgcGFwZXJIZWlnaHRNbTogbnVtYmVyCiAgICAgIG9yaWVudGF0aW9uOiAncG9ydHJhaXQnIHwgJ2xhbmRzY2FwZScKICAgICAgZmlsZU5hbWU6IHN0cmluZwogICAgfQoKdHlwZSBXb3JrZXJTdWNjZXNzID0gewogIGlkOiBudW1iZXIKICBvazogdHJ1ZQogIGJ1ZmZlcjogQXJyYXlCdWZmZXIKICBtaW1lOiBzdHJpbmcKfQoKdHlwZSBXb3JrZXJGYWlsdXJlID0gewogIGlkOiBudW1iZXIKICBvazogZmFsc2UKICBlcnJvcjogc3RyaW5nCn0KCmFzeW5jIGZ1bmN0aW9uIHBuZ1RvSnBlZyhwbmdCdWZmZXI6IEFycmF5QnVmZmVyLCBxdWFsaXR5OiBudW1iZXIpOiBQcm9taXNlPEFycmF5QnVmZmVyPiB7CiAgY29uc3QgYmxvYiA9IG5ldyBCbG9iKFtwbmdCdWZmZXJdLCB7IHR5cGU6ICdpbWFnZS9wbmcnIH0pCiAgY29uc3QgYml0bWFwID0gYXdhaXQgY3JlYXRlSW1hZ2VCaXRtYXAoYmxvYikKICBjb25zdCBjYW52YXMgPSBuZXcgT2Zmc2NyZWVuQ2FudmFzKGJpdG1hcC53aWR0aCwgYml0bWFwLmhlaWdodCkKICBjb25zdCBjdHggPSBjYW52YXMuZ2V0Q29udGV4dCgnMmQnKQogIGlmICghY3R4KSB0aHJvdyBuZXcgRXJyb3IoJ0NvbnRleHRlIDJEIGluZGlzcG9uaWJsZSBkYW5zIGxlIHdvcmtlci4nKQogIGN0eC5kcmF3SW1hZ2UoYml0bWFwLCAwLCAwKQogIGJpdG1hcC5jbG9zZSgpCiAgY29uc3QganBlZ0Jsb2IgPSBhd2FpdCBjYW52YXMuY29udmVydFRvQmxvYih7IHR5cGU6ICdpbWFnZS9qcGVnJywgcXVhbGl0eSB9KQogIHJldHVybiBqcGVnQmxvYi5hcnJheUJ1ZmZlcigpCn0KCmFzeW5jIGZ1bmN0aW9uIGJ1aWxkUGRmRnJvbVBuZ1BhZ2VzKAogIHBhZ2VzOiBBcnJheUJ1ZmZlcltdLAogIHBhcGVyV2lkdGhNbTogbnVtYmVyLAogIHBhcGVySGVpZ2h0TW06IG51bWJlciwKKTogUHJvbWlzZTxBcnJheUJ1ZmZlcj4gewogIGNvbnN0IHBkZkRvYyA9IGF3YWl0IFBERkRvY3VtZW50LmNyZWF0ZSgpCiAgY29uc3Qgd2lkdGhQdCA9IHBhcGVyV2lkdGhNbSAqIE1NX1RPX1BUCiAgY29uc3QgaGVpZ2h0UHQgPSBwYXBlckhlaWdodE1tICogTU1fVE9fUFQKICBmb3IgKGNvbnN0IHBhZ2VCdWZmZXIgb2YgcGFnZXMpIHsKICAgIGNvbnN0IHBhZ2UgPSBwZGZEb2MuYWRkUGFnZShbd2lkdGhQdCwgaGVpZ2h0UHRdKQogICAgY29uc3QgcG5nID0gYXdhaXQgcGRmRG9jLmVtYmVkUG5nKHBhZ2VCdWZmZXIpCiAgICBwYWdlLmRyYXdJbWFnZShwbmcsIHsKICAgICAgeDogMCwKICAgICAgeTogMCwKICAgICAgd2lkdGg6IHdpZHRoUHQsCiAgICAgIGhlaWdodDogaGVpZ2h0UHQsCiAgICB9KQogIH0KICBjb25zdCBieXRlcyA9IGF3YWl0IHBkZkRvYy5zYXZlKCkKICByZXR1cm4gYnl0ZXMuYnVmZmVyLnNsaWNlKGJ5dGVzLmJ5dGVPZmZzZXQsIGJ5dGVzLmJ5dGVPZmZzZXQgKyBieXRlcy5ieXRlTGVuZ3RoKQp9CgpmdW5jdGlvbiBpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGRhdGE6IHVua25vd24pOiBkYXRhIGlzIFdvcmtlclJlcXVlc3QgewogIGlmICghZGF0YSB8fCB0eXBlb2YgZGF0YSAhPT0gJ29iamVjdCcpIHJldHVybiBmYWxzZQogIGNvbnN0IHJlY29yZCA9IGRhdGEgYXMgUmVjb3JkPHN0cmluZywgdW5rbm93bj4KICBpZiAodHlwZW9mIHJlY29yZC5pZCAhPT0gJ251bWJlcicgfHwgdHlwZW9mIHJlY29yZC50eXBlICE9PSAnc3RyaW5nJykgcmV0dXJuIGZhbHNlCiAgaWYgKHJlY29yZC50eXBlID09PSAncG5nLWRwaScpIHsKICAgIHJldHVybiBpc0FycmF5QnVmZmVyVmFsdWUocmVjb3JkLnBuZykgJiYgdHlwZW9mIHJlY29yZC5kcGkgPT09ICdudW1iZXInCiAgfQogIGlmIChyZWNvcmQudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICByZXR1cm4gaXNBcnJheUJ1ZmZlclZhbHVlKHJlY29yZC5wbmcpICYmIHR5cGVvZiByZWNvcmQucXVhbGl0eSA9PT0gJ251bWJlcicKICB9CiAgaWYgKHJlY29yZC50eXBlID09PSAncGRmJykgewogICAgcmV0dXJuICgKICAgICAgQXJyYXkuaXNBcnJheShyZWNvcmQucGFnZXMpICYmCiAgICAgIHJlY29yZC5wYWdlcy5ldmVyeSgocGFnZSkgPT4gaXNBcnJheUJ1ZmZlclZhbHVlKHBhZ2UpKSAmJgogICAgICB0eXBlb2YgcmVjb3JkLnBhcGVyV2lkdGhNbSA9PT0gJ251bWJlcicgJiYKICAgICAgdHlwZW9mIHJlY29yZC5wYXBlckhlaWdodE1tID09PSAnbnVtYmVyJyAmJgogICAgICAocmVjb3JkLm9yaWVudGF0aW9uID09PSAncG9ydHJhaXQnIHx8IHJlY29yZC5vcmllbnRhdGlvbiA9PT0gJ2xhbmRzY2FwZScpCiAgICApCiAgfQogIHJldHVybiBmYWxzZQp9CgpzZWxmLm9ubWVzc2FnZSA9IChldmVudDogTWVzc2FnZUV2ZW50KSA9PiB7CiAgaWYgKGV2ZW50Lm9yaWdpbiAhPT0gc2VsZi5sb2NhdGlvbi5vcmlnaW4pIHsKICAgIGlmIChldmVudC5vcmlnaW4gIT09ICcnICYmIGV2ZW50Lm9yaWdpbiAhPT0gJ251bGwnKSByZXR1cm4KICB9CiAgaWYgKCFpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGV2ZW50LmRhdGEpKSByZXR1cm4KCiAgdm9pZCAoYXN5bmMgKCkgPT4gewogICAgY29uc3QgbWVzc2FnZSA9IGV2ZW50LmRhdGEKICAgIHRyeSB7CiAgICAgIGlmIChtZXNzYWdlLnR5cGUgPT09ICdwbmctZHBpJykgewogICAgICAgIGNvbnN0IHdpdGhEcGkgPSBpbmplY3REcGlJblBuZ0J5dGVzKG5ldyBVaW50OEFycmF5KG1lc3NhZ2UucG5nKSwgbWVzc2FnZS5kcGkpCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiB3aXRoRHBpLmJ1ZmZlciwKICAgICAgICAgIG1pbWU6ICdpbWFnZS9wbmcnLAogICAgICAgIH0KICAgICAgICBzZWxmLnBvc3RNZXNzYWdlKHJlc3BvbnNlLCB7IHRyYW5zZmVyOiBbd2l0aERwaS5idWZmZXJdIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICAgICAgY29uc3QganBlZyA9IGF3YWl0IHBuZ1RvSnBlZyhtZXNzYWdlLnBuZywgbWVzc2FnZS5xdWFsaXR5KQogICAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJTdWNjZXNzID0gewogICAgICAgICAgaWQ6IG1lc3NhZ2UuaWQsCiAgICAgICAgICBvazogdHJ1ZSwKICAgICAgICAgIGJ1ZmZlcjoganBlZywKICAgICAgICAgIG1pbWU6ICdpbWFnZS9qcGVnJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW2pwZWddIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ3BkZicpIHsKICAgICAgICBjb25zdCBwZGYgPSBhd2FpdCBidWlsZFBkZkZyb21QbmdQYWdlcygKICAgICAgICAgIG1lc3NhZ2UucGFnZXMsCiAgICAgICAgICBtZXNzYWdlLnBhcGVyV2lkdGhNbSwKICAgICAgICAgIG1lc3NhZ2UucGFwZXJIZWlnaHRNbSwKICAgICAgICApCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiBwZGYsCiAgICAgICAgICBtaW1lOiAnYXBwbGljYXRpb24vcGRmJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW3BkZl0gfSkKICAgICAgfQogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJGYWlsdXJlID0gewogICAgICAgIGlkOiBtZXNzYWdlLmlkLAogICAgICAgIG9rOiBmYWxzZSwKICAgICAgICBlcnJvcjogZXJyIGluc3RhbmNlb2YgRXJyb3IgPyBlcnIubWVzc2FnZSA6IFN0cmluZyhlcnIpLAogICAgICB9CiAgICAgIHNlbGYucG9zdE1lc3NhZ2UocmVzcG9uc2UpCiAgICB9CiAgfSkoKQp9Cg==", _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href).href;
+  }
   let worker = null;
   let requestId = 0;
   const pending = /* @__PURE__ */ new Map();
@@ -84658,11 +84794,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       throw new Error("Web Workers indisponibles.");
     }
     if (!worker) {
-      const instance = new Worker(new URL(
-        /* @vite-ignore */
-        "" + new URL("assets/printExport.worker-CNXuYKaC.js", document.currentScript && document.currentScript.tagName.toUpperCase() === "SCRIPT" && document.currentScript.src || document.baseURI).href,
-        _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href
-      ), {
+      const instance = new Worker(resolvePrintExportWorkerUrl(), {
         type: "module"
       });
       instance.onmessage = (event) => {
@@ -94819,7 +94951,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       options: printTemplateSelectOptions.value,
                       class: "mb-20"
                     }, null, 8, ["modelValue", "options"]),
-                    createVNode(unref(yc), {
+                    createVNode(unref(bc), {
                       modelValue: printFormState.pageOrientation,
                       "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => printFormState.pageOrientation = $event),
                       inline: false,
@@ -109189,7 +109321,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return features;
   }
-  const geoJsonFormat$1 = new GeoJSON();
+  const geoJsonFormat$2 = new GeoJSON();
   function looksLikeBbox(raw) {
     try {
       const v = JSON.parse(raw);
@@ -109260,12 +109392,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         } else if (looksLikeCircleOrDisc(data)) {
           features = [featureFromCircleJson(data, mapProjection)];
         } else if ((data == null ? void 0 : data.type) === "FeatureCollection" || (data == null ? void 0 : data.type) === "Feature") {
-          features = geoJsonFormat$1.readFeatures(data, {
+          features = geoJsonFormat$2.readFeatures(data, {
             dataProjection: "EPSG:4326",
             featureProjection: mapProjection
           });
         } else {
-          features = geoJsonFormat$1.readFeatures(
+          features = geoJsonFormat$2.readFeatures(
             { type: "Feature", geometry: data, properties: {} },
             {
               dataProjection: "EPSG:4326",
@@ -112386,7 +112518,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     node.setAttribute("xunits", vec2.xunits);
     node.setAttribute("yunits", vec2.yunits);
   }
-  const geoJsonFormat = new GeoJSON();
+  const geoJsonFormat$1 = new GeoJSON();
   const kmlFormat = new KML();
   function roundCoords(value2, precision) {
     if (typeof value2 === "number") {
@@ -112448,7 +112580,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
     const multiMerged = mergeToMultiFeature(prepared, primary);
     const toWrite = multiMerged ? [multiMerged] : prepared;
-    const json = geoJsonFormat.writeFeaturesObject(toWrite, {
+    const json = geoJsonFormat$1.writeFeaturesObject(toWrite, {
       dataProjection: "EPSG:4326",
       featureProjection: mapProjection
     });
@@ -115966,6 +116098,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     refreshFicheForMapModeChange(mode2, zoom);
   }
   const LAYER_KEY = "ecFicheGeometryHighlight";
+  const geoJsonFormat = new GeoJSON();
   const highlightStyle = new Style({
     stroke: new Stroke({ color: "rgba(0, 0, 145, 0.9)", width: 2 }),
     fill: new Fill({ color: "rgba(0, 0, 145, 0.12)" })
@@ -116016,8 +116149,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return;
     }
-    const format = new GeoJSON();
-    const features = format.readFeatures(
+    const features = geoJsonFormat.readFeatures(
       geometry.type === "FeatureCollection" ? geometry : { type: "Feature", geometry, properties: {} },
       { dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" }
     );
@@ -116158,10 +116290,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       const parcelTabLoading = /* @__PURE__ */ ref(false);
       const parcelTabError = /* @__PURE__ */ ref(null);
       const cadastreModalOpen = /* @__PURE__ */ ref(false);
-      function parcelFicheKey(selection) {
+      function parcelDetailLoadKey(selection) {
         if (!selection) return "";
         const raw = selection.raw && typeof selection.raw === "object" ? selection.raw : null;
-        return resolveParcelIdFromRaw(raw) ?? selection.parcelLabel ?? selection.title ?? "";
+        return resolveParcelIdFromRaw(raw) ?? "";
+      }
+      function parcelPanelIdentityKey(selection) {
+        if (!selection) return "";
+        const id2 = parcelDetailLoadKey(selection);
+        if (id2) return id2;
+        const raw = selection.raw && typeof selection.raw === "object" ? selection.raw : null;
+        const lon = raw == null ? void 0 : raw.lon;
+        const lat = raw == null ? void 0 : raw.lat;
+        if (typeof lon === "number" && typeof lat === "number") {
+          return `pt:${lon}|${lat}`;
+        }
+        return selection.parcelLabel ?? selection.title ?? "";
       }
       const parcelDetailReady = computed(() => {
         var _a2, _b;
@@ -116177,10 +116321,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           const record = raw && typeof raw === "object" ? raw : null;
           syncFicheGeometryHighlight(mapRef.value, record);
         },
-        { immediate: true, deep: true }
+        { immediate: true }
       );
       watch(
-        () => parcelFicheKey(props.selection),
+        () => parcelPanelIdentityKey(props.selection),
         (next, prev) => {
           if (next === prev) return;
           activeParcelTab.value = "infos";
@@ -116190,7 +116334,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       watch(
-        () => [parcelFicheKey(props.selection), parcelDetailReady.value, showParcelLayout.value],
+        () => [
+          parcelDetailLoadKey(props.selection),
+          parcelDetailReady.value,
+          showParcelLayout.value
+        ],
         ([key2, ready, parcelMode]) => {
           var _a2;
           if (!parcelMode || !key2 || ready || ((_a2 = props.selection) == null ? void 0 : _a2.parcelMissingAtPoint)) return;
@@ -116539,19 +116687,16 @@ Expected function or array of functions, received type ${typeof value2}.`
                   ]);
                 }), 128))
               ]),
-              (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
-                var _a3, _b2;
-                return openBlock(), createBlock(_sfc_main$l, {
-                  id: `ec-fiche-doc-panel-${tab.id}`,
-                  key: tab.id,
-                  class: normalizeClass(["fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel", { "fr-tabs__panel--selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id }]),
-                  role: "tabpanel",
-                  "aria-labelledby": `ec-fiche-doc-tab-${tab.id}`,
-                  tabindex: ((_b2 = activeDocTab.value) == null ? void 0 : _b2.id) === tab.id ? 0 : -1,
-                  html: tab.bodyHtml,
-                  "link-target-blank": ""
-                }, null, 8, ["id", "class", "aria-labelledby", "tabindex", "html"]);
-              }), 128))
+              activeDocTab.value ? (openBlock(), createBlock(_sfc_main$l, {
+                key: 0,
+                id: `ec-fiche-doc-panel-${activeDocTab.value.id}`,
+                class: "fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel fr-tabs__panel--selected",
+                role: "tabpanel",
+                "aria-labelledby": `ec-fiche-doc-tab-${activeDocTab.value.id}`,
+                tabindex: "0",
+                html: activeDocTab.value.bodyHtml,
+                "link-target-blank": ""
+              }, null, 8, ["id", "aria-labelledby", "html"])) : createCommentVNode("", true)
             ])) : (openBlock(), createBlock(_sfc_main$l, {
               key: 2,
               class: "ec-fiche-info__body",
@@ -118107,7 +118252,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       let olControl = null;
       const isOpen = /* @__PURE__ */ ref(false);
       const activeTab = /* @__PURE__ */ ref(null);
-      const selection = /* @__PURE__ */ ref(null);
+      const selection = /* @__PURE__ */ shallowRef(null);
+      function storeFicheSelection(next) {
+        if (next.raw && typeof next.raw === "object") {
+          return { ...next, raw: markRaw({ ...next.raw }) };
+        }
+        return next;
+      }
       const { layoutMode, refreshLayoutMetrics } = useTabPanelsLayout(shellEl);
       const {
         sheetSnapIndex,
@@ -118212,11 +118363,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         openTab(index2);
       }
       function showSelection(next) {
-        selection.value = next;
+        selection.value = storeFicheSelection(next);
         openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP);
       }
       function updateSelection(next) {
-        selection.value = next;
+        selection.value = storeFicheSelection(next);
       }
       function openLegendForLayer(layerId) {
         legendPanelFocusRef.value = { layerId, at: Date.now() };
@@ -118852,8 +119003,6 @@ Expected function or array of functions, received type ${typeof value2}.`
           origin: "ficheInfo",
           center: false
         });
-        setMapPermalinkMarker(lon, lat);
-        ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey);
         void loadFicheForMapPoint({
           lon,
           lat,
@@ -118861,6 +119010,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           zoom,
           markerPlacedAtClick: true
         });
+        ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey);
       }
       function syncCursor(map2) {
         const nextShell = map2 ? mapShellFromMap(map2) : null;
@@ -119734,6 +119884,40 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   }
+  const GEOCODING_LAYER_TYPES = /* @__PURE__ */ new Set([
+    "streetaddress",
+    "positionofinterest",
+    "cadastralparcel",
+    "location"
+  ]);
+  function isGeocodingLayerType(raw) {
+    if (!raw) return false;
+    return GEOCODING_LAYER_TYPES.has(raw.trim().toLowerCase());
+  }
+  function pickPlaceKindFromGeopfItem(item) {
+    const p5 = item.properties;
+    if (p5 && typeof p5.type === "string" && p5.type.trim()) return p5.type;
+    if (typeof item.kind === "string" && item.kind.trim()) return item.kind;
+    if (typeof item.type === "string" && item.type.trim() && !isGeocodingLayerType(item.type)) {
+      return item.type;
+    }
+    return void 0;
+  }
+  function pickPlaceKindFromGeopfFeature(feature) {
+    const props = feature.get("properties");
+    if (props && typeof props === "object" && props !== null) {
+      const p5 = props;
+      if (typeof p5.type === "string" && p5.type.trim()) return p5.type;
+      if (typeof p5.kind === "string" && p5.kind.trim()) return p5.kind;
+    }
+    const kind = feature.get("kind");
+    if (typeof kind === "string" && kind.trim()) return kind;
+    const typeTop = feature.get("type");
+    if (typeof typeTop === "string" && typeTop.trim() && !isGeocodingLayerType(typeTop)) {
+      return typeTop;
+    }
+    return void 0;
+  }
   function toLocationRedirectParams(location) {
     return {
       municipality: location.fullText,
@@ -119748,11 +119932,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     const x = Number((_a2 = item == null ? void 0 : item.position) == null ? void 0 : _a2.x);
     const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const placeKind = item ? pickPlaceKindFromGeopfItem(item) : void 0;
     return {
       fullText: (item == null ? void 0 : item.fullText) || event.title || "",
       position: { x, y },
       type: item == null ? void 0 : item.type,
       kind: item == null ? void 0 : item.kind,
+      placeKind,
       poiType: item == null ? void 0 : item.poiType
     };
   }
@@ -119774,10 +119960,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
     const infoPopup = String(feature.get("infoPopup") ?? "");
     const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
+    const placeKind = pickPlaceKindFromGeopfFeature(feature);
+    const geocodingLayerType = String(feature.get("type") ?? fallbackType);
     return {
       fullText: label,
       position: { x: lon, y: lat },
-      type: String(feature.get("type") ?? fallbackType)
+      /** Couche SearchEngine / geopf (`StreetAddress`, …), pas le type BAN (`placeKind`). */
+      type: geocodingLayerType,
+      placeKind
     };
   }
   function locationFromGeolocation(coordinates2, label = "Ma localisation") {

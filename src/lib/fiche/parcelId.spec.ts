@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildParcelIdFromProperties, resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
+import {
+  buildParcelIdFromProperties,
+  parcelGpuIdFromCadastralIdu,
+  resolveParcelIdFromRaw,
+} from '@/lib/fiche/parcelId'
 
 describe('buildParcelIdFromProperties', () => {
   it('assemble l’identifiant gpu-site', () => {
@@ -27,6 +31,18 @@ describe('resolveParcelIdFromRaw', () => {
     )
   })
 
+  it('convertit parcelId IDU (sans underscore) vers l’identifiant gpu-site', () => {
+    expect(resolveParcelIdFromRaw({ parcelId: '95197000AK0432' })).toBe('95_197_000_000_AK_0432')
+  })
+
+  it('convertit parcel.idu en identifiant gpu-site', () => {
+    expect(
+      resolveParcelIdFromRaw({
+        parcel: { idu: '95197000AK0432' },
+      }),
+    ).toBe('95_197_000_000_AK_0432')
+  })
+
   it('dérive depuis raw.parcel.features', () => {
     expect(
       resolveParcelIdFromRaw({
@@ -46,5 +62,11 @@ describe('resolveParcelIdFromRaw', () => {
         },
       }),
     ).toBe('75_056_000_000_AB_0001')
+  })
+})
+
+describe('parcelGpuIdFromCadastralIdu', () => {
+  it('rejette les chaînes déjà au format underscore', () => {
+    expect(parcelGpuIdFromCadastralIdu('95_197_000_000_AK_0432')).toBeNull()
   })
 })

@@ -9,6 +9,8 @@ export type ParcelFicheDetailCacheEntry = {
   parcelDocumentsHtml: string
 }
 
+const PARCEL_DETAIL_CACHE_MAX = 50
+
 const parcelDetailById = new Map<string, ParcelFicheDetailCacheEntry>()
 
 export function parcelIdFromSelection(selection: FicheInfoSelection | null): string | null {
@@ -21,7 +23,15 @@ export function getParcelFicheDetailCache(parcelId: string): ParcelFicheDetailCa
 }
 
 export function storeParcelFicheDetailCache(entry: ParcelFicheDetailCacheEntry): void {
+  if (parcelDetailById.has(entry.parcelId)) {
+    parcelDetailById.delete(entry.parcelId)
+  }
   parcelDetailById.set(entry.parcelId, entry)
+  while (parcelDetailById.size > PARCEL_DETAIL_CACHE_MAX) {
+    const oldest = parcelDetailById.keys().next().value
+    if (oldest === undefined) break
+    parcelDetailById.delete(oldest)
+  }
 }
 
 /** Réinjecte Infos/Documents déjà chargés pour la même parcelle (clé `parcelId`). */

@@ -40,6 +40,9 @@ function collectReferencedAssetNames(dir) {
     for (const match of text.matchAll(/printExport\.worker-[A-Za-z0-9_.-]+\.js/g)) {
       names.add(match[0])
     }
+    if (text.includes('printExport.worker-embed.js')) {
+      names.add('printExport.worker-embed.js')
+    }
   }
   }
   walk(dir)

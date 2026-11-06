@@ -16,8 +16,9 @@ npm ls --depth=0
 | Paquet | Version (exemple) | Rôle |
 | ------ | ----------------- | ---- |
 | `@gouvfr/dsfr` | 1.15.3 | Système de design de l’État (CSS, composants) |
-| `@gouvminint/vue-dsfr` | 8.20.0 | Composants Vue 3 DSFR |
-| `@iconify/vue` | 5.0.x | Icônes (UI) |
+| `@gouvminint/vue-dsfr` | 8.21.0 | Composants Vue 3 DSFR |
+| `@iconify/vue` | 5.0.5 | Icônes (UI) |
+| `@vueuse/core` | 15.0.x | Utilitaires composition Vue |
 | `dompurify` | 3.4.x | Assainissement HTML |
 | `fast-xml-parser` | 5.8.0 | Parsing XML (KML, métadonnées) |
 | `geopf-extensions-openlayers` | 1.0.0-beta.14 | Extensions Géoplateforme (SearchEngine, widgets OL) |
@@ -25,7 +26,7 @@ npm ls --depth=0
 | `ol` | 10.10.x | OpenLayers |
 | `remixicon` | 4.9.x | Pictogrammes (complément DSFR) |
 | `vue` | 3.5.x | Framework UI |
-| `vue-router` | 5.0.3 | Routage SPA (démo) |
+| `vue-router` | 5.0.7 | Routage SPA (démo) |
 
 ## Développement (`devDependencies`)
 
@@ -35,7 +36,7 @@ npm ls --depth=0
 | `@vitejs/plugin-vue` | 6.0.x | Build Vue (Vite) |
 | `@vue/test-utils` | 2.5.x | Tests composants |
 | `@types/dompurify`, `@types/node` | — | Types TypeScript |
-| `globals` | 17.x | ESLint flat config |
+| `globals` | 17.14.x | ESLint flat config |
 | `husky` | 9.x | Hooks Git (pre-commit) |
 | `jsdom` | 30.x | Environnement Vitest |
 | `prettier` | 3.9.x | Formatage |

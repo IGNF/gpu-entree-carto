@@ -9,6 +9,8 @@ import type { FeatureCollection, Geometry } from 'geojson'
 
 const LAYER_KEY = 'ecFicheGeometryHighlight'
 
+const geoJsonFormat = new GeoJSON()
+
 const highlightStyle = new Style({
   stroke: new Stroke({ color: 'rgba(0, 0, 145, 0.9)', width: 2 }),
   fill: new Fill({ color: 'rgba(0, 0, 145, 0.12)' }),
@@ -72,8 +74,7 @@ export function syncFicheGeometryHighlight(
     return
   }
 
-  const format = new GeoJSON()
-  const features = format.readFeatures(
+  const features = geoJsonFormat.readFeatures(
     geometry.type === 'FeatureCollection'
       ? geometry
       : { type: 'Feature', geometry, properties: {} },

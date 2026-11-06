@@ -1,4 +1,5 @@
 import { isArrayBufferValue } from '@/lib/map/print/printExportTransfer'
+import { resolvePrintExportWorkerUrl } from '@/lib/map/print/printExportWorkerUrl'
 
 type WorkerRequest =
   | {
@@ -70,7 +71,7 @@ function getPrintExportWorker(): Worker {
     throw new Error('Web Workers indisponibles.')
   }
   if (!worker) {
-    const instance = new Worker(new URL('./printExport.worker.ts', import.meta.url), {
+    const instance = new Worker(resolvePrintExportWorkerUrl(), {
       type: 'module',
     })
     instance.onmessage = (event: MessageEvent) => {

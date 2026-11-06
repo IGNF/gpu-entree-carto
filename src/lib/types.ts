@@ -3,6 +3,8 @@ export interface StandardViewerSearch {
   position?: { x: number; y: number }
   type?: string
   kind?: string
+  /** Sous-type lieu geopf (`municipality`, `housenumber`, …) — handoff accueil → carte pour le mode par défaut. */
+  placeKind?: string
   poiType?: string[]
 }
 
@@ -40,6 +42,7 @@ export interface AutocompleteLocation {
   fullText: string
   type?: string
   kind?: string
+  placeKind?: string
   poiType?: string[]
   position: { x: number; y: number }
 }

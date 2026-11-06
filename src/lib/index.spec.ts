@@ -60,9 +60,12 @@ describe('lib exports unitaires', () => {
       position: { x: 2.3, y: 48.8 },
     })
     expect(takeLocationHandoff()).toEqual({
-      fullText: 'Ma localisation',
-      type: 'geolocate',
-      position: { x: 2.3, y: 48.8 },
+      mapMode: 2,
+      search: {
+        fullText: 'Ma localisation',
+        type: 'geolocate',
+        position: { x: 2.3, y: 48.8 },
+      },
     })
     expect(takeLocationHandoff()).toBeNull()
   })

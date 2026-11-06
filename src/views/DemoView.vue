@@ -18,7 +18,12 @@ import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
 import MapPermalinkSync from '@/components/map/MapPermalinkSync.vue'
 import { provideMapPermalinkUi } from '@/composables/mapPermalinkUi'
 import { provideMapMode } from '@/composables/mapMode'
-import { normalizeMapMode } from '@/lib/map/mapMode'
+import {
+  DEFAULT_MAP_MODE,
+  normalizeMapMode,
+  readExplicitMapModeFromLocation,
+  type MapModeId,
+} from '@/lib/map/mapMode'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
@@ -66,8 +71,20 @@ if (typeof window !== 'undefined') {
   }
 }
 
+const locationHandoff = takeLocationHandoff()
+
+function resolveInitialMapModeFromDemo(): MapModeId | undefined {
+  const fromPermalinkOrQuery =
+    typeof window !== 'undefined' ? readExplicitMapModeFromLocation(window.location) : null
+  if (fromPermalinkOrQuery != null) return fromPermalinkOrQuery
+  if (locationHandoff?.mapMode != null) return locationHandoff.mapMode
+  return normalizeMapMode(getDemoConfig().map?.mode) ?? DEFAULT_MAP_MODE
+}
+
+const initialMapModeFromDemo = resolveInitialMapModeFromDemo()
+
 provideMapMode({
-  initial: normalizeMapMode(getDemoConfig().map?.mode) ?? undefined,
+  initial: initialMapModeFromDemo,
 })
 
 const demoCfg = getDemoConfig()
@@ -80,8 +97,10 @@ const activeBase = ref<GpuBaseLayerId>(resolveDemoBaseLayerId(demoCfg))
 const mapZoom = ref(demoCfg.map?.zoom ?? 6)
 const mapLayers = computed(() => gpuBaseEnv.allLayers)
 
-const handoff = takeLocationHandoff()
-const initialSearch = ref<StandardViewerSearch | null>(handoff ?? demoCfg.map?.search ?? null)
+const initialSearch = ref<StandardViewerSearch | null>(
+  locationHandoff?.search ?? demoCfg.map?.search ?? null,
+)
+const hasLocationHandoff = Boolean(locationHandoff)
 const expectsRemoteLayerConfig = Boolean(demoCfg.configScriptUrl?.trim())
 if (expectsRemoteLayerConfig) {
   markGpuClientConfigLoading()
@@ -98,7 +117,7 @@ provide(mapPrintModalKey, {
   close: () => printModalRef.value?.close(),
 })
 const pendingBbox = ref<number[] | null>(
-  !handoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
+  !hasLocationHandoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
 )
 const gpuDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
 
@@ -125,8 +144,9 @@ onMounted(async () => {
     await loadLibBundle('entree-carto')
     bundleViewer = getCreateStandardViewerFromBundle()({
       document: cfg.document ?? null,
-      bbox: !handoff && isValidBbox(cfg.bbox) ? cfg.bbox : null,
+      bbox: !hasLocationHandoff && isValidBbox(cfg.bbox) ? cfg.bbox : null,
       search: initialSearch.value,
+      mode: initialMapModeFromDemo,
     })
     return
   }
@@ -153,7 +173,7 @@ watch(
 )
 
 function resolveDemoStartupBbox(cfg = getDemoConfig()): [number, number, number, number] | null {
-  if (handoff) return null
+  if (hasLocationHandoff) return null
   const fromDoc = cfg.document ? parseDocumentBbox(cfg.document) : null
   if (fromDoc) return fromDoc
   return isValidBbox(cfg.bbox) ? cfg.bbox : null

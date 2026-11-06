@@ -2,7 +2,11 @@ import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 
 export const NO_PARCEL_AT_POINT_MESSAGE = 'Pas de parcelle à cet emplacement.'
 
+/** Libellé bouton retour parcelle (sans point final). */
+export const NO_PARCEL_AT_POINT_SWITCH_LABEL = 'Pas de parcelle à cet emplacement'
+
 export function ficheHasParcelAtPoint(data: GpuFicheInfoPayload): boolean {
+  if (typeof data.territoryParcelId === 'string' && data.territoryParcelId.trim()) return true
   if (typeof data.parcelId === 'string' && data.parcelId.trim()) return true
   if (data.parcelGeometry) return true
   const parcel = data.parcel

@@ -6,7 +6,7 @@ import type { Extent } from 'ol/extent'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Map from 'ol/Map'
 import type { Feature as GeoJsonFeature } from 'geojson'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import type { MapModeId } from '@/lib/map/mapMode'
 import { fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
 import { modeEmprisePartsFromFichePayload } from '@/lib/map/modeEmpriseFromFiche'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
@@ -168,20 +168,6 @@ function featuresFromFichePayload(
   return features
 }
 
-function cacheBothModeEmprisesFromPayload(
-  lon: number,
-  lat: number,
-  payload: Parameters<typeof modeEmprisePartsFromFichePayload>[0],
-): void {
-  storeEmpriseInCache(lon, lat, MAP_MODE_PARCEL, featuresFromFichePayload(payload, MAP_MODE_PARCEL))
-  storeEmpriseInCache(
-    lon,
-    lat,
-    MAP_MODE_TERRITORY,
-    featuresFromFichePayload(payload, MAP_MODE_TERRITORY),
-  )
-}
-
 async function fetchModeEmpriseFeatures(
   lon: number,
   lat: number,
@@ -192,14 +178,16 @@ async function fetchModeEmpriseFeatures(
 
   return new Promise((resolve) => {
     whenGpuClientConfigReady(() => {
-      void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode }).then((payload) => {
-        if (!payload) {
-          resolve([])
-          return
-        }
-        cacheBothModeEmprisesFromPayload(lon, lat, payload)
-        resolve(featuresFromFichePayload(payload, mode))
-      })
+      void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode })
+        .then((payload) => {
+          if (!payload) {
+            resolve([])
+            return
+          }
+          storeEmpriseInCache(lon, lat, mode, featuresFromFichePayload(payload, mode))
+          resolve(featuresFromFichePayload(payload, mode))
+        })
+        .catch(() => resolve([]))
     })
   })
 }

@@ -99,7 +99,7 @@ par :
 
 Les GeoJSON limites région/département des fonds de plan (`department-fr-geojson.json`, `region-fr-geojson.json`) restent à la racine web gpu-site dans `public/json-data/` (requêtes `/json-data/…`), et non dans le bundle vendor entree-carto.
 
-gpu-site ne copie en général **pas** tout `dist/assets/` (artefacts démo Vite). Copier au minimum `assets/remixicon*.woff2` et **`assets/printExport.worker-*.js`** vers `vendor/entree-carto/assets/` : le bundle carte charge le worker via une URL **relative** à `entree-carto.min.js` (`assets/printExport.worker-….js`).
+gpu-site ne copie en général **pas** tout `dist/assets/` (artefacts démo Vite). Copier au minimum `assets/remixicon*.woff2` et **`assets/printExport.worker*.js`** (dont `printExport.worker-embed.js`, build lib) vers `vendor/entree-carto/assets/` : le bundle carte charge le worker via une URL **relative** à `entree-carto.min.js`.
 
 ### 3. Templates Twig — cartographie (`templates/map/index.html.twig`)
 

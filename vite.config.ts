@@ -40,6 +40,16 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    /** Évite ENOSPC (inotify) : bases CodeQL, dist rebuild, etc. */
+    watch: {
+      ignored: [
+        '**/.codeql-db/**',
+        '**/.codeql-db-test/**',
+        '**/.codeql-cli/**',
+        '**/dist/**',
+        '**/.git/**',
+      ],
+    },
     proxy: {
       /** gpu-site local (légendes, script config, APIs) — évite ORB en dev. */
       '/__gpu_dev_proxy__': {
