@@ -48,10 +48,14 @@ describe('computeFicheCatalogFamilyVisibility', () => {
     const entries = [
       { id: 'dev-du', path: '/dev-du', permalinkId: 'dev-du' },
       { id: 'dev-sup', path: '/dev-sup', permalinkId: 'dev-sup' },
-      { id: 'dev-scot', path: '/dev-scot', permalinkId: 'dev-scot' },
+      {
+        id: 'dev-scot--dev-scot',
+        path: '/dev-scot/dev-scot',
+        permalinkId: 'dev-scot,dev-scot',
+      },
     ]
     const vis = computeFicheCatalogFamilyVisibility(
-      { 'dev-du': true, 'dev-sup': false, 'dev-scot': false },
+      { 'dev-du': true, 'dev-sup': false, 'dev-scot--dev-scot': false },
       entries,
     )
     expect(vis.du).toBe(true)
@@ -70,6 +74,57 @@ describe('computeFicheCatalogFamilyVisibility', () => {
     })
     expect(isFicheDocumentFamilyVisible('sup')).toBe(false)
     expect(isFicheDocumentFamilyVisible('scot')).toBe(false)
+  })
+
+  it('groupe SCoT coché + seul MEC scot actif → famille scot masquée (pas la tuile WFS SCoT)', () => {
+    const entries = [
+      { id: 'dev-scot', path: '/dev-scot', permalinkId: 'dev-scot' },
+      {
+        id: 'dev-scot--dev-scot',
+        path: '/dev-scot/dev-scot',
+        permalinkId: 'dev-scot,dev-scot',
+      },
+      {
+        id: 'dev-scot--dev-mec',
+        path: '/dev-scot/dev-mec',
+        permalinkId: 'dev-scot,dev-mec',
+      },
+    ]
+    const roots = [
+      {
+        id: 'dev-scot',
+        title: 'SCHEMA DE COHERENCE TERRITORIALE',
+        visible: true,
+        gpuVirtual: true,
+      },
+    ]
+    const vis = computeFicheCatalogFamilyVisibility(
+      {
+        'dev-scot': true,
+        'dev-scot--dev-scot': false,
+        'dev-scot--dev-mec': true,
+      },
+      entries,
+      roots,
+    )
+    expect(vis.scot).toBe(false)
+    expect(vis.mec).toBe(true)
+  })
+
+  it('tuile catalogue SCoT WFS cochée → famille scot visible', () => {
+    const entries = [
+      { id: 'dev-scot', path: '/dev-scot', permalinkId: 'dev-scot' },
+      {
+        id: 'dev-scot--dev-scot',
+        path: '/dev-scot/dev-scot',
+        permalinkId: 'dev-scot,dev-scot',
+      },
+    ]
+    const vis = computeFicheCatalogFamilyVisibility(
+      { 'dev-scot': true, 'dev-scot--dev-scot': true },
+      entries,
+    )
+    expect(vis.scot).toBe(true)
   })
 })
 

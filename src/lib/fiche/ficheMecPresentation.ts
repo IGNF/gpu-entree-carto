@@ -7,6 +7,10 @@ import {
   procedureTileHtml,
 } from '@/lib/fiche/ficheDocumentTiles'
 import { resolveMecDocumentTileHref } from '@/lib/fiche/ficheGpuSiteUrls'
+import {
+  isFicheMecTerritoryPartitionCatalogVisible,
+  isFicheProcedureVisibleForDocumentKey,
+} from '@/lib/fiche/ficheProcedureCatalogFamilies'
 
 export const MEC_DOCUMENT_NOTICE =
   'Une ou plusieurs zones de ce document ont été modifiées par une procédure de mise en compatibilité.'
@@ -181,8 +185,19 @@ export function mecProcedureTileHtmlForParcelFeature(
 export function buildMecTerritoryProceduresHtml(data: GpuFicheInfoPayload): string {
   const tiles: string[] = []
 
-  for (const map of [normalizePartitionsMap(data.mecsDu), normalizePartitionsMap(data.mecsScot)]) {
-    for (const partition of Object.values(map)) {
+  const mecsDu = normalizePartitionsMap(data.mecsDu)
+  if (isFicheMecTerritoryPartitionCatalogVisible('mecsDu')) {
+    for (const partition of Object.values(mecsDu)) {
+      const doc = pickProductionDocument(partition.documents)
+      if (!doc) continue
+      const tile = mecProcedureTileHtmlFromGpuDocument(doc)
+      if (tile) tiles.push(tile)
+    }
+  }
+
+  const mecsScot = normalizePartitionsMap(data.mecsScot)
+  if (isFicheMecTerritoryPartitionCatalogVisible('mecsScot')) {
+    for (const partition of Object.values(mecsScot)) {
       const doc = pickProductionDocument(partition.documents)
       if (!doc) continue
       const tile = mecProcedureTileHtmlFromGpuDocument(doc)
@@ -194,6 +209,7 @@ export function buildMecTerritoryProceduresHtml(data: GpuFicheInfoPayload): stri
   for (const [docName, list] of Object.entries(pbd)) {
     if (!/^MEC_/i.test(docName)) continue
     for (const procedure of list) {
+      if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue
       const title =
         procedure.name?.trim() ||
         procedure.procedureType?.title?.trim() ||
