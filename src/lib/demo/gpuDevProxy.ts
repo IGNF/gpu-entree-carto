@@ -37,6 +37,45 @@ export function rewriteLocalGpuSiteUrl(url: string): string {
   return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX)
 }
 
+/**
+ * Hôte gpu-site réel pour résoudre les chemins relatifs de gpu.config
+ * (démo Vite : script chargé via `/__gpu_dev_proxy__/…` → base `http://127.0.0.1:8000/…`).
+ */
+export function canonicalGpuClientConfigScriptUrl(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return trimmed
+  if (typeof window === 'undefined') return trimmed
+
+  try {
+    const u = new URL(trimmed, window.location.href)
+    if (u.pathname.startsWith(GPU_VITE_DEV_PROXY_PREFIX)) {
+      const path = u.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), '') || '/'
+      return `http://127.0.0.1:8000${path}${u.search}${u.hash}`
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (isGpuDevProxyPath(trimmed)) {
+    const path = trimmed.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), '') || '/'
+    return `http://127.0.0.1:8000${path}`
+  }
+
+  const normalized = normalizeLocalGpuSiteUrl(trimmed)
+  if (/^https?:\/\//i.test(normalized) || normalized.startsWith('//')) {
+    return normalized
+  }
+
+  if (trimmed.startsWith('/')) {
+    try {
+      return new URL(trimmed, window.location.href).href
+    } catch {
+      return trimmed
+    }
+  }
+  return trimmed
+}
+
 /** Liens HTML / navigation : garder l’hôte gpu-site (pas le proxy fetch). */
 const GPU_CONFIG_NAVIGATION_URL_KEYS = new Set([
   'baseUrl',

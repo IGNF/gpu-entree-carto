@@ -172,8 +172,7 @@ Fallback léger : `gpu.mountLocationSearch` ([LocationSearchWidget.md](./Locatio
 
 ### 6. Config JavaScript
 
-Le fichier `templates/map/gpu_client_config.js.twig` peut rester tel quel : il fait `Object.assign(gpu.config, { … })`.  
-Renommage optionnel ultérieur en `map_config.js.twig`.
+`templates/map/gpu_client_config.js.twig` fait `Object.assign(gpu.config, { … })`. Les endpoints API (`apiFicheInfo*`, `apiFeatureInfo*`, `apiDocument*`, etc.) doivent utiliser Symfony **`path()`** (chemins relatifs cacheables), pas **`url()`** (hôte absolu). entree-carto résout ces chemins par rapport à l’URL du script gpu-client-config (embed gpu-site ou démo Vite via `configScriptUrl`).
 
 ### 7. CSS site
 

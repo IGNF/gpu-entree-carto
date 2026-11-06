@@ -2,12 +2,17 @@
  * Résolution des URL relatives de `gpu.config` par rapport au script
  * gpu-client-config.js (hôte du fichier de config), pas la page SPA.
  */
-import { isGpuDevProxyPath, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import {
+  canonicalGpuClientConfigScriptUrl,
+  isGpuDevProxyPath,
+  rewriteLocalGpuSiteUrl,
+} from '@/lib/demo/gpuDevProxy'
 
 let gpuClientConfigScriptUrl: string | null = null
 
 export function setGpuClientConfigScriptUrl(url: string | null): void {
-  gpuClientConfigScriptUrl = url?.trim() || null
+  const trimmed = url?.trim()
+  gpuClientConfigScriptUrl = trimmed ? canonicalGpuClientConfigScriptUrl(trimmed) : null
 }
 
 export function getGpuClientConfigScriptUrl(): string | null {
@@ -60,7 +65,7 @@ export function resolveConfigUrlsInRecord(target: Record<string, unknown>): void
       document.querySelector<HTMLScriptElement>('script[src*="gpu_map_client_config"]') ??
       document.querySelector<HTMLScriptElement>('script#gpu-client-config[src]')
     if (fallback?.src) {
-      gpuClientConfigScriptUrl = fallback.src
+      setGpuClientConfigScriptUrl(fallback.src)
     }
   }
   if (!gpuClientConfigScriptUrl) return
