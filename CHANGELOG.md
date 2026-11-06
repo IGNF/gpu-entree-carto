@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **gpu-site config / demo** — API routes in `gpu_client_config.js.twig` use Symfony `path()`; entree-carto canonicalizes the config script URL (Vite proxy → gpu-site host) when resolving relative `*Url` fields.
-- **gpu-site integration** — lib build `base: './'`: print worker `assets/printExport.worker-*.js` resolves from the script URL; integration doc (webpack copy).
+- **gpu-site integration** — print worker `assets/printExport.worker-embed.js` (esbuild) resolves from `entree-carto.min.js` URL (not `/map/assets/` via `document.baseURI`); webpack copy `printExport.worker*.js`.
 - **Map print** — PNG DPI fallback without `fetch(data:…)` (strict embed `connect-src` CSP).
 - **Map print** — **All legends** option (under “Show legend”): includes hidden and out-of-zoom layers with muted styling.
 - **Fiche info** — parcel / territory **Print** buttons open the map print modal with the matching fiche option preselected.

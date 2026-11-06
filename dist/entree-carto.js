@@ -84633,6 +84633,39 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (value2 instanceof ArrayBuffer) return true;
     return Object.prototype.toString.call(value2) === "[object ArrayBuffer]";
   }
+  const ENTREE_PRINT_WORKER_ASSET = "assets/printExport.worker-embed.js";
+  function entreeCartoScriptSrc() {
+    if (typeof document === "undefined") return null;
+    const candidates = [
+      document.querySelector('script[src*="entree-carto.min.js"]'),
+      document.querySelector('script[src*="entree-carto.js"]')
+    ];
+    for (const el2 of candidates) {
+      if (!(el2 == null ? void 0 : el2.src)) continue;
+      const src = el2.src.split("?")[0];
+      if (/entree-carto(\.min)?\.js$/i.test(src.split("/").pop() ?? "")) {
+        return src;
+      }
+    }
+    return null;
+  }
+  function resolveAgainstEntreeCartoScript(assetPath) {
+    const scriptSrc = entreeCartoScriptSrc();
+    if (scriptSrc) {
+      return new URL(assetPath, scriptSrc).href;
+    }
+    const scriptDir = config.scriptDir;
+    if (typeof scriptDir === "string" && scriptDir.length > 1 && scriptDir !== "/") {
+      const base = scriptDir.endsWith("/") ? scriptDir : `${scriptDir}/`;
+      return new URL(assetPath, base).href;
+    }
+    return null;
+  }
+  function resolvePrintExportWorkerUrl() {
+    const resolved = resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET);
+    if (resolved) return resolved;
+    return new URL("data:video/mp2t;base64,aW1wb3J0IHsgUERGRG9jdW1lbnQgfSBmcm9tICdwZGYtbGliJwppbXBvcnQgeyBpbmplY3REcGlJblBuZ0J5dGVzIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3BuZ0RwaScKaW1wb3J0IHsgaXNBcnJheUJ1ZmZlclZhbHVlIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3ByaW50RXhwb3J0VHJhbnNmZXInCgovKiogUG9pbnRzIFBERiAoMS83MiBpbikgZGVwdWlzIG1pbGxpbcOodHJlcyBwYXBpZXIuICovCmNvbnN0IE1NX1RPX1BUID0gNzIgLyAyNS40Cgp0eXBlIFdvcmtlclJlcXVlc3QgPQogIHwgewogICAgICBpZDogbnVtYmVyCiAgICAgIHR5cGU6ICdwbmctZHBpJwogICAgICBwbmc6IEFycmF5QnVmZmVyCiAgICAgIGRwaTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ2pwZWcnCiAgICAgIHBuZzogQXJyYXlCdWZmZXIKICAgICAgcXVhbGl0eTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ3BkZicKICAgICAgcGFnZXM6IEFycmF5QnVmZmVyW10KICAgICAgcGFwZXJXaWR0aE1tOiBudW1iZXIKICAgICAgcGFwZXJIZWlnaHRNbTogbnVtYmVyCiAgICAgIG9yaWVudGF0aW9uOiAncG9ydHJhaXQnIHwgJ2xhbmRzY2FwZScKICAgICAgZmlsZU5hbWU6IHN0cmluZwogICAgfQoKdHlwZSBXb3JrZXJTdWNjZXNzID0gewogIGlkOiBudW1iZXIKICBvazogdHJ1ZQogIGJ1ZmZlcjogQXJyYXlCdWZmZXIKICBtaW1lOiBzdHJpbmcKfQoKdHlwZSBXb3JrZXJGYWlsdXJlID0gewogIGlkOiBudW1iZXIKICBvazogZmFsc2UKICBlcnJvcjogc3RyaW5nCn0KCmFzeW5jIGZ1bmN0aW9uIHBuZ1RvSnBlZyhwbmdCdWZmZXI6IEFycmF5QnVmZmVyLCBxdWFsaXR5OiBudW1iZXIpOiBQcm9taXNlPEFycmF5QnVmZmVyPiB7CiAgY29uc3QgYmxvYiA9IG5ldyBCbG9iKFtwbmdCdWZmZXJdLCB7IHR5cGU6ICdpbWFnZS9wbmcnIH0pCiAgY29uc3QgYml0bWFwID0gYXdhaXQgY3JlYXRlSW1hZ2VCaXRtYXAoYmxvYikKICBjb25zdCBjYW52YXMgPSBuZXcgT2Zmc2NyZWVuQ2FudmFzKGJpdG1hcC53aWR0aCwgYml0bWFwLmhlaWdodCkKICBjb25zdCBjdHggPSBjYW52YXMuZ2V0Q29udGV4dCgnMmQnKQogIGlmICghY3R4KSB0aHJvdyBuZXcgRXJyb3IoJ0NvbnRleHRlIDJEIGluZGlzcG9uaWJsZSBkYW5zIGxlIHdvcmtlci4nKQogIGN0eC5kcmF3SW1hZ2UoYml0bWFwLCAwLCAwKQogIGJpdG1hcC5jbG9zZSgpCiAgY29uc3QganBlZ0Jsb2IgPSBhd2FpdCBjYW52YXMuY29udmVydFRvQmxvYih7IHR5cGU6ICdpbWFnZS9qcGVnJywgcXVhbGl0eSB9KQogIHJldHVybiBqcGVnQmxvYi5hcnJheUJ1ZmZlcigpCn0KCmFzeW5jIGZ1bmN0aW9uIGJ1aWxkUGRmRnJvbVBuZ1BhZ2VzKAogIHBhZ2VzOiBBcnJheUJ1ZmZlcltdLAogIHBhcGVyV2lkdGhNbTogbnVtYmVyLAogIHBhcGVySGVpZ2h0TW06IG51bWJlciwKKTogUHJvbWlzZTxBcnJheUJ1ZmZlcj4gewogIGNvbnN0IHBkZkRvYyA9IGF3YWl0IFBERkRvY3VtZW50LmNyZWF0ZSgpCiAgY29uc3Qgd2lkdGhQdCA9IHBhcGVyV2lkdGhNbSAqIE1NX1RPX1BUCiAgY29uc3QgaGVpZ2h0UHQgPSBwYXBlckhlaWdodE1tICogTU1fVE9fUFQKICBmb3IgKGNvbnN0IHBhZ2VCdWZmZXIgb2YgcGFnZXMpIHsKICAgIGNvbnN0IHBhZ2UgPSBwZGZEb2MuYWRkUGFnZShbd2lkdGhQdCwgaGVpZ2h0UHRdKQogICAgY29uc3QgcG5nID0gYXdhaXQgcGRmRG9jLmVtYmVkUG5nKHBhZ2VCdWZmZXIpCiAgICBwYWdlLmRyYXdJbWFnZShwbmcsIHsKICAgICAgeDogMCwKICAgICAgeTogMCwKICAgICAgd2lkdGg6IHdpZHRoUHQsCiAgICAgIGhlaWdodDogaGVpZ2h0UHQsCiAgICB9KQogIH0KICBjb25zdCBieXRlcyA9IGF3YWl0IHBkZkRvYy5zYXZlKCkKICByZXR1cm4gYnl0ZXMuYnVmZmVyLnNsaWNlKGJ5dGVzLmJ5dGVPZmZzZXQsIGJ5dGVzLmJ5dGVPZmZzZXQgKyBieXRlcy5ieXRlTGVuZ3RoKQp9CgpmdW5jdGlvbiBpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGRhdGE6IHVua25vd24pOiBkYXRhIGlzIFdvcmtlclJlcXVlc3QgewogIGlmICghZGF0YSB8fCB0eXBlb2YgZGF0YSAhPT0gJ29iamVjdCcpIHJldHVybiBmYWxzZQogIGNvbnN0IHJlY29yZCA9IGRhdGEgYXMgUmVjb3JkPHN0cmluZywgdW5rbm93bj4KICBpZiAodHlwZW9mIHJlY29yZC5pZCAhPT0gJ251bWJlcicgfHwgdHlwZW9mIHJlY29yZC50eXBlICE9PSAnc3RyaW5nJykgcmV0dXJuIGZhbHNlCiAgaWYgKHJlY29yZC50eXBlID09PSAncG5nLWRwaScpIHsKICAgIHJldHVybiBpc0FycmF5QnVmZmVyVmFsdWUocmVjb3JkLnBuZykgJiYgdHlwZW9mIHJlY29yZC5kcGkgPT09ICdudW1iZXInCiAgfQogIGlmIChyZWNvcmQudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICByZXR1cm4gaXNBcnJheUJ1ZmZlclZhbHVlKHJlY29yZC5wbmcpICYmIHR5cGVvZiByZWNvcmQucXVhbGl0eSA9PT0gJ251bWJlcicKICB9CiAgaWYgKHJlY29yZC50eXBlID09PSAncGRmJykgewogICAgcmV0dXJuICgKICAgICAgQXJyYXkuaXNBcnJheShyZWNvcmQucGFnZXMpICYmCiAgICAgIHJlY29yZC5wYWdlcy5ldmVyeSgocGFnZSkgPT4gaXNBcnJheUJ1ZmZlclZhbHVlKHBhZ2UpKSAmJgogICAgICB0eXBlb2YgcmVjb3JkLnBhcGVyV2lkdGhNbSA9PT0gJ251bWJlcicgJiYKICAgICAgdHlwZW9mIHJlY29yZC5wYXBlckhlaWdodE1tID09PSAnbnVtYmVyJyAmJgogICAgICAocmVjb3JkLm9yaWVudGF0aW9uID09PSAncG9ydHJhaXQnIHx8IHJlY29yZC5vcmllbnRhdGlvbiA9PT0gJ2xhbmRzY2FwZScpCiAgICApCiAgfQogIHJldHVybiBmYWxzZQp9CgpzZWxmLm9ubWVzc2FnZSA9IChldmVudDogTWVzc2FnZUV2ZW50KSA9PiB7CiAgaWYgKGV2ZW50Lm9yaWdpbiAhPT0gc2VsZi5sb2NhdGlvbi5vcmlnaW4pIHsKICAgIGlmIChldmVudC5vcmlnaW4gIT09ICcnICYmIGV2ZW50Lm9yaWdpbiAhPT0gJ251bGwnKSByZXR1cm4KICB9CiAgaWYgKCFpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGV2ZW50LmRhdGEpKSByZXR1cm4KCiAgdm9pZCAoYXN5bmMgKCkgPT4gewogICAgY29uc3QgbWVzc2FnZSA9IGV2ZW50LmRhdGEKICAgIHRyeSB7CiAgICAgIGlmIChtZXNzYWdlLnR5cGUgPT09ICdwbmctZHBpJykgewogICAgICAgIGNvbnN0IHdpdGhEcGkgPSBpbmplY3REcGlJblBuZ0J5dGVzKG5ldyBVaW50OEFycmF5KG1lc3NhZ2UucG5nKSwgbWVzc2FnZS5kcGkpCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiB3aXRoRHBpLmJ1ZmZlciwKICAgICAgICAgIG1pbWU6ICdpbWFnZS9wbmcnLAogICAgICAgIH0KICAgICAgICBzZWxmLnBvc3RNZXNzYWdlKHJlc3BvbnNlLCB7IHRyYW5zZmVyOiBbd2l0aERwaS5idWZmZXJdIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICAgICAgY29uc3QganBlZyA9IGF3YWl0IHBuZ1RvSnBlZyhtZXNzYWdlLnBuZywgbWVzc2FnZS5xdWFsaXR5KQogICAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJTdWNjZXNzID0gewogICAgICAgICAgaWQ6IG1lc3NhZ2UuaWQsCiAgICAgICAgICBvazogdHJ1ZSwKICAgICAgICAgIGJ1ZmZlcjoganBlZywKICAgICAgICAgIG1pbWU6ICdpbWFnZS9qcGVnJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW2pwZWddIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ3BkZicpIHsKICAgICAgICBjb25zdCBwZGYgPSBhd2FpdCBidWlsZFBkZkZyb21QbmdQYWdlcygKICAgICAgICAgIG1lc3NhZ2UucGFnZXMsCiAgICAgICAgICBtZXNzYWdlLnBhcGVyV2lkdGhNbSwKICAgICAgICAgIG1lc3NhZ2UucGFwZXJIZWlnaHRNbSwKICAgICAgICApCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiBwZGYsCiAgICAgICAgICBtaW1lOiAnYXBwbGljYXRpb24vcGRmJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW3BkZl0gfSkKICAgICAgfQogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJGYWlsdXJlID0gewogICAgICAgIGlkOiBtZXNzYWdlLmlkLAogICAgICAgIG9rOiBmYWxzZSwKICAgICAgICBlcnJvcjogZXJyIGluc3RhbmNlb2YgRXJyb3IgPyBlcnIubWVzc2FnZSA6IFN0cmluZyhlcnIpLAogICAgICB9CiAgICAgIHNlbGYucG9zdE1lc3NhZ2UocmVzcG9uc2UpCiAgICB9CiAgfSkoKQp9Cg==", _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href).href;
+  }
   let worker = null;
   let requestId = 0;
   const pending = /* @__PURE__ */ new Map();
@@ -84658,11 +84691,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       throw new Error("Web Workers indisponibles.");
     }
     if (!worker) {
-      const instance = new Worker(new URL(
-        /* @vite-ignore */
-        "" + new URL("assets/printExport.worker-CNXuYKaC.js", document.currentScript && document.currentScript.tagName.toUpperCase() === "SCRIPT" && document.currentScript.src || document.baseURI).href,
-        _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href
-      ), {
+      const instance = new Worker(resolvePrintExportWorkerUrl(), {
         type: "module"
       });
       instance.onmessage = (event) => {

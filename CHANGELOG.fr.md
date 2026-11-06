@@ -20,7 +20,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Modifié
 
 - **Config gpu-site / démo** — API `gpu_client_config.js.twig` en chemins `path()` ; résolution entree-carto canonicalise l’URL du script (proxy Vite → hôte gpu-site) pour les `*Url` relatifs.
-- **Intégration gpu-site** — build lib `base: './'` : worker d’export `assets/printExport.worker-*.js` résolu depuis l’URL du script ; doc intégration (copie webpack).
+- **Intégration gpu-site** — worker d’export `assets/printExport.worker-embed.js` (esbuild) résolu depuis l’URL de `entree-carto.min.js` (plus `/map/assets/` via `document.baseURI`) ; copie webpack `printExport.worker*.js`.
 - **Impression carte** — repli PNG DPI sans `fetch(data:…)` (compatible CSP `connect-src` stricte des embeds).
 - **Impression carte** — option **Toutes les légendes** (sous « Afficher la légende ») : couches masquées et hors zoom incluses, style grisé.
 - **Fiche info** — boutons **Imprimer** parcelle / territoire ouvrent la modale d’impression avec la fiche correspondante précochée.

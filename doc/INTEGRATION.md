@@ -99,7 +99,7 @@ with:
 
 Region/department limit GeoJSON for base maps (`department-fr-geojson.json`, `region-fr-geojson.json`) stay on the gpu-site web root at `public/json-data/` (requested as `/json-data/…`), not inside the entree-carto vendor bundle.
 
-gpu-site usually does **not** copy all of `dist/assets/` (Vite demo artefacts). Copy at least `assets/remixicon*.woff2` and **`assets/printExport.worker-*.js`** into `vendor/entree-carto/assets/`: the map bundle loads the worker with a URL **relative** to `entree-carto.min.js` (`assets/printExport.worker-….js`).
+gpu-site usually does **not** copy all of `dist/assets/` (Vite demo artefacts). Copy at least `assets/remixicon*.woff2` and **`assets/printExport.worker*.js`** (including `printExport.worker-embed.js` from the lib build) into `vendor/entree-carto/assets/`: the map bundle loads the worker with a URL **relative** to `entree-carto.min.js`.
 
 ### 3. Twig templates — mapping (`templates/map/index.html.twig`)
 
