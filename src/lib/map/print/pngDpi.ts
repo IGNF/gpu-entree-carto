@@ -40,9 +40,25 @@ export function injectDpiInPngBytes(bytes: Uint8Array, dpi: number): Uint8Array 
   return result
 }
 
-export async function injectDpiInPng(dataUrl: string, dpi: number): Promise<string> {
-  const response = await fetch(dataUrl)
-  const buffer = await response.arrayBuffer()
-  const withDpi = injectDpiInPngBytes(new Uint8Array(buffer), dpi)
+function dataUrlToUint8Array(dataUrl: string): Uint8Array {
+  const comma = dataUrl.indexOf(',')
+  if (comma === -1) throw new Error('Data URL PNG invalide.')
+  const meta = dataUrl.slice(0, comma)
+  const payload = dataUrl.slice(comma + 1)
+  if (meta.includes(';base64')) {
+    const binary = atob(payload)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return bytes
+  }
+  const decoded = decodeURIComponent(payload)
+  const bytes = new Uint8Array(decoded.length)
+  for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i)
+  return bytes
+}
+
+/** Repli thread principal (sans fetch sur data:, bloqué par certaines CSP embed). */
+export function injectDpiInPng(dataUrl: string, dpi: number): string {
+  const withDpi = injectDpiInPngBytes(dataUrlToUint8Array(dataUrl), dpi)
   return URL.createObjectURL(new Blob([withDpi], { type: 'image/png' }))
 }

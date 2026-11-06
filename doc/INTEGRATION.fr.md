@@ -25,7 +25,7 @@ dist/
   entree-carto-search-engine.js / .min.js     # accueil SearchEngine geopf (mountSearchEngine)
   entree-carto-geometry-editor.js / .min.js   # mini-carte formulaires (remplace ol-geometry-editor)
   entree-carto-sketch.js / .min.js            # croquis standalone (mountSketch / SketchControl)
-  assets/                                     # polices Remix (woff2), …
+  assets/                                     # polices Remix (woff2), worker impression printExport.worker-*.js, …
   css/
     entree-carto.css / .min.css
     entree-carto-location-search.css / .min.css
@@ -98,6 +98,8 @@ par :
 ```
 
 Les GeoJSON limites région/département des fonds de plan (`department-fr-geojson.json`, `region-fr-geojson.json`) restent à la racine web gpu-site dans `public/json-data/` (requêtes `/json-data/…`), et non dans le bundle vendor entree-carto.
+
+gpu-site ne copie en général **pas** tout `dist/assets/` (artefacts démo Vite). Copier au minimum `assets/remixicon*.woff2` et **`assets/printExport.worker-*.js`** vers `vendor/entree-carto/assets/` : le bundle carte charge le worker via une URL **relative** à `entree-carto.min.js` (`assets/printExport.worker-….js`).
 
 ### 3. Templates Twig — cartographie (`templates/map/index.html.twig`)
 

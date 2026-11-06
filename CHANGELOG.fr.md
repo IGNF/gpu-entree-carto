@@ -19,6 +19,8 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Intégration gpu-site** — build lib `base: './'` : worker d’export `assets/printExport.worker-*.js` résolu depuis l’URL du script ; doc intégration (copie webpack).
+- **Impression carte** — repli PNG DPI sans `fetch(data:…)` (compatible CSP `connect-src` stricte des embeds).
 - **Impression carte** — option **Toutes les légendes** (sous « Afficher la légende ») : couches masquées et hors zoom incluses, style grisé.
 - **Fiche info** — boutons **Imprimer** parcelle / territoire ouvrent la modale d’impression avec la fiche correspondante précochée.
 - **Impression carte** — export PDF : **pdf-lib** dans le worker d’encodage (remplace jsPDF / canvg) ; même fonctionnalité multi-pages, moins de code tiers signalé par CodeQL dans `dist/`.
