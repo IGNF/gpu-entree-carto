@@ -17,7 +17,11 @@ import {
   markGpuClientConfigReady,
   trySettleGpuClientConfigFromWindow,
 } from '@/lib/demo/gpuClientConfigState'
-import { rewriteGpuConfigUrlsForViteDev, rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import {
+  isGpuDevProxyPath,
+  rewriteGpuConfigUrlsForViteDev,
+  rewriteLocalGpuSiteUrl,
+} from '@/lib/demo/gpuDevProxy'
 import type { MapModeId } from '@/lib/map/mapMode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import type Map from 'ol/Map'
@@ -227,14 +231,25 @@ async function patchLegendImageDirectoryFromScript(url: string): Promise<void> {
   }
 }
 
+function resolveConfigScriptLoadHref(url: string): string {
+  const trimmed = url.trim()
+  if (isGpuDevProxyPath(trimmed) || /^https?:\/\//i.test(trimmed)) {
+    return rewriteLocalGpuSiteUrl(trimmed)
+  }
+  if (trimmed.startsWith('/') && typeof window !== 'undefined') {
+    return rewriteLocalGpuSiteUrl(new URL(trimmed, window.location.href).href)
+  }
+  return rewriteLocalGpuSiteUrl(trimmed)
+}
+
 export function loadGpuClientConfigScript(url: string): Promise<void> {
-  const scriptUrl = rewriteLocalGpuSiteUrl(url)
+  const scriptUrl = resolveConfigScriptLoadHref(url)
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(
       `script[data-ec-demo-config="${url}"]`,
     )
     if (existing) {
-      setGpuClientConfigScriptUrl(url)
+      setGpuClientConfigScriptUrl(existing.src || url)
       applyGpuConfigSyncAndDevRewrite()
       void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
       return
@@ -246,7 +261,7 @@ export function loadGpuClientConfigScript(url: string): Promise<void> {
     script.src = scriptUrl
     script.onload = () => {
       console.info(`${LOG_PREFIX} gpu-client-config chargé`, scriptUrl)
-      setGpuClientConfigScriptUrl(url)
+      setGpuClientConfigScriptUrl(script.src || url)
       applyGpuConfigSyncAndDevRewrite()
       void patchLegendImageDirectoryFromScript(url).finally(() => resolve())
     }

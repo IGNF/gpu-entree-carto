@@ -14,8 +14,12 @@ window.DEMO_CONFIG = {
    * URL du script gpu-client-config (prod / dev / local), optionnel.
    * S’il est défini, le script est chargé au démarrage de `/map` (globals LAYER_CONFIG, …).
    */
-  /** gpu-site local : injecte apiFicheInfo* → /api/fiche-info-v2* (cadastre APICarto côté serveur). */
-  configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
+  /**
+   * Script gpu-client-config (chemins API relatifs dans gpu.config → résolus vs l’URL du script).
+   * Démo Vite : proxy same-origin ; gpu-site : `/map/gpu-client-config.js` ou URL absolue prod.
+   */
+  configScriptUrl: '/__gpu_dev_proxy__/map/gpu-client-config.js',
+  // configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
   // configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
 
   document: null,

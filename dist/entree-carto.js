@@ -67683,6 +67683,35 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!LOCAL_GPU_SITE.test(normalized)) return url;
     return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
   }
+  function canonicalGpuClientConfigScriptUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) return trimmed;
+    if (typeof window === "undefined") return trimmed;
+    try {
+      const u2 = new URL(trimmed, window.location.href);
+      if (u2.pathname.startsWith(GPU_VITE_DEV_PROXY_PREFIX)) {
+        const path = u2.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+        return `http://127.0.0.1:8000${path}${u2.search}${u2.hash}`;
+      }
+    } catch {
+    }
+    if (isGpuDevProxyPath(trimmed)) {
+      const path = trimmed.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+      return `http://127.0.0.1:8000${path}`;
+    }
+    const normalized = normalizeLocalGpuSiteUrl(trimmed);
+    if (/^https?:\/\//i.test(normalized) || normalized.startsWith("//")) {
+      return normalized;
+    }
+    if (trimmed.startsWith("/")) {
+      try {
+        return new URL(trimmed, window.location.href).href;
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
   function gpuSiteNavigationUrlFromProxy(raw) {
     var _a2, _b;
     const trimmed = raw.trim();
@@ -67710,7 +67739,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   let gpuClientConfigScriptUrl = null;
   function setGpuClientConfigScriptUrl(url) {
-    gpuClientConfigScriptUrl = (url == null ? void 0 : url.trim()) || null;
+    const trimmed = url == null ? void 0 : url.trim();
+    gpuClientConfigScriptUrl = trimmed ? canonicalGpuClientConfigScriptUrl(trimmed) : null;
   }
   function getGpuClientConfigScriptUrl() {
     return gpuClientConfigScriptUrl;
@@ -67737,7 +67767,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
       const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
       if (fallback == null ? void 0 : fallback.src) {
-        gpuClientConfigScriptUrl = fallback.src;
+        setGpuClientConfigScriptUrl(fallback.src);
       }
     }
     if (!gpuClientConfigScriptUrl) return;
