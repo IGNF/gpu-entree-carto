@@ -20,7 +20,7 @@ npm ls --depth=0
 | `@iconify/vue` | 5.0.5 | Icônes (UI) |
 | `@vueuse/core` | 15.0.x | Utilitaires composition Vue |
 | `dompurify` | 3.4.x | Assainissement HTML |
-| `fast-xml-parser` | 5.8.0 | Parsing XML (KML, métadonnées) |
+| `fast-xml-parser` | 5.12.1 | Parsing XML (KML, métadonnées) |
 | `geopf-extensions-openlayers` | 1.0.0-beta.14 | Extensions Géoplateforme (SearchEngine, widgets OL) |
 | `notivue` | 2.4.x | Notifications toast (démo) |
 | `ol` | 10.10.x | OpenLayers |
@@ -38,7 +38,7 @@ npm ls --depth=0
 | `@types/dompurify`, `@types/node` | — | Types TypeScript |
 | `globals` | 17.14.x | ESLint flat config |
 | `husky` | 9.x | Hooks Git (pre-commit) |
-| `jsdom` | 30.x | Environnement Vitest |
+| `jsdom` | 31.x | Environnement Vitest |
 | `prettier` | 3.9.x | Formatage |
 | `typescript` | 5.7.x | Typage statique |
 | `vite` | 6.4.x | Bundler / serveur de dev |

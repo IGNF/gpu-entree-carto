@@ -19,7 +19,9 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
-- **Dépendances** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`) ; voir [DEPENDENCIES](./DEPENDENCIES.fr.md).
+- **Dépendances** — `fast-xml-parser` 5.12.1 (GHSA-474x-hrwr-fgx4).
+- **Dépendances** — `vite` 6.4.6, `vue` 3.5.45, `jsdom` 31.x, `eslint-plugin-vue` 10.12.1, `vue-eslint-parser` 10.4.2, `typescript-eslint` 8.72.2 (`package-lock.json`) ; voir [DEPENDENCIES](./DEPENDENCIES.fr.md).
+- **Dépendances** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`).
 - **SearchEngine (carte)** — le `view.fit` après recherche de lieu utilise un `maxZoom` **19** au lieu de **15** pour que les petites emprises `trueGeometry` (rivières, ponts, POI linéaires) occupent mieux l’écran.
 - **Handoff accueil SearchEngine** — `prepareLocationHandoff` mémorise `{ search, mapMode }` ; **`properties.type`** du résultat géocodage (types BAN `municipality`, `street`, …) prime sur `kind` et sur la couche SearchEngine pour le mode ; couches **`StreetAddress`** / **`PositionOfInterest`** en secours si `placeKind` absent ; **seul un `mode` explicite dans l’URL / le hash** écrase le handoff (un simple `/map` n’impose plus le défaut territoire via `readMapModeFromLocation`) ; `placeKind` dans `StandardViewerSearch` ; `createStandardViewer` minifié reçoit le même `mode`.
 - **Fiche info (panneau parcelle)** — chargement différé Infos/Documents uniquement si `resolveParcelIdFromRaw` renvoie un id (plus de repli sur le titre affiché) ; corrige un faux « Identifiant parcelle indisponible » après rejeu historique SearchEngine quand le JSON n’expose pas encore les champs parcelle.
