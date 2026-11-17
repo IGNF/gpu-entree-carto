@@ -19,7 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Dependencies** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`); see [DEPENDENCIES](./DEPENDENCIES.md).
+- **Geometry editor / sketch bundles** — Vite aliases `is-unsafe` XML context to `src/vendor/is-unsafe-xml-context.js` (CodeQL `js/bad-html-filtering-regexp` on `-->` comment close).
+- **Dependencies** — `fast-xml-parser` 5.12.1 (GHSA-474x-hrwr-fgx4).
+- **Dependencies** — `vite` 6.4.6, `vue` 3.5.45, `jsdom` 31.x, `eslint-plugin-vue` 10.12.1, `vue-eslint-parser` 10.4.2, `typescript-eslint` 8.72.2 (`package-lock.json`); see [DEPENDENCIES](./DEPENDENCIES.md).
+- **Dependencies** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`).
 - **SearchEngine (map)** — fly-to extent after place search uses `maxZoom` **19** instead of **15** so narrow / small `trueGeometry` features (rivers, bridges, linear POIs) frame large enough on screen.
 - **Demo home SearchEngine handoff** — `prepareLocationHandoff` stores `{ search, mapMode }`; **`properties.type`** from geocoding results (BAN `municipality`, `street`, …) takes priority over `kind` and SearchEngine layer when inferring mode; geocoding layer **`StreetAddress`** / **`PositionOfInterest`** still used when `placeKind` is absent; **only an explicit `mode` in the URL/hash** overrides the handoff (plain `/map` no longer forces the default territory mode via `readMapModeFromLocation`); minified `createStandardViewer` receives `mode` from the same resolution.
 - **Fiche info panel (parcel)** — deferred Infos/Documents fetch runs only when `resolveParcelIdFromRaw` returns an id (no fallback on display title); fixes spurious “Identifiant parcelle indisponible” after SearchEngine history replay when the API payload had not yet exposed parcel fields.

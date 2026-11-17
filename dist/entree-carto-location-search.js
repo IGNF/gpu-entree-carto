@@ -4,7 +4,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
 (function(exports) {
   "use strict";
   /**
-  * @vue/shared v3.5.44
+  * @vue/shared v3.5.45
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -64,24 +64,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     });
   };
   const camelizeRE = /-\w/g;
-  const camelize = cacheStringFunction(
-    (str) => {
-      return str.replace(camelizeRE, (c) => c.slice(1).toUpperCase());
-    }
-  );
+  const camelize = /* @__PURE__ */ cacheStringFunction((str) => {
+    return str.replace(camelizeRE, (c) => c.slice(1).toUpperCase());
+  });
   const hyphenateRE = /\B([A-Z])/g;
-  const hyphenate = cacheStringFunction(
+  const hyphenate = /* @__PURE__ */ cacheStringFunction(
     (str) => str.replace(hyphenateRE, "-$1").toLowerCase()
   );
-  const capitalize = cacheStringFunction((str) => {
+  const capitalize = /* @__PURE__ */ cacheStringFunction((str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   });
-  const toHandlerKey = cacheStringFunction(
-    (str) => {
-      const s = str ? `on${capitalize(str)}` : ``;
-      return s;
-    }
-  );
+  const toHandlerKey = /* @__PURE__ */ cacheStringFunction((str) => {
+    const s = str ? `on${capitalize(str)}` : ``;
+    return s;
+  });
   const hasChanged = (value, oldValue) => !Object.is(value, oldValue);
   const invokeArrayFns = (fns, ...arg) => {
     for (let i = 0; i < fns.length; i++) {
@@ -160,7 +156,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const isHTMLTag = /* @__PURE__ */ makeMap(HTML_TAGS);
   const isSVGTag = /* @__PURE__ */ makeMap(SVG_TAGS);
   const isMathMLTag = /* @__PURE__ */ makeMap(MATH_TAGS);
-  const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`;
+  const specialBooleanAttrs = `itemscope,allowfullscreen,disablepictureinpicture,disableremoteplayback,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`;
   const isSpecialBooleanAttr = /* @__PURE__ */ makeMap(specialBooleanAttrs);
   function includeBooleanAttr(value) {
     return !!value || value === "";
@@ -296,7 +292,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   };
   /**
-  * @vue/reactivity v3.5.44
+  * @vue/reactivity v3.5.45
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -1184,7 +1180,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return res;
   }
   const isNonTrackableKeys = /* @__PURE__ */ makeMap(`__proto__,__v_isRef,__isVue`);
-  const builtInSymbols = new Set(
+  const builtInSymbols = /* @__PURE__ */ new Set(
     /* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((key) => key !== "arguments" && key !== "caller").map((key) => Symbol[key]).filter(isSymbol)
   );
   function hasOwnProperty(key) {
@@ -2033,7 +2029,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return value;
   }
   /**
-  * @vue/runtime-core v3.5.44
+  * @vue/runtime-core v3.5.45
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -2194,7 +2190,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const res = callWithErrorHandling(fn, instance, type, args);
       if (res && isPromise(res)) {
         res.catch((err) => {
-          handleError(err, instance, type);
+          handleError(err, instance, type, void 0, true);
         });
       }
       return res;
@@ -2211,7 +2207,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       );
     }
   }
-  function handleError(err, instance, type, throwInDev = true) {
+  function handleError(err, instance, type, throwInDev = true, isAsyncError = false) {
     const contextVNode = instance ? instance.vnode : null;
     const { errorHandler, throwUnhandledErrorInProduction } = instance && instance.appContext.config || EMPTY_OBJ;
     if (instance) {
@@ -2220,7 +2216,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const errorInfo = ErrorTypeStrings$1[type];
       while (cur) {
         const errorCapturedHooks = cur.ec;
-        if (errorCapturedHooks) {
+        if (errorCapturedHooks && !cur.isUnmounted && // Async failures may outlive stopped scopes whose unmount effects
+        // are deferred or discarded by Suspense.
+        (!isAsyncError || cur.scope.active)) {
           for (let i = 0; i < errorCapturedHooks.length; i++) {
             if (errorCapturedHooks[i](err, exposedInstance, errorInfo) === false) {
               return;
@@ -2546,14 +2544,32 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         instance.ceReload(newComp.styles);
         dirtyInstances.delete(instance);
       } else if (instance.parent) {
-        queueJob(() => {
-          if (!(instance.job.flags & 8)) {
-            isHmrUpdating = true;
+        const update = () => {
+          if (!instance.scope.active) return;
+          const pending = instance.asyncDep && !instance.asyncResolved ? instance : locateUnresolvedAsyncRoot(instance.parent);
+          if (pending) {
+            pending.asyncDep.catch(NOOP).then(() => {
+              if (instance.scope.active && (pending.asyncResolved || !pending.scope.active)) {
+                queueJob(update);
+              }
+            });
+            return;
+          }
+          dirtyInstances = hmrDirtyComponents.get(oldComp);
+          if (!dirtyInstances) {
+            hmrDirtyComponents.set(oldComp, dirtyInstances = /* @__PURE__ */ new Set());
+          }
+          dirtyInstances.add(instance);
+          isHmrUpdating = true;
+          try {
             instance.parent.update();
+          } finally {
             isHmrUpdating = false;
             dirtyInstances.delete(instance);
+            queuePostFlushCb(() => hmrDirtyComponents.clear());
           }
-        });
+        };
+        queueJob(update);
       } else if (instance.appContext.reload) {
         instance.appContext.reload();
       } else if (typeof window !== "undefined") {
@@ -2772,12 +2788,31 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return vnode;
   }
   function invokeDirectiveHook(vnode, prevVNode, instance, name) {
-    const bindings = vnode.dirs;
+    let hookVNode = vnode;
+    if (name === "beforeMount") {
+      vnode._mount = vnode;
+    } else if (name === "beforeUpdate") {
+      const mount = prevVNode && prevVNode._mount;
+      if (mount) {
+        mount._latest = vnode;
+        vnode._mount = mount;
+      }
+    } else if (name === "mounted") {
+      const latest = vnode._latest;
+      vnode._mount = vnode._latest = void 0;
+      if (latest) {
+        hookVNode = latest;
+        latest._mount = void 0;
+      }
+    }
+    const bindings = hookVNode.dirs;
     const oldBindings = prevVNode && prevVNode.dirs;
     for (let i = 0; i < bindings.length; i++) {
-      const binding = bindings[i];
+      let binding = bindings[i];
       if (oldBindings) {
         binding.oldValue = oldBindings[i].value;
+      } else if (name === "mounted" && binding.oldValue !== void 0) {
+        binding = extend({}, binding, { oldValue: void 0 });
       }
       let hook = binding.dir[name];
       if (hook) {
@@ -2785,7 +2820,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         callWithAsyncErrorHandling(hook, instance, 8, [
           vnode.el,
           binding,
-          vnode,
+          hookVNode,
           prevVNode
         ]);
         resetTracking();
@@ -2994,8 +3029,16 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         hooks
       );
     } else if (vnode.shapeFlag & 128) {
-      vnode.ssContent.transition = hooks.clone(vnode.ssContent);
-      vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
+      const suspense = vnode.suspense;
+      if (suspense) {
+        const branch = suspense.isHydrating ? suspense.pendingBranch : suspense.activeBranch;
+        if (branch) {
+          setTransitionHooks(branch, hooks.clone(branch));
+        }
+      } else {
+        vnode.ssContent.transition = hooks.clone(vnode.ssContent);
+        vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
+      }
     } else {
       vnode.transition = hooks;
       if (vnode.type === Fragment && isArray(vnode.children)) {
@@ -3214,9 +3257,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       true
       /* prepend */
     );
-    onUnmounted(() => {
-      remove(keepAliveRoot[type], injected);
-    }, target);
+    const removal = injectHook(
+      "um",
+      () => remove(keepAliveRoot[type], injected),
+      target
+    );
+    removal.flags = 16;
   }
   function injectHook(type, hook, target = currentInstance, prepend = false) {
     if (target) {
@@ -5501,6 +5547,8 @@ For more details, see https://link.vuejs.org/feature-flags.`
       const needCallTransitionHooks = needTransition(parentSuspense, transition);
       if (needCallTransitionHooks) {
         transition.beforeEnter(el);
+      } else if (transition && !transition.persisted) {
+        el[deferredEnterKey] = true;
       }
       hostInsert(el, container, anchor);
       if ((vnodeHook = props && props.onVnodeMounted) || needCallTransitionHooks || dirs) {
@@ -5951,16 +5999,23 @@ For more details, see https://link.vuejs.org/feature-flags.`
         } else {
           let { next, bu, u, parent, vnode } = instance;
           {
-            const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance);
-            if (nonHydratedAsyncRoot) {
+            const unresolvedAsyncRoot = locateUnresolvedAsyncRoot(instance);
+            if (unresolvedAsyncRoot) {
               if (next) {
                 next.el = vnode.el;
                 updateComponentPreRender(instance, next, optimized);
               }
-              nonHydratedAsyncRoot.asyncDep.then(() => {
-                queuePostRenderEffect(() => {
-                  if (!instance.isUnmounted) update();
-                }, parentSuspense);
+              unresolvedAsyncRoot.asyncDep.then(() => {
+                const retry = () => {
+                  if (instance.job.flags & 8) return;
+                  if (parentSuspense && parentSuspense.pendingBranch) {
+                    queuePostRenderEffect(retry, parentSuspense);
+                  } else {
+                    update();
+                  }
+                };
+                retry.flags = 16 | 32;
+                queuePostRenderEffect(retry, parentSuspense);
               });
               return;
             }
@@ -5999,8 +6054,11 @@ For more details, see https://link.vuejs.org/feature-flags.`
           patch(
             prevTree,
             nextTree,
-            // parent may have changed if it's in a teleport
-            hostParentNode(prevTree.el),
+            // parent may have changed if it's in a teleport. a root that is a
+            // pending async component only has its placeholder comment
+            hostParentNode(
+              prevTree.el || resolveAsyncComponentPlaceholder(prevTree)
+            ),
             // anchor may have changed if it's in a fragment
             getNextHostNode(prevTree),
             instance,
@@ -6440,8 +6498,7 @@ For more details, see https://link.vuejs.org/feature-flags.`
       if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
         parentComponent.renderCache[cacheIndex] = void 0;
       }
-      if (shapeFlag & 256) {
-        parentComponent.ctx.deactivate(vnode);
+      if (shapeFlag & 256 && parentComponent.ctx.deactivate(vnode)) {
         return;
       }
       const shouldInvokeDirs = shapeFlag & 1 && dirs;
@@ -6563,16 +6620,18 @@ For more details, see https://link.vuejs.org/feature-flags.`
       if (job) {
         job.flags |= 8;
         unmount(subTree, instance, parentSuspense, doRemove);
-      } else if (instance.vnode.el && subTree) {
+      } else if (subTree) {
         subTree.transition = instance.vnode.transition;
         unmount(subTree, instance, parentSuspense, doRemove);
       }
       if (um) {
         queuePostRenderEffect(um, parentSuspense);
       }
-      queuePostRenderEffect(() => {
+      const markUnmounted = () => {
         instance.isUnmounted = true;
-      }, parentSuspense);
+      };
+      markUnmounted.flags = 16;
+      queuePostRenderEffect(markUnmounted, parentSuspense);
       {
         devtoolsComponentRemoved(instance);
       }
@@ -6718,13 +6777,13 @@ For more details, see https://link.vuejs.org/feature-flags.`
     }
     return result;
   }
-  function locateNonHydratedAsyncRoot(instance) {
+  function locateUnresolvedAsyncRoot(instance) {
     const subComponent = instance.subTree.component;
     if (subComponent) {
       if (subComponent.asyncDep && !subComponent.asyncResolved) {
         return subComponent;
       } else {
-        return locateNonHydratedAsyncRoot(subComponent);
+        return locateUnresolvedAsyncRoot(subComponent);
       }
     }
   }
@@ -6742,9 +6801,14 @@ For more details, see https://link.vuejs.org/feature-flags.`
     if (instance) {
       return resolveAsyncComponentPlaceholder(instance.subTree);
     }
+    const suspense = anchorVnode.suspense;
+    if (suspense && suspense.activeBranch) {
+      return resolveAsyncComponentPlaceholder(suspense.activeBranch);
+    }
     return null;
   }
   const isSuspense = (type) => type.__isSuspense;
+  const deferredEnterKey = /* @__PURE__ */ Symbol("_deferredEnter");
   function queueEffectWithSuspense(fn, suspense) {
     if (suspense && suspense.pendingBranch) {
       if (isArray(fn)) {
@@ -6973,7 +7037,8 @@ Component that was made reactive: `,
   }
   function guardReactiveProps(props) {
     if (!props) return null;
-    return /* @__PURE__ */ isProxy(props) || isInternalObject(props) ? extend({}, props) : props;
+    if (/* @__PURE__ */ isProxy(props)) return extend({}, props);
+    return isInternalObject(props) ? extend({}, props[rawAttrsKey] || props) : props;
   }
   function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false) {
     const { props, ref: ref3, patchFlag, children, transition } = vnode;
@@ -7146,7 +7211,7 @@ Component that was made reactive: `,
       prevVNode
     ]);
   }
-  const emptyAppContext = createAppContext();
+  const emptyAppContext = /* @__PURE__ */ createAppContext();
   let uid = 0;
   function getNextUid() {
     return uid;
@@ -7359,7 +7424,8 @@ Component that was made reactive: `,
               setInSSRSetupState(false);
             }
           }).catch((e) => {
-            handleError(e, instance, 0);
+            handleError(e, instance, 0, void 0, true);
+            instance.ssrRender = (_, push) => push("<!---->");
           });
         } else {
           instance.asyncDep = setupResult;
@@ -7430,11 +7496,12 @@ Component that was made reactive: `,
       }
     }
   }
+  const rawAttrsKey = /* @__PURE__ */ Symbol();
   const attrsProxyHandlers = {
     get(target, key) {
       markAttrsAccessed();
       track(target, "get", "");
-      return target[key];
+      return key === rawAttrsKey ? target : target[key];
     },
     set() {
       warn$1(`setupContext.attrs is readonly.`);
@@ -7731,10 +7798,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version = "3.5.44";
+  const version = "3.5.45";
   const warn = warn$1;
   /**
-  * @vue/runtime-dom v3.5.44
+  * @vue/runtime-dom v3.5.45
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -8357,7 +8424,7 @@ Expected function or array of functions, received type ${typeof value}.`
     return container;
   }
   /**
-  * vue v3.5.44
+  * vue v3.5.45
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
