@@ -39,6 +39,7 @@ npm run verify:codeql:all   # src/ + dist/
 
 | Règle | Fichier(s) | Origine |
 | ----- | ---------- | ------- |
+| `js/bad-html-filtering-regexp` | `entree-carto-geometry-editor.js`, `entree-carto-sketch.js` | transitive **is-unsafe** (fast-xml-parser) — contourné via `src/vendor/is-unsafe-xml-context.js` + plugin Vite `isUnsafeXmlContextAlias` |
 | `js/redos` | `assets/index.es-*.js` (obsolète) | canvg, ex-dépendance jsPDF |
 | `js/double-escaping` | anciens `printExport.worker-*.js` | jsPDF (remplacé par **pdf-lib**) |
 

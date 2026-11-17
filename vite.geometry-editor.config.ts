@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { libCssAssetFileName, libMinifyEsbuildOptions } from './vite/libBuildOptions'
 import { remixiconExternal } from './vite/remixiconExternal'
 import { stubDsfrIconsCss } from './vite/stubDsfrIconsCss'
+import { isUnsafeXmlContextAlias } from './vite/isUnsafeXmlContextAlias'
 import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './vite.manualChunks'
 
 const minify = process.env.LIB_MINIFY === '1'
@@ -12,7 +13,7 @@ const minify = process.env.LIB_MINIFY === '1'
  * OpenLayers inclus (contrairement à ol-geometry-editor historique).
  */
 export default defineConfig({
-  plugins: [stubDsfrIconsCss(), remixiconExternal()],
+  plugins: [isUnsafeXmlContextAlias(), stubDsfrIconsCss(), remixiconExternal()],
   esbuild: libMinifyEsbuildOptions(minify),
   resolve: {
     alias: {

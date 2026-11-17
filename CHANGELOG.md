@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Geometry editor / sketch bundles** — Vite aliases `is-unsafe` XML context to `src/vendor/is-unsafe-xml-context.js` (CodeQL `js/bad-html-filtering-regexp` on `-->` comment close).
 - **Dependencies** — `fast-xml-parser` 5.12.1 (GHSA-474x-hrwr-fgx4).
 - **Dependencies** — `vite` 6.4.6, `vue` 3.5.45, `jsdom` 31.x, `eslint-plugin-vue` 10.12.1, `vue-eslint-parser` 10.4.2, `typescript-eslint` 8.72.2 (`package-lock.json`); see [DEPENDENCIES](./DEPENDENCIES.md).
 - **Dependencies** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`).

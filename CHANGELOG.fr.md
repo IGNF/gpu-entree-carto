@@ -19,6 +19,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Bundles geometry-editor / sketch** — alias Vite du contexte XML `is-unsafe` vers `src/vendor/is-unsafe-xml-context.js` (CodeQL `js/bad-html-filtering-regexp` sur la clôture `-->`).
 - **Dépendances** — `fast-xml-parser` 5.12.1 (GHSA-474x-hrwr-fgx4).
 - **Dépendances** — `vite` 6.4.6, `vue` 3.5.45, `jsdom` 31.x, `eslint-plugin-vue` 10.12.1, `vue-eslint-parser` 10.4.2, `typescript-eslint` 8.72.2 (`package-lock.json`) ; voir [DEPENDENCIES](./DEPENDENCIES.fr.md).
 - **Dépendances** — `globals` 17.14.0, `@gouvminint/vue-dsfr` 8.21.0, `@vueuse/core` 15.x, `vue-router` 5.0.7, `@iconify/vue` 5.0.5 (`package-lock.json`).

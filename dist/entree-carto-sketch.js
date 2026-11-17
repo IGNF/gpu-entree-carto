@@ -34795,12 +34795,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     {
       id: "xml-processing-instruction",
       description: "XML processing instruction: <?xml-stylesheet or <?php etc.",
-      pattern: /<\?(?:xml[\- ]|php|asp)/i
+      pattern: /<\?(?:xml[- ]|php|asp)/i
     },
     {
       id: "xml-doctype-injection",
       description: "DOCTYPE declaration embedded in content — can define entities",
-      // Match <!DOCTYPE followed by end-of-string, whitespace, or [ (internal subset)
       pattern: /<!DOCTYPE(?:[\s[]|$)/i
     },
     {
@@ -34821,13 +34820,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     {
       id: "xml-billion-laughs",
       description: "Entity reference chaining / billion laughs: repeated &eX; style references",
-      // Heuristic: 3+ consecutive entity refs suggests expansion attack
       pattern: /(?:&\w{1,20};){3,}/
     },
     {
       id: "xml-namespace-confusion",
       description: "xmlns: attribute injection — can redefine namespaces to confuse parsers",
-      // pattern: /\bxmlns\s*(?::\w{1,40})?\s*=/i,
       pattern: /\bxmlns(?::\w{1,40})?\s*=/i
     },
     {
@@ -34837,8 +34834,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     },
     {
       id: "xml-comment-close",
-      description: "--> closes an enclosing XML comment",
-      pattern: /-->/
+      description: "HTML/XML comment close: --> or legacy --!>",
+      pattern: /--!?>/
     },
     {
       id: "xml-pi-close",
