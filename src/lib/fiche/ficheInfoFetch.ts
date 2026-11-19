@@ -1,9 +1,10 @@
 import config from '@/lib/config'
-import type { MapModeId } from '@/lib/map/mapMode'
+import { MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
-import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
+import { appendFicheInfoQueryParams, notifyFicheInfoSupersede } from '@/lib/fiche/ficheInfoQuery'
 import {
   legacyFicheModeValue,
+  resolveFicheInfoCombinedFetchUrl,
   resolveFicheInfoFetchUrl,
   shouldAppendLegacyFicheModeParam,
 } from '@/lib/fiche/ficheInfoApiUrls'
@@ -11,25 +12,46 @@ import { isGpuFicheInfoPayload, type GpuFicheInfoPayload } from '@/lib/fiche/fic
 
 const inflightPayloadByPoint = new Map<string, Promise<GpuFicheInfoPayload | null>>()
 
-let activeNetworkAbort: AbortController | null = null
+/** Fetch « panneau » (clic / recherche) : un seul en vol, annulé au point suivant. */
+let activePanelNetworkAbort: AbortController | null = null
 
 export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
 }
 
-function fichePayloadInflightKey(lon: number, lat: number, zoom: number, mode: MapModeId): string {
+function fichePayloadInflightKey(
+  lon: number,
+  lat: number,
+  zoom: number,
+  mode: MapModeId | 'combined',
+): string {
   return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}`
 }
 
-function takeoverFicheNetworkSignal(external?: AbortSignal): AbortSignal {
-  activeNetworkAbort?.abort()
-  activeNetworkAbort = new AbortController()
-  const { signal } = activeNetworkAbort
+export type FicheInfoFetchRole = 'panel' | 'background'
+
+function takeoverFicheNetworkSignal(
+  external?: AbortSignal,
+  role: FicheInfoFetchRole = 'panel',
+): AbortSignal {
+  if (role === 'background') {
+    const controller = new AbortController()
+    if (external?.aborted) {
+      controller.abort()
+    } else if (external) {
+      external.addEventListener('abort', () => controller.abort(), { once: true })
+    }
+    return controller.signal
+  }
+
+  activePanelNetworkAbort?.abort()
+  activePanelNetworkAbort = new AbortController()
+  const { signal } = activePanelNetworkAbort
   if (external) {
     if (external.aborted) {
-      activeNetworkAbort.abort()
+      activePanelNetworkAbort.abort()
     } else {
-      external.addEventListener('abort', () => activeNetworkAbort?.abort(), { once: true })
+      external.addEventListener('abort', () => activePanelNetworkAbort?.abort(), { once: true })
     }
   }
   return signal
@@ -39,11 +61,58 @@ function clearInflightFichePayloads(): void {
   inflightPayloadByPoint.clear()
 }
 
+function resolveFicheInfoSupersedeBaseUrl(): string | null {
+  return (
+    resolveFicheInfoCombinedFetchUrl() ??
+    resolveFicheInfoFetchUrl(MAP_MODE_TERRITORY) ??
+    (typeof config.apiFicheInfoUrl === 'string' ? config.apiFicheInfoUrl.trim() : null) ??
+    null
+  )
+}
+
 /** Annule le fetch réseau en cours (clic suivant) et vide les promesses partagées. */
 export function abortInflightFicheInfoFetch(): void {
-  activeNetworkAbort?.abort()
-  activeNetworkAbort = null
+  const hadPanel = activePanelNetworkAbort !== null
+  activePanelNetworkAbort?.abort()
+  activePanelNetworkAbort = null
   clearInflightFichePayloads()
+  if (hadPanel) {
+    const base = resolveFicheInfoSupersedeBaseUrl()
+    if (base) notifyFicheInfoSupersede(base)
+  }
+}
+
+/** v2 combinée : un pipeline WFS gpu-site pour territoire + parcelle (voir doc FicheInfoApi). */
+export async function fetchGpuFicheInfoCombinedPayload(params: {
+  lon: number
+  lat: number
+  zoom: number
+  abortSignal?: AbortSignal
+  fetchRole?: FicheInfoFetchRole
+}): Promise<GpuFicheInfoPayload | null> {
+  if (typeof window === 'undefined') return null
+  const fetchBase = resolveFicheInfoCombinedFetchUrl()
+  if (!fetchBase) return null
+
+  const inflightKey = fichePayloadInflightKey(params.lon, params.lat, params.zoom, 'combined')
+  const existing = inflightPayloadByPoint.get(inflightKey)
+  if (existing) return existing
+
+  const role = params.fetchRole ?? 'panel'
+  const signal = takeoverFicheNetworkSignal(params.abortSignal, role)
+
+  const promise = fetchGpuFicheInfoPayloadFromUrl(
+    fetchBase,
+    { ...params, mode: MAP_MODE_TERRITORY },
+    signal,
+  ).finally(() => {
+    inflightPayloadByPoint.delete(inflightKey)
+    if (role === 'panel' && activePanelNetworkAbort?.signal === signal) {
+      activePanelNetworkAbort = null
+    }
+  })
+  inflightPayloadByPoint.set(inflightKey, promise)
+  return promise
 }
 
 export async function fetchGpuFicheInfoPayload(params: {
@@ -52,6 +121,8 @@ export async function fetchGpuFicheInfoPayload(params: {
   zoom: number
   mode: MapModeId
   abortSignal?: AbortSignal
+  /** Emprise carte, enrichissement silencieux : n’annule pas le fetch panneau en cours. */
+  fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
   if (typeof window === 'undefined') return null
 
@@ -59,12 +130,13 @@ export async function fetchGpuFicheInfoPayload(params: {
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
 
-  const signal = takeoverFicheNetworkSignal(params.abortSignal)
+  const role = params.fetchRole ?? 'panel'
+  const signal = takeoverFicheNetworkSignal(params.abortSignal, role)
 
   const promise = fetchGpuFicheInfoPayloadImpl(params, signal).finally(() => {
     inflightPayloadByPoint.delete(inflightKey)
-    if (activeNetworkAbort?.signal === signal) {
-      activeNetworkAbort = null
+    if (role === 'panel' && activePanelNetworkAbort?.signal === signal) {
+      activePanelNetworkAbort = null
     }
   })
   inflightPayloadByPoint.set(inflightKey, promise)
@@ -101,12 +173,7 @@ async function fetchGpuFicheInfoPayloadFromUrl(
     url.searchParams.set('mode', legacyFicheModeValue(params.mode))
   }
 
-  const preferCombined = Boolean(
-    'apiFicheInfoPreferCombined' in config &&
-    (config as { apiFicheInfoPreferCombined?: boolean }).apiFicheInfoPreferCombined,
-  )
   if (
-    preferCombined &&
     url.pathname.includes('fiche-info-v2') &&
     !url.pathname.endsWith('/territoire') &&
     !url.pathname.endsWith('/parcelle')

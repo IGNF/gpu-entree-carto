@@ -103,6 +103,7 @@ function parcelPanelIdentityKey(selection: FicheInfoSelection | null): string {
 
 const parcelDetailReady = computed(() => {
   const s = props.selection
+  if (parcelFichePayloadFromSelection(s)) return true
   return Boolean(s?.parcelInfosHtml?.trim() && s?.parcelDocumentsHtml?.trim())
 })
 
@@ -233,7 +234,9 @@ const parcelInfosDisplayHtml = computed((): string => {
   if (!parcelDetailReady.value) return ''
   const payload = parcelFichePayloadFromSelection(props.selection)
   if (payload) {
-    return buildParcelInfosHtmlFromFiche(payload, legendZoom.value)
+    const raw = props.selection?.raw
+    const ficheApi = raw && typeof raw === 'object' && isGpuFicheInfoPayload(raw) ? raw : null
+    return buildParcelInfosHtmlFromFiche(payload, legendZoom.value, ficheApi)
   }
   return props.selection?.parcelInfosHtml ?? '<p>Aucune information.</p>'
 })

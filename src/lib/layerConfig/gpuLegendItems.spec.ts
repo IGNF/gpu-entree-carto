@@ -49,6 +49,23 @@ describe('legendImageUrl scaleDependant', () => {
     expect(legendImageUrl(base, 'zone_secteur/surf/01', true, 16, 10)).toContain('-lowscale.png')
     expect(legendImageUrl(base, 'zone_secteur/surf/01', true, 16, 18)).toContain('-highscale.png')
   })
+
+  it('aligne la bascule sur la visibilité tuile WMS (seuil − 0,5)', () => {
+    const base = 'http://x/'
+    const layer = 'zone_secteur/surf/01'
+    expect(legendImageUrl(base, layer, true, 16, 15.319999999999993)).toContain('-lowscale.png')
+    expect(legendImageUrl(base, layer, true, 16, 15.779999999999994)).toContain('-highscale.png')
+    expect(legendImageUrl(base, layer, true, 16, 15.4)).toContain('-lowscale.png')
+    expect(legendImageUrl(base, layer, true, 16, 15.5)).toContain('-highscale.png')
+  })
+
+  it('réaligne un seuil catalogue 17 sur la bande tuile 16 (évite bascule ~16,7)', () => {
+    const base = 'http://x/'
+    const layer = 'zone_secteur/surf/01'
+    expect(legendImageUrl(base, layer, true, 17, 15.779999999999994)).toContain('-highscale.png')
+    expect(legendImageUrl(base, layer, true, 17, 15.319999999999993)).toContain('-lowscale.png')
+    expect(legendImageUrl(base, layer, true, 17, 16.699999999999996)).toContain('-highscale.png')
+  })
 })
 
 describe('buildLegendItemsForGpuLayer filter + LEGEND_CONFIG', () => {

@@ -27,7 +27,7 @@ Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dan
 - Pas de réglage d’opacité ici (réservé à [DataLayersManagerPanel](./DataLayersManagerPanel.fr.md)).
 - URLs d’images : **`legendImageDetailDirectory`** (injecté dans `gpu.config` par `gpu-client-config.js`, aussi fusionné dans `@/lib/config`) + chemin relatif de l’image + `.png`, comme gpu-client `LegendImages#getUrl`.
 - Symboles dérivés de `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligné gpu-client `CreateTreeLayerSwitcherItems`) : chemins filtrés `info_surf/05`, sous-filtres `hasfilter2`, blocs « other », etc.
-- **`scaleDependant`** : suffixe `-lowscale` / `-highscale` recalculé à partir du **zoom courant** de la carte (écoute `change:resolution` sur la vue OL).
+- **`scaleDependant`** : suffixe `-lowscale` / `-highscale` recalculé à partir du **zoom courant** de la carte (écoute `change:resolution` sur la vue OL) ; bascule highscale à `scaleDependantTreshold − 0,5`, alignée sur la visibilité tuile WMS (`gpuWmsLayers`).
 
 ## Dépendances
 

@@ -5,8 +5,10 @@ import type { StandardViewerDocument } from '@/lib/types'
 const FICHE_CLIENT_STORAGE_KEY = 'ec-fiche-info-client-id'
 
 let ficheRequestSeq = 0
+/** Seq pre-reserve pour supersede + fetch panneau suivant (evite double increment). */
+let pendingFicheInfoRequestSeq: number | null = null
 
-function getOrCreateFicheClientId(): string {
+export function getOrCreateFicheClientId(): string {
   if (typeof window === 'undefined') return 'ssr'
   try {
     const existing = sessionStorage.getItem(FICHE_CLIENT_STORAGE_KEY)
@@ -25,6 +27,38 @@ function getOrCreateFicheClientId(): string {
 export function nextFicheInfoRequestSeq(): number {
   ficheRequestSeq += 1
   return ficheRequestSeq
+}
+
+/** Reserve le seq du prochain fetch panneau (apres supersede cote serveur). */
+export function preclaimFicheInfoRequestSeq(): number {
+  const seq = nextFicheInfoRequestSeq()
+  pendingFicheInfoRequestSeq = seq
+  return seq
+}
+
+function assignFicheInfoRequestSeqForUrl(): number {
+  if (pendingFicheInfoRequestSeq !== null) {
+    const seq = pendingFicheInfoRequestSeq
+    pendingFicheInfoRequestSeq = null
+    return seq
+  }
+  return nextFicheInfoRequestSeq()
+}
+
+/** Signale au gpu-site que le clic precedent est obsolete (sans attendre lon/lat). */
+export function notifyFicheInfoSupersede(apiBaseUrl: string): void {
+  if (typeof window === 'undefined') return
+  const resolved = apiBaseUrl.trim()
+  if (!resolved) return
+
+  const url = resolved.startsWith('/')
+    ? new URL(resolved, window.location.origin)
+    : new URL(resolved)
+  url.searchParams.set('client', getOrCreateFicheClientId())
+  url.searchParams.set('seq', String(preclaimFicheInfoRequestSeq()))
+  url.searchParams.set('supersede', 'true')
+
+  void fetch(url.toString(), { credentials: 'same-origin', keepalive: true })
 }
 
 /** Document preview injecté par gpu-site / demo-config. */
@@ -59,7 +93,7 @@ export function appendFicheInfoQueryParams(
   }
 
   url.searchParams.set('client', getOrCreateFicheClientId())
-  url.searchParams.set('seq', String(nextFicheInfoRequestSeq()))
+  url.searchParams.set('seq', String(assignFicheInfoRequestSeqForUrl()))
 }
 
 type DocumentBboxSource = {

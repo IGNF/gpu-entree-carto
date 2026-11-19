@@ -5,6 +5,7 @@ import {
 } from '@/lib/layerConfig/gpuLegendItems'
 import { ParcelFeatureLabel, type DuCategory } from '@/lib/fiche/parcelFeatureLabel'
 import type { ParcelFicheFeature } from '@/lib/fiche/parcelFicheFromGpuApi'
+import { isHighScaleLegendZoom } from '@/lib/layerConfig/catalogLayerZoomRange'
 
 /** Zoom par défaut fiche parcelle (~ 1/5000), comme vue serrée gpu-client. */
 export const DEFAULT_PARCEL_FICHE_LEGEND_ZOOM = 17
@@ -101,8 +102,8 @@ function getSubFilterValue(
 
 function getScalePart(config: ParcelLegendConfigEntry, zoom: number): string {
   if (!config.visibility) return ''
-  if (zoom >= (config.visibility.highscale[0] ?? 16)) return '-highscale'
-  return '-lowscale'
+  const threshold = config.visibility.highscale[0] ?? 16
+  return isHighScaleLegendZoom(zoom, threshold) ? '-highscale' : '-lowscale'
 }
 
 function getScotImage(layer: string, properties: Record<string, unknown>): string {

@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="${ROOT}/.codeql-cli"
-CODEQL_VERSION="${CODEQL_VERSION:-v2.27.0}"
+CODEQL_VERSION="${CODEQL_VERSION:-v2.27.4}"
 ZIP_URL="https://github.com/github/codeql-cli-binaries/releases/download/${CODEQL_VERSION}/codeql-linux64.zip"
 BIN="${DEST}/codeql/codeql"
 

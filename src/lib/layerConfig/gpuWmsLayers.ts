@@ -9,6 +9,8 @@ import {
   type GpuLayerCatalogEntry,
   type GpuLayerConfig,
 } from '@/lib/layerConfig/gpuLayerConfig'
+import type View from 'ol/View'
+import { getLayerResolutionRange } from '@/lib/layerConfig/layerResolutionRange'
 
 function wmsUrl(): string {
   const url = config.wmsExterneUrl
@@ -34,13 +36,10 @@ function buildCqlFilter(layer: GpuLayerConfig, document: StandardViewerDocument 
   return parts.join(' AND ')
 }
 
-function zoomToResolution(zoom: number): number {
-  return 156543.03392804097 / Math.pow(2, zoom)
-}
-
 function createWmsTileLayer(
   entry: GpuLayerCatalogEntry,
   document: StandardViewerDocument | null,
+  view: View,
 ): TileLayer | null {
   const layer = entry.config
   if (layer.virtual || !layer.name) return null
@@ -76,6 +75,7 @@ function createWmsTileLayer(
 
   const minZoom = layer.minZoomLevel ?? 0
   const maxZoom = layer.maxZoomLevel ?? 22
+  const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom)
 
   return new TileLayer({
     source: new TileWMS({
@@ -87,8 +87,8 @@ function createWmsTileLayer(
     }),
     visible: false,
     opacity: layer.forceOpacity ? 1 : typeof layer.opacity === 'number' ? layer.opacity : 0.7,
-    minResolution: zoomToResolution(maxZoom + 0.5),
-    maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
+    minResolution,
+    maxResolution,
     zIndex: layer.zIndex ? Number(layer.zIndex) : undefined,
     properties: {
       ecGpuCatalogId: entry.id,
@@ -151,7 +151,8 @@ export class GpuWmsLayerRegistry {
     const entry = this.entries.get(catalogId)
     if (!entry) return undefined
 
-    const created = createWmsTileLayer(entry, this.document)
+    if (!this.map) return undefined
+    const created = createWmsTileLayer(entry, this.document, this.map.getView())
     if (!created) return undefined
 
     this.olLayers.set(catalogId, created)

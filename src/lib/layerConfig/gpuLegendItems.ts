@@ -3,6 +3,10 @@ import type { GpuLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import config from '@/lib/config'
 import { resolveConfigUrl } from '@/lib/configUrls'
 import { rewriteLocalGpuSiteUrl } from '@/lib/demo/gpuDevProxy'
+import {
+  effectiveScaleDependantLegendThreshold,
+  isHighScaleLegendZoom,
+} from '@/lib/layerConfig/catalogLayerZoomRange'
 
 const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16
 const GEOMETRY_TYPES = ['pct', 'lin', 'surf'] as const
@@ -34,7 +38,8 @@ function normalizeLayerNameForLegend(layerName: string): string {
 }
 
 function readScaleDependantThreshold(layer: GpuLayerConfig): number | undefined {
-  const raw = layer.scaleDependantTreshold
+  const bag = layer as GpuLayerConfig & { scaleDependantThreshold?: number }
+  const raw = layer.scaleDependantTreshold ?? bag.scaleDependantThreshold
   if (raw === undefined || raw === null) return undefined
   const n = Number(raw)
   return Number.isFinite(n) ? n : undefined
@@ -57,11 +62,7 @@ function getScaleDependantThreshold(layer: GpuLayerConfig, ancestors: GpuLayerCo
   return DEFAULT_SCALE_DEPENDANT_THRESHOLD
 }
 
-function isHighScaleZoom(zoom: number, threshold: number): boolean {
-  return zoom >= threshold
-}
-
-/** Comme gpu-client {@link LegendImages#getUrl}. */
+/** Comme gpu-client {@link LegendImages#getUrl}, seuil aligné visibilité WMS (−0,5). */
 export function legendImageUrl(
   imagePath: string,
   imageName: string,
@@ -71,7 +72,7 @@ export function legendImageUrl(
 ): string {
   let name = imageName
   if (scaleDependant) {
-    name += isHighScaleZoom(zoom, threshold) ? '-highscale' : '-lowscale'
+    name += isHighScaleLegendZoom(zoom, threshold) ? '-highscale' : '-lowscale'
   }
   return `${imagePath}${name}.png`
 }
@@ -96,10 +97,20 @@ export function sortLegendImageNamesByGeometry(names: string[]): string[] {
 export function resolveLegendItemImageUrls(item: LegendItem, zoom: number): string[] {
   const path = item.legendImagePath
   const names = legendImageNamesForItem(item)
+  const scaleDependant = item.legendScaleDependant === true
+  const rawThreshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD
+  const threshold = scaleDependant
+    ? effectiveScaleDependantLegendThreshold(rawThreshold)
+    : rawThreshold
   if (path && names.length) {
-    const scaleDependant = item.legendScaleDependant === true
-    const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD
     return names.map((name) => legendImageUrl(path, name, scaleDependant, threshold, zoom))
+  }
+  if (scaleDependant && path && names.length === 0 && item.legendImageName) {
+    return [legendImageUrl(path, item.legendImageName, true, threshold, zoom)]
+  }
+  if (item.imageUrl && !scaleDependant) return [item.imageUrl]
+  if (item.imageUrl && scaleDependant && item.legendImageName && path) {
+    return [legendImageUrl(path, item.legendImageName, true, threshold, zoom)]
   }
   if (item.imageUrl) return [item.imageUrl]
   return []
@@ -342,18 +353,14 @@ function pushLegendItemsFromNames(
     title,
     legendImagePath: opts.imagePath,
     legendScaleDependant: scaleDependant,
-    legendScaleThreshold: threshold,
+    legendScaleThreshold: scaleDependant
+      ? effectiveScaleDependantLegendThreshold(threshold)
+      : threshold,
   }
   if (sorted.length === 1) {
     item.legendImageName = sorted[0]
-    if (opts.imagePath) {
-      item.imageUrl = legendImageUrl(
-        opts.imagePath,
-        sorted[0],
-        scaleDependant,
-        threshold,
-        opts.zoomAtInit,
-      )
+    if (opts.imagePath && !scaleDependant) {
+      item.imageUrl = legendImageUrl(opts.imagePath, sorted[0], false, threshold, opts.zoomAtInit)
     }
   } else {
     item.legendImageNames = sorted

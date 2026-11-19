@@ -231,6 +231,24 @@ function sectionBlock(
   return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES[kind] ?? kind)}</h3>${documentTilesListHtml(tiles)}`
 }
 
+/** Section HTML Documents (une famille) depuis les panneaux fiche-info API — repli si la fiche parcelle WFS n’a pas de tuile. */
+export function buildParcelDocumentsSectionFromFicheApi(
+  data: GpuFicheInfoPayload,
+  kind: 'du' | 'psmv' | 'scot' | 'sup',
+): string {
+  if (!isFicheDocumentFamilyVisible(kind)) return ''
+  const partitionMap =
+    kind === 'du'
+      ? data.dus
+      : kind === 'psmv'
+        ? data.psmvs
+        : kind === 'sup'
+          ? data.sups
+          : data.scots
+  const documents = collectProductionDocuments(normalizePartitionsMap(partitionMap))
+  return sectionBlock(kind, documents, data.proceduresByDocument)
+}
+
 /** Liste cartes documents (onglet Documents mode Parcelle). */
 export function buildParcelDocumentsPresentationHtml(data: GpuFicheInfoPayload): string {
   const parts: string[] = []

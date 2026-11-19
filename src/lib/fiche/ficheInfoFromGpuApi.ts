@@ -29,6 +29,8 @@ import {
   procedureTileHref,
 } from '@/lib/fiche/ficheDocumentTiles'
 import {
+  buildParcelDocumentsHtmlFromFiche,
+  buildParcelInfosHtmlFromFiche,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
@@ -525,6 +527,8 @@ export function ficheSelectionFromGpuApi(
       const parcelFiche = extractParcelFichePayload(data)
       if (parcelFiche) {
         base.raw = { ...base.raw, _parcelFiche: parcelFiche }
+        base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche, undefined, data)
+        base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data)
       } else {
         base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data)
         base.parcelInfosHtml = undefined
@@ -578,8 +582,21 @@ export function refreshFicheSelectionCatalogVisibility(
   const mode = selection.mapMode ?? (raw.mode as MapModeId) ?? MAP_MODE_TERRITORY
   const rebuilt = ficheSelectionFromGpuApi(data, mode, lon, lat)
 
+  const rawRecord = selection.raw && typeof selection.raw === 'object' ? selection.raw : null
+  const parcelFicheFromRaw = rawRecord?._parcelFiche
+  if (
+    isGpuParcelFichePayload(parcelFicheFromRaw) &&
+    rebuilt.raw &&
+    typeof rebuilt.raw === 'object'
+  ) {
+    rebuilt.raw = { ...rebuilt.raw, _parcelFiche: parcelFicheFromRaw }
+    rebuilt.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFicheFromRaw, undefined, data)
+    rebuilt.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFicheFromRaw, data)
+  }
+
   return {
     ...selection,
+    raw: rebuilt.raw ?? selection.raw,
     documentTabs: rebuilt.documentTabs,
     bodyHtml: rebuilt.bodyHtml,
     headerHtml: rebuilt.headerHtml,

@@ -48,8 +48,16 @@ function toggleExpanded(layerId: string) {
   }
 }
 
+const legendZoomForBand = computed(() => props.mapZoom)
+
 function legendImageSrcs(leg: LegendItem): string[] {
-  return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url))
+  return resolveLegendItemImageUrls(leg, legendZoomForBand.value).map((url) =>
+    rewriteLocalGpuSiteUrl(url),
+  )
+}
+
+function legendImageRowKey(leg: LegendItem, imgIdx: number, src: string): string {
+  return `${leg.id}|${imgIdx}|${legendZoomForBand.value}|${src}`
 }
 
 const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
@@ -140,7 +148,7 @@ watch(
                   <template v-if="legendImageSrcs(leg).length">
                     <img
                       v-for="(src, imgIdx) in legendImageSrcs(leg)"
-                      :key="imgIdx"
+                      :key="legendImageRowKey(leg, imgIdx, src)"
                       class="ec-layer-legends__img"
                       :src="src"
                       alt=""

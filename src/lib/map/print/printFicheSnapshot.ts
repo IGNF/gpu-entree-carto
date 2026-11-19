@@ -102,7 +102,9 @@ export function buildParcelInfosPrintHtml(
   if (!selection) return ''
   const payload = parcelFichePayloadFromSelection(selection)
   if (payload) {
-    return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom))
+    const raw = selection?.raw
+    const ficheApi = raw && typeof raw === 'object' && isGpuFicheInfoPayload(raw) ? raw : null
+    return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi))
   }
   if (selection.parcelInfosHtml?.trim()) {
     return sanitizeFicheHtmlForPrint(selection.parcelInfosHtml)

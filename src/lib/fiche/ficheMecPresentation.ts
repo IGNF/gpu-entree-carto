@@ -170,15 +170,7 @@ export function mecProcedureTileHtmlForParcelFeature(
     }
   }
 
-  const title = options.fallbackTitle?.trim() || 'Mise en compatibilité'
-  return procedureTileHtml({
-    title,
-    href: resolveMecDocumentTileHref({
-      documentId: options.fallbackDocumentId,
-    }),
-    inProgress: true,
-    detailLine: MEC_DOCUMENT_NOTICE,
-  })
+  return ''
 }
 
 /** Tuiles MEC + procédures MEC pour l’onglet Procédures (territoire). */
