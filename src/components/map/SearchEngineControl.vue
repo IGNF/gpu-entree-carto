@@ -25,6 +25,7 @@ import { createSearchEngineAdvanced } from '@/lib/search/createSearchEngineAdvan
 import { useMapMode } from '@/composables/mapMode'
 import type { StandardViewerSearch } from '@/lib/types'
 import { loadFicheForSearch } from '@/lib/fiche/ficheInfoService'
+import { zoomForLocationSearch } from '@/lib/search/locationSearch'
 import { animateViewFit } from '@/lib/map/animateViewFit'
 import { defaultMapViewFitPadding } from '@/lib/map/mapViewFitPadding'
 import { setMapLocationMarker, type MapLocationMarkerFn } from '@/composables/mapLocationMarker'
@@ -128,7 +129,11 @@ function searchKey(search: StandardViewerSearch | null | undefined): string | nu
 
 function openFicheFromSearch(search: StandardViewerSearch): void {
   const map = controlRef.value?.getMap?.() ?? null
-  const zoom = map?.getView().getZoom() ?? 6
+  const viewZoom = map?.getView().getZoom()
+  const zoom =
+    Number.isFinite(viewZoom) && viewZoom != null
+      ? Math.max(viewZoom, zoomForLocationSearch(search))
+      : zoomForLocationSearch(search)
   const mode = normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE
   void loadFicheForSearch(search, mode, zoom)
 }
@@ -382,8 +387,8 @@ function applyInitialSearch(control: SearchEngineAdvancedLike, search: StandardV
   const isGeolocate = search.type === 'geolocate'
   const willGeocode = Boolean(label && !isGeolocate)
 
-  // Fiche immédiate sauf si un géocode va déplacer le résultat (fiche + cerise via onSearch).
-  if (!willGeocode) {
+  // Fiche immédiate si coords connues ou pas de second géocode ; sinon fiche via onSearch.
+  if (!willGeocode || hasCoords) {
     openFicheFromSearch(search)
   }
 

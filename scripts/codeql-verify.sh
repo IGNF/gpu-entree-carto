@@ -47,13 +47,13 @@ resolve_codeql() {
     echo "${CODEQL}"
     return 0
   fi
-  if command -v codeql >/dev/null 2>&1; then
-    command -v codeql
-    return 0
-  fi
   local local_bin="${ROOT}/.codeql-cli/codeql/codeql"
   if [[ -x "${local_bin}" ]]; then
     echo "${local_bin}"
+    return 0
+  fi
+  if command -v codeql >/dev/null 2>&1; then
+    command -v codeql
     return 0
   fi
   return 1

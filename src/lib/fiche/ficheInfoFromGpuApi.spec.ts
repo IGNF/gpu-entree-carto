@@ -145,7 +145,7 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.[2]?.bodyHtml).not.toContain(callout)
   })
 
-  it('mode parcelle : en-tête parcelle, documents depuis partitions, Infos différées', () => {
+  it('mode parcelle : en-tête parcelle, documents depuis partitions si pas de parcelFiche', () => {
     const sel = ficheSelectionFromGpuApi(samplePayload, MAP_MODE_PARCEL, 2.33, 48.96)
     expect(sel.title).toBe('AK 0432')
     expect(sel.parcelLabel).toBe('AK 0432')
@@ -153,5 +153,68 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.parcelInfosHtml).toBeUndefined()
     expect(sel.parcelDocumentsHtml).toContain('fr-tile')
     expect(sel.documentTabs).toBeUndefined()
+  })
+
+  it('mode parcelle : Infos WFS masquées sans DU en production, affichées sinon', () => {
+    const sansBdd = ficheSelectionFromGpuApi(
+      {
+        ...samplePayload,
+        dus: { DU_95197: { documents: [] } },
+        parcelFiche: {
+          features: [
+            {
+              id: 'zone_urba.1',
+              properties: {
+                typezone: 'U',
+                libelle: 'UM',
+                libelong: 'Zone pavillonnaire',
+                partition: 'DU_95197',
+              },
+            },
+          ],
+        },
+      },
+      MAP_MODE_PARCEL,
+      2.33,
+      48.96,
+    )
+    expect(sansBdd.parcelInfosHtml).toContain('Aucune règle')
+    const avecBdd = ficheSelectionFromGpuApi(
+      {
+        ...samplePayload,
+        dus: {
+          DU_95197: {
+            documents: [
+              {
+                id: 'a'.repeat(32),
+                name: 'DU_95197',
+                title: 'PLU test',
+                status: 'document.production',
+                originalName: '95197_PLU_20200121',
+              },
+            ],
+          },
+        },
+        parcelFiche: {
+          features: [
+            {
+              id: 'zone_urba.1',
+              properties: {
+                typezone: 'U',
+                libelle: 'UM',
+                libelong: 'Zone pavillonnaire',
+                partition: 'DU_95197',
+              },
+            },
+          ],
+        },
+      },
+      MAP_MODE_PARCEL,
+      2.33,
+      48.96,
+    )
+    expect(avecBdd.parcelInfosHtml).toContain('Zonage(s)')
+    expect(avecBdd.parcelInfosHtml).toContain('Zone pavillonnaire')
+    expect(avecBdd.raw?._parcelFiche).toBeTruthy()
   })
 })

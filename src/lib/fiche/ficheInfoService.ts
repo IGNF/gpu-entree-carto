@@ -17,7 +17,12 @@ import {
 import { readMapModeFromPermalinkParams } from '@/lib/map/mapMode'
 import { readMapPermalinkZoom } from '@/lib/map/mapPermalink'
 import { syncCadastreLowFromFicheSelectionRaw } from '@/lib/fiche/cadastreLowFromFicheInfo'
-import { abortInflightFicheInfoFetch, fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
+import {
+  abortInflightFicheInfoFetch,
+  fetchGpuFicheInfoCombinedPayload,
+  fetchGpuFicheInfoPayload,
+} from '@/lib/fiche/ficheInfoFetch'
+import { preferFicheInfoV2CombinedFetch } from '@/lib/fiche/ficheInfoApiUrls'
 import {
   ficheSelectionFromGpuApi,
   isGpuFicheInfoPayload,
@@ -85,13 +90,33 @@ function cachedFicheForMode(mode: MapModeId, lon: number, lat: number): FicheInf
   return fichePointCache.byMode[mode] ?? null
 }
 
+/**
+ * Le cache conserve le JSON brut : on recompose Infos / onglets territoire selon le catalogue actif
+ * (évite une fiche territoire vide figée avant la première sync catalogue).
+ */
+function hydrateFicheSelectionFromCache(
+  cached: FicheInfoSelection,
+  mode: MapModeId,
+): FicheInfoSelection {
+  const refreshed = refreshFicheSelectionCatalogVisibility({ ...cached, mapMode: mode })
+  return withParcelDetailCache(refreshed, mode)
+}
+
+/** Met à jour l’entrée cache de l’autre mode au même point (JSON partagé, visibilité catalogue courante). */
+function syncSiblingFicheCacheAtPoint(lon: number, lat: number, activeMode: MapModeId): void {
+  const sibling = activeMode === MAP_MODE_TERRITORY ? MAP_MODE_PARCEL : MAP_MODE_TERRITORY
+  const cached = cachedFicheForMode(sibling, lon, lat)
+  if (!cached) return
+  storeFicheInCache(sibling, lon, lat, hydrateFicheSelectionFromCache(cached, sibling))
+}
+
 /** Fiche en cache au point cerise du permalink (impression / bascule mode). */
 export function getCachedFicheSelectionAtMarker(mode: MapModeId): FicheInfoSelection | null {
   const marker = readMapPermalinkMarker(getMapPermalinkParams())
   if (!marker) return null
   const cached = cachedFicheForMode(mode, marker.lon, marker.lat)
   if (!cached) return null
-  return mode === MAP_MODE_PARCEL ? applyParcelFicheDetailCache(cached) : cached
+  return hydrateFicheSelectionFromCache(cached, mode)
 }
 
 /** Bascule la fiche au changement de mode si une cerise est présente (sans refetch si en cache). */
@@ -100,7 +125,9 @@ export function refreshFicheForMapModeChange(mode: MapModeId, zoom: number): voi
   if (!marker) return
   const cached = cachedFicheForMode(mode, marker.lon, marker.lat)
   if (cached) {
-    showFiche(withParcelDetailCache(cached, mode))
+    const hydrated = hydrateFicheSelectionFromCache(cached, mode)
+    storeFicheInCache(mode, marker.lon, marker.lat, hydrated)
+    showFiche(hydrated)
     return
   }
   void loadFicheForMapPoint({
@@ -212,6 +239,14 @@ export function refreshFicheForCatalogVisibility(): void {
   syncCadastreLowFromFicheSelectionRaw(next.raw)
   api?.updateSelection(next)
 
+  const lon = Number(next.raw?.lon)
+  const lat = Number(next.raw?.lat)
+  const activeMode = next.mapMode ?? readMapModeFromPermalinkParams(getMapPermalinkParams())
+  if (Number.isFinite(lon) && Number.isFinite(lat) && activeMode) {
+    storeFicheInCache(activeMode, lon, lat, next)
+    syncSiblingFicheCacheAtPoint(lon, lat, activeMode)
+  }
+
   const parcelId = parcelIdFromSelection(next)
   if (
     parcelId &&
@@ -277,6 +312,18 @@ function selectionFromGpuPayload(
   return ficheSelectionFromGpuApi(data, mode, lon, lat)
 }
 
+/** Après un seul GET v2 combiné, évite un second passage serveur au changement de mode. */
+function storeDualModeFicheCacheFromCombinedPayload(
+  lon: number,
+  lat: number,
+  payload: GpuFicheInfoPayload,
+): void {
+  for (const mode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL] as const) {
+    const selection = withParcelDetailCache(selectionFromGpuPayload(payload, mode, lon, lat), mode)
+    storeFicheInCache(mode, lon, lat, selection)
+  }
+}
+
 async function enrichTerritoryPayloadWithParcelAtPoint(
   params: { lon: number; lat: number; zoom: number },
   territoryPayload: GpuFicheInfoPayload,
@@ -329,11 +376,28 @@ async function loadFicheForMapPointImpl(params: {
   syncFichePointCache(params.lon, params.lat)
   const loadingTitle =
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
+
+  const cachedAtPoint = cachedFicheForMode(params.mode, params.lon, params.lat)
+  if (cachedAtPoint) {
+    const hydrated = hydrateFicheSelectionFromCache(cachedAtPoint, params.mode)
+    return applyMapPointResult(
+      requestId,
+      params.lon,
+      params.lat,
+      params.mode,
+      hydrated,
+      markerPlacedAtClick,
+      skipLocationMarker,
+      silent,
+    )
+  }
+
   if (!silent) {
     showLoading(loadingTitle)
   }
 
   await waitUntilGpuClientConfigScriptSettled()
+  syncEntreeConfigFromGpuScript()
   finalizeGpuClientConfigStateIfInjected()
 
   const apiUrl = resolveApiFicheInfoUrl()
@@ -352,7 +416,15 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
-  let payload = await fetchGpuFicheInfoPayload({ ...params, abortSignal: fetchAbortSignal })
+  const useCombinedV2 = preferFicheInfoV2CombinedFetch()
+  let payload = useCombinedV2
+    ? await fetchGpuFicheInfoCombinedPayload({
+        lon: params.lon,
+        lat: params.lat,
+        zoom: params.zoom,
+        abortSignal: fetchAbortSignal,
+      })
+    : await fetchGpuFicheInfoPayload({ ...params, abortSignal: fetchAbortSignal })
   if (fetchAbortSignal.aborted || requestId !== mapPointRequestSeq) return null
   if (!payload) {
     return applyMapPointResult(
@@ -367,7 +439,9 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
-  if (params.mode === MAP_MODE_TERRITORY) {
+  if (useCombinedV2) {
+    storeDualModeFicheCacheFromCombinedPayload(params.lon, params.lat, payload)
+  } else if (params.mode === MAP_MODE_TERRITORY) {
     payload = await enrichTerritoryPayloadWithParcelAtPoint(
       { lon: params.lon, lat: params.lat, zoom: params.zoom },
       payload,
@@ -378,7 +452,9 @@ async function loadFicheForMapPointImpl(params: {
   }
 
   const selection = selectionFromGpuPayload(payload, params.mode, params.lon, params.lat)
-  storeFicheInCache(params.mode, params.lon, params.lat, selection)
+  if (!useCombinedV2) {
+    storeFicheInCache(params.mode, params.lon, params.lat, selection)
+  }
   return applyMapPointResult(
     requestId,
     params.lon,
@@ -492,7 +568,11 @@ export async function loadParcelFicheDetail(
     raw._parcelFiche = payload
     raw.parcelId = parcelId
   }
-  const parcelInfosHtml = buildParcelInfosHtmlFromFiche(payload)
+  const parcelInfosHtml = buildParcelInfosHtmlFromFiche(
+    payload,
+    undefined,
+    isGpuFicheInfoPayload(raw) ? raw : null,
+  )
   const ficheApi = isGpuFicheInfoPayload(raw) ? raw : null
   const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload, ficheApi)
   storeParcelFicheDetailCache({

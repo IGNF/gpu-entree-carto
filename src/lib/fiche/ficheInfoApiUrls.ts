@@ -64,6 +64,31 @@ export function resolveFicheInfoEndpointUrl(kind: FicheInfoEndpointKind): string
   return `${normalized}/${suffix}`
 }
 
+/** URL v2 combinée (`scope=both` côté serveur) — évite territoire + parcelle en double. */
+export function resolveFicheInfoCombinedFetchUrl(): string | null {
+  const combined = resolveFicheInfoEndpointUrl('combined')
+  if (!combined?.includes('fiche-info-v2')) return null
+  return combined
+}
+
+/**
+ * Un seul fetch `/api/fiche-info-v2` pour alimenter les deux modes en cache (gpu-site).
+ * Désactivable via `gpu.config.apiFicheInfoPreferCombined = false`.
+ */
+export function preferFicheInfoV2CombinedFetch(): boolean {
+  if (!resolveFicheInfoCombinedFetchUrl()) return false
+  const base = readConfigUrl('apiFicheInfoUrl')
+  const hasSplit =
+    Boolean(
+      readConfigUrl('apiFicheInfoTerritoireUrl') || readConfigUrl('apiFicheInfoParcelleUrl'),
+    ) ||
+    (typeof base === 'string' && ficheInfoUsesV2SplitEndpoints(base))
+  if (!hasSplit) return false
+  const bag = config as { apiFicheInfoPreferCombined?: boolean }
+  if (bag.apiFicheInfoPreferCombined === false) return false
+  return true
+}
+
 export function resolveFicheInfoFetchUrl(mode: MapModeId): string | null {
   const kind = mode === MAP_MODE_TERRITORY ? 'territoire' : 'parcelle'
   const explicitSplit = readConfigUrl(

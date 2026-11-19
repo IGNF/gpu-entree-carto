@@ -27,7 +27,7 @@ Side panel **Legends** tab: symbols for layers **visible** in the “Data layers
 - No opacity control here (reserved for [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
 - Image URLs: **`legendImageDetailDirectory`** (injected in `gpu.config` by `gpu-client-config.js`, also merged in `@/lib/config`) + relative image path + `.png`, as gpu-client `LegendImages#getUrl`.
 - Symbols from `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligned gpu-client `CreateTreeLayerSwitcherItems`): filtered paths `info_surf/05`, sub-filters `hasfilter2`, “other” blocks, etc.
-- **`scaleDependant`**: `-lowscale` / `-highscale` suffix recalculated from map **current zoom** (listen `change:resolution` on OL view).
+- **`scaleDependant`**: `-lowscale` / `-highscale` suffix recalculated from map **current zoom** (listen `change:resolution` on OL view); highscale from `scaleDependantTreshold − 0.5`, same band as WMS tile visibility (`gpuWmsLayers`).
 
 ## Dependencies
 

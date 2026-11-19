@@ -22,12 +22,14 @@ Legacy : `GET /api/fiche-info` avec `mode`, `includeParcel`, paramètres preview
 | `apiFicheInfoUrl` | URL de base (legacy ou racine v2) |
 | `apiFicheInfoTerritoireUrl` | Surcharge endpoint territoire |
 | `apiFicheInfoParcelleUrl` | Surcharge endpoint parcelle |
-| `apiFicheInfoCombinedUrl` | Endpoint combiné (prioritaire si défini) |
+| `apiFicheInfoCombinedUrl` | Endpoint combiné v2 |
+| `apiFicheInfoPreferCombined` | `false` pour forcer les appels split `/territoire` et `/parcelle` (défaut : combiné si v2) |
 
 Les chemins relatifs se résolvent par rapport à l’hôte du script gpu-client-config (`configUrls.ts`).
 
 ### Règles serveur
 
+- **Documents v2 (gpu-site)** — pipeline en trois temps : résolution **parcelle + commune** au clic ; chargement BDD pour le **maillage communal** (DU, PSMV…), **SUP** via **`municipality_sup`** (INSEE → partitions `{idgest}_SUP_{département}_{suptype}`), **SCoT** au point si la commune n’a pas de maillage SCoT, partitions WFS **au point** si aucune commune, et partitions WFS sur la **parcelle** ; **synthèse** par scope (`territoire` = catalogue communal si INSEE résolu, sinon partitions au point ; `parcelle` = partitions intersectant la parcelle). En **territoire**, un document BDD sans entité d’urbanisme WFS au clic (hors SUP via `municipality_sup`) n’est pas affiché. **Cache lookup** (5 min, tags `published_documents`, INSEE commune, id parcelle, maillage document) ; invalidation à la publication : communes déduites par **descendance** maillage (SCoT / EPCI / département → communes). API legacy `/api/fiche-info` inchangée.
 - **APICarto** (`cadastre/commune`, `cadastre/parcelle`) uniquement **côté gpu-site**, jamais depuis le navigateur.
 - Réponses avec clés de cache stables : `grid.insee`, identifiant parcelle (`parcelId` ou propriétés `parcel`).
 - Indices client optionnels : `knownParcelId`, `knownGridInsee` (cache serveur / 304 — évolution).
@@ -67,10 +69,11 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 ## Comportement entree-carto
 
 - Plus de repli APICarto dans le navigateur.
-- Appels **par mode** (`apiFicheInfoTerritoireUrl` / `apiFicheInfoParcelleUrl`) ; repli `apiFicheInfoCombinedUrl` si besoin.
-- **Vue territoire** : après `/territoire`, appel silencieux `/parcelle` (ou cache parcelle au même point) pour fusionner les métadonnées parcelle du CTA retour, sans remplacer les onglets documents territoire.
-- Cache **par mode** au point cerise (`ficheInfoService.ts`) ; changement de mode = requête de l’autre vue si absente du cache.
-- Annulation du `fetch` précédent au clic suivant (`AbortController` + paramètres `client` / `seq`).
+- **Clic carte** : si v2 est configuré (`apiFicheInfoTerritoireUrl` / `apiFicheInfoParcelleUrl` ou URL racine v2), un seul `GET` sur `apiFicheInfoCombinedUrl` (`scope=both`) remplit le cache territoire **et** parcelle au point cerise ; pas d’enrichissement silencieux `/parcelle` dans ce cas.
+- **Split** : avec `apiFicheInfoPreferCombined = false`, appels par mode ; en territoire, second appel `/parcelle` (ou cache) pour les métadonnées parcelle du CTA retour.
+- **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
+- Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).
+- Annulation du `fetch` précédent au clic suivant (`AbortController`) ; requête légère `supersede=true` avec `client` / `seq` pour couper le travail Symfony en cours avant le nouvel appel.
 - Présentation : tuiles DSFR horizontales (`ficheDocumentTiles.ts`).
 
 Voir aussi [FicheInfo](./FicheInfo.fr.md).

@@ -178,7 +178,7 @@ async function fetchModeEmpriseFeatures(
 
   return new Promise((resolve) => {
     whenGpuClientConfigReady(() => {
-      void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode })
+      void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode, fetchRole: 'background' })
         .then((payload) => {
           if (!payload) {
             resolve([])

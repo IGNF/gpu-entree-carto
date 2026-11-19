@@ -67882,13 +67882,183 @@ Expected function or array of functions, received type ${typeof value2}.`
       target2[key2] = resolveConfigUrl(val);
     }
   }
+  function isCatalogAggregate(node) {
+    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
+  }
+  function directCatalogChildren(node) {
+    return catalogChildNodes(node);
+  }
+  function isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent) {
+    if (!node.gpuOnlyLegend || !(parent == null ? void 0 : parent.gpuVirtual)) return false;
+    const parentId = parent.id.toLowerCase();
+    if (!parentId.includes("scot")) return false;
+    const nodeId = node.id.toLowerCase();
+    if (nodeId.includes("dev-mec") || nodeId.includes("--mec")) return false;
+    return nodeId.includes("--dev-scot") || nodeId.endsWith("--scot");
+  }
+  function catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2) {
+    const node = index2.nodesById.get(nodeId);
+    if (!node) return nodeId;
+    const parent = index2.parentById.get(nodeId) ?? null;
+    if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
+      return parent.id;
+    }
+    return nodeId;
+  }
+  function isCheckboxSameAsDirectChildren(checked, node) {
+    const self2 = Boolean(checked[node.id]);
+    for (const child of directCatalogChildren(node)) {
+      if (Boolean(checked[child.id]) !== self2) return false;
+    }
+    return true;
+  }
+  function isSameAsChildrenState(checked, node, opacityById) {
+    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
+    return isOpacitySameAsDirectChildren(node, opacityById);
+  }
+  function isSameAsDescendants(checked, node, index2, opacityById) {
+    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
+    for (const child of directCatalogChildren(node)) {
+      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
+    }
+    return true;
+  }
+  function splitAggregateAncestorId(nodeId, index2, splitIds) {
+    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
+    let current = index2.nodesById.get(nodeId);
+    while (current) {
+      const parent = index2.parentById.get(current.id);
+      if (!parent) return null;
+      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
+      current = parent;
+    }
+    return null;
+  }
+  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    const parent = index2.parentById.get(node.id);
+    if (!parent) return false;
+    if (split == null ? void 0 : split.has(parent.id)) {
+      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+    }
+    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
+      return true;
+    }
+    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+  }
+  function isOpacitySameAsDirectChildren(node, opacityById) {
+    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
+    for (const child of directCatalogChildren(node)) {
+      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
+      if (childOpacity !== selfOpacity) return false;
+    }
+    return true;
+  }
+  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
+    if (!node.gpuMapLayer || node.gpuVirtual) return false;
+    if (!checked[node.id]) return false;
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
+      return false;
+    }
+    if (splitAggregateAncestorId(node.id, index2, split)) {
+      return true;
+    }
+    const parent = index2.parentById.get(node.id);
+    if (!parent) {
+      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
+      return catalogChildNodes(node).length === 0;
+    }
+    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
+      return true;
+    }
+    return false;
+  }
+  function propagateCheckedToDescendants(checked, node, value2) {
+    for (const child of directCatalogChildren(node)) {
+      checked[child.id] = value2;
+      propagateCheckedToDescendants(checked, child, value2);
+    }
+  }
+  function propagateCheckedToAncestors(checked, nodeId, index2) {
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return;
+    let parentChecked = false;
+    for (const child of directCatalogChildren(parent)) {
+      if (checked[child.id]) {
+        parentChecked = true;
+        break;
+      }
+    }
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend && !parentChecked) {
+        checked[child.id] = false;
+      }
+    }
+    if (Boolean(checked[parent.id]) !== parentChecked) {
+      checked[parent.id] = parentChecked;
+    }
+    propagateCheckedToAncestors(checked, parent.id, index2);
+  }
+  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
+    let effectiveId = nodeId;
+    if (!value2) {
+      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
+    }
+    const node = index2.nodesById.get(effectiveId);
+    if (!node) return;
+    checked[effectiveId] = value2;
+    propagateCheckedToAncestors(checked, effectiveId, index2);
+    propagateCheckedToDescendants(checked, node, value2);
+  }
+  function computeMapVisibilityById(checked, index2, opacityById, options) {
+    const out = {};
+    for (const node of index2.nodesById.values()) {
+      if (!node.gpuMapLayer) continue;
+      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
+    }
+    return out;
+  }
+  const DEFAULT_GPU_MIN_ZOOM = 0;
+  const DEFAULT_GPU_MAX_ZOOM = 22;
+  const GPU_WMS_ZOOM_BAND_MARGIN = 0.5;
+  const DEFAULT_SCALE_DEPENDANT_LEGEND_THRESHOLD = 16;
+  function effectiveScaleDependantLegendThreshold(threshold) {
+    if (!Number.isFinite(threshold)) return DEFAULT_SCALE_DEPENDANT_LEGEND_THRESHOLD;
+    if (threshold >= 17) return DEFAULT_SCALE_DEPENDANT_LEGEND_THRESHOLD;
+    return threshold;
+  }
+  function isHighScaleLegendZoom(zoom, threshold) {
+    const t = effectiveScaleDependantLegendThreshold(threshold);
+    return zoom >= t - GPU_WMS_ZOOM_BAND_MARGIN;
+  }
+  function isZoomInLayerRange(zoom, minZoom, maxZoom) {
+    return zoom >= minZoom && zoom <= maxZoom;
+  }
+  function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
+    return {
+      min: layer.minZoomLevel ?? inheritedMin,
+      max: layer.maxZoomLevel ?? inheritedMax
+    };
+  }
+  function isCatalogNodeInZoomRange(node, zoom) {
+    const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
+    const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM;
+    const children = catalogChildNodes(node);
+    if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
+      return isZoomInLayerRange(zoom, min, max);
+    }
+    if (!children.length) return true;
+    return children.some((child) => isCatalogNodeInZoomRange(child, zoom));
+  }
   const DEFAULT_SCALE_DEPENDANT_THRESHOLD = 16;
   const GEOMETRY_TYPES = ["pct", "lin", "surf"];
   function normalizeLayerNameForLegend$1(layerName) {
     return layerName.replace(/^(dev|qlf|pp|formation)-/, "");
   }
   function readScaleDependantThreshold(layer) {
-    const raw = layer.scaleDependantTreshold;
+    const bag = layer;
+    const raw = layer.scaleDependantTreshold ?? bag.scaleDependantThreshold;
     if (raw === void 0 || raw === null) return void 0;
     const n = Number(raw);
     return Number.isFinite(n) ? n : void 0;
@@ -67908,13 +68078,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return DEFAULT_SCALE_DEPENDANT_THRESHOLD;
   }
-  function isHighScaleZoom(zoom, threshold) {
-    return zoom >= threshold;
-  }
   function legendImageUrl(imagePath, imageName, scaleDependant, threshold, zoom) {
     let name2 = imageName;
     if (scaleDependant) {
-      name2 += isHighScaleZoom(zoom, threshold) ? "-highscale" : "-lowscale";
+      name2 += isHighScaleLegendZoom(zoom, threshold) ? "-highscale" : "-lowscale";
     }
     return `${imagePath}${name2}.png`;
   }
@@ -67936,10 +68103,18 @@ Expected function or array of functions, received type ${typeof value2}.`
   function resolveLegendItemImageUrls(item, zoom) {
     const path = item.legendImagePath;
     const names2 = legendImageNamesForItem(item);
+    const scaleDependant = item.legendScaleDependant === true;
+    const rawThreshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD;
+    const threshold = scaleDependant ? effectiveScaleDependantLegendThreshold(rawThreshold) : rawThreshold;
     if (path && names2.length) {
-      const scaleDependant = item.legendScaleDependant === true;
-      const threshold = item.legendScaleThreshold ?? DEFAULT_SCALE_DEPENDANT_THRESHOLD;
       return names2.map((name2) => legendImageUrl(path, name2, scaleDependant, threshold, zoom));
+    }
+    if (scaleDependant && path && names2.length === 0 && item.legendImageName) {
+      return [legendImageUrl(path, item.legendImageName, true, threshold, zoom)];
+    }
+    if (item.imageUrl && !scaleDependant) return [item.imageUrl];
+    if (item.imageUrl && scaleDependant && item.legendImageName && path) {
+      return [legendImageUrl(path, item.legendImageName, true, threshold, zoom)];
     }
     if (item.imageUrl) return [item.imageUrl];
     return [];
@@ -68108,18 +68283,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       title: title2,
       legendImagePath: opts.imagePath,
       legendScaleDependant: scaleDependant,
-      legendScaleThreshold: threshold
+      legendScaleThreshold: scaleDependant ? effectiveScaleDependantLegendThreshold(threshold) : threshold
     };
     if (sorted.length === 1) {
       item.legendImageName = sorted[0];
-      if (opts.imagePath) {
-        item.imageUrl = legendImageUrl(
-          opts.imagePath,
-          sorted[0],
-          scaleDependant,
-          threshold,
-          opts.zoomAtInit
-        );
+      if (opts.imagePath && !scaleDependant) {
+        item.imageUrl = legendImageUrl(opts.imagePath, sorted[0], false, threshold, opts.zoomAtInit);
       }
     } else {
       item.legendImageNames = sorted;
@@ -68261,164 +68430,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       zoomAtInit,
       ancestorLayers: []
     };
-  }
-  function isCatalogAggregate(node) {
-    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
-  }
-  function directCatalogChildren(node) {
-    return catalogChildNodes(node);
-  }
-  function isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent) {
-    if (!node.gpuOnlyLegend || !(parent == null ? void 0 : parent.gpuVirtual)) return false;
-    const parentId = parent.id.toLowerCase();
-    if (!parentId.includes("scot")) return false;
-    const nodeId = node.id.toLowerCase();
-    if (nodeId.includes("dev-mec") || nodeId.includes("--mec")) return false;
-    return nodeId.includes("--dev-scot") || nodeId.endsWith("--scot");
-  }
-  function catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2) {
-    const node = index2.nodesById.get(nodeId);
-    if (!node) return nodeId;
-    const parent = index2.parentById.get(nodeId) ?? null;
-    if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
-      return parent.id;
-    }
-    return nodeId;
-  }
-  function isCheckboxSameAsDirectChildren(checked, node) {
-    const self2 = Boolean(checked[node.id]);
-    for (const child of directCatalogChildren(node)) {
-      if (Boolean(checked[child.id]) !== self2) return false;
-    }
-    return true;
-  }
-  function isSameAsChildrenState(checked, node, opacityById) {
-    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
-    return isOpacitySameAsDirectChildren(node, opacityById);
-  }
-  function isSameAsDescendants(checked, node, index2, opacityById) {
-    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
-    for (const child of directCatalogChildren(node)) {
-      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
-    }
-    return true;
-  }
-  function splitAggregateAncestorId(nodeId, index2, splitIds) {
-    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
-    let current = index2.nodesById.get(nodeId);
-    while (current) {
-      const parent = index2.parentById.get(current.id);
-      if (!parent) return null;
-      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
-      current = parent;
-    }
-    return null;
-  }
-  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    const parent = index2.parentById.get(node.id);
-    if (!parent) return false;
-    if (split == null ? void 0 : split.has(parent.id)) {
-      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-    }
-    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
-      return true;
-    }
-    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-  }
-  function isOpacitySameAsDirectChildren(node, opacityById) {
-    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
-    for (const child of directCatalogChildren(node)) {
-      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
-      if (childOpacity !== selfOpacity) return false;
-    }
-    return true;
-  }
-  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
-    if (!node.gpuMapLayer || node.gpuVirtual) return false;
-    if (!checked[node.id]) return false;
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
-      return false;
-    }
-    if (splitAggregateAncestorId(node.id, index2, split)) {
-      return true;
-    }
-    const parent = index2.parentById.get(node.id);
-    if (!parent) {
-      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
-      return catalogChildNodes(node).length === 0;
-    }
-    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
-      return true;
-    }
-    return false;
-  }
-  function propagateCheckedToDescendants(checked, node, value2) {
-    for (const child of directCatalogChildren(node)) {
-      checked[child.id] = value2;
-      propagateCheckedToDescendants(checked, child, value2);
-    }
-  }
-  function propagateCheckedToAncestors(checked, nodeId, index2) {
-    const parent = index2.parentById.get(nodeId);
-    if (!parent) return;
-    let parentChecked = false;
-    for (const child of directCatalogChildren(parent)) {
-      if (checked[child.id]) {
-        parentChecked = true;
-        break;
-      }
-    }
-    for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend && !parentChecked) {
-        checked[child.id] = false;
-      }
-    }
-    if (Boolean(checked[parent.id]) !== parentChecked) {
-      checked[parent.id] = parentChecked;
-    }
-    propagateCheckedToAncestors(checked, parent.id, index2);
-  }
-  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
-    let effectiveId = nodeId;
-    if (!value2) {
-      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
-    }
-    const node = index2.nodesById.get(effectiveId);
-    if (!node) return;
-    checked[effectiveId] = value2;
-    propagateCheckedToAncestors(checked, effectiveId, index2);
-    propagateCheckedToDescendants(checked, node, value2);
-  }
-  function computeMapVisibilityById(checked, index2, opacityById, options) {
-    const out = {};
-    for (const node of index2.nodesById.values()) {
-      if (!node.gpuMapLayer) continue;
-      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
-    }
-    return out;
-  }
-  const DEFAULT_GPU_MIN_ZOOM = 0;
-  const DEFAULT_GPU_MAX_ZOOM = 22;
-  function isZoomInLayerRange(zoom, minZoom, maxZoom) {
-    return zoom >= minZoom && zoom <= maxZoom;
-  }
-  function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
-    return {
-      min: layer.minZoomLevel ?? inheritedMin,
-      max: layer.maxZoomLevel ?? inheritedMax
-    };
-  }
-  function isCatalogNodeInZoomRange(node, zoom) {
-    const min = node.gpuMinZoomLevel ?? DEFAULT_GPU_MIN_ZOOM;
-    const max = node.gpuMaxZoomLevel ?? DEFAULT_GPU_MAX_ZOOM;
-    const children = catalogChildNodes(node);
-    if (node.gpuMapLayer && (isCatalogAggregate(node) || node.gpuOnlyLegend || children.length === 0)) {
-      return isZoomInLayerRange(zoom, min, max);
-    }
-    if (!children.length) return true;
-    return children.some((child) => isCatalogNodeInZoomRange(child, zoom));
   }
   function defaultOpacityPercent(layer) {
     if (layer.forceOpacity) return GPU_FORCE_OPACITY_PERCENT;
@@ -70710,6 +70721,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const FICHE_CLIENT_STORAGE_KEY = "ec-fiche-info-client-id";
   let ficheRequestSeq = 0;
+  let pendingFicheInfoRequestSeq = null;
   function getOrCreateFicheClientId() {
     if (typeof window === "undefined") return "ssr";
     try {
@@ -70725,6 +70737,29 @@ Expected function or array of functions, received type ${typeof value2}.`
   function nextFicheInfoRequestSeq() {
     ficheRequestSeq += 1;
     return ficheRequestSeq;
+  }
+  function preclaimFicheInfoRequestSeq() {
+    const seq = nextFicheInfoRequestSeq();
+    pendingFicheInfoRequestSeq = seq;
+    return seq;
+  }
+  function assignFicheInfoRequestSeqForUrl() {
+    if (pendingFicheInfoRequestSeq !== null) {
+      const seq = pendingFicheInfoRequestSeq;
+      pendingFicheInfoRequestSeq = null;
+      return seq;
+    }
+    return nextFicheInfoRequestSeq();
+  }
+  function notifyFicheInfoSupersede(apiBaseUrl) {
+    if (typeof window === "undefined") return;
+    const resolved = apiBaseUrl.trim();
+    if (!resolved) return;
+    const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
+    url.searchParams.set("client", getOrCreateFicheClientId());
+    url.searchParams.set("seq", String(preclaimFicheInfoRequestSeq()));
+    url.searchParams.set("supersede", "true");
+    void fetch(url.toString(), { credentials: "same-origin", keepalive: true });
   }
   function getActivePreviewDocument() {
     const fromConfig = config.document;
@@ -70751,7 +70786,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     url.searchParams.set("client", getOrCreateFicheClientId());
-    url.searchParams.set("seq", String(nextFicheInfoRequestSeq()));
+    url.searchParams.set("seq", String(assignFicheInfoRequestSeqForUrl()));
   }
   function parseDocumentBbox(doc2) {
     const raw = doc2.bbox;
@@ -70814,6 +70849,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       return normalized.replace(/\/(territoire|parcelle)$/, `/${suffix}`);
     }
     return `${normalized}/${suffix}`;
+  }
+  function resolveFicheInfoCombinedFetchUrl() {
+    const combined = resolveFicheInfoEndpointUrl("combined");
+    if (!(combined == null ? void 0 : combined.includes("fiche-info-v2"))) return null;
+    return combined;
+  }
+  function preferFicheInfoV2CombinedFetch() {
+    if (!resolveFicheInfoCombinedFetchUrl()) return false;
+    const base = readConfigUrl("apiFicheInfoUrl");
+    const hasSplit = Boolean(
+      readConfigUrl("apiFicheInfoTerritoireUrl") || readConfigUrl("apiFicheInfoParcelleUrl")
+    ) || typeof base === "string" && ficheInfoUsesV2SplitEndpoints(base);
+    if (!hasSplit) return false;
+    const bag = config;
+    if (bag.apiFicheInfoPreferCombined === false) return false;
+    return true;
   }
   function resolveFicheInfoFetchUrl(mode2) {
     const kind = mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle";
@@ -71479,8 +71530,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function getScalePart(config2, zoom) {
     if (!config2.visibility) return "";
-    if (zoom >= (config2.visibility.highscale[0] ?? 16)) return "-highscale";
-    return "-lowscale";
+    const threshold = config2.visibility.highscale[0] ?? 16;
+    return isHighScaleLegendZoom(zoom, threshold) ? "-highscale" : "-lowscale";
   }
   function getScotImage(layer, properties) {
     if (properties.gpu_id != null) return `${layer}/SCOT_PUBLISHED.png`;
@@ -71772,6 +71823,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     const tiles = documents.map((d) => documentTileFromGpuDocument(d, tileKind, proceduresByDocument));
     return `<h3 class="ec-fiche-info__section-title">${escapeHtml(SECTION_TITLES$1[kind] ?? kind)}</h3>${documentTilesListHtml(tiles)}`;
   }
+  function buildParcelDocumentsSectionFromFicheApi(data, kind) {
+    if (!isFicheDocumentFamilyVisible(kind)) return "";
+    const partitionMap = kind === "du" ? data.dus : kind === "psmv" ? data.psmvs : kind === "sup" ? data.sups : data.scots;
+    const documents = collectProductionDocuments(normalizePartitionsMap$3(partitionMap));
+    return sectionBlock(kind, documents, data.proceduresByDocument);
+  }
   function buildParcelDocumentsPresentationHtml(data) {
     const parts = [];
     if (fichePayloadHasNonExecutoireDocument(data)) {
@@ -71937,7 +71994,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return null;
   }
   function mecProcedureTileHtmlForParcelFeature(data, options) {
-    var _a2, _b;
+    var _a2;
     const mecPartitionKey = ((_a2 = options.mecPartitionKey) == null ? void 0 : _a2.trim()) ?? "";
     if (data && mecPartitionKey) {
       const doc2 = findGpuSiteMecDocument(data, mecPartitionKey);
@@ -71946,15 +72003,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (tile) return tile;
       }
     }
-    const title2 = ((_b = options.fallbackTitle) == null ? void 0 : _b.trim()) || "Mise en compatibilité";
-    return procedureTileHtml({
-      title: title2,
-      href: resolveMecDocumentTileHref({
-        documentId: options.fallbackDocumentId
-      }),
-      inProgress: true,
-      detailLine: MEC_DOCUMENT_NOTICE
-    });
+    return "";
   }
   function buildMecTerritoryProceduresHtml(data) {
     var _a2, _b, _c2, _d, _e2, _f;
@@ -72273,14 +72322,26 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return blocked;
   }
+  function mecPartitionParentKey(mecPartition) {
+    return documentPartitionKeyFromMecPartition(mecPartition).toLowerCase();
+  }
+  function isParcelMecFeatureAllowed(feature, ficheApi) {
+    var _a2;
+    if (!isFicheDocumentFamilyVisible("mec")) return false;
+    const mecPartition = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.partition);
+    if (!mecPartition) return false;
+    const parent = mecPartitionParentKey(mecPartition);
+    if (parent.startsWith("scot_") && !isFicheDocumentFamilyVisible("scot")) return false;
+    if (!ficheApi) return false;
+    return findGpuSiteMecDocument(ficheApi, mecPartition) !== null;
+  }
   function mecTileFromFeature(feature, ficheApi) {
+    if (!isParcelMecFeatureAllowed(feature, ficheApi)) return "";
     const props = feature.properties ?? {};
-    const libelle = coerceDisplayString(props.libelle);
+    coerceDisplayString(props.libelle);
     const mecPartition = coerceDisplayString(props.partition);
-    const fallbackTitle = libelle ? `Mise en compatibilité - ${libelle}` : void 0;
     return mecProcedureTileHtmlForParcelFeature(ficheApi, {
       mecPartitionKey: mecPartition,
-      fallbackTitle,
       fallbackDocumentId: parcelFeatureGpuDocumentId(props)
     });
   }
@@ -72305,6 +72366,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       for (const feature of group) {
         const props = feature.properties ?? {};
         if (apiRecord && wfsFeatureMatchesGpuSiteRecord(props, apiRecord)) continue;
+        if (!documentFeatureInGpuSite(props, lookup2)) continue;
         const nameKey = coerceDisplayString(props.name ?? props.originalName).toUpperCase() || featureDedupeKey(feature);
         if (seenWfs.has(nameKey)) continue;
         seenWfs.add(nameKey);
@@ -72319,10 +72381,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const feature of dedupeMecFeaturesByPartition(mecFeatures)) {
       const mecPartition = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.partition);
       if (!mecPartition) continue;
-      const parent = documentPartitionKeyFromMecPartition(mecPartition).toLowerCase();
+      const parent = mecPartitionParentKey(mecPartition);
       if (!blockedParents.has(parent)) continue;
       if (parent.startsWith("scot_")) continue;
-      tiles.push(mecTileFromFeature(feature, ficheApi));
+      const tile = mecTileFromFeature(feature, ficheApi);
+      if (tile) tiles.push(tile);
     }
     return tiles;
   }
@@ -72431,8 +72494,58 @@ Expected function or array of functions, received type ${typeof value2}.`
       mecNoticeHtml: ficheApi ? mecNoticeHtmlForDocumentName(ficheApi, name2, partitionName) : void 0
     });
   }
-  function buildParcelInfosHtmlFromFiche(data, zoom = DEFAULT_PARCEL_FICHE_LEGEND_ZOOM) {
+  function isProductionGpuSiteDocument(doc2) {
+    const id2 = coerceDisplayString(doc2.id);
+    if (!id2 || !/^[a-f0-9]{32}$/i.test(id2)) return false;
+    return doc2.status === "document.production";
+  }
+  function partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2) {
+    var _a2;
+    const key2 = partition.trim().toLowerCase();
+    if (!key2) return false;
+    const fromLookup = lookup2 == null ? void 0 : lookup2.byPartition.get(key2);
+    if ((fromLookup == null ? void 0 : fromLookup.status) === "document.production") return true;
+    for (const panel of [ficheApi == null ? void 0 : ficheApi.dus, ficheApi == null ? void 0 : ficheApi.psmvs, ficheApi == null ? void 0 : ficheApi.scots, ficheApi == null ? void 0 : ficheApi.sups]) {
+      const map2 = normalizePartitionsMap$1(panel);
+      const entry = map2[partition] ?? ((_a2 = Object.entries(map2).find(([k]) => k.toLowerCase() === key2)) == null ? void 0 : _a2[1]);
+      const docs = (entry == null ? void 0 : entry.documents) ?? [];
+      if (docs.some((d) => isProductionGpuSiteDocument(d))) return true;
+    }
+    return false;
+  }
+  function duUrbanismRuleFeatureVisible(feature, ficheApi, lookup2) {
+    if (!ficheApi) return false;
+    const props = feature.properties ?? {};
+    if (documentFeatureInGpuSite(props, lookup2)) return true;
+    const partition = coerceDisplayString(props.partition);
+    if (partition && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2)) return true;
+    const idurba = coerceDisplayString(props.idurba ?? props.originalName ?? props.name);
+    if (idurba) {
+      const rec = lookup2 == null ? void 0 : lookup2.byName.get(idurba.toUpperCase());
+      if ((rec == null ? void 0 : rec.status) === "document.production") return true;
+    }
+    return false;
+  }
+  function shouldIncludeParcelRuleFeature(feature, section, ficheApi, lookup2) {
+    if (section === "mec") {
+      return isParcelMecFeatureAllowed(feature, ficheApi);
+    }
+    if (section === "zonage" || section === "prescription" || section === "information" || section === "secteur") {
+      return duUrbanismRuleFeatureVisible(feature, ficheApi, lookup2);
+    }
+    if (section === "sup" || section === "scot") {
+      const props = feature.properties ?? {};
+      if (!ficheApi) return false;
+      if (documentFeatureInGpuSite(props, lookup2)) return true;
+      const partition = coerceDisplayString(props.partition);
+      if (partition && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2)) return true;
+      return false;
+    }
+    return true;
+  }
+  function buildParcelInfosHtmlFromFiche(data, zoom = DEFAULT_PARCEL_FICHE_LEGEND_ZOOM, ficheApi) {
     const features = data.features ?? [];
+    const lookup2 = gpuSiteDocumentLookupFromFicheApi(ficheApi);
     const featureLabel = createParcelFeatureLabel();
     const supCategories = readSupCategories();
     const grouped = groupFeatures(features, zoom, featureLabel, supCategories);
@@ -72458,8 +72571,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const section of order) {
       const family = sectionFamily[section];
       if (family && !isFicheDocumentFamilyVisible(family)) continue;
-      const list = grouped.get(section);
-      if (!(list == null ? void 0 : list.length)) continue;
+      const list = (grouped.get(section) ?? []).filter(
+        (f2) => shouldIncludeParcelRuleFeature(f2, section, ficheApi, lookup2)
+      );
+      if (!list.length) continue;
       const rows = list.map((f2) => ruleRowHtml(f2, zoom, featureLabel, supCategories)).join("");
       parts.push(
         `<section class="ec-fiche-info__rules-section"><h4 class="ec-fiche-info__rules-section-title">${escapeHtml(SECTION_TITLES[section])}</h4>${rows}</section>`
@@ -72487,11 +72602,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             coerceDisplayString((_b = mec.properties) == null ? void 0 : _b.partition)
           ).toLowerCase();
           if (mecParent !== partition) continue;
-          tiles.push(mecTileFromFeature(mec, ficheApi));
+          const mecTile = mecTileFromFeature(mec, ficheApi);
+          if (mecTile) tiles.push(mecTile);
           break;
         }
         continue;
       }
+      const props = feature.properties ?? {};
+      if (!documentFeatureInGpuSite(props, lookup2)) continue;
       tiles.push(scotTileFromFeature(feature, lookup2, ficheApi));
     }
     return tiles;
@@ -72533,14 +72651,23 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (duTiles.length) {
       parts.push('<h3 class="ec-fiche-info__section-title">Documents d’urbanisme</h3>');
       parts.push(documentTilesListHtml(duTiles));
+    } else if (ficheApi) {
+      const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "du");
+      if (duSection) parts.push(duSection);
     }
     if (supTiles.length) {
       parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>');
       parts.push(documentTilesListHtml(supTiles));
+    } else if (ficheApi && isFicheDocumentFamilyVisible("sup")) {
+      const supSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "sup");
+      if (supSection) parts.push(supSection);
     }
     if (scotTiles.length) {
       parts.push('<h3 class="ec-fiche-info__section-title">Schémas de cohérence territoriale</h3>');
       parts.push(documentTilesListHtml(scotTiles));
+    } else if (ficheApi) {
+      const scotSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "scot");
+      if (scotSection) parts.push(scotSection);
     }
     return parts.join("");
   }
@@ -72913,6 +73040,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         const parcelFiche = extractParcelFichePayload(data);
         if (parcelFiche) {
           base.raw = { ...base.raw, _parcelFiche: parcelFiche };
+          base.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFiche, void 0, data);
+          base.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFiche, data);
         } else {
           base.parcelDocumentsHtml = buildParcelDocumentsPresentationHtml(data);
           base.parcelInfosHtml = void 0;
@@ -72955,8 +73084,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     const lat = Number(raw.lat) || 0;
     const mode2 = selection.mapMode ?? raw.mode ?? MAP_MODE_TERRITORY;
     const rebuilt = ficheSelectionFromGpuApi(data, mode2, lon, lat);
+    const rawRecord = selection.raw && typeof selection.raw === "object" ? selection.raw : null;
+    const parcelFicheFromRaw = rawRecord == null ? void 0 : rawRecord._parcelFiche;
+    if (isGpuParcelFichePayload(parcelFicheFromRaw) && rebuilt.raw && typeof rebuilt.raw === "object") {
+      rebuilt.raw = { ...rebuilt.raw, _parcelFiche: parcelFicheFromRaw };
+      rebuilt.parcelInfosHtml = buildParcelInfosHtmlFromFiche(parcelFicheFromRaw, void 0, data);
+      rebuilt.parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(parcelFicheFromRaw, data);
+    }
     return {
       ...selection,
+      raw: rebuilt.raw ?? selection.raw,
       documentTabs: rebuilt.documentTabs,
       bodyHtml: rebuilt.bodyHtml,
       headerHtml: rebuilt.headerHtml,
@@ -72965,19 +73102,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   const inflightPayloadByPoint = /* @__PURE__ */ new Map();
-  let activeNetworkAbort = null;
+  let activePanelNetworkAbort = null;
   function fichePayloadInflightKey(lon, lat, zoom, mode2) {
     return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}`;
   }
-  function takeoverFicheNetworkSignal(external) {
-    activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort();
-    activeNetworkAbort = new AbortController();
-    const { signal } = activeNetworkAbort;
+  function takeoverFicheNetworkSignal(external, role = "panel") {
+    if (role === "background") {
+      const controller2 = new AbortController();
+      if (external == null ? void 0 : external.aborted) {
+        controller2.abort();
+      } else if (external) {
+        external.addEventListener("abort", () => controller2.abort(), { once: true });
+      }
+      return controller2.signal;
+    }
+    activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.abort();
+    activePanelNetworkAbort = new AbortController();
+    const { signal } = activePanelNetworkAbort;
     if (external) {
       if (external.aborted) {
-        activeNetworkAbort.abort();
+        activePanelNetworkAbort.abort();
       } else {
-        external.addEventListener("abort", () => activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort(), { once: true });
+        external.addEventListener("abort", () => activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.abort(), { once: true });
       }
     }
     return signal;
@@ -72985,21 +73131,52 @@ Expected function or array of functions, received type ${typeof value2}.`
   function clearInflightFichePayloads() {
     inflightPayloadByPoint.clear();
   }
+  function resolveFicheInfoSupersedeBaseUrl() {
+    return resolveFicheInfoCombinedFetchUrl() ?? resolveFicheInfoFetchUrl(MAP_MODE_TERRITORY) ?? (typeof config.apiFicheInfoUrl === "string" ? config.apiFicheInfoUrl.trim() : null) ?? null;
+  }
   function abortInflightFicheInfoFetch() {
-    activeNetworkAbort == null ? void 0 : activeNetworkAbort.abort();
-    activeNetworkAbort = null;
+    const hadPanel = activePanelNetworkAbort !== null;
+    activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.abort();
+    activePanelNetworkAbort = null;
     clearInflightFichePayloads();
+    if (hadPanel) {
+      const base = resolveFicheInfoSupersedeBaseUrl();
+      if (base) notifyFicheInfoSupersede(base);
+    }
+  }
+  async function fetchGpuFicheInfoCombinedPayload(params2) {
+    if (typeof window === "undefined") return null;
+    const fetchBase = resolveFicheInfoCombinedFetchUrl();
+    if (!fetchBase) return null;
+    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom, "combined");
+    const existing = inflightPayloadByPoint.get(inflightKey);
+    if (existing) return existing;
+    const role = params2.fetchRole ?? "panel";
+    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role);
+    const promise = fetchGpuFicheInfoPayloadFromUrl(
+      fetchBase,
+      { ...params2, mode: MAP_MODE_TERRITORY },
+      signal
+    ).finally(() => {
+      inflightPayloadByPoint.delete(inflightKey);
+      if (role === "panel" && (activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.signal) === signal) {
+        activePanelNetworkAbort = null;
+      }
+    });
+    inflightPayloadByPoint.set(inflightKey, promise);
+    return promise;
   }
   async function fetchGpuFicheInfoPayload(params2) {
     if (typeof window === "undefined") return null;
     const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom, params2.mode);
     const existing = inflightPayloadByPoint.get(inflightKey);
     if (existing) return existing;
-    const signal = takeoverFicheNetworkSignal(params2.abortSignal);
+    const role = params2.fetchRole ?? "panel";
+    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role);
     const promise = fetchGpuFicheInfoPayloadImpl(params2, signal).finally(() => {
       inflightPayloadByPoint.delete(inflightKey);
-      if ((activeNetworkAbort == null ? void 0 : activeNetworkAbort.signal) === signal) {
-        activeNetworkAbort = null;
+      if (role === "panel" && (activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.signal) === signal) {
+        activePanelNetworkAbort = null;
       }
     });
     inflightPayloadByPoint.set(inflightKey, promise);
@@ -73017,10 +73194,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (shouldAppendLegacyFicheModeParam(resolved)) {
       url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
     }
-    const preferCombined = Boolean(
-      "apiFicheInfoPreferCombined" in config && config.apiFicheInfoPreferCombined
-    );
-    if (preferCombined && url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
+    if (url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
       url.searchParams.set("scope", "both");
     }
     try {
@@ -73187,19 +73361,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null;
     return fichePointCache.byMode[mode2] ?? null;
   }
+  function hydrateFicheSelectionFromCache(cached, mode2) {
+    const refreshed = refreshFicheSelectionCatalogVisibility({ ...cached, mapMode: mode2 });
+    return withParcelDetailCache(refreshed, mode2);
+  }
+  function syncSiblingFicheCacheAtPoint(lon, lat, activeMode) {
+    const sibling = activeMode === MAP_MODE_TERRITORY ? MAP_MODE_PARCEL : MAP_MODE_TERRITORY;
+    const cached = cachedFicheForMode(sibling, lon, lat);
+    if (!cached) return;
+    storeFicheInCache(sibling, lon, lat, hydrateFicheSelectionFromCache(cached, sibling));
+  }
   function getCachedFicheSelectionAtMarker(mode2) {
     const marker = readMapPermalinkMarker(getMapPermalinkParams());
     if (!marker) return null;
     const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
     if (!cached) return null;
-    return mode2 === MAP_MODE_PARCEL ? applyParcelFicheDetailCache(cached) : cached;
+    return hydrateFicheSelectionFromCache(cached, mode2);
   }
   function refreshFicheForMapModeChange(mode2, zoom) {
     const marker = readMapPermalinkMarker(getMapPermalinkParams());
     if (!marker) return;
     const cached = cachedFicheForMode(mode2, marker.lon, marker.lat);
     if (cached) {
-      showFiche(withParcelDetailCache(cached, mode2));
+      const hydrated = hydrateFicheSelectionFromCache(cached, mode2);
+      storeFicheInCache(mode2, marker.lon, marker.lat, hydrated);
+      showFiche(hydrated);
       return;
     }
     void loadFicheForMapPoint({
@@ -73286,15 +73472,22 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   function refreshFicheForCatalogVisibility() {
-    var _a2, _b;
+    var _a2, _b, _c2, _d;
     const api = tabPanelsApiRef.value;
     const current = api == null ? void 0 : api.selection.value;
     if (!(current == null ? void 0 : current.raw) || current.loading) return;
     const next = refreshFicheSelectionCatalogVisibility(current);
     syncCadastreLowFromFicheSelectionRaw(next.raw);
     api == null ? void 0 : api.updateSelection(next);
+    const lon = Number((_a2 = next.raw) == null ? void 0 : _a2.lon);
+    const lat = Number((_b = next.raw) == null ? void 0 : _b.lat);
+    const activeMode = next.mapMode ?? readMapModeFromPermalinkParams(getMapPermalinkParams());
+    if (Number.isFinite(lon) && Number.isFinite(lat) && activeMode) {
+      storeFicheInCache(activeMode, lon, lat, next);
+      syncSiblingFicheCacheAtPoint(lon, lat, activeMode);
+    }
     const parcelId = parcelIdFromSelection(next);
-    if (parcelId && ((_a2 = next.parcelInfosHtml) == null ? void 0 : _a2.trim()) && ((_b = next.parcelDocumentsHtml) == null ? void 0 : _b.trim()) && next.raw && typeof next.raw === "object") {
+    if (parcelId && ((_c2 = next.parcelInfosHtml) == null ? void 0 : _c2.trim()) && ((_d = next.parcelDocumentsHtml) == null ? void 0 : _d.trim()) && next.raw && typeof next.raw === "object") {
       const parcelFiche = next.raw._parcelFiche;
       if (parcelFiche) {
         storeParcelFicheDetailCache({
@@ -73332,6 +73525,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   function selectionFromGpuPayload(data, mode2, lon, lat) {
     return ficheSelectionFromGpuApi(data, mode2, lon, lat);
   }
+  function storeDualModeFicheCacheFromCombinedPayload(lon, lat, payload) {
+    for (const mode2 of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
+      const selection = withParcelDetailCache(selectionFromGpuPayload(payload, mode2, lon, lat), mode2);
+      storeFicheInCache(mode2, lon, lat, selection);
+    }
+  }
   async function enrichTerritoryPayloadWithParcelAtPoint(params2, territoryPayload, requestId2, abortSignal) {
     if (ficheHasParcelAtPoint(territoryPayload)) return territoryPayload;
     const cachedParcel = cachedFicheForMode(MAP_MODE_PARCEL, params2.lon, params2.lat);
@@ -73365,10 +73564,25 @@ Expected function or array of functions, received type ${typeof value2}.`
     const silent = params2.silent === true;
     syncFichePointCache(params2.lon, params2.lat);
     const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
+    const cachedAtPoint = cachedFicheForMode(params2.mode, params2.lon, params2.lat);
+    if (cachedAtPoint) {
+      const hydrated = hydrateFicheSelectionFromCache(cachedAtPoint, params2.mode);
+      return applyMapPointResult(
+        requestId2,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        hydrated,
+        markerPlacedAtClick,
+        skipLocationMarker,
+        silent
+      );
+    }
     if (!silent) {
       showLoading(loadingTitle);
     }
     await waitUntilGpuClientConfigScriptSettled();
+    syncEntreeConfigFromGpuScript();
     finalizeGpuClientConfigStateIfInjected();
     const apiUrl = resolveApiFicheInfoUrl();
     if (!apiUrl) {
@@ -73384,7 +73598,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
-    let payload = await fetchGpuFicheInfoPayload({ ...params2, abortSignal: fetchAbortSignal });
+    const useCombinedV2 = preferFicheInfoV2CombinedFetch();
+    let payload = useCombinedV2 ? await fetchGpuFicheInfoCombinedPayload({
+      lon: params2.lon,
+      lat: params2.lat,
+      zoom: params2.zoom,
+      abortSignal: fetchAbortSignal
+    }) : await fetchGpuFicheInfoPayload({ ...params2, abortSignal: fetchAbortSignal });
     if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
     if (!payload) {
       return applyMapPointResult(
@@ -73398,7 +73618,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
-    if (params2.mode === MAP_MODE_TERRITORY) {
+    if (useCombinedV2) {
+      storeDualModeFicheCacheFromCombinedPayload(params2.lon, params2.lat, payload);
+    } else if (params2.mode === MAP_MODE_TERRITORY) {
       payload = await enrichTerritoryPayloadWithParcelAtPoint(
         { lon: params2.lon, lat: params2.lat, zoom: params2.zoom },
         payload,
@@ -73408,7 +73630,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
     }
     const selection = selectionFromGpuPayload(payload, params2.mode, params2.lon, params2.lat);
-    storeFicheInCache(params2.mode, params2.lon, params2.lat, selection);
+    if (!useCombinedV2) {
+      storeFicheInCache(params2.mode, params2.lon, params2.lat, selection);
+    }
     return applyMapPointResult(
       requestId2,
       params2.lon,
@@ -73494,7 +73718,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       raw._parcelFiche = payload;
       raw.parcelId = parcelId;
     }
-    const parcelInfosHtml = buildParcelInfosHtmlFromFiche(payload);
+    const parcelInfosHtml = buildParcelInfosHtmlFromFiche(
+      payload,
+      void 0,
+      isGpuFicheInfoPayload(raw) ? raw : null
+    );
     const ficheApi = isGpuFicheInfoPayload(raw) ? raw : null;
     const parcelDocumentsHtml = buildParcelDocumentsHtmlFromFiche(payload, ficheApi);
     storeParcelFicheDetailCache({
@@ -73526,6 +73754,142 @@ Expected function or array of functions, received type ${typeof value2}.`
       duration: duration2 ?? LOCATION_SEARCH_ANIMATION_MS,
       easing: easeOut
     });
+  }
+  function zoomForLocationSearch(search) {
+    var _a2;
+    if ((_a2 = search.poiType) == null ? void 0 : _a2.includes("département")) return 9;
+    switch (search.type) {
+      case "StreetAddress":
+        return 18;
+      case "PositionOfInterest":
+        return 13;
+      default:
+        return 13;
+    }
+  }
+  const GEOCODING_LAYER_TYPES = /* @__PURE__ */ new Set([
+    "streetaddress",
+    "positionofinterest",
+    "cadastralparcel",
+    "location"
+  ]);
+  function isGeocodingLayerType(raw) {
+    if (!raw) return false;
+    return GEOCODING_LAYER_TYPES.has(raw.trim().toLowerCase());
+  }
+  function pickPlaceKindFromGeopfItem(item) {
+    const p5 = item.properties;
+    if (p5 && typeof p5.type === "string" && p5.type.trim()) return p5.type;
+    if (typeof item.kind === "string" && item.kind.trim()) return item.kind;
+    if (typeof item.type === "string" && item.type.trim() && !isGeocodingLayerType(item.type)) {
+      return item.type;
+    }
+    return void 0;
+  }
+  function pickPlaceKindFromGeopfFeature(feature) {
+    const props = feature.get("properties");
+    if (props && typeof props === "object" && props !== null) {
+      const p5 = props;
+      if (typeof p5.type === "string" && p5.type.trim()) return p5.type;
+      if (typeof p5.kind === "string" && p5.kind.trim()) return p5.kind;
+    }
+    const kind = feature.get("kind");
+    if (typeof kind === "string" && kind.trim()) return kind;
+    const typeTop = feature.get("type");
+    if (typeof typeTop === "string" && typeTop.trim() && !isGeocodingLayerType(typeTop)) {
+      return typeTop;
+    }
+    return void 0;
+  }
+  function toLocationRedirectParams(location) {
+    return {
+      municipality: location.fullText,
+      position_x: String(location.position.x),
+      position_y: String(location.position.y),
+      type: location.type ?? ""
+    };
+  }
+  function locationFromGeopfSelect(event) {
+    var _a2, _b;
+    const item = event.item;
+    const x = Number((_a2 = item == null ? void 0 : item.position) == null ? void 0 : _a2.x);
+    const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const placeKind = item ? pickPlaceKindFromGeopfItem(item) : void 0;
+    return {
+      fullText: (item == null ? void 0 : item.fullText) || event.title || "",
+      position: { x, y },
+      type: item == null ? void 0 : item.type,
+      kind: item == null ? void 0 : item.kind,
+      placeKind,
+      poiType: item == null ? void 0 : item.poiType
+    };
+  }
+  function locationFromGeopfFeature(feature, fallbackType = "") {
+    const geometry = feature.getGeometry();
+    if (!geometry || typeof geometry.getType !== "function") {
+      return null;
+    }
+    let coord = null;
+    const geomType = geometry.getType();
+    if (geomType === "Point") {
+      coord = geometry.getCoordinates();
+    } else if (typeof geometry.getExtent === "function") {
+      const extent = geometry.getExtent();
+      coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
+    }
+    if (!coord || coord.length < 2) return null;
+    const [lon, lat] = toLonLat(coord, "EPSG:3857");
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    const infoPopup = String(feature.get("infoPopup") ?? "");
+    const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
+    const placeKind = pickPlaceKindFromGeopfFeature(feature);
+    const geocodingLayerType = String(feature.get("type") ?? fallbackType);
+    return {
+      fullText: label,
+      position: { x: lon, y: lat },
+      /** Couche SearchEngine / geopf (`StreetAddress`, …), pas le type BAN (`placeKind`). */
+      type: geocodingLayerType,
+      placeKind
+    };
+  }
+  function locationFromGeolocation(coordinates2, label = "Ma localisation") {
+    const x = Number(coordinates2 == null ? void 0 : coordinates2[0]);
+    const y = Number(coordinates2 == null ? void 0 : coordinates2[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      fullText: label,
+      position: { x, y },
+      type: "geolocate"
+    };
+  }
+  function redirectToMapWithLocation(location, options = {}) {
+    const mapUrl = options.mapUrl ?? "/map/";
+    const method = options.method ?? "POST";
+    const params2 = toLocationRedirectParams(location);
+    if (method === "GET") {
+      const qs2 = new URLSearchParams({
+        municipality: params2.municipality,
+        position_x: params2.position_x,
+        position_y: params2.position_y,
+        type: params2.type
+      });
+      window.location.assign(`${mapUrl}${mapUrl.includes("?") ? "&" : "?"}${qs2.toString()}`);
+      return;
+    }
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = mapUrl;
+    form.style.display = "none";
+    for (const [name2, value2] of Object.entries(params2)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name2;
+      input.value = value2;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
   }
   function mapShellEl() {
     const shell = document.querySelector(".ec-map-shell");
@@ -73724,7 +74088,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (typeof window === "undefined") return [];
     return new Promise((resolve2) => {
       whenGpuClientConfigReady(() => {
-        void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode: mode2 }).then((payload) => {
+        void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode: mode2, fetchRole: "background" }).then((payload) => {
           if (!payload) {
             resolve2([]);
             return;
@@ -73888,7 +74252,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       function openFicheFromSearch(search) {
         var _a2, _b;
         const map2 = ((_b = (_a2 = controlRef.value) == null ? void 0 : _a2.getMap) == null ? void 0 : _b.call(_a2)) ?? null;
-        const zoom = (map2 == null ? void 0 : map2.getView().getZoom()) ?? 6;
+        const viewZoom = map2 == null ? void 0 : map2.getView().getZoom();
+        const zoom = Number.isFinite(viewZoom) && viewZoom != null ? Math.max(viewZoom, zoomForLocationSearch(search)) : zoomForLocationSearch(search);
         const mode2 = normalizeMapMode(mapMode.mode.value) ?? DEFAULT_MAP_MODE;
         void loadFicheForSearch(search, mode2, zoom);
       }
@@ -74084,7 +74449,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const hasCoords = Number.isFinite(x) && Number.isFinite(y);
         const isGeolocate = search.type === "geolocate";
         const willGeocode = Boolean(label && !isGeolocate);
-        if (!willGeocode) {
+        if (!willGeocode || hasCoords) {
           openFicheFromSearch(search);
         }
         if (hasCoords) {
@@ -75679,7 +76044,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function mapZoomForLegend(map2) {
     const z2 = map2.getView().getZoom();
     if (z2 == null || Number.isNaN(z2)) return DEFAULT_PARCEL_FICHE_LEGEND_ZOOM;
-    return Math.round(z2);
+    return z2;
   }
   function useMapLegendZoom(mapRef) {
     const legendZoom = /* @__PURE__ */ ref(DEFAULT_PARCEL_FICHE_LEGEND_ZOOM);
@@ -92923,7 +93288,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!selection) return "";
     const payload = parcelFichePayloadFromSelection(selection);
     if (payload) {
-      return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom));
+      const raw = selection == null ? void 0 : selection.raw;
+      const ficheApi = raw && typeof raw === "object" && isGpuFicheInfoPayload(raw) ? raw : null;
+      return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi));
     }
     if ((_a2 = selection.parcelInfosHtml) == null ? void 0 : _a2.trim()) {
       return sanitizeFicheHtmlForPrint(selection.parcelInfosHtml);
@@ -115925,6 +116292,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return 0.7;
   }
+  const RESOLUTION_EPSILON = 1e-5;
+  function getLayerResolutionRange(view, minZoomLevel, maxZoomLevel) {
+    const viewMinZoom = view.getMinZoom();
+    let maxResolution;
+    if (minZoomLevel - 1 >= viewMinZoom) {
+      maxResolution = view.getResolutionForZoom(minZoomLevel - 1);
+    } else {
+      maxResolution = view.getResolutionForZoom(minZoomLevel) + RESOLUTION_EPSILON;
+    }
+    return {
+      minResolution: view.getResolutionForZoom(maxZoomLevel),
+      maxResolution
+    };
+  }
   function wmsUrl() {
     const url = config.wmsExterneUrl;
     return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
@@ -115943,10 +116324,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return parts.join(" AND ");
   }
-  function zoomToResolution(zoom) {
-    return 156543.03392804097 / Math.pow(2, zoom);
-  }
-  function createWmsTileLayer(entry, document2) {
+  function createWmsTileLayer(entry, document2, view) {
     const layer = entry.config;
     if (layer.virtual || !layer.name) return null;
     let layerName = layer.name;
@@ -115971,6 +116349,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     const minZoom = layer.minZoomLevel ?? 0;
     const maxZoom = layer.maxZoomLevel ?? 22;
+    const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
     return new TileLayer({
       source: new TileWMS({
         url,
@@ -115981,8 +116360,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }),
       visible: false,
       opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
-      minResolution: zoomToResolution(maxZoom + 0.5),
-      maxResolution: zoomToResolution(Math.max(0, minZoom - 0.5)),
+      minResolution,
+      maxResolution,
       zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
       properties: {
         ecGpuCatalogId: entry.id,
@@ -116038,7 +116417,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (layer) return layer;
       const entry = this.entries.get(catalogId);
       if (!entry) return void 0;
-      const created = createWmsTileLayer(entry, this.document);
+      if (!this.map) return void 0;
+      const created = createWmsTileLayer(entry, this.document, this.map.getView());
       if (!created) return void 0;
       this.olLayers.set(catalogId, created);
       applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
@@ -116120,21 +116500,36 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return layerPermalinkInInitialHash === true;
   }
+  const MAP_ZOOM_DEBOUNCE_MS = 80;
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
     const mapZoom = /* @__PURE__ */ ref(6);
     let unbind;
+    let debounceId = null;
     function bindMap(map2) {
       unbind == null ? void 0 : unbind();
       unbind = void 0;
+      if (debounceId) {
+        clearTimeout(debounceId);
+        debounceId = null;
+      }
       if (!map2) return;
       const view = map2.getView();
       const update = () => {
-        mapZoom.value = view.getZoom() ?? mapZoom.value;
+        const z2 = view.getZoom();
+        if (z2 != null && Number.isFinite(z2)) mapZoom.value = z2;
+      };
+      const updateDebounced = () => {
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = setTimeout(update, MAP_ZOOM_DEBOUNCE_MS);
       };
       update();
-      view.on("change:resolution", update);
-      unbind = () => view.un("change:resolution", update);
+      view.on("change:resolution", updateDebounced);
+      unbind = () => {
+        view.un("change:resolution", updateDebounced);
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = null;
+      };
     }
     watch(() => mapRef.value ?? null, bindMap, { immediate: true });
     onUnmounted(() => unbind == null ? void 0 : unbind());
@@ -117291,6 +117686,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const parcelDetailReady = computed(() => {
         var _a2, _b;
         const s = props.selection;
+        if (parcelFichePayloadFromSelection2(s)) return true;
         return Boolean(((_a2 = s == null ? void 0 : s.parcelInfosHtml) == null ? void 0 : _a2.trim()) && ((_b = s == null ? void 0 : s.parcelDocumentsHtml) == null ? void 0 : _b.trim()));
       });
       watch(
@@ -117405,14 +117801,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const parcelDetailCached = computed(() => Boolean(parcelFichePayloadFromSelection2(props.selection)));
       const parcelInfosDisplayHtml = computed(() => {
-        var _a2;
+        var _a2, _b;
         void ficheCatalogVisibilityRevision.value;
         if (!parcelDetailReady.value) return "";
         const payload = parcelFichePayloadFromSelection2(props.selection);
         if (payload) {
-          return buildParcelInfosHtmlFromFiche(payload, legendZoom.value);
+          const raw = (_a2 = props.selection) == null ? void 0 : _a2.raw;
+          const ficheApi = raw && typeof raw === "object" && isGpuFicheInfoPayload(raw) ? raw : null;
+          return buildParcelInfosHtmlFromFiche(payload, legendZoom.value, ficheApi);
         }
-        return ((_a2 = props.selection) == null ? void 0 : _a2.parcelInfosHtml) ?? "<p>Aucune information.</p>";
+        return ((_b = props.selection) == null ? void 0 : _b.parcelInfosHtml) ?? "<p>Aucune information.</p>";
       });
       const parcelDocumentsDisplayHtml = computed(() => {
         var _a2, _b;
@@ -118678,8 +119076,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           [layerId]: !expandedByLayerId.value[layerId]
         };
       }
+      const legendZoomForBand = computed(() => props.mapZoom);
       function legendImageSrcs(leg) {
-        return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url));
+        return resolveLegendItemImageUrls(leg, legendZoomForBand.value).map(
+          (url) => rewriteLocalGpuSiteUrl(url)
+        );
+      }
+      function legendImageRowKey(leg, imgIdx, src) {
+        return `${leg.id}|${imgIdx}|${legendZoomForBand.value}|${src}`;
       }
       const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers));
       const legendItems = computed(() => {
@@ -118765,7 +119169,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                           createBaseVNode("span", _hoisted_10$1, [
                             legendImageSrcs(leg).length ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(legendImageSrcs(leg), (src, imgIdx) => {
                               return openBlock(), createElementBlock("img", {
-                                key: imgIdx,
+                                key: legendImageRowKey(leg, imgIdx, src),
                                 class: "ec-layer-legends__img",
                                 src,
                                 alt: "",
@@ -118788,7 +119192,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-1d4fcda0"]]);
+  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-efb185eb"]]);
   const TAB_PANELS_MOBILE_MEDIA = "(max-width: 48rem)";
   const TAB_PANELS_SHEET_SNAP_PERCENT = [0, 35, 70, 98];
   const TAB_PANELS_DEFAULT_OPEN_SNAP = 2;
@@ -120897,130 +121301,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         suggestedLocations: (data.results ?? []).map(normalizeGeopfResult)
       };
     }
-  }
-  const GEOCODING_LAYER_TYPES = /* @__PURE__ */ new Set([
-    "streetaddress",
-    "positionofinterest",
-    "cadastralparcel",
-    "location"
-  ]);
-  function isGeocodingLayerType(raw) {
-    if (!raw) return false;
-    return GEOCODING_LAYER_TYPES.has(raw.trim().toLowerCase());
-  }
-  function pickPlaceKindFromGeopfItem(item) {
-    const p5 = item.properties;
-    if (p5 && typeof p5.type === "string" && p5.type.trim()) return p5.type;
-    if (typeof item.kind === "string" && item.kind.trim()) return item.kind;
-    if (typeof item.type === "string" && item.type.trim() && !isGeocodingLayerType(item.type)) {
-      return item.type;
-    }
-    return void 0;
-  }
-  function pickPlaceKindFromGeopfFeature(feature) {
-    const props = feature.get("properties");
-    if (props && typeof props === "object" && props !== null) {
-      const p5 = props;
-      if (typeof p5.type === "string" && p5.type.trim()) return p5.type;
-      if (typeof p5.kind === "string" && p5.kind.trim()) return p5.kind;
-    }
-    const kind = feature.get("kind");
-    if (typeof kind === "string" && kind.trim()) return kind;
-    const typeTop = feature.get("type");
-    if (typeof typeTop === "string" && typeTop.trim() && !isGeocodingLayerType(typeTop)) {
-      return typeTop;
-    }
-    return void 0;
-  }
-  function toLocationRedirectParams(location) {
-    return {
-      municipality: location.fullText,
-      position_x: String(location.position.x),
-      position_y: String(location.position.y),
-      type: location.type ?? ""
-    };
-  }
-  function locationFromGeopfSelect(event) {
-    var _a2, _b;
-    const item = event.item;
-    const x = Number((_a2 = item == null ? void 0 : item.position) == null ? void 0 : _a2.x);
-    const y = Number((_b = item == null ? void 0 : item.position) == null ? void 0 : _b.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    const placeKind = item ? pickPlaceKindFromGeopfItem(item) : void 0;
-    return {
-      fullText: (item == null ? void 0 : item.fullText) || event.title || "",
-      position: { x, y },
-      type: item == null ? void 0 : item.type,
-      kind: item == null ? void 0 : item.kind,
-      placeKind,
-      poiType: item == null ? void 0 : item.poiType
-    };
-  }
-  function locationFromGeopfFeature(feature, fallbackType = "") {
-    const geometry = feature.getGeometry();
-    if (!geometry || typeof geometry.getType !== "function") {
-      return null;
-    }
-    let coord = null;
-    const geomType = geometry.getType();
-    if (geomType === "Point") {
-      coord = geometry.getCoordinates();
-    } else if (typeof geometry.getExtent === "function") {
-      const extent = geometry.getExtent();
-      coord = [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2];
-    }
-    if (!coord || coord.length < 2) return null;
-    const [lon, lat] = toLonLat(coord, "EPSG:3857");
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
-    const infoPopup = String(feature.get("infoPopup") ?? "");
-    const label = infoPopup.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || String(feature.get("fullText") ?? feature.get("label") ?? "Localisation");
-    const placeKind = pickPlaceKindFromGeopfFeature(feature);
-    const geocodingLayerType = String(feature.get("type") ?? fallbackType);
-    return {
-      fullText: label,
-      position: { x: lon, y: lat },
-      /** Couche SearchEngine / geopf (`StreetAddress`, …), pas le type BAN (`placeKind`). */
-      type: geocodingLayerType,
-      placeKind
-    };
-  }
-  function locationFromGeolocation(coordinates2, label = "Ma localisation") {
-    const x = Number(coordinates2 == null ? void 0 : coordinates2[0]);
-    const y = Number(coordinates2 == null ? void 0 : coordinates2[1]);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return {
-      fullText: label,
-      position: { x, y },
-      type: "geolocate"
-    };
-  }
-  function redirectToMapWithLocation(location, options = {}) {
-    const mapUrl = options.mapUrl ?? "/map/";
-    const method = options.method ?? "POST";
-    const params2 = toLocationRedirectParams(location);
-    if (method === "GET") {
-      const qs2 = new URLSearchParams({
-        municipality: params2.municipality,
-        position_x: params2.position_x,
-        position_y: params2.position_y,
-        type: params2.type
-      });
-      window.location.assign(`${mapUrl}${mapUrl.includes("?") ? "&" : "?"}${qs2.toString()}`);
-      return;
-    }
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = mapUrl;
-    form.style.display = "none";
-    for (const [name2, value2] of Object.entries(params2)) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name2;
-      input.value = value2;
-      form.appendChild(input);
-    }
-    document.body.appendChild(form);
-    form.submit();
   }
   const _hoisted_1 = { class: "fr-search-bar fr-search-bar--lg ec-location-search__bar" };
   const _hoisted_2 = ["placeholder", "title", "value", "aria-controls", "aria-expanded", "aria-activedescendant"];

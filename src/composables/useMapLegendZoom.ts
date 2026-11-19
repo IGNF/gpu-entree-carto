@@ -7,11 +7,11 @@ import { DEFAULT_PARCEL_FICHE_LEGEND_ZOOM } from '@/lib/fiche/parcelLegendImage'
 /** Aligné gpu-client `LegendImages` (LEGEND_ZOOM_DEBOUNCE_MS). */
 const LEGEND_ZOOM_DEBOUNCE_MS = 150
 
-/** Zoom entier pour pictos légende scaleDependant (seuil gpu-client, ex. 16). */
+/** Zoom carte (float) pour pictos scaleDependant — même valeur que `useMapZoom` / tuiles WMS. */
 export function mapZoomForLegend(map: Map): number {
   const z = map.getView().getZoom()
   if (z == null || Number.isNaN(z)) return DEFAULT_PARCEL_FICHE_LEGEND_ZOOM
-  return Math.round(z)
+  return z
 }
 
 /**
