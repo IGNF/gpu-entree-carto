@@ -5,6 +5,8 @@ import Style from 'ol/style/Style'
 import Stroke from 'ol/style/Stroke'
 import type Feature from 'ol/Feature'
 import type { Geometry } from 'ol/geom'
+import { limitGeoJsonAssetUrl } from '@/ol/limitGeoJsonDataRoot'
+
 /** Seuils gpu-client `Region` / `Department`. */
 const RES_REGION_MIN = 1222.99245256282
 const RES_REGION_MAX = 2445.98490512564
@@ -12,11 +14,6 @@ const RES_DEPT_MAX = 1222.99245256282
 
 const MAP_PROJECTION = 'EPSG:3857'
 const DATA_PROJECTION = 'EPSG:4326'
-
-/** `{BASE_URL}json-data/` — démo Vite ; gpu-site : `public/json-data/` à la racine web (`/json-data/…`). */
-function limitGeoJsonUrl(fileName: string): string {
-  return `${import.meta.env.BASE_URL}json-data/${fileName}`
-}
 
 const limitStyle = new Style({
   stroke: new Stroke({ width: 2, color: '#000000' }),
@@ -39,7 +36,7 @@ function readGeoJsonFeatures(data: object): Feature<Geometry>[] {
 async function loadRegions(): Promise<Feature<Geometry>[]> {
   if (regionsFeatures) return regionsFeatures
   if (!regionsLoad) {
-    regionsLoad = fetch(limitGeoJsonUrl('region-fr-geojson.json'))
+    regionsLoad = fetch(limitGeoJsonAssetUrl('region-fr-geojson.json'))
       .then(async (res) => {
         if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`)
         regionsFeatures = readGeoJsonFeatures(await res.json())
@@ -56,7 +53,7 @@ async function loadRegions(): Promise<Feature<Geometry>[]> {
 async function loadDepartments(): Promise<Feature<Geometry>[]> {
   if (departmentsFeatures) return departmentsFeatures
   if (!departmentsLoad) {
-    departmentsLoad = fetch(limitGeoJsonUrl('department-fr-geojson.json'))
+    departmentsLoad = fetch(limitGeoJsonAssetUrl('department-fr-geojson.json'))
       .then(async (res) => {
         if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`)
         departmentsFeatures = readGeoJsonFeatures(await res.json())

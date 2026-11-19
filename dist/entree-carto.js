@@ -120199,14 +120199,47 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  function resolveLimitGeoJsonDataRoot(fallbackBase = "./") {
+    const baseUrlRaw = typeof config.baseUrl === "string" ? config.baseUrl.trim() : "";
+    if (!baseUrlRaw) return normalizeRoot(fallbackBase);
+    if (baseUrlRaw === "/") {
+      if (typeof window !== "undefined") {
+        return normalizeRoot(`${window.location.origin}/`);
+      }
+      return "/";
+    }
+    if (/^https?:\/\//i.test(baseUrlRaw) || baseUrlRaw.startsWith("//")) {
+      try {
+        const resolved = new URL(baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`);
+        if (typeof window === "undefined" || resolved.origin === window.location.origin) {
+          return normalizeRoot(resolved.href);
+        }
+      } catch {
+      }
+      return normalizeRoot(fallbackBase);
+    }
+    if (baseUrlRaw.startsWith("/") && typeof window !== "undefined") {
+      const resolved = new URL(
+        baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`,
+        window.location.origin
+      );
+      return normalizeRoot(resolved.href);
+    }
+    return normalizeRoot(fallbackBase);
+  }
+  function limitGeoJsonAssetUrl(fileName, fallbackBase = "./") {
+    const root = resolveLimitGeoJsonDataRoot(fallbackBase);
+    const path = fileName.replace(/^\//, "");
+    return `${root}json-data/${path}`;
+  }
+  function normalizeRoot(root) {
+    return root.endsWith("/") ? root : `${root}/`;
+  }
   const RES_REGION_MIN = 1222.99245256282;
   const RES_REGION_MAX = 2445.98490512564;
   const RES_DEPT_MAX = 1222.99245256282;
   const MAP_PROJECTION = "EPSG:3857";
   const DATA_PROJECTION = "EPSG:4326";
-  function limitGeoJsonUrl(fileName) {
-    return `${"./"}json-data/${fileName}`;
-  }
   const limitStyle = new Style({
     stroke: new Stroke({ width: 2, color: "#000000" })
   });
@@ -120224,7 +120257,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function loadRegions() {
     if (regionsFeatures) return regionsFeatures;
     if (!regionsLoad) {
-      regionsLoad = fetch(limitGeoJsonUrl("region-fr-geojson.json")).then(async (res) => {
+      regionsLoad = fetch(limitGeoJsonAssetUrl("region-fr-geojson.json")).then(async (res) => {
         if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`);
         regionsFeatures = readGeoJsonFeatures(await res.json());
         return regionsFeatures;
@@ -120238,7 +120271,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function loadDepartments() {
     if (departmentsFeatures) return departmentsFeatures;
     if (!departmentsLoad) {
-      departmentsLoad = fetch(limitGeoJsonUrl("department-fr-geojson.json")).then(async (res) => {
+      departmentsLoad = fetch(limitGeoJsonAssetUrl("department-fr-geojson.json")).then(async (res) => {
         if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`);
         departmentsFeatures = readGeoJsonFeatures(await res.json());
         return departmentsFeatures;
