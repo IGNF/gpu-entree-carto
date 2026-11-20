@@ -15,6 +15,9 @@ const inflightPayloadByPoint = new Map<string, Promise<GpuFicheInfoPayload | nul
 /** Fetch « panneau » (clic / recherche) : un seul en vol, annulé au point suivant. */
 let activePanelNetworkAbort: AbortController | null = null
 
+/** Fetches emprise / enrichissement : annulés avec le panneau au clic suivant. */
+const activeBackgroundNetworkAborts = new Set<AbortController>()
+
 export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
 }
@@ -36,6 +39,12 @@ function takeoverFicheNetworkSignal(
 ): AbortSignal {
   if (role === 'background') {
     const controller = new AbortController()
+    activeBackgroundNetworkAborts.add(controller)
+    controller.signal.addEventListener(
+      'abort',
+      () => activeBackgroundNetworkAborts.delete(controller),
+      { once: true },
+    )
     if (external?.aborted) {
       controller.abort()
     } else if (external) {
@@ -75,6 +84,10 @@ export function abortInflightFicheInfoFetch(): void {
   const hadPanel = activePanelNetworkAbort !== null
   activePanelNetworkAbort?.abort()
   activePanelNetworkAbort = null
+  for (const controller of [...activeBackgroundNetworkAborts]) {
+    controller.abort()
+  }
+  activeBackgroundNetworkAborts.clear()
   clearInflightFichePayloads()
   if (hadPanel) {
     const base = resolveFicheInfoSupersedeBaseUrl()

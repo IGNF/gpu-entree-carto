@@ -44,6 +44,7 @@ import {
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
+import { seedModeEmpriseCacheFromFichePayload } from '@/lib/map/searchResultGraphics'
 
 const FICHE_UNAVAILABLE_BODY = '<p>Indisponibilité du service</p>'
 const FICHE_PARCEL_UNAVAILABLE_BODY =
@@ -318,6 +319,7 @@ function storeDualModeFicheCacheFromCombinedPayload(
   lat: number,
   payload: GpuFicheInfoPayload,
 ): void {
+  seedModeEmpriseCacheFromFichePayload(lon, lat, payload)
   for (const mode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL] as const) {
     const selection = withParcelDetailCache(selectionFromGpuPayload(payload, mode, lon, lat), mode)
     storeFicheInCache(mode, lon, lat, selection)
