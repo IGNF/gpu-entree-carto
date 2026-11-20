@@ -12,6 +12,7 @@ import {
   fetchGpuFicheInfoPayload,
 } from '@/lib/fiche/ficheInfoFetch'
 import { preferFicheInfoV2CombinedFetch } from '@/lib/fiche/ficheInfoApiUrls'
+import { resolveFicheInfoActiveFamiliesForFetch } from '@/lib/fiche/ficheActiveFamilies'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { modeEmprisePartsFromFichePayload } from '@/lib/map/modeEmpriseFromFiche'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
@@ -179,10 +180,17 @@ function fetchEmpriseFichePayload(
   mode: MapModeId,
   zoom: number,
 ): Promise<GpuFicheInfoPayload | null> {
+  const activeFamilies = resolveFicheInfoActiveFamiliesForFetch()
   if (preferFicheInfoV2CombinedFetch()) {
-    return fetchGpuFicheInfoCombinedPayload({ lon, lat, zoom, fetchRole: 'background' })
+    return fetchGpuFicheInfoCombinedPayload({
+      lon,
+      lat,
+      zoom,
+      activeFamilies,
+      fetchRole: 'background',
+    })
   }
-  return fetchGpuFicheInfoPayload({ lon, lat, zoom, mode, fetchRole: 'background' })
+  return fetchGpuFicheInfoPayload({ lon, lat, zoom, mode, activeFamilies, fetchRole: 'background' })
 }
 
 /** Remplit le cache emprise (2 modes) après un GET v2 combiné — évite un second fetch réseau. */

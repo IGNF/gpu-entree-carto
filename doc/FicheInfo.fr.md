@@ -126,10 +126,12 @@ Fichiers entree-carto concernés : permalink / `demoConfig`, `managedLayers`, `M
 
 ### Visibilité catalogue (couches Données)
 
-Les cases cochées dans le catalogue (état reflété dans le **permalink** hash, clés `dev-du`, `dev-sup`, `dev-scot`, `mec`, etc.) pilotent la fiche sans nouvel appel API :
+Les cases cochées dans le catalogue (état reflété dans le **permalink** hash, clés `dev-du`, `dev-sup`, `dev-scot`, `mec`, etc.) pilotent la fiche :
 
 - **Territoire** : onglets Documents / SUP / SCoT / Procédures (MEC) masqués si la famille est décochée ; contenu recalculé via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
-- **Parcelle** : sections **Infos** (zonage, prescriptions, SUP, MEC, SCoT…) et **Documents** (DU, SUP, SCoT, tuiles MEC de remplacement) filtrées ou reconstruites au changement catalogue (`TabPanelsControl`).
+- **Parcelle** : sections **Infos** (zonage, prescriptions, SUP, MEC, SCoT…) et **Documents** (DU, SUP, SCoT, tuiles MEC de remplacement) filtrées ou reconstruites au changement catalogue (`TabPanelsControl`) ; **SUP** = assiettes intersectant la parcelle uniquement (pas la liste communale territoire).
+- **Requêtes (v2)** : au clic, seules les familles visibles partent en `activeFamilies` (`ficheActiveFamilies.ts`) ; si une famille est **réactivée** au même point cerise, un complément réseau ciblé fusionne le JSON (`ensureFicheFamiliesForCatalogAtMarker`).
+- **SUP territoire** : l’onglet **Servitude** liste les SUP **communales** (couche dérivée `municipality_sup` côté gpu-site), pas seulement celles dont l’assiette intersecte le clic.
 
 ### Liens externes (tuiles, procédures, PDF)
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import {
   buildParcelDocumentsHtmlFromFiche,
@@ -121,6 +121,7 @@ describe('buildParcelInfosHtmlFromFiche', () => {
 })
 
 describe('buildParcelDocumentsHtmlFromFiche', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
   it('liste les features document présentes en gpu-site', () => {
     const docId = 'a'.repeat(32)
     const ficheApi: GpuFicheInfoPayload = {
@@ -336,7 +337,35 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
     )
     expect(html).toContain('PLU parcelle')
     expect(html).toContain('Servitude AC1')
-    setFicheCatalogFamilyVisibility(null)
+  })
+
+  it('n’affiche pas les SUP communales sans assiette à la parcelle', () => {
+    const ficheApi: GpuFicheInfoPayload = {
+      sups: {
+        '172014607_SUP_31_AC1': {
+          documents: [
+            {
+              id: '3a22781f0cdf36aa622287cdda2305ff',
+              name: '172014607_SUP_31_AC1',
+              title: 'SUP AC1 communal',
+              status: 'document.production',
+            },
+          ],
+        },
+      },
+    }
+    const infos = buildParcelInfosHtmlFromFiche(
+      { features: [{ id: 'zone_urba.1', properties: { libelle: 'Ua' } }] },
+      undefined,
+      ficheApi,
+    )
+    const docs = buildParcelDocumentsHtmlFromFiche(
+      { features: [{ id: 'zone_urba.1', properties: { libelle: 'Ua' } }] },
+      ficheApi,
+    )
+    expect(infos).not.toContain('Servitudes d’utilité publique')
+    expect(docs).not.toContain('SUP AC1 communal')
+    expect(docs).not.toContain('Servitudes d’utilité publique')
   })
 
   it('affiche les SUP gpu-site quand une assiette intersecte la parcelle', () => {

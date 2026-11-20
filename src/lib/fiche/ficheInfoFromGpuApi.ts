@@ -113,7 +113,16 @@ const TAB_PROCEDURES = 'procedures'
 export function isGpuFicheInfoPayload(data: unknown): data is GpuFicheInfoPayload {
   if (!data || typeof data !== 'object') return false
   const o = data as Record<string, unknown>
-  return 'parcel' in o || 'grid' in o || 'dus' in o || 'partitions' in o || 'parcelFeature' in o
+  return (
+    'parcel' in o ||
+    'grid' in o ||
+    'dus' in o ||
+    'sups' in o ||
+    'scots' in o ||
+    'psmvs' in o ||
+    'partitions' in o ||
+    'parcelFeature' in o
+  )
 }
 
 function normalizePartitionsMap(

@@ -45,6 +45,16 @@ import {
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import { seedModeEmpriseCacheFromFichePayload } from '@/lib/map/searchResultGraphics'
+import {
+  type FicheInfoApiFamily,
+  familiesAcquisitionSatisfied,
+  isCatalogDrivenFicheFetchEnabled,
+  missingFicheInfoFamilies,
+  resolveFicheInfoActiveFamiliesForFetch,
+  familiesForTerritoryNetworkFetch,
+  unionFicheInfoFamilies,
+} from '@/lib/fiche/ficheActiveFamilies'
+import { mergeGpuFicheInfoPayloads } from '@/lib/fiche/ficheInfoPayloadMerge'
 
 const FICHE_UNAVAILABLE_BODY = '<p>Indisponibilité du service</p>'
 const FICHE_PARCEL_UNAVAILABLE_BODY =
@@ -60,6 +70,9 @@ const FICHE_POINT_EPS = 1e-7
 type FichePointCache = {
   lon: number
   lat: number
+  /** Familles déjà récupérées au point (requêtes gpu-site partielles fusionnées). */
+  acquiredFamilies: FicheInfoApiFamily[]
+  mergedGpuPayload: GpuFicheInfoPayload | null
   byMode: Partial<Record<MapModeId, FicheInfoSelection>>
 }
 
@@ -72,8 +85,44 @@ function sameMapPoint(a: { lon: number; lat: number }, b: { lon: number; lat: nu
 
 function syncFichePointCache(lon: number, lat: number): void {
   if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
-    fichePointCache = { lon, lat, byMode: {} }
+    fichePointCache = { lon, lat, acquiredFamilies: [], mergedGpuPayload: null, byMode: {} }
   }
+}
+
+function recordGpuPayloadAcquisition(
+  lon: number,
+  lat: number,
+  payload: GpuFicheInfoPayload,
+  fetchedFamilies: FicheInfoApiFamily[],
+): GpuFicheInfoPayload {
+  syncFichePointCache(lon, lat)
+  const merged = fichePointCache!.mergedGpuPayload
+    ? mergeGpuFicheInfoPayloads(fichePointCache!.mergedGpuPayload, payload)
+    : payload
+  fichePointCache!.mergedGpuPayload = merged
+  fichePointCache!.acquiredFamilies = unionFicheInfoFamilies(
+    fichePointCache!.acquiredFamilies,
+    fetchedFamilies,
+  )
+  return merged
+}
+
+async function fetchFicheGpuPayloadAtPoint(
+  params: { lon: number; lat: number; zoom: number; mode: MapModeId },
+  activeFamilies: FicheInfoApiFamily[],
+  signal: AbortSignal,
+): Promise<GpuFicheInfoPayload | null> {
+  const familyArgs = { activeFamilies }
+  if (preferFicheInfoV2CombinedFetch()) {
+    return fetchGpuFicheInfoCombinedPayload({
+      lon: params.lon,
+      lat: params.lat,
+      zoom: params.zoom,
+      ...familyArgs,
+      abortSignal: signal,
+    })
+  }
+  return fetchGpuFicheInfoPayload({ ...params, ...familyArgs, abortSignal: signal })
 }
 
 function storeFicheInCache(
@@ -230,16 +279,54 @@ function showFiche(selection: FicheInfoSelection): void {
   }
 }
 
+function readFicheCherryPoint(): { lon: number; lat: number } | null {
+  const fromPermalink = readMapPermalinkMarker(getMapPermalinkParams())
+  if (fromPermalink) return fromPermalink
+  if (fichePointCache) return { lon: fichePointCache.lon, lat: fichePointCache.lat }
+  const raw = tabPanelsApiRef.value?.selection.value?.raw
+  const lon = Number(raw?.lon)
+  const lat = Number(raw?.lat)
+  if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat }
+  return null
+}
+
 /** Réaffiche la fiche courante après changement de visibilité catalogue (permalink). */
 export function refreshFicheForCatalogVisibility(): void {
   const api = tabPanelsApiRef.value
   const current = api?.selection.value
   if (!current?.raw || current.loading) return
 
+  const desired = resolveFicheInfoActiveFamiliesForFetch()
+  const missing =
+    fichePointCache && isCatalogDrivenFicheFetchEnabled()
+      ? missingFicheInfoFamilies(desired, fichePointCache.acquiredFamilies)
+      : []
+
+  if (missing.length > 0) {
+    void (async () => {
+      try {
+        await ensureFicheFamiliesForCatalogAtMarker()
+      } catch (err) {
+        console.error('[fiche] ensureFicheFamiliesForCatalogAtMarker', err)
+        return
+      }
+      const after = tabPanelsApiRef.value?.selection.value
+      if (!after?.raw || after.loading) return
+      const next = refreshFicheSelectionCatalogVisibility(after)
+      syncCadastreLowFromFicheSelectionRaw(next.raw)
+      tabPanelsApiRef.value?.updateSelection(next)
+      persistFicheCacheAfterCatalogRefresh(next)
+    })()
+    return
+  }
+
   const next = refreshFicheSelectionCatalogVisibility(current)
   syncCadastreLowFromFicheSelectionRaw(next.raw)
   api?.updateSelection(next)
+  persistFicheCacheAfterCatalogRefresh(next)
+}
 
+function persistFicheCacheAfterCatalogRefresh(next: FicheInfoSelection): void {
   const lon = Number(next.raw?.lon)
   const lat = Number(next.raw?.lat)
   const activeMode = next.mapMode ?? readMapModeFromPermalinkParams(getMapPermalinkParams())
@@ -266,6 +353,53 @@ export function refreshFicheForCatalogVisibility(): void {
       })
     }
   }
+}
+
+/** Complète les familles manquantes au point cerise quand le catalogue expose de nouvelles couches. */
+export async function ensureFicheFamiliesForCatalogAtMarker(): Promise<void> {
+  if (!isCatalogDrivenFicheFetchEnabled()) return
+  const cherry = readFicheCherryPoint()
+  if (!cherry || !fichePointCache || !sameMapPoint(fichePointCache, cherry)) return
+  if (!fichePointCache.mergedGpuPayload) return
+
+  const { lon, lat } = cherry
+  const desired = resolveFicheInfoActiveFamiliesForFetch()
+  const missing = missingFicheInfoFamilies(desired, fichePointCache.acquiredFamilies)
+  if (!missing.length) return
+
+  const params = getMapPermalinkParams()
+  const mode = readMapModeFromPermalinkParams(params) ?? MAP_MODE_TERRITORY
+  const zoom = readMapPermalinkZoom(params) ?? 14
+
+  await waitUntilGpuClientConfigScriptSettled()
+  syncEntreeConfigFromGpuScript()
+  finalizeGpuClientConfigStateIfInjected()
+  if (!resolveApiFicheInfoUrl()) return
+
+  const requestId = ++mapPointRequestSeq
+  mapPointFetchAbort?.abort()
+  abortInflightFicheInfoFetch()
+  mapPointFetchAbort = new AbortController()
+
+  const familiesToFetch = familiesForTerritoryNetworkFetch(missing, mode)
+  const partial = await fetchFicheGpuPayloadAtPoint(
+    { lon, lat, zoom, mode },
+    familiesToFetch,
+    mapPointFetchAbort.signal,
+  )
+  if (!partial || requestId !== mapPointRequestSeq) return
+
+  const merged = recordGpuPayloadAcquisition(lon, lat, partial, familiesToFetch)
+  storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged)
+  for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL] as const) {
+    const selection = selectionFromGpuPayload(merged, mapMode, lon, lat)
+    storeFicheInCache(mapMode, lon, lat, selection)
+  }
+  const displayed = hydrateFicheSelectionFromCache(
+    cachedFicheForMode(mode, lon, lat) ?? selectionFromGpuPayload(merged, mode, lon, lat),
+    mode,
+  )
+  showFiche(displayed)
 }
 
 /** Cerise geopf au point interrogé (fiche-info gpu-site). */
@@ -343,6 +477,7 @@ async function enrichTerritoryPayloadWithParcelAtPoint(
   const parcelPayload = await fetchGpuFicheInfoPayload({
     ...params,
     mode: MAP_MODE_PARCEL,
+    activeFamilies: resolveFicheInfoActiveFamiliesForFetch(),
     abortSignal,
   })
   if (abortSignal.aborted || requestId !== mapPointRequestSeq) return territoryPayload
@@ -379,8 +514,12 @@ async function loadFicheForMapPointImpl(params: {
   const loadingTitle =
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
 
+  const desiredFamilies = resolveFicheInfoActiveFamiliesForFetch()
+  const acquisitionComplete =
+    fichePointCache &&
+    familiesAcquisitionSatisfied(desiredFamilies, fichePointCache.acquiredFamilies)
   const cachedAtPoint = cachedFicheForMode(params.mode, params.lon, params.lat)
-  if (cachedAtPoint) {
+  if (cachedAtPoint && acquisitionComplete) {
     const hydrated = hydrateFicheSelectionFromCache(cachedAtPoint, params.mode)
     return applyMapPointResult(
       requestId,
@@ -388,6 +527,24 @@ async function loadFicheForMapPointImpl(params: {
       params.lat,
       params.mode,
       hydrated,
+      markerPlacedAtClick,
+      skipLocationMarker,
+      silent,
+    )
+  }
+  if (!cachedAtPoint && acquisitionComplete && fichePointCache?.mergedGpuPayload) {
+    const selection = selectionFromGpuPayload(
+      fichePointCache.mergedGpuPayload,
+      params.mode,
+      params.lon,
+      params.lat,
+    )
+    return applyMapPointResult(
+      requestId,
+      params.lon,
+      params.lat,
+      params.mode,
+      withParcelDetailCache(selection, params.mode),
       markerPlacedAtClick,
       skipLocationMarker,
       silent,
@@ -418,15 +575,16 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
-  const useCombinedV2 = preferFicheInfoV2CombinedFetch()
-  let payload = useCombinedV2
-    ? await fetchGpuFicheInfoCombinedPayload({
-        lon: params.lon,
-        lat: params.lat,
-        zoom: params.zoom,
-        abortSignal: fetchAbortSignal,
-      })
-    : await fetchGpuFicheInfoPayload({ ...params, abortSignal: fetchAbortSignal })
+  const missingFamilies =
+    isCatalogDrivenFicheFetchEnabled() && fichePointCache?.mergedGpuPayload
+      ? missingFicheInfoFamilies(desiredFamilies, fichePointCache.acquiredFamilies)
+      : desiredFamilies
+  const familiesToFetch = familiesForTerritoryNetworkFetch(
+    missingFamilies.length ? missingFamilies : desiredFamilies,
+    params.mode,
+  )
+
+  let payload = await fetchFicheGpuPayloadAtPoint(params, familiesToFetch, fetchAbortSignal)
   if (fetchAbortSignal.aborted || requestId !== mapPointRequestSeq) return null
   if (!payload) {
     return applyMapPointResult(
@@ -441,6 +599,9 @@ async function loadFicheForMapPointImpl(params: {
     )
   }
 
+  payload = recordGpuPayloadAcquisition(params.lon, params.lat, payload, familiesToFetch)
+
+  const useCombinedV2 = preferFicheInfoV2CombinedFetch()
   if (useCombinedV2) {
     storeDualModeFicheCacheFromCombinedPayload(params.lon, params.lat, payload)
   } else if (params.mode === MAP_MODE_TERRITORY) {

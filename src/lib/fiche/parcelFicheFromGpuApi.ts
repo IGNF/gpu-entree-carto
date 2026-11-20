@@ -18,10 +18,7 @@ import {
   documentUrbanismTileHtml,
   FICHE_NON_EXECUTOIRE_CALLOUT_HTML,
 } from '@/lib/fiche/ficheDocumentTiles'
-import {
-  buildParcelDocumentsPresentationHtml,
-  buildParcelDocumentsSectionFromFicheApi,
-} from '@/lib/fiche/ficheDocumentPresentation'
+import { buildParcelDocumentsSectionFromFicheApi } from '@/lib/fiche/ficheDocumentPresentation'
 import {
   documentPartitionKeyFromMecPartition,
   findGpuSiteMecDocument,
@@ -514,15 +511,33 @@ function buildMecReplacementTiles(
   return tiles
 }
 
+function supPartitionMatchesParcelFeature(
+  partitionKey: string,
+  feature: ParcelFicheFeature,
+): boolean {
+  const keyNorm = partitionKey.trim().toLowerCase()
+  const props = feature.properties ?? {}
+  const partition = coerceDisplayString(props.partition)
+  if (partition && partition.toLowerCase() === keyNorm) return true
+  const name = coerceDisplayString(props.name ?? props.originalName)
+  if (name && name.toLowerCase() === keyNorm) return true
+  const suptype = coerceDisplayString(props.suptype)
+  if (suptype && keyNorm.endsWith(`_${suptype.toLowerCase()}`)) return true
+  const typepsc = coerceDisplayString(props.typepsc)
+  if (typepsc && keyNorm.endsWith(`_${typepsc.toLowerCase()}`)) return true
+  return false
+}
+
 function buildSupDocumentTiles(
   ficheApi: GpuFicheInfoPayload | null | undefined,
-  hasSupOnParcel: boolean,
+  supOnParcel: ParcelFicheFeature[],
 ): string[] {
-  if (!hasSupOnParcel || !ficheApi) return []
+  if (!supOnParcel.length || !ficheApi) return []
   const categories = readSupCategories()
   const seen = new Set<string>()
   const tiles: string[] = []
-  for (const partition of Object.values(normalizePartitionsMap(ficheApi.sups))) {
+  for (const [partitionKey, partition] of Object.entries(normalizePartitionsMap(ficheApi.sups))) {
+    if (!supOnParcel.some((f) => supPartitionMatchesParcelFeature(partitionKey, f))) continue
     const docs = partition.documents ?? []
     const production = docs.filter((d) => d.status === 'document.production')
     const doc = (production[0] ?? docs[0]) as Record<string, unknown> | undefined
@@ -709,13 +724,16 @@ function shouldIncludeParcelRuleFeature(
   ) {
     return duUrbanismRuleFeatureVisible(feature, ficheApi, lookup)
   }
-  if (section === 'sup' || section === 'scot') {
+  if (section === 'sup') {
+    return true
+  }
+  if (section === 'scot') {
     const props = feature.properties ?? {}
     if (!ficheApi) return false
     if (documentFeatureInGpuSite(props, lookup)) return true
     const partition = coerceDisplayString(props.partition)
-    if (partition && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup)) return true
-    return false
+    if (!partition) return false
+    return partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup)
   }
   return true
 }
@@ -817,17 +835,14 @@ export function buildParcelDocumentsHtmlFromFiche(
   const documentFeatures = all.filter((f) => classifyFeature(f) === 'document')
   const scotFeatures = all.filter((f) => classifyFeature(f) === 'scot')
   const mecFeatures = all.filter((f) => classifyFeature(f) === 'mec')
-  const hasSupOnParcel = all.some((f) => classifyFeature(f) === 'sup')
+  const supOnParcel = all.filter((f) => classifyFeature(f) === 'sup')
   const mecCatalogVisible = isFicheDocumentFamilyVisible('mec')
   const blockedParents = mecCatalogVisible
     ? blockedParentPartitionsFromMecFeatures(mecFeatures)
     : new Set<string>()
 
   const parts: string[] = []
-  if (
-    documentFeatures.some((f) => documentFeatureIsNonExecutoire(f, lookup)) ||
-    (ficheApi && buildParcelDocumentsPresentationHtml(ficheApi).includes('ec-fiche-info__callout'))
-  ) {
+  if (documentFeatures.some((f) => documentFeatureIsNonExecutoire(f, lookup))) {
     parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML)
   }
   const duTiles = isFicheDocumentFamilyVisible('du')
@@ -839,7 +854,7 @@ export function buildParcelDocumentsHtmlFromFiche(
       ]
     : []
   const supTiles = isFicheDocumentFamilyVisible('sup')
-    ? buildSupDocumentTiles(ficheApi, hasSupOnParcel)
+    ? buildSupDocumentTiles(ficheApi, supOnParcel)
     : []
   const scotTiles = isFicheDocumentFamilyVisible('scot')
     ? buildScotDocumentTiles(
@@ -853,8 +868,10 @@ export function buildParcelDocumentsHtmlFromFiche(
     : []
 
   if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
-    const presentation = buildParcelDocumentsPresentationHtml(ficheApi).trim()
-    if (presentation) parts.push(presentation)
+    if (isFicheDocumentFamilyVisible('du')) {
+      const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, 'du')
+      if (duSection) parts.push(duSection)
+    }
     return parts.join('')
   }
 
@@ -872,16 +889,10 @@ export function buildParcelDocumentsHtmlFromFiche(
   if (supTiles.length) {
     parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>')
     parts.push(documentTilesListHtml(supTiles))
-  } else if (ficheApi && isFicheDocumentFamilyVisible('sup')) {
-    const supSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, 'sup')
-    if (supSection) parts.push(supSection)
   }
   if (scotTiles.length) {
     parts.push('<h3 class="ec-fiche-info__section-title">Schémas de cohérence territoriale</h3>')
     parts.push(documentTilesListHtml(scotTiles))
-  } else if (ficheApi) {
-    const scotSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, 'scot')
-    if (scotSection) parts.push(scotSection)
   }
   return parts.join('')
 }

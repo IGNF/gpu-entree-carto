@@ -58,6 +58,10 @@ describe('isGpuFicheInfoPayload', () => {
     expect(isGpuFicheInfoPayload(samplePayload)).toBe(true)
     expect(isGpuFicheInfoPayload({ title: 'x', bodyHtml: 'y' })).toBe(false)
   })
+
+  it('accepte une réponse partielle (ex. activeFamilies=sup)', () => {
+    expect(isGpuFicheInfoPayload({ sups: { PARTITION_SUP: { documents: [] } } })).toBe(true)
+  })
 })
 
 describe('ficheSelectionFromGpuApi', () => {

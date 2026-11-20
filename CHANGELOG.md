@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Fiche info (performance)** — single `GET /api/fiche-info-v2` (`scope=both`) on map click when v2 split endpoints are configured; dual-mode cherry cache and no silent `/parcelle` follow-up; repeat click or mode switch at the same point uses client cache (`apiFicheInfoPreferCombined` to force split calls).
 - **Fiche info (performance)** — mode emprise (SearchEngine) shares the combined fetch with the panel (no parallel `/territoire|/parcelle` + `scope=both`); emprise fetches aborted on the next map click.
+- **Fiche info (performance)** — catalog-driven requests: `activeFamilies` on v2 from Données checkboxes; point-level merge cache; targeted fetch when a family is enabled (`apiFicheInfoCatalogFamilies=false` loads all families).
+- **Territory fiche SUP** — catalog `sup` supplement lists all commune SUP (`municipality_sup` on gpu-site); client may add `du` when WFS municipality grid is missing.
+- **Parcel fiche SUP** — Documents/Infos show only SUP with an assiette intersecting the parcel (no territory panel / `municipality_sup` fallback).
 - **Fiche info (performance)** — sends `supersede=true` on panel fetch abort so gpu-site can drop stale WFS work sooner.
 - **Fiche info (territory)** — parcel ↔ territory switch and point cache rehydrate presentation from JSON using current catalog visibility (fixes stale “No documents at this location” after catalog sync).
 - **Fiche info API contract** — territory documents = full commune catalogue (grid + `municipality_sup` on gpu-site); parcel documents = parcel WFS intersections only; see [FicheInfoApi](./doc/FicheInfoApi.md).

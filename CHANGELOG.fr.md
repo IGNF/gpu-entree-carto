@@ -21,6 +21,9 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - **Fiche info (perf)** — un seul `GET /api/fiche-info-v2` (`scope=both`) au clic carte quand les endpoints v2 split sont configurés ; cache bi-mode au point cerise et pas de second appel silencieux `/parcelle` ; second clic ou bascule de mode sans déplacement = cache client (`apiFicheInfoPreferCombined` pour revenir au split).
 - **Fiche info (perf)** — emprise mode (SearchEngine) partage le fetch combiné avec le panneau (plus de double appel `/territoire|/parcelle` + `scope=both`) ; annulation des fetches emprise au clic suivant.
+- **Fiche info (perf)** — requêtes pilotées par le catalogue : `activeFamilies` (v2) selon les cases Données ; cache et fusion au point cerise ; requêtes ciblées à l’activation d’une famille (`apiFicheInfoCatalogFamilies=false` pour tout charger).
+- **Fiche territoire SUP** — complément catalogue `sup` : liste communale complète (`municipality_sup`) via gpu-site + inclure `du` côté client si le maillage WFS manque.
+- **Fiche parcelle SUP** — onglet Documents / Infos : uniquement les SUP dont une assiette intersecte la parcelle (plus de repli panneau territoire / `municipality_sup`).
 - **Fiche info (perf)** — `supersede=true` (gpu-site) envoyé lors de l’annulation du fetch panneau pour couper plus tôt les requêtes WFS Symfony.
 - **Fiche info (territoire)** — bascule parcelle ↔ territoire et cache point : recomposer la présentation depuis le JSON selon le catalogue (évite « Aucun document… » figé tant que les cases données n’avaient pas encore été synchronisées).
 - **Contrat API fiche info** — documents territoire = catalogue communal complet (maillage + `municipality_sup` côté gpu-site) ; documents parcelle = intersections WFS parcelle uniquement ; voir [FicheInfoApi](./doc/FicheInfoApi.fr.md).

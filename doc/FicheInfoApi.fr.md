@@ -24,6 +24,7 @@ Legacy : `GET /api/fiche-info` avec `mode`, `includeParcel`, paramètres preview
 | `apiFicheInfoParcelleUrl` | Surcharge endpoint parcelle |
 | `apiFicheInfoCombinedUrl` | Endpoint combiné v2 |
 | `apiFicheInfoPreferCombined` | `false` pour forcer les appels split `/territoire` et `/parcelle` (défaut : combiné si v2) |
+| `apiFicheInfoCatalogFamilies` | `false` pour désactiver le filtrage `activeFamilies` piloté par le catalogue (défaut : `true` en v2) |
 
 Les chemins relatifs se résolvent par rapport à l’hôte du script gpu-client-config (`configUrls.ts`).
 
@@ -70,6 +71,7 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 
 - Plus de repli APICarto dans le navigateur.
 - **Clic carte** : si v2 est configuré (`apiFicheInfoTerritoireUrl` / `apiFicheInfoParcelleUrl` ou URL racine v2), un seul `GET` sur `apiFicheInfoCombinedUrl` (`scope=both`) remplit le cache territoire **et** parcelle au point cerise ; pas d’enrichissement silencieux `/parcelle` dans ce cas.
+- **Catalogue** : les cases Données (DU/PSMV/MEC → `du`, SUP, SCoT) sont envoyées en `activeFamilies[]` ; au même point, seules les familles nouvellement cochées déclenchent un complément réseau (fusion JSON locale).
 - **Split** : avec `apiFicheInfoPreferCombined = false`, appels par mode ; en territoire, second appel `/parcelle` (ou cache) pour les métadonnées parcelle du CTA retour.
 - **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
 - Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).

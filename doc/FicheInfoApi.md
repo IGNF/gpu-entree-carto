@@ -24,6 +24,7 @@ Legacy: `GET /api/fiche-info` with `mode`, `includeParcel`, preview params (`fic
 | `apiFicheInfoParcelleUrl` | Override parcel endpoint |
 | `apiFicheInfoCombinedUrl` | Combined v2 endpoint |
 | `apiFicheInfoPreferCombined` | `false` to force split `/territoire` and `/parcelle` calls (default: combined when v2 is configured) |
+| `apiFicheInfoCatalogFamilies` | `false` to disable catalog-driven `activeFamilies` filtering (default: `true` with v2) |
 
 Relative paths resolve against the gpu-client-config script host (`configUrls.ts`).
 
@@ -70,6 +71,7 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 
 - No APICarto fallback in the browser.
 - **Map click**: when v2 split endpoints are configured, a single `GET` on `apiFicheInfoCombinedUrl` (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
+- **Catalog**: Données checkboxes (DU/PSMV/MEC → `du`, SUP, SCoT) are sent as `activeFamilies[]`; at the same point, only newly enabled families trigger an incremental network fetch (local JSON merge).
 - **Split** (`apiFicheInfoPreferCombined = false`): per-mode requests; territory still may call `/parcelle` silently for the back-to-parcel CTA metadata.
 - **Parcel — Infos** — zoning, prescriptions, and information rules are shown only when the partition’s document is **in production** in the fiche-info API (same rule as Document tiles).
 - **Per-mode** cache at the cherry point (`ficheInfoService.ts`); repeat click or mode switch at the same point uses cache (no refetch).
