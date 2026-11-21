@@ -34,12 +34,12 @@ npm ls --depth=0
 | ------ | ----------------- | ---- |
 | `@eslint/js`, `eslint`, `eslint-plugin-vue`, `typescript-eslint`, `vue-eslint-parser`, `eslint-config-prettier` | voir `npm ls` | Lint (config flat dans `eslint.config.js`) |
 | `@vitejs/plugin-vue` | 6.0.x | Build Vue (Vite) |
-| `@vue/test-utils` | 2.5.x | Tests composants |
+| `@vue/test-utils` | 2.6.x | Tests composants |
 | `@types/dompurify`, `@types/node` | — | Types TypeScript |
 | `globals` | 17.14.x | ESLint flat config |
 | `husky` | 9.x | Hooks Git (pre-commit) |
 | `jsdom` | 31.x | Environnement Vitest |
-| `prettier` | 3.9.x | Formatage |
+| `prettier` | 3.10.x | Formatage |
 | `typescript` | 5.7.x | Typage statique |
 | `vite` | 6.4.x | Bundler / serveur de dev |
 | `vitest` | 4.1.x | Tests unitaires |
