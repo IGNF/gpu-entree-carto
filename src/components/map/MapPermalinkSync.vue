@@ -30,7 +30,10 @@ import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { tryUseMapMode } from '@/composables/mapMode'
 import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
-import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
+import {
+  searchEngineLayerHostRef,
+  syncModeEmpriseToSearchLayer,
+} from '@/lib/map/searchResultGraphics'
 
 const props = withDefaults(
   defineProps<{
@@ -165,6 +168,11 @@ watch(mapPermalinkLayersBridgeRef, () => {
 })
 
 watch(searchEngineLayerHostRef, () => {
+  const marker = readMapPermalinkMarker(getMapPermalinkParams())
+  if (marker) {
+    const mode = mapMode?.mode.value ?? 2
+    syncModeEmpriseToSearchLayer(marker.lon, marker.lat, mode)
+  }
   if (!cherryEmpriseFocusPending) return
   const map = mapRef.value
   if (map) void syncCherryEmpriseFocusFromPermalink(map)

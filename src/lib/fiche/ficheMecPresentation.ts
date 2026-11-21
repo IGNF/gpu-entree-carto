@@ -1,16 +1,9 @@
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
-import {
-  documentTileHrefFromApiFields,
-  documentTilesListHtml,
-  procedureTileHtml,
-} from '@/lib/fiche/ficheDocumentTiles'
+import { documentTilesListHtml, procedureTileHtml } from '@/lib/fiche/ficheDocumentTiles'
 import { resolveMecDocumentTileHref } from '@/lib/fiche/ficheGpuSiteUrls'
-import {
-  isFicheMecTerritoryPartitionCatalogVisible,
-  isFicheProcedureVisibleForDocumentKey,
-} from '@/lib/fiche/ficheProcedureCatalogFamilies'
+import { isFicheMecTerritoryPartitionCatalogVisible } from '@/lib/fiche/ficheProcedureCatalogFamilies'
 
 export const MEC_DOCUMENT_NOTICE =
   'Une ou plusieurs zones de ce document ont été modifiées par une procédure de mise en compatibilité.'
@@ -197,30 +190,15 @@ export function buildMecTerritoryProceduresHtml(data: GpuFicheInfoPayload): stri
     }
   }
 
-  const pbd = data.proceduresByDocument ?? {}
-  for (const [docName, list] of Object.entries(pbd)) {
-    if (!/^MEC_/i.test(docName)) continue
-    for (const procedure of list) {
-      if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue
-      const title =
-        procedure.name?.trim() ||
-        procedure.procedureType?.title?.trim() ||
-        procedure.documentName?.trim() ||
-        'Procédure MEC'
-      tiles.push(
-        procedureTileHtml({
-          title,
-          href: documentTileHrefFromApiFields({
-            id: procedure.id,
-            viewUrl: procedure.files?.[0]?.url,
-          }),
-          inProgress: procedure.inProgress !== false,
-          detailLine: null,
-        }),
-      )
-    }
-  }
-
   if (!tiles.length) return ''
-  return documentTilesListHtml(tiles)
+  const seenIds = new Set<string>()
+  const unique: string[] = []
+  for (const tile of tiles) {
+    const match = tile.match(/\/document\/([a-f0-9]{32})/i)
+    const key = match?.[1]?.toLowerCase() ?? tile
+    if (seenIds.has(key)) continue
+    seenIds.add(key)
+    unique.push(tile)
+  }
+  return documentTilesListHtml(unique)
 }

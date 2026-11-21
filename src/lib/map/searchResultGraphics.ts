@@ -6,13 +6,20 @@ import type { Extent } from 'ol/extent'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Map from 'ol/Map'
 import type { Feature as GeoJsonFeature } from 'geojson'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  readMapModeFromPermalinkParams,
+  type MapModeId,
+} from '@/lib/map/mapMode'
+import { getMapPermalinkParams } from '@/lib/map/mapPermalink'
 import {
   fetchGpuFicheInfoCombinedPayload,
   fetchGpuFicheInfoPayload,
 } from '@/lib/fiche/ficheInfoFetch'
 import { preferFicheInfoV2CombinedFetch } from '@/lib/fiche/ficheInfoApiUrls'
 import { resolveFicheInfoActiveFamiliesForFetch } from '@/lib/fiche/ficheActiveFamilies'
+import { resolveFicheInfoActiveSupTypesForFetch } from '@/lib/fiche/ficheActiveSupTypes'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import { modeEmprisePartsFromFichePayload } from '@/lib/map/modeEmpriseFromFiche'
 import { whenGpuClientConfigReady } from '@/lib/demo/gpuClientConfigState'
@@ -181,16 +188,26 @@ function fetchEmpriseFichePayload(
   zoom: number,
 ): Promise<GpuFicheInfoPayload | null> {
   const activeFamilies = resolveFicheInfoActiveFamiliesForFetch()
+  const activeSupTypes = resolveFicheInfoActiveSupTypesForFetch()
   if (preferFicheInfoV2CombinedFetch()) {
     return fetchGpuFicheInfoCombinedPayload({
       lon,
       lat,
       zoom,
       activeFamilies,
+      activeSupTypes,
       fetchRole: 'background',
     })
   }
-  return fetchGpuFicheInfoPayload({ lon, lat, zoom, mode, activeFamilies, fetchRole: 'background' })
+  return fetchGpuFicheInfoPayload({
+    lon,
+    lat,
+    zoom,
+    mode,
+    activeFamilies,
+    activeSupTypes,
+    fetchRole: 'background',
+  })
 }
 
 /** Remplit le cache emprise (2 modes) après un GET v2 combiné — évite un second fetch réseau. */
@@ -326,4 +343,21 @@ export async function ensureModeEmpriseForMapPointAsync(
   if (!host) return null
   await ensureModeEmpriseOnSearchLayer(host, lon, lat, mode, targetKey)
   return modeEmpriseViewExtent(host)
+}
+
+/**
+ * Réaffiche l’emprise rouge après chargement fiche (cache geometries) ou quand la couche SearchEngine est prête.
+ */
+export function syncModeEmpriseToSearchLayer(lon: number, lat: number, mode?: MapModeId): void {
+  const host = searchEngineLayerHostRef.value
+  if (!host) return
+  const resolvedMode =
+    mode ?? readMapModeFromPermalinkParams(getMapPermalinkParams()) ?? MAP_MODE_TERRITORY
+  void ensureModeEmpriseOnSearchLayer(
+    host,
+    lon,
+    lat,
+    resolvedMode,
+    empriseTargetKeyForModeFocus(lon, lat),
+  )
 }

@@ -28,9 +28,11 @@ function fichePayloadInflightKey(
   zoom: number,
   mode: MapModeId | 'combined',
   activeFamilies?: string[],
+  activeSupTypes?: string[] | null,
 ): string {
   const families = activeFamilies?.length ? [...activeFamilies].sort().join(',') : 'all'
-  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}|${families}`
+  const supTypes = activeSupTypes?.length ? [...activeSupTypes].sort().join(',') : 'all-sup'
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}|${families}|${supTypes}`
 }
 
 export type FicheInfoFetchRole = 'panel' | 'background'
@@ -103,6 +105,7 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   lat: number
   zoom: number
   activeFamilies?: string[]
+  activeSupTypes?: string[] | null
   abortSignal?: AbortSignal
   fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
@@ -116,6 +119,7 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
     params.zoom,
     'combined',
     params.activeFamilies,
+    params.activeSupTypes,
   )
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
@@ -143,6 +147,7 @@ export async function fetchGpuFicheInfoPayload(params: {
   zoom: number
   mode: MapModeId
   activeFamilies?: string[]
+  activeSupTypes?: string[] | null
   abortSignal?: AbortSignal
   /** Emprise carte, enrichissement silencieux : n’annule pas le fetch panneau en cours. */
   fetchRole?: FicheInfoFetchRole
@@ -155,6 +160,7 @@ export async function fetchGpuFicheInfoPayload(params: {
     params.zoom,
     params.mode,
     params.activeFamilies,
+    params.activeSupTypes,
   )
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
@@ -188,7 +194,14 @@ async function fetchGpuFicheInfoPayloadImpl(
 
 async function fetchGpuFicheInfoPayloadFromUrl(
   fetchBase: string,
-  params: { lon: number; lat: number; zoom: number; mode: MapModeId; activeFamilies?: string[] },
+  params: {
+    lon: number
+    lat: number
+    zoom: number
+    mode: MapModeId
+    activeFamilies?: string[]
+    activeSupTypes?: string[] | null
+  },
   signal: AbortSignal,
 ): Promise<GpuFicheInfoPayload | null> {
   const resolved = resolveConfigUrlForFetch(fetchBase)
@@ -210,8 +223,14 @@ async function fetchGpuFicheInfoPayloadFromUrl(
     url.searchParams.set('scope', 'both')
   }
 
+  const sendSessionCookies =
+    url.searchParams.get('zone') === 'validation' || url.searchParams.has('previewDocumentId')
+
   try {
-    const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
+    const res = await fetch(url.toString(), {
+      credentials: sendSessionCookies ? 'include' : 'same-origin',
+      signal,
+    })
     if (res.status === 204) return null
     if (!res.ok) return null
     const data: unknown = await res.json()

@@ -29,11 +29,11 @@ describe('filterParcelDocumentsHtmlByCatalog', () => {
     expect(out).not.toContain('>SUP<')
   })
 
-  it('ne laisse que l’intro si toutes les sections visibles sont masquées', () => {
+  it('conserve les documents DU même si dev-du est décoché (seules SUP/PSMV/MEC suivent le catalogue)', () => {
     setMapPermalinkParams({ 'dev-du': '0:0.7:0:0:1', 'dev-sup': '0:0.7:0:0:1' })
     const out = filterParcelDocumentsHtmlByCatalog(html)
     expect(out).toContain('ec-fiche-info__intro')
-    expect(out).not.toContain('Aucun document visible')
+    expect(out).toContain('Documents d’urbanisme')
     expect(out).not.toContain('Servitudes')
   })
 })

@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Parcel fiche catalogue** — parcel **Documents** DU/SCoT no longer depend on Données checkboxes; **SUP** filtered by checked layers’ `supType` (`config_layers.json`); parcel **Infos** DU rules filtered by catalogue `filterAttribute` / `filterValue` (prescriptions, etc.).
+- **Fiche info requests** — v2 sends `activeSupTypes[]` from catalogue `supType`; incremental fetch at the same cherry when new SUP categories are checked (gpu-site filters WFS / `municipality_sup`).
 - **Fiche info (performance)** — single `GET /api/fiche-info-v2` (`scope=both`) on map click when v2 split endpoints are configured; dual-mode cherry cache and no silent `/parcelle` follow-up; repeat click or mode switch at the same point uses client cache (`apiFicheInfoPreferCombined` to force split calls).
 - **Fiche info (performance)** — mode emprise (SearchEngine) shares the combined fetch with the panel (no parallel `/territoire|/parcelle` + `scope=both`); emprise fetches aborted on the next map click.
 - **Fiche info (performance)** — catalog-driven requests: `activeFamilies` on v2 from Données checkboxes; point-level merge cache; targeted fetch when a family is enabled (`apiFicheInfoCatalogFamilies=false` loads all families).
@@ -89,6 +91,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche SCoT** — territory/parcel tiles only when gpu-site document `id` matches WFS `gpu_id` at the point (no partition-only fallback); gpu-site filter + entree-carto presentation.
+- **Territory fiche MEC (gpu-site)** — additional WFS `mec` query on the commune footprint, not only the cherry point (SCoT MEC overlapping the municipality but away from the marker).
+- **Map permalink (SUP)** — partial SUP sub-layer selection is preserved on reload (permalink restore no longer checks the whole branch; parent keys omitted when children differ).
+- **Map permalink (SCoT)** — checked `onlyLegend` catalogue tiles (e.g. `dev-scot,dev-scot`) stay in the hash when other Données checkboxes change (no longer dropped when they matched LAYER_CONFIG defaults).
+- **Mode emprise (reload)** — redraw red dashed territory/parcel outline after v2 fiche load or when the SearchEngine layer mounts (permalink cherry).
+- **Territory fiche MEC (gpu-site)** — commune outline as plain WKT (`ST_AsText`) for WFS `mec`; query also when only `scot` is active (`MEC_*_scot_*` partitions).
 - **Territories (geopf)** — opening the panel no longer throws when the bottom bar also hosts `MapPrintControl` (build-time patch of `PanelManager.js` / `Widget.js` in `vite.geopfPlugins.ts`).
 - **Map print control** — DSFR/geopf button styling; mobile bottom bar slot; sketch column max-height; print modal realigned on cartes.gouv `PrintModal` (`DsfrModal`, `defineExpose` open/close, always mounted); OL clone preview kept for embed.
 - **Demo document startup** — `/map` with `DEMO_CONFIG.document` only fits extent and WMS preview (aligned with gpu-site embed); no automatic fiche tab or location cherry at bbox center.

@@ -1,6 +1,7 @@
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import { documentSupTileHtml, documentTileHrefFromApiFields } from '@/lib/fiche/ficheDocumentTiles'
 import { resolveGpuSiteNavigationUrl } from '@/lib/fiche/ficheGpuSiteUrls'
+import { isSupCategoryCatalogVisible } from '@/lib/fiche/ficheCatalogLayerScope'
 import { readSupCategories, type SupCategory } from '@/lib/fiche/parcelLegendImage'
 
 type GpuFicheDocument = {
@@ -125,6 +126,7 @@ export function buildGroupedSupTabHtml(
     if (!doc) continue
     const cat = supCategoryForDocument(doc, categories)
     const key = cat?.name ?? '_other'
+    if (key !== '_other' && !isSupCategoryCatalogVisible(key)) continue
     const bucket = byCategory.get(key) ?? { category: cat, docs: [] }
     bucket.docs.push(doc)
     byCategory.set(key, bucket)

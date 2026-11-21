@@ -21,6 +21,8 @@ export interface GpuLayerConfig {
   filterAttribute?: string
   filterValue?: string[]
   filterValueLike?: string
+  /** Codes catégorie SUP (`legend_references` → config_layers, ex. AC1). */
+  supType?: string[]
   zIndex?: number | string
   path?: string
 }

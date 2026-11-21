@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
+import { setFicheCatalogFamilyVisibility } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import {
+  buildMecTerritoryProceduresHtml,
   documentNameAffectedByMec,
   documentPartitionKeyFromMecPartition,
   mecNoticeHtmlForDocumentName,
@@ -33,6 +35,40 @@ describe('mecProcedureTileHtmlFromGpuDocument', () => {
     expect(html).toContain('EN COURS DE PROCÉDURE')
     expect(html).toContain('compatibilit')
     expect(html).not.toContain('ec-fiche-info__badge--vigueur')
+  })
+})
+
+describe('buildMecTerritoryProceduresHtml', () => {
+  beforeEach(() => {
+    setFicheCatalogFamilyVisibility({
+      du: true,
+      psmv: true,
+      sup: true,
+      scot: true,
+      mec: true,
+    })
+  })
+
+  it('n’affiche qu’une tuile MEC quand proceduresByDocument répète la même partition', () => {
+    const mecId = '2e7fac47f27a0825cd0091dd1471d985'
+    const html = buildMecTerritoryProceduresHtml({
+      mecsScot: {
+        MEC_1_scot_200051183: {
+          documents: [{ id: mecId, title: 'MEC SCoT', status: 'document.production' }],
+        },
+      },
+      proceduresByDocument: {
+        MEC_1_scot_200051183: [
+          {
+            id: 'proc-1',
+            name: 'MEC SCoT',
+            inProgress: true,
+            documentName: 'MEC_1_scot_200051183',
+          },
+        ],
+      },
+    })
+    expect(html.match(/\/document\/2e7fac47f27a0825cd0091dd1471d985/gi)?.length ?? 0).toBe(1)
   })
 })
 

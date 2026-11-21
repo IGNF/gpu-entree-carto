@@ -72,6 +72,22 @@ make dev
 
 URL par défaut : http://localhost:5173/
 
+Si Vite s’arrête avec `ENOSPC` (limite **inotify** du noyau, souvent avec l’IDE et plusieurs dépôts ouverts) :
+
+1. **Recommandé (Linux)** — augmenter la limite (session admin) :
+
+   ```bash
+   echo fs.inotify.max_user_watches=524288 | sudo tee /etc/sysctl.d/99-inotify.conf
+   sudo sysctl --system
+   ```
+
+2. **Contournement** — surveillance par polling (un peu plus lent) :
+
+   ```bash
+   make dev-polling
+   # équivalent : npm run dev:polling
+   ```
+
 Configuration démo sans rebuild : `public/js/demo-config.js` → `window.DEMO_CONFIG` ([doc/DemoConfig.md](doc/DemoConfig.md)).
 
 ## Compilation

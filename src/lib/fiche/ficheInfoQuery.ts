@@ -73,7 +73,13 @@ export function getActivePreviewDocument(): StandardViewerDocument | null {
 
 export function appendFicheInfoQueryParams(
   url: URL,
-  params: { lon: number; lat: number; zoom: number; activeFamilies?: string[] },
+  params: {
+    lon: number
+    lat: number
+    zoom: number
+    activeFamilies?: string[]
+    activeSupTypes?: string[] | null
+  },
 ): void {
   url.searchParams.set('lon', String(params.lon))
   url.searchParams.set('lat', String(params.lat))
@@ -99,6 +105,13 @@ export function appendFicheInfoQueryParams(
   if (families?.length) {
     for (const family of families) {
       url.searchParams.append('activeFamilies[]', family)
+    }
+  }
+
+  const supTypes = params.activeSupTypes?.filter(Boolean)
+  if (supTypes?.length) {
+    for (const code of supTypes) {
+      url.searchParams.append('activeSupTypes[]', code.trim().toUpperCase())
     }
   }
 }

@@ -19,6 +19,8 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Modifié
 
+- **Fiche parcelle / catalogue** — onglet **Documents** : DU et SCoT indépendants des cases Données ; **SUP** filtrée par `supType` des couches cochées (`config_layers.json`) ; onglet **Infos** : règles DU filtrées par `filterAttribute` / `filterValue` du catalogue (prescriptions, etc.).
+- **Requêtes fiche info** — v2 envoie `activeSupTypes[]` depuis le `supType` catalogue ; complément au même point cerise lors du cochage de nouvelles catégories SUP (filtrage WFS / `municipality_sup` côté gpu-site).
 - **Fiche info (perf)** — un seul `GET /api/fiche-info-v2` (`scope=both`) au clic carte quand les endpoints v2 split sont configurés ; cache bi-mode au point cerise et pas de second appel silencieux `/parcelle` ; second clic ou bascule de mode sans déplacement = cache client (`apiFicheInfoPreferCombined` pour revenir au split).
 - **Fiche info (perf)** — emprise mode (SearchEngine) partage le fetch combiné avec le panneau (plus de double appel `/territoire|/parcelle` + `scope=both`) ; annulation des fetches emprise au clic suivant.
 - **Fiche info (perf)** — requêtes pilotées par le catalogue : `activeFamilies` (v2) selon les cases Données ; cache et fusion au point cerise ; requêtes ciblées à l’activation d’une famille (`apiFicheInfoCatalogFamilies=false` pour tout charger).
@@ -89,6 +91,12 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Fiche SCoT** — affichage uniquement si l’`id` document BDD = `gpu_id` WFS au point (plus de rapprochement par seule partition `scot_*`), côté gpu-site et entree-carto.
+- **Fiche MEC territoire (gpu-site)** — WFS `mec` sur l’emprise communale en complément du point cerise (MEC SCoT recouvrant la commune mais hors clic).
+- **Permalink carte (SUP)** — sélection partielle des sous-couches SUP conservée au rechargement (restauration sans cocher toute la branche ; clés parentes omises du hash quand les enfants diffèrent).
+- **Permalink carte (SCoT)** — tuiles catalogue `onlyLegend` (ex. `dev-scot,dev-scot`) conservées dans le hash lors d’un autre changement Données (ne plus être retirées quand l’état correspondait aux défauts LAYER_CONFIG).
+- **Emprise mode (rechargement)** — après chargement fiche-info v2 ou montage de la couche SearchEngine, réapplication de l’emprise rouge pointillée (commune / parcelle) au cerise du permalink.
+- **Fiche MEC territoire (gpu-site)** — contour communal en WKT simple (`ST_AsText`) pour le WFS `mec` ; requête aussi si seule la famille `scot` est active (filtre partitions `MEC_*_scot_*`).
 - **Territoires (geopf)** — ouverture du panneau sans `TypeError` lorsque la barre basse contient aussi `MapPrintControl` (patch build `PanelManager.js` / `Widget.js` dans `vite.geopfPlugins.ts`).
 - **Impression carte** — style bouton DSFR/geopf ; slot barre basse mobile ; hauteur colonne croquis ; modale réalignée sur cartes.gouv `PrintModal` (`DsfrModal`, `open`/`close` exposés, montage permanent) ; prévisualisation par clone OL (embed).
 - **Démarrage document (démo)** — `/map` avec `DEMO_CONFIG.document` : recentrage + WMS preview uniquement (aligné gpu-site) ; plus d’ouverture auto de la fiche ni cerise au centre de l’emprise.

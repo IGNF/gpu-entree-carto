@@ -1,5 +1,10 @@
 import { shallowRef } from 'vue'
 import { branchForCatalogSubtree } from '@/lib/layerConfig/documentCatalogVisibility'
+import {
+  resetFicheCatalogLayerScopes,
+  setFicheCatalogDuRuleScope,
+  setFicheCatalogSupTypes,
+} from '@/lib/fiche/ficheCatalogLayerScope'
 import { getMapPermalinkParams } from '@/lib/map/mapPermalink'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 
@@ -23,6 +28,11 @@ export function setFicheCatalogFamilyVisibility(
   map: Record<FicheDocumentFamily, boolean> | null,
 ): void {
   catalogFamilyVisibility = map
+  if (!map) {
+    setFicheCatalogSupTypes(null)
+    setFicheCatalogDuRuleScope(null)
+    resetFicheCatalogLayerScopes()
+  }
   ficheCatalogVisibilityRevision.value += 1
 }
 
@@ -30,7 +40,7 @@ function catalogHaystack(entry: CatalogEntryForFicheVisibility): string {
   return `${entry.path}|${entry.id}|${entry.permalinkId ?? ''}`.toLowerCase()
 }
 
-function catalogEntryMatchesFamily(
+export function catalogEntryMatchesFamily(
   entry: CatalogEntryForFicheVisibility,
   family: FicheDocumentFamily,
 ): boolean {
@@ -228,6 +238,8 @@ const PARCEL_DOCUMENTS_SECTIONS: Array<{
   { titlePattern: /Schémas de cohérence territoriale/i, family: 'scot' },
 ]
 
+const CATALOG_FILTERED_DOCUMENT_SECTIONS = new Set<FicheDocumentFamily>(['sup', 'psmv', 'mec'])
+
 function familyForDocumentsSectionTitle(title: string): FicheDocumentFamily | null {
   for (const { titlePattern, family } of PARCEL_DOCUMENTS_SECTIONS) {
     if (titlePattern.test(title)) return family
@@ -246,7 +258,13 @@ export function filterParcelDocumentsHtmlByCatalog(html: string): string {
     const title = match[1]?.trim() ?? ''
     const body = match[2] ?? ''
     const family = familyForDocumentsSectionTitle(title)
-    if (family && !isFicheDocumentFamilyVisible(family)) continue
+    if (
+      family &&
+      CATALOG_FILTERED_DOCUMENT_SECTIONS.has(family) &&
+      !isFicheDocumentFamilyVisible(family)
+    ) {
+      continue
+    }
     keptSections.push(`<h3 class="ec-fiche-info__section-title">${title}</h3>${body}`)
   }
 

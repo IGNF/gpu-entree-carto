@@ -31,6 +31,7 @@ import {
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
+  filterScotPartitionsByWfsGpuId,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
@@ -400,7 +401,10 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     })
   }
 
-  const scots = normalizePartitionsMap(data.scots)
+  const scots = filterScotPartitionsByWfsGpuId(
+    normalizePartitionsMap(data.scots),
+    isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : undefined,
+  )
   if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible('scot')) {
     const bodyHtml = buildDuTabTilesHtml(scots, data)
     tabs.push({
@@ -411,12 +415,12 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   }
 
   const inProgress = collectInProgressProcedures(proceduresByDocument)
-  const mecProcedures = collectMecProcedures(proceduresByDocument)
+  const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
+  const mecProcedures = mecProceduresHtml ? [] : collectMecProcedures(proceduresByDocument)
   const procedureTiles = [...inProgress]
   for (const mecProc of mecProcedures) {
     if (!procedureTiles.some((p) => p.id === mecProc.id)) procedureTiles.push(mecProc)
   }
-  const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
   if (procedureTiles.length || mecProceduresHtml) {
     let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : ''
     if (mecProceduresHtml) bodyHtml += mecProceduresHtml

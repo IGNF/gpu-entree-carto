@@ -436,7 +436,7 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
     expect(html).toContain('ec-fiche-info__callout')
   })
 
-  it('SCoT parcelle : une tuile gpu-site avec lien (partition WFS)', () => {
+  it('SCoT parcelle : une tuile seulement si gpu_id WFS = id document BDD', () => {
     const gpuId = '75320666e060cde9d822dc388522604d'
     const ficheApi: GpuFicheInfoPayload = {
       scots: {
@@ -474,7 +474,7 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
             id: 'scot.4799',
             properties: {
               partition: 'scot_200051183',
-              gpu_id: '2e7fac47f27a0825cd0091dd1471d985',
+              gpu_id: gpuId,
               name: 'scot_200051183',
               title: 'SCOT CAEN METROPOLE',
             },
@@ -499,6 +499,38 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
     expect(html.split('Schéma de Cohérence Territorial (SCoT) CAEN METROPOLE').length - 1).toBe(1)
     expect(html).toContain('ec-fiche-info__mec-notice')
     expect(html).toContain('mise en compatibilit')
+  })
+
+  it('SCoT parcelle : pas de tuile si gpu_id WFS ≠ id document BDD', () => {
+    const ficheApi: GpuFicheInfoPayload = {
+      scots: {
+        scot_200051183: {
+          documents: [
+            {
+              id: '1e30ef3ade30fcbded0a16648a39432d',
+              name: 'scot_200051183',
+              title: 'SCoT',
+              status: 'document.production',
+            },
+          ],
+        },
+      },
+    }
+    const html = buildParcelDocumentsHtmlFromFiche(
+      {
+        features: [
+          {
+            id: 'scot.4799',
+            properties: {
+              partition: 'scot_200051183',
+              gpu_id: '2e7fac47f27a0825cd0091dd1471d985',
+            },
+          },
+        ],
+      },
+      ficheApi,
+    )
+    expect(html).not.toContain('Schémas de cohérence territoriale')
   })
 
   it('ignore les features WFS sans entrée gpu-site', () => {

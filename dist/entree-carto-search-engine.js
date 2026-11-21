@@ -1765,7 +1765,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   function toDegrees(angleInRadians) {
     return angleInRadians * 180 / Math.PI;
   }
-  function toRadians(angleInDegrees) {
+  function toRadians$1(angleInDegrees) {
     return angleInDegrees * Math.PI / 180;
   }
   function modulo(a, b) {
@@ -2337,8 +2337,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   const DEFAULT_RADIUS = 63710088e-1;
   function offset(c1, distance, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians(c1[1]);
-    const lon1 = toRadians(c1[0]);
+    const lat1 = toRadians$1(c1[1]);
+    const lon1 = toRadians$1(c1[0]);
     const dByR = distance / radius;
     const lat = Math.asin(
       Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(bearing)
@@ -2678,7 +2678,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     const latitude = pRad - pTan / r * (d2 / 2 - d4 / 24 * (5 + 3 * pTan2 + 10 * c - 4 * c2 - 9 * E_P2)) + d6 / 720 * (61 + 90 * pTan2 + 298 * c + 45 * pTan4 - 252 * E_P2 - 3 * c2);
     let longitude = (d - d3 / 6 * (1 + 2 * pTan2 + c) + d5 / 120 * (5 - 2 * c + 28 * pTan2 - 3 * c2 + 8 * E_P2 + 24 * pTan4)) / pCos;
     longitude = wrap(
-      longitude + toRadians(zoneToCentralLongitude(zone.number)),
+      longitude + toRadians$1(zoneToCentralLongitude(zone.number)),
       -Math.PI,
       Math.PI
     );
@@ -2695,15 +2695,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     } else if (latitude > MAX_LATITUDE) {
       latitude = MAX_LATITUDE;
     }
-    const latRad = toRadians(latitude);
+    const latRad = toRadians$1(latitude);
     const latSin = Math.sin(latRad);
     const latCos = Math.cos(latRad);
     const latTan = latSin / latCos;
     const latTan2 = latTan * latTan;
     const latTan4 = latTan2 * latTan2;
-    const lonRad = toRadians(longitude);
+    const lonRad = toRadians$1(longitude);
     const centralLon = zoneToCentralLongitude(zone.number);
-    const centralLonRad = toRadians(centralLon);
+    const centralLonRad = toRadians$1(centralLon);
     const n = R / Math.sqrt(1 - E * latSin ** 2);
     const c = E_P2 * latCos ** 2;
     const a = latCos * wrap(lonRad - centralLonRad, -Math.PI, Math.PI);
@@ -5393,7 +5393,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     );
   }
   function createSnapToZero(tolerance) {
-    const t = toRadians(5);
+    const t = toRadians$1(5);
     return (
       /**
        * @param {number|undefined} rotation Rotation.
@@ -19077,7 +19077,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       );
       this.set(
         Property.HEADING,
-        coords.heading === null ? void 0 : toRadians(coords.heading)
+        coords.heading === null ? void 0 : toRadians$1(coords.heading)
       );
       if (!this.position_) {
         this.position_ = [coords.longitude, coords.latitude];
@@ -30278,7 +30278,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.17 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.17/LICENSE */
+  /*! @license DOMPurify 3.4.18 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.18/LICENSE */
   function _arrayLikeToArray(r, a) {
     (null == a || a > r.length) && (a = r.length);
     for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -30321,6 +30321,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
   }
   const entries = Object.entries;
+  const objectKeys = Object.keys;
   const setPrototypeOf = Object.setPrototypeOf;
   const isFrozen = Object.isFrozen;
   const getPrototypeOf = Object.getPrototypeOf;
@@ -30367,11 +30368,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   const symbolToString = typeof Symbol === "undefined" ? null : unapply(Symbol.prototype.toString);
   const objectHasOwnProperty = unapply(Object.prototype.hasOwnProperty);
   const objectToString = unapply(Object.prototype.toString);
-  const regExpTest = unapply(RegExp.prototype.test);
+  const regExpTestRaw = RegExp.prototype.test;
+  const regExpTest = function regExpTest2(regExp, value2) {
+    if (regExp instanceof RegExp) regExp.lastIndex = 0;
+    return apply(regExpTestRaw, regExp, [value2]);
+  };
   const typeErrorCreate = unconstruct(TypeError);
   function unapply(func) {
     return function(thisArg) {
-      if (thisArg instanceof RegExp) thisArg.lastIndex = 0;
       for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) args[_key3 - 1] = arguments[_key3];
       return apply(func, thisArg, args);
     };
@@ -30417,6 +30421,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
     }
     return newObject;
+  }
+  function cloneSet(set) {
+    const newSet = create(null);
+    const keys = objectKeys(set);
+    let l = keys.length;
+    while (l--) newSet[keys[l]] = set[keys[l]];
+    return newSet;
   }
   function stringifyValue(value2) {
     switch (typeof value2) {
@@ -30470,6 +30481,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     return null;
   }
   function isRegex(value2) {
+    if (!value2) return false;
     try {
       regExpTest(value2, "");
       return true;
@@ -30612,8 +30624,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     "defs",
     "desc",
     "ellipse",
-    "enterkeyhint",
-    "exportparts",
     "filter",
     "font",
     "g",
@@ -30621,14 +30631,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     "glyphref",
     "hkern",
     "image",
-    "inputmode",
     "line",
     "lineargradient",
     "marker",
     "mask",
     "metadata",
     "mpath",
-    "part",
     "path",
     "pattern",
     "polygon",
@@ -31128,6 +31136,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   const MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
   const ERB_EXPR = seal(/<%[\w\W]*|^[\w\W]*%>/g);
   const TMPLIT_EXPR = seal(/\${[\w\W]*/g);
+  const TMPL_MARKER_SERIALIZED = seal(/{{|}}|\${|<%|%>|&lt;%|%&gt;/);
   const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/);
   const ARIA_ATTR = seal(/^aria-[\-\w]+$/);
   const IS_ALLOWED_URI = seal(/^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i);
@@ -31139,19 +31148,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   const COMMENT_MARKUP_PROBE = seal(/<[/\w]/g);
   const FALLBACK_TAG_CLOSE = seal(/<\/no(script|embed|frames)/i);
   const SELF_CLOSING_TAG = seal(/\/>/i);
+  const ATTR_VALUE_BREAKOUT = seal(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i);
+  const LEADING_WHITESPACE = seal(/^[\r\n\t ]+/);
   const NODE_TYPE = {
     element: 1,
-    attribute: 2,
     text: 3,
-    cdataSection: 4,
-    entityReference: 5,
-    entityNode: 6,
     processingInstruction: 7,
     comment: 8,
     document: 9,
-    documentType: 10,
-    documentFragment: 11,
-    notation: 12
+    documentFragment: 11
   };
   const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, [
     "style",
@@ -31200,16 +31205,16 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
   };
   const _resolveSetOption = function _resolveSetOption2(cfg, key2, fallback, options) {
-    return objectHasOwnProperty(cfg, key2) && arrayIsArray(cfg[key2]) ? addToSet(options.base ? clone(options.base) : {}, cfg[key2], options.transform) : fallback;
+    return objectHasOwnProperty(cfg, key2) && arrayIsArray(cfg[key2]) ? addToSet(options.base ? cloneSet(options.base) : {}, cfg[key2], options.transform) : fallback;
   };
-  const _resolveObjectOption = function _resolveObjectOption2(cfg, key2, makeFallback) {
+  const _resolveObjectOption = function _resolveObjectOption2(cfg, key2, fallback) {
     const value2 = objectHasOwnProperty(cfg, key2) ? cfg[key2] : void 0;
-    return value2 && typeof value2 === "object" ? clone(value2) : makeFallback();
+    return value2 && typeof value2 === "object" ? clone(value2) : fallback;
   };
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.17";
+    DOMPurify.version = "3.4.18";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -31218,11 +31223,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     let document2 = window2.document;
     const originalDocument = document2;
     const currentScript = originalDocument.currentScript;
-    window2.DocumentFragment;
-    const HTMLTemplateElement = window2.HTMLTemplateElement, Node = window2.Node, Element = window2.Element, NodeFilter = window2.NodeFilter;
-    window2.NamedNodeMap === void 0 && (window2.NamedNodeMap || window2.MozNamedAttrMap);
-    window2.HTMLFormElement;
-    const DOMParser = window2.DOMParser, trustedTypes = window2.trustedTypes;
+    const HTMLTemplateElement = window2.HTMLTemplateElement, Node = window2.Node, Element = window2.Element, NodeFilter = window2.NodeFilter, DOMParser = window2.DOMParser, trustedTypes = window2.trustedTypes;
     const ElementPrototype = Element.prototype;
     const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
     const remove = lookupGetter(ElementPrototype, "remove");
@@ -31266,6 +31267,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         IN_TRUSTED_TYPES_POLICY--;
       }
     };
+    const _signOutput = function _signOutput2(html2) {
+      return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(html2) : html2;
+    };
     const _createTrustedScriptURL = function _createTrustedScriptURL2(scriptUrl) {
       _assertNotInTrustedTypesPolicy();
       IN_TRUSTED_TYPES_POLICY++;
@@ -31303,26 +31307,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       ...mathMl,
       ...xml
     ]);
-    let CUSTOM_ELEMENT_HANDLING = Object.seal(create(null, {
-      tagNameCheck: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: null
-      },
-      attributeNameCheck: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: null
-      },
-      allowCustomizedBuiltInElements: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: false
-      }
-    }));
+    let CUSTOM_ELEMENT_HANDLING = null;
     let FORBID_TAGS = null;
     let FORBID_ATTR = null;
     const EXTRA_ELEMENT_HANDLING = Object.seal(create(null, {
@@ -31359,7 +31344,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     let KEEP_CONTENT = true;
     let IN_PLACE = false;
     let IN_PLACE_VISITED = null;
-    let USE_PROFILES = {};
+    let USE_PROFILES = false;
     let FORBID_CONTENTS = null;
     const DEFAULT_FORBID_CONTENTS = addToSet({}, [
       "annotation-xml",
@@ -31426,16 +31411,17 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       SVG_NAMESPACE,
       HTML_NAMESPACE
     ], stringToString);
-    const DEFAULT_MATHML_TEXT_INTEGRATION_POINTS = freeze([
+    const DEFAULT_MATHML_TEXT_INTEGRATION_POINTS = freeze(addToSet({}, [
       "mi",
       "mo",
       "mn",
       "ms",
       "mtext"
-    ]);
-    let MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
-    const DEFAULT_HTML_INTEGRATION_POINTS = freeze(["annotation-xml"]);
-    let HTML_INTEGRATION_POINTS = addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS);
+    ]));
+    let MATHML_TEXT_INTEGRATION_POINTS = null;
+    const DEFAULT_HTML_INTEGRATION_POINTS = freeze(addToSet({}, ["annotation-xml"]));
+    let HTML_INTEGRATION_POINTS = null;
+    const DEFAULT_CUSTOM_ELEMENT_HANDLING = freeze(create(null));
     const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, [
       "title",
       "style",
@@ -31454,7 +31440,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _parseConfig = function _parseConfig2() {
       let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-      if (CONFIG && CONFIG === cfg) return;
       if (!cfg || typeof cfg !== "object") cfg = {};
       cfg = clone(cfg);
       PARSER_MEDIA_TYPE = SUPPORTED_PARSER_MEDIA_TYPES.indexOf(cfg.PARSER_MEDIA_TYPE) === -1 ? DEFAULT_PARSER_MEDIA_TYPE : cfg.PARSER_MEDIA_TYPE;
@@ -31471,8 +31456,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         base: DEFAULT_DATA_URI_TAGS
       });
       FORBID_CONTENTS = _resolveSetOption(cfg, "FORBID_CONTENTS", DEFAULT_FORBID_CONTENTS, { transform: transformCaseFunc });
-      FORBID_TAGS = _resolveSetOption(cfg, "FORBID_TAGS", clone({}), { transform: transformCaseFunc });
-      FORBID_ATTR = _resolveSetOption(cfg, "FORBID_ATTR", clone({}), { transform: transformCaseFunc });
+      FORBID_TAGS = _resolveSetOption(cfg, "FORBID_TAGS", create(null), { transform: transformCaseFunc });
+      FORBID_ATTR = _resolveSetOption(cfg, "FORBID_ATTR", create(null), { transform: transformCaseFunc });
       USE_PROFILES = objectHasOwnProperty(cfg, "USE_PROFILES") ? cfg.USE_PROFILES && typeof cfg.USE_PROFILES === "object" ? clone(cfg.USE_PROFILES) : cfg.USE_PROFILES : false;
       ALLOW_ARIA_ATTR = cfg.ALLOW_ARIA_ATTR !== false;
       ALLOW_DATA_ATTR = cfg.ALLOW_DATA_ATTR !== false;
@@ -31491,9 +31476,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       IN_PLACE = cfg.IN_PLACE || false;
       IS_ALLOWED_URI$1 = isRegex(cfg.ALLOWED_URI_REGEXP) ? cfg.ALLOWED_URI_REGEXP : IS_ALLOWED_URI;
       NAMESPACE = typeof cfg.NAMESPACE === "string" ? cfg.NAMESPACE : HTML_NAMESPACE;
-      MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(cfg, "MATHML_TEXT_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS));
-      HTML_INTEGRATION_POINTS = _resolveObjectOption(cfg, "HTML_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS));
-      const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", () => create(null));
+      MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(cfg, "MATHML_TEXT_INTEGRATION_POINTS", DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
+      HTML_INTEGRATION_POINTS = _resolveObjectOption(cfg, "HTML_INTEGRATION_POINTS", DEFAULT_HTML_INTEGRATION_POINTS);
+      const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", DEFAULT_CUSTOM_ELEMENT_HANDLING);
       CUSTOM_ELEMENT_HANDLING = create(null);
       if (objectHasOwnProperty(customElementHandling, "tagNameCheck") && isRegexOrFunction(customElementHandling.tagNameCheck)) CUSTOM_ELEMENT_HANDLING.tagNameCheck = customElementHandling.tagNameCheck;
       if (objectHasOwnProperty(customElementHandling, "attributeNameCheck") && isRegexOrFunction(customElementHandling.attributeNameCheck)) CUSTOM_ELEMENT_HANDLING.attributeNameCheck = customElementHandling.attributeNameCheck;
@@ -31502,6 +31487,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (SAFE_FOR_TEMPLATES) ALLOW_DATA_ATTR = false;
       if (RETURN_DOM_FRAGMENT) RETURN_DOM = true;
       if (USE_PROFILES) {
+        if ((objectHasOwnProperty(cfg, "ALLOWED_TAGS") || objectHasOwnProperty(cfg, "ALLOWED_ATTR")) && typeof console !== "undefined" && typeof console.warn === "function") console.warn("DOMPurify: USE_PROFILES overrides ALLOWED_TAGS and ALLOWED_ATTR. Do not use these options together.");
         ALLOWED_TAGS = addToSet({}, text);
         ALLOWED_ATTR = create(null);
         if (USE_PROFILES.html === true) {
@@ -31529,19 +31515,19 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (objectHasOwnProperty(cfg, "ADD_TAGS")) {
         if (typeof cfg.ADD_TAGS === "function") EXTRA_ELEMENT_HANDLING.tagCheck = cfg.ADD_TAGS;
         else if (arrayIsArray(cfg.ADD_TAGS)) {
-          if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = clone(ALLOWED_TAGS);
+          if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = cloneSet(ALLOWED_TAGS);
           addToSet(ALLOWED_TAGS, cfg.ADD_TAGS, transformCaseFunc);
         }
       }
       if (objectHasOwnProperty(cfg, "ADD_ATTR")) {
         if (typeof cfg.ADD_ATTR === "function") EXTRA_ELEMENT_HANDLING.attributeCheck = cfg.ADD_ATTR;
         else if (arrayIsArray(cfg.ADD_ATTR)) {
-          if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) ALLOWED_ATTR = clone(ALLOWED_ATTR);
+          if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) ALLOWED_ATTR = cloneSet(ALLOWED_ATTR);
           addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
         }
       }
       if (objectHasOwnProperty(cfg, "ADD_FORBID_CONTENTS") && arrayIsArray(cfg.ADD_FORBID_CONTENTS)) {
-        if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) FORBID_CONTENTS = clone(FORBID_CONTENTS);
+        if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) FORBID_CONTENTS = cloneSet(FORBID_CONTENTS);
         addToSet(FORBID_CONTENTS, cfg.ADD_FORBID_CONTENTS, transformCaseFunc);
       }
       if (KEEP_CONTENT) ALLOWED_TAGS["#text"] = true;
@@ -31551,7 +31537,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         "body"
       ]);
       if (ALLOWED_TAGS.table) {
-        addToSet(ALLOWED_TAGS, ["tbody"]);
+        ALLOWED_TAGS.tbody = true;
         delete FORBID_TAGS.tbody;
       }
       if (cfg.TRUSTED_TYPES_POLICY) {
@@ -31572,8 +31558,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (trustedTypesPolicy === void 0) trustedTypesPolicy = _getDefaultTrustedTypesPolicy();
         if (trustedTypesPolicy && typeof emptyHTML === "string") emptyHTML = _createTrustedHTML("");
       }
-      if (freeze) freeze(cfg);
-      CONFIG = cfg;
+      CONFIG = freeze(cfg);
     };
     const ALL_SVG_TAGS = addToSet({}, [
       ...svg$1,
@@ -31581,40 +31566,36 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       ...svgDisallowed
     ]);
     const ALL_MATHML_TAGS = addToSet({}, [...mathMl$1, ...mathMlDisallowed]);
-    const _checkSvgNamespace = function _checkSvgNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "svg";
-      if (parent.namespaceURI === MATHML_NAMESPACE) return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
+    const _checkSvgNamespace = function _checkSvgNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === HTML_NAMESPACE) return tagName === "svg";
+      if (parentNamespace === MATHML_NAMESPACE) return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
       return Boolean(ALL_SVG_TAGS[tagName]);
     };
-    const _checkMathMlNamespace = function _checkMathMlNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "math";
-      if (parent.namespaceURI === SVG_NAMESPACE) return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
+    const _checkMathMlNamespace = function _checkMathMlNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === HTML_NAMESPACE) return tagName === "math";
+      if (parentNamespace === SVG_NAMESPACE) return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
       return Boolean(ALL_MATHML_TAGS[tagName]);
     };
-    const _checkHtmlNamespace = function _checkHtmlNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) return false;
-      if (parent.namespaceURI === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) return false;
+    const _checkHtmlNamespace = function _checkHtmlNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) return false;
+      if (parentNamespace === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) return false;
       return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
     };
     const _checkValidNamespace = function _checkValidNamespace2(element) {
       const elementNamespace = _readNamespaceURI(element);
       const tagName = stringToLowerCase(_readNodeName(element));
       const parentNode = getParentNode(element);
-      let parent;
-      let parentTagName;
+      let parentNamespace = NAMESPACE;
+      let parentTagName = "template";
       if (parentNode && _readNodeType(parentNode) === NODE_TYPE.element) {
-        parent = { namespaceURI: _readNamespaceURI(parentNode) };
+        parentNamespace = _readNamespaceURI(parentNode);
         parentTagName = stringToLowerCase(_readNodeName(parentNode));
-      } else {
-        parent = { namespaceURI: NAMESPACE };
-        parentTagName = "template";
       }
       if (!ALLOWED_NAMESPACES[elementNamespace]) return false;
-      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
-      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
-      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
-      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[elementNamespace]) return true;
-      return false;
+      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parentNamespace, parentTagName);
+      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parentNamespace, parentTagName);
+      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parentNamespace, parentTagName);
+      return PARSER_MEDIA_TYPE === "application/xhtml+xml";
     };
     const _forceRemove = function _forceRemove2(node) {
       arrayPush(DOMPurify.removed, { element: node });
@@ -31644,12 +31625,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         } catch (_) {
         }
       });
-      const attributes = _readNodeType(root) === NODE_TYPE.element ? getAttributes(root) : null;
-      if (attributes) for (let i = attributes.length - 1; i >= 0; --i) {
-        const attribute = attributes[i];
-        const name = attribute && attribute.name;
-        if (typeof name === "string") _stripAttributeNode(root, attribute, name);
-      }
+      if (_readNodeType(root) === NODE_TYPE.element) _stripAttributes(root, false);
     };
     const _removeAttribute = function _removeAttribute2(name, element, attr) {
       if (!attr) try {
@@ -31661,14 +31637,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         attribute: attr || null,
         from: element
       });
-      try {
-        if (attr) removeAttributeNode(element, attr);
-        else element.removeAttribute(name);
+      if (attr) _stripAttributeNode(element, attr, name);
+      else try {
+        element.removeAttribute(name);
       } catch (_) {
-        try {
-          element.removeAttribute(name);
-        } catch (_2) {
-        }
       }
       if (name === "is") {
         if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
@@ -31681,14 +31653,13 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
       }
     };
-    const _stripDisallowedAttributes = function _stripDisallowedAttributes2(element) {
+    const _stripAttributes = function _stripAttributes2(element, keepAllowed) {
       const attributes = getAttributes(element);
       if (!attributes) return;
       for (let i = attributes.length - 1; i >= 0; --i) {
         const attribute = attributes[i];
         const name = attribute && attribute.name;
-        if (typeof name !== "string" || ALLOWED_ATTR[transformCaseFunc(name)]) continue;
-        _stripAttributeNode(element, attribute, name);
+        if (typeof name === "string" && !(keepAllowed && ALLOWED_ATTR[transformCaseFunc(name)])) _stripAttributeNode(element, attribute, name);
       }
     };
     const _walkTree = function _walkTree2(root, visit) {
@@ -31707,7 +31678,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _neutralizeSubtree = function _neutralizeSubtree2(root) {
       _walkTree(root, (node) => {
-        if (_readNodeType(node) === NODE_TYPE.element) _stripDisallowedAttributes(node);
+        if (_readNodeType(node) === NODE_TYPE.element) _stripAttributes(node, true);
       });
     };
     const _collectLiveNodes = function _collectLiveNodes2(root) {
@@ -31723,7 +31694,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (_readNodeType(node) === NODE_TYPE.element) setAdd(reachable, node);
       });
       arrayForEach(before, (node) => {
-        if (_readNodeType(node) === NODE_TYPE.element && !setHas(reachable, node)) _stripDisallowedAttributes(node);
+        if (_readNodeType(node) === NODE_TYPE.element && !setHas(reachable, node)) _stripAttributes(node, true);
       });
     };
     const _neutralizeDiscarded = function _neutralizeDiscarded2(root, before) {
@@ -31771,9 +31742,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       while (node = iterator.nextNode()) {
         if (!setHas(original, node) || setHas(IN_PLACE_VISITED, node)) continue;
         if (inShadow) _executeHooks(hooks.uponSanitizeShadowNode, node, null);
-        _sanitizeElements(node, root);
-        _sanitizeAttributes(node, root);
-        if (_isDocumentFragment(node.content)) _sanitizeShadowDOM2(node.content);
+        _sanitizeNode(node, root);
       }
     };
     const _markVisited = function _markVisited2(node) {
@@ -31812,7 +31781,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       let leadingWhitespace = null;
       if (FORCE_BODY) dirty = "<remove></remove>" + dirty;
       else {
-        const matches = stringMatch(dirty, /^[\r\n\t ]+/);
+        const matches = stringMatch(dirty, LEADING_WHITESPACE);
         leadingWhitespace = matches && matches[0];
       }
       if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && NAMESPACE === HTML_NAMESPACE) dirty = '<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body>' + dirty + "</body></html>";
@@ -31834,8 +31803,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return WHOLE_DOCUMENT ? doc.documentElement : body;
     };
     const _createNodeIterator = function _createNodeIterator2(root) {
+      let characterDataOnly = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : false;
       const doc = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
-      return createNodeIterator.call(doc || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
+      return createNodeIterator.call(doc || root, root, (characterDataOnly ? 0 : NodeFilter.SHOW_ELEMENT) | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
     };
     const _stripTemplateExpressions = function _stripTemplateExpressions2(value2) {
       value2 = stringReplace(value2, MUSTACHE_EXPR$1, " ");
@@ -31853,8 +31823,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _scrubOwnCharacterData = function _scrubOwnCharacterData2(node) {
       node.normalize();
-      const doc = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
-      const walker = createNodeIterator.call(doc || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
+      const walker = _createNodeIterator(node, true);
       let currentNode = walker.nextNode();
       while (currentNode) {
         currentNode.data = _stripTemplateExpressions(currentNode.data);
@@ -31867,21 +31836,20 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (transformCaseFunc(realTagName) !== "form") return false;
       return typeof element.nodeName !== "string" || typeof element.textContent !== "string" || typeof element.removeChild !== "function" || element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || typeof element.removeAttributeNode !== "function" || typeof element.getAttributeNode !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || element.nodeType !== getNodeType(element) || element.childNodes !== getChildNodes(element);
     };
-    const _isDocumentFragment = function _isDocumentFragment2(value2) {
-      if (!getNodeType || typeof value2 !== "object" || value2 === null) return false;
+    const _nodeTypeOf = function _nodeTypeOf2(value2) {
+      if (!getNodeType || typeof value2 !== "object" || value2 === null) return null;
       try {
-        return getNodeType(value2) === NODE_TYPE.documentFragment;
+        const nodeType = getNodeType(value2);
+        return typeof nodeType === "number" ? nodeType : null;
       } catch (_) {
-        return false;
+        return null;
       }
     };
+    const _isDocumentFragment = function _isDocumentFragment2(value2) {
+      return _nodeTypeOf(value2) === NODE_TYPE.documentFragment;
+    };
     const _isNode = function _isNode2(value2) {
-      if (!getNodeType || typeof value2 !== "object" || value2 === null) return false;
-      try {
-        return typeof getNodeType(value2) === "number";
-      } catch (_) {
-        return false;
-      }
+      return _nodeTypeOf(value2) !== null;
     };
     function _executeHooks(hooks2, currentNode, data) {
       if (hooks2.length === 0) return;
@@ -31889,11 +31857,11 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         hook.call(DOMPurify, currentNode, data, CONFIG);
       });
     }
-    const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName) {
-      if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
-      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && _readNodeType(currentNode) === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
-      if (currentNode.nodeType === NODE_TYPE.processingInstruction) return true;
-      if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
+    const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName, nodeType) {
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.element && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
+      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && nodeType === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
+      if (nodeType === NODE_TYPE.processingInstruction) return true;
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
       return false;
     };
     const _matchesNameCheck = function _matchesNameCheck2(check, name) {
@@ -31922,7 +31890,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     };
     const _forkSharedAllowlist = function _forkSharedAllowlist2(hookList, set, defaultSet, setConfigSet) {
       if (hookList.length === 0) return set;
-      return set === defaultSet || set === setConfigSet ? clone(set) : set;
+      return set === defaultSet || set === setConfigSet ? cloneSet(set) : set;
     };
     const _handleHookDetachedNode = function _handleHookDetachedNode2(currentNode, root) {
       if (currentNode === root || getParentNode(currentNode) !== null) return false;
@@ -31938,13 +31906,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return true;
       }
       const tagName = transformCaseFunc(_readNodeName(currentNode));
+      const nodeType = _readNodeType(currentNode);
       ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
       _executeHooks(hooks.uponSanitizeElement, currentNode, {
         tagName,
         allowedTags: ALLOWED_TAGS
       });
       if (_handleHookDetachedNode(currentNode, root)) return true;
-      if (_isUnsafeNode(currentNode, tagName)) {
+      if (_isUnsafeNode(currentNode, tagName, nodeType)) {
         _forceRemove(currentNode);
         return true;
       }
@@ -31956,7 +31925,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         return removed;
       }
-      if (_readNodeType(currentNode) === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
+      if (nodeType === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
         _forceRemove(currentNode);
         return true;
       }
@@ -31964,9 +31933,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         _forceRemove(currentNode);
         return true;
       }
-      if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
-        const content = _stripTemplateExpressions(currentNode.textContent);
-        if (currentNode.textContent !== content) {
+      if (SAFE_FOR_TEMPLATES && nodeType === NODE_TYPE.text) {
+        const text2 = currentNode.textContent;
+        const content = _stripTemplateExpressions(text2);
+        if (text2 !== content) {
           arrayPush(DOMPurify.removed, { element: currentNode.cloneNode() });
           currentNode.textContent = content;
         }
@@ -31983,9 +31953,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) return true;
       if (!nameIsPermitted) return _isBasicCustomElement(lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName, lcTag) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value2);
       if (URI_SAFE_ATTRIBUTES[lcName]) return true;
-      if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) return true;
+      const compactValue = stringReplace(value2, ATTR_WHITESPACE$1, "");
+      if (regExpTest(IS_ALLOWED_URI$1, compactValue)) return true;
       if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value2, "data:") === 0 && DATA_URI_TAGS[lcTag]) return true;
-      if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) return true;
+      if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, compactValue)) return true;
       return !value2;
     };
     const RESERVED_CUSTOM_ELEMENT_NAMES = addToSet({}, [
@@ -32025,8 +31996,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
     };
     const _isUnsafeAttributeValue = function _isUnsafeAttributeValue2(name, value2) {
-      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) return true;
-      return stringToLowerCase(name) === "attributename" && stringMatch(value2, "href") !== null;
+      if (SAFE_FOR_XML && regExpTest(ATTR_VALUE_BREAKOUT, value2)) return true;
+      return stringToLowerCase(name) === "attributename" && stringIndexOf(value2, "href") !== -1;
     };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
@@ -32042,7 +32013,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         forceKeepAttr: void 0
       };
       let l = attributes.length;
-      const lcTag = transformCaseFunc(currentNode.nodeName);
+      const lcTag = transformCaseFunc(_readNodeName(currentNode));
       while (l--) {
         const attr = attributes[l];
         const name = attr.name, namespaceURI = attr.namespaceURI, attrValue = attr.value;
@@ -32087,15 +32058,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
       _handleHookDetachedNode(currentNode, root);
     };
+    const _sanitizeNode = function _sanitizeNode2(node, root) {
+      _sanitizeElements(node, root);
+      _sanitizeAttributes(node, root);
+      if (_isDocumentFragment(node.content)) _sanitizeShadowDOM2(node.content);
+    };
     const _sanitizeShadowDOM2 = function _sanitizeShadowDOM(fragment) {
       let shadowNode = null;
       const shadowIterator = _createNodeIterator(fragment);
       _executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
       while (shadowNode = shadowIterator.nextNode()) {
         _executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
-        _sanitizeElements(shadowNode, fragment);
-        _sanitizeAttributes(shadowNode, fragment);
-        if (_isDocumentFragment(shadowNode.content)) _sanitizeShadowDOM2(shadowNode.content);
+        _sanitizeNode(shadowNode, fragment);
         if (_readNodeType(shadowNode) === NODE_TYPE.element) {
           const innerSr = getShadowRoot(shadowNode);
           if (_isDocumentFragment(innerSr)) {
@@ -32164,8 +32138,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         ALLOWED_TAGS = SET_CONFIG_ALLOWED_TAGS;
         ALLOWED_ATTR = SET_CONFIG_ALLOWED_ATTR;
       } else _parseConfig(cfg);
-      if (hooks.uponSanitizeElement.length > 0 || hooks.uponSanitizeAttribute.length > 0) ALLOWED_TAGS = clone(ALLOWED_TAGS);
-      if (hooks.uponSanitizeAttribute.length > 0) ALLOWED_ATTR = clone(ALLOWED_ATTR);
       DOMPurify.removed = [];
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
       let inPlaceNodes = [];
@@ -32194,7 +32166,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         else body.appendChild(importedNode);
         _sanitizeAttachedShadowRoots(body);
       } else {
-        if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && dirty.indexOf("<") === -1) return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(dirty) : dirty;
+        if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && dirty.indexOf("<") === -1) return _signOutput(dirty);
         body = _initDocument(dirty);
         if (!body) return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
       }
@@ -32203,11 +32175,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       try {
         if (inPlace) _sanitizeAttachedShadowRoots(dirty);
         const nodeIterator = _createNodeIterator(walkRoot);
-        while (currentNode = nodeIterator.nextNode()) {
-          _sanitizeElements(currentNode, walkRoot);
-          _sanitizeAttributes(currentNode, walkRoot);
-          if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
-        }
+        while (currentNode = nodeIterator.nextNode()) _sanitizeNode(currentNode, walkRoot);
         if (inPlace) _sanitizeUnvisitedNodes(dirty, inPlaceNodes);
       } catch (error) {
         if (inPlace) {
@@ -32232,10 +32200,14 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (ALLOWED_ATTR.shadowroot || ALLOWED_ATTR.shadowrootmode) returnNode = importNode.call(originalDocument, returnNode, true);
         return returnNode;
       }
-      let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
+      const serialize = () => WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
+      let serializedHTML = serialize();
+      if (SAFE_FOR_TEMPLATES && regExpTest(TMPL_MARKER_SERIALIZED, serializedHTML)) {
+        _scrubOwnCharacterData(body);
+        serializedHTML = serialize();
+      }
       if (WHOLE_DOCUMENT && ALLOWED_TAGS["!doctype"] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) serializedHTML = "<!DOCTYPE " + body.ownerDocument.doctype.name + ">\n" + serializedHTML;
-      if (SAFE_FOR_TEMPLATES) serializedHTML = _stripTemplateExpressions(serializedHTML);
-      return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(serializedHTML) : serializedHTML;
+      return _signOutput(serializedHTML);
     };
     DOMPurify.setConfig = function() {
       let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
@@ -42253,16 +42225,45 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return self2;
   }
+  var D2R = 0.017453292519943295;
+  function d2r(input) {
+    return input * D2R;
+  }
+  function isEquidistantCylindrical(projName) {
+    return /^(equirectangular|equidistant[ _]cylindrical)/i.test(projName || "");
+  }
+  function applyProjectionDefaults(wkt2) {
+    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
+    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
+      wkt2.long0 = wkt2.longc;
+    }
+    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
+      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
+      wkt2.lat_ts = wkt2.lat0;
+      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
+      delete wkt2.lat1;
+    } else if (wkt2.lat_ts === void 0 && wkt2.lat1 !== void 0 && isEquidistantCylindrical(wkt2.projName)) {
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    }
+  }
   class PROJJSONBuilderBase {
     static getId(node) {
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       if (idNode && idNode.length >= 3) {
         return {
           authority: idNode[1],
-          code: parseInt(idNode[2], 10)
+          code: this.parseCode(idNode[2])
         };
       }
       return null;
+    }
+    // PROJJSON codes are integers, or strings for codes like IGNF:LURESG
+    static parseCode(code) {
+      return /^-?\d+$/.test(code) ? parseInt(code, 10) : code;
     }
     static convertUnit(node, type = "unit") {
       if (!node || node.length < 3) {
@@ -42273,7 +42274,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       const id = idNode ? {
         authority: idNode[1],
-        code: parseInt(idNode[2], 10)
+        code: this.parseCode(idNode[2])
       } : null;
       return {
         type,
@@ -42313,12 +42314,28 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     static extractAxes(node) {
       return node.filter((child) => Array.isArray(child) && child[0] === "AXIS").map((axis) => this.convertAxis(axis)).sort((a, b) => (a.order || 0) - (b.order || 0));
     }
+    // A prime meridian without a unit takes the angle unit of its CRS (ISO 19162, 8.2.2).
+    // Like PROJ, write the longitude as a number in degrees, or as a value with a unit.
+    static convertPrimeMeridianLongitude(primem, crsAngleUnitNode) {
+      const value2 = parseFloat(primem[2]);
+      const unitNode = primem.find(
+        (child) => Array.isArray(child) && (child[0] === "ANGLEUNIT" || child[0] === "UNIT")
+      ) || crsAngleUnitNode;
+      const unit = this.convertUnit(unitNode, "AngularUnit");
+      if (!unit.conversion_factor || Math.abs(unit.conversion_factor / d2r(1) - 1) < 1e-9) {
+        return value2;
+      }
+      return { value: value2, unit };
+    }
     static convert(node, result = {}) {
       switch (node[0]) {
         case "PROJCRS":
           result.type = "ProjectedCRS";
           result.name = node[1];
-          result.base_crs = node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS")) : null;
+          const baseCrsNode = node.find(
+            (child) => Array.isArray(child) && (child[0] === "BASEGEOGCRS" || child[0] === "BASEGEODCRS")
+          );
+          result.base_crs = baseCrsNode ? this.convert(baseCrsNode) : null;
           result.conversion = node.find((child) => Array.isArray(child) && child[0] === "CONVERSION") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "CONVERSION")) : null;
           const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           if (csNode) {
@@ -42335,6 +42352,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           result.id = this.getId(node);
           break;
         case "BASEGEOGCRS":
+        case "BASEGEODCRS":
         case "GEOGCRS":
         case "GEODCRS":
           result.type = node[0] === "GEODCRS" ? "GeodeticCRS" : "GeographicCRS";
@@ -42353,7 +42371,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             if (primem && primem[1] !== "Greenwich") {
               datumOrEnsemble.prime_meridian = {
                 name: primem[1],
-                longitude: parseFloat(primem[2])
+                longitude: this.convertPrimeMeridianLongitude(
+                  primem,
+                  node.find((child) => Array.isArray(child) && child[0] === "ANGLEUNIT")
+                )
               };
             }
           }
@@ -42393,7 +42414,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           result.name = node[1];
           result.semi_major_axis = parseFloat(node[2]);
           result.inverse_flattening = parseFloat(node[3]);
-          node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT"), result) : null;
+          const ellipsoidUnitNode = node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT");
+          if (ellipsoidUnitNode) {
+            this.convert(ellipsoidUnitNode, result);
+          }
           break;
         case "CONVERSION":
           result.type = "Conversion";
@@ -42415,6 +42439,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
               (child) => Array.isArray(child) && (child[0] === "LENGTHUNIT" || child[0] === "ANGLEUNIT" || child[0] === "SCALEUNIT")
             )
           );
+          result.id = this.getId(node);
+          break;
+        case "COMPOUNDCRS":
+          result.type = "CompoundCRS";
+          result.name = node[1];
+          result.components = node.slice(2).filter((child) => Array.isArray(child) && child[0].endsWith("CRS")).map((child) => this.convert(child));
           result.id = this.getId(node);
           break;
         case "BOUNDCRS":
@@ -42456,8 +42486,9 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           });
           if (result.parameters.length === 7) {
             const scaleDifference = result.parameters[6];
-            if (scaleDifference.name === "Scale difference") {
+            if (scaleDifference.name === "Scale difference" && !scaleDifference.unit.conversion_factor) {
               scaleDifference.value = Math.round((scaleDifference.value - 1) * 1e12) / 1e6;
+              scaleDifference.unit = { type: "ScaleUnit", name: "parts per million", conversion_factor: 1e-6, id: null };
             }
           }
           result.id = this.getId(node);
@@ -42493,7 +42524,43 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return result;
     }
   }
+  function upperCaseKeywords(node) {
+    node[0] = node[0].toUpperCase();
+    for (var i = 1; i < node.length; i++) {
+      if (Array.isArray(node[i])) {
+        upperCaseKeywords(node[i]);
+      }
+    }
+  }
+  var preferredKeywords = {
+    GEODETICCRS: "GEODCRS",
+    GEOGRAPHICCRS: "GEOGCRS",
+    PROJECTEDCRS: "PROJCRS",
+    GEODETICDATUM: "DATUM",
+    TRF: "DATUM",
+    SPHEROID: "ELLIPSOID",
+    PRIMEMERIDIAN: "PRIMEM",
+    PROJECTION: "METHOD",
+    VERTICALCRS: "VERTCRS",
+    VERTICALDATUM: "VDATUM",
+    VRF: "VDATUM",
+    ENGINEERINGCRS: "ENGCRS",
+    ENGINEERINGDATUM: "EDATUM",
+    PARAMETRICDATUM: "PDATUM",
+    TIMEDATUM: "TDATUM",
+    TEMPORALQUANTITY: "TIMEUNIT"
+  };
+  function usePreferredKeywords(node) {
+    node[0] = preferredKeywords[node[0]] || node[0];
+    for (var i = 1; i < node.length; i++) {
+      if (Array.isArray(node[i])) {
+        usePreferredKeywords(node[i]);
+      }
+    }
+  }
   function buildPROJJSON(root) {
+    upperCaseKeywords(root);
+    usePreferredKeywords(root);
     return PROJJSONBuilderBase.convert(root);
   }
   function detectWKTVersion(wkt2) {
@@ -42515,8 +42582,8 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
   var whitespace = /\s/;
   var latin = /[A-Za-z]/;
   var keyword = /[A-Za-z84_]/;
-  var endThings = /[,\]]/;
-  var digets = /[\d\.E\-\+]/;
+  var endThings = /[,\])]/;
+  var digets = /[\d\.Ee\-\+]/;
   function Parser(text2) {
     if (typeof text2 !== "string") {
       throw new Error("not a string");
@@ -42576,7 +42643,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.state = NEUTRAL;
       return;
     }
-    if (char === "]") {
+    if (char === "]" || char === ")") {
       this.level--;
       if (this.word !== null) {
         this.currentObject.push(this.word);
@@ -42615,7 +42682,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       this.word += char;
       return;
     }
-    if (char === "[") {
+    if (char === "[" || char === "(") {
       var newObjects = [];
       newObjects.push(this.word);
       this.level++;
@@ -42784,25 +42851,6 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         return mapit(obj, key2, v);
     }
   }
-  var D2R = 0.017453292519943295;
-  function d2r(input) {
-    return input * D2R;
-  }
-  function applyProjectionDefaults(wkt2) {
-    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
-    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
-      wkt2.long0 = wkt2.longc;
-    }
-    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
-      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
-      wkt2.lat_ts = wkt2.lat1;
-      delete wkt2.lat1;
-    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
-      wkt2.lat_ts = wkt2.lat0;
-      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
-      delete wkt2.lat1;
-    }
-  }
   function processUnit(unit) {
     let result = { units: null, to_meter: void 0 };
     if (typeof unit === "string") {
@@ -42828,6 +42876,28 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     }
     return valueOrObject;
   }
+  function toRadians(angle) {
+    if (typeof angle !== "object") {
+      return angle * Math.PI / 180;
+    }
+    return angle.unit === "degree" ? angle.value * Math.PI / 180 : toValue(angle);
+  }
+  const ARC_SECOND = Math.PI / 648e3;
+  const DATUM_PARAMS_UNITS = [1, 1, 1, ARC_SECOND, ARC_SECOND, ARC_SECOND, 1e-6];
+  function toDatumParam(param, i) {
+    const unit = param.unit;
+    const factor = unit && typeof unit === "object" ? unit.conversion_factor : unit === "degree" ? Math.PI / 180 : unit === "metre" || unit === "unity" ? 1 : null;
+    return factor && i < DATUM_PARAMS_UNITS.length ? param.value * factor / DATUM_PARAMS_UNITS[i] : param.value;
+  }
+  function isCoordinateFrameRotation(method) {
+    if (!method) {
+      return false;
+    }
+    if (method.id && method.id.authority === "EPSG") {
+      return [9607, 1032, 1038].includes(Number(method.id.code));
+    }
+    return /^Coordinate Frame rotation\b/i.test(method.name);
+  }
   function calculateEllipsoid(value2, result) {
     if (value2.ellipsoid.radius) {
       result.a = value2.ellipsoid.radius;
@@ -42841,9 +42911,22 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       }
     }
   }
+  function isHorizontalCRS(crs) {
+    if (crs.type === "BoundCRS") {
+      return Boolean(crs.source_crs) && isHorizontalCRS(crs.source_crs);
+    }
+    if (crs.type === "GeodeticCRS") {
+      return !crs.coordinate_system || crs.coordinate_system.subtype !== "Cartesian";
+    }
+    return crs.type === "GeographicCRS" || crs.type === "ProjectedCRS";
+  }
   function transformPROJJSON(projjson, result = {}) {
     if (!projjson || typeof projjson !== "object") {
       return projjson;
+    }
+    if (projjson.type === "CompoundCRS") {
+      const horizontal = (projjson.components || []).find(isHorizontalCRS);
+      return horizontal ? transformPROJJSON(horizontal, result) : result;
     }
     if (projjson.type === "BoundCRS") {
       transformPROJJSON(projjson.source_crs, result);
@@ -42851,7 +42934,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         if (projjson.transformation.method && projjson.transformation.method.name === "NTv2") {
           result.nadgrids = projjson.transformation.parameters[0].value;
         } else {
-          result.datum_params = projjson.transformation.parameters.map((param) => param.value);
+          result.datum_params = projjson.transformation.parameters.map(toDatumParam);
+          if (result.datum_params.length >= 6 && isCoordinateFrameRotation(projjson.transformation.method)) {
+            for (let i = 3; i < 6; ++i) {
+              result.datum_params[i] = -result.datum_params[i];
+            }
+          }
         }
       }
       return result;
@@ -42889,7 +42977,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
             calculateEllipsoid(value2, result);
           }
           if (value2.prime_meridian) {
-            result.from_greenwich = value2.prime_meridian.longitude * Math.PI / 180;
+            result.from_greenwich = toRadians(value2.prime_meridian.longitude);
           }
           break;
         case "ellipsoid":
@@ -42897,7 +42985,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
           calculateEllipsoid(value2, result);
           break;
         case "prime_meridian":
-          result.long0 = (value2.longitude || 0) * Math.PI / 180;
+          result.long0 = toRadians(value2.longitude || 0);
           break;
         case "coordinate_system":
           if (value2.axis) {
@@ -43022,6 +43110,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (result.northing_at_projection_centre) {
       result.y0 = result.northing_at_projection_centre;
     }
+    if (result.projection_plane_origin_height !== void 0) {
+      result.h = result.projection_plane_origin_height;
+    }
+    if (result.satellite_height !== void 0) {
+      result.h = result.satellite_height;
+    }
+    if (result.viewpoint_height !== void 0) {
+      result.h = result.viewpoint_height;
+    }
     if (result.standard_parallel_1 !== void 0) {
       result.lat1 = result.standard_parallel_1;
     }
@@ -43046,6 +43143,21 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (result.angle_from_rectified_to_skew_grid) {
       result.rectified_grid_angle = result.angle_from_rectified_to_skew_grid;
     }
+    if (result.long0 === void 0 && result.central_meridian !== void 0) {
+      result.long0 = result.central_meridian;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_origin !== void 0) {
+      result.lat0 = result.latitude_of_origin;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_center !== void 0) {
+      result.lat0 = result.latitude_of_center;
+    }
+    if (result.longc === void 0 && result.longitude_of_center !== void 0) {
+      result.longc = result.longitude_of_center;
+    }
+    if (result.k0 === void 0 && result.scale_factor !== void 0) {
+      result.k0 = result.scale_factor;
+    }
     applyProjectionDefaults(result);
     return result;
   }
@@ -43061,6 +43173,31 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     "GEODETICDATUM",
     "ENGCRS",
     "ENGINEERINGCRS"
+  ];
+  var projectionProperties = [
+    "projName",
+    "axis",
+    "units",
+    "to_meter",
+    "datumCode",
+    "datum_params",
+    "nadgrids",
+    "ellps",
+    "from_greenwich",
+    "a",
+    "rf",
+    "sphere",
+    "k0",
+    "x0",
+    "y0",
+    "long0",
+    "longc",
+    "lat0",
+    "lat1",
+    "lat2",
+    "lat_ts",
+    "alpha",
+    "rectified_grid_angle"
   ];
   function rename(obj, params2) {
     var outName = params2[0];
@@ -43197,8 +43334,12 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     if (wkt2.b && !isFinite(wkt2.b)) {
       wkt2.b = wkt2.a;
     }
+    var angularUnit = geogcs && geogcs.UNIT && geogcs.UNIT.convert;
+    var toRadians2 = angularUnit && Math.abs(angularUnit / d2r(1) - 1) > 1e-9 ? function(input) {
+      return input * angularUnit;
+    } : d2r;
     if (wkt2.rectified_grid_angle) {
-      wkt2.rectified_grid_angle = d2r(wkt2.rectified_grid_angle);
+      wkt2.rectified_grid_angle = toRadians2(wkt2.rectified_grid_angle);
     }
     function toMeter(input) {
       var ratio = wkt2.to_meter || 1;
@@ -43229,22 +43370,25 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       ["k0", "scale_factor"],
       ["latitude_of_center", "Latitude_Of_Center"],
       ["latitude_of_center", "Latitude_of_center"],
-      ["lat0", "latitude_of_center", d2r],
+      ["lat0", "latitude_of_center", toRadians2],
       ["longitude_of_center", "Longitude_Of_Center"],
       ["longitude_of_center", "Longitude_of_center"],
-      ["longc", "longitude_of_center", d2r],
+      ["longc", "longitude_of_center", toRadians2],
       ["x0", "false_easting", toMeter],
       ["y0", "false_northing", toMeter],
-      ["long0", "central_meridian", d2r],
-      ["lat0", "latitude_of_origin", d2r],
-      ["lat0", "standard_parallel_1", d2r],
-      ["lat1", "standard_parallel_1", d2r],
-      ["lat2", "standard_parallel_2", d2r],
+      ["long0", "central_meridian", toRadians2],
+      ["lat0", "latitude_of_origin", toRadians2],
+      ["lat1", "standard_parallel_1", toRadians2],
+      ["lat2", "standard_parallel_2", toRadians2],
+      ["h", "Height", toMeter],
       ["azimuth", "Azimuth"],
-      ["alpha", "azimuth", d2r],
+      ["alpha", "azimuth", toRadians2],
       ["srsCode", "name"]
     ];
     list.forEach(renamer);
+    if (!isEquidistantCylindrical(wkt2.projName)) {
+      renamer(["lat0", "standard_parallel_1", toRadians2]);
+    }
     applyProjectionDefaults(wkt2);
   }
   function wkt(wkt2) {
@@ -43261,7 +43405,18 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
     var obj = {};
     sExpr(lisp, obj);
     cleanWKT(obj);
-    return obj[type];
+    var result = obj[type];
+    if (type === "COMPD_CS") {
+      var horizontal = result.PROJCS || result.GEOGCS;
+      if (horizontal) {
+        projectionProperties.forEach(function(key2) {
+          if (key2 in horizontal) {
+            result[key2] = horizontal[key2];
+          }
+        });
+      }
+    }
+    return result;
   }
   function defs(name) {
     var that = this;

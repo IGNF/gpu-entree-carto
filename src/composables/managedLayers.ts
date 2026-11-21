@@ -19,12 +19,14 @@ import {
   type PanelLayerState,
 } from '@/lib/layerConfig/catalogDataLayersStack'
 import {
+  applyCatalogToggleFromPermalink,
   applyUserCatalogToggle,
   catalogIdToUncheckWhenRemovingScotGroup,
   computeMapVisibilityById,
   isCatalogAggregate,
   propagateCheckedToAncestors,
 } from '@/lib/layerConfig/catalogCheckboxLogic'
+import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
 import {
   aggregateDetailToggleForStackNode,
   aggregatePanelStateAfterRegroup,
@@ -343,7 +345,10 @@ export function useManagedLayers(
 
       treeIndex = buildCatalogTreeIndex(roots)
 
-      if (structureChanged || !Object.keys(catalogChecked.value).length) {
+      const emptyChecked = !Object.keys(catalogChecked.value).length
+      const keepPermalinkChecked =
+        structureChanged && !emptyChecked && initialHashHadLayerPermalinkParams()
+      if ((structureChanged || emptyChecked) && !keepPermalinkChecked) {
         initCatalogCheckedFromConfig(roots)
       }
       reapplyCatalogMapState()
@@ -420,6 +425,44 @@ export function useManagedLayers(
     if (!treeIndex.nodesById.has(id)) return
     applyUserCatalogToggle(catalogChecked.value, id, checked, treeIndex)
     catalogChecked.value = { ...catalogChecked.value }
+    reapplyCatalogMapState()
+  }
+
+  function permalinkChangeHasDescendantInHash(
+    nodeId: string,
+    hashNodeIds: ReadonlySet<string>,
+  ): boolean {
+    const node = treeIndex.nodesById.get(nodeId)
+    if (!node) return false
+    for (const child of catalogChildNodes(node)) {
+      if (hashNodeIds.has(child.id)) return true
+      if (permalinkChangeHasDescendantInHash(child.id, hashNodeIds)) return true
+    }
+    return false
+  }
+
+  /** Restauration permalink — sélection partielle sans cocher toute la branche. */
+  function applyCatalogCheckedFromPermalink(
+    changes: ReadonlyArray<{ id: string; checked: boolean }>,
+  ) {
+    if (!changes.length) return
+    const hashNodeIds = new Set(changes.map((c) => c.id))
+    const next = { ...catalogChecked.value }
+    for (const { id, checked } of changes) {
+      if (!treeIndex.nodesById.has(id)) continue
+      if (!checked) {
+        applyCatalogToggleFromPermalink(next, id, false, treeIndex)
+        continue
+      }
+      const node = treeIndex.nodesById.get(id)
+      const hasChildren = node ? catalogChildNodes(node).length > 0 : false
+      if (hasChildren && !permalinkChangeHasDescendantInHash(id, hashNodeIds)) {
+        applyUserCatalogToggle(next, id, true, treeIndex)
+      } else {
+        applyCatalogToggleFromPermalink(next, id, true, treeIndex)
+      }
+    }
+    catalogChecked.value = next
     reapplyCatalogMapState()
   }
 
@@ -614,6 +657,7 @@ export function useManagedLayers(
     legendLayersAll,
     catalogCheckedById,
     setCatalogChecked,
+    applyCatalogCheckedFromPermalink,
     setInStack,
     setVisible,
     applyDataLayerPermalinkPanelState,
