@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
+  applyCatalogToggleFromPermalink,
   applyUserCatalogToggle,
   computeMapVisibilityById,
   isSameAsDescendants,
   propagateCheckedToAncestors,
+  shouldPersistOnlyLegendLayerInPermalink,
 } from '@/lib/layerConfig/catalogCheckboxLogic'
 import { buildCatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
 
@@ -53,6 +55,37 @@ describe('catalogCheckboxLogic', () => {
     expect(checked.zone).toBe(true)
     expect(checked.presc).toBe(true)
     expect(checked['presc-leaf']).toBe(true)
+  })
+
+  it('permalink : une feuille cochée ne propage pas aux frères', () => {
+    const supRoots: TreeLayerNode[] = [
+      node({
+        id: 'sup',
+        title: 'SUP',
+        visible: false,
+        gpuVirtual: true,
+        children: [
+          node({
+            id: 'mh',
+            title: 'Monuments historiques',
+            visible: false,
+            gpuMapLayer: true,
+          }),
+          node({
+            id: 'mn',
+            title: 'Monuments naturels',
+            visible: false,
+            gpuMapLayer: true,
+          }),
+        ],
+      }),
+    ]
+    const supIndex = buildCatalogTreeIndex(supRoots)
+    const checked: Record<string, boolean> = {}
+    applyCatalogToggleFromPermalink(checked, 'mh', true, supIndex)
+    expect(checked.mh).toBe(true)
+    expect(checked.mn).toBeFalsy()
+    expect(checked.sup).toBe(true)
   })
 
   it('init visible : parent virtual reste coché si seul enfant onlyLegend est coché', () => {
@@ -119,6 +152,74 @@ describe('catalogCheckboxLogic', () => {
     expect(checked['dev-scot']).toBe(false)
     expect(checked['dev-scot--dev-scot']).toBe(false)
     expect(checked['dev-scot--dev-mec']).toBe(false)
+  })
+
+  it('permalink : persiste onlyLegend si sélection partielle sous le groupe SCoT', () => {
+    const scotRoots: TreeLayerNode[] = [
+      node({
+        id: 'dev-scot',
+        title: 'SCHEMA DE COHERENCE TERRITORIALE',
+        visible: true,
+        gpuVirtual: true,
+        children: [
+          node({
+            id: 'dev-scot--dev-scot',
+            title: 'SCHEMA DE COHERENCE TERRITORIALE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+          node({
+            id: 'dev-scot--dev-mec',
+            title: 'MISE EN COMPATIBILITE',
+            visible: true,
+            gpuMapLayer: true,
+            gpuOnlyLegend: true,
+          }),
+        ],
+      }),
+    ]
+    const scotIndex = buildCatalogTreeIndex(scotRoots)
+    const checked: Record<string, boolean> = {
+      'dev-scot': true,
+      'dev-scot--dev-scot': true,
+      'dev-scot--dev-mec': false,
+    }
+    expect(
+      shouldPersistOnlyLegendLayerInPermalink(
+        'dev-scot--dev-scot',
+        checked,
+        scotIndex,
+        false,
+        true,
+        true,
+      ),
+    ).toBe(true)
+    expect(
+      shouldPersistOnlyLegendLayerInPermalink(
+        'dev-scot--dev-mec',
+        checked,
+        scotIndex,
+        false,
+        true,
+        false,
+      ),
+    ).toBe(true)
+    const uniform: Record<string, boolean> = {
+      'dev-scot': true,
+      'dev-scot--dev-scot': true,
+      'dev-scot--dev-mec': true,
+    }
+    expect(
+      shouldPersistOnlyLegendLayerInPermalink(
+        'dev-scot--dev-scot',
+        uniform,
+        scotIndex,
+        false,
+        true,
+        true,
+      ),
+    ).toBe(true)
   })
 
   it('décocher uniquement MEC scot laisse le SCoT WFS actif', () => {

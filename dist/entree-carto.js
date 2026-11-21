@@ -12015,7 +12015,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function toDegrees(angleInRadians) {
     return angleInRadians * 180 / Math.PI;
   }
-  function toRadians(angleInDegrees) {
+  function toRadians$1(angleInDegrees) {
     return angleInDegrees * Math.PI / 180;
   }
   function modulo(a3, b) {
@@ -12727,10 +12727,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const DEFAULT_RADIUS = 63710088e-1;
   function getDistance(c1, c2, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians(c1[1]);
-    const lat2 = toRadians(c2[1]);
+    const lat1 = toRadians$1(c1[1]);
+    const lat2 = toRadians$1(c2[1]);
     const deltaLatBy2 = (lat2 - lat1) / 2;
-    const deltaLonBy2 = toRadians(c2[0] - c1[0]) / 2;
+    const deltaLonBy2 = toRadians$1(c2[0] - c1[0]) / 2;
     const a3 = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a3), Math.sqrt(1 - a3));
   }
@@ -12813,7 +12813,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (let i2 = 0; i2 < len; i2++) {
       const x2 = coordinates2[i2][0];
       const y2 = coordinates2[i2][1];
-      area += toRadians(x2 - x1) * (2 + Math.sin(toRadians(y1)) + Math.sin(toRadians(y2)));
+      area += toRadians$1(x2 - x1) * (2 + Math.sin(toRadians$1(y1)) + Math.sin(toRadians$1(y2)));
       x1 = x2;
       y1 = y2;
     }
@@ -12878,8 +12878,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function offset(c1, distance2, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians(c1[1]);
-    const lon1 = toRadians(c1[0]);
+    const lat1 = toRadians$1(c1[1]);
+    const lon1 = toRadians$1(c1[0]);
     const dByR = distance2 / radius;
     const lat = Math.asin(
       Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(bearing)
@@ -13219,7 +13219,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const latitude = pRad - pTan / r * (d2 / 2 - d4 / 24 * (5 + 3 * pTan2 + 10 * c - 4 * c2 - 9 * E_P2)) + d6 / 720 * (61 + 90 * pTan2 + 298 * c + 45 * pTan4 - 252 * E_P2 - 3 * c2);
     let longitude = (d - d3 / 6 * (1 + 2 * pTan2 + c) + d5 / 120 * (5 - 2 * c + 28 * pTan2 - 3 * c2 + 8 * E_P2 + 24 * pTan4)) / pCos;
     longitude = wrap(
-      longitude + toRadians(zoneToCentralLongitude(zone.number)),
+      longitude + toRadians$1(zoneToCentralLongitude(zone.number)),
       -Math.PI,
       Math.PI
     );
@@ -13236,15 +13236,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     } else if (latitude > MAX_LATITUDE) {
       latitude = MAX_LATITUDE;
     }
-    const latRad = toRadians(latitude);
+    const latRad = toRadians$1(latitude);
     const latSin = Math.sin(latRad);
     const latCos = Math.cos(latRad);
     const latTan = latSin / latCos;
     const latTan2 = latTan * latTan;
     const latTan4 = latTan2 * latTan2;
-    const lonRad = toRadians(longitude);
+    const lonRad = toRadians$1(longitude);
     const centralLon = zoneToCentralLongitude(zone.number);
-    const centralLonRad = toRadians(centralLon);
+    const centralLonRad = toRadians$1(centralLon);
     const n = R / Math.sqrt(1 - E$1 * latSin ** 2);
     const c = E_P2 * latCos ** 2;
     const a3 = latCos * wrap(lonRad - centralLonRad, -Math.PI, Math.PI);
@@ -16075,7 +16075,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
   }
   function createSnapToZero(tolerance) {
-    const t = toRadians(5);
+    const t = toRadians$1(5);
     return (
       /**
        * @param {number|undefined} rotation Rotation.
@@ -31946,7 +31946,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       this.set(
         Property.HEADING,
-        coords.heading === null ? void 0 : toRadians(coords.heading)
+        coords.heading === null ? void 0 : toRadians$1(coords.heading)
       );
       if (!this.position_) {
         this.position_ = [coords.longitude, coords.latitude];
@@ -42840,7 +42840,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.17 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.17/LICENSE */
+  /*! @license DOMPurify 3.4.18 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.18/LICENSE */
   function _arrayLikeToArray(r, a3) {
     (null == a3 || a3 > r.length) && (a3 = r.length);
     for (var e2 = 0, n = Array(a3); e2 < a3; e2++) n[e2] = r[e2];
@@ -42883,6 +42883,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   const entries = Object.entries;
+  const objectKeys = Object.keys;
   const setPrototypeOf = Object.setPrototypeOf;
   const isFrozen = Object.isFrozen;
   const getPrototypeOf = Object.getPrototypeOf;
@@ -42929,11 +42930,14 @@ Expected function or array of functions, received type ${typeof value2}.`
   const symbolToString = typeof Symbol === "undefined" ? null : unapply(Symbol.prototype.toString);
   const objectHasOwnProperty = unapply(Object.prototype.hasOwnProperty);
   const objectToString = unapply(Object.prototype.toString);
-  const regExpTest = unapply(RegExp.prototype.test);
+  const regExpTestRaw = RegExp.prototype.test;
+  const regExpTest = function regExpTest2(regExp, value2) {
+    if (regExp instanceof RegExp) regExp.lastIndex = 0;
+    return apply(regExpTestRaw, regExp, [value2]);
+  };
   const typeErrorCreate = unconstruct(TypeError);
   function unapply(func) {
     return function(thisArg) {
-      if (thisArg instanceof RegExp) thisArg.lastIndex = 0;
       for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) args[_key3 - 1] = arguments[_key3];
       return apply(func, thisArg, args);
     };
@@ -42979,6 +42983,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     return newObject;
+  }
+  function cloneSet(set2) {
+    const newSet = create(null);
+    const keys = objectKeys(set2);
+    let l = keys.length;
+    while (l--) newSet[keys[l]] = set2[keys[l]];
+    return newSet;
   }
   function stringifyValue(value2) {
     switch (typeof value2) {
@@ -43032,6 +43043,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return null;
   }
   function isRegex(value2) {
+    if (!value2) return false;
     try {
       regExpTest(value2, "");
       return true;
@@ -43174,8 +43186,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     "defs",
     "desc",
     "ellipse",
-    "enterkeyhint",
-    "exportparts",
     "filter",
     "font",
     "g",
@@ -43183,14 +43193,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     "glyphref",
     "hkern",
     "image",
-    "inputmode",
     "line",
     "lineargradient",
     "marker",
     "mask",
     "metadata",
     "mpath",
-    "part",
     "path",
     "pattern",
     "polygon",
@@ -43690,6 +43698,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
   const ERB_EXPR = seal(/<%[\w\W]*|^[\w\W]*%>/g);
   const TMPLIT_EXPR = seal(/\${[\w\W]*/g);
+  const TMPL_MARKER_SERIALIZED = seal(/{{|}}|\${|<%|%>|&lt;%|%&gt;/);
   const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/);
   const ARIA_ATTR = seal(/^aria-[\-\w]+$/);
   const IS_ALLOWED_URI = seal(/^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i);
@@ -43701,19 +43710,15 @@ Expected function or array of functions, received type ${typeof value2}.`
   const COMMENT_MARKUP_PROBE = seal(/<[/\w]/g);
   const FALLBACK_TAG_CLOSE = seal(/<\/no(script|embed|frames)/i);
   const SELF_CLOSING_TAG = seal(/\/>/i);
+  const ATTR_VALUE_BREAKOUT = seal(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i);
+  const LEADING_WHITESPACE = seal(/^[\r\n\t ]+/);
   const NODE_TYPE = {
     element: 1,
-    attribute: 2,
     text: 3,
-    cdataSection: 4,
-    entityReference: 5,
-    entityNode: 6,
     processingInstruction: 7,
     comment: 8,
     document: 9,
-    documentType: 10,
-    documentFragment: 11,
-    notation: 12
+    documentFragment: 11
   };
   const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, [
     "style",
@@ -43762,16 +43767,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   };
   const _resolveSetOption = function _resolveSetOption2(cfg, key2, fallback, options) {
-    return objectHasOwnProperty(cfg, key2) && arrayIsArray(cfg[key2]) ? addToSet(options.base ? clone$1(options.base) : {}, cfg[key2], options.transform) : fallback;
+    return objectHasOwnProperty(cfg, key2) && arrayIsArray(cfg[key2]) ? addToSet(options.base ? cloneSet(options.base) : {}, cfg[key2], options.transform) : fallback;
   };
-  const _resolveObjectOption = function _resolveObjectOption2(cfg, key2, makeFallback) {
+  const _resolveObjectOption = function _resolveObjectOption2(cfg, key2, fallback) {
     const value2 = objectHasOwnProperty(cfg, key2) ? cfg[key2] : void 0;
-    return value2 && typeof value2 === "object" ? clone$1(value2) : makeFallback();
+    return value2 && typeof value2 === "object" ? clone$1(value2) : fallback;
   };
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.17";
+    DOMPurify.version = "3.4.18";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -43780,11 +43785,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let document2 = window2.document;
     const originalDocument = document2;
     const currentScript = originalDocument.currentScript;
-    window2.DocumentFragment;
-    const HTMLTemplateElement = window2.HTMLTemplateElement, Node2 = window2.Node, Element2 = window2.Element, NodeFilter = window2.NodeFilter;
-    window2.NamedNodeMap === void 0 && (window2.NamedNodeMap || window2.MozNamedAttrMap);
-    window2.HTMLFormElement;
-    const DOMParser2 = window2.DOMParser, trustedTypes = window2.trustedTypes;
+    const HTMLTemplateElement = window2.HTMLTemplateElement, Node2 = window2.Node, Element2 = window2.Element, NodeFilter = window2.NodeFilter, DOMParser2 = window2.DOMParser, trustedTypes = window2.trustedTypes;
     const ElementPrototype = Element2.prototype;
     const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
     const remove2 = lookupGetter(ElementPrototype, "remove");
@@ -43828,6 +43829,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         IN_TRUSTED_TYPES_POLICY--;
       }
     };
+    const _signOutput = function _signOutput2(html2) {
+      return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(html2) : html2;
+    };
     const _createTrustedScriptURL = function _createTrustedScriptURL2(scriptUrl) {
       _assertNotInTrustedTypesPolicy();
       IN_TRUSTED_TYPES_POLICY++;
@@ -43865,26 +43869,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       ...mathMl,
       ...xml
     ]);
-    let CUSTOM_ELEMENT_HANDLING = Object.seal(create(null, {
-      tagNameCheck: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: null
-      },
-      attributeNameCheck: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: null
-      },
-      allowCustomizedBuiltInElements: {
-        writable: true,
-        configurable: false,
-        enumerable: true,
-        value: false
-      }
-    }));
+    let CUSTOM_ELEMENT_HANDLING = null;
     let FORBID_TAGS = null;
     let FORBID_ATTR = null;
     const EXTRA_ELEMENT_HANDLING = Object.seal(create(null, {
@@ -43921,7 +43906,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let KEEP_CONTENT = true;
     let IN_PLACE = false;
     let IN_PLACE_VISITED = null;
-    let USE_PROFILES = {};
+    let USE_PROFILES = false;
     let FORBID_CONTENTS = null;
     const DEFAULT_FORBID_CONTENTS = addToSet({}, [
       "annotation-xml",
@@ -43988,16 +43973,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       SVG_NAMESPACE,
       HTML_NAMESPACE
     ], stringToString);
-    const DEFAULT_MATHML_TEXT_INTEGRATION_POINTS = freeze([
+    const DEFAULT_MATHML_TEXT_INTEGRATION_POINTS = freeze(addToSet({}, [
       "mi",
       "mo",
       "mn",
       "ms",
       "mtext"
-    ]);
-    let MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
-    const DEFAULT_HTML_INTEGRATION_POINTS = freeze(["annotation-xml"]);
-    let HTML_INTEGRATION_POINTS = addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS);
+    ]));
+    let MATHML_TEXT_INTEGRATION_POINTS = null;
+    const DEFAULT_HTML_INTEGRATION_POINTS = freeze(addToSet({}, ["annotation-xml"]));
+    let HTML_INTEGRATION_POINTS = null;
+    const DEFAULT_CUSTOM_ELEMENT_HANDLING = freeze(create(null));
     const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, [
       "title",
       "style",
@@ -44016,7 +44002,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _parseConfig = function _parseConfig2() {
       let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-      if (CONFIG && CONFIG === cfg) return;
       if (!cfg || typeof cfg !== "object") cfg = {};
       cfg = clone$1(cfg);
       PARSER_MEDIA_TYPE = SUPPORTED_PARSER_MEDIA_TYPES.indexOf(cfg.PARSER_MEDIA_TYPE) === -1 ? DEFAULT_PARSER_MEDIA_TYPE : cfg.PARSER_MEDIA_TYPE;
@@ -44033,8 +44018,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         base: DEFAULT_DATA_URI_TAGS
       });
       FORBID_CONTENTS = _resolveSetOption(cfg, "FORBID_CONTENTS", DEFAULT_FORBID_CONTENTS, { transform: transformCaseFunc });
-      FORBID_TAGS = _resolveSetOption(cfg, "FORBID_TAGS", clone$1({}), { transform: transformCaseFunc });
-      FORBID_ATTR = _resolveSetOption(cfg, "FORBID_ATTR", clone$1({}), { transform: transformCaseFunc });
+      FORBID_TAGS = _resolveSetOption(cfg, "FORBID_TAGS", create(null), { transform: transformCaseFunc });
+      FORBID_ATTR = _resolveSetOption(cfg, "FORBID_ATTR", create(null), { transform: transformCaseFunc });
       USE_PROFILES = objectHasOwnProperty(cfg, "USE_PROFILES") ? cfg.USE_PROFILES && typeof cfg.USE_PROFILES === "object" ? clone$1(cfg.USE_PROFILES) : cfg.USE_PROFILES : false;
       ALLOW_ARIA_ATTR = cfg.ALLOW_ARIA_ATTR !== false;
       ALLOW_DATA_ATTR = cfg.ALLOW_DATA_ATTR !== false;
@@ -44053,9 +44038,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       IN_PLACE = cfg.IN_PLACE || false;
       IS_ALLOWED_URI$1 = isRegex(cfg.ALLOWED_URI_REGEXP) ? cfg.ALLOWED_URI_REGEXP : IS_ALLOWED_URI;
       NAMESPACE = typeof cfg.NAMESPACE === "string" ? cfg.NAMESPACE : HTML_NAMESPACE;
-      MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(cfg, "MATHML_TEXT_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS));
-      HTML_INTEGRATION_POINTS = _resolveObjectOption(cfg, "HTML_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS));
-      const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", () => create(null));
+      MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(cfg, "MATHML_TEXT_INTEGRATION_POINTS", DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
+      HTML_INTEGRATION_POINTS = _resolveObjectOption(cfg, "HTML_INTEGRATION_POINTS", DEFAULT_HTML_INTEGRATION_POINTS);
+      const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", DEFAULT_CUSTOM_ELEMENT_HANDLING);
       CUSTOM_ELEMENT_HANDLING = create(null);
       if (objectHasOwnProperty(customElementHandling, "tagNameCheck") && isRegexOrFunction(customElementHandling.tagNameCheck)) CUSTOM_ELEMENT_HANDLING.tagNameCheck = customElementHandling.tagNameCheck;
       if (objectHasOwnProperty(customElementHandling, "attributeNameCheck") && isRegexOrFunction(customElementHandling.attributeNameCheck)) CUSTOM_ELEMENT_HANDLING.attributeNameCheck = customElementHandling.attributeNameCheck;
@@ -44064,6 +44049,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (SAFE_FOR_TEMPLATES) ALLOW_DATA_ATTR = false;
       if (RETURN_DOM_FRAGMENT) RETURN_DOM = true;
       if (USE_PROFILES) {
+        if ((objectHasOwnProperty(cfg, "ALLOWED_TAGS") || objectHasOwnProperty(cfg, "ALLOWED_ATTR")) && typeof console !== "undefined" && typeof console.warn === "function") console.warn("DOMPurify: USE_PROFILES overrides ALLOWED_TAGS and ALLOWED_ATTR. Do not use these options together.");
         ALLOWED_TAGS = addToSet({}, text);
         ALLOWED_ATTR = create(null);
         if (USE_PROFILES.html === true) {
@@ -44091,19 +44077,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (objectHasOwnProperty(cfg, "ADD_TAGS")) {
         if (typeof cfg.ADD_TAGS === "function") EXTRA_ELEMENT_HANDLING.tagCheck = cfg.ADD_TAGS;
         else if (arrayIsArray(cfg.ADD_TAGS)) {
-          if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = clone$1(ALLOWED_TAGS);
+          if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = cloneSet(ALLOWED_TAGS);
           addToSet(ALLOWED_TAGS, cfg.ADD_TAGS, transformCaseFunc);
         }
       }
       if (objectHasOwnProperty(cfg, "ADD_ATTR")) {
         if (typeof cfg.ADD_ATTR === "function") EXTRA_ELEMENT_HANDLING.attributeCheck = cfg.ADD_ATTR;
         else if (arrayIsArray(cfg.ADD_ATTR)) {
-          if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) ALLOWED_ATTR = clone$1(ALLOWED_ATTR);
+          if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) ALLOWED_ATTR = cloneSet(ALLOWED_ATTR);
           addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
         }
       }
       if (objectHasOwnProperty(cfg, "ADD_FORBID_CONTENTS") && arrayIsArray(cfg.ADD_FORBID_CONTENTS)) {
-        if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) FORBID_CONTENTS = clone$1(FORBID_CONTENTS);
+        if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) FORBID_CONTENTS = cloneSet(FORBID_CONTENTS);
         addToSet(FORBID_CONTENTS, cfg.ADD_FORBID_CONTENTS, transformCaseFunc);
       }
       if (KEEP_CONTENT) ALLOWED_TAGS["#text"] = true;
@@ -44113,7 +44099,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "body"
       ]);
       if (ALLOWED_TAGS.table) {
-        addToSet(ALLOWED_TAGS, ["tbody"]);
+        ALLOWED_TAGS.tbody = true;
         delete FORBID_TAGS.tbody;
       }
       if (cfg.TRUSTED_TYPES_POLICY) {
@@ -44134,8 +44120,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (trustedTypesPolicy === void 0) trustedTypesPolicy = _getDefaultTrustedTypesPolicy();
         if (trustedTypesPolicy && typeof emptyHTML === "string") emptyHTML = _createTrustedHTML("");
       }
-      if (freeze) freeze(cfg);
-      CONFIG = cfg;
+      CONFIG = freeze(cfg);
     };
     const ALL_SVG_TAGS = addToSet({}, [
       ...svg$1,
@@ -44143,40 +44128,36 @@ Expected function or array of functions, received type ${typeof value2}.`
       ...svgDisallowed
     ]);
     const ALL_MATHML_TAGS = addToSet({}, [...mathMl$1, ...mathMlDisallowed]);
-    const _checkSvgNamespace = function _checkSvgNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "svg";
-      if (parent.namespaceURI === MATHML_NAMESPACE) return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
+    const _checkSvgNamespace = function _checkSvgNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === HTML_NAMESPACE) return tagName === "svg";
+      if (parentNamespace === MATHML_NAMESPACE) return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
       return Boolean(ALL_SVG_TAGS[tagName]);
     };
-    const _checkMathMlNamespace = function _checkMathMlNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "math";
-      if (parent.namespaceURI === SVG_NAMESPACE) return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
+    const _checkMathMlNamespace = function _checkMathMlNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === HTML_NAMESPACE) return tagName === "math";
+      if (parentNamespace === SVG_NAMESPACE) return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
       return Boolean(ALL_MATHML_TAGS[tagName]);
     };
-    const _checkHtmlNamespace = function _checkHtmlNamespace2(tagName, parent, parentTagName) {
-      if (parent.namespaceURI === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) return false;
-      if (parent.namespaceURI === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) return false;
+    const _checkHtmlNamespace = function _checkHtmlNamespace2(tagName, parentNamespace, parentTagName) {
+      if (parentNamespace === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) return false;
+      if (parentNamespace === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) return false;
       return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
     };
     const _checkValidNamespace = function _checkValidNamespace2(element) {
       const elementNamespace = _readNamespaceURI(element);
       const tagName = stringToLowerCase(_readNodeName(element));
       const parentNode = getParentNode(element);
-      let parent;
-      let parentTagName;
+      let parentNamespace = NAMESPACE;
+      let parentTagName = "template";
       if (parentNode && _readNodeType(parentNode) === NODE_TYPE.element) {
-        parent = { namespaceURI: _readNamespaceURI(parentNode) };
+        parentNamespace = _readNamespaceURI(parentNode);
         parentTagName = stringToLowerCase(_readNodeName(parentNode));
-      } else {
-        parent = { namespaceURI: NAMESPACE };
-        parentTagName = "template";
       }
       if (!ALLOWED_NAMESPACES[elementNamespace]) return false;
-      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
-      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
-      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
-      if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[elementNamespace]) return true;
-      return false;
+      if (elementNamespace === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parentNamespace, parentTagName);
+      if (elementNamespace === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parentNamespace, parentTagName);
+      if (elementNamespace === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parentNamespace, parentTagName);
+      return PARSER_MEDIA_TYPE === "application/xhtml+xml";
     };
     const _forceRemove = function _forceRemove2(node) {
       arrayPush(DOMPurify.removed, { element: node });
@@ -44206,12 +44187,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         } catch (_) {
         }
       });
-      const attributes = _readNodeType(root) === NODE_TYPE.element ? getAttributes(root) : null;
-      if (attributes) for (let i2 = attributes.length - 1; i2 >= 0; --i2) {
-        const attribute = attributes[i2];
-        const name2 = attribute && attribute.name;
-        if (typeof name2 === "string") _stripAttributeNode(root, attribute, name2);
-      }
+      if (_readNodeType(root) === NODE_TYPE.element) _stripAttributes(root, false);
     };
     const _removeAttribute = function _removeAttribute2(name2, element, attr) {
       if (!attr) try {
@@ -44223,14 +44199,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         attribute: attr || null,
         from: element
       });
-      try {
-        if (attr) removeAttributeNode(element, attr);
-        else element.removeAttribute(name2);
+      if (attr) _stripAttributeNode(element, attr, name2);
+      else try {
+        element.removeAttribute(name2);
       } catch (_) {
-        try {
-          element.removeAttribute(name2);
-        } catch (_2) {
-        }
       }
       if (name2 === "is") {
         if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
@@ -44243,14 +44215,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
     };
-    const _stripDisallowedAttributes = function _stripDisallowedAttributes2(element) {
+    const _stripAttributes = function _stripAttributes2(element, keepAllowed) {
       const attributes = getAttributes(element);
       if (!attributes) return;
       for (let i2 = attributes.length - 1; i2 >= 0; --i2) {
         const attribute = attributes[i2];
         const name2 = attribute && attribute.name;
-        if (typeof name2 !== "string" || ALLOWED_ATTR[transformCaseFunc(name2)]) continue;
-        _stripAttributeNode(element, attribute, name2);
+        if (typeof name2 === "string" && !(keepAllowed && ALLOWED_ATTR[transformCaseFunc(name2)])) _stripAttributeNode(element, attribute, name2);
       }
     };
     const _walkTree = function _walkTree2(root, visit) {
@@ -44269,7 +44240,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _neutralizeSubtree = function _neutralizeSubtree2(root) {
       _walkTree(root, (node) => {
-        if (_readNodeType(node) === NODE_TYPE.element) _stripDisallowedAttributes(node);
+        if (_readNodeType(node) === NODE_TYPE.element) _stripAttributes(node, true);
       });
     };
     const _collectLiveNodes = function _collectLiveNodes2(root) {
@@ -44285,7 +44256,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (_readNodeType(node) === NODE_TYPE.element) setAdd(reachable, node);
       });
       arrayForEach(before, (node) => {
-        if (_readNodeType(node) === NODE_TYPE.element && !setHas(reachable, node)) _stripDisallowedAttributes(node);
+        if (_readNodeType(node) === NODE_TYPE.element && !setHas(reachable, node)) _stripAttributes(node, true);
       });
     };
     const _neutralizeDiscarded = function _neutralizeDiscarded2(root, before) {
@@ -44333,9 +44304,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       while (node = iterator2.nextNode()) {
         if (!setHas(original, node) || setHas(IN_PLACE_VISITED, node)) continue;
         if (inShadow) _executeHooks(hooks.uponSanitizeShadowNode, node, null);
-        _sanitizeElements(node, root);
-        _sanitizeAttributes(node, root);
-        if (_isDocumentFragment(node.content)) _sanitizeShadowDOM2(node.content);
+        _sanitizeNode(node, root);
       }
     };
     const _markVisited = function _markVisited2(node) {
@@ -44374,7 +44343,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let leadingWhitespace = null;
       if (FORCE_BODY) dirty = "<remove></remove>" + dirty;
       else {
-        const matches2 = stringMatch(dirty, /^[\r\n\t ]+/);
+        const matches2 = stringMatch(dirty, LEADING_WHITESPACE);
         leadingWhitespace = matches2 && matches2[0];
       }
       if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && NAMESPACE === HTML_NAMESPACE) dirty = '<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body>' + dirty + "</body></html>";
@@ -44396,8 +44365,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       return WHOLE_DOCUMENT ? doc2.documentElement : body;
     };
     const _createNodeIterator = function _createNodeIterator2(root) {
+      let characterDataOnly = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : false;
       const doc2 = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
-      return createNodeIterator.call(doc2 || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
+      return createNodeIterator.call(doc2 || root, root, (characterDataOnly ? 0 : NodeFilter.SHOW_ELEMENT) | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
     };
     const _stripTemplateExpressions = function _stripTemplateExpressions2(value2) {
       value2 = stringReplace(value2, MUSTACHE_EXPR$1, " ");
@@ -44415,8 +44385,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _scrubOwnCharacterData = function _scrubOwnCharacterData2(node) {
       node.normalize();
-      const doc2 = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
-      const walker = createNodeIterator.call(doc2 || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
+      const walker = _createNodeIterator(node, true);
       let currentNode = walker.nextNode();
       while (currentNode) {
         currentNode.data = _stripTemplateExpressions(currentNode.data);
@@ -44429,21 +44398,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (transformCaseFunc(realTagName) !== "form") return false;
       return typeof element.nodeName !== "string" || typeof element.textContent !== "string" || typeof element.removeChild !== "function" || element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || typeof element.removeAttributeNode !== "function" || typeof element.getAttributeNode !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || element.nodeType !== getNodeType(element) || element.childNodes !== getChildNodes(element);
     };
-    const _isDocumentFragment = function _isDocumentFragment2(value2) {
-      if (!getNodeType || typeof value2 !== "object" || value2 === null) return false;
+    const _nodeTypeOf = function _nodeTypeOf2(value2) {
+      if (!getNodeType || typeof value2 !== "object" || value2 === null) return null;
       try {
-        return getNodeType(value2) === NODE_TYPE.documentFragment;
+        const nodeType = getNodeType(value2);
+        return typeof nodeType === "number" ? nodeType : null;
       } catch (_) {
-        return false;
+        return null;
       }
     };
+    const _isDocumentFragment = function _isDocumentFragment2(value2) {
+      return _nodeTypeOf(value2) === NODE_TYPE.documentFragment;
+    };
     const _isNode = function _isNode2(value2) {
-      if (!getNodeType || typeof value2 !== "object" || value2 === null) return false;
-      try {
-        return typeof getNodeType(value2) === "number";
-      } catch (_) {
-        return false;
-      }
+      return _nodeTypeOf(value2) !== null;
     };
     function _executeHooks(hooks2, currentNode, data) {
       if (hooks2.length === 0) return;
@@ -44451,11 +44419,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         hook.call(DOMPurify, currentNode, data, CONFIG);
       });
     }
-    const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName) {
-      if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
-      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && _readNodeType(currentNode) === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
-      if (currentNode.nodeType === NODE_TYPE.processingInstruction) return true;
-      if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
+    const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName, nodeType) {
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.element && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
+      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && nodeType === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
+      if (nodeType === NODE_TYPE.processingInstruction) return true;
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
       return false;
     };
     const _matchesNameCheck = function _matchesNameCheck2(check, name2) {
@@ -44484,7 +44452,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _forkSharedAllowlist = function _forkSharedAllowlist2(hookList, set2, defaultSet, setConfigSet) {
       if (hookList.length === 0) return set2;
-      return set2 === defaultSet || set2 === setConfigSet ? clone$1(set2) : set2;
+      return set2 === defaultSet || set2 === setConfigSet ? cloneSet(set2) : set2;
     };
     const _handleHookDetachedNode = function _handleHookDetachedNode2(currentNode, root) {
       if (currentNode === root || getParentNode(currentNode) !== null) return false;
@@ -44500,13 +44468,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         return true;
       }
       const tagName = transformCaseFunc(_readNodeName(currentNode));
+      const nodeType = _readNodeType(currentNode);
       ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
       _executeHooks(hooks.uponSanitizeElement, currentNode, {
         tagName,
         allowedTags: ALLOWED_TAGS
       });
       if (_handleHookDetachedNode(currentNode, root)) return true;
-      if (_isUnsafeNode(currentNode, tagName)) {
+      if (_isUnsafeNode(currentNode, tagName, nodeType)) {
         _forceRemove(currentNode);
         return true;
       }
@@ -44518,7 +44487,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return removed;
       }
-      if (_readNodeType(currentNode) === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
+      if (nodeType === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
         _forceRemove(currentNode);
         return true;
       }
@@ -44526,9 +44495,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         _forceRemove(currentNode);
         return true;
       }
-      if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
-        const content2 = _stripTemplateExpressions(currentNode.textContent);
-        if (currentNode.textContent !== content2) {
+      if (SAFE_FOR_TEMPLATES && nodeType === NODE_TYPE.text) {
+        const text2 = currentNode.textContent;
+        const content2 = _stripTemplateExpressions(text2);
+        if (text2 !== content2) {
           arrayPush(DOMPurify.removed, { element: currentNode.cloneNode() });
           currentNode.textContent = content2;
         }
@@ -44545,9 +44515,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) return true;
       if (!nameIsPermitted) return _isBasicCustomElement(lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName, lcTag) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value2);
       if (URI_SAFE_ATTRIBUTES[lcName]) return true;
-      if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) return true;
+      const compactValue = stringReplace(value2, ATTR_WHITESPACE$1, "");
+      if (regExpTest(IS_ALLOWED_URI$1, compactValue)) return true;
       if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value2, "data:") === 0 && DATA_URI_TAGS[lcTag]) return true;
-      if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value2, ATTR_WHITESPACE$1, ""))) return true;
+      if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, compactValue)) return true;
       return !value2;
     };
     const RESERVED_CUSTOM_ELEMENT_NAMES = addToSet({}, [
@@ -44587,8 +44558,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     };
     const _isUnsafeAttributeValue = function _isUnsafeAttributeValue2(name2, value2) {
-      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value2)) return true;
-      return stringToLowerCase(name2) === "attributename" && stringMatch(value2, "href") !== null;
+      if (SAFE_FOR_XML && regExpTest(ATTR_VALUE_BREAKOUT, value2)) return true;
+      return stringToLowerCase(name2) === "attributename" && stringIndexOf(value2, "href") !== -1;
     };
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
@@ -44604,7 +44575,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         forceKeepAttr: void 0
       };
       let l = attributes.length;
-      const lcTag = transformCaseFunc(currentNode.nodeName);
+      const lcTag = transformCaseFunc(_readNodeName(currentNode));
       while (l--) {
         const attr = attributes[l];
         const name2 = attr.name, namespaceURI = attr.namespaceURI, attrValue2 = attr.value;
@@ -44649,15 +44620,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       _executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
       _handleHookDetachedNode(currentNode, root);
     };
+    const _sanitizeNode = function _sanitizeNode2(node, root) {
+      _sanitizeElements(node, root);
+      _sanitizeAttributes(node, root);
+      if (_isDocumentFragment(node.content)) _sanitizeShadowDOM2(node.content);
+    };
     const _sanitizeShadowDOM2 = function _sanitizeShadowDOM(fragment) {
       let shadowNode = null;
       const shadowIterator = _createNodeIterator(fragment);
       _executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
       while (shadowNode = shadowIterator.nextNode()) {
         _executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
-        _sanitizeElements(shadowNode, fragment);
-        _sanitizeAttributes(shadowNode, fragment);
-        if (_isDocumentFragment(shadowNode.content)) _sanitizeShadowDOM2(shadowNode.content);
+        _sanitizeNode(shadowNode, fragment);
         if (_readNodeType(shadowNode) === NODE_TYPE.element) {
           const innerSr = getShadowRoot(shadowNode);
           if (_isDocumentFragment(innerSr)) {
@@ -44726,8 +44700,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         ALLOWED_TAGS = SET_CONFIG_ALLOWED_TAGS;
         ALLOWED_ATTR = SET_CONFIG_ALLOWED_ATTR;
       } else _parseConfig(cfg);
-      if (hooks.uponSanitizeElement.length > 0 || hooks.uponSanitizeAttribute.length > 0) ALLOWED_TAGS = clone$1(ALLOWED_TAGS);
-      if (hooks.uponSanitizeAttribute.length > 0) ALLOWED_ATTR = clone$1(ALLOWED_ATTR);
       DOMPurify.removed = [];
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
       let inPlaceNodes = [];
@@ -44756,7 +44728,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         else body.appendChild(importedNode);
         _sanitizeAttachedShadowRoots(body);
       } else {
-        if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && dirty.indexOf("<") === -1) return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(dirty) : dirty;
+        if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && dirty.indexOf("<") === -1) return _signOutput(dirty);
         body = _initDocument(dirty);
         if (!body) return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
       }
@@ -44765,11 +44737,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       try {
         if (inPlace) _sanitizeAttachedShadowRoots(dirty);
         const nodeIterator = _createNodeIterator(walkRoot);
-        while (currentNode = nodeIterator.nextNode()) {
-          _sanitizeElements(currentNode, walkRoot);
-          _sanitizeAttributes(currentNode, walkRoot);
-          if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
-        }
+        while (currentNode = nodeIterator.nextNode()) _sanitizeNode(currentNode, walkRoot);
         if (inPlace) _sanitizeUnvisitedNodes(dirty, inPlaceNodes);
       } catch (error) {
         if (inPlace) {
@@ -44794,10 +44762,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (ALLOWED_ATTR.shadowroot || ALLOWED_ATTR.shadowrootmode) returnNode = importNode.call(originalDocument, returnNode, true);
         return returnNode;
       }
-      let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
+      const serialize2 = () => WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
+      let serializedHTML = serialize2();
+      if (SAFE_FOR_TEMPLATES && regExpTest(TMPL_MARKER_SERIALIZED, serializedHTML)) {
+        _scrubOwnCharacterData(body);
+        serializedHTML = serialize2();
+      }
       if (WHOLE_DOCUMENT && ALLOWED_TAGS["!doctype"] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) serializedHTML = "<!DOCTYPE " + body.ownerDocument.doctype.name + ">\n" + serializedHTML;
-      if (SAFE_FOR_TEMPLATES) serializedHTML = _stripTemplateExpressions(serializedHTML);
-      return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(serializedHTML) : serializedHTML;
+      return _signOutput(serializedHTML);
     };
     DOMPurify.setConfig = function() {
       let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
@@ -58467,16 +58439,45 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return self2;
   }
+  var D2R = 0.017453292519943295;
+  function d2r(input) {
+    return input * D2R;
+  }
+  function isEquidistantCylindrical(projName) {
+    return /^(equirectangular|equidistant[ _]cylindrical)/i.test(projName || "");
+  }
+  function applyProjectionDefaults(wkt2) {
+    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
+    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
+      wkt2.long0 = wkt2.longc;
+    }
+    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
+      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
+      wkt2.lat_ts = wkt2.lat0;
+      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
+      delete wkt2.lat1;
+    } else if (wkt2.lat_ts === void 0 && wkt2.lat1 !== void 0 && isEquidistantCylindrical(wkt2.projName)) {
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    }
+  }
   class PROJJSONBuilderBase {
     static getId(node) {
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       if (idNode && idNode.length >= 3) {
         return {
           authority: idNode[1],
-          code: parseInt(idNode[2], 10)
+          code: this.parseCode(idNode[2])
         };
       }
       return null;
+    }
+    // PROJJSON codes are integers, or strings for codes like IGNF:LURESG
+    static parseCode(code) {
+      return /^-?\d+$/.test(code) ? parseInt(code, 10) : code;
     }
     static convertUnit(node, type = "unit") {
       if (!node || node.length < 3) {
@@ -58487,7 +58488,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       const id2 = idNode ? {
         authority: idNode[1],
-        code: parseInt(idNode[2], 10)
+        code: this.parseCode(idNode[2])
       } : null;
       return {
         type,
@@ -58527,12 +58528,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     static extractAxes(node) {
       return node.filter((child) => Array.isArray(child) && child[0] === "AXIS").map((axis) => this.convertAxis(axis)).sort((a3, b) => (a3.order || 0) - (b.order || 0));
     }
+    // A prime meridian without a unit takes the angle unit of its CRS (ISO 19162, 8.2.2).
+    // Like PROJ, write the longitude as a number in degrees, or as a value with a unit.
+    static convertPrimeMeridianLongitude(primem, crsAngleUnitNode) {
+      const value2 = parseFloat(primem[2]);
+      const unitNode = primem.find(
+        (child) => Array.isArray(child) && (child[0] === "ANGLEUNIT" || child[0] === "UNIT")
+      ) || crsAngleUnitNode;
+      const unit = this.convertUnit(unitNode, "AngularUnit");
+      if (!unit.conversion_factor || Math.abs(unit.conversion_factor / d2r(1) - 1) < 1e-9) {
+        return value2;
+      }
+      return { value: value2, unit };
+    }
     static convert(node, result = {}) {
       switch (node[0]) {
         case "PROJCRS":
           result.type = "ProjectedCRS";
           result.name = node[1];
-          result.base_crs = node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS")) : null;
+          const baseCrsNode = node.find(
+            (child) => Array.isArray(child) && (child[0] === "BASEGEOGCRS" || child[0] === "BASEGEODCRS")
+          );
+          result.base_crs = baseCrsNode ? this.convert(baseCrsNode) : null;
           result.conversion = node.find((child) => Array.isArray(child) && child[0] === "CONVERSION") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "CONVERSION")) : null;
           const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           if (csNode) {
@@ -58549,6 +58566,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.id = this.getId(node);
           break;
         case "BASEGEOGCRS":
+        case "BASEGEODCRS":
         case "GEOGCRS":
         case "GEODCRS":
           result.type = node[0] === "GEODCRS" ? "GeodeticCRS" : "GeographicCRS";
@@ -58567,7 +58585,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             if (primem && primem[1] !== "Greenwich") {
               datumOrEnsemble.prime_meridian = {
                 name: primem[1],
-                longitude: parseFloat(primem[2])
+                longitude: this.convertPrimeMeridianLongitude(
+                  primem,
+                  node.find((child) => Array.isArray(child) && child[0] === "ANGLEUNIT")
+                )
               };
             }
           }
@@ -58607,7 +58628,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.name = node[1];
           result.semi_major_axis = parseFloat(node[2]);
           result.inverse_flattening = parseFloat(node[3]);
-          node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT"), result) : null;
+          const ellipsoidUnitNode = node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT");
+          if (ellipsoidUnitNode) {
+            this.convert(ellipsoidUnitNode, result);
+          }
           break;
         case "CONVERSION":
           result.type = "Conversion";
@@ -58629,6 +58653,12 @@ Expected function or array of functions, received type ${typeof value2}.`
               (child) => Array.isArray(child) && (child[0] === "LENGTHUNIT" || child[0] === "ANGLEUNIT" || child[0] === "SCALEUNIT")
             )
           );
+          result.id = this.getId(node);
+          break;
+        case "COMPOUNDCRS":
+          result.type = "CompoundCRS";
+          result.name = node[1];
+          result.components = node.slice(2).filter((child) => Array.isArray(child) && child[0].endsWith("CRS")).map((child) => this.convert(child));
           result.id = this.getId(node);
           break;
         case "BOUNDCRS":
@@ -58670,8 +58700,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           });
           if (result.parameters.length === 7) {
             const scaleDifference = result.parameters[6];
-            if (scaleDifference.name === "Scale difference") {
+            if (scaleDifference.name === "Scale difference" && !scaleDifference.unit.conversion_factor) {
               scaleDifference.value = Math.round((scaleDifference.value - 1) * 1e12) / 1e6;
+              scaleDifference.unit = { type: "ScaleUnit", name: "parts per million", conversion_factor: 1e-6, id: null };
             }
           }
           result.id = this.getId(node);
@@ -58707,7 +58738,43 @@ Expected function or array of functions, received type ${typeof value2}.`
       return result;
     }
   }
+  function upperCaseKeywords(node) {
+    node[0] = node[0].toUpperCase();
+    for (var i2 = 1; i2 < node.length; i2++) {
+      if (Array.isArray(node[i2])) {
+        upperCaseKeywords(node[i2]);
+      }
+    }
+  }
+  var preferredKeywords = {
+    GEODETICCRS: "GEODCRS",
+    GEOGRAPHICCRS: "GEOGCRS",
+    PROJECTEDCRS: "PROJCRS",
+    GEODETICDATUM: "DATUM",
+    TRF: "DATUM",
+    SPHEROID: "ELLIPSOID",
+    PRIMEMERIDIAN: "PRIMEM",
+    PROJECTION: "METHOD",
+    VERTICALCRS: "VERTCRS",
+    VERTICALDATUM: "VDATUM",
+    VRF: "VDATUM",
+    ENGINEERINGCRS: "ENGCRS",
+    ENGINEERINGDATUM: "EDATUM",
+    PARAMETRICDATUM: "PDATUM",
+    TIMEDATUM: "TDATUM",
+    TEMPORALQUANTITY: "TIMEUNIT"
+  };
+  function usePreferredKeywords(node) {
+    node[0] = preferredKeywords[node[0]] || node[0];
+    for (var i2 = 1; i2 < node.length; i2++) {
+      if (Array.isArray(node[i2])) {
+        usePreferredKeywords(node[i2]);
+      }
+    }
+  }
   function buildPROJJSON(root) {
+    upperCaseKeywords(root);
+    usePreferredKeywords(root);
     return PROJJSONBuilderBase.convert(root);
   }
   function detectWKTVersion(wkt2) {
@@ -58729,8 +58796,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   var whitespace = /\s/;
   var latin = /[A-Za-z]/;
   var keyword = /[A-Za-z84_]/;
-  var endThings = /[,\]]/;
-  var digets = /[\d\.E\-\+]/;
+  var endThings = /[,\])]/;
+  var digets = /[\d\.Ee\-\+]/;
   function Parser$1(text2) {
     if (typeof text2 !== "string") {
       throw new Error("not a string");
@@ -58790,7 +58857,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.state = NEUTRAL;
       return;
     }
-    if (char === "]") {
+    if (char === "]" || char === ")") {
       this.level--;
       if (this.word !== null) {
         this.currentObject.push(this.word);
@@ -58829,7 +58896,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.word += char;
       return;
     }
-    if (char === "[") {
+    if (char === "[" || char === "(") {
       var newObjects = [];
       newObjects.push(this.word);
       this.level++;
@@ -58998,25 +59065,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         return mapit(obj, key2, v);
     }
   }
-  var D2R = 0.017453292519943295;
-  function d2r(input) {
-    return input * D2R;
-  }
-  function applyProjectionDefaults(wkt2) {
-    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
-    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
-      wkt2.long0 = wkt2.longc;
-    }
-    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
-      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
-      wkt2.lat_ts = wkt2.lat1;
-      delete wkt2.lat1;
-    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
-      wkt2.lat_ts = wkt2.lat0;
-      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
-      delete wkt2.lat1;
-    }
-  }
   function processUnit(unit) {
     let result = { units: null, to_meter: void 0 };
     if (typeof unit === "string") {
@@ -59042,6 +59090,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return valueOrObject;
   }
+  function toRadians(angle2) {
+    if (typeof angle2 !== "object") {
+      return angle2 * Math.PI / 180;
+    }
+    return angle2.unit === "degree" ? angle2.value * Math.PI / 180 : toValue(angle2);
+  }
+  const ARC_SECOND = Math.PI / 648e3;
+  const DATUM_PARAMS_UNITS = [1, 1, 1, ARC_SECOND, ARC_SECOND, ARC_SECOND, 1e-6];
+  function toDatumParam(param, i2) {
+    const unit = param.unit;
+    const factor = unit && typeof unit === "object" ? unit.conversion_factor : unit === "degree" ? Math.PI / 180 : unit === "metre" || unit === "unity" ? 1 : null;
+    return factor && i2 < DATUM_PARAMS_UNITS.length ? param.value * factor / DATUM_PARAMS_UNITS[i2] : param.value;
+  }
+  function isCoordinateFrameRotation(method) {
+    if (!method) {
+      return false;
+    }
+    if (method.id && method.id.authority === "EPSG") {
+      return [9607, 1032, 1038].includes(Number(method.id.code));
+    }
+    return /^Coordinate Frame rotation\b/i.test(method.name);
+  }
   function calculateEllipsoid(value2, result) {
     if (value2.ellipsoid.radius) {
       result.a = value2.ellipsoid.radius;
@@ -59055,9 +59125,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
+  function isHorizontalCRS(crs) {
+    if (crs.type === "BoundCRS") {
+      return Boolean(crs.source_crs) && isHorizontalCRS(crs.source_crs);
+    }
+    if (crs.type === "GeodeticCRS") {
+      return !crs.coordinate_system || crs.coordinate_system.subtype !== "Cartesian";
+    }
+    return crs.type === "GeographicCRS" || crs.type === "ProjectedCRS";
+  }
   function transformPROJJSON(projjson, result = {}) {
     if (!projjson || typeof projjson !== "object") {
       return projjson;
+    }
+    if (projjson.type === "CompoundCRS") {
+      const horizontal = (projjson.components || []).find(isHorizontalCRS);
+      return horizontal ? transformPROJJSON(horizontal, result) : result;
     }
     if (projjson.type === "BoundCRS") {
       transformPROJJSON(projjson.source_crs, result);
@@ -59065,7 +59148,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (projjson.transformation.method && projjson.transformation.method.name === "NTv2") {
           result.nadgrids = projjson.transformation.parameters[0].value;
         } else {
-          result.datum_params = projjson.transformation.parameters.map((param) => param.value);
+          result.datum_params = projjson.transformation.parameters.map(toDatumParam);
+          if (result.datum_params.length >= 6 && isCoordinateFrameRotation(projjson.transformation.method)) {
+            for (let i2 = 3; i2 < 6; ++i2) {
+              result.datum_params[i2] = -result.datum_params[i2];
+            }
+          }
         }
       }
       return result;
@@ -59103,7 +59191,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             calculateEllipsoid(value2, result);
           }
           if (value2.prime_meridian) {
-            result.from_greenwich = value2.prime_meridian.longitude * Math.PI / 180;
+            result.from_greenwich = toRadians(value2.prime_meridian.longitude);
           }
           break;
         case "ellipsoid":
@@ -59111,7 +59199,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           calculateEllipsoid(value2, result);
           break;
         case "prime_meridian":
-          result.long0 = (value2.longitude || 0) * Math.PI / 180;
+          result.long0 = toRadians(value2.longitude || 0);
           break;
         case "coordinate_system":
           if (value2.axis) {
@@ -59236,6 +59324,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.northing_at_projection_centre) {
       result.y0 = result.northing_at_projection_centre;
     }
+    if (result.projection_plane_origin_height !== void 0) {
+      result.h = result.projection_plane_origin_height;
+    }
+    if (result.satellite_height !== void 0) {
+      result.h = result.satellite_height;
+    }
+    if (result.viewpoint_height !== void 0) {
+      result.h = result.viewpoint_height;
+    }
     if (result.standard_parallel_1 !== void 0) {
       result.lat1 = result.standard_parallel_1;
     }
@@ -59260,6 +59357,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.angle_from_rectified_to_skew_grid) {
       result.rectified_grid_angle = result.angle_from_rectified_to_skew_grid;
     }
+    if (result.long0 === void 0 && result.central_meridian !== void 0) {
+      result.long0 = result.central_meridian;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_origin !== void 0) {
+      result.lat0 = result.latitude_of_origin;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_center !== void 0) {
+      result.lat0 = result.latitude_of_center;
+    }
+    if (result.longc === void 0 && result.longitude_of_center !== void 0) {
+      result.longc = result.longitude_of_center;
+    }
+    if (result.k0 === void 0 && result.scale_factor !== void 0) {
+      result.k0 = result.scale_factor;
+    }
     applyProjectionDefaults(result);
     return result;
   }
@@ -59275,6 +59387,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     "GEODETICDATUM",
     "ENGCRS",
     "ENGINEERINGCRS"
+  ];
+  var projectionProperties = [
+    "projName",
+    "axis",
+    "units",
+    "to_meter",
+    "datumCode",
+    "datum_params",
+    "nadgrids",
+    "ellps",
+    "from_greenwich",
+    "a",
+    "rf",
+    "sphere",
+    "k0",
+    "x0",
+    "y0",
+    "long0",
+    "longc",
+    "lat0",
+    "lat1",
+    "lat2",
+    "lat_ts",
+    "alpha",
+    "rectified_grid_angle"
   ];
   function rename(obj, params2) {
     var outName = params2[0];
@@ -59411,8 +59548,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (wkt2.b && !isFinite(wkt2.b)) {
       wkt2.b = wkt2.a;
     }
+    var angularUnit = geogcs && geogcs.UNIT && geogcs.UNIT.convert;
+    var toRadians2 = angularUnit && Math.abs(angularUnit / d2r(1) - 1) > 1e-9 ? function(input) {
+      return input * angularUnit;
+    } : d2r;
     if (wkt2.rectified_grid_angle) {
-      wkt2.rectified_grid_angle = d2r(wkt2.rectified_grid_angle);
+      wkt2.rectified_grid_angle = toRadians2(wkt2.rectified_grid_angle);
     }
     function toMeter(input) {
       var ratio = wkt2.to_meter || 1;
@@ -59443,22 +59584,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       ["k0", "scale_factor"],
       ["latitude_of_center", "Latitude_Of_Center"],
       ["latitude_of_center", "Latitude_of_center"],
-      ["lat0", "latitude_of_center", d2r],
+      ["lat0", "latitude_of_center", toRadians2],
       ["longitude_of_center", "Longitude_Of_Center"],
       ["longitude_of_center", "Longitude_of_center"],
-      ["longc", "longitude_of_center", d2r],
+      ["longc", "longitude_of_center", toRadians2],
       ["x0", "false_easting", toMeter],
       ["y0", "false_northing", toMeter],
-      ["long0", "central_meridian", d2r],
-      ["lat0", "latitude_of_origin", d2r],
-      ["lat0", "standard_parallel_1", d2r],
-      ["lat1", "standard_parallel_1", d2r],
-      ["lat2", "standard_parallel_2", d2r],
+      ["long0", "central_meridian", toRadians2],
+      ["lat0", "latitude_of_origin", toRadians2],
+      ["lat1", "standard_parallel_1", toRadians2],
+      ["lat2", "standard_parallel_2", toRadians2],
+      ["h", "Height", toMeter],
       ["azimuth", "Azimuth"],
-      ["alpha", "azimuth", d2r],
+      ["alpha", "azimuth", toRadians2],
       ["srsCode", "name"]
     ];
     list.forEach(renamer);
+    if (!isEquidistantCylindrical(wkt2.projName)) {
+      renamer(["lat0", "standard_parallel_1", toRadians2]);
+    }
     applyProjectionDefaults(wkt2);
   }
   function wkt(wkt2) {
@@ -59475,7 +59619,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     var obj = {};
     sExpr(lisp, obj);
     cleanWKT(obj);
-    return obj[type];
+    var result = obj[type];
+    if (type === "COMPD_CS") {
+      var horizontal = result.PROJCS || result.GEOGCS;
+      if (horizontal) {
+        projectionProperties.forEach(function(key2) {
+          if (key2 in horizontal) {
+            result[key2] = horizontal[key2];
+          }
+        });
+      }
+    }
+    return result;
   }
   function defs(name2) {
     var that = this;
@@ -67905,6 +68060,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return nodeId;
   }
+  function shouldPersistOnlyLegendLayerInPermalink(nodeId, checked, index2, stateDiffersFromConfig, defaultChecked, currentChecked) {
+    if (currentChecked !== defaultChecked) return true;
+    if (stateDiffersFromConfig) return true;
+    if (currentChecked) return true;
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return false;
+    if (directCatalogChildren(parent).length <= 1) return false;
+    return !isCheckboxSameAsDirectChildren(checked, parent);
+  }
   function isCheckboxSameAsDirectChildren(checked, node) {
     const self2 = Boolean(checked[node.id]);
     for (const child of directCatalogChildren(node)) {
@@ -68010,6 +68174,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     checked[effectiveId] = value2;
     propagateCheckedToAncestors(checked, effectiveId, index2);
     propagateCheckedToDescendants(checked, node, value2);
+  }
+  function applyCatalogToggleFromPermalink(checked, nodeId, value2, index2) {
+    let effectiveId = nodeId;
+    if (!value2) {
+      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
+    }
+    const node = index2.nodesById.get(effectiveId);
+    if (!node) return;
+    checked[effectiveId] = value2;
+    propagateCheckedToAncestors(checked, effectiveId, index2);
   }
   function computeMapVisibilityById(checked, index2, opacityById, options) {
     const out = {};
@@ -70770,6 +70944,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return getDemoConfig().document ?? null;
   }
   function appendFicheInfoQueryParams(url, params2) {
+    var _a2, _b;
     url.searchParams.set("lon", String(params2.lon));
     url.searchParams.set("lat", String(params2.lat));
     url.searchParams.set("zoom", String(Math.round(params2.zoom)));
@@ -70787,6 +70962,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     url.searchParams.set("client", getOrCreateFicheClientId());
     url.searchParams.set("seq", String(assignFicheInfoRequestSeqForUrl()));
+    const families = (_a2 = params2.activeFamilies) == null ? void 0 : _a2.filter(Boolean);
+    if (families == null ? void 0 : families.length) {
+      for (const family of families) {
+        url.searchParams.append("activeFamilies[]", family);
+      }
+    }
+    const supTypes = (_b = params2.activeSupTypes) == null ? void 0 : _b.filter(Boolean);
+    if (supTypes == null ? void 0 : supTypes.length) {
+      for (const code of supTypes) {
+        url.searchParams.append("activeSupTypes[]", code.trim().toUpperCase());
+      }
+    }
   }
   function parseDocumentBbox(doc2) {
     const raw = doc2.bbox;
@@ -70963,11 +71150,189 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!grid || typeof grid !== "object") return false;
     return Boolean(grid.insee || grid.name);
   }
+  let activeSupTypes = null;
+  let activeDuRuleScope = null;
+  function setFicheCatalogSupTypes(types) {
+    activeSupTypes = types;
+    ficheCatalogVisibilityRevision.value += 1;
+  }
+  function setFicheCatalogDuRuleScope(scope) {
+    activeDuRuleScope = scope;
+    ficheCatalogVisibilityRevision.value += 1;
+  }
+  function getFicheCatalogSupTypes() {
+    return activeSupTypes;
+  }
+  function normalizeSupTypeList(config2) {
+    const raw = config2.supType;
+    if (!Array.isArray(raw)) return [];
+    return raw.map((v) => typeof v === "string" ? v.trim().toUpperCase() : "").filter(Boolean);
+  }
+  function duLayerNameHintsZonage(config2) {
+    const name2 = (config2.name ?? "").toLowerCase();
+    return name2.includes("zone_secteur") || name2.includes("zonage");
+  }
+  function duLayerNameHintsSecteur(config2) {
+    const name2 = (config2.name ?? "").toLowerCase();
+    return name2.includes("zone_secteur") || name2.includes("secteur");
+  }
+  function duLayerNameHintsInformation(config2) {
+    const name2 = (config2.name ?? "").toLowerCase();
+    return name2.includes("info");
+  }
+  function duLayerNameHintsPrescription(config2) {
+    const name2 = (config2.name ?? "").toLowerCase();
+    return name2.includes("prescription");
+  }
+  function stackableSupEntries(catalogChecked, entries2) {
+    return entries2.filter((entry) => {
+      var _a2;
+      if (!catalogChecked[entry.id]) return false;
+      const types = normalizeSupTypeList(entry.config);
+      if (!types.length) return false;
+      return Boolean((_a2 = entry.config.name) == null ? void 0 : _a2.trim());
+    });
+  }
+  function computeActiveSupTypesFromCatalog(catalogChecked, entries2) {
+    const checked = stackableSupEntries(catalogChecked, entries2);
+    if (!checked.length) return null;
+    const out = /* @__PURE__ */ new Set();
+    for (const entry of checked) {
+      for (const code of normalizeSupTypeList(entry.config)) {
+        out.add(code);
+      }
+    }
+    return out.size ? out : null;
+  }
+  function isSupCategoryCatalogVisible(code) {
+    if (!isFicheDocumentFamilyVisible("sup")) return false;
+    const key2 = code.trim().toUpperCase();
+    if (!key2) return true;
+    if (!(activeSupTypes == null ? void 0 : activeSupTypes.size)) return true;
+    return activeSupTypes.has(key2);
+  }
+  function mergeFilterValues(target2, values) {
+    if (!(values == null ? void 0 : values.length)) return;
+    for (const v of values) {
+      const n = v.trim().toUpperCase();
+      if (n) target2.add(n);
+    }
+  }
+  function duCatalogEntryIsCheckedLeaf(catalogChecked, entry) {
+    if (!catalogChecked[entry.id]) return false;
+    return catalogEntryMatchesFamily({ id: entry.id, path: entry.path }, "du");
+  }
+  function computeDuRuleCatalogScope(catalogChecked, entries2) {
+    var _a2;
+    const checkedDu = entries2.filter((e2) => duCatalogEntryIsCheckedLeaf(catalogChecked, e2));
+    if (!checkedDu.length) return null;
+    const scope = {
+      restricted: false,
+      zonage: false,
+      secteur: false,
+      prescriptions: false,
+      prescriptionTypepsc: /* @__PURE__ */ new Set(),
+      informations: false,
+      informationTypeinf: /* @__PURE__ */ new Set()
+    };
+    let sawLeafConstraint = false;
+    for (const entry of checkedDu) {
+      const config2 = entry.config;
+      const attr = (_a2 = config2.filterAttribute) == null ? void 0 : _a2.trim();
+      const values = config2.filterValue;
+      if (attr === "typepsc" && (values == null ? void 0 : values.length)) {
+        sawLeafConstraint = true;
+        scope.restricted = true;
+        scope.prescriptions = true;
+        mergeFilterValues(scope.prescriptionTypepsc, values);
+        continue;
+      }
+      if (attr === "typeinf" && (values == null ? void 0 : values.length)) {
+        sawLeafConstraint = true;
+        scope.restricted = true;
+        scope.informations = true;
+        mergeFilterValues(scope.informationTypeinf, values);
+        continue;
+      }
+      if (attr === "typezone" && (values == null ? void 0 : values.length)) {
+        sawLeafConstraint = true;
+        scope.restricted = true;
+        scope.zonage = true;
+        continue;
+      }
+      if (attr === "typesect" && (values == null ? void 0 : values.length)) {
+        sawLeafConstraint = true;
+        scope.restricted = true;
+        scope.secteur = true;
+        continue;
+      }
+      if (!attr) {
+        if (duLayerNameHintsZonage(config2)) {
+          sawLeafConstraint = true;
+          scope.restricted = true;
+          scope.zonage = true;
+        }
+        if (duLayerNameHintsSecteur(config2)) {
+          sawLeafConstraint = true;
+          scope.restricted = true;
+          scope.secteur = true;
+        }
+        if (duLayerNameHintsInformation(config2)) {
+          sawLeafConstraint = true;
+          scope.restricted = true;
+          scope.informations = true;
+        }
+        if (duLayerNameHintsPrescription(config2)) {
+          sawLeafConstraint = true;
+          scope.restricted = true;
+          scope.prescriptions = true;
+        }
+      }
+    }
+    return sawLeafConstraint ? scope : null;
+  }
+  function duRuleFeatureMatchesCatalogScope(feature, section) {
+    const scope = activeDuRuleScope;
+    if (!(scope == null ? void 0 : scope.restricted)) return true;
+    const props = feature.properties ?? {};
+    if (section === "zonage") {
+      return scope.zonage;
+    }
+    if (section === "secteur") {
+      return scope.secteur;
+    }
+    if (section === "prescription") {
+      if (!scope.prescriptions) return false;
+      if (!scope.prescriptionTypepsc.size) return true;
+      const code = coerceDisplayString(props.typepsc).toUpperCase();
+      return scope.prescriptionTypepsc.has(code);
+    }
+    if (section === "information") {
+      if (!scope.informations) return false;
+      if (!scope.informationTypeinf.size) return true;
+      const code = coerceDisplayString(props.typeinf).toUpperCase();
+      return scope.informationTypeinf.has(code);
+    }
+    return true;
+  }
+  function syncFicheCatalogLayerScopes(catalogChecked, catalogEntries) {
+    setFicheCatalogSupTypes(computeActiveSupTypesFromCatalog(catalogChecked, catalogEntries));
+    setFicheCatalogDuRuleScope(computeDuRuleCatalogScope(catalogChecked, catalogEntries));
+  }
+  function resetFicheCatalogLayerScopes() {
+    activeSupTypes = null;
+    activeDuRuleScope = null;
+  }
   const FICHE_DOCUMENT_FAMILIES = ["du", "psmv", "sup", "scot", "mec"];
   let catalogFamilyVisibility = null;
   const ficheCatalogVisibilityRevision = /* @__PURE__ */ shallowRef(0);
   function setFicheCatalogFamilyVisibility(map2) {
     catalogFamilyVisibility = map2;
+    if (!map2) {
+      setFicheCatalogSupTypes(null);
+      setFicheCatalogDuRuleScope(null);
+      resetFicheCatalogLayerScopes();
+    }
     ficheCatalogVisibilityRevision.value += 1;
   }
   function catalogHaystack(entry) {
@@ -71102,6 +71467,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     { titlePattern: /Servitudes d[\u2019']utilité publique/i, family: "sup" },
     { titlePattern: /Schémas de cohérence territoriale/i, family: "scot" }
   ];
+  const CATALOG_FILTERED_DOCUMENT_SECTIONS = /* @__PURE__ */ new Set(["sup", "psmv", "mec"]);
   function familyForDocumentsSectionTitle(title2) {
     for (const { titlePattern, family } of PARCEL_DOCUMENTS_SECTIONS) {
       if (titlePattern.test(title2)) return family;
@@ -71118,7 +71484,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const title2 = ((_a2 = match2[1]) == null ? void 0 : _a2.trim()) ?? "";
       const body = match2[2] ?? "";
       const family = familyForDocumentsSectionTitle(title2);
-      if (family && !isFicheDocumentFamilyVisible(family)) continue;
+      if (family && CATALOG_FILTERED_DOCUMENT_SECTIONS.has(family) && !isFicheDocumentFamilyVisible(family)) {
+        continue;
+      }
       keptSections.push(`<h3 class="ec-fiche-info__section-title">${title2}</h3>${body}`);
     }
     if (!keptSections.length) {
@@ -71666,6 +72034,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!doc2) continue;
       const cat = supCategoryForDocument(doc2, categories);
       const key2 = (cat == null ? void 0 : cat.name) ?? "_other";
+      if (key2 !== "_other" && !isSupCategoryCatalogVisible(key2)) continue;
       const bucket = byCategory.get(key2) ?? { category: cat, docs: [] };
       bucket.docs.push(doc2);
       byCategory.set(key2, bucket);
@@ -71825,7 +72194,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function buildParcelDocumentsSectionFromFicheApi(data, kind) {
     if (!isFicheDocumentFamilyVisible(kind)) return "";
-    const partitionMap = kind === "du" ? data.dus : kind === "psmv" ? data.psmvs : kind === "sup" ? data.sups : data.scots;
+    const partitionMap = data.dus;
     const documents = collectProductionDocuments(normalizePartitionsMap$3(partitionMap));
     return sectionBlock(kind, documents, data.proceduresByDocument);
   }
@@ -72006,7 +72375,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return "";
   }
   function buildMecTerritoryProceduresHtml(data) {
-    var _a2, _b, _c2, _d, _e2, _f;
+    var _a2;
     const tiles = [];
     const mecsDu = normalizePartitionsMap$2(data.mecsDu);
     if (isFicheMecTerritoryPartitionCatalogVisible("mecsDu")) {
@@ -72026,27 +72395,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (tile) tiles.push(tile);
       }
     }
-    const pbd = data.proceduresByDocument ?? {};
-    for (const [docName, list] of Object.entries(pbd)) {
-      if (!/^MEC_/i.test(docName)) continue;
-      for (const procedure of list) {
-        if (!isFicheProcedureVisibleForDocumentKey(docName, procedure.documentType)) continue;
-        const title2 = ((_a2 = procedure.name) == null ? void 0 : _a2.trim()) || ((_c2 = (_b = procedure.procedureType) == null ? void 0 : _b.title) == null ? void 0 : _c2.trim()) || ((_d = procedure.documentName) == null ? void 0 : _d.trim()) || "Procédure MEC";
-        tiles.push(
-          procedureTileHtml({
-            title: title2,
-            href: documentTileHrefFromApiFields({
-              id: procedure.id,
-              viewUrl: (_f = (_e2 = procedure.files) == null ? void 0 : _e2[0]) == null ? void 0 : _f.url
-            }),
-            inProgress: procedure.inProgress !== false,
-            detailLine: null
-          })
-        );
-      }
-    }
     if (!tiles.length) return "";
-    return documentTilesListHtml(tiles);
+    const seenIds = /* @__PURE__ */ new Set();
+    const unique2 = [];
+    for (const tile of tiles) {
+      const match2 = tile.match(/\/document\/([a-f0-9]{32})/i);
+      const key2 = ((_a2 = match2 == null ? void 0 : match2[1]) == null ? void 0 : _a2.toLowerCase()) ?? tile;
+      if (seenIds.has(key2)) continue;
+      seenIds.add(key2);
+      unique2.push(tile);
+    }
+    return documentTilesListHtml(unique2);
   }
   function resolveParcelRuleWrittenPieceHref(properties) {
     const urlfic = coerceDisplayString(properties.urlfic);
@@ -72199,13 +72558,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (name2) {
       const byName = lookup2.byName.get(name2);
       if (byName) return byName;
-    }
-    if (options == null ? void 0 : options.matchPartition) {
-      const partition = coerceDisplayString(props.partition).toLowerCase();
-      if (partition) {
-        const byPartition = lookup2.byPartition.get(partition);
-        if (byPartition) return byPartition;
-      }
     }
     return null;
   }
@@ -72389,20 +72741,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return tiles;
   }
-  function buildSupDocumentTiles(ficheApi, hasSupOnParcel) {
-    if (!hasSupOnParcel || !ficheApi) return [];
+  function supPartitionMatchesParcelFeature(partitionKey, feature) {
+    const keyNorm = partitionKey.trim().toLowerCase();
+    const props = feature.properties ?? {};
+    const partition = coerceDisplayString(props.partition);
+    if (partition && partition.toLowerCase() === keyNorm) return true;
+    const name2 = coerceDisplayString(props.name ?? props.originalName);
+    if (name2 && name2.toLowerCase() === keyNorm) return true;
+    const suptype = coerceDisplayString(props.suptype);
+    if (suptype && keyNorm.endsWith(`_${suptype.toLowerCase()}`)) return true;
+    const typepsc = coerceDisplayString(props.typepsc);
+    if (typepsc && keyNorm.endsWith(`_${typepsc.toLowerCase()}`)) return true;
+    return false;
+  }
+  function buildSupDocumentTiles(ficheApi, supOnParcel) {
+    var _a2;
+    if (!supOnParcel.length || !ficheApi) return [];
     const categories = readSupCategories();
     const seen = /* @__PURE__ */ new Set();
     const tiles = [];
-    for (const partition of Object.values(normalizePartitionsMap$1(ficheApi.sups))) {
+    for (const [partitionKey, partition] of Object.entries(normalizePartitionsMap$1(ficheApi.sups))) {
+      if (!supOnParcel.some((f2) => supPartitionMatchesParcelFeature(partitionKey, f2))) continue;
       const docs = partition.documents ?? [];
       const production = docs.filter((d) => d.status === "document.production");
       const doc2 = production[0] ?? docs[0];
       if (!doc2) continue;
-      const id2 = coerceDisplayString(doc2.id);
-      if (id2 && seen.has(id2.toLowerCase())) continue;
-      if (id2) seen.add(id2.toLowerCase());
-      const title2 = coerceDisplayString(doc2.title) || "Servitude d’utilité publique";
       const category = supCategoryForDocument(
         {
           name: coerceDisplayString(doc2.name),
@@ -72411,6 +72774,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         },
         categories
       );
+      const supCode = (_a2 = category == null ? void 0 : category.name) == null ? void 0 : _a2.trim().toUpperCase();
+      if (supCode && !isSupCategoryCatalogVisible(supCode)) continue;
+      const id2 = coerceDisplayString(doc2.id);
+      if (id2 && seen.has(id2.toLowerCase())) continue;
+      if (id2) seen.add(id2.toLowerCase());
+      const title2 = coerceDisplayString(doc2.title) || "Servitude d’utilité publique";
       tiles.push(
         documentSupTileHtml({
           title: supCategoryLibelle(category),
@@ -72425,16 +72794,43 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return tiles;
   }
-  function dedupeScotFeaturesByPartition(features) {
+  function dedupeScotFeaturesByGpuId(features) {
     var _a2;
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     for (const feature of features) {
-      const partition = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.partition).toLowerCase();
-      const key2 = partition || featureDedupeKey(feature);
+      const props = feature.properties ?? {};
+      const key2 = ((_a2 = parcelFeatureGpuDocumentId(props)) == null ? void 0 : _a2.toLowerCase()) || featureDedupeKey(feature);
       if (seen.has(key2)) continue;
       seen.add(key2);
       out.push(feature);
+    }
+    return out;
+  }
+  function scotFeatureMatchesGpuSiteDocumentId(props, lookup2) {
+    if (!lookup2) return false;
+    const docId = parcelFeatureGpuDocumentId(props);
+    return Boolean(docId && lookup2.byId.has(docId.toLowerCase()));
+  }
+  function filterScotPartitionsByWfsGpuId(scots, parcelFiche) {
+    if (!scots || !Object.keys(scots).length) return scots ?? {};
+    const features = (parcelFiche == null ? void 0 : parcelFiche.features) ?? [];
+    const scotIds = /* @__PURE__ */ new Set();
+    for (const feature of features) {
+      if (classifyFeature(feature) !== "scot") continue;
+      const id2 = parcelFeatureGpuDocumentId(feature.properties ?? {});
+      if (id2) scotIds.add(id2.toLowerCase());
+    }
+    if (!scotIds.size) return {};
+    const out = {};
+    for (const [partitionKey, partition] of Object.entries(scots)) {
+      const docs = (partition.documents ?? []).filter((doc2) => {
+        const id2 = coerceDisplayString(doc2.id);
+        return id2 && scotIds.has(id2.toLowerCase());
+      });
+      if (docs.length) {
+        out[partitionKey] = { ...partition, documents: docs };
+      }
     }
     return out;
   }
@@ -72468,7 +72864,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function scotTileFromFeature(feature, lookup2, ficheApi) {
     const props = feature.properties ?? {};
-    const gpuSite = gpuSiteDocumentForFeatureProps(props, lookup2, { matchPartition: true });
+    const gpuSite = gpuSiteDocumentForFeatureProps(props, lookup2);
     const title2 = (gpuSite == null ? void 0 : gpuSite.title) || formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT");
     const name2 = (gpuSite == null ? void 0 : gpuSite.originalName) || coerceDisplayString(props.originalName ?? props.name);
     const partitionName = coerceDisplayString(props.name) || coerceDisplayString(props.partition) || void 0;
@@ -72527,19 +72923,26 @@ Expected function or array of functions, received type ${typeof value2}.`
     return false;
   }
   function shouldIncludeParcelRuleFeature(feature, section, ficheApi, lookup2) {
+    var _a2;
     if (section === "mec") {
       return isParcelMecFeatureAllowed(feature, ficheApi);
     }
     if (section === "zonage" || section === "prescription" || section === "information" || section === "secteur") {
+      if (!duRuleFeatureMatchesCatalogScope(feature, section)) return false;
       return duUrbanismRuleFeatureVisible(feature, ficheApi, lookup2);
     }
-    if (section === "sup" || section === "scot") {
+    if (section === "sup") {
+      const suptype = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.suptype);
+      if (!suptype) return true;
+      return isSupCategoryCatalogVisible(suptype);
+    }
+    if (section === "scot") {
       const props = feature.properties ?? {};
       if (!ficheApi) return false;
       if (documentFeatureInGpuSite(props, lookup2)) return true;
       const partition = coerceDisplayString(props.partition);
-      if (partition && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2)) return true;
-      return false;
+      if (!partition) return false;
+      return partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2);
     }
     return true;
   }
@@ -72594,7 +72997,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function buildScotDocumentTiles(scotFeatures, mecFeatures, blockedParents, lookup2, ficheApi, mecCatalogVisible) {
     var _a2, _b;
     const tiles = [];
-    for (const feature of dedupeScotFeaturesByPartition(scotFeatures)) {
+    for (const feature of dedupeScotFeaturesByGpuId(scotFeatures)) {
       const partition = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.partition).toLowerCase();
       if (mecCatalogVisible && partition && blockedParents.has(partition)) {
         for (const mec of dedupeMecFeaturesByPartition(mecFeatures)) {
@@ -72609,7 +73012,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         continue;
       }
       const props = feature.properties ?? {};
-      if (!documentFeatureInGpuSite(props, lookup2)) continue;
+      if (!scotFeatureMatchesGpuSiteDocumentId(props, lookup2)) continue;
       tiles.push(scotTileFromFeature(feature, lookup2, ficheApi));
     }
     return tiles;
@@ -72620,29 +73023,29 @@ Expected function or array of functions, received type ${typeof value2}.`
     const documentFeatures = all2.filter((f2) => classifyFeature(f2) === "document");
     const scotFeatures = all2.filter((f2) => classifyFeature(f2) === "scot");
     const mecFeatures = all2.filter((f2) => classifyFeature(f2) === "mec");
-    const hasSupOnParcel = all2.some((f2) => classifyFeature(f2) === "sup");
+    const supOnParcel = all2.filter((f2) => classifyFeature(f2) === "sup");
     const mecCatalogVisible = isFicheDocumentFamilyVisible("mec");
     const blockedParents = mecCatalogVisible ? blockedParentPartitionsFromMecFeatures(mecFeatures) : /* @__PURE__ */ new Set();
     const parts = [];
-    if (documentFeatures.some((f2) => documentFeatureIsNonExecutoire(f2, lookup2)) || ficheApi && buildParcelDocumentsPresentationHtml(ficheApi).includes("ec-fiche-info__callout")) {
+    if (documentFeatures.some((f2) => documentFeatureIsNonExecutoire(f2, lookup2))) {
       parts.push(FICHE_NON_EXECUTOIRE_CALLOUT_HTML);
     }
-    const duTiles = isFicheDocumentFamilyVisible("du") ? [
+    const duTiles = [
       ...mecCatalogVisible ? buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) : [],
       ...buildDuDocumentTiles(documentFeatures, blockedParents, lookup2, ficheApi)
-    ] : [];
-    const supTiles = isFicheDocumentFamilyVisible("sup") ? buildSupDocumentTiles(ficheApi, hasSupOnParcel) : [];
-    const scotTiles = isFicheDocumentFamilyVisible("scot") ? buildScotDocumentTiles(
+    ];
+    const supTiles = isFicheDocumentFamilyVisible("sup") ? buildSupDocumentTiles(ficheApi, supOnParcel) : [];
+    const scotTiles = buildScotDocumentTiles(
       scotFeatures,
       mecFeatures,
       blockedParents,
       lookup2,
       ficheApi,
       mecCatalogVisible
-    ) : [];
+    );
     if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
-      const presentation = buildParcelDocumentsPresentationHtml(ficheApi).trim();
-      if (presentation) parts.push(presentation);
+      const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "du");
+      if (duSection) parts.push(duSection);
       return parts.join("");
     }
     if (!duTiles.length && !supTiles.length && !scotTiles.length) {
@@ -72658,16 +73061,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (supTiles.length) {
       parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>');
       parts.push(documentTilesListHtml(supTiles));
-    } else if (ficheApi && isFicheDocumentFamilyVisible("sup")) {
-      const supSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "sup");
-      if (supSection) parts.push(supSection);
     }
     if (scotTiles.length) {
       parts.push('<h3 class="ec-fiche-info__section-title">Schémas de cohérence territoriale</h3>');
       parts.push(documentTilesListHtml(scotTiles));
-    } else if (ficheApi) {
-      const scotSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "scot");
-      if (scotSection) parts.push(scotSection);
     }
     return parts.join("");
   }
@@ -72706,7 +73103,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function isGpuFicheInfoPayload(data) {
     if (!data || typeof data !== "object") return false;
     const o = data;
-    return "parcel" in o || "grid" in o || "dus" in o || "partitions" in o || "parcelFeature" in o;
+    return "parcel" in o || "grid" in o || "dus" in o || "sups" in o || "scots" in o || "psmvs" in o || "partitions" in o || "parcelFeature" in o;
   }
   function normalizePartitionsMap(value2) {
     if (!value2) return {};
@@ -72924,7 +73321,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         bodyHtml: territory ? prependNonExecutoireCalloutForPartitionMap(body, sups) : body
       });
     }
-    const scots = normalizePartitionsMap(data.scots);
+    const scots = filterScotPartitionsByWfsGpuId(
+      normalizePartitionsMap(data.scots),
+      isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : void 0
+    );
     if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible("scot")) {
       const bodyHtml = buildDuTabTilesHtml(scots, data);
       tabs.push({
@@ -72934,12 +73334,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
     }
     const inProgress = collectInProgressProcedures(proceduresByDocument);
-    const mecProcedures = collectMecProcedures(proceduresByDocument);
+    const mecProceduresHtml = buildMecTerritoryProceduresHtml(data);
+    const mecProcedures = mecProceduresHtml ? [] : collectMecProcedures(proceduresByDocument);
     const procedureTiles = [...inProgress];
     for (const mecProc of mecProcedures) {
       if (!procedureTiles.some((p5) => p5.id === mecProc.id)) procedureTiles.push(mecProc);
     }
-    const mecProceduresHtml = buildMecTerritoryProceduresHtml(data);
     if (procedureTiles.length || mecProceduresHtml) {
       let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : "";
       if (mecProceduresHtml) bodyHtml += mecProceduresHtml;
@@ -73103,12 +73503,21 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const inflightPayloadByPoint = /* @__PURE__ */ new Map();
   let activePanelNetworkAbort = null;
-  function fichePayloadInflightKey(lon, lat, zoom, mode2) {
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}`;
+  const activeBackgroundNetworkAborts = /* @__PURE__ */ new Set();
+  function fichePayloadInflightKey(lon, lat, zoom, mode2, activeFamilies, activeSupTypes2) {
+    const families = (activeFamilies == null ? void 0 : activeFamilies.length) ? [...activeFamilies].sort().join(",") : "all";
+    const supTypes = (activeSupTypes2 == null ? void 0 : activeSupTypes2.length) ? [...activeSupTypes2].sort().join(",") : "all-sup";
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}|${families}|${supTypes}`;
   }
   function takeoverFicheNetworkSignal(external, role = "panel") {
     if (role === "background") {
       const controller2 = new AbortController();
+      activeBackgroundNetworkAborts.add(controller2);
+      controller2.signal.addEventListener(
+        "abort",
+        () => activeBackgroundNetworkAborts.delete(controller2),
+        { once: true }
+      );
       if (external == null ? void 0 : external.aborted) {
         controller2.abort();
       } else if (external) {
@@ -73138,6 +73547,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     const hadPanel = activePanelNetworkAbort !== null;
     activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.abort();
     activePanelNetworkAbort = null;
+    for (const controller2 of [...activeBackgroundNetworkAborts]) {
+      controller2.abort();
+    }
+    activeBackgroundNetworkAborts.clear();
     clearInflightFichePayloads();
     if (hadPanel) {
       const base = resolveFicheInfoSupersedeBaseUrl();
@@ -73148,7 +73561,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (typeof window === "undefined") return null;
     const fetchBase = resolveFicheInfoCombinedFetchUrl();
     if (!fetchBase) return null;
-    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom, "combined");
+    const inflightKey = fichePayloadInflightKey(
+      params2.lon,
+      params2.lat,
+      params2.zoom,
+      "combined",
+      params2.activeFamilies,
+      params2.activeSupTypes
+    );
     const existing = inflightPayloadByPoint.get(inflightKey);
     if (existing) return existing;
     const role = params2.fetchRole ?? "panel";
@@ -73168,7 +73588,14 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   async function fetchGpuFicheInfoPayload(params2) {
     if (typeof window === "undefined") return null;
-    const inflightKey = fichePayloadInflightKey(params2.lon, params2.lat, params2.zoom, params2.mode);
+    const inflightKey = fichePayloadInflightKey(
+      params2.lon,
+      params2.lat,
+      params2.zoom,
+      params2.mode,
+      params2.activeFamilies,
+      params2.activeSupTypes
+    );
     const existing = inflightPayloadByPoint.get(inflightKey);
     if (existing) return existing;
     const role = params2.fetchRole ?? "panel";
@@ -73197,8 +73624,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
       url.searchParams.set("scope", "both");
     }
+    const sendSessionCookies = url.searchParams.get("zone") === "validation" || url.searchParams.has("previewDocumentId");
     try {
-      const res = await fetch(url.toString(), { credentials: "same-origin", signal });
+      const res = await fetch(url.toString(), {
+        credentials: sendSessionCookies ? "include" : "same-origin",
+        signal
+      });
       if (res.status === 204) return null;
       if (!res.ok) return null;
       const data = await res.json();
@@ -73339,6 +73770,432 @@ Expected function or array of functions, received type ${typeof value2}.`
       parcelDocumentsHtml: cached.parcelDocumentsHtml
     };
   }
+  const ALL_API_FAMILIES = ["du", "sup", "scot"];
+  function readConfigFlag() {
+    const bag = config;
+    if (bag.apiFicheInfoCatalogFamilies === false) return false;
+    const apiUrl = config.apiFicheInfoUrl;
+    return preferFicheInfoV2CombinedFetch() || Boolean(apiUrl == null ? void 0 : apiUrl.includes("fiche-info-v2"));
+  }
+  function isCatalogDrivenFicheFetchEnabled() {
+    return readConfigFlag();
+  }
+  function resolveFicheInfoActiveFamiliesForFetch() {
+    if (!isCatalogDrivenFicheFetchEnabled()) {
+      return [...ALL_API_FAMILIES];
+    }
+    const families = [];
+    if (isFicheDocumentFamilyVisible("du") || isFicheDocumentFamilyVisible("psmv") || isFicheDocumentFamilyVisible("mec")) {
+      families.push("du");
+    }
+    if (isFicheDocumentFamilyVisible("sup")) families.push("sup");
+    if (isFicheDocumentFamilyVisible("scot")) families.push("scot");
+    return families.length ? families : ["du"];
+  }
+  function missingFicheInfoFamilies(desired, acquired) {
+    const have = new Set(acquired);
+    return desired.filter((f2) => !have.has(f2));
+  }
+  function unionFicheInfoFamilies(a3, b) {
+    return [.../* @__PURE__ */ new Set([...a3, ...b])];
+  }
+  function familiesForTerritoryNetworkFetch(missing, mode2) {
+    if (mode2 !== MAP_MODE_TERRITORY || !missing.length) return missing;
+    if (missing.some((f2) => f2 === "sup" || f2 === "scot") && !missing.includes("du") && isFicheDocumentFamilyVisible("du")) {
+      return unionFicheInfoFamilies(missing, ["du"]);
+    }
+    return missing;
+  }
+  function resolveFicheInfoActiveSupTypesForFetch() {
+    if (!isCatalogDrivenFicheFetchEnabled()) return null;
+    if (!isFicheDocumentFamilyVisible("sup")) return null;
+    const types = getFicheCatalogSupTypes();
+    if (!(types == null ? void 0 : types.size)) return null;
+    return [...types].sort((a3, b) => a3.localeCompare(b));
+  }
+  function missingFicheInfoSupTypes(desired, acquired) {
+    if (!(desired == null ? void 0 : desired.length)) return [];
+    if (acquired === null) return [];
+    return desired.filter((code) => !acquired.has(code.toUpperCase()));
+  }
+  function supTypesAcquisitionSatisfied(desired, acquired) {
+    return missingFicheInfoSupTypes(desired, acquired).length === 0;
+  }
+  function unionAcquiredSupTypes(acquired, fetched) {
+    if (fetched === null) {
+      return null;
+    }
+    if (fetched === void 0 || !fetched.length) {
+      return acquired;
+    }
+    if (acquired === null) {
+      return null;
+    }
+    const next = new Set(acquired);
+    for (const code of fetched) {
+      const key2 = code.trim().toUpperCase();
+      if (key2) next.add(key2);
+    }
+    return next;
+  }
+  function activeSupTypesForFetch(familiesToFetch, acquiredFamilies, acquiredSupTypes) {
+    if (!familiesToFetch.includes("sup")) return null;
+    const desired = resolveFicheInfoActiveSupTypesForFetch();
+    if (!(desired == null ? void 0 : desired.length)) return null;
+    const firstSupFamilyFetch = !acquiredFamilies.includes("sup");
+    if (firstSupFamilyFetch) {
+      return desired;
+    }
+    const missing = missingFicheInfoSupTypes(desired, acquiredSupTypes);
+    return missing.length ? missing : null;
+  }
+  function catalogFicheAcquisitionComplete(desiredFamilies, acquiredFamilies, acquiredSupTypes) {
+    const desiredSup = resolveFicheInfoActiveSupTypesForFetch();
+    const familiesOk = desiredFamilies.every((f2) => acquiredFamilies.includes(f2));
+    const supOk = supTypesAcquisitionSatisfied(desiredSup, acquiredSupTypes);
+    return familiesOk && supOk;
+  }
+  function parentCommuneInseeForArrondissement(codeInsee) {
+    if (!/^\d{5}$/.test(codeInsee)) return null;
+    if (codeInsee.startsWith("751") && codeInsee !== "75056") return "75056";
+    const codeNum = Number(codeInsee);
+    if (codeNum >= 13201 && codeNum <= 13216) return "13055";
+    if (codeNum >= 69381 && codeNum <= 69389) return "69123";
+    return null;
+  }
+  function isMunicipalArrondissementInsee(codeInsee) {
+    return parentCommuneInseeForArrondissement(codeInsee) != null;
+  }
+  function readGeometry$1(value2) {
+    if (!value2 || typeof value2 !== "object") return null;
+    const g = value2;
+    return typeof g.type === "string" ? g : null;
+  }
+  function gridInseeFromPayload(payload) {
+    const grid = payload.grid;
+    if (!grid || typeof grid !== "object") return "";
+    const insee = grid.insee;
+    return typeof insee === "string" ? insee : "";
+  }
+  function parcelGeometryFromPayload(payload) {
+    const direct = readGeometry$1(payload.parcelGeometry);
+    if (direct) return direct;
+    const raw = payload;
+    const parcelFeature = raw.parcelFeature;
+    if (parcelFeature && typeof parcelFeature === "object") {
+      return readGeometry$1(parcelFeature.geometry);
+    }
+    return null;
+  }
+  function modeEmprisePartsFromFichePayload(payload, mode2) {
+    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
+    if (resolvedMode === MAP_MODE_PARCEL) {
+      const geometry = parcelGeometryFromPayload(payload);
+      return geometry ? [{ kind: "parcel", geometry }] : [];
+    }
+    if (resolvedMode !== MAP_MODE_TERRITORY) return [];
+    const insee = gridInseeFromPayload(payload);
+    const parentGeometry = readGeometry$1(payload.parentGridGeometry);
+    const gridGeometry = readGeometry$1(payload.gridGeometry);
+    const parts = [];
+    if (parentGeometry) {
+      parts.push({ kind: "commune", geometry: parentGeometry });
+    }
+    if (gridGeometry) {
+      const kind = parentGeometry && insee && isMunicipalArrondissementInsee(insee) ? "arrondissement" : "commune";
+      parts.push({ kind, geometry: gridGeometry });
+    }
+    return parts;
+  }
+  const MODE_EMPRISE_PROP = "ec-mode-emprise";
+  const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
+  let empriseTargetKey = null;
+  const EMPRISE_POINT_EPS = 1e-7;
+  let emprisePointCache = null;
+  const geoJson$1 = new GeoJSON();
+  function sameEmprisePoint(a3, b) {
+    return Math.abs(a3.lon - b.lon) <= EMPRISE_POINT_EPS && Math.abs(a3.lat - b.lat) <= EMPRISE_POINT_EPS;
+  }
+  function syncEmprisePointCache(lon, lat) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) {
+      emprisePointCache = { lon, lat, byMode: {} };
+    }
+  }
+  function cloneEmpriseFeature(feature) {
+    const clone2 = feature.clone();
+    const kind = feature.get(MODE_EMPRISE_PROP);
+    if (kind) {
+      clone2.set(MODE_EMPRISE_PROP, kind);
+      clone2.setStyle(styleForKind(kind));
+    }
+    return clone2;
+  }
+  function storeEmpriseInCache(lon, lat, mode2, features) {
+    syncEmprisePointCache(lon, lat);
+    emprisePointCache.byMode[mode2] = features.map(cloneEmpriseFeature);
+  }
+  function cachedEmpriseForMode(lon, lat, mode2) {
+    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) return null;
+    if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
+    const stored = emprisePointCache.byMode[mode2] ?? [];
+    return stored.map(cloneEmpriseFeature);
+  }
+  function modeEmpriseStyle(stroke, fill) {
+    return new Style({
+      stroke: new Stroke({
+        color: stroke,
+        width: 2,
+        lineDash: [8, 8]
+      }),
+      fill: new Fill({ color: fill })
+    });
+  }
+  function communeOrParcelEmpriseStyle() {
+    return modeEmpriseStyle("rgba(200, 16, 46, 0.95)", "rgba(200, 16, 46, 0.12)");
+  }
+  function arrondissementEmpriseStyle() {
+    return modeEmpriseStyle("rgba(230, 126, 34, 0.95)", "rgba(230, 126, 34, 0.14)");
+  }
+  function styleForKind(kind) {
+    return kind === "arrondissement" ? arrondissementEmpriseStyle() : communeOrParcelEmpriseStyle();
+  }
+  function dismissSearchEnginePopup(host) {
+    var _a2;
+    (_a2 = host.popup) == null ? void 0 : _a2.setPosition(void 0);
+  }
+  function removeModeEmpriseFeatures(host) {
+    var _a2;
+    const source = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
+    if (!source) return;
+    for (const feature of [...source.getFeatures()]) {
+      if (!feature.get(MODE_EMPRISE_PROP)) continue;
+      if (typeof source.removeFeature === "function") {
+        source.removeFeature(feature);
+      }
+    }
+  }
+  function readGeoJsonFeature(raw, kind) {
+    var _a2;
+    if (!(raw == null ? void 0 : raw.geometry)) return null;
+    const map2 = (_a2 = searchEngineLayerHostRef.value) == null ? void 0 : _a2.getMap();
+    const projection = map2 == null ? void 0 : map2.getView().getProjection();
+    if (!projection) return null;
+    const feature = geoJson$1.readFeature(raw, {
+      dataProjection: "EPSG:4326",
+      featureProjection: projection
+    });
+    feature.set(MODE_EMPRISE_PROP, kind);
+    feature.setStyle(styleForKind(kind));
+    return feature;
+  }
+  function readMapZoom() {
+    var _a2;
+    const map2 = (_a2 = searchEngineLayerHostRef.value) == null ? void 0 : _a2.getMap();
+    return (map2 == null ? void 0 : map2.getView().getZoom()) ?? 15;
+  }
+  function featuresFromFichePayload(payload, mode2) {
+    const parts = modeEmprisePartsFromFichePayload(payload, mode2);
+    const features = [];
+    for (const part of parts) {
+      const feature = readGeoJsonFeature(
+        { type: "Feature", geometry: part.geometry, properties: {} },
+        part.kind
+      );
+      if (feature) features.push(feature);
+    }
+    return features;
+  }
+  function fetchEmpriseFichePayload(lon, lat, mode2, zoom) {
+    const activeFamilies = resolveFicheInfoActiveFamiliesForFetch();
+    const activeSupTypes2 = resolveFicheInfoActiveSupTypesForFetch();
+    if (preferFicheInfoV2CombinedFetch()) {
+      return fetchGpuFicheInfoCombinedPayload({
+        lon,
+        lat,
+        zoom,
+        activeFamilies,
+        activeSupTypes: activeSupTypes2,
+        fetchRole: "background"
+      });
+    }
+    return fetchGpuFicheInfoPayload({
+      lon,
+      lat,
+      zoom,
+      mode: mode2,
+      activeFamilies,
+      activeSupTypes: activeSupTypes2,
+      fetchRole: "background"
+    });
+  }
+  function seedModeEmpriseCacheFromFichePayload(lon, lat, payload) {
+    for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
+      storeEmpriseInCache(lon, lat, mapMode, featuresFromFichePayload(payload, mapMode));
+    }
+  }
+  async function fetchModeEmpriseFeatures(lon, lat, mode2, zoom) {
+    if (typeof window === "undefined") return [];
+    return new Promise((resolve2) => {
+      whenGpuClientConfigReady(() => {
+        void fetchEmpriseFichePayload(lon, lat, mode2, zoom).then((payload) => {
+          if (!payload) {
+            resolve2([]);
+            return;
+          }
+          if (preferFicheInfoV2CombinedFetch()) {
+            seedModeEmpriseCacheFromFichePayload(lon, lat, payload);
+          } else {
+            storeEmpriseInCache(lon, lat, mode2, featuresFromFichePayload(payload, mode2));
+          }
+          const features = preferFicheInfoV2CombinedFetch() ? cachedEmpriseForMode(lon, lat, mode2) ?? [] : featuresFromFichePayload(payload, mode2);
+          resolve2(features.map(cloneEmpriseFeature));
+        }).catch(() => resolve2([]));
+      });
+    });
+  }
+  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey, zoom = readMapZoom()) {
+    var _a2, _b;
+    empriseTargetKey = targetKey;
+    removeModeEmpriseFeatures(host);
+    const fromCache = cachedEmpriseForMode(lon, lat, mode2);
+    if (fromCache !== null && fromCache.length > 0) {
+      if (empriseTargetKey !== targetKey) return;
+      const source2 = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
+      if (!source2) return;
+      for (const feature of fromCache) {
+        source2.addFeature(feature);
+      }
+      return;
+    }
+    const features = await fetchModeEmpriseFeatures(lon, lat, mode2, zoom);
+    if (empriseTargetKey !== targetKey) return;
+    const source = (_b = host.layer) == null ? void 0 : _b.getSource();
+    if (!source) return;
+    for (const feature of features) {
+      source.addFeature(feature);
+    }
+  }
+  function readCherryOrModeEmprisePoint() {
+    if (emprisePointCache) {
+      return { lon: emprisePointCache.lon, lat: emprisePointCache.lat };
+    }
+    return null;
+  }
+  function empriseTargetKeyForPoint(lon, lat) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`;
+  }
+  function empriseTargetKeyForModeFocus(lon, lat) {
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|mode-emprise`;
+  }
+  function ensureModeEmpriseForMapPoint(lon, lat, mode2, targetKey) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return;
+    void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
+  }
+  function modeEmpriseViewExtent(host) {
+    var _a2;
+    const source = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
+    if (!source) return null;
+    const emprise = createEmpty();
+    let hasEmprise = false;
+    for (const feature of source.getFeatures()) {
+      if (!feature.get(MODE_EMPRISE_PROP)) continue;
+      const geometry = feature.getGeometry();
+      if (!geometry || geometry.getType() === "Point") continue;
+      extend$3(emprise, geometry.getExtent());
+      hasEmprise = true;
+    }
+    return hasEmprise && !isEmpty(emprise) ? emprise : null;
+  }
+  async function ensureModeEmpriseForMapPointAsync(lon, lat, mode2, targetKey) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return null;
+    await ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
+    return modeEmpriseViewExtent(host);
+  }
+  function syncModeEmpriseToSearchLayer(lon, lat, mode2) {
+    const host = searchEngineLayerHostRef.value;
+    if (!host) return;
+    const resolvedMode = mode2 ?? readMapModeFromPermalinkParams(getMapPermalinkParams()) ?? MAP_MODE_TERRITORY;
+    void ensureModeEmpriseOnSearchLayer(
+      host,
+      lon,
+      lat,
+      resolvedMode,
+      empriseTargetKeyForModeFocus(lon, lat)
+    );
+  }
+  function mergeRecordPartitions(base, extra) {
+    if (!extra) return base;
+    if (Array.isArray(extra)) return extra.length ? extra : base;
+    if (!base || Array.isArray(base)) return Object.keys(extra).length ? extra : base;
+    if (!Object.keys(extra).length) return base;
+    return { ...base, ...extra };
+  }
+  function mergeProcedureMaps(base, extra) {
+    if (!extra) return base;
+    if (!base) return { ...extra };
+    const out = { ...base };
+    for (const [key2, list] of Object.entries(extra)) {
+      const prev = out[key2] ?? [];
+      const seen = new Set(prev.map((p5) => p5.id ?? p5.name));
+      const merged = [...prev];
+      for (const proc of list) {
+        const id2 = proc.id ?? proc.name;
+        if (id2 && seen.has(id2)) continue;
+        if (id2) seen.add(id2);
+        merged.push(proc);
+      }
+      out[key2] = merged;
+    }
+    return out;
+  }
+  function mergeParcelFiche(base, extra) {
+    if (!extra) return base;
+    if (!base) return extra;
+    const byId = /* @__PURE__ */ new Map();
+    for (const f2 of base.features ?? []) {
+      const id2 = typeof f2.id === "string" ? f2.id : "";
+      if (id2) byId.set(id2, f2);
+    }
+    for (const f2 of extra.features ?? []) {
+      const id2 = typeof f2.id === "string" ? f2.id : "";
+      if (id2) byId.set(id2, f2);
+    }
+    return { features: [...byId.values()] };
+  }
+  function mergeGpuFicheInfoPayloads(base, partial) {
+    const merged = { ...base };
+    merged.dus = mergeRecordPartitions(base.dus, partial.dus);
+    merged.psmvs = mergeRecordPartitions(base.psmvs, partial.psmvs);
+    merged.sups = mergeRecordPartitions(base.sups, partial.sups);
+    merged.scots = mergeRecordPartitions(base.scots, partial.scots);
+    merged.mecsDu = mergeRecordPartitions(base.mecsDu, partial.mecsDu);
+    merged.mecsScot = mergeRecordPartitions(base.mecsScot, partial.mecsScot);
+    merged.lowScaleDocument = partial.lowScaleDocument ?? base.lowScaleDocument;
+    merged.proceduresByDocument = mergeProcedureMaps(
+      base.proceduresByDocument,
+      partial.proceduresByDocument
+    );
+    merged.notUnforceableByDocument = {
+      ...base.notUnforceableByDocument,
+      ...partial.notUnforceableByDocument
+    };
+    merged.grid = partial.grid ?? base.grid;
+    merged.parcel = partial.parcel ?? base.parcel;
+    merged.parcelId = partial.parcelId ?? base.parcelId;
+    merged.territoryParcelId = partial.territoryParcelId ?? base.territoryParcelId;
+    merged.parcelGeometry = partial.parcelGeometry ?? base.parcelGeometry;
+    merged.gridGeometry = partial.gridGeometry ?? base.gridGeometry;
+    merged.parentGridGeometry = partial.parentGridGeometry ?? base.parentGridGeometry;
+    merged.typeref = partial.typeref ?? base.typeref;
+    if (partial.is_el9_alert !== void 0) merged.is_el9_alert = partial.is_el9_alert;
+    const parcelBase = isGpuParcelFichePayload(base.parcelFiche) ? base.parcelFiche : void 0;
+    const parcelExtra = isGpuParcelFichePayload(partial.parcelFiche) ? partial.parcelFiche : void 0;
+    const parcelMerged = mergeParcelFiche(parcelBase, parcelExtra);
+    if (parcelMerged) merged.parcelFiche = parcelMerged;
+    return merged;
+  }
   const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
   const FICHE_PARCEL_UNAVAILABLE_BODY = "<p>Indisponibilité du service fiche parcelle (API gpu-site requise).</p>";
   let mapPointRequestSeq = 0;
@@ -73350,8 +74207,42 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function syncFichePointCache(lon, lat) {
     if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
-      fichePointCache = { lon, lat, byMode: {} };
+      fichePointCache = {
+        lon,
+        lat,
+        acquiredFamilies: [],
+        acquiredSupTypes: /* @__PURE__ */ new Set(),
+        mergedGpuPayload: null,
+        byMode: {}
+      };
     }
+  }
+  function recordGpuPayloadAcquisition(lon, lat, payload, fetchedFamilies, fetchedSupTypes) {
+    syncFichePointCache(lon, lat);
+    const merged = fichePointCache.mergedGpuPayload ? mergeGpuFicheInfoPayloads(fichePointCache.mergedGpuPayload, payload) : payload;
+    fichePointCache.mergedGpuPayload = merged;
+    fichePointCache.acquiredFamilies = unionFicheInfoFamilies(
+      fichePointCache.acquiredFamilies,
+      fetchedFamilies
+    );
+    fichePointCache.acquiredSupTypes = unionAcquiredSupTypes(
+      fichePointCache.acquiredSupTypes,
+      fetchedSupTypes
+    );
+    return merged;
+  }
+  async function fetchFicheGpuPayloadAtPoint(params2, activeFamilies, activeSupTypes2, signal) {
+    const queryArgs = { activeFamilies, activeSupTypes: activeSupTypes2 ?? void 0 };
+    if (preferFicheInfoV2CombinedFetch()) {
+      return fetchGpuFicheInfoCombinedPayload({
+        lon: params2.lon,
+        lat: params2.lat,
+        zoom: params2.zoom,
+        ...queryArgs,
+        abortSignal: signal
+      });
+    }
+    return fetchGpuFicheInfoPayload({ ...params2, ...queryArgs, abortSignal: signal });
   }
   function storeFicheInCache(mode2, lon, lat, selection) {
     syncFichePointCache(lon, lat);
@@ -73471,14 +74362,50 @@ Expected function or array of functions, received type ${typeof value2}.`
       api.updateSelection(selection);
     }
   }
+  function readFicheCherryPoint() {
+    var _a2, _b;
+    const fromPermalink = readMapPermalinkMarker(getMapPermalinkParams());
+    if (fromPermalink) return fromPermalink;
+    if (fichePointCache) return { lon: fichePointCache.lon, lat: fichePointCache.lat };
+    const raw = (_b = (_a2 = tabPanelsApiRef.value) == null ? void 0 : _a2.selection.value) == null ? void 0 : _b.raw;
+    const lon = Number(raw == null ? void 0 : raw.lon);
+    const lat = Number(raw == null ? void 0 : raw.lat);
+    if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat };
+    return null;
+  }
   function refreshFicheForCatalogVisibility() {
-    var _a2, _b, _c2, _d;
     const api = tabPanelsApiRef.value;
     const current = api == null ? void 0 : api.selection.value;
     if (!(current == null ? void 0 : current.raw) || current.loading) return;
+    const desired = resolveFicheInfoActiveFamiliesForFetch();
+    const desiredSup = resolveFicheInfoActiveSupTypesForFetch();
+    const missingFamilies = fichePointCache && isCatalogDrivenFicheFetchEnabled() ? missingFicheInfoFamilies(desired, fichePointCache.acquiredFamilies) : [];
+    const missingSup = fichePointCache && isCatalogDrivenFicheFetchEnabled() ? missingFicheInfoSupTypes(desiredSup, fichePointCache.acquiredSupTypes) : [];
+    if (missingFamilies.length > 0 || missingSup.length > 0) {
+      void (async () => {
+        var _a2, _b;
+        try {
+          await ensureFicheCatalogSupplementAtMarker();
+        } catch (err) {
+          console.error("[fiche] ensureFicheCatalogSupplementAtMarker", err);
+          return;
+        }
+        const after = (_a2 = tabPanelsApiRef.value) == null ? void 0 : _a2.selection.value;
+        if (!(after == null ? void 0 : after.raw) || after.loading) return;
+        const next2 = refreshFicheSelectionCatalogVisibility(after);
+        syncCadastreLowFromFicheSelectionRaw(next2.raw);
+        (_b = tabPanelsApiRef.value) == null ? void 0 : _b.updateSelection(next2);
+        persistFicheCacheAfterCatalogRefresh(next2);
+      })();
+      return;
+    }
     const next = refreshFicheSelectionCatalogVisibility(current);
     syncCadastreLowFromFicheSelectionRaw(next.raw);
     api == null ? void 0 : api.updateSelection(next);
+    persistFicheCacheAfterCatalogRefresh(next);
+  }
+  function persistFicheCacheAfterCatalogRefresh(next) {
+    var _a2, _b, _c2, _d;
     const lon = Number((_a2 = next.raw) == null ? void 0 : _a2.lon);
     const lat = Number((_b = next.raw) == null ? void 0 : _b.lat);
     const activeMode = next.mapMode ?? readMapModeFromPermalinkParams(getMapPermalinkParams());
@@ -73498,6 +74425,59 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
       }
     }
+  }
+  async function ensureFicheCatalogSupplementAtMarker() {
+    if (!isCatalogDrivenFicheFetchEnabled()) return;
+    const cherry = readFicheCherryPoint();
+    if (!cherry || !fichePointCache || !sameMapPoint(fichePointCache, cherry)) return;
+    if (!fichePointCache.mergedGpuPayload) return;
+    const { lon, lat } = cherry;
+    const desired = resolveFicheInfoActiveFamiliesForFetch();
+    const desiredSup = resolveFicheInfoActiveSupTypesForFetch();
+    const missingFamilies = missingFicheInfoFamilies(desired, fichePointCache.acquiredFamilies);
+    const missingSup = missingFicheInfoSupTypes(desiredSup, fichePointCache.acquiredSupTypes);
+    if (!missingFamilies.length && !missingSup.length) return;
+    const params2 = getMapPermalinkParams();
+    const mode2 = readMapModeFromPermalinkParams(params2) ?? MAP_MODE_TERRITORY;
+    const zoom = readMapPermalinkZoom(params2) ?? 14;
+    await waitUntilGpuClientConfigScriptSettled();
+    syncEntreeConfigFromGpuScript();
+    finalizeGpuClientConfigStateIfInjected();
+    if (!resolveApiFicheInfoUrl()) return;
+    const requestId2 = ++mapPointRequestSeq;
+    mapPointFetchAbort == null ? void 0 : mapPointFetchAbort.abort();
+    abortInflightFicheInfoFetch();
+    mapPointFetchAbort = new AbortController();
+    const familiesToFetch = missingFamilies.length ? familiesForTerritoryNetworkFetch(missingFamilies, mode2) : ["sup"];
+    const supTypesToFetch = missingSup.length > 0 ? missingSup : activeSupTypesForFetch(
+      familiesToFetch,
+      fichePointCache.acquiredFamilies,
+      fichePointCache.acquiredSupTypes
+    );
+    const partial = await fetchFicheGpuPayloadAtPoint(
+      { lon, lat, zoom, mode: mode2 },
+      [...familiesToFetch],
+      supTypesToFetch,
+      mapPointFetchAbort.signal
+    );
+    if (!partial || requestId2 !== mapPointRequestSeq) return;
+    const merged = recordGpuPayloadAcquisition(
+      lon,
+      lat,
+      partial,
+      [...familiesToFetch],
+      supTypesToFetch
+    );
+    storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged);
+    for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
+      const selection = selectionFromGpuPayload(merged, mapMode, lon, lat);
+      storeFicheInCache(mapMode, lon, lat, selection);
+    }
+    const displayed = hydrateFicheSelectionFromCache(
+      cachedFicheForMode(mode2, lon, lat) ?? selectionFromGpuPayload(merged, mode2, lon, lat),
+      mode2
+    );
+    showFiche(displayed);
   }
   function syncFicheLocationMarker(lon, lat) {
     showMapLocationMarker(lon, lat, {
@@ -73520,16 +74500,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         syncFicheLocationMarker(lon, lat);
       }
     }
+    syncModeEmpriseToSearchLayer(lon, lat, mode2);
     return resolved;
   }
   function selectionFromGpuPayload(data, mode2, lon, lat) {
     return ficheSelectionFromGpuApi(data, mode2, lon, lat);
   }
-  function storeDualModeFicheCacheFromCombinedPayload(lon, lat, payload) {
+  function storeDualModeFicheCacheFromCombinedPayload(lon, lat, payload, displayMode) {
+    seedModeEmpriseCacheFromFichePayload(lon, lat, payload);
     for (const mode2 of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
       const selection = withParcelDetailCache(selectionFromGpuPayload(payload, mode2, lon, lat), mode2);
       storeFicheInCache(mode2, lon, lat, selection);
     }
+    syncModeEmpriseToSearchLayer(lon, lat, displayMode);
   }
   async function enrichTerritoryPayloadWithParcelAtPoint(params2, territoryPayload, requestId2, abortSignal) {
     if (ficheHasParcelAtPoint(territoryPayload)) return territoryPayload;
@@ -73541,6 +74524,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const parcelPayload = await fetchGpuFicheInfoPayload({
       ...params2,
       mode: MAP_MODE_PARCEL,
+      activeFamilies: resolveFicheInfoActiveFamiliesForFetch(),
       abortSignal
     });
     if (abortSignal.aborted || requestId2 !== mapPointRequestSeq) return territoryPayload;
@@ -73564,8 +74548,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     const silent = params2.silent === true;
     syncFichePointCache(params2.lon, params2.lat);
     const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
+    const desiredFamilies = resolveFicheInfoActiveFamiliesForFetch();
+    const acquisitionComplete = fichePointCache && catalogFicheAcquisitionComplete(
+      desiredFamilies,
+      fichePointCache.acquiredFamilies,
+      fichePointCache.acquiredSupTypes
+    );
     const cachedAtPoint = cachedFicheForMode(params2.mode, params2.lon, params2.lat);
-    if (cachedAtPoint) {
+    if (cachedAtPoint && acquisitionComplete) {
       const hydrated = hydrateFicheSelectionFromCache(cachedAtPoint, params2.mode);
       return applyMapPointResult(
         requestId2,
@@ -73573,6 +74563,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         params2.lat,
         params2.mode,
         hydrated,
+        markerPlacedAtClick,
+        skipLocationMarker,
+        silent
+      );
+    }
+    if (!cachedAtPoint && acquisitionComplete && (fichePointCache == null ? void 0 : fichePointCache.mergedGpuPayload)) {
+      const selection2 = selectionFromGpuPayload(
+        fichePointCache.mergedGpuPayload,
+        params2.mode,
+        params2.lon,
+        params2.lat
+      );
+      return applyMapPointResult(
+        requestId2,
+        params2.lon,
+        params2.lat,
+        params2.mode,
+        withParcelDetailCache(selection2, params2.mode),
         markerPlacedAtClick,
         skipLocationMarker,
         silent
@@ -73598,13 +74606,23 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
-    const useCombinedV2 = preferFicheInfoV2CombinedFetch();
-    let payload = useCombinedV2 ? await fetchGpuFicheInfoCombinedPayload({
-      lon: params2.lon,
-      lat: params2.lat,
-      zoom: params2.zoom,
-      abortSignal: fetchAbortSignal
-    }) : await fetchGpuFicheInfoPayload({ ...params2, abortSignal: fetchAbortSignal });
+    const missingFamilies = isCatalogDrivenFicheFetchEnabled() && (fichePointCache == null ? void 0 : fichePointCache.mergedGpuPayload) ? missingFicheInfoFamilies(desiredFamilies, fichePointCache.acquiredFamilies) : desiredFamilies;
+    const familiesToFetch = familiesForTerritoryNetworkFetch(
+      missingFamilies.length ? missingFamilies : desiredFamilies,
+      params2.mode
+    );
+    const acquiredFamilies = (fichePointCache == null ? void 0 : fichePointCache.acquiredFamilies) ?? [];
+    const supTypesToFetch = activeSupTypesForFetch(
+      familiesToFetch,
+      acquiredFamilies,
+      (fichePointCache == null ? void 0 : fichePointCache.acquiredSupTypes) ?? /* @__PURE__ */ new Set()
+    );
+    let payload = await fetchFicheGpuPayloadAtPoint(
+      params2,
+      familiesToFetch,
+      supTypesToFetch,
+      fetchAbortSignal
+    );
     if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
     if (!payload) {
       return applyMapPointResult(
@@ -73618,8 +74636,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         silent
       );
     }
+    payload = recordGpuPayloadAcquisition(
+      params2.lon,
+      params2.lat,
+      payload,
+      familiesToFetch,
+      supTypesToFetch
+    );
+    const useCombinedV2 = preferFicheInfoV2CombinedFetch();
     if (useCombinedV2) {
-      storeDualModeFicheCacheFromCombinedPayload(params2.lon, params2.lat, payload);
+      storeDualModeFicheCacheFromCombinedPayload(params2.lon, params2.lat, payload, params2.mode);
     } else if (params2.mode === MAP_MODE_TERRITORY) {
       payload = await enrichTerritoryPayloadWithParcelAtPoint(
         { lon: params2.lon, lat: params2.lat, zoom: params2.zoom },
@@ -73933,231 +74959,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       return [72, 72, tabPanelsBottomInset(), 72];
     }
     return [72, tabPanelsRightInset(), 72, 72];
-  }
-  function parentCommuneInseeForArrondissement(codeInsee) {
-    if (!/^\d{5}$/.test(codeInsee)) return null;
-    if (codeInsee.startsWith("751") && codeInsee !== "75056") return "75056";
-    const codeNum = Number(codeInsee);
-    if (codeNum >= 13201 && codeNum <= 13216) return "13055";
-    if (codeNum >= 69381 && codeNum <= 69389) return "69123";
-    return null;
-  }
-  function isMunicipalArrondissementInsee(codeInsee) {
-    return parentCommuneInseeForArrondissement(codeInsee) != null;
-  }
-  function readGeometry$1(value2) {
-    if (!value2 || typeof value2 !== "object") return null;
-    const g = value2;
-    return typeof g.type === "string" ? g : null;
-  }
-  function gridInseeFromPayload(payload) {
-    const grid = payload.grid;
-    if (!grid || typeof grid !== "object") return "";
-    const insee = grid.insee;
-    return typeof insee === "string" ? insee : "";
-  }
-  function parcelGeometryFromPayload(payload) {
-    const direct = readGeometry$1(payload.parcelGeometry);
-    if (direct) return direct;
-    const raw = payload;
-    const parcelFeature = raw.parcelFeature;
-    if (parcelFeature && typeof parcelFeature === "object") {
-      return readGeometry$1(parcelFeature.geometry);
-    }
-    return null;
-  }
-  function modeEmprisePartsFromFichePayload(payload, mode2) {
-    const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
-    if (resolvedMode === MAP_MODE_PARCEL) {
-      const geometry = parcelGeometryFromPayload(payload);
-      return geometry ? [{ kind: "parcel", geometry }] : [];
-    }
-    if (resolvedMode !== MAP_MODE_TERRITORY) return [];
-    const insee = gridInseeFromPayload(payload);
-    const parentGeometry = readGeometry$1(payload.parentGridGeometry);
-    const gridGeometry = readGeometry$1(payload.gridGeometry);
-    const parts = [];
-    if (parentGeometry) {
-      parts.push({ kind: "commune", geometry: parentGeometry });
-    }
-    if (gridGeometry) {
-      const kind = parentGeometry && insee && isMunicipalArrondissementInsee(insee) ? "arrondissement" : "commune";
-      parts.push({ kind, geometry: gridGeometry });
-    }
-    return parts;
-  }
-  const MODE_EMPRISE_PROP = "ec-mode-emprise";
-  const searchEngineLayerHostRef = /* @__PURE__ */ shallowRef(null);
-  let empriseTargetKey = null;
-  const EMPRISE_POINT_EPS = 1e-7;
-  let emprisePointCache = null;
-  const geoJson$1 = new GeoJSON();
-  function sameEmprisePoint(a3, b) {
-    return Math.abs(a3.lon - b.lon) <= EMPRISE_POINT_EPS && Math.abs(a3.lat - b.lat) <= EMPRISE_POINT_EPS;
-  }
-  function syncEmprisePointCache(lon, lat) {
-    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) {
-      emprisePointCache = { lon, lat, byMode: {} };
-    }
-  }
-  function cloneEmpriseFeature(feature) {
-    const clone2 = feature.clone();
-    const kind = feature.get(MODE_EMPRISE_PROP);
-    if (kind) {
-      clone2.set(MODE_EMPRISE_PROP, kind);
-      clone2.setStyle(styleForKind(kind));
-    }
-    return clone2;
-  }
-  function storeEmpriseInCache(lon, lat, mode2, features) {
-    syncEmprisePointCache(lon, lat);
-    emprisePointCache.byMode[mode2] = features.map(cloneEmpriseFeature);
-  }
-  function cachedEmpriseForMode(lon, lat, mode2) {
-    if (!emprisePointCache || !sameEmprisePoint(emprisePointCache, { lon, lat })) return null;
-    if (!Object.prototype.hasOwnProperty.call(emprisePointCache.byMode, mode2)) return null;
-    const stored = emprisePointCache.byMode[mode2] ?? [];
-    return stored.map(cloneEmpriseFeature);
-  }
-  function modeEmpriseStyle(stroke, fill) {
-    return new Style({
-      stroke: new Stroke({
-        color: stroke,
-        width: 2,
-        lineDash: [8, 8]
-      }),
-      fill: new Fill({ color: fill })
-    });
-  }
-  function communeOrParcelEmpriseStyle() {
-    return modeEmpriseStyle("rgba(200, 16, 46, 0.95)", "rgba(200, 16, 46, 0.12)");
-  }
-  function arrondissementEmpriseStyle() {
-    return modeEmpriseStyle("rgba(230, 126, 34, 0.95)", "rgba(230, 126, 34, 0.14)");
-  }
-  function styleForKind(kind) {
-    return kind === "arrondissement" ? arrondissementEmpriseStyle() : communeOrParcelEmpriseStyle();
-  }
-  function dismissSearchEnginePopup(host) {
-    var _a2;
-    (_a2 = host.popup) == null ? void 0 : _a2.setPosition(void 0);
-  }
-  function removeModeEmpriseFeatures(host) {
-    var _a2;
-    const source = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
-    if (!source) return;
-    for (const feature of [...source.getFeatures()]) {
-      if (!feature.get(MODE_EMPRISE_PROP)) continue;
-      if (typeof source.removeFeature === "function") {
-        source.removeFeature(feature);
-      }
-    }
-  }
-  function readGeoJsonFeature(raw, kind) {
-    var _a2;
-    if (!(raw == null ? void 0 : raw.geometry)) return null;
-    const map2 = (_a2 = searchEngineLayerHostRef.value) == null ? void 0 : _a2.getMap();
-    const projection = map2 == null ? void 0 : map2.getView().getProjection();
-    if (!projection) return null;
-    const feature = geoJson$1.readFeature(raw, {
-      dataProjection: "EPSG:4326",
-      featureProjection: projection
-    });
-    feature.set(MODE_EMPRISE_PROP, kind);
-    feature.setStyle(styleForKind(kind));
-    return feature;
-  }
-  function readMapZoom() {
-    var _a2;
-    const map2 = (_a2 = searchEngineLayerHostRef.value) == null ? void 0 : _a2.getMap();
-    return (map2 == null ? void 0 : map2.getView().getZoom()) ?? 15;
-  }
-  function featuresFromFichePayload(payload, mode2) {
-    const parts = modeEmprisePartsFromFichePayload(payload, mode2);
-    const features = [];
-    for (const part of parts) {
-      const feature = readGeoJsonFeature(
-        { type: "Feature", geometry: part.geometry, properties: {} },
-        part.kind
-      );
-      if (feature) features.push(feature);
-    }
-    return features;
-  }
-  async function fetchModeEmpriseFeatures(lon, lat, mode2, zoom) {
-    if (typeof window === "undefined") return [];
-    return new Promise((resolve2) => {
-      whenGpuClientConfigReady(() => {
-        void fetchGpuFicheInfoPayload({ lon, lat, zoom, mode: mode2, fetchRole: "background" }).then((payload) => {
-          if (!payload) {
-            resolve2([]);
-            return;
-          }
-          storeEmpriseInCache(lon, lat, mode2, featuresFromFichePayload(payload, mode2));
-          resolve2(featuresFromFichePayload(payload, mode2));
-        }).catch(() => resolve2([]));
-      });
-    });
-  }
-  async function ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey, zoom = readMapZoom()) {
-    var _a2, _b;
-    empriseTargetKey = targetKey;
-    removeModeEmpriseFeatures(host);
-    const fromCache = cachedEmpriseForMode(lon, lat, mode2);
-    if (fromCache !== null && fromCache.length > 0) {
-      if (empriseTargetKey !== targetKey) return;
-      const source2 = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
-      if (!source2) return;
-      for (const feature of fromCache) {
-        source2.addFeature(feature);
-      }
-      return;
-    }
-    const features = await fetchModeEmpriseFeatures(lon, lat, mode2, zoom);
-    if (empriseTargetKey !== targetKey) return;
-    const source = (_b = host.layer) == null ? void 0 : _b.getSource();
-    if (!source) return;
-    for (const feature of features) {
-      source.addFeature(feature);
-    }
-  }
-  function readCherryOrModeEmprisePoint() {
-    if (emprisePointCache) {
-      return { lon: emprisePointCache.lon, lat: emprisePointCache.lat };
-    }
-    return null;
-  }
-  function empriseTargetKeyForPoint(lon, lat) {
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Date.now()}`;
-  }
-  function empriseTargetKeyForModeFocus(lon, lat) {
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|mode-emprise`;
-  }
-  function ensureModeEmpriseForMapPoint(lon, lat, mode2, targetKey) {
-    const host = searchEngineLayerHostRef.value;
-    if (!host) return;
-    void ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
-  }
-  function modeEmpriseViewExtent(host) {
-    var _a2;
-    const source = (_a2 = host.layer) == null ? void 0 : _a2.getSource();
-    if (!source) return null;
-    const emprise = createEmpty();
-    let hasEmprise = false;
-    for (const feature of source.getFeatures()) {
-      if (!feature.get(MODE_EMPRISE_PROP)) continue;
-      const geometry = feature.getGeometry();
-      if (!geometry || geometry.getType() === "Point") continue;
-      extend$3(emprise, geometry.getExtent());
-      hasEmprise = true;
-    }
-    return hasEmprise && !isEmpty(emprise) ? emprise : null;
-  }
-  async function ensureModeEmpriseForMapPointAsync(lon, lat, mode2, targetKey) {
-    const host = searchEngineLayerHostRef.value;
-    if (!host) return null;
-    await ensureModeEmpriseOnSearchLayer(host, lon, lat, mode2, targetKey);
-    return modeEmpriseViewExtent(host);
   }
   function storedPlaceViewExtent(extent) {
     if (!extent) return null;
@@ -112011,7 +112812,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     writeFeaturesNode(features, options) {
       options = this.adaptOptions(options);
-      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
+      const kml = createElementNS(NAMESPACE_URIS[4] ?? "", "kml");
       const xmlnsUri = "http://www.w3.org/2000/xmlns/";
       kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
       kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
@@ -112345,7 +113146,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       object["heading"]
     );
     if (heading !== void 0) {
-      rotation = toRadians(heading);
+      rotation = toRadians$1(heading);
     }
     const scale2 = (
       /** @type {number|undefined} */
@@ -116500,6 +117301,63 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return layerPermalinkInInitialHash === true;
   }
+  function buildCatalogTreeIndex(roots) {
+    const nodesById = /* @__PURE__ */ new Map();
+    const parentById = /* @__PURE__ */ new Map();
+    function walk(node, parent) {
+      nodesById.set(node.id, node);
+      parentById.set(node.id, parent);
+      for (const child of catalogChildNodes(node)) {
+        walk(child, node);
+      }
+    }
+    for (const root of roots) walk(root, null);
+    return { nodesById, parentById, roots };
+  }
+  function catalogAncestorIds(nodeId, parentById) {
+    const ids = [];
+    let parent = parentById.get(nodeId) ?? null;
+    while (parent) {
+      ids.unshift(parent.id);
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return ids;
+  }
+  function flattenCatalogNodes(roots) {
+    const flat = [];
+    function walk(node) {
+      flat.push(node);
+      catalogChildNodes(node).forEach(walk);
+    }
+    roots.forEach(walk);
+    return flat;
+  }
+  function catalogSubtreePartiallyChecked(node, checkedById) {
+    let anyChecked = false;
+    let anyUnchecked = false;
+    function walk(n) {
+      if (checkedById[n.id]) anyChecked = true;
+      else anyUnchecked = true;
+      for (const child of catalogChildNodes(n)) walk(child);
+    }
+    walk(node);
+    return anyChecked && anyUnchecked;
+  }
+  function catalogAncestorIdsToExpand(roots, checkedById) {
+    const expand = /* @__PURE__ */ new Set();
+    function visit(node) {
+      const children = catalogChildNodes(node);
+      if (!children.length) return;
+      if (catalogSubtreePartiallyChecked(node, checkedById)) {
+        expand.add(node.id);
+      }
+      for (const child of children) {
+        visit(child);
+      }
+    }
+    for (const root of roots) visit(root);
+    return expand;
+  }
   const MAP_ZOOM_DEBOUNCE_MS = 80;
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
@@ -116749,63 +117607,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       visible,
       grayscale
     };
-  }
-  function buildCatalogTreeIndex(roots) {
-    const nodesById = /* @__PURE__ */ new Map();
-    const parentById = /* @__PURE__ */ new Map();
-    function walk(node, parent) {
-      nodesById.set(node.id, node);
-      parentById.set(node.id, parent);
-      for (const child of catalogChildNodes(node)) {
-        walk(child, node);
-      }
-    }
-    for (const root of roots) walk(root, null);
-    return { nodesById, parentById, roots };
-  }
-  function catalogAncestorIds(nodeId, parentById) {
-    const ids = [];
-    let parent = parentById.get(nodeId) ?? null;
-    while (parent) {
-      ids.unshift(parent.id);
-      parent = parentById.get(parent.id) ?? null;
-    }
-    return ids;
-  }
-  function flattenCatalogNodes(roots) {
-    const flat = [];
-    function walk(node) {
-      flat.push(node);
-      catalogChildNodes(node).forEach(walk);
-    }
-    roots.forEach(walk);
-    return flat;
-  }
-  function catalogSubtreePartiallyChecked(node, checkedById) {
-    let anyChecked = false;
-    let anyUnchecked = false;
-    function walk(n) {
-      if (checkedById[n.id]) anyChecked = true;
-      else anyUnchecked = true;
-      for (const child of catalogChildNodes(n)) walk(child);
-    }
-    walk(node);
-    return anyChecked && anyUnchecked;
-  }
-  function catalogAncestorIdsToExpand(roots, checkedById) {
-    const expand = /* @__PURE__ */ new Set();
-    function visit(node) {
-      const children = catalogChildNodes(node);
-      if (!children.length) return;
-      if (catalogSubtreePartiallyChecked(node, checkedById)) {
-        expand.add(node.id);
-      }
-      for (const child of children) {
-        visit(child);
-      }
-    }
-    for (const root of roots) visit(root);
-    return expand;
   }
   const STACK_SORT_KEY_STEP = 1e3;
   function ensureStackSortKeys(sortKeyById, catalogStackOrderBottomToTop) {
@@ -117109,7 +117910,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         const nextIds = flattenCatalogNodes(roots).map((n) => n.id).join("|");
         const structureChanged = prevIds !== nextIds;
         treeIndex = buildCatalogTreeIndex(roots);
-        if (structureChanged || !Object.keys(catalogChecked.value).length) {
+        const emptyChecked = !Object.keys(catalogChecked.value).length;
+        const keepPermalinkChecked = structureChanged && !emptyChecked && initialHashHadLayerPermalinkParams();
+        if ((structureChanged || emptyChecked) && !keepPermalinkChecked) {
           initCatalogCheckedFromConfig(roots);
         }
         reapplyCatalogMapState();
@@ -117181,6 +117984,36 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!treeIndex.nodesById.has(id2)) return;
       applyUserCatalogToggle(catalogChecked.value, id2, checked, treeIndex);
       catalogChecked.value = { ...catalogChecked.value };
+      reapplyCatalogMapState();
+    }
+    function permalinkChangeHasDescendantInHash(nodeId, hashNodeIds) {
+      const node = treeIndex.nodesById.get(nodeId);
+      if (!node) return false;
+      for (const child of catalogChildNodes(node)) {
+        if (hashNodeIds.has(child.id)) return true;
+        if (permalinkChangeHasDescendantInHash(child.id, hashNodeIds)) return true;
+      }
+      return false;
+    }
+    function applyCatalogCheckedFromPermalink(changes) {
+      if (!changes.length) return;
+      const hashNodeIds = new Set(changes.map((c) => c.id));
+      const next = { ...catalogChecked.value };
+      for (const { id: id2, checked } of changes) {
+        if (!treeIndex.nodesById.has(id2)) continue;
+        if (!checked) {
+          applyCatalogToggleFromPermalink(next, id2, false, treeIndex);
+          continue;
+        }
+        const node = treeIndex.nodesById.get(id2);
+        const hasChildren = node ? catalogChildNodes(node).length > 0 : false;
+        if (hasChildren && !permalinkChangeHasDescendantInHash(id2, hashNodeIds)) {
+          applyUserCatalogToggle(next, id2, true, treeIndex);
+        } else {
+          applyCatalogToggleFromPermalink(next, id2, true, treeIndex);
+        }
+      }
+      catalogChecked.value = next;
       reapplyCatalogMapState();
     }
     function syncCatalogCheckedFromTreeVisible() {
@@ -117338,6 +118171,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       legendLayersAll,
       catalogCheckedById,
       setCatalogChecked,
+      applyCatalogCheckedFromPermalink,
       setInStack,
       setVisible,
       applyDataLayerPermalinkPanelState,
@@ -119676,6 +120510,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         catalogCheckedById,
         catalogEntryInZoomRange,
         setCatalogChecked,
+        applyCatalogCheckedFromPermalink,
         applyDataLayerPermalinkPanelState,
         setVisible,
         setOpacity,
@@ -119773,17 +120608,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       function syncFicheCatalogFamilyVisibilityFromCatalog() {
+        const visibilityEntries = catalogEntries.value.map((entry) => ({
+          id: entry.id,
+          path: entry.path,
+          permalinkId: primaryPermalinkIdForEntry(entry)
+        }));
         setFicheCatalogFamilyVisibility(
           computeFicheCatalogFamilyVisibility(
             catalogCheckedById.value,
-            catalogEntries.value.map((entry) => ({
-              id: entry.id,
-              path: entry.path,
-              permalinkId: primaryPermalinkIdForEntry(entry)
-            })),
+            visibilityEntries,
             layerNodesRef.value
           )
         );
+        syncFicheCatalogLayerScopes(catalogCheckedById.value, catalogEntries.value);
       }
       const api = {
         openTab,
@@ -119911,10 +120748,33 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       function collectLayerParamsForPermalink() {
         const out = {};
+        const treeIndex = buildCatalogTreeIndex(layerNodesRef.value);
+        const opacityById = {};
+        for (const layer of layers.value) {
+          opacityById[layer.id] = layer.opacity;
+        }
+        const checked = catalogCheckedById.value;
         for (const entry of catalogEntries.value) {
-          if (entry.config.onlyLegend) continue;
           const state = layerPermalinkStateForEntry(entry);
-          if (!state.checked && !layerStateDiffersFromConfig(entry)) continue;
+          const onlyLegend = Boolean(entry.config.onlyLegend);
+          if (onlyLegend) {
+            if (!shouldPersistOnlyLegendLayerInPermalink(
+              entry.id,
+              checked,
+              treeIndex,
+              layerStateDiffersFromConfig(entry),
+              configDefaultCatalogChecked(entry),
+              state.checked
+            )) {
+              continue;
+            }
+          } else {
+            if (!state.checked && !layerStateDiffersFromConfig(entry)) continue;
+            const node = findCatalogTreeNode(entry.id);
+            if (state.checked && node && catalogChildNodes(node).length > 0 && !isSameAsDescendants(checked, node, treeIndex, opacityById)) {
+              continue;
+            }
+          }
           const permalinkId = primaryPermalinkIdForEntry(entry);
           if (!permalinkId) continue;
           out[permalinkId] = encodeLayerPermalinkValue(state);
@@ -119960,18 +120820,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!layerNodesRef.value.length) return;
         const stackIndexByNodeId = {};
         const panelOverrides = [];
+        const checkboxChanges = [];
         for (const { permalinkId, value: value2 } of items) {
           const nodeId = catalogIdByPermalink.value.get(permalinkId);
           if (!nodeId) continue;
           const state = decodeLayerPermalinkValue(value2);
           if (!state) continue;
-          setCatalogChecked(nodeId, state.checked);
+          checkboxChanges.push({ id: nodeId, checked: state.checked });
           if (state.checked) {
             panelOverrides.push({ nodeId, state });
             stackIndexByNodeId[nodeId] = state.stackIndex;
           }
         }
-        reapplyCatalogMapState();
+        applyCatalogCheckedFromPermalink(checkboxChanges);
         for (const { nodeId, state } of panelOverrides) {
           applyDataLayerPermalinkPanelState(nodeId, {
             visible: state.visible,
@@ -120015,22 +120876,26 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
         }
       );
+      let layerPermalinkSyncTimer = null;
+      function scheduleLayerPermalinkSync() {
+        if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer);
+        layerPermalinkSyncTimer = setTimeout(() => {
+          layerPermalinkSyncTimer = null;
+          replaceLayerPermalinkParams(collectLayerParamsForPermalink());
+        }, 300);
+      }
       watch(
         () => JSON.stringify(catalogCheckedById.value),
         () => {
           syncFicheCatalogFamilyVisibilityFromCatalog();
           refreshFicheForCatalogVisibility();
+          scheduleLayerPermalinkSync();
         }
       );
-      let layerPermalinkSyncTimer = null;
       watch(
         () => layers.value.map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`).join("|"),
         () => {
-          if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer);
-          layerPermalinkSyncTimer = setTimeout(() => {
-            layerPermalinkSyncTimer = null;
-            replaceLayerPermalinkParams(collectLayerParamsForPermalink());
-          }, 300);
+          scheduleLayerPermalinkSync();
         }
       );
       onMounted(() => {
@@ -120577,6 +121442,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         applyLayersFromPermalink();
       });
       watch(searchEngineLayerHostRef, () => {
+        const marker = readMapPermalinkMarker(getMapPermalinkParams());
+        if (marker) {
+          const mode2 = (mapMode == null ? void 0 : mapMode.mode.value) ?? 2;
+          syncModeEmpriseToSearchLayer(marker.lon, marker.lat, mode2);
+        }
         if (!cherryEmpriseFocusPending) return;
         const map2 = mapRef.value;
         if (map2) void syncCherryEmpriseFocusFromPermalink(map2);

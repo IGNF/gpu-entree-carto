@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "dev": "npm run sync:demo-external && vite",
+    "dev:polling": "npm run sync:demo-external && VITE_USE_POLLING=1 vite",
     "build": "npm run build:demo && npm run build:lib && npm run build:location-search && npm run build:search-engine && npm run build:geometry-editor && npm run build:sketch",
     "sync:demo-external": "node scripts/sync-demo-external.mjs",
     "build:demo": "npm run sync:demo-external && vue-tsc --noEmit && vite build",

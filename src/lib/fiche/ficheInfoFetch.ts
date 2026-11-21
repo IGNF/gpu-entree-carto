@@ -15,6 +15,9 @@ const inflightPayloadByPoint = new Map<string, Promise<GpuFicheInfoPayload | nul
 /** Fetch « panneau » (clic / recherche) : un seul en vol, annulé au point suivant. */
 let activePanelNetworkAbort: AbortController | null = null
 
+/** Fetches emprise / enrichissement : annulés avec le panneau au clic suivant. */
+const activeBackgroundNetworkAborts = new Set<AbortController>()
+
 export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
 }
@@ -24,8 +27,12 @@ function fichePayloadInflightKey(
   lat: number,
   zoom: number,
   mode: MapModeId | 'combined',
+  activeFamilies?: string[],
+  activeSupTypes?: string[] | null,
 ): string {
-  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}`
+  const families = activeFamilies?.length ? [...activeFamilies].sort().join(',') : 'all'
+  const supTypes = activeSupTypes?.length ? [...activeSupTypes].sort().join(',') : 'all-sup'
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}|${families}|${supTypes}`
 }
 
 export type FicheInfoFetchRole = 'panel' | 'background'
@@ -36,6 +43,12 @@ function takeoverFicheNetworkSignal(
 ): AbortSignal {
   if (role === 'background') {
     const controller = new AbortController()
+    activeBackgroundNetworkAborts.add(controller)
+    controller.signal.addEventListener(
+      'abort',
+      () => activeBackgroundNetworkAborts.delete(controller),
+      { once: true },
+    )
     if (external?.aborted) {
       controller.abort()
     } else if (external) {
@@ -75,6 +88,10 @@ export function abortInflightFicheInfoFetch(): void {
   const hadPanel = activePanelNetworkAbort !== null
   activePanelNetworkAbort?.abort()
   activePanelNetworkAbort = null
+  for (const controller of [...activeBackgroundNetworkAborts]) {
+    controller.abort()
+  }
+  activeBackgroundNetworkAborts.clear()
   clearInflightFichePayloads()
   if (hadPanel) {
     const base = resolveFicheInfoSupersedeBaseUrl()
@@ -87,6 +104,8 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   lon: number
   lat: number
   zoom: number
+  activeFamilies?: string[]
+  activeSupTypes?: string[] | null
   abortSignal?: AbortSignal
   fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
@@ -94,7 +113,14 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   const fetchBase = resolveFicheInfoCombinedFetchUrl()
   if (!fetchBase) return null
 
-  const inflightKey = fichePayloadInflightKey(params.lon, params.lat, params.zoom, 'combined')
+  const inflightKey = fichePayloadInflightKey(
+    params.lon,
+    params.lat,
+    params.zoom,
+    'combined',
+    params.activeFamilies,
+    params.activeSupTypes,
+  )
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
 
@@ -120,13 +146,22 @@ export async function fetchGpuFicheInfoPayload(params: {
   lat: number
   zoom: number
   mode: MapModeId
+  activeFamilies?: string[]
+  activeSupTypes?: string[] | null
   abortSignal?: AbortSignal
   /** Emprise carte, enrichissement silencieux : n’annule pas le fetch panneau en cours. */
   fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
   if (typeof window === 'undefined') return null
 
-  const inflightKey = fichePayloadInflightKey(params.lon, params.lat, params.zoom, params.mode)
+  const inflightKey = fichePayloadInflightKey(
+    params.lon,
+    params.lat,
+    params.zoom,
+    params.mode,
+    params.activeFamilies,
+    params.activeSupTypes,
+  )
   const existing = inflightPayloadByPoint.get(inflightKey)
   if (existing) return existing
 
@@ -159,7 +194,14 @@ async function fetchGpuFicheInfoPayloadImpl(
 
 async function fetchGpuFicheInfoPayloadFromUrl(
   fetchBase: string,
-  params: { lon: number; lat: number; zoom: number; mode: MapModeId },
+  params: {
+    lon: number
+    lat: number
+    zoom: number
+    mode: MapModeId
+    activeFamilies?: string[]
+    activeSupTypes?: string[] | null
+  },
   signal: AbortSignal,
 ): Promise<GpuFicheInfoPayload | null> {
   const resolved = resolveConfigUrlForFetch(fetchBase)
@@ -181,8 +223,14 @@ async function fetchGpuFicheInfoPayloadFromUrl(
     url.searchParams.set('scope', 'both')
   }
 
+  const sendSessionCookies =
+    url.searchParams.get('zone') === 'validation' || url.searchParams.has('previewDocumentId')
+
   try {
-    const res = await fetch(url.toString(), { credentials: 'same-origin', signal })
+    const res = await fetch(url.toString(), {
+      credentials: sendSessionCookies ? 'include' : 'same-origin',
+      signal,
+    })
     if (res.status === 204) return null
     if (!res.ok) return null
     const data: unknown = await res.json()

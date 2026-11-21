@@ -85,10 +85,12 @@ Titles and document lookup rules per FicheInfoDetaillee.
 
 ### Catalogue visibility (_Data_ layers)
 
-Checked catalogue entries (permalink hash keys such as `dev-du`, `dev-sup`, `dev-scot`, `mec`, …) drive the fiche **without** a new API call:
+Checked catalogue entries (permalink hash keys such as `dev-du`, `dev-sup`, `dev-scot`, `mec`, …) drive the fiche:
 
 - **Territory:** hide document tabs (DU, SUP, SCoT, procedures/MEC) when the family is unchecked; content rebuilt via `refreshFicheForCatalogVisibility` (`ficheCatalogVisibilityFilter.ts`, `ficheInfoFromGpuApi.ts`).
-- **Parcel:** **Infos** sections and **Documents** blocks (DU, SUP, SCoT, MEC replacement tiles) filtered or rebuilt on catalogue change (`TabPanelsControl`).
+- **Parcel:** **Infos** sections and **Documents** blocks (DU, SUP, SCoT, MEC replacement tiles) filtered or rebuilt on catalogue change (`TabPanelsControl`); **SUP** only when an assiette intersects the parcel (not the territory commune list).
+- **Requests (v2):** on map click, only visible families are sent as `activeFamilies` (`ficheActiveFamilies.ts`); re-enabling a family at the same cherry triggers a targeted fetch merged locally (`ensureFicheFamiliesForCatalogAtMarker`).
+- **Territory SUP tab:** lists **commune-wide** SUP (`municipality_sup` on gpu-site), not only assiettes intersecting the click point.
 
 ### External links (tiles, procedures, PDF)
 

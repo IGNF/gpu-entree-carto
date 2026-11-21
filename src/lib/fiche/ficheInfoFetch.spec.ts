@@ -72,6 +72,38 @@ describe('fetchGpuFicheInfoPayload', () => {
     expect(fetchMock).toHaveBeenCalled()
   })
 
+  it('annule aussi les fetches emprise (background) au clic suivant', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoCombinedUrl?: string }).apiFicheInfoCombinedUrl = '/api/fiche-info-v2'
+
+    let resolveBackground: () => void = () => {}
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const signal = init?.signal
+      await new Promise<void>((resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new DOMException('Aborted', 'AbortError'))
+          return
+        }
+        signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        resolveBackground = resolve
+      })
+      return new Response(JSON.stringify(payload), { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const backgroundPromise = fetchGpuFicheInfoPayload({
+      lon: 2.35,
+      lat: 48.85,
+      zoom: 6,
+      mode: MAP_MODE_TERRITORY,
+      fetchRole: 'background',
+    })
+    await Promise.resolve()
+    abortInflightFicheInfoFetch()
+    resolveBackground()
+    await expect(backgroundPromise).resolves.toBeNull()
+  })
+
   it('envoie supersede=true au gpu-site quand un fetch panneau est interrompu', async () => {
     ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2'
 

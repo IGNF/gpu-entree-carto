@@ -40,14 +40,21 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
-    /** Évite ENOSPC (inotify) : bases CodeQL, dist rebuild, etc. */
+    /**
+     * Évite ENOSPC (inotify) : outillage CodeQL, artefacts build, dépôt git, etc.
+     * Secours : `VITE_USE_POLLING=1 npm run dev` si la limite noyau reste basse.
+     */
     watch: {
+      usePolling: process.env.VITE_USE_POLLING === '1',
       ignored: [
         '**/.codeql-db/**',
         '**/.codeql-db-test/**',
         '**/.codeql-cli/**',
+        '**/.codeql-results.sarif',
         '**/dist/**',
         '**/.git/**',
+        '**/.github/**',
+        '**/.cursor/**',
       ],
     },
     proxy: {

@@ -41,6 +41,28 @@ export function catalogIdToUncheckWhenRemovingScotGroup(
   return nodeId
 }
 
+/**
+ * Couches onlyLegend (ex. SCoT / MEC scot sous `dev-scot`) : les inclure au permalink
+ * lorsque la sélection diffère des défauts ou des frères (sélection partielle).
+ */
+export function shouldPersistOnlyLegendLayerInPermalink(
+  nodeId: string,
+  checked: Record<string, boolean>,
+  index: CatalogTreeIndex,
+  stateDiffersFromConfig: boolean,
+  defaultChecked: boolean,
+  currentChecked: boolean,
+): boolean {
+  if (currentChecked !== defaultChecked) return true
+  if (stateDiffersFromConfig) return true
+  /** Toujours écrire une feuille onlyLegend cochée : `replaceLayerPermalinkParams` remplace tout le hash couches. */
+  if (currentChecked) return true
+  const parent = index.parentById.get(nodeId)
+  if (!parent) return false
+  if (directCatalogChildren(parent).length <= 1) return false
+  return !isCheckboxSameAsDirectChildren(checked, parent)
+}
+
 export function isCheckboxSameAsDirectChildren(
   checked: Record<string, boolean>,
   node: TreeLayerNode,
@@ -224,6 +246,26 @@ export function applyUserCatalogToggle(
   checked[effectiveId] = value
   propagateCheckedToAncestors(checked, effectiveId, index)
   propagateCheckedToDescendants(checked, node, value)
+}
+
+/**
+ * Restauration permalink : ne propage pas aux descendants (sélection partielle SUP, etc.).
+ */
+export function applyCatalogToggleFromPermalink(
+  checked: Record<string, boolean>,
+  nodeId: string,
+  value: boolean,
+  index: CatalogTreeIndex,
+): void {
+  let effectiveId = nodeId
+  if (!value) {
+    effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index)
+  }
+  const node = index.nodesById.get(effectiveId)
+  if (!node) return
+
+  checked[effectiveId] = value
+  propagateCheckedToAncestors(checked, effectiveId, index)
 }
 
 export function computeMapVisibilityById(

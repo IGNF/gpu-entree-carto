@@ -72,6 +72,22 @@ make dev
 
 Default URL: http://localhost:5173/
 
+If Vite exits with `ENOSPC` (kernel **inotify** watch limit, common with the IDE and several repos open):
+
+1. **Recommended (Linux)** — raise the limit (admin session):
+
+   ```bash
+   echo fs.inotify.max_user_watches=524288 | sudo tee /etc/sysctl.d/99-inotify.conf
+   sudo sysctl --system
+   ```
+
+2. **Workaround** — polling-based watching (slightly slower):
+
+   ```bash
+   make dev-polling
+   # equivalent: npm run dev:polling
+   ```
+
 Demo configuration without rebuild: `public/js/demo-config.js` → `window.DEMO_CONFIG` (see [doc/DemoConfig.md](doc/DemoConfig.md)).
 
 ## Build

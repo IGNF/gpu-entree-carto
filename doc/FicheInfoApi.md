@@ -24,6 +24,7 @@ Legacy: `GET /api/fiche-info` with `mode`, `includeParcel`, preview params (`fic
 | `apiFicheInfoParcelleUrl` | Override parcel endpoint |
 | `apiFicheInfoCombinedUrl` | Combined v2 endpoint |
 | `apiFicheInfoPreferCombined` | `false` to force split `/territoire` and `/parcelle` calls (default: combined when v2 is configured) |
+| `apiFicheInfoCatalogFamilies` | `false` to disable catalog-driven `activeFamilies` filtering (default: `true` with v2) |
 
 Relative paths resolve against the gpu-client-config script host (`configUrls.ts`).
 
@@ -70,10 +71,13 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 
 - No APICarto fallback in the browser.
 - **Map click**: when v2 split endpoints are configured, a single `GET` on `apiFicheInfoCombinedUrl` (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
+- **Catalog**: Données checkboxes (DU/PSMV/MEC → `du`, SUP, SCoT) are sent as `activeFamilies[]`; checked SUP sub-layers send `activeSupTypes[]` from `config_layers.json` `supType` (e.g. `AC1`). At the same cherry point, newly checked families or SUP types trigger an incremental fetch (local JSON merge, `ensureFicheCatalogSupplementAtMarker`).
 - **Split** (`apiFicheInfoPreferCombined = false`): per-mode requests; territory still may call `/parcelle` silently for the back-to-parcel CTA metadata.
 - **Parcel — Infos** — zoning, prescriptions, and information rules are shown only when the partition’s document is **in production** in the fiche-info API (same rule as Document tiles).
 - **Per-mode** cache at the cherry point (`ficheInfoService.ts`); repeat click or mode switch at the same point uses cache (no refetch).
 - Previous in-flight `fetch` aborted on the next click (`AbortController`); lightweight `supersede=true` with `client` / `seq` stops stale Symfony work before the main request.
 - Presentation: DSFR horizontal tiles (`ficheDocumentTiles.ts`).
+- **SCoT**: a tile is shown only when the gpu-site document `id` matches the WFS feature `gpu_id` (or `gpu_doc_id`) at the click point (no partition-only fallback).
+- **MEC (territory)**: gpu-site also queries WFS layer `mec` against the **commune footprint** (`ign_grid` outline), not only the cherry point — so a SCoT (or DU) MEC overlapping the commune is detected even when the marker is elsewhere on the municipality.
 
 See also [FicheInfo](./FicheInfo.md).

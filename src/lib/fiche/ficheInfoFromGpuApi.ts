@@ -31,6 +31,7 @@ import {
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
+  filterScotPartitionsByWfsGpuId,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
@@ -113,7 +114,16 @@ const TAB_PROCEDURES = 'procedures'
 export function isGpuFicheInfoPayload(data: unknown): data is GpuFicheInfoPayload {
   if (!data || typeof data !== 'object') return false
   const o = data as Record<string, unknown>
-  return 'parcel' in o || 'grid' in o || 'dus' in o || 'partitions' in o || 'parcelFeature' in o
+  return (
+    'parcel' in o ||
+    'grid' in o ||
+    'dus' in o ||
+    'sups' in o ||
+    'scots' in o ||
+    'psmvs' in o ||
+    'partitions' in o ||
+    'parcelFeature' in o
+  )
 }
 
 function normalizePartitionsMap(
@@ -391,7 +401,10 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     })
   }
 
-  const scots = normalizePartitionsMap(data.scots)
+  const scots = filterScotPartitionsByWfsGpuId(
+    normalizePartitionsMap(data.scots),
+    isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : undefined,
+  )
   if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible('scot')) {
     const bodyHtml = buildDuTabTilesHtml(scots, data)
     tabs.push({
@@ -402,12 +415,12 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   }
 
   const inProgress = collectInProgressProcedures(proceduresByDocument)
-  const mecProcedures = collectMecProcedures(proceduresByDocument)
+  const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
+  const mecProcedures = mecProceduresHtml ? [] : collectMecProcedures(proceduresByDocument)
   const procedureTiles = [...inProgress]
   for (const mecProc of mecProcedures) {
     if (!procedureTiles.some((p) => p.id === mecProc.id)) procedureTiles.push(mecProc)
   }
-  const mecProceduresHtml = buildMecTerritoryProceduresHtml(data)
   if (procedureTiles.length || mecProceduresHtml) {
     let bodyHtml = procedureTiles.length ? buildProceduresTabHtml(procedureTiles) : ''
     if (mecProceduresHtml) bodyHtml += mecProceduresHtml

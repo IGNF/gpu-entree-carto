@@ -17,6 +17,7 @@ import {
   watch,
   type ShallowRef,
 } from 'vue'
+import { syncFicheCatalogLayerScopes } from '@/lib/fiche/ficheCatalogLayerScope'
 import {
   computeFicheCatalogFamilyVisibility,
   setFicheCatalogFamilyVisibility,
@@ -44,6 +45,12 @@ import {
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
 import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
+import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
+import { buildCatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
+import {
+  isSameAsDescendants,
+  shouldPersistOnlyLegendLayerInPermalink,
+} from '@/lib/layerConfig/catalogCheckboxLogic'
 import { getDemoConfig } from '@/lib/demo/demoConfig'
 import config from '@/lib/config'
 import type { StandardViewerDocument } from '@/lib/types'
@@ -152,6 +159,7 @@ const {
   catalogCheckedById,
   catalogEntryInZoomRange,
   setCatalogChecked,
+  applyCatalogCheckedFromPermalink,
   applyDataLayerPermalinkPanelState,
   setVisible,
   setOpacity,
@@ -272,17 +280,19 @@ function syncShellOpenClass(open: boolean) {
 }
 
 function syncFicheCatalogFamilyVisibilityFromCatalog(): void {
+  const visibilityEntries = catalogEntries.value.map((entry) => ({
+    id: entry.id,
+    path: entry.path,
+    permalinkId: primaryPermalinkIdForEntry(entry),
+  }))
   setFicheCatalogFamilyVisibility(
     computeFicheCatalogFamilyVisibility(
       catalogCheckedById.value,
-      catalogEntries.value.map((entry) => ({
-        id: entry.id,
-        path: entry.path,
-        permalinkId: primaryPermalinkIdForEntry(entry),
-      })),
+      visibilityEntries,
       layerNodesRef.value,
     ),
   )
+  syncFicheCatalogLayerScopes(catalogCheckedById.value, catalogEntries.value)
 }
 
 const api: TabPanelsApi = {
@@ -421,10 +431,40 @@ function primaryPermalinkIdForEntry(entry: GpuLayerCatalogEntry): string {
 
 function collectLayerParamsForPermalink(): MapPermalinkParams {
   const out: MapPermalinkParams = {}
+  const treeIndex = buildCatalogTreeIndex(layerNodesRef.value)
+  const opacityById: Record<string, number> = {}
+  for (const layer of layers.value) {
+    opacityById[layer.id] = layer.opacity
+  }
+  const checked = catalogCheckedById.value
   for (const entry of catalogEntries.value) {
-    if (entry.config.onlyLegend) continue
     const state = layerPermalinkStateForEntry(entry)
-    if (!state.checked && !layerStateDiffersFromConfig(entry)) continue
+    const onlyLegend = Boolean(entry.config.onlyLegend)
+    if (onlyLegend) {
+      if (
+        !shouldPersistOnlyLegendLayerInPermalink(
+          entry.id,
+          checked,
+          treeIndex,
+          layerStateDiffersFromConfig(entry),
+          configDefaultCatalogChecked(entry),
+          state.checked,
+        )
+      ) {
+        continue
+      }
+    } else {
+      if (!state.checked && !layerStateDiffersFromConfig(entry)) continue
+      const node = findCatalogTreeNode(entry.id)
+      if (
+        state.checked &&
+        node &&
+        catalogChildNodes(node).length > 0 &&
+        !isSameAsDescendants(checked, node, treeIndex, opacityById)
+      ) {
+        continue
+      }
+    }
     const permalinkId = primaryPermalinkIdForEntry(entry)
     if (!permalinkId) continue
     out[permalinkId] = encodeLayerPermalinkValue(state)
@@ -476,18 +516,19 @@ function applyLayerParamsFromPermalink(params: MapPermalinkParams): void {
   if (!layerNodesRef.value.length) return
   const stackIndexByNodeId: Record<string, number> = {}
   const panelOverrides: Array<{ nodeId: string; state: LayerPermalinkState }> = []
+  const checkboxChanges: Array<{ id: string; checked: boolean }> = []
   for (const { permalinkId, value } of items) {
     const nodeId = catalogIdByPermalink.value.get(permalinkId)
     if (!nodeId) continue
     const state = decodeLayerPermalinkValue(value)
     if (!state) continue
-    setCatalogChecked(nodeId, state.checked)
+    checkboxChanges.push({ id: nodeId, checked: state.checked })
     if (state.checked) {
       panelOverrides.push({ nodeId, state })
       stackIndexByNodeId[nodeId] = state.stackIndex
     }
   }
-  reapplyCatalogMapState()
+  applyCatalogCheckedFromPermalink(checkboxChanges)
   for (const { nodeId, state } of panelOverrides) {
     applyDataLayerPermalinkPanelState(nodeId, {
       visible: state.visible,
@@ -536,26 +577,31 @@ watch(
   },
 )
 
+let layerPermalinkSyncTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleLayerPermalinkSync(): void {
+  if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer)
+  layerPermalinkSyncTimer = setTimeout(() => {
+    layerPermalinkSyncTimer = null
+    replaceLayerPermalinkParams(collectLayerParamsForPermalink())
+  }, 300)
+}
+
 watch(
   () => JSON.stringify(catalogCheckedById.value),
   () => {
     syncFicheCatalogFamilyVisibilityFromCatalog()
     refreshFicheForCatalogVisibility()
+    scheduleLayerPermalinkSync()
   },
 )
 
-let layerPermalinkSyncTimer: ReturnType<typeof setTimeout> | null = null
 watch(
   () =>
     layers.value
       .map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`)
       .join('|'),
   () => {
-    if (layerPermalinkSyncTimer) clearTimeout(layerPermalinkSyncTimer)
-    layerPermalinkSyncTimer = setTimeout(() => {
-      layerPermalinkSyncTimer = null
-      replaceLayerPermalinkParams(collectLayerParamsForPermalink())
-    }, 300)
+    scheduleLayerPermalinkSync()
   },
 )
 

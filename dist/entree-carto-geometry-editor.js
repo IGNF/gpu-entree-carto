@@ -44462,7 +44462,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
      */
     writeFeaturesNode(features, options) {
       options = this.adaptOptions(options);
-      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
+      const kml = createElementNS(NAMESPACE_URIS[4] ?? "", "kml");
       const xmlnsUri = "http://www.w3.org/2000/xmlns/";
       kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
       kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
