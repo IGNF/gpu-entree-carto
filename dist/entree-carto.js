@@ -12015,7 +12015,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function toDegrees(angleInRadians) {
     return angleInRadians * 180 / Math.PI;
   }
-  function toRadians$1(angleInDegrees) {
+  function toRadians(angleInDegrees) {
     return angleInDegrees * Math.PI / 180;
   }
   function modulo(a3, b) {
@@ -12727,10 +12727,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const DEFAULT_RADIUS = 63710088e-1;
   function getDistance(c1, c2, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians$1(c1[1]);
-    const lat2 = toRadians$1(c2[1]);
+    const lat1 = toRadians(c1[1]);
+    const lat2 = toRadians(c2[1]);
     const deltaLatBy2 = (lat2 - lat1) / 2;
-    const deltaLonBy2 = toRadians$1(c2[0] - c1[0]) / 2;
+    const deltaLonBy2 = toRadians(c2[0] - c1[0]) / 2;
     const a3 = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a3), Math.sqrt(1 - a3));
   }
@@ -12813,7 +12813,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (let i2 = 0; i2 < len; i2++) {
       const x2 = coordinates2[i2][0];
       const y2 = coordinates2[i2][1];
-      area += toRadians$1(x2 - x1) * (2 + Math.sin(toRadians$1(y1)) + Math.sin(toRadians$1(y2)));
+      area += toRadians(x2 - x1) * (2 + Math.sin(toRadians(y1)) + Math.sin(toRadians(y2)));
       x1 = x2;
       y1 = y2;
     }
@@ -12878,8 +12878,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function offset(c1, distance2, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians$1(c1[1]);
-    const lon1 = toRadians$1(c1[0]);
+    const lat1 = toRadians(c1[1]);
+    const lon1 = toRadians(c1[0]);
     const dByR = distance2 / radius;
     const lat = Math.asin(
       Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(bearing)
@@ -13219,7 +13219,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const latitude = pRad - pTan / r * (d2 / 2 - d4 / 24 * (5 + 3 * pTan2 + 10 * c - 4 * c2 - 9 * E_P2)) + d6 / 720 * (61 + 90 * pTan2 + 298 * c + 45 * pTan4 - 252 * E_P2 - 3 * c2);
     let longitude = (d - d3 / 6 * (1 + 2 * pTan2 + c) + d5 / 120 * (5 - 2 * c + 28 * pTan2 - 3 * c2 + 8 * E_P2 + 24 * pTan4)) / pCos;
     longitude = wrap(
-      longitude + toRadians$1(zoneToCentralLongitude(zone.number)),
+      longitude + toRadians(zoneToCentralLongitude(zone.number)),
       -Math.PI,
       Math.PI
     );
@@ -13236,15 +13236,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     } else if (latitude > MAX_LATITUDE) {
       latitude = MAX_LATITUDE;
     }
-    const latRad = toRadians$1(latitude);
+    const latRad = toRadians(latitude);
     const latSin = Math.sin(latRad);
     const latCos = Math.cos(latRad);
     const latTan = latSin / latCos;
     const latTan2 = latTan * latTan;
     const latTan4 = latTan2 * latTan2;
-    const lonRad = toRadians$1(longitude);
+    const lonRad = toRadians(longitude);
     const centralLon = zoneToCentralLongitude(zone.number);
-    const centralLonRad = toRadians$1(centralLon);
+    const centralLonRad = toRadians(centralLon);
     const n = R / Math.sqrt(1 - E$1 * latSin ** 2);
     const c = E_P2 * latCos ** 2;
     const a3 = latCos * wrap(lonRad - centralLonRad, -Math.PI, Math.PI);
@@ -16075,7 +16075,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
   }
   function createSnapToZero(tolerance) {
-    const t = toRadians$1(5);
+    const t = toRadians(5);
     return (
       /**
        * @param {number|undefined} rotation Rotation.
@@ -31946,7 +31946,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       this.set(
         Property.HEADING,
-        coords.heading === null ? void 0 : toRadians$1(coords.heading)
+        coords.heading === null ? void 0 : toRadians(coords.heading)
       );
       if (!this.position_) {
         this.position_ = [coords.longitude, coords.latitude];
@@ -58439,45 +58439,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return self2;
   }
-  var D2R = 0.017453292519943295;
-  function d2r(input) {
-    return input * D2R;
-  }
-  function isEquidistantCylindrical(projName) {
-    return /^(equirectangular|equidistant[ _]cylindrical)/i.test(projName || "");
-  }
-  function applyProjectionDefaults(wkt2) {
-    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
-    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
-      wkt2.long0 = wkt2.longc;
-    }
-    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
-      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
-      wkt2.lat_ts = wkt2.lat1;
-      delete wkt2.lat1;
-    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
-      wkt2.lat_ts = wkt2.lat0;
-      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
-      delete wkt2.lat1;
-    } else if (wkt2.lat_ts === void 0 && wkt2.lat1 !== void 0 && isEquidistantCylindrical(wkt2.projName)) {
-      wkt2.lat_ts = wkt2.lat1;
-      delete wkt2.lat1;
-    }
-  }
   class PROJJSONBuilderBase {
     static getId(node) {
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       if (idNode && idNode.length >= 3) {
         return {
           authority: idNode[1],
-          code: this.parseCode(idNode[2])
+          code: parseInt(idNode[2], 10)
         };
       }
       return null;
-    }
-    // PROJJSON codes are integers, or strings for codes like IGNF:LURESG
-    static parseCode(code) {
-      return /^-?\d+$/.test(code) ? parseInt(code, 10) : code;
     }
     static convertUnit(node, type = "unit") {
       if (!node || node.length < 3) {
@@ -58488,7 +58459,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       const id2 = idNode ? {
         authority: idNode[1],
-        code: this.parseCode(idNode[2])
+        code: parseInt(idNode[2], 10)
       } : null;
       return {
         type,
@@ -58528,28 +58499,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     static extractAxes(node) {
       return node.filter((child) => Array.isArray(child) && child[0] === "AXIS").map((axis) => this.convertAxis(axis)).sort((a3, b) => (a3.order || 0) - (b.order || 0));
     }
-    // A prime meridian without a unit takes the angle unit of its CRS (ISO 19162, 8.2.2).
-    // Like PROJ, write the longitude as a number in degrees, or as a value with a unit.
-    static convertPrimeMeridianLongitude(primem, crsAngleUnitNode) {
-      const value2 = parseFloat(primem[2]);
-      const unitNode = primem.find(
-        (child) => Array.isArray(child) && (child[0] === "ANGLEUNIT" || child[0] === "UNIT")
-      ) || crsAngleUnitNode;
-      const unit = this.convertUnit(unitNode, "AngularUnit");
-      if (!unit.conversion_factor || Math.abs(unit.conversion_factor / d2r(1) - 1) < 1e-9) {
-        return value2;
-      }
-      return { value: value2, unit };
-    }
     static convert(node, result = {}) {
       switch (node[0]) {
         case "PROJCRS":
           result.type = "ProjectedCRS";
           result.name = node[1];
-          const baseCrsNode = node.find(
-            (child) => Array.isArray(child) && (child[0] === "BASEGEOGCRS" || child[0] === "BASEGEODCRS")
-          );
-          result.base_crs = baseCrsNode ? this.convert(baseCrsNode) : null;
+          result.base_crs = node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS")) : null;
           result.conversion = node.find((child) => Array.isArray(child) && child[0] === "CONVERSION") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "CONVERSION")) : null;
           const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           if (csNode) {
@@ -58566,7 +58521,6 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.id = this.getId(node);
           break;
         case "BASEGEOGCRS":
-        case "BASEGEODCRS":
         case "GEOGCRS":
         case "GEODCRS":
           result.type = node[0] === "GEODCRS" ? "GeodeticCRS" : "GeographicCRS";
@@ -58585,10 +58539,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             if (primem && primem[1] !== "Greenwich") {
               datumOrEnsemble.prime_meridian = {
                 name: primem[1],
-                longitude: this.convertPrimeMeridianLongitude(
-                  primem,
-                  node.find((child) => Array.isArray(child) && child[0] === "ANGLEUNIT")
-                )
+                longitude: parseFloat(primem[2])
               };
             }
           }
@@ -58628,10 +58579,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.name = node[1];
           result.semi_major_axis = parseFloat(node[2]);
           result.inverse_flattening = parseFloat(node[3]);
-          const ellipsoidUnitNode = node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT");
-          if (ellipsoidUnitNode) {
-            this.convert(ellipsoidUnitNode, result);
-          }
+          node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT"), result) : null;
           break;
         case "CONVERSION":
           result.type = "Conversion";
@@ -58653,12 +58601,6 @@ Expected function or array of functions, received type ${typeof value2}.`
               (child) => Array.isArray(child) && (child[0] === "LENGTHUNIT" || child[0] === "ANGLEUNIT" || child[0] === "SCALEUNIT")
             )
           );
-          result.id = this.getId(node);
-          break;
-        case "COMPOUNDCRS":
-          result.type = "CompoundCRS";
-          result.name = node[1];
-          result.components = node.slice(2).filter((child) => Array.isArray(child) && child[0].endsWith("CRS")).map((child) => this.convert(child));
           result.id = this.getId(node);
           break;
         case "BOUNDCRS":
@@ -58700,9 +58642,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           });
           if (result.parameters.length === 7) {
             const scaleDifference = result.parameters[6];
-            if (scaleDifference.name === "Scale difference" && !scaleDifference.unit.conversion_factor) {
+            if (scaleDifference.name === "Scale difference") {
               scaleDifference.value = Math.round((scaleDifference.value - 1) * 1e12) / 1e6;
-              scaleDifference.unit = { type: "ScaleUnit", name: "parts per million", conversion_factor: 1e-6, id: null };
             }
           }
           result.id = this.getId(node);
@@ -58738,43 +58679,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return result;
     }
   }
-  function upperCaseKeywords(node) {
-    node[0] = node[0].toUpperCase();
-    for (var i2 = 1; i2 < node.length; i2++) {
-      if (Array.isArray(node[i2])) {
-        upperCaseKeywords(node[i2]);
-      }
-    }
-  }
-  var preferredKeywords = {
-    GEODETICCRS: "GEODCRS",
-    GEOGRAPHICCRS: "GEOGCRS",
-    PROJECTEDCRS: "PROJCRS",
-    GEODETICDATUM: "DATUM",
-    TRF: "DATUM",
-    SPHEROID: "ELLIPSOID",
-    PRIMEMERIDIAN: "PRIMEM",
-    PROJECTION: "METHOD",
-    VERTICALCRS: "VERTCRS",
-    VERTICALDATUM: "VDATUM",
-    VRF: "VDATUM",
-    ENGINEERINGCRS: "ENGCRS",
-    ENGINEERINGDATUM: "EDATUM",
-    PARAMETRICDATUM: "PDATUM",
-    TIMEDATUM: "TDATUM",
-    TEMPORALQUANTITY: "TIMEUNIT"
-  };
-  function usePreferredKeywords(node) {
-    node[0] = preferredKeywords[node[0]] || node[0];
-    for (var i2 = 1; i2 < node.length; i2++) {
-      if (Array.isArray(node[i2])) {
-        usePreferredKeywords(node[i2]);
-      }
-    }
-  }
   function buildPROJJSON(root) {
-    upperCaseKeywords(root);
-    usePreferredKeywords(root);
     return PROJJSONBuilderBase.convert(root);
   }
   function detectWKTVersion(wkt2) {
@@ -58796,8 +58701,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   var whitespace = /\s/;
   var latin = /[A-Za-z]/;
   var keyword = /[A-Za-z84_]/;
-  var endThings = /[,\])]/;
-  var digets = /[\d\.Ee\-\+]/;
+  var endThings = /[,\]]/;
+  var digets = /[\d\.E\-\+]/;
   function Parser$1(text2) {
     if (typeof text2 !== "string") {
       throw new Error("not a string");
@@ -58857,7 +58762,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.state = NEUTRAL;
       return;
     }
-    if (char === "]" || char === ")") {
+    if (char === "]") {
       this.level--;
       if (this.word !== null) {
         this.currentObject.push(this.word);
@@ -58896,7 +58801,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.word += char;
       return;
     }
-    if (char === "[" || char === "(") {
+    if (char === "[") {
       var newObjects = [];
       newObjects.push(this.word);
       this.level++;
@@ -59065,6 +58970,25 @@ Expected function or array of functions, received type ${typeof value2}.`
         return mapit(obj, key2, v);
     }
   }
+  var D2R = 0.017453292519943295;
+  function d2r(input) {
+    return input * D2R;
+  }
+  function applyProjectionDefaults(wkt2) {
+    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
+    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
+      wkt2.long0 = wkt2.longc;
+    }
+    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
+      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
+      wkt2.lat_ts = wkt2.lat0;
+      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
+      delete wkt2.lat1;
+    }
+  }
   function processUnit(unit) {
     let result = { units: null, to_meter: void 0 };
     if (typeof unit === "string") {
@@ -59090,28 +59014,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return valueOrObject;
   }
-  function toRadians(angle2) {
-    if (typeof angle2 !== "object") {
-      return angle2 * Math.PI / 180;
-    }
-    return angle2.unit === "degree" ? angle2.value * Math.PI / 180 : toValue(angle2);
-  }
-  const ARC_SECOND = Math.PI / 648e3;
-  const DATUM_PARAMS_UNITS = [1, 1, 1, ARC_SECOND, ARC_SECOND, ARC_SECOND, 1e-6];
-  function toDatumParam(param, i2) {
-    const unit = param.unit;
-    const factor = unit && typeof unit === "object" ? unit.conversion_factor : unit === "degree" ? Math.PI / 180 : unit === "metre" || unit === "unity" ? 1 : null;
-    return factor && i2 < DATUM_PARAMS_UNITS.length ? param.value * factor / DATUM_PARAMS_UNITS[i2] : param.value;
-  }
-  function isCoordinateFrameRotation(method) {
-    if (!method) {
-      return false;
-    }
-    if (method.id && method.id.authority === "EPSG") {
-      return [9607, 1032, 1038].includes(Number(method.id.code));
-    }
-    return /^Coordinate Frame rotation\b/i.test(method.name);
-  }
   function calculateEllipsoid(value2, result) {
     if (value2.ellipsoid.radius) {
       result.a = value2.ellipsoid.radius;
@@ -59125,22 +59027,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
-  function isHorizontalCRS(crs) {
-    if (crs.type === "BoundCRS") {
-      return Boolean(crs.source_crs) && isHorizontalCRS(crs.source_crs);
-    }
-    if (crs.type === "GeodeticCRS") {
-      return !crs.coordinate_system || crs.coordinate_system.subtype !== "Cartesian";
-    }
-    return crs.type === "GeographicCRS" || crs.type === "ProjectedCRS";
-  }
   function transformPROJJSON(projjson, result = {}) {
     if (!projjson || typeof projjson !== "object") {
       return projjson;
-    }
-    if (projjson.type === "CompoundCRS") {
-      const horizontal = (projjson.components || []).find(isHorizontalCRS);
-      return horizontal ? transformPROJJSON(horizontal, result) : result;
     }
     if (projjson.type === "BoundCRS") {
       transformPROJJSON(projjson.source_crs, result);
@@ -59148,12 +59037,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (projjson.transformation.method && projjson.transformation.method.name === "NTv2") {
           result.nadgrids = projjson.transformation.parameters[0].value;
         } else {
-          result.datum_params = projjson.transformation.parameters.map(toDatumParam);
-          if (result.datum_params.length >= 6 && isCoordinateFrameRotation(projjson.transformation.method)) {
-            for (let i2 = 3; i2 < 6; ++i2) {
-              result.datum_params[i2] = -result.datum_params[i2];
-            }
-          }
+          result.datum_params = projjson.transformation.parameters.map((param) => param.value);
         }
       }
       return result;
@@ -59191,7 +59075,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             calculateEllipsoid(value2, result);
           }
           if (value2.prime_meridian) {
-            result.from_greenwich = toRadians(value2.prime_meridian.longitude);
+            result.from_greenwich = value2.prime_meridian.longitude * Math.PI / 180;
           }
           break;
         case "ellipsoid":
@@ -59199,7 +59083,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           calculateEllipsoid(value2, result);
           break;
         case "prime_meridian":
-          result.long0 = toRadians(value2.longitude || 0);
+          result.long0 = (value2.longitude || 0) * Math.PI / 180;
           break;
         case "coordinate_system":
           if (value2.axis) {
@@ -59324,15 +59208,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.northing_at_projection_centre) {
       result.y0 = result.northing_at_projection_centre;
     }
-    if (result.projection_plane_origin_height !== void 0) {
-      result.h = result.projection_plane_origin_height;
-    }
-    if (result.satellite_height !== void 0) {
-      result.h = result.satellite_height;
-    }
-    if (result.viewpoint_height !== void 0) {
-      result.h = result.viewpoint_height;
-    }
     if (result.standard_parallel_1 !== void 0) {
       result.lat1 = result.standard_parallel_1;
     }
@@ -59357,21 +59232,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.angle_from_rectified_to_skew_grid) {
       result.rectified_grid_angle = result.angle_from_rectified_to_skew_grid;
     }
-    if (result.long0 === void 0 && result.central_meridian !== void 0) {
-      result.long0 = result.central_meridian;
-    }
-    if (result.lat0 === void 0 && result.latitude_of_origin !== void 0) {
-      result.lat0 = result.latitude_of_origin;
-    }
-    if (result.lat0 === void 0 && result.latitude_of_center !== void 0) {
-      result.lat0 = result.latitude_of_center;
-    }
-    if (result.longc === void 0 && result.longitude_of_center !== void 0) {
-      result.longc = result.longitude_of_center;
-    }
-    if (result.k0 === void 0 && result.scale_factor !== void 0) {
-      result.k0 = result.scale_factor;
-    }
     applyProjectionDefaults(result);
     return result;
   }
@@ -59387,31 +59247,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     "GEODETICDATUM",
     "ENGCRS",
     "ENGINEERINGCRS"
-  ];
-  var projectionProperties = [
-    "projName",
-    "axis",
-    "units",
-    "to_meter",
-    "datumCode",
-    "datum_params",
-    "nadgrids",
-    "ellps",
-    "from_greenwich",
-    "a",
-    "rf",
-    "sphere",
-    "k0",
-    "x0",
-    "y0",
-    "long0",
-    "longc",
-    "lat0",
-    "lat1",
-    "lat2",
-    "lat_ts",
-    "alpha",
-    "rectified_grid_angle"
   ];
   function rename(obj, params2) {
     var outName = params2[0];
@@ -59548,12 +59383,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (wkt2.b && !isFinite(wkt2.b)) {
       wkt2.b = wkt2.a;
     }
-    var angularUnit = geogcs && geogcs.UNIT && geogcs.UNIT.convert;
-    var toRadians2 = angularUnit && Math.abs(angularUnit / d2r(1) - 1) > 1e-9 ? function(input) {
-      return input * angularUnit;
-    } : d2r;
     if (wkt2.rectified_grid_angle) {
-      wkt2.rectified_grid_angle = toRadians2(wkt2.rectified_grid_angle);
+      wkt2.rectified_grid_angle = d2r(wkt2.rectified_grid_angle);
     }
     function toMeter(input) {
       var ratio = wkt2.to_meter || 1;
@@ -59584,25 +59415,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       ["k0", "scale_factor"],
       ["latitude_of_center", "Latitude_Of_Center"],
       ["latitude_of_center", "Latitude_of_center"],
-      ["lat0", "latitude_of_center", toRadians2],
+      ["lat0", "latitude_of_center", d2r],
       ["longitude_of_center", "Longitude_Of_Center"],
       ["longitude_of_center", "Longitude_of_center"],
-      ["longc", "longitude_of_center", toRadians2],
+      ["longc", "longitude_of_center", d2r],
       ["x0", "false_easting", toMeter],
       ["y0", "false_northing", toMeter],
-      ["long0", "central_meridian", toRadians2],
-      ["lat0", "latitude_of_origin", toRadians2],
-      ["lat1", "standard_parallel_1", toRadians2],
-      ["lat2", "standard_parallel_2", toRadians2],
-      ["h", "Height", toMeter],
+      ["long0", "central_meridian", d2r],
+      ["lat0", "latitude_of_origin", d2r],
+      ["lat0", "standard_parallel_1", d2r],
+      ["lat1", "standard_parallel_1", d2r],
+      ["lat2", "standard_parallel_2", d2r],
       ["azimuth", "Azimuth"],
-      ["alpha", "azimuth", toRadians2],
+      ["alpha", "azimuth", d2r],
       ["srsCode", "name"]
     ];
     list.forEach(renamer);
-    if (!isEquidistantCylindrical(wkt2.projName)) {
-      renamer(["lat0", "standard_parallel_1", toRadians2]);
-    }
     applyProjectionDefaults(wkt2);
   }
   function wkt(wkt2) {
@@ -59619,18 +59447,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     var obj = {};
     sExpr(lisp, obj);
     cleanWKT(obj);
-    var result = obj[type];
-    if (type === "COMPD_CS") {
-      var horizontal = result.PROJCS || result.GEOGCS;
-      if (horizontal) {
-        projectionProperties.forEach(function(key2) {
-          if (key2 in horizontal) {
-            result[key2] = horizontal[key2];
-          }
-        });
-      }
-    }
-    return result;
+    return obj[type];
   }
   function defs(name2) {
     var that = this;
@@ -112812,7 +112629,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     writeFeaturesNode(features, options) {
       options = this.adaptOptions(options);
-      const kml = createElementNS(NAMESPACE_URIS[4] ?? "", "kml");
+      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
       const xmlnsUri = "http://www.w3.org/2000/xmlns/";
       kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
       kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
@@ -113146,7 +112963,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       object["heading"]
     );
     if (heading !== void 0) {
-      rotation = toRadians$1(heading);
+      rotation = toRadians(heading);
     }
     const scale2 = (
       /** @type {number|undefined} */
