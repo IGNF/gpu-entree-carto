@@ -91,6 +91,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Fiche info SCoT (non publié / arrêté)** — les SCoT présents dans les données carte mais absents de la base ont désormais une tuile document avec un badge gris **NON PUBLIÉ** ou **ARRÊTÉ**, sans lien (parcelle et territoire) ; la légende parcelle utilise `SCOT_PERIMETER` quand `approved` est faux (au lieu de `SCOT_NOT_PUBLISHED`) et suffixe le libellé. Repris de gpu-client.
 - **Fiche SCoT** — affichage uniquement si l’`id` document BDD = `gpu_id` WFS au point (plus de rapprochement par seule partition `scot_*`), côté gpu-site et entree-carto.
 - **Fiche MEC territoire (gpu-site)** — WFS `mec` sur l’emprise communale en complément du point cerise (MEC SCoT recouvrant la commune mais hors clic).
 - **Permalink carte (SUP)** — sélection partielle des sous-couches SUP conservée au rechargement (restauration sans cocher toute la branche ; clés parentes omises du hash quand les enfants diffèrent).

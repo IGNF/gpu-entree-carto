@@ -31,6 +31,7 @@ import {
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
+  buildScotWfsStatusTiles,
   filterScotPartitionsByWfsGpuId,
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
@@ -271,9 +272,21 @@ function collectMecProcedures(
   return out
 }
 
+/** Onglet SCoT : tuiles documents en base + tuiles de statut WFS (non publié / arrêté). */
+function buildScotTabTilesHtml(
+  partitions: Record<string, GpuFichePartition>,
+  data: GpuFicheInfoPayload,
+  statusTiles: string[],
+): string {
+  const docsHtml = buildDuTabTilesHtml(partitions, data, statusTiles)
+  if (docsHtml || !statusTiles.length) return docsHtml
+  return documentTilesListHtml(statusTiles)
+}
+
 function buildDuTabTilesHtml(
   partitions: Record<string, GpuFichePartition>,
   data: GpuFicheInfoPayload,
+  extraTiles: string[] = [],
 ): string {
   const keys = Object.keys(partitions)
   if (!keys.length) return ''
@@ -302,7 +315,7 @@ function buildDuTabTilesHtml(
     )
   }
   if (!tiles.length) return ''
-  const list = documentTilesListHtml(tiles)
+  const list = documentTilesListHtml([...tiles, ...extraTiles])
   if (keys.length > 1) {
     return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`
   }
@@ -405,8 +418,13 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     normalizePartitionsMap(data.scots),
     isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : undefined,
   )
-  if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible('scot')) {
-    const bodyHtml = buildDuTabTilesHtml(scots, data)
+  // SCoT présents sur la carte mais absents de la base (non publié / arrêté).
+  const scotStatusTiles = buildScotWfsStatusTiles(extractParcelFichePayload(data)?.features ?? [])
+  if (
+    (mapHasProductionDocument(scots) || scotStatusTiles.length) &&
+    isFicheDocumentFamilyVisible('scot')
+  ) {
+    const bodyHtml = buildScotTabTilesHtml(scots, data, scotStatusTiles)
     tabs.push({
       id: TAB_SCOT,
       label: territory ? territoryDocumentTabLabel(TAB_SCOT, 'SCoT') : 'SCoT',

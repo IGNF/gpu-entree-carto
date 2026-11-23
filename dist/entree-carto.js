@@ -67498,7 +67498,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     (_a2 = mapLocationMarkerRef.value) == null ? void 0 : _a2.call(mapLocationMarkerRef, lon, lat, options);
   }
   function escapeHtml(value2) {
-    return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   const FICHE_LOADING_SPINNER_HTML = `<p class="ec-fiche-info__loading"><span class="ec-fiche-info__spinner fr-icon-refresh-line" aria-hidden="true"></span> Chargement…</p>`;
   const gpuClientConfigStatus = /* @__PURE__ */ shallowRef("idle");
@@ -68502,6 +68502,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   function layerConfigToTreeNodes(layers, zoomAtInit = 6) {
     const legendOpts = readGpuLegendBuildOptions(zoomAtInit);
     return buildTreeLevel(layers, "", [], legendOpts);
+  }
+  function findElementByDataset(tagName, datasetKey, value2) {
+    for (const el2 of document.getElementsByTagName(tagName)) {
+      if (el2.dataset[datasetKey] === value2) return el2;
+    }
+    return null;
   }
   const DEFAULT_DEMO_CONFIG = {
     configScriptUrl: null,
@@ -71328,6 +71334,52 @@ Expected function or array of functions, received type ${typeof value2}.`
       selection.bodyHtml = "";
     }
   }
+  function parseScotApprovedValue(value2) {
+    if (value2 === true || value2 === 1) return true;
+    if (value2 === false || value2 === 0) return false;
+    if (typeof value2 === "string") {
+      const normalized = value2.trim().toLowerCase();
+      if (normalized === "true" || normalized === "1") return true;
+      if (normalized === "false" || normalized === "0") return false;
+    }
+    return null;
+  }
+  function hasScotGpuId(properties) {
+    return coerceDisplayString(properties == null ? void 0 : properties.gpu_id).trim() !== "";
+  }
+  function resolveScotWfsDisplayState(properties) {
+    if (hasScotGpuId(properties)) return "published";
+    if (parseScotApprovedValue(properties == null ? void 0 : properties.approved) === true) return "not_published";
+    return "stopped";
+  }
+  function isScotWfsUnpublishedState(state) {
+    return state === "not_published" || state === "stopped";
+  }
+  function resolveScotLegendImageKey(properties) {
+    const state = resolveScotWfsDisplayState(properties);
+    if (state === "published") return "SCOT_PUBLISHED";
+    if (state === "not_published") return "SCOT_NOT_PUBLISHED";
+    return "SCOT_PERIMETER";
+  }
+  function getScotLegendImagePath(layer, properties) {
+    return `${layer}/${resolveScotLegendImageKey(properties)}.png`;
+  }
+  function formatScotParcelLegendTitle(title2, properties) {
+    const base = (title2 == null ? void 0 : title2.trim()) || "SCOT";
+    const state = resolveScotWfsDisplayState(properties);
+    if (state === "not_published") return `${base} - non publié`;
+    if (state === "stopped") return `${base} - arrêté`;
+    return base;
+  }
+  function scotWfsStatusBadgeLabel(state) {
+    return state === "not_published" ? "NON PUBLIÉ" : "ARRÊTÉ";
+  }
+  function scotWfsStatusBannerMessage(state) {
+    if (state === "not_published") {
+      return "Ce schéma de cohérence territoriale n'est pas encore publié sur le Géoportail de l'urbanisme.";
+    }
+    return "Ce schéma de cohérence territoriale est arrêté.";
+  }
   function readConfigString(key2) {
     const raw = config[key2];
     if (typeof raw !== "string") return null;
@@ -71500,12 +71552,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     return `<div class="ec-fiche-info__tile-badges">${parts.join("")}</div>`;
   }
   function dsfrHorizontalTile(title2, href, detail) {
+    const enlarge = href ? " fr-enlarge-link" : "";
     const titleInner = escapeHtml(title2);
     const titleBlock = href ? `<h3 class="fr-tile__title"><a class="fr-tile__link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a></h3>` : `<h3 class="fr-tile__title">${titleInner}</h3>`;
     const detailBlock = detail ? `<p class="fr-tile__detail">${escapeHtml(detail)}</p>` : "";
-    return `<div class="fr-tile fr-tile--horizontal fr-enlarge-link ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`;
+    return `<div class="fr-tile fr-tile--horizontal${enlarge} ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`;
+  }
+  function scotWfsStatusTileHtml(title2, state) {
+    const badge = `<div class="ec-fiche-info__tile-badges"><span class="ec-fiche-info__badge ec-fiche-info__badge--scot-status">${escapeHtml(scotWfsStatusBadgeLabel(state))}</span></div>`;
+    return dsfrHorizontalTile(title2, void 0, scotWfsStatusBannerMessage(state)).replace(
+      '<div class="fr-tile__content">',
+      `<div class="fr-tile__content">${badge}`
+    );
   }
   function documentUrbanismTileHtml(model) {
+    if (model.scotWfsStatus) return scotWfsStatusTileHtml(model.title, model.scotWfsStatus);
     const detail = lastApprovedProcedureTileDetail(model.datapproLabel, model.procedureNatureLabel);
     const badges = tileBadgesRow(model);
     let core = dsfrHorizontalTile(model.title, model.href, detail);
@@ -71719,9 +71780,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return isHighScaleLegendZoom(zoom, threshold) ? "-highscale" : "-lowscale";
   }
   function getScotImage(layer, properties) {
-    if (properties.gpu_id != null) return `${layer}/SCOT_PUBLISHED.png`;
-    if (properties.approved != null) return `${layer}/SCOT_NOT_PUBLISHED.png`;
-    return `${layer}/SCOT_PERIMETER.png`;
+    return getScotLegendImagePath(layer, properties);
   }
   function getMecImage(layer) {
     return `${layer}/MEC.png`;
@@ -72283,7 +72342,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (section === "scot") {
       return {
-        title: formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT"),
+        title: formatScotParcelLegendTitle(
+          formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT"),
+          props
+        ),
         subtitle: ""
       };
     }
@@ -72755,6 +72817,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (section === "scot") {
       const props = feature.properties ?? {};
+      if (isScotWfsUnpublishedState(resolveScotWfsDisplayState(props))) return true;
       if (!ficheApi) return false;
       if (documentFeatureInGpuSite(props, lookup2)) return true;
       const partition = coerceDisplayString(props.partition);
@@ -72829,8 +72892,34 @@ Expected function or array of functions, received type ${typeof value2}.`
         continue;
       }
       const props = feature.properties ?? {};
+      if (isScotWfsUnpublishedState(resolveScotWfsDisplayState(props))) continue;
       if (!scotFeatureMatchesGpuSiteDocumentId(props, lookup2)) continue;
       tiles.push(scotTileFromFeature(feature, lookup2, ficheApi));
+    }
+    const excluded = mecCatalogVisible ? blockedParents : /* @__PURE__ */ new Set();
+    tiles.push(...buildScotWfsStatusTiles(scotFeatures, excluded));
+    return tiles;
+  }
+  function buildScotWfsStatusTiles(features, excludedPartitions = /* @__PURE__ */ new Set()) {
+    if (!isFicheDocumentFamilyVisible("scot")) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const tiles = [];
+    for (const feature of features) {
+      if (classifyFeature(feature) !== "scot") continue;
+      const props = feature.properties ?? {};
+      const state = resolveScotWfsDisplayState(props);
+      if (!isScotWfsUnpublishedState(state)) continue;
+      const partition = coerceDisplayString(props.partition ?? props.name).toLowerCase();
+      if (partition && excludedPartitions.has(partition)) continue;
+      const key2 = partition || featureDedupeKey(feature);
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      tiles.push(
+        documentUrbanismTileHtml({
+          title: formatParcelRuleLabel(coerceDisplayString(props.title) || "SCoT"),
+          scotWfsStatus: state
+        })
+      );
     }
     return tiles;
   }
@@ -73033,7 +73122,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return out;
   }
-  function buildDuTabTilesHtml(partitions, data) {
+  function buildScotTabTilesHtml(partitions, data, statusTiles) {
+    const docsHtml = buildDuTabTilesHtml(partitions, data, statusTiles);
+    if (docsHtml || !statusTiles.length) return docsHtml;
+    return documentTilesListHtml(statusTiles);
+  }
+  function buildDuTabTilesHtml(partitions, data, extraTiles = []) {
     var _a2;
     const keys = Object.keys(partitions);
     if (!keys.length) return "";
@@ -73062,7 +73156,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
     }
     if (!tiles.length) return "";
-    const list = documentTilesListHtml(tiles);
+    const list = documentTilesListHtml([...tiles, ...extraTiles]);
     if (keys.length > 1) {
       return `<p class="ec-fiche-info__intro">Zone d’incertitude où se superposent plusieurs documents.</p>${list}`;
     }
@@ -73108,6 +73202,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return prependNonExecutoireCalloutForPartitionMap(html2, partitions);
   }
   function buildDocumentTabs(data, mode2) {
+    var _a2;
     const tabs = [];
     const proceduresByDocument = data.proceduresByDocument;
     const territory = mode2 === MAP_MODE_TERRITORY;
@@ -73142,8 +73237,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       normalizePartitionsMap(data.scots),
       isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : void 0
     );
-    if (mapHasProductionDocument(scots) && isFicheDocumentFamilyVisible("scot")) {
-      const bodyHtml = buildDuTabTilesHtml(scots, data);
+    const scotStatusTiles = buildScotWfsStatusTiles(((_a2 = extractParcelFichePayload(data)) == null ? void 0 : _a2.features) ?? []);
+    if ((mapHasProductionDocument(scots) || scotStatusTiles.length) && isFicheDocumentFamilyVisible("scot")) {
+      const bodyHtml = buildScotTabTilesHtml(scots, data, scotStatusTiles);
       tabs.push({
         id: TAB_SCOT,
         label: territory ? territoryDocumentTabLabel(TAB_SCOT, "SCoT") : "SCoT",
@@ -93820,11 +93916,25 @@ Expected function or array of functions, received type ${typeof value2}.`
     ctx.drawImage(shot, marginPx, marginPx, innerWidthPx, innerHeightPx);
     return finalCanvas;
   }
+  const FICHE_LINK_SANITIZE = { ADD_ATTR: ["target"] };
+  const purifier = purify_default();
+  purifier.addHook("afterSanitizeAttributes", (node) => {
+    if (!(node instanceof Element) || !node.hasAttribute("target")) return;
+    const tokens = new Set(
+      (node.getAttribute("rel") ?? "").toLowerCase().split(/\s+/).filter((t) => t && t !== "opener")
+    );
+    tokens.add("noopener");
+    tokens.add("noreferrer");
+    node.setAttribute("rel", [...tokens].join(" "));
+  });
+  function sanitizeDisplayHtml(html2, linkTargetBlank) {
+    return purifier.sanitize(html2, linkTargetBlank ? FICHE_LINK_SANITIZE : {});
+  }
   function sanitizeFicheHtmlForPrint(html2) {
     if (!html2.trim()) return html2;
-    if (typeof document === "undefined") return html2;
+    if (typeof document === "undefined") return "";
     const tpl = document.createElement("template");
-    tpl.innerHTML = html2;
+    tpl.innerHTML = sanitizeDisplayHtml(html2);
     tpl.content.querySelectorAll(".ec-fiche-info__rule-doc").forEach((el2) => el2.remove());
     tpl.content.querySelectorAll("hr").forEach((el2) => el2.remove());
     tpl.content.querySelectorAll("a").forEach((anchor) => {
@@ -93985,10 +94095,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const w = attrRect.width * domToExportScale;
     const h2 = attrRect.height * domToExportScale;
     ctx.drawImage(shot, x, y, w, h2);
-  }
-  const FICHE_LINK_SANITIZE = { ADD_ATTR: ["target"] };
-  function sanitizeDisplayHtml(html2, linkTargetBlank) {
-    return purify_default.sanitize(html2, linkTargetBlank ? FICHE_LINK_SANITIZE : void 0);
   }
   const _hoisted_1$l = ["innerHTML"];
   const _sfc_main$l = /* @__PURE__ */ defineComponent({
@@ -121803,7 +121909,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function loadStylesheet(href) {
     if (LOADED.has(href)) return Promise.resolve();
-    const existing = document.querySelector(`link[data-ec-external-css="${href}"]`);
+    const existing = findElementByDataset("link", "ecExternalCss", href);
     if (existing) {
       LOADED.add(href);
       return Promise.resolve();

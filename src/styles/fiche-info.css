@@ -439,6 +439,12 @@
   color: #666;
 }
 
+/* SCoT présent sur la carte mais absent de la base (non publié / arrêté). */
+.ec-fiche-info__badge--scot-status {
+  background: var(--background-contrast-grey, #eee);
+  color: var(--text-mention-grey, #666);
+}
+
 .ec-fiche-info__mec-notice {
   color: #c0102e;
   font-size: 0.875rem;

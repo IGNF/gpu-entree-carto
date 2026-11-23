@@ -45,6 +45,11 @@ import {
   resolveParcelFeatureLegendImageUrl,
 } from '@/lib/fiche/parcelLegendImage'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
+import {
+  formatScotParcelLegendTitle,
+  isScotWfsUnpublishedState,
+  resolveScotWfsDisplayState,
+} from '@/lib/fiche/scotWfsStatus'
 
 export type ParcelFicheFeature = {
   id?: string
@@ -111,7 +116,10 @@ function ruleTextsForFeature(
   }
   if (section === 'scot') {
     return {
-      title: formatParcelRuleLabel(coerceDisplayString(props.title) || 'SCoT'),
+      title: formatScotParcelLegendTitle(
+        formatParcelRuleLabel(coerceDisplayString(props.title) || 'SCoT'),
+        props,
+      ),
       subtitle: '',
     }
   }
@@ -775,6 +783,8 @@ function shouldIncludeParcelRuleFeature(
   }
   if (section === 'scot') {
     const props = feature.properties ?? {}
+    // SCoT non publié / arrêté : présent sur la carte, sans document en base.
+    if (isScotWfsUnpublishedState(resolveScotWfsDisplayState(props))) return true
     if (!ficheApi) return false
     if (documentFeatureInGpuSite(props, lookup)) return true
     const partition = coerceDisplayString(props.partition)
@@ -866,8 +876,44 @@ function buildScotDocumentTiles(
       continue
     }
     const props = feature.properties ?? {}
+    // Non publié / arrêté : tuile de statut dédiée (ci-dessous).
+    if (isScotWfsUnpublishedState(resolveScotWfsDisplayState(props))) continue
     if (!scotFeatureMatchesGpuSiteDocumentId(props, lookup)) continue
     tiles.push(scotTileFromFeature(feature, lookup, ficheApi))
+  }
+  const excluded = mecCatalogVisible ? blockedParents : new Set<string>()
+  tiles.push(...buildScotWfsStatusTiles(scotFeatures, excluded))
+  return tiles
+}
+
+/**
+ * Tuiles des SCoT présents dans les données carte (WFS) mais absents de la base :
+ * badge gris « NON PUBLIÉ » / « ARRÊTÉ », sans lien. Une tuile par partition.
+ * Utilisé par la fiche parcelle (Documents) et l’onglet SCoT de la fiche territoire.
+ */
+export function buildScotWfsStatusTiles(
+  features: ParcelFicheFeature[],
+  excludedPartitions: ReadonlySet<string> = new Set(),
+): string[] {
+  if (!isFicheDocumentFamilyVisible('scot')) return []
+  const seen = new Set<string>()
+  const tiles: string[] = []
+  for (const feature of features) {
+    if (classifyFeature(feature) !== 'scot') continue
+    const props = feature.properties ?? {}
+    const state = resolveScotWfsDisplayState(props)
+    if (!isScotWfsUnpublishedState(state)) continue
+    const partition = coerceDisplayString(props.partition ?? props.name).toLowerCase()
+    if (partition && excludedPartitions.has(partition)) continue
+    const key = partition || featureDedupeKey(feature)
+    if (seen.has(key)) continue
+    seen.add(key)
+    tiles.push(
+      documentUrbanismTileHtml({
+        title: formatParcelRuleLabel(coerceDisplayString(props.title) || 'SCoT'),
+        scotWfsStatus: state,
+      }),
+    )
   }
   return tiles
 }

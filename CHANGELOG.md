@@ -91,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche info SCoT (not published / stopped)** — SCoTs present in the map data but not in the database now get a document tile with a grey **NON PUBLIÉ** or **ARRÊTÉ** badge and no link (parcel and territory); parcel legend uses `SCOT_PERIMETER` when `approved` is false (was `SCOT_NOT_PUBLISHED`) and suffixes the label. Ported from gpu-client.
 - **Fiche SCoT** — territory/parcel tiles only when gpu-site document `id` matches WFS `gpu_id` at the point (no partition-only fallback); gpu-site filter + entree-carto presentation.
 - **Territory fiche MEC (gpu-site)** — additional WFS `mec` query on the commune footprint, not only the cherry point (SCoT MEC overlapping the municipality but away from the marker).
 - **Map permalink (SUP)** — partial SUP sub-layer selection is preserved on reload (permalink restore no longer checks the whole branch; parent keys omitted when children differ).

@@ -78,6 +78,7 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 - Previous in-flight `fetch` aborted on the next click (`AbortController`); lightweight `supersede=true` with `client` / `seq` stops stale Symfony work before the main request.
 - Presentation: DSFR horizontal tiles (`ficheDocumentTiles.ts`).
 - **SCoT**: a tile is shown only when the gpu-site document `id` matches the WFS feature `gpu_id` (or `gpu_doc_id`) at the click point (no partition-only fallback).
+- **SCoT not in the database** (map/WFS data only, no `gpu_id`): `approved` true → grey **NON PUBLIÉ** badge, otherwise → grey **ARRÊTÉ** badge (`scotWfsStatus.ts`, same rule as the WMS styles and gpu-client). The tile has no link (the document does not exist) and is shown in parcel **Documents** and in the territory **SCoT** tab (from `parcelFiche.features`). Parcel **Infos** rows get the ` - non publié` / ` - arrêté` suffix and the `SCOT_NOT_PUBLISHED` / `SCOT_PERIMETER` legend picture.
 - **MEC (territory)**: gpu-site also queries WFS layer `mec` against the **commune footprint** (`ign_grid` outline), not only the cherry point — so a SCoT (or DU) MEC overlapping the commune is detected even when the marker is elsewhere on the municipality.
 
 See also [FicheInfo](./FicheInfo.md).

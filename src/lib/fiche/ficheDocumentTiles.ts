@@ -1,6 +1,11 @@
 import { lastApprovedProcedureTileDetail } from '@/lib/fiche/ficheDocumentPresentation'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import {
+  scotWfsStatusBadgeLabel,
+  scotWfsStatusBannerMessage,
+  type ScotWfsUnpublishedState,
+} from '@/lib/fiche/scotWfsStatus'
+import {
   documentIsNonExecutoireEffectiveStatus,
   documentIsPreviewStatus,
   DOCUMENT_PREVIEW_BADGE_HTML,
@@ -26,6 +31,11 @@ export type FicheDocumentTileModel = {
   mecNoticeHtml?: string
   /** Document issu du WFS sans entrée gpu-site. */
   notInDatabase?: boolean
+  /**
+   * SCoT présent dans les données carte mais absent de la base (non publié / arrêté) :
+   * badge gris seul, message explicatif, aucun lien (le document n’existe pas).
+   */
+  scotWfsStatus?: ScotWfsUnpublishedState
 }
 
 export type FicheProcedureTileModel = {
@@ -102,16 +112,27 @@ function dsfrHorizontalTile(
   href: string | undefined,
   detail: string | null,
 ): string {
+  const enlarge = href ? ' fr-enlarge-link' : ''
   const titleInner = escapeHtml(title)
   const titleBlock = href
     ? `<h3 class="fr-tile__title"><a class="fr-tile__link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a></h3>`
     : `<h3 class="fr-tile__title">${titleInner}</h3>`
   const detailBlock = detail ? `<p class="fr-tile__detail">${escapeHtml(detail)}</p>` : ''
-  return `<div class="fr-tile fr-tile--horizontal fr-enlarge-link ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`
+  return `<div class="fr-tile fr-tile--horizontal${enlarge} ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`
+}
+
+/** Tuile SCoT hors base : badge gris « NON PUBLIÉ » / « ARRÊTÉ », sans lien. */
+function scotWfsStatusTileHtml(title: string, state: ScotWfsUnpublishedState): string {
+  const badge = `<div class="ec-fiche-info__tile-badges"><span class="ec-fiche-info__badge ec-fiche-info__badge--scot-status">${escapeHtml(scotWfsStatusBadgeLabel(state))}</span></div>`
+  return dsfrHorizontalTile(title, undefined, scotWfsStatusBannerMessage(state)).replace(
+    '<div class="fr-tile__content">',
+    `<div class="fr-tile__content">${badge}`,
+  )
 }
 
 /** Tuile document DU / PSMV / SCoT (badges effectif + légal). */
 export function documentUrbanismTileHtml(model: FicheDocumentTileModel): string {
+  if (model.scotWfsStatus) return scotWfsStatusTileHtml(model.title, model.scotWfsStatus)
   const detail = lastApprovedProcedureTileDetail(model.datapproLabel, model.procedureNatureLabel)
   const badges = tileBadgesRow(model, true)
   let core = dsfrHorizontalTile(model.title, model.href, detail)
