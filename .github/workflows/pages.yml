@@ -12,7 +12,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    # Uniquement un push sur main du dépôt lui-même : une PR de fork dont la branche
+    # s'appelle « main » déclenche aussi CI (workflow_run filtre sur le nom de branche).
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     permissions:
       contents: read
       pages: write

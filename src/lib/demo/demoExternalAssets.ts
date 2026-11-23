@@ -1,3 +1,5 @@
+import { findElementByDataset } from '@/lib/demo/findByDataset'
+
 /**
  * Assets partagés (DSFR icônes, Remix) pour la démo autonome (`public/external/`)
  * sans les dupliquer dans les bundles `dist/` intégrés à gpu-site.
@@ -61,7 +63,7 @@ export function hostPageProvidesRemixIcon(): boolean {
 
 function loadStylesheet(href: string): Promise<void> {
   if (LOADED.has(href)) return Promise.resolve()
-  const existing = document.querySelector<HTMLLinkElement>(`link[data-ec-external-css="${href}"]`)
+  const existing = findElementByDataset('link', 'ecExternalCss', href)
   if (existing) {
     LOADED.add(href)
     return Promise.resolve()

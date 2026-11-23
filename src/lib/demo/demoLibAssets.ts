@@ -6,6 +6,7 @@ import type { AutocompleteLocation, StandardViewerParams } from '@/lib/types'
 import type { MountGeometryEditorHandle } from '@/geometry-editor'
 import type { GeometryEditorOptions } from '@/geometry-editor/types'
 import type { MountSketchHandle, MountSketchOptions } from '@/sketch/mountSketch'
+import { findElementByDataset } from '@/lib/demo/findByDataset'
 
 /** Bundles IIFE livrés dans `dist/` (gpu-site). */
 export type DemoLibBundle =
@@ -44,7 +45,7 @@ const loadedScripts = new Set<string>()
 
 export function loadStylesheetOnce(href: string): Promise<void> {
   if (loadedStyles.has(href)) return Promise.resolve()
-  const existing = document.querySelector<HTMLLinkElement>(`link[data-ec-lib-css="${href}"]`)
+  const existing = findElementByDataset('link', 'ecLibCss', href)
   if (existing) {
     loadedStyles.add(href)
     return Promise.resolve()
@@ -65,7 +66,7 @@ export function loadStylesheetOnce(href: string): Promise<void> {
 
 export function loadScriptOnce(src: string): Promise<void> {
   if (loadedScripts.has(src)) return Promise.resolve()
-  const existing = document.querySelector<HTMLScriptElement>(`script[data-ec-lib-js="${src}"]`)
+  const existing = findElementByDataset('script', 'ecLibJs', src)
   if (existing) {
     loadedScripts.add(src)
     return Promise.resolve()

@@ -161,6 +161,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sketch style popup** — two action rows: local Undo/Redo (tertiary) for in-popup style history, then Delete / Close; live edits also recorded in sketch undo/redo.
 - README restructured (English reference + `README.fr.md` overview).
 
+### Security
+
+- **GitHub Pages** — deploy workflow only runs for `push` events of this repository (a fork PR from a branch named `main` could previously publish its build).
+- **geopf Search `eval`** — `patchGeopfSearchEval` now fails the build if any `eval(` remains after patching; new `npm run verify:no-eval` (run in CI) scans built bundles.
+- **HTML sanitisation** — dedicated DOMPurify instance forcing `rel="noopener noreferrer"` on links with `target`; `escapeHtml` also escapes `'`; print fiche HTML (`sanitizeFicheHtmlForPrint`) is sanitised on its own.
+- **Demo asset loaders** — existing `<script>` / `<link>` lookups no longer interpolate URLs into CSS selectors (`findElementByDataset`).
+
 ## [0.3.0] - 2026-09-25
 
 ### Added

@@ -87,7 +87,6 @@ window.DEMO_CONFIG = {
 
 /* Exemples configScriptUrl — décommenter :
    configScriptUrl: 'https://www.geoportail-urbanisme.gouv.fr/map/gpu-client-config.js',
-   configScriptUrl: 'https://gpu-site.dev.gpf-tech.ign.fr/map/gpu-client-config.js',
    configScriptUrl: 'http://127.0.0.1:8000/map/gpu-client-config.js',
 */
 

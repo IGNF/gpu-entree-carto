@@ -1,10 +1,15 @@
-/** HTML fiche / tuiles : sans liens ni boutons pièce écrite (aperçu + export). */
+import { sanitizeDisplayHtml } from '@/components/common/sanitizedHtmlCore'
+
+/**
+ * HTML fiche / tuiles : sans liens ni boutons pièce écrite (aperçu + export).
+ * La sortie est assainie (DOMPurify) : sûre même sans repasser par `SanitizedHtml`.
+ */
 export function sanitizeFicheHtmlForPrint(html: string): string {
   if (!html.trim()) return html
-  if (typeof document === 'undefined') return html
+  if (typeof document === 'undefined') return ''
 
   const tpl = document.createElement('template')
-  tpl.innerHTML = html
+  tpl.innerHTML = sanitizeDisplayHtml(html)
 
   tpl.content.querySelectorAll('.ec-fiche-info__rule-doc').forEach((el) => el.remove())
   tpl.content.querySelectorAll('hr').forEach((el) => el.remove())

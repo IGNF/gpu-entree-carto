@@ -4,6 +4,7 @@ import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
 import config from '@/lib/config'
+import { findElementByDataset } from '@/lib/demo/findByDataset'
 import {
   getGpuClientConfigScriptUrl,
   resolveConfigUrl,
@@ -245,9 +246,7 @@ function resolveConfigScriptLoadHref(url: string): string {
 export function loadGpuClientConfigScript(url: string): Promise<void> {
   const scriptUrl = resolveConfigScriptLoadHref(url)
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[data-ec-demo-config="${url}"]`,
-    )
+    const existing = findElementByDataset('script', 'ecDemoConfig', url)
     if (existing) {
       setGpuClientConfigScriptUrl(existing.src || url)
       applyGpuConfigSyncAndDevRewrite()

@@ -161,6 +161,13 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Popup style croquis** — deux lignes d’actions : Annuler / Rétablir (tertiaire, mini-historique du style) puis Supprimer / Fermer ; les changements en direct restent aussi dans l’historique croquis.
 - README restructuré (anglais de référence + aperçu `README.fr.md`).
 
+### Sécurité
+
+- **GitHub Pages** — le workflow de déploiement ne s’exécute plus que pour les `push` de ce dépôt (une PR de fork depuis une branche nommée `main` pouvait publier son build).
+- **`eval` geopf Search** — `patchGeopfSearchEval` fait échouer le build si un `eval(` subsiste après patch ; nouveau `npm run verify:no-eval` (exécuté en CI) qui analyse les bundles construits.
+- **Assainissement HTML** — instance DOMPurify dédiée imposant `rel="noopener noreferrer"` sur les liens avec `target` ; `escapeHtml` échappe aussi `'` ; le HTML des fiches imprimées (`sanitizeFicheHtmlForPrint`) est assaini de façon autonome.
+- **Chargeurs d’assets démo** — la recherche des `<script>` / `<link>` existants n’interpole plus les URL dans des sélecteurs CSS (`findElementByDataset`).
+
 ## [0.3.0] - 2026-09-25
 
 ### Ajouté
