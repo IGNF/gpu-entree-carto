@@ -4,7 +4,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
 (function(exports) {
   "use strict";
   /**
-  * @vue/shared v3.5.45
+  * @vue/shared v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -56,11 +56,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   const isBuiltInDirective = /* @__PURE__ */ makeMap(
     "bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo"
   );
+  const STRING_CACHE_MAX_SIZE = 1e4;
   const cacheStringFunction = (fn) => {
-    const cache = /* @__PURE__ */ Object.create(null);
+    let cache = /* @__PURE__ */ Object.create(null);
+    let size = 0;
     return ((str) => {
       const hit = cache[str];
-      return hit || (cache[str] = fn(str));
+      if (hit !== void 0) return hit;
+      if (++size > STRING_CACHE_MAX_SIZE) {
+        cache = /* @__PURE__ */ Object.create(null);
+        size = 1;
+      }
+      return cache[str] = fn(str);
     });
   };
   const camelizeRE = /-\w/g;
@@ -203,13 +210,13 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return false;
     }
     for (const key in a) {
-      const aHasKey = a.hasOwnProperty(key);
-      const bHasKey = b.hasOwnProperty(key);
+      const aHasKey = hasOwn(a, key);
+      const bHasKey = hasOwn(b, key);
       if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a[key], b[key], seen)) {
         return false;
       }
     }
-    return String(a) === String(b);
+    return toComparableString(a) === toComparableString(b);
   }
   function looseCompareNested(a, b, seen, compare) {
     if (!seen) {
@@ -253,6 +260,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     return String(a) === String(b);
   }
+  function toComparableString(value) {
+    return Object.getPrototypeOf(value) === null && value[Symbol.toPrimitive] == null && typeof value.toString !== "function" && typeof value.valueOf !== "function" ? toTypeString(value) : String(value);
+  }
   const isRef$1 = (val) => {
     return !!(val && val["__v_isRef"] === true);
   };
@@ -292,7 +302,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     );
   };
   /**
-  * @vue/reactivity v3.5.45
+  * @vue/reactivity v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -2029,7 +2039,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return value;
   }
   /**
-  * @vue/runtime-core v3.5.45
+  * @vue/runtime-core v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -7798,10 +7808,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version = "3.5.45";
+  const version = "3.5.46";
   const warn = warn$1;
   /**
-  * @vue/runtime-dom v3.5.45
+  * @vue/runtime-dom v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -8424,7 +8434,7 @@ Expected function or array of functions, received type ${typeof value}.`
     return container;
   }
   /**
-  * vue v3.5.45
+  * vue v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
