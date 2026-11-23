@@ -6,7 +6,10 @@ const GEOPF_SEARCH_SET_URL_EVAL =
   /m_url\s*=\s*eval\s*\(\s*"`"\s*\+\s*value\s*\+\s*"`"\s*\)\s*;\s*\/\/\s*insecure\s*!/
 
 const GEOPF_SEARCH_SET_URL_SAFE =
-  'm_url = String(value ?? ""); /* entree-carto: pas d’eval (URL service fixe) */'
+  'm_url = String(value ?? ""); /* entree-carto: patch sans évaluation dynamique, URL service fixe */'
+
+/** Tout appel `eval(` restant après patch (forme amont modifiée, nouvel appel…). */
+const ANY_EVAL_CALL = /(^|[^\w$.])eval\s*\(/m
 
 function isGeopfSearchModuleId(id: string): boolean {
   return (
@@ -17,6 +20,7 @@ function isGeopfSearchModuleId(id: string): boolean {
 
 /**
  * Remplace l’eval de setUrl par une affectation de chaîne (comportement identique pour nos URLs HTTPS).
+ * Échoue le build si un `eval(` subsiste (motif amont modifié).
  * @see https://github.com/IGNF/geopf-extensions-openlayers
  */
 export function patchGeopfSearchEval(): Plugin {
@@ -26,8 +30,15 @@ export function patchGeopfSearchEval(): Plugin {
     load(id) {
       if (!isGeopfSearchModuleId(id)) return null
       const code = readFileSync(id, 'utf8')
-      if (!GEOPF_SEARCH_SET_URL_EVAL.test(code)) return code
-      return code.replace(GEOPF_SEARCH_SET_URL_EVAL, GEOPF_SEARCH_SET_URL_SAFE)
+      const patched = code.replace(GEOPF_SEARCH_SET_URL_EVAL, GEOPF_SEARCH_SET_URL_SAFE)
+      if (ANY_EVAL_CALL.test(patched)) {
+        // Mise à jour amont : le motif connu ne correspond plus → refuser de bundler un eval.
+        throw new Error(
+          `[entree-carto] eval() encore présent dans ${id} après patch : ` +
+            'adapter GEOPF_SEARCH_SET_URL_EVAL dans vite.geopfPlugins.ts.',
+        )
+      }
+      return patched
     },
   }
 }

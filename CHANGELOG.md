@@ -91,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche info SCoT (not published / stopped)** — SCoTs present in the map data but not in the database now get a document tile with a grey **NON PUBLIÉ** or **ARRÊTÉ** badge and no link (parcel and territory); parcel legend uses `SCOT_PERIMETER` when `approved` is false (was `SCOT_NOT_PUBLISHED`) and suffixes the label. Ported from gpu-client.
 - **Fiche SCoT** — territory/parcel tiles only when gpu-site document `id` matches WFS `gpu_id` at the point (no partition-only fallback); gpu-site filter + entree-carto presentation.
 - **Territory fiche MEC (gpu-site)** — additional WFS `mec` query on the commune footprint, not only the cherry point (SCoT MEC overlapping the municipality but away from the marker).
 - **Map permalink (SUP)** — partial SUP sub-layer selection is preserved on reload (permalink restore no longer checks the whole branch; parent keys omitted when children differ).
@@ -160,6 +161,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Layer catalogue** — no default demo layers; loading spinner while `gpu-client-config` / `LAYER_CONFIG` is fetched.
 - **Sketch style popup** — two action rows: local Undo/Redo (tertiary) for in-popup style history, then Delete / Close; live edits also recorded in sketch undo/redo.
 - README restructured (English reference + `README.fr.md` overview).
+
+### Security
+
+- **GitHub Pages** — deploy workflow only runs for `push` events of this repository (a fork PR from a branch named `main` could previously publish its build).
+- **geopf Search `eval`** — `patchGeopfSearchEval` now fails the build if any `eval(` remains after patching; new `npm run verify:no-eval` (run in CI) scans built bundles.
+- **HTML sanitisation** — dedicated DOMPurify instance forcing `rel="noopener noreferrer"` on links with `target`; `escapeHtml` also escapes `'`; print fiche HTML (`sanitizeFicheHtmlForPrint`) is sanitised on its own.
+- **Demo asset loaders** — existing `<script>` / `<link>` lookups no longer interpolate URLs into CSS selectors (`findElementByDataset`).
 
 ## [0.3.0] - 2026-09-25
 

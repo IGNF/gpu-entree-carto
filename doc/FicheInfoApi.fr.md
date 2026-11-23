@@ -78,6 +78,7 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 - Annulation du `fetch` précédent au clic suivant (`AbortController`) ; requête légère `supersede=true` avec `client` / `seq` pour couper le travail Symfony en cours avant le nouvel appel.
 - Présentation : tuiles DSFR horizontales (`ficheDocumentTiles.ts`).
 - **SCoT** : une tuile n’est affichée que si l’`id` document gpu-site correspond au `gpu_id` (ou `gpu_doc_id`) de l’entité WFS au point (plus de seul rapprochement par partition `scot_*`).
+- **SCoT absent de la base** (données carte / WFS uniquement, sans `gpu_id`) : `approved` vrai → badge gris **NON PUBLIÉ**, sinon → badge gris **ARRÊTÉ** (`scotWfsStatus.ts`, même règle que les styles WMS et gpu-client). La tuile n’a pas de lien (le document n’existe pas) ; elle apparaît dans **Documents** (parcelle) et dans l’onglet **SCoT** (territoire, à partir de `parcelFiche.features`). Les lignes **Infos** parcelle reçoivent le suffixe ` - non publié` / ` - arrêté` et le pictogramme de légende `SCOT_NOT_PUBLISHED` / `SCOT_PERIMETER`.
 - **MEC (territoire)** : gpu-site interroge aussi la couche WFS `mec` sur l’**emprise communale** (intersection avec le contour `ign_grid`), pas uniquement au cerise — pour détecter une MEC SCoT (ou DU) qui recouvre la commune sans intersecter le point de localisation.
 
 Voir aussi [FicheInfo](./FicheInfo.fr.md).

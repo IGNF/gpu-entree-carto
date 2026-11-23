@@ -6,6 +6,7 @@ import {
 import { ParcelFeatureLabel, type DuCategory } from '@/lib/fiche/parcelFeatureLabel'
 import type { ParcelFicheFeature } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { isHighScaleLegendZoom } from '@/lib/layerConfig/catalogLayerZoomRange'
+import { getScotLegendImagePath } from '@/lib/fiche/scotWfsStatus'
 
 /** Zoom par défaut fiche parcelle (~ 1/5000), comme vue serrée gpu-client. */
 export const DEFAULT_PARCEL_FICHE_LEGEND_ZOOM = 17
@@ -106,10 +107,9 @@ function getScalePart(config: ParcelLegendConfigEntry, zoom: number): string {
   return isHighScaleLegendZoom(zoom, threshold) ? '-highscale' : '-lowscale'
 }
 
+/** `approved` false / absent → périmètre arrêté (et non « non publié »). */
 function getScotImage(layer: string, properties: Record<string, unknown>): string {
-  if (properties.gpu_id != null) return `${layer}/SCOT_PUBLISHED.png`
-  if (properties.approved != null) return `${layer}/SCOT_NOT_PUBLISHED.png`
-  return `${layer}/SCOT_PERIMETER.png`
+  return getScotLegendImagePath(layer, properties)
 }
 
 function getMecImage(layer: string): string {

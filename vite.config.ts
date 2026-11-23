@@ -35,7 +35,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'eslint/**/*.spec.mjs'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'eslint/**/*.spec.mjs',
+      'vite/**/*.spec.ts',
+      'scripts/**/*.spec.mjs',
+    ],
   },
   server: {
     port: 5173,

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY } from '@/lib/map/mapMode'
 import { setFicheCatalogFamilyVisibility } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { ficheSelectionFromGpuApi, isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
+import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 
 const samplePayload = {
   parcel: {
@@ -81,7 +82,7 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(sel.documentTabs?.[0]?.label).toBe('Documents')
     expect(sel.documentTabs?.[0]?.bodyHtml).toContain('Plan Local')
     expect(sel.documentTabs?.[0]?.bodyHtml).toContain(
-      "Procédure d'elaboration approuvée le 21/01/2020",
+      escapeHtml("Procédure d'elaboration approuvée le 21/01/2020"),
     )
     expect(sel.documentTabs?.[1]?.bodyHtml).toContain('SUP AC1')
   })
