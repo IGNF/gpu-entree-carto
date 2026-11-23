@@ -29,7 +29,7 @@ this.gpu = (function() {
     config.scriptDir = path.split("/").slice(0, -1).join("/");
   }
   /**
-  * @vue/shared v3.5.45
+  * @vue/shared v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -81,11 +81,18 @@ this.gpu = (function() {
   const isBuiltInDirective = /* @__PURE__ */ makeMap(
     "bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo"
   );
+  const STRING_CACHE_MAX_SIZE = 1e4;
   const cacheStringFunction = (fn2) => {
-    const cache2 = /* @__PURE__ */ Object.create(null);
+    let cache2 = /* @__PURE__ */ Object.create(null);
+    let size2 = 0;
     return ((str) => {
       const hit = cache2[str];
-      return hit || (cache2[str] = fn2(str));
+      if (hit !== void 0) return hit;
+      if (++size2 > STRING_CACHE_MAX_SIZE) {
+        cache2 = /* @__PURE__ */ Object.create(null);
+        size2 = 1;
+      }
+      return cache2[str] = fn2(str);
     });
   };
   const camelizeRE = /-\w/g;
@@ -243,13 +250,13 @@ this.gpu = (function() {
       return false;
     }
     for (const key2 in a3) {
-      const aHasKey = a3.hasOwnProperty(key2);
-      const bHasKey = b.hasOwnProperty(key2);
+      const aHasKey = hasOwn(a3, key2);
+      const bHasKey = hasOwn(b, key2);
       if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a3[key2], b[key2], seen)) {
         return false;
       }
     }
-    return String(a3) === String(b);
+    return toComparableString(a3) === toComparableString(b);
   }
   function looseCompareNested(a3, b, seen, compare) {
     if (!seen) {
@@ -295,6 +302,9 @@ this.gpu = (function() {
   }
   function looseIndexOf(arr, val) {
     return arr.findIndex((item) => looseEqual(item, val));
+  }
+  function toComparableString(value2) {
+    return Object.getPrototypeOf(value2) === null && value2[Symbol.toPrimitive] == null && typeof value2.toString !== "function" && typeof value2.valueOf !== "function" ? toTypeString(value2) : String(value2);
   }
   const isRef$1 = (val) => {
     return !!(val && val["__v_isRef"] === true);
@@ -352,7 +362,7 @@ this.gpu = (function() {
     return String(value2);
   }
   /**
-  * @vue/reactivity v3.5.45
+  * @vue/reactivity v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -2196,7 +2206,7 @@ this.gpu = (function() {
     return value2;
   }
   /**
-  * @vue/runtime-core v3.5.45
+  * @vue/runtime-core v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -3473,8 +3483,8 @@ this.gpu = (function() {
       const targetNode = target2._lpa || target2.firstChild;
       if (vnode.shapeFlag & 16) {
         if (disabled) {
-          hydrateDisabledTeleport(node, vnode);
           hydrateAnchor(target2, targetNode);
+          hydrateDisabledTeleport(node, vnode);
           if (!vnode.targetAnchor) {
             prepareAnchor(
               target2,
@@ -3517,19 +3527,11 @@ this.gpu = (function() {
   function updateCssVars(vnode, isDisabled) {
     const ctx = vnode.ctx;
     if (ctx && ctx.ut) {
-      let node, anchor;
       if (isDisabled) {
-        node = vnode.el;
-        anchor = vnode.anchor;
+        ctx.ut(vnode.el, vnode.anchor);
       } else {
-        node = vnode.targetStart;
-        anchor = vnode.targetAnchor;
+        ctx.ut(vnode.targetStart, vnode.targetAnchor);
       }
-      while (node && node !== anchor) {
-        if (node.nodeType === 1) node.setAttribute("data-v-owner", ctx.uid);
-        node = node.nextSibling;
-      }
-      ctx.ut();
     }
   }
   function prepareAnchor(target2, vnode, createText, insert, anchor = null) {
@@ -3774,7 +3776,10 @@ this.gpu = (function() {
         callHook2(hook, [el2]);
       },
       enter(el2) {
-        if (!isHmrUpdating && leavingVNodesCache[key2] === vnode) return;
+        if (!isHmrUpdating && el2[leaveCbKey]) {
+          if (hooks.delayedLeave) hooks.delayedLeave();
+          return;
+        }
         let hook = onEnter;
         let afterHook = onAfterEnter;
         let cancelHook = onEnterCancelled;
@@ -8949,10 +8954,10 @@ Component that was made reactive: `,
       window.devtoolsFormatters = [formatter];
     }
   }
-  const version$4 = "3.5.45";
+  const version$4 = "3.5.46";
   const warn$2 = warn$1;
   /**
-  * @vue/runtime-dom v3.5.45
+  * @vue/runtime-dom v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -9118,12 +9123,14 @@ Component that was made reactive: `,
       onAppearCancelled = onEnterCancelled
     } = baseProps;
     const finishEnter = (el2, isAppear, done, isCancelled) => {
+      el2._enterResolve = void 0;
       el2._enterCancelled = isCancelled;
       removeTransitionClass(el2, isAppear ? appearToClass : enterToClass);
       removeTransitionClass(el2, isAppear ? appearActiveClass : enterActiveClass);
       done && done();
     };
     const finishLeave = (el2, done) => {
+      el2._leaveResolve = void 0;
       el2._isLeaving = false;
       removeTransitionClass(el2, leaveFromClass);
       removeTransitionClass(el2, leaveToClass);
@@ -9133,10 +9140,18 @@ Component that was made reactive: `,
     const makeEnterHook = (isAppear) => {
       return (el2, done) => {
         const hook = isAppear ? onAppear : onEnter;
-        const resolve2 = () => finishEnter(el2, isAppear, done);
+        const resolve2 = () => {
+          if (el2._enterResolve === resolve2) {
+            finishEnter(el2, isAppear, done);
+          }
+        };
+        el2._enterResolve = resolve2;
         callHook(hook, [el2, resolve2]);
         nextFrame(() => {
           removeTransitionClass(el2, isAppear ? appearFromClass : enterFromClass);
+          if (el2._enterResolve !== resolve2) {
+            return;
+          }
           addTransitionClass(el2, isAppear ? appearToClass : enterToClass);
           if (!hasExplicitCallback(hook)) {
             whenTransitionEnds(el2, type, enterDuration, resolve2);
@@ -9159,7 +9174,12 @@ Component that was made reactive: `,
       onAppear: makeEnterHook(true),
       onLeave(el2, done) {
         el2._isLeaving = true;
-        const resolve2 = () => finishLeave(el2, done);
+        const resolve2 = () => {
+          if (el2._leaveResolve === resolve2) {
+            finishLeave(el2, done);
+          }
+        };
+        el2._leaveResolve = resolve2;
         addTransitionClass(el2, leaveFromClass);
         if (!el2._enterCancelled) {
           forceReflow(el2);
@@ -9169,7 +9189,7 @@ Component that was made reactive: `,
           forceReflow(el2);
         }
         nextFrame(() => {
-          if (!el2._isLeaving) {
+          if (el2._leaveResolve !== resolve2) {
             return;
           }
           removeTransitionClass(el2, leaveFromClass);
@@ -9378,10 +9398,23 @@ Component that was made reactive: `,
       warn$2(`useCssVars is called without current active component instance.`);
       return;
     }
-    const updateTeleports = instance.ut = (vars = getter(instance.proxy)) => {
+    const updateTeleports = (vars = getter(instance.proxy)) => {
       Array.from(
         document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)
       ).forEach((node) => setVarsOnNode(node, vars));
+    };
+    const owner = {
+      uid: String(instance.uid),
+      update: updateTeleports
+    };
+    onScopeDispose(() => owner.update = void 0);
+    instance.ut = (start2, end) => {
+      if (start2) {
+        start2[TELEPORT_KEY] = [end, owner];
+        observeTeleport(start2);
+        markTeleport(start2);
+      }
+      updateTeleports();
     };
     {
       instance.getCssVars = () => getter(instance.proxy);
@@ -9404,6 +9437,56 @@ Component that was made reactive: `,
       ob.observe(instance.subTree.el.parentNode, { childList: true });
       onUnmounted(() => ob.disconnect());
     });
+  }
+  const TELEPORT_KEY = /* @__PURE__ */ Symbol("TELEPORT_KEY");
+  function markTeleport(start2, added) {
+    const [end, owner] = start2[TELEPORT_KEY];
+    let update;
+    if (owner.update) {
+      for (let node = start2; node && node !== end; node = node.nextSibling) {
+        if (node.nodeType === 1 && (!added || (added === true || added.has(node)) && (node.getAttribute("data-v-owner") || owner.uid) === owner.uid)) {
+          node.setAttribute("data-v-owner", owner.uid);
+          update = owner.update;
+        }
+      }
+    }
+    return update;
+  }
+  function observeTeleport(start2) {
+    const container = start2.parentNode;
+    if (container) {
+      let starts = container[TELEPORT_KEY];
+      if (!starts) {
+        starts = container[TELEPORT_KEY] = /* @__PURE__ */ new Set();
+        new MutationObserver(onTeleportMutations).observe(container, {
+          childList: true
+        });
+      }
+      starts.add(start2);
+    }
+  }
+  function onTeleportMutations(records, ob) {
+    const container = records[0].target;
+    const starts = container[TELEPORT_KEY];
+    const added = /* @__PURE__ */ new Set();
+    for (const { addedNodes } of records) {
+      addedNodes.forEach((node) => added.add(node));
+    }
+    const updates = /* @__PURE__ */ new Set();
+    starts.forEach((start2) => {
+      if (start2.parentNode !== container) {
+        starts.delete(start2);
+        observeTeleport(start2);
+        updates.add(markTeleport(start2, true));
+      } else if (added.size) {
+        updates.add(markTeleport(start2, added));
+      }
+    });
+    updates.forEach((update) => update && update());
+    if (!starts.size) {
+      ob.disconnect();
+      container[TELEPORT_KEY] = void 0;
+    }
   }
   function setVarsOnVNode(vnode, vars) {
     if (vnode.shapeFlag & 128) {
@@ -10192,7 +10275,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return container;
   }
   /**
-  * vue v3.5.45
+  * vue v3.5.46
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
   **/
@@ -12015,7 +12098,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function toDegrees(angleInRadians) {
     return angleInRadians * 180 / Math.PI;
   }
-  function toRadians(angleInDegrees) {
+  function toRadians$1(angleInDegrees) {
     return angleInDegrees * Math.PI / 180;
   }
   function modulo(a3, b) {
@@ -12727,10 +12810,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const DEFAULT_RADIUS = 63710088e-1;
   function getDistance(c1, c2, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians(c1[1]);
-    const lat2 = toRadians(c2[1]);
+    const lat1 = toRadians$1(c1[1]);
+    const lat2 = toRadians$1(c2[1]);
     const deltaLatBy2 = (lat2 - lat1) / 2;
-    const deltaLonBy2 = toRadians(c2[0] - c1[0]) / 2;
+    const deltaLonBy2 = toRadians$1(c2[0] - c1[0]) / 2;
     const a3 = Math.sin(deltaLatBy2) * Math.sin(deltaLatBy2) + Math.sin(deltaLonBy2) * Math.sin(deltaLonBy2) * Math.cos(lat1) * Math.cos(lat2);
     return 2 * radius * Math.atan2(Math.sqrt(a3), Math.sqrt(1 - a3));
   }
@@ -12813,7 +12896,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (let i2 = 0; i2 < len; i2++) {
       const x2 = coordinates2[i2][0];
       const y2 = coordinates2[i2][1];
-      area += toRadians(x2 - x1) * (2 + Math.sin(toRadians(y1)) + Math.sin(toRadians(y2)));
+      area += toRadians$1(x2 - x1) * (2 + Math.sin(toRadians$1(y1)) + Math.sin(toRadians$1(y2)));
       x1 = x2;
       y1 = y2;
     }
@@ -12878,8 +12961,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function offset(c1, distance2, bearing, radius) {
     radius = radius || DEFAULT_RADIUS;
-    const lat1 = toRadians(c1[1]);
-    const lon1 = toRadians(c1[0]);
+    const lat1 = toRadians$1(c1[1]);
+    const lon1 = toRadians$1(c1[0]);
     const dByR = distance2 / radius;
     const lat = Math.asin(
       Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(bearing)
@@ -13219,7 +13302,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const latitude = pRad - pTan / r * (d2 / 2 - d4 / 24 * (5 + 3 * pTan2 + 10 * c - 4 * c2 - 9 * E_P2)) + d6 / 720 * (61 + 90 * pTan2 + 298 * c + 45 * pTan4 - 252 * E_P2 - 3 * c2);
     let longitude = (d - d3 / 6 * (1 + 2 * pTan2 + c) + d5 / 120 * (5 - 2 * c + 28 * pTan2 - 3 * c2 + 8 * E_P2 + 24 * pTan4)) / pCos;
     longitude = wrap(
-      longitude + toRadians(zoneToCentralLongitude(zone.number)),
+      longitude + toRadians$1(zoneToCentralLongitude(zone.number)),
       -Math.PI,
       Math.PI
     );
@@ -13236,15 +13319,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     } else if (latitude > MAX_LATITUDE) {
       latitude = MAX_LATITUDE;
     }
-    const latRad = toRadians(latitude);
+    const latRad = toRadians$1(latitude);
     const latSin = Math.sin(latRad);
     const latCos = Math.cos(latRad);
     const latTan = latSin / latCos;
     const latTan2 = latTan * latTan;
     const latTan4 = latTan2 * latTan2;
-    const lonRad = toRadians(longitude);
+    const lonRad = toRadians$1(longitude);
     const centralLon = zoneToCentralLongitude(zone.number);
-    const centralLonRad = toRadians(centralLon);
+    const centralLonRad = toRadians$1(centralLon);
     const n = R / Math.sqrt(1 - E$1 * latSin ** 2);
     const c = E_P2 * latCos ** 2;
     const a3 = latCos * wrap(lonRad - centralLonRad, -Math.PI, Math.PI);
@@ -16075,7 +16158,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
   }
   function createSnapToZero(tolerance) {
-    const t = toRadians(5);
+    const t = toRadians$1(5);
     return (
       /**
        * @param {number|undefined} rotation Rotation.
@@ -31946,7 +32029,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       this.set(
         Property.HEADING,
-        coords.heading === null ? void 0 : toRadians(coords.heading)
+        coords.heading === null ? void 0 : toRadians$1(coords.heading)
       );
       if (!this.position_) {
         this.position_ = [coords.longitude, coords.latitude];
@@ -42840,7 +42923,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.SearchEngineGeocodeIGN = SearchEngineGeocodeIGN;
   }
-  /*! @license DOMPurify 3.4.18 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.18/LICENSE */
+  /*! @license DOMPurify 3.5.0 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.5.0/LICENSE */
   function _arrayLikeToArray(r, a3) {
     (null == a3 || a3 > r.length) && (a3 = r.length);
     for (var e2 = 0, n = Array(a3); e2 < a3; e2++) n[e2] = r[e2];
@@ -42918,6 +43001,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const setCreate = unconstruct(Set);
   const setAdd = unapply(Set.prototype.add);
   const setHas = unapply(Set.prototype.has);
+  const setDelete = unapply(Set.prototype.delete);
+  const mapCreate = unconstruct(Map);
+  const mapGet = unapply(Map.prototype.get);
+  const mapSet = unapply(Map.prototype.set);
   const stringToLowerCase = unapply(String.prototype.toLowerCase);
   const stringToString = unapply(String.prototype.toString);
   const stringMatch = unapply(String.prototype.match);
@@ -43698,7 +43785,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   const MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
   const ERB_EXPR = seal(/<%[\w\W]*|^[\w\W]*%>/g);
   const TMPLIT_EXPR = seal(/\${[\w\W]*/g);
-  const TMPL_MARKER_SERIALIZED = seal(/{{|}}|\${|<%|%>|&lt;%|%&gt;/);
+  const TMPL_MARKER = seal(/{{|}}|\${|<%|%>/);
+  const NON_WHITESPACE = seal(/[^\t\n\f\r ]/);
+  const NUL = seal(/\u0000/g);
   const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/);
   const ARIA_ATTR = seal(/^aria-[\-\w]+$/);
   const IS_ALLOWED_URI = seal(/^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i);
@@ -43708,6 +43797,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const CUSTOM_ELEMENT = seal(/^[a-z][.\w]*(-[.\w]+)+$/i);
   const ELEMENT_MARKUP_PROBE = seal(/<[/\w!]/g);
   const COMMENT_MARKUP_PROBE = seal(/<[/\w]/g);
+  const COMMENT_UNSAFE = seal(/<[/\w]|^-?>|--!?>|<!-$/g);
   const FALLBACK_TAG_CLOSE = seal(/<\/no(script|embed|frames)/i);
   const SELF_CLOSING_TAG = seal(/\/>/i);
   const ATTR_VALUE_BREAKOUT = seal(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i);
@@ -43729,6 +43819,27 @@ Expected function or array of functions, received type ${typeof value2}.`
     "noframes",
     "plaintext",
     "noscript"
+  ]));
+  const ESCAPABLE_TEXT_ELEMENTS = freeze(addToSet({}, ["textarea", "title"]));
+  const VOID_ELEMENTS = freeze(addToSet({}, [
+    "area",
+    "base",
+    "basefont",
+    "bgsound",
+    "br",
+    "col",
+    "embed",
+    "frame",
+    "hr",
+    "img",
+    "input",
+    "keygen",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr"
   ]));
   const getGlobal = function getGlobal2() {
     return typeof window === "undefined" ? null : window;
@@ -43776,7 +43887,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function createDOMPurify() {
     let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
     const DOMPurify = (root) => createDOMPurify(root);
-    DOMPurify.version = "3.4.18";
+    DOMPurify.version = "3.5.0";
     DOMPurify.removed = [];
     if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
       DOMPurify.isSupported = false;
@@ -43789,6 +43900,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const ElementPrototype = Element2.prototype;
     const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
     const remove2 = lookupGetter(ElementPrototype, "remove");
+    const removeChild = lookupGetter(ElementPrototype, "removeChild");
     const removeAttributeNode = lookupGetter(ElementPrototype, "removeAttributeNode");
     const getNextSibling = lookupGetter(ElementPrototype, "nextSibling");
     const getChildNodes = lookupGetter(ElementPrototype, "childNodes");
@@ -43807,6 +43919,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const getNamespaceURI = lookupAccessor(ElementPrototype, "namespaceURI");
     const _readNamespaceURI = function _readNamespaceURI2(element) {
       return getNamespaceURI ? getNamespaceURI(element) : element.namespaceURI;
+    };
+    const _readAttributes = function _readAttributes2(node) {
+      return _readNodeType(node) === NODE_TYPE.element ? getAttributes(node) : null;
     };
     if (typeof HTMLTemplateElement === "function") {
       const template = document2.createElement("template");
@@ -43906,6 +44021,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     let KEEP_CONTENT = true;
     let IN_PLACE = false;
     let IN_PLACE_VISITED = null;
+    let IN_PLACE_RETURNS = null;
     let USE_PROFILES = false;
     let FORBID_CONTENTS = null;
     const DEFAULT_FORBID_CONTENTS = addToSet({}, [
@@ -43996,6 +44112,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const DEFAULT_PARSER_MEDIA_TYPE = "text/html";
     let transformCaseFunc = null;
     let CONFIG = null;
+    let ACTIVE_CONFIG = null;
     const formElement = document2.createElement("form");
     const isRegexOrFunction = function isRegexOrFunction2(testValue) {
       return testValue instanceof RegExp || testValue instanceof Function;
@@ -44161,6 +44278,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
     const _forceRemove = function _forceRemove2(node) {
       arrayPush(DOMPurify.removed, { element: node });
+      _unmarkVisited(node);
       try {
         getParentNode(node).removeChild(node);
       } catch (_) {
@@ -44183,7 +44301,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const childNodes = getChildNodes(root);
       if (childNodes) arrayForEach(arraySlice(childNodes), (child) => {
         try {
-          remove2(child);
+          removeChild(root, child);
         } catch (_) {
         }
       });
@@ -44270,6 +44388,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       _neutralizeEscapedElements(root, before);
       return rootRemoved;
     };
+    const _failClosed = function _failClosed2(root, before) {
+      _neutralizeRoot(root);
+      _neutralizeDiscarded(root, before);
+    };
     const MAX_UNVISITED_ROUNDS = 8;
     const _sanitizeUnvisitedNodes = function _sanitizeUnvisitedNodes2(root, before) {
       const visited = IN_PLACE_VISITED;
@@ -44308,7 +44430,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     };
     const _markVisited = function _markVisited2(node) {
-      if (IN_PLACE_VISITED) setAdd(IN_PLACE_VISITED, node);
+      if (!IN_PLACE_VISITED) return;
+      setAdd(IN_PLACE_VISITED, node);
+      const returns = mapGet(IN_PLACE_RETURNS, node);
+      if (returns === void 0) return;
+      if (returns >= MAX_UNVISITED_ROUNDS) throw typeErrorCreate("the tree kept changing during in-place sanitization; refusing to return it");
+      mapSet(IN_PLACE_RETURNS, node, returns + 1);
+    };
+    const _unmarkVisited = function _unmarkVisited2(node) {
+      if (!IN_PLACE_VISITED) return;
+      setDelete(IN_PLACE_VISITED, node);
+      if (mapGet(IN_PLACE_RETURNS, node) === void 0) mapSet(IN_PLACE_RETURNS, node, 0);
     };
     const _isPatchLinkageAttribute = function _isPatchLinkageAttribute2(lcName, lcTag) {
       if (!SAFE_FOR_XML) return false;
@@ -44383,12 +44515,64 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
       });
     };
+    const TABLE_STRUCTURE = "table,tbody,thead,tfoot,tr,colgroup";
+    const TABLE_CONTENT = addToSet({}, [
+      "caption",
+      "colgroup",
+      "col",
+      "thead",
+      "tbody",
+      "tfoot",
+      "tr",
+      "td",
+      "th",
+      "style",
+      "script",
+      "template"
+    ]);
+    const _fosterTableContent = function _fosterTableContent2(root) {
+      var _root$querySelectorAl;
+      if (PARSER_MEDIA_TYPE === "application/xhtml+xml") return;
+      const structures = (_root$querySelectorAl = root.querySelectorAll) === null || _root$querySelectorAl === void 0 ? void 0 : _root$querySelectorAl.call(root, TABLE_STRUCTURE);
+      if (!structures || structures.length === 0) return;
+      arrayForEach(structures, (structure) => {
+        arrayForEach(arraySlice(getChildNodes(structure)), (child) => {
+          const nodeType = _readNodeType(child);
+          if (!(nodeType === NODE_TYPE.text ? regExpTest(NON_WHITESPACE, child.data) : nodeType === NODE_TYPE.element && !TABLE_CONTENT[stringToLowerCase(_readNodeName(child))])) return;
+          let table = structure;
+          while (table && stringToLowerCase(_readNodeName(table)) !== "table") table = table === root ? null : getParentNode(table);
+          const tableParent = table && table !== root ? getParentNode(table) : null;
+          if (tableParent) try {
+            tableParent.insertBefore(child, table);
+          } catch (_) {
+          }
+        });
+      });
+    };
     const _scrubOwnCharacterData = function _scrubOwnCharacterData2(node) {
+      _fosterTableContent(node);
       node.normalize();
       const walker = _createNodeIterator(node, true);
+      let previousText = null;
       let currentNode = walker.nextNode();
       while (currentNode) {
-        currentNode.data = _stripTemplateExpressions(currentNode.data);
+        let data = currentNode.data;
+        if (regExpTest(NUL, data)) {
+          data = stringReplace(data, NUL, "");
+          currentNode.data = data;
+        }
+        if (regExpTest(TMPL_MARKER, data)) {
+          data = _stripTemplateExpressions(data);
+          currentNode.data = data;
+        }
+        if (data && _readNodeType(currentNode) === NODE_TYPE.text) {
+          if (previousText) {
+            const tail = previousText.data;
+            const boundary = tail[tail.length - 1] + data[0];
+            if (regExpTest(TMPL_MARKER, boundary)) previousText.data = _stripTemplateExpressions(tail + data[0]);
+          }
+          previousText = currentNode;
+        }
         currentNode = walker.nextNode();
       }
     };
@@ -44419,11 +44603,20 @@ Expected function or array of functions, received type ${typeof value2}.`
         hook.call(DOMPurify, currentNode, data, CONFIG);
       });
     }
+    const _isMalformedElement = function _isMalformedElement2(currentNode, tagName) {
+      const isVoid = Boolean(VOID_ELEMENTS[tagName]);
+      const literal = Boolean(LITERAL_TEXT_ELEMENTS[tagName]);
+      if (!isVoid && !literal && !ESCAPABLE_TEXT_ELEMENTS[tagName]) return false;
+      if (_readNamespaceURI(currentNode) !== HTML_NAMESPACE) return false;
+      if (isVoid) return currentNode.hasChildNodes();
+      if (_isNode(currentNode.firstElementChild)) return true;
+      return literal && typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent);
+    };
     const _isUnsafeNode = function _isUnsafeNode2(currentNode, tagName, nodeType) {
       if (SAFE_FOR_XML && nodeType === NODE_TYPE.element && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
-      if (SAFE_FOR_XML && LITERAL_TEXT_ELEMENTS[tagName] && nodeType === NODE_TYPE.element && _readNamespaceURI(currentNode) === HTML_NAMESPACE && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent))) return true;
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.element && _isMalformedElement(currentNode, tagName)) return true;
       if (nodeType === NODE_TYPE.processingInstruction) return true;
-      if (SAFE_FOR_XML && nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
+      if (SAFE_FOR_XML && nodeType === NODE_TYPE.comment && regExpTest(COMMENT_UNSAFE, currentNode.data)) return true;
       return false;
     };
     const _matchesNameCheck = function _matchesNameCheck2(check, name2) {
@@ -44457,6 +44650,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const _handleHookDetachedNode = function _handleHookDetachedNode2(currentNode, root) {
       if (currentNode === root || getParentNode(currentNode) !== null) return false;
       if (IN_PLACE) _neutralizeSubtree(currentNode);
+      _unmarkVisited(currentNode);
       return true;
     };
     const _sanitizeElements = function _sanitizeElements2(currentNode, root) {
@@ -44479,14 +44673,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         _forceRemove(currentNode);
         return true;
       }
-      if (FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) {
-        const removed = _sanitizeDisallowedNode(currentNode, tagName, root);
-        if (removed === false) {
-          _executeHooks(hooks.afterSanitizeElements, currentNode, null);
-          if (_handleHookDetachedNode(currentNode, root)) return true;
-        }
-        return removed;
-      }
+      if ((FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) && _sanitizeDisallowedNode(currentNode, tagName, root)) return true;
       if (nodeType === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
         _forceRemove(currentNode);
         return true;
@@ -44564,7 +44751,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const _sanitizeAttributes = function _sanitizeAttributes2(currentNode, root) {
       _executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
       if (_handleHookDetachedNode(currentNode, root)) return;
-      const attributes = currentNode.attributes;
+      const attributes = _readAttributes(currentNode);
       if (!attributes || _isClobbered(currentNode)) return;
       ALLOWED_ATTR = _forkSharedAllowlist(hooks.uponSanitizeAttribute, ALLOWED_ATTR, DEFAULT_ALLOWED_ATTR, SET_CONFIG_ALLOWED_ATTR);
       const hookEvent = {
@@ -44578,6 +44765,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const lcTag = transformCaseFunc(_readNodeName(currentNode));
       while (l--) {
         const attr = attributes[l];
+        if (!attr) continue;
         const name2 = attr.name, namespaceURI = attr.namespaceURI, attrValue2 = attr.value;
         const lcName = transformCaseFunc(name2);
         const initValue = attrValue2;
@@ -44683,7 +44871,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
     };
-    DOMPurify.sanitize = function(dirty) {
+    const _sanitize = function _sanitize2(dirty) {
       let cfg = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
       let body = null;
       let importedNode = null;
@@ -44700,26 +44888,29 @@ Expected function or array of functions, received type ${typeof value2}.`
         ALLOWED_TAGS = SET_CONFIG_ALLOWED_TAGS;
         ALLOWED_ATTR = SET_CONFIG_ALLOWED_ATTR;
       } else _parseConfig(cfg);
+      ACTIVE_CONFIG = CONFIG;
       DOMPurify.removed = [];
       const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
       let inPlaceNodes = [];
       const outerVisited = IN_PLACE_VISITED;
+      const outerReturns = IN_PLACE_RETURNS;
       if (inPlace) {
         _neutralizePatchLinkage(dirty);
+        inPlaceNodes = _collectLiveNodes(dirty);
         const nn2 = _readNodeName(dirty);
         if (typeof nn2 === "string") {
           const tagName = transformCaseFunc(nn2);
           if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
-            _neutralizeRoot(dirty);
+            _failClosed(dirty, inPlaceNodes);
             throw typeErrorCreate("root node is forbidden and cannot be sanitized in-place");
           }
         }
         if (_isClobbered(dirty)) {
-          _neutralizeRoot(dirty);
+          _failClosed(dirty, inPlaceNodes);
           throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
         }
-        inPlaceNodes = _collectLiveNodes(dirty);
         IN_PLACE_VISITED = setCreate();
+        IN_PLACE_RETURNS = mapCreate();
       } else if (_isNode(dirty)) {
         body = _initDocument("<!---->");
         importedNode = body.ownerDocument.importNode(dirty, true);
@@ -44740,13 +44931,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         while (currentNode = nodeIterator.nextNode()) _sanitizeNode(currentNode, walkRoot);
         if (inPlace) _sanitizeUnvisitedNodes(dirty, inPlaceNodes);
       } catch (error) {
-        if (inPlace) {
-          _neutralizeRoot(dirty);
-          _neutralizeDiscarded(dirty, inPlaceNodes);
-        }
+        if (inPlace) _failClosed(dirty, inPlaceNodes);
         throw error;
       } finally {
         IN_PLACE_VISITED = outerVisited;
+        IN_PLACE_RETURNS = outerReturns;
       }
       if (inPlace) {
         if (_neutralizeDiscarded(dirty, inPlaceNodes)) throw typeErrorCreate("a node selected for removal could not be safely returned; refusing to sanitize in place");
@@ -44762,14 +44951,29 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (ALLOWED_ATTR.shadowroot || ALLOWED_ATTR.shadowrootmode) returnNode = importNode.call(originalDocument, returnNode, true);
         return returnNode;
       }
-      const serialize2 = () => WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
-      let serializedHTML = serialize2();
-      if (SAFE_FOR_TEMPLATES && regExpTest(TMPL_MARKER_SERIALIZED, serializedHTML)) {
-        _scrubOwnCharacterData(body);
-        serializedHTML = serialize2();
-      }
+      if (SAFE_FOR_TEMPLATES) _scrubOwnCharacterData(body);
+      let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
       if (WHOLE_DOCUMENT && ALLOWED_TAGS["!doctype"] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) serializedHTML = "<!DOCTYPE " + body.ownerDocument.doctype.name + ">\n" + serializedHTML;
       return _signOutput(serializedHTML);
+    };
+    DOMPurify.sanitize = function(dirty) {
+      let cfg = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+      const outerConfig = ACTIVE_CONFIG;
+      const outerTags = ALLOWED_TAGS;
+      const outerAttr = ALLOWED_ATTR;
+      const outerRemoved = DOMPurify.removed;
+      ACTIVE_CONFIG = null;
+      try {
+        return _sanitize(dirty, cfg);
+      } finally {
+        ACTIVE_CONFIG = outerConfig;
+        if (outerConfig) {
+          if (!SET_CONFIG) _parseConfig(outerConfig);
+          ALLOWED_TAGS = outerTags;
+          ALLOWED_ATTR = outerAttr;
+          DOMPurify.removed = outerRemoved;
+        }
+      }
     };
     DOMPurify.setConfig = function() {
       let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
@@ -58439,16 +58643,45 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return self2;
   }
+  var D2R = 0.017453292519943295;
+  function d2r(input) {
+    return input * D2R;
+  }
+  function isEquidistantCylindrical(projName) {
+    return /^(equirectangular|equidistant[ _]cylindrical)/i.test(projName || "");
+  }
+  function applyProjectionDefaults(wkt2) {
+    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
+    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
+      wkt2.long0 = wkt2.longc;
+    }
+    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
+      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
+      wkt2.lat_ts = wkt2.lat0;
+      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
+      delete wkt2.lat1;
+    } else if (wkt2.lat_ts === void 0 && wkt2.lat1 !== void 0 && isEquidistantCylindrical(wkt2.projName)) {
+      wkt2.lat_ts = wkt2.lat1;
+      delete wkt2.lat1;
+    }
+  }
   class PROJJSONBuilderBase {
     static getId(node) {
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       if (idNode && idNode.length >= 3) {
         return {
           authority: idNode[1],
-          code: parseInt(idNode[2], 10)
+          code: this.parseCode(idNode[2])
         };
       }
       return null;
+    }
+    // PROJJSON codes are integers, or strings for codes like IGNF:LURESG
+    static parseCode(code) {
+      return /^-?\d+$/.test(code) ? parseInt(code, 10) : code;
     }
     static convertUnit(node, type = "unit") {
       if (!node || node.length < 3) {
@@ -58459,7 +58692,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const idNode = node.find((child) => Array.isArray(child) && child[0] === "ID");
       const id2 = idNode ? {
         authority: idNode[1],
-        code: parseInt(idNode[2], 10)
+        code: this.parseCode(idNode[2])
       } : null;
       return {
         type,
@@ -58499,12 +58732,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     static extractAxes(node) {
       return node.filter((child) => Array.isArray(child) && child[0] === "AXIS").map((axis) => this.convertAxis(axis)).sort((a3, b) => (a3.order || 0) - (b.order || 0));
     }
+    // A prime meridian without a unit takes the angle unit of its CRS (ISO 19162, 8.2.2).
+    // Like PROJ, write the longitude as a number in degrees, or as a value with a unit.
+    static convertPrimeMeridianLongitude(primem, crsAngleUnitNode) {
+      const value2 = parseFloat(primem[2]);
+      const unitNode = primem.find(
+        (child) => Array.isArray(child) && (child[0] === "ANGLEUNIT" || child[0] === "UNIT")
+      ) || crsAngleUnitNode;
+      const unit = this.convertUnit(unitNode, "AngularUnit");
+      if (!unit.conversion_factor || Math.abs(unit.conversion_factor / d2r(1) - 1) < 1e-9) {
+        return value2;
+      }
+      return { value: value2, unit };
+    }
     static convert(node, result = {}) {
       switch (node[0]) {
         case "PROJCRS":
           result.type = "ProjectedCRS";
           result.name = node[1];
-          result.base_crs = node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "BASEGEOGCRS")) : null;
+          const baseCrsNode = node.find(
+            (child) => Array.isArray(child) && (child[0] === "BASEGEOGCRS" || child[0] === "BASEGEODCRS")
+          );
+          result.base_crs = baseCrsNode ? this.convert(baseCrsNode) : null;
           result.conversion = node.find((child) => Array.isArray(child) && child[0] === "CONVERSION") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "CONVERSION")) : null;
           const csNode = node.find((child) => Array.isArray(child) && child[0] === "CS");
           if (csNode) {
@@ -58521,6 +58770,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.id = this.getId(node);
           break;
         case "BASEGEOGCRS":
+        case "BASEGEODCRS":
         case "GEOGCRS":
         case "GEODCRS":
           result.type = node[0] === "GEODCRS" ? "GeodeticCRS" : "GeographicCRS";
@@ -58539,7 +58789,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             if (primem && primem[1] !== "Greenwich") {
               datumOrEnsemble.prime_meridian = {
                 name: primem[1],
-                longitude: parseFloat(primem[2])
+                longitude: this.convertPrimeMeridianLongitude(
+                  primem,
+                  node.find((child) => Array.isArray(child) && child[0] === "ANGLEUNIT")
+                )
               };
             }
           }
@@ -58579,7 +58832,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           result.name = node[1];
           result.semi_major_axis = parseFloat(node[2]);
           result.inverse_flattening = parseFloat(node[3]);
-          node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT") ? this.convert(node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT"), result) : null;
+          const ellipsoidUnitNode = node.find((child) => Array.isArray(child) && child[0] === "LENGTHUNIT");
+          if (ellipsoidUnitNode) {
+            this.convert(ellipsoidUnitNode, result);
+          }
           break;
         case "CONVERSION":
           result.type = "Conversion";
@@ -58601,6 +58857,12 @@ Expected function or array of functions, received type ${typeof value2}.`
               (child) => Array.isArray(child) && (child[0] === "LENGTHUNIT" || child[0] === "ANGLEUNIT" || child[0] === "SCALEUNIT")
             )
           );
+          result.id = this.getId(node);
+          break;
+        case "COMPOUNDCRS":
+          result.type = "CompoundCRS";
+          result.name = node[1];
+          result.components = node.slice(2).filter((child) => Array.isArray(child) && child[0].endsWith("CRS")).map((child) => this.convert(child));
           result.id = this.getId(node);
           break;
         case "BOUNDCRS":
@@ -58642,8 +58904,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           });
           if (result.parameters.length === 7) {
             const scaleDifference = result.parameters[6];
-            if (scaleDifference.name === "Scale difference") {
+            if (scaleDifference.name === "Scale difference" && !scaleDifference.unit.conversion_factor) {
               scaleDifference.value = Math.round((scaleDifference.value - 1) * 1e12) / 1e6;
+              scaleDifference.unit = { type: "ScaleUnit", name: "parts per million", conversion_factor: 1e-6, id: null };
             }
           }
           result.id = this.getId(node);
@@ -58679,7 +58942,43 @@ Expected function or array of functions, received type ${typeof value2}.`
       return result;
     }
   }
+  function upperCaseKeywords(node) {
+    node[0] = node[0].toUpperCase();
+    for (var i2 = 1; i2 < node.length; i2++) {
+      if (Array.isArray(node[i2])) {
+        upperCaseKeywords(node[i2]);
+      }
+    }
+  }
+  var preferredKeywords = {
+    GEODETICCRS: "GEODCRS",
+    GEOGRAPHICCRS: "GEOGCRS",
+    PROJECTEDCRS: "PROJCRS",
+    GEODETICDATUM: "DATUM",
+    TRF: "DATUM",
+    SPHEROID: "ELLIPSOID",
+    PRIMEMERIDIAN: "PRIMEM",
+    PROJECTION: "METHOD",
+    VERTICALCRS: "VERTCRS",
+    VERTICALDATUM: "VDATUM",
+    VRF: "VDATUM",
+    ENGINEERINGCRS: "ENGCRS",
+    ENGINEERINGDATUM: "EDATUM",
+    PARAMETRICDATUM: "PDATUM",
+    TIMEDATUM: "TDATUM",
+    TEMPORALQUANTITY: "TIMEUNIT"
+  };
+  function usePreferredKeywords(node) {
+    node[0] = preferredKeywords[node[0]] || node[0];
+    for (var i2 = 1; i2 < node.length; i2++) {
+      if (Array.isArray(node[i2])) {
+        usePreferredKeywords(node[i2]);
+      }
+    }
+  }
   function buildPROJJSON(root) {
+    upperCaseKeywords(root);
+    usePreferredKeywords(root);
     return PROJJSONBuilderBase.convert(root);
   }
   function detectWKTVersion(wkt2) {
@@ -58701,8 +59000,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   var whitespace = /\s/;
   var latin = /[A-Za-z]/;
   var keyword = /[A-Za-z84_]/;
-  var endThings = /[,\]]/;
-  var digets = /[\d\.E\-\+]/;
+  var endThings = /[,\])]/;
+  var digets = /[\d\.Ee\-\+]/;
   function Parser$1(text2) {
     if (typeof text2 !== "string") {
       throw new Error("not a string");
@@ -58762,7 +59061,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.state = NEUTRAL;
       return;
     }
-    if (char === "]") {
+    if (char === "]" || char === ")") {
       this.level--;
       if (this.word !== null) {
         this.currentObject.push(this.word);
@@ -58801,7 +59100,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       this.word += char;
       return;
     }
-    if (char === "[") {
+    if (char === "[" || char === "(") {
       var newObjects = [];
       newObjects.push(this.word);
       this.level++;
@@ -58970,25 +59269,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         return mapit(obj, key2, v);
     }
   }
-  var D2R = 0.017453292519943295;
-  function d2r(input) {
-    return input * D2R;
-  }
-  function applyProjectionDefaults(wkt2) {
-    const normalizedProjName = (wkt2.projName || "").toLowerCase().replace(/_/g, " ");
-    if (wkt2.long0 === void 0 && wkt2.longc !== void 0) {
-      wkt2.long0 = wkt2.longc;
-    }
-    if (!wkt2.lat_ts && wkt2.lat1 && (normalizedProjName === "stereographic south pole" || normalizedProjName === "polar stereographic (variant b)")) {
-      wkt2.lat0 = d2r(wkt2.lat1 > 0 ? 90 : -90);
-      wkt2.lat_ts = wkt2.lat1;
-      delete wkt2.lat1;
-    } else if (!wkt2.lat_ts && wkt2.lat0 && (normalizedProjName === "polar stereographic" || normalizedProjName === "polar stereographic (variant a)")) {
-      wkt2.lat_ts = wkt2.lat0;
-      wkt2.lat0 = d2r(wkt2.lat0 > 0 ? 90 : -90);
-      delete wkt2.lat1;
-    }
-  }
   function processUnit(unit) {
     let result = { units: null, to_meter: void 0 };
     if (typeof unit === "string") {
@@ -59014,6 +59294,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return valueOrObject;
   }
+  function toRadians(angle2) {
+    if (typeof angle2 !== "object") {
+      return angle2 * Math.PI / 180;
+    }
+    return angle2.unit === "degree" ? angle2.value * Math.PI / 180 : toValue(angle2);
+  }
+  const ARC_SECOND = Math.PI / 648e3;
+  const DATUM_PARAMS_UNITS = [1, 1, 1, ARC_SECOND, ARC_SECOND, ARC_SECOND, 1e-6];
+  function toDatumParam(param, i2) {
+    const unit = param.unit;
+    const factor = unit && typeof unit === "object" ? unit.conversion_factor : unit === "degree" ? Math.PI / 180 : unit === "metre" || unit === "unity" ? 1 : null;
+    return factor && i2 < DATUM_PARAMS_UNITS.length ? param.value * factor / DATUM_PARAMS_UNITS[i2] : param.value;
+  }
+  function isCoordinateFrameRotation(method) {
+    if (!method) {
+      return false;
+    }
+    if (method.id && method.id.authority === "EPSG") {
+      return [9607, 1032, 1038].includes(Number(method.id.code));
+    }
+    return /^Coordinate Frame rotation\b/i.test(method.name);
+  }
   function calculateEllipsoid(value2, result) {
     if (value2.ellipsoid.radius) {
       result.a = value2.ellipsoid.radius;
@@ -59027,9 +59329,22 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
   }
+  function isHorizontalCRS(crs) {
+    if (crs.type === "BoundCRS") {
+      return Boolean(crs.source_crs) && isHorizontalCRS(crs.source_crs);
+    }
+    if (crs.type === "GeodeticCRS") {
+      return !crs.coordinate_system || crs.coordinate_system.subtype !== "Cartesian";
+    }
+    return crs.type === "GeographicCRS" || crs.type === "ProjectedCRS";
+  }
   function transformPROJJSON(projjson, result = {}) {
     if (!projjson || typeof projjson !== "object") {
       return projjson;
+    }
+    if (projjson.type === "CompoundCRS") {
+      const horizontal = (projjson.components || []).find(isHorizontalCRS);
+      return horizontal ? transformPROJJSON(horizontal, result) : result;
     }
     if (projjson.type === "BoundCRS") {
       transformPROJJSON(projjson.source_crs, result);
@@ -59037,7 +59352,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (projjson.transformation.method && projjson.transformation.method.name === "NTv2") {
           result.nadgrids = projjson.transformation.parameters[0].value;
         } else {
-          result.datum_params = projjson.transformation.parameters.map((param) => param.value);
+          result.datum_params = projjson.transformation.parameters.map(toDatumParam);
+          if (result.datum_params.length >= 6 && isCoordinateFrameRotation(projjson.transformation.method)) {
+            for (let i2 = 3; i2 < 6; ++i2) {
+              result.datum_params[i2] = -result.datum_params[i2];
+            }
+          }
         }
       }
       return result;
@@ -59075,7 +59395,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             calculateEllipsoid(value2, result);
           }
           if (value2.prime_meridian) {
-            result.from_greenwich = value2.prime_meridian.longitude * Math.PI / 180;
+            result.from_greenwich = toRadians(value2.prime_meridian.longitude);
           }
           break;
         case "ellipsoid":
@@ -59083,7 +59403,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           calculateEllipsoid(value2, result);
           break;
         case "prime_meridian":
-          result.long0 = (value2.longitude || 0) * Math.PI / 180;
+          result.long0 = toRadians(value2.longitude || 0);
           break;
         case "coordinate_system":
           if (value2.axis) {
@@ -59208,6 +59528,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.northing_at_projection_centre) {
       result.y0 = result.northing_at_projection_centre;
     }
+    if (result.projection_plane_origin_height !== void 0) {
+      result.h = result.projection_plane_origin_height;
+    }
+    if (result.satellite_height !== void 0) {
+      result.h = result.satellite_height;
+    }
+    if (result.viewpoint_height !== void 0) {
+      result.h = result.viewpoint_height;
+    }
     if (result.standard_parallel_1 !== void 0) {
       result.lat1 = result.standard_parallel_1;
     }
@@ -59232,6 +59561,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (result.angle_from_rectified_to_skew_grid) {
       result.rectified_grid_angle = result.angle_from_rectified_to_skew_grid;
     }
+    if (result.long0 === void 0 && result.central_meridian !== void 0) {
+      result.long0 = result.central_meridian;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_origin !== void 0) {
+      result.lat0 = result.latitude_of_origin;
+    }
+    if (result.lat0 === void 0 && result.latitude_of_center !== void 0) {
+      result.lat0 = result.latitude_of_center;
+    }
+    if (result.longc === void 0 && result.longitude_of_center !== void 0) {
+      result.longc = result.longitude_of_center;
+    }
+    if (result.k0 === void 0 && result.scale_factor !== void 0) {
+      result.k0 = result.scale_factor;
+    }
     applyProjectionDefaults(result);
     return result;
   }
@@ -59247,6 +59591,31 @@ Expected function or array of functions, received type ${typeof value2}.`
     "GEODETICDATUM",
     "ENGCRS",
     "ENGINEERINGCRS"
+  ];
+  var projectionProperties = [
+    "projName",
+    "axis",
+    "units",
+    "to_meter",
+    "datumCode",
+    "datum_params",
+    "nadgrids",
+    "ellps",
+    "from_greenwich",
+    "a",
+    "rf",
+    "sphere",
+    "k0",
+    "x0",
+    "y0",
+    "long0",
+    "longc",
+    "lat0",
+    "lat1",
+    "lat2",
+    "lat_ts",
+    "alpha",
+    "rectified_grid_angle"
   ];
   function rename(obj, params2) {
     var outName = params2[0];
@@ -59383,8 +59752,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (wkt2.b && !isFinite(wkt2.b)) {
       wkt2.b = wkt2.a;
     }
+    var angularUnit = geogcs && geogcs.UNIT && geogcs.UNIT.convert;
+    var toRadians2 = angularUnit && Math.abs(angularUnit / d2r(1) - 1) > 1e-9 ? function(input) {
+      return input * angularUnit;
+    } : d2r;
     if (wkt2.rectified_grid_angle) {
-      wkt2.rectified_grid_angle = d2r(wkt2.rectified_grid_angle);
+      wkt2.rectified_grid_angle = toRadians2(wkt2.rectified_grid_angle);
     }
     function toMeter(input) {
       var ratio = wkt2.to_meter || 1;
@@ -59415,22 +59788,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       ["k0", "scale_factor"],
       ["latitude_of_center", "Latitude_Of_Center"],
       ["latitude_of_center", "Latitude_of_center"],
-      ["lat0", "latitude_of_center", d2r],
+      ["lat0", "latitude_of_center", toRadians2],
       ["longitude_of_center", "Longitude_Of_Center"],
       ["longitude_of_center", "Longitude_of_center"],
-      ["longc", "longitude_of_center", d2r],
+      ["longc", "longitude_of_center", toRadians2],
       ["x0", "false_easting", toMeter],
       ["y0", "false_northing", toMeter],
-      ["long0", "central_meridian", d2r],
-      ["lat0", "latitude_of_origin", d2r],
-      ["lat0", "standard_parallel_1", d2r],
-      ["lat1", "standard_parallel_1", d2r],
-      ["lat2", "standard_parallel_2", d2r],
+      ["long0", "central_meridian", toRadians2],
+      ["lat0", "latitude_of_origin", toRadians2],
+      ["lat1", "standard_parallel_1", toRadians2],
+      ["lat2", "standard_parallel_2", toRadians2],
+      ["h", "Height", toMeter],
       ["azimuth", "Azimuth"],
-      ["alpha", "azimuth", d2r],
+      ["alpha", "azimuth", toRadians2],
       ["srsCode", "name"]
     ];
     list.forEach(renamer);
+    if (!isEquidistantCylindrical(wkt2.projName)) {
+      renamer(["lat0", "standard_parallel_1", toRadians2]);
+    }
     applyProjectionDefaults(wkt2);
   }
   function wkt(wkt2) {
@@ -59447,7 +59823,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     var obj = {};
     sExpr(lisp, obj);
     cleanWKT(obj);
-    return obj[type];
+    var result = obj[type];
+    if (type === "COMPD_CS") {
+      var horizontal = result.PROJCS || result.GEOGCS;
+      if (horizontal) {
+        projectionProperties.forEach(function(key2) {
+          if (key2 in horizontal) {
+            result[key2] = horizontal[key2];
+          }
+        });
+      }
+    }
+    return result;
   }
   function defs(name2) {
     var that = this;
@@ -76720,7 +77107,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         height.value = entry.contentRect.height;
       }
     }, options);
-    tryOnMounted(() => {
+    function measure() {
       const ele = unrefElement(target2);
       if (ele && "offsetWidth" in ele) {
         if (box === "content-box" && window2) {
@@ -76729,8 +77116,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           const padY = Number.parseFloat(cs2.paddingTop) + Number.parseFloat(cs2.paddingBottom);
           const bdX = Number.parseFloat(cs2.borderLeftWidth) + Number.parseFloat(cs2.borderRightWidth);
           const bdY = Number.parseFloat(cs2.borderTopWidth) + Number.parseFloat(cs2.borderBottomWidth);
-          width.value = ele.offsetWidth - padX - bdX;
-          height.value = ele.offsetHeight - padY - bdY;
+          width.value = Math.max(0, ele.offsetWidth - padX - bdX);
+          height.value = Math.max(0, ele.offsetHeight - padY - bdY);
         } else {
           width.value = ele.offsetWidth;
           height.value = ele.offsetHeight;
@@ -76739,10 +77126,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         width.value = initialSize.width;
         height.value = initialSize.height;
       }
-    });
+    }
+    tryOnMounted(measure);
     const stop2 = watch(() => unrefElement(target2), (ele) => {
-      width.value = ele ? initialSize.width : 0;
-      height.value = ele ? initialSize.height : 0;
+      if (ele) measure();
+      else {
+        width.value = 0;
+        height.value = 0;
+      }
     });
     function stop() {
       stop1();
@@ -112735,7 +113126,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     writeFeaturesNode(features, options) {
       options = this.adaptOptions(options);
-      const kml = createElementNS(NAMESPACE_URIS[4], "kml");
+      const kml = createElementNS(NAMESPACE_URIS[4] ?? "", "kml");
       const xmlnsUri = "http://www.w3.org/2000/xmlns/";
       kml.setAttributeNS(xmlnsUri, "xmlns:gx", GX_NAMESPACE_URIS[0]);
       kml.setAttributeNS(xmlnsUri, "xmlns:xsi", XML_SCHEMA_INSTANCE_URI);
@@ -113069,7 +113460,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       object["heading"]
     );
     if (heading !== void 0) {
-      rotation = toRadians(heading);
+      rotation = toRadians$1(heading);
     }
     const scale2 = (
       /** @type {number|undefined} */
