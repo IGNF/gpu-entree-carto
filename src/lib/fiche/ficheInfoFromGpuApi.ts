@@ -1,4 +1,5 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
+import { TERRITORY_NO_DOCUMENT_HTML } from '@/lib/fiche/ficheNoDataMessages'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import {
   ficheHasParcelAtPoint,
@@ -496,7 +497,7 @@ function fallbackBodyHtml(data: GpuFicheInfoPayload): string {
     data.proceduresByDocument,
   )
   if (lowScaleHtml) return lowScaleHtml
-  return '<p>Aucun document disponible à cet emplacement.</p>'
+  return TERRITORY_NO_DOCUMENT_HTML
 }
 
 export function extractParcelFichePayload(data: GpuFicheInfoPayload): GpuParcelFichePayload | null {

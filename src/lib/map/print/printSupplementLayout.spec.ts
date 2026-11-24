@@ -35,7 +35,7 @@ describe('countSupplementPageSlices', () => {
     const item = root.querySelector('.ec-layer-legends__item') as HTMLElement
 
     Object.defineProperty(content, 'scrollHeight', { configurable: true, value: 2000 })
-    Object.defineProperty(page, 'scrollHeight', { configurable: true, value: 2000 })
+    Object.defineProperty(page, 'scrollHeight', { configurable: true, value: 1500 })
 
     page.getBoundingClientRect = () => ({
       top: 0,
@@ -903,5 +903,40 @@ describe('countSupplementPageSlices', () => {
 
     expect(ficheFootnotesVisibleForSlice(page, 0, 600)).toBe(false)
     expect(ficheFootnotesVisibleForSlice(page, 600, 900)).toBe(true)
+  })
+})
+
+describe('mesure sur l’aperçu réduit (transform: scale)', () => {
+  it('coupe avant la ligne de légende à cheval, même sans layoutScale explicite', () => {
+    // Page de 1000 px export affichée à ×0,1 : les rectangles écran sont 10× plus petits.
+    const page = document.createElement('article')
+    page.className = 'ec-print-supplement-page ec-print-legends'
+    const item = document.createElement('li')
+    item.className = 'ec-layer-legends__item'
+    page.appendChild(item)
+    Object.defineProperty(page, 'offsetWidth', { configurable: true, value: 1000 })
+    Object.defineProperty(page, 'scrollHeight', { configurable: true, value: 1500 })
+    Object.defineProperty(item, 'offsetHeight', { configurable: true, value: 200 })
+    const rect = (top: number, height: number, width: number) => () =>
+      ({
+        top,
+        bottom: top + height,
+        left: 0,
+        right: width,
+        width,
+        height,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      }) as DOMRect
+    page.getBoundingClientRect = rect(0, 200, 100)
+    item.getBoundingClientRect = rect(90, 20, 50)
+    document.body.appendChild(page)
+    try {
+      // Ligne à 900–1100 px export : la 2e page doit commencer à 900, pas à 1000 (coupure uniforme).
+      expect(measureSupplementSlicePlanFromPage(page, 1000).sliceStarts).toEqual([0, 900])
+    } finally {
+      page.remove()
+    }
   })
 })

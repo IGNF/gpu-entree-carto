@@ -13,6 +13,7 @@ export type PrintMapPrewarmParams = {
   mapWidthPx: number
   mapHeightPx: number
   extent: Extent
+  signal?: AbortSignal
 }
 
 export async function prewarmPrintMapRenderCache(params: PrintMapPrewarmParams): Promise<boolean> {
@@ -26,6 +27,7 @@ export async function prewarmPrintMapRenderCache(params: PrintMapPrewarmParams):
     extent: params.extent,
     layerFingerprint,
     rotation: view.getRotation(),
+    previewWidthPx: params.previewMap.getSize()?.[0] ?? 0,
   })
   if (getCachedPrintMapCanvas(cacheKey)) return true
 
@@ -34,6 +36,7 @@ export async function prewarmPrintMapRenderCache(params: PrintMapPrewarmParams):
     heightPx: params.mapHeightPx,
     extent: params.extent,
     cacheKey,
+    signal: params.signal,
   })
   canvas.remove()
   return true

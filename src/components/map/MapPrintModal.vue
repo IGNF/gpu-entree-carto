@@ -15,7 +15,7 @@ import {
   type ShallowRef,
 } from 'vue'
 import { useElementSize, watchDebounced } from '@vueuse/core'
-import Map from 'ol/Map'
+import OlMap from 'ol/Map'
 import View from 'ol/View'
 import { Attribution } from 'ol/control'
 import ScaleLine from 'ol/control/ScaleLine'
@@ -37,16 +37,23 @@ import {
   HIGH_DPI_VALUE,
   PAPER_FORMATS_MM,
   convertMmToPx,
-  isPaperFormatAllowedAtHighDpi,
+  dpiSelectOptions,
+  paperFormatSelectOptions,
+  resolveDpiForPaperFormat,
   type PaperFormatId,
 } from '@/lib/map/print/paperFormats'
 import { rebuildPrintPreviewMap } from '@/lib/map/print/cloneMapLayers'
+import { printMapUiScale } from '@/lib/map/print/printMapUiScale'
+import { recenterPrintPreviewOnPlace } from '@/lib/map/print/printRecenterTarget'
+import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
+import { fromLonLat } from 'ol/proj'
 import { renderOffscreenPrintMapCanvas } from '@/lib/map/print/offscreenPrintMapExport'
 import { WeightedExportProgress } from '@/lib/map/print/printExportProgress'
 import { injectDpiInPng } from '@/lib/map/print/pngDpi'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
-import { waitForMapRender } from '@/lib/map/print/waitForMapRender'
-import { captureScaleLineSnapshot, computeScaleCoeff, drawScale } from '@/lib/map/print/printScale'
+import { renderSyncIfAttached, waitForMapRender } from '@/lib/map/print/waitForMapRender'
+import { captureScaleLineSnapshot, drawScale } from '@/lib/map/print/printScale'
+import { printPreviewPaperScale } from '@/lib/map/print/printModalLayout'
 import {
   computePrintMapTitleLayout,
   drawPrintMapTitleOnCanvas,
@@ -59,6 +66,11 @@ import {
   clearPrintMapRenderCache,
 } from '@/lib/map/print/printMapRenderCache'
 import { prewarmPrintMapRenderCache } from '@/lib/map/print/printMapPrewarm'
+import { PrintPrewarmScheduler } from '@/lib/map/print/printPrewarmScheduler'
+import {
+  previewNeedsSourceViewResync,
+  type PrintSourceViewKey,
+} from '@/lib/map/print/printPreviewResync'
 import {
   encodePrintJpeg,
   encodePrintPdf,
@@ -126,6 +138,7 @@ import {
 import { parcelLegendScaleBand } from '@/lib/fiche/parcelLegendImage'
 import {
   PRINT_TEMPLATE_CUSTOM_ID,
+  DEFAULT_PRINT_TEMPLATE_ID,
   PRINT_TEMPLATE_LAYOUTS,
   applyPrintTemplateToForm,
   findMatchingPrintTemplate,
@@ -181,7 +194,19 @@ function applyPrintOpenOptions(options?: MapPrintModalOpenOptions): void {
   if (!printFormState.hasLegends) printFormState.hasAllLegends = false
 }
 
+/** Cerise (lon/lat) au moment de l’ouverture : la carte principale est inaccessible modale ouverte. */
+const printPlaceMarker = ref<{ lon: number; lat: number } | null>(null)
+
+function recenterPreviewOnPlace(): void {
+  const map = previewMap.value
+  const marker = printPlaceMarker.value
+  if (!map || !marker) return
+  const projection = map.getView().getProjection()
+  recenterPrintPreviewOnPlace(map, fromLonLat([marker.lon, marker.lat], projection))
+}
+
 function onModalPrintOpen(options?: MapPrintModalOpenOptions): void {
+  printPlaceMarker.value = readMapPermalinkMarker(getMapPermalinkParams())
   applyPrintOpenOptions(options)
   dismissGuardUntil = Date.now() + 500
   printModalOpened.value = true
@@ -201,6 +226,7 @@ function onModalPrintClose(): void {
   isExportInProgress.value = false
   isPreviewLayoutPending.value = false
   printMapPrewarmGeneration += 1
+  printMapPrewarmScheduler.interrupt()
   clearPrintMapRenderCache()
   terminatePrintExportWorker()
   printTemplatePrewarmGeneration += 1
@@ -208,7 +234,7 @@ function onModalPrintClose(): void {
   previewColumnZoom.value = 1
   printModalOpened.value = false
   document.body.classList.remove('modal-open')
-  sourceMapRef.value?.renderSync()
+  renderSyncIfAttached(sourceMapRef.value)
 }
 
 defineExpose({
@@ -216,7 +242,7 @@ defineExpose({
   close: onModalPrintClose,
 })
 
-const sourceMapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
+const sourceMapRef = inject<ShallowRef<OlMap | null>>('olMap', shallowRef(null))
 const printPanels = mapPrintPanelsRef
 
 const previewMapEl = ref<HTMLElement | null>(null)
@@ -232,7 +258,7 @@ const supplementSliceStarts = ref<Partial<Record<PrintPreviewPageKind, number[]>
 /** Décalage vertical aperçu (coupures repères, pas grille uniforme). */
 const supplementPreviewSliceStartPx = ref(0)
 /** Cache des plans de pagination par annexe (réutilisé en cochant / décochant). */
-const supplementSlicePlanByKey = new globalThis.Map<string, SupplementSlicePlan>()
+const supplementSlicePlanByKey = new Map<string, SupplementSlicePlan>()
 let printTemplatePrewarmGeneration = 0
 const measureLayoutOverride = ref<{
   innerWidthPx: number
@@ -243,8 +269,7 @@ const selectedPrintTemplateId = ref<PrintTemplateId>('a4-apercu')
 let applyingPrintTemplate = false
 const previewPageIndex = ref(0)
 const printPage = ref<HTMLElement | null>(null)
-const printForm = ref<HTMLElement | null>(null)
-const previewPaginationEl = ref<HTMLElement | null>(null)
+const previewColumnEl = ref<HTMLElement | null>(null)
 const previewZoomHostEl = ref<HTMLElement | null>(null)
 
 const PREVIEW_COLUMN_ZOOM_MIN = 0.6
@@ -252,7 +277,7 @@ const PREVIEW_COLUMN_ZOOM_MAX = 2.5
 const PREVIEW_COLUMN_ZOOM_STEP = 0.08
 const previewColumnZoom = ref(1)
 
-const previewMap = shallowRef<Map | null>(null)
+const previewMap = shallowRef<OlMap | null>(null)
 const { legendZoom: printPreviewLegendZoom } = useMapLegendZoom(previewMap)
 
 type PrintFormState = {
@@ -285,7 +310,7 @@ const printFormState = reactive<PrintFormState>({
   format: 'PNG',
 })
 
-const defaultPrintTemplate = PRINT_TEMPLATE_LAYOUTS.find((t) => t.id === 'a4-apercu')
+const defaultPrintTemplate = PRINT_TEMPLATE_LAYOUTS.find((t) => t.id === DEFAULT_PRINT_TEMPLATE_ID)
 if (defaultPrintTemplate) {
   applyPrintTemplateToForm(defaultPrintTemplate, printFormState)
 }
@@ -448,6 +473,7 @@ watch(
 const annexContentSnapshot = computed(() =>
   buildAnnexContentMeasureSnapshot({
     territoryTabCount: territoryDocumentTabs.value.length,
+    territoryBodyLength: territorySelectionForPrint.value?.bodyHtml?.length ?? 0,
     parcelInfosLength: parcelInfosHtml.value.length,
     parcelDocumentsLength: parcelDocumentsHtml.value.length,
     parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
@@ -463,6 +489,7 @@ const annexContentSnapshot = computed(() =>
 
 const supplementContentFingerprints = computed((): SupplementContentFingerprints => ({
   territoryTabCount: annexContentSnapshot.value.territoryTabCount,
+  territoryBodyLength: annexContentSnapshot.value.territoryBodyLength,
   parcelInfosLength: annexContentSnapshot.value.parcelInfosLength,
   parcelDocumentsLength: annexContentSnapshot.value.parcelDocumentsLength,
   parcelLegendScale: annexContentSnapshot.value.parcelLegendScale,
@@ -698,18 +725,17 @@ function schedulePrintTemplatePrewarm(): void {
   }
 }
 
+/**
+ * Préchauffage carte (rendu hors écran au DPI d’export, coûteux) : seulement après 3 s sans
+ * interaction sur l’aperçu, interrompu dès que la vue bouge ou que la modale se ferme.
+ */
+const printMapPrewarmScheduler = new PrintPrewarmScheduler(3000)
+
 function schedulePrintMapPrewarm(): void {
-  const run = (): void => {
-    void runPrintMapPrewarm()
-  }
-  if (typeof requestIdleCallback !== 'undefined') {
-    requestIdleCallback(run, { timeout: 20_000 })
-  } else {
-    window.setTimeout(run, 800)
-  }
+  printMapPrewarmScheduler.schedule((signal) => runPrintMapPrewarm(signal))
 }
 
-async function runPrintMapPrewarm(): Promise<void> {
+async function runPrintMapPrewarm(signal: AbortSignal): Promise<void> {
   const generation = ++printMapPrewarmGeneration
   if (!printModalOpened.value || isExportInProgress.value || isPreviewLayoutPending.value) return
   const map = previewMap.value
@@ -740,9 +766,13 @@ async function runPrintMapPrewarm(): Promise<void> {
       mapWidthPx,
       mapHeightPx,
       extent,
+      signal,
     })
   } catch (err) {
-    logPrintPreview('préchauffage carte: ignoré', err)
+    // Interruption = cas normal (interaction sur l’aperçu) : pas de pile d’erreur dans la console.
+    if (signal.aborted) logPrintPreview('préchauffage carte: interrompu')
+    else logPrintPreview('préchauffage carte: ignoré', err)
+    return
   }
   if (generation !== printMapPrewarmGeneration) return
   logPrintPreview('préchauffage carte terminé')
@@ -894,7 +924,7 @@ watch(
   () => {
     if (!printModalOpened.value) return
     previewMap.value?.updateSize()
-    previewMap.value?.renderSync()
+    renderSyncIfAttached(previewMap.value)
     sanitizePrintPreviewAttributions(previewMapEl.value)
   },
 )
@@ -904,88 +934,40 @@ const pageOrientationOptions = [
   { label: 'Paysage', value: 'landscape' },
 ]
 
-const paperFormatOptions = computed(() =>
-  Object.entries(PAPER_FORMATS_MM).map(([format, dimension]) => {
-    const id = format as PaperFormatId
-    const disabled = printFormState.dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(id)
-    return {
-      value: id,
-      text: `${format} (${dimension.width} x ${dimension.height} mm)`,
-      disabled,
-    }
-  }),
-)
+const paperFormatOptions = computed(() => paperFormatSelectOptions())
 
-const dpiOptions = computed(() => [
-  { value: BASE_DPI, text: '96 DPI (écran)' },
-  {
-    value: HIGH_DPI_VALUE,
-    text: '300 DPI (impression)',
-    disabled: !isPaperFormatAllowedAtHighDpi(printFormState.paperFormat),
-  },
-])
+const dpiOptions = computed(() => dpiSelectOptions(printFormState.paperFormat))
 
+/** Grand format choisi à 300 DPI : on garde le format et on repasse en 96 DPI. */
 watch(
   () => [printFormState.dpi, printFormState.paperFormat] as const,
   ([dpiValue, paperFormat]) => {
-    if (dpiValue === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) {
-      printFormState.paperFormat = 'A4'
-    }
+    printFormState.dpi = resolveDpiForPaperFormat(dpiValue, paperFormat)
   },
   { immediate: true },
 )
 
-const printPageSize = reactive(
-  useElementSize(printPage, { width: 0, height: 0 }, { box: 'border-box' }),
+/** Colonne d’aperçu (sous la pagination) : la feuille y tient entière, portrait ou paysage. */
+const previewColumnSize = reactive(
+  useElementSize(previewColumnEl, { width: 0, height: 0 }, { box: 'content-box' }),
 )
-const printFormSize = reactive(
-  useElementSize(printForm, { width: 0, height: 0 }, { box: 'border-box' }),
-)
-const previewPaginationSize = reactive(
-  useElementSize(previewPaginationEl, { width: 0, height: 0 }, { box: 'border-box' }),
-)
-
-/** Marges autour du cadre feuille (ombre portée `box-shadow` du conteneur). */
-const previewFrameMarginPx = {
-  top: 6,
-  bottom: 12,
-  horizontal: 10,
-} as const
-
-/** Espace entre feuille et barre de pagination (`gap` CSS). */
-const previewColumnGapPx = 8
-
-/** Espace réservé sous l’aperçu feuille pour la barre de pagination. */
-const previewPaginationReservePx = computed(() => {
-  const measured = previewPaginationSize.height
-  const barHeight = measured > 4 ? measured : 48
-  return barHeight + previewColumnGapPx
-})
-
-/** Hauteur / largeur utiles pour dimensionner la feuille sans rogner le cadre. */
-const previewLayoutChromeReservePx = computed(() => {
-  const vertical =
-    previewFrameMarginPx.top + previewFrameMarginPx.bottom + previewPaginationReservePx.value
-  const horizontal = previewFrameMarginPx.horizontal * 2
-  return { vertical, horizontal }
-})
 
 const paperDimensionPx = computed(() => ({
   width: paperDimension.value.width / COEFF_PX2MM,
   height: paperDimension.value.height / COEFF_PX2MM,
 }))
 
-const paper2PreviewScaleCoeff = computed(() => {
-  const { vertical, horizontal } = previewLayoutChromeReservePx.value
-  const containerHeight = Math.max(0, printPageSize.height - vertical)
-  const containerWidth = Math.max(0, printPageSize.width - printFormSize.width - horizontal)
-  return computeScaleCoeff(
-    containerWidth,
-    containerHeight,
-    paperDimensionPx.value.width,
-    paperDimensionPx.value.height,
-  )
-})
+/** Attributions + échelle : taille papier fixe (mm), proportionnelle au format choisi. */
+const previewMapUiScale = computed(() =>
+  printMapUiScale(
+    { widthMm: paperDimension.value.width, heightMm: paperDimension.value.height },
+    paper2PreviewScaleCoeff.value / COEFF_PX2MM,
+  ),
+)
+
+const paper2PreviewScaleCoeff = computed(() =>
+  printPreviewPaperScale(previewColumnSize, paperDimensionPx.value),
+)
 
 const printableAreaMm = computed(() => ({
   width: paperDimension.value.width - 2 * printFormState.margin,
@@ -1070,7 +1052,10 @@ const supplementSliceLayoutHeight = computed(() =>
 )
 
 const supplementLayoutStyle = computed(() =>
-  printSupplementCssVars(supplementExportInner.value.innerWidthPx, printFormState.dpi),
+  printSupplementCssVars(supplementExportInner.value.innerWidthPx, printFormState.dpi, {
+    widthMm: paperDimension.value.width,
+    heightMm: paperDimension.value.height,
+  }),
 )
 
 const measureExportInner = computed(() => {
@@ -1098,7 +1083,9 @@ const supplementPreviewFrame = computed(() => {
   const sliceH = supplementSliceLayoutHeight.value
   return {
     width: previewW,
-    height: Math.max(sliceH, 1) * scale,
+    // Zone intérieure complète (marges intérieures haut/bas comprises) : avec la seule hauteur de
+    // tranche, le bas du contenu était coupé et la capture d’export étirée verticalement.
+    height: innerHeightPx * scale,
     scale,
     sliceHeightPx: sliceH,
   }
@@ -1312,7 +1299,11 @@ function attachPreviewViewCustomizationListeners(): void {
   const preview = previewMap.value
   if (!preview) return
   const view = preview.getView()
-  const handler = () => markPreviewMapViewCustomized()
+  const handler = () => {
+    markPreviewMapViewCustomized()
+    // Vue modifiée : le préchauffage en cours est périmé et ralentirait l’interaction.
+    schedulePrintMapPrewarm()
+  }
   previewViewCustomizationListeners = [
     view.on('change:center', handler),
     view.on('change:resolution', handler),
@@ -1321,21 +1312,23 @@ function attachPreviewViewCustomizationListeners(): void {
 }
 
 /** Vue / couches carte principale au dernier fermeture de la modale (réouverture sans recalcul). */
-let printPreviewSessionSourceViewKey = ''
+let printPreviewSessionSourceViewKey: PrintSourceViewKey | null = null
 let printPreviewSessionViewCustomized = false
 
-function computeSourceMapViewKey(): string {
+function computeSourceMapViewKey(): PrintSourceViewKey | null {
   const source = sourceMapRef.value
-  if (!source) return ''
+  if (!source) return null
   const view = source.getView()
   const center = view.getCenter()
   const resolution = view.getResolution()
-  return [
-    center?.map((value) => value.toFixed(2)).join(',') ?? '',
-    resolution?.toFixed(8) ?? '',
-    view.getRotation().toFixed(6),
-    buildVisibleLayerFingerprint(source),
-  ].join('|')
+  return {
+    location: [
+      center?.map((value) => value.toFixed(2)).join(',') ?? '',
+      resolution?.toFixed(8) ?? '',
+      view.getRotation().toFixed(6),
+    ].join('|'),
+    layers: buildVisibleLayerFingerprint(source),
+  }
 }
 
 function detachPreviewMap(): void {
@@ -1358,7 +1351,7 @@ function syncPreviewFromSource(): void {
   if (!source || !preview) return
   runWithoutPreviewViewCustomizationTracking(() => {
     copyViewState(source.getView(), preview.getView())
-    preview.renderSync()
+    renderSyncIfAttached(preview)
   })
   previewMapViewCustomized.value = false
 }
@@ -1370,7 +1363,7 @@ function replacerPreviewMapFromSource(): void {
 function createScaleLineControl(): ScaleLine {
   return new ScaleLine({
     units: 'metric',
-    minWidth: 100,
+    minWidth: Math.max(8, Math.round(100 * previewMapUiScale.value)),
     bar: false,
   })
 }
@@ -1396,15 +1389,15 @@ function syncPreviewScaleLineControl(): void {
     map.addControl(createScaleLineControl())
   }
   configureDisplayOnlyOlControls(map)
-  map.renderSync()
+  renderSyncIfAttached(map)
 }
 
-function wirePreviewMapDisplayControls(map: Map): void {
+function wirePreviewMapDisplayControls(map: OlMap): void {
   configureDisplayOnlyOlControls(map)
   map.getControls().on('add', () => configureDisplayOnlyOlControls(map))
 }
 
-async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
+async function ensurePreviewMap(forceRecreate = false): Promise<OlMap | null> {
   if (isExportInProgress.value && !forceRecreate) {
     return previewMap.value
   }
@@ -1434,7 +1427,7 @@ async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
 
   destroyPreviewMap()
   const view = source.getView()
-  const map = new Map({
+  const map = new OlMap({
     target,
     view: new View({
       center: view.getCenter(),
@@ -1462,20 +1455,18 @@ async function ensurePreviewMap(forceRecreate = false): Promise<Map | null> {
   return map
 }
 
-function previewNeedsSourceViewResync(sourceViewKey: string): boolean {
-  return (
-    Boolean(previewMap.value) &&
-    !printPreviewSessionViewCustomized &&
-    Boolean(printPreviewSessionSourceViewKey) &&
-    sourceViewKey !== printPreviewSessionSourceViewKey
-  )
-}
-
 /** Réouverture modale : resync vue avant tuiles (évite d’attendre l’ancienne emprise). */
 async function preparePreviewMapOnModalOpen(): Promise<void> {
   const sourceViewKey = computeSourceMapViewKey()
   const reusePreviewMap = Boolean(previewMap.value)
-  const needsViewResync = previewNeedsSourceViewResync(sourceViewKey)
+  const needsViewResync =
+    Boolean(previewMap.value) &&
+    sourceViewKey !== null &&
+    previewNeedsSourceViewResync(
+      printPreviewSessionSourceViewKey,
+      sourceViewKey,
+      printPreviewSessionViewCustomized,
+    )
 
   if (!reusePreviewMap) {
     await ensurePreviewMap(true)
@@ -1569,7 +1560,7 @@ watch(printModalOpened, async (isOpen) => {
 })
 
 watch(
-  () => printFormState.hasScale,
+  () => [printFormState.hasScale, previewMapUiScale.value] as const,
   () => {
     if (!printModalOpened.value) return
     void nextTick(() => syncPreviewScaleLineControl())
@@ -1587,14 +1578,17 @@ watch(
     if (!printModalOpened.value) return
     void nextTick(() => {
       previewMap.value?.updateSize()
-      previewMap.value?.renderSync()
+      renderSyncIfAttached(previewMap.value)
     })
   },
 )
 
-onUnmounted(() => destroyPreviewMap())
+onUnmounted(() => {
+  printMapPrewarmScheduler.interrupt()
+  destroyPreviewMap()
+})
 
-function getPrintMapInstance(): Map | null {
+function getPrintMapInstance(): OlMap | null {
   if (printModalOpened.value) return previewMap.value
   return previewMap.value ?? sourceMapRef.value
 }
@@ -1675,7 +1669,7 @@ async function buildRasterExportCanvas(
   const mapElement = previewMapEl.value
   const scaleSnapshot =
     printFormState.hasScale && dpiValue === HIGH_DPI_VALUE && mapElement
-      ? captureScaleLineSnapshot(mapElement, paper2PreviewScaleCoeff.value)
+      ? captureScaleLineSnapshot(mapElement)
       : null
 
   const map = getPrintMapInstance()
@@ -1693,6 +1687,7 @@ async function buildRasterExportCanvas(
     extent: mapExtent,
     layerFingerprint: buildVisibleLayerFingerprint(map),
     rotation: map.getView().getRotation(),
+    previewWidthPx: previewSize?.[0] ?? 0,
   })
 
   const mapCanvas = await renderOffscreenPrintMapCanvas(map, {
@@ -1750,14 +1745,7 @@ async function buildRasterExportCanvas(
     if (overlayCtx) {
       await drawAttributionOnMapExport(overlayCtx, mapElement, mapHeightPx)
       if (printFormState.hasScale) {
-        drawScale(
-          overlayCtx,
-          mapElement,
-          mapWidthPx,
-          mapHeightPx,
-          scaleSnapshot,
-          paper2PreviewScaleCoeff.value,
-        )
+        drawScale(overlayCtx, mapElement, mapWidthPx, mapHeightPx, scaleSnapshot)
       }
       finalCtx.drawImage(overlayCanvas, marginPx, marginPx + titleHeightPx)
     }
@@ -1935,6 +1923,10 @@ async function onClickExportMap(): Promise<void> {
   exportProgressPercent.value = 1
   exportProgressDetail.value = 'Préparation de l’export…'
   const savedPreviewPageIndex = previewPageIndex.value
+  // html2canvas ignore le zoom (Ctrl+molette) appliqué au-dessus du cadre capturé : texte
+  // dessiné à la taille CSS mais placé à la taille zoomée (espaces entre mots, logos agrandis).
+  const savedPreviewColumnZoom = previewColumnZoom.value
+  previewColumnZoom.value = 1
   const finalizeStepIndexRef = { value: 0 }
   try {
     await syncAnnexPaginationForExport((label, percent) => {
@@ -1960,6 +1952,7 @@ async function onClickExportMap(): Promise<void> {
     syncExportProgressUi(exportProgressPercent.value, message)
   } finally {
     previewPageIndex.value = savedPreviewPageIndex
+    previewColumnZoom.value = savedPreviewColumnZoom
     await nextTick()
     isExportInProgress.value = false
     exportProgressPercent.value = 0
@@ -1978,7 +1971,7 @@ async function onClickExportMap(): Promise<void> {
       @close="onModalPrintClose"
     >
       <div ref="printPage" class="print-page">
-        <div ref="printForm" class="print-form">
+        <div class="print-form">
           <DsfrSelect
             v-model="selectedPrintTemplateId"
             label="Modèle d'impression"
@@ -2082,10 +2075,22 @@ async function onClickExportMap(): Promise<void> {
             :options="dpiOptions"
           />
           <DsfrButton
+            id="print-page-recenter-place"
+            class="print-form__recenter-place"
+            label="Recentrer sur le lieu"
+            title="Recentrer l’aperçu sur le lieu sélectionné (emprise ou cerise)"
+            tertiary
+            :disabled="
+              !printPlaceMarker || isExportInProgress || isPreviewLayoutPending || !previewMap
+            "
+            icon=""
+            @click="recenterPreviewOnPlace"
+          />
+          <DsfrButton
             id="print-page-reset-map-view"
             class="print-form__replacer-carte"
-            label="Replacer la carte"
-            title="Replacer la carte"
+            label="Vue par défaut"
+            title="Vue par défaut : aligner l’aperçu sur la vue de la carte principale"
             secondary
             :disabled="
               !previewMapViewCustomized ||
@@ -2107,11 +2112,7 @@ async function onClickExportMap(): Promise<void> {
           />
         </div>
         <div class="print-preview-panel">
-          <nav
-            ref="previewPaginationEl"
-            class="print-preview-pagination"
-            aria-label="Pages à imprimer"
-          >
+          <nav class="print-preview-pagination" aria-label="Pages à imprimer">
             <button
               v-if="previewPages.length > 1"
               type="button"
@@ -2136,6 +2137,7 @@ async function onClickExportMap(): Promise<void> {
             </button>
           </nav>
           <div
+            ref="previewColumnEl"
             class="print-preview-column"
             title="Ctrl + molette : zoomer l’aperçu (hors carte)"
             @wheel="onPreviewColumnWheel"
@@ -2176,7 +2178,10 @@ async function onClickExportMap(): Promise<void> {
                           v-if="printModalOpened"
                           ref="previewMapEl"
                           class="map ec-map-print-preview-map"
-                          :style="{ minHeight: `${previewMapMinHeightPx}px` }"
+                          :style="{
+                            minHeight: `${previewMapMinHeightPx}px`,
+                            '--ec-print-ui-scale': String(previewMapUiScale),
+                          }"
                         />
                       </div>
                       <div
@@ -2202,6 +2207,7 @@ async function onClickExportMap(): Promise<void> {
                                   printModalOpened && currentPreviewPage?.kind === 'ficheTerritory'
                                 "
                                 :document-tabs="territoryDocumentTabs"
+                                :body-html="territorySelectionForPrint?.bodyHtml"
                                 :title="territoryPrintTitle(territorySelectionForPrint)"
                               />
                               <MapPrintFicheParcelPage
@@ -2264,6 +2270,7 @@ async function onClickExportMap(): Promise<void> {
           <MapPrintFicheTerritoryPage
             v-if="measureKind === 'ficheTerritory'"
             :document-tabs="territoryDocumentTabs"
+            :body-html="territorySelectionForPrint?.bodyHtml"
             :title="territoryPrintTitle(territorySelectionForPrint)"
           />
           <MapPrintFicheParcelPage
@@ -2303,11 +2310,27 @@ async function onClickExportMap(): Promise<void> {
   padding-left: 1.25rem;
 }
 
+/*
+ * Modale d’impression à hauteur d’écran : le corps DSFR prend sa hauteur maximale et la zone
+ * formulaire + aperçu remplit le reste ; chaque colonne défile seule (la modale ne défile plus),
+ * la barre de progression (absolue sur .print-page) reste donc toujours visible.
+ */
+:global(.fr-modal__body:has(.print-page)) {
+  height: 100%;
+}
+
+:global(.fr-modal__content:has(.print-page) > div:has(> .print-page)) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .print-page {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: row;
-  min-height: min(35rem, calc(100dvh - 6rem));
-  height: auto;
+  min-height: 0;
   position: relative;
 }
 
@@ -2329,7 +2352,9 @@ async function onClickExportMap(): Promise<void> {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Centrage par marges auto (scale-slot) : une feuille zoomée plus large que la colonne
+     reste atteignable par défilement (align-items: center la ferait déborder à gauche). */
+  align-items: stretch;
   justify-content: flex-start;
   gap: 0.5rem;
   overflow: auto;
@@ -2344,7 +2369,7 @@ async function onClickExportMap(): Promise<void> {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .print-preview-column__viewport--pending .print-preview-column__scale-slot {
@@ -2364,7 +2389,8 @@ async function onClickExportMap(): Promise<void> {
   align-items: center;
   gap: 0.5rem;
   width: max-content;
-  max-width: 100%;
+  /* Pas de max-width : la largeur du slot dérive de celle-ci (boucle figeant la largeur portrait). */
+  max-width: none;
   box-sizing: border-box;
 }
 
@@ -2484,8 +2510,13 @@ async function onClickExportMap(): Promise<void> {
   margin-bottom: 8px;
 }
 
-.print-form__replacer-carte {
+.print-form__recenter-place {
   margin-top: 12px;
+  width: 100%;
+}
+
+.print-form__replacer-carte {
+  margin-top: 8px;
   margin-bottom: 8px;
   width: 100%;
 }
@@ -2518,12 +2549,16 @@ async function onClickExportMap(): Promise<void> {
 }
 
 .ec-map-print-preview-map {
-  --ec-scale-line-right: 6px;
-  --ec-widget-gap: 4px;
-  --ec-attribution-logo-width: 32px;
-  --ec-attribution-logo-height: 34px;
-  --ec-attribution-block-height: calc(var(--ec-attribution-logo-height) + 4px);
-  --ec-scale-attribution-stack-gap: 2px;
+  /* Facteur papier (printMapUiScale) : attributions et échelle en mm, proportionnelles au format. */
+  --ec-print-ui-scale: 1;
+  --ec-scale-line-right: calc(6px * var(--ec-print-ui-scale));
+  --ec-widget-gap: calc(4px * var(--ec-print-ui-scale));
+  --ec-attribution-logo-width: calc(32px * var(--ec-print-ui-scale));
+  --ec-attribution-logo-height: calc(34px * var(--ec-print-ui-scale));
+  --ec-attribution-block-height: calc(
+    var(--ec-attribution-logo-height) + 4px * var(--ec-print-ui-scale)
+  );
+  --ec-scale-attribution-stack-gap: calc(2px * var(--ec-print-ui-scale));
 }
 
 .ec-map-print-preview-map :deep(.ol-control.ol-attribution) {
@@ -2540,10 +2575,11 @@ async function onClickExportMap(): Promise<void> {
   flex-flow: row nowrap;
   align-items: flex-end;
   justify-content: flex-end;
-  gap: 0.125rem;
+  gap: calc(0.125rem * var(--ec-print-ui-scale));
   margin: 0;
   padding: 0;
-  font-size: 0.28125rem;
+  font-size: calc(0.28125rem * var(--ec-print-ui-scale));
+  white-space: nowrap;
   line-height: 1.1;
 }
 
@@ -2558,7 +2594,7 @@ async function onClickExportMap(): Promise<void> {
   margin: 0;
   max-height: none;
   background-color: #fff !important;
-  padding: 2px;
+  padding: calc(2px * var(--ec-print-ui-scale));
 }
 
 .ec-map-print-preview-map :deep(.ol-attribution a::after),
@@ -2577,6 +2613,16 @@ async function onClickExportMap(): Promise<void> {
   );
   pointer-events: none !important;
   background: var(--background-default-grey, #fff);
+  padding: calc(2px * var(--ec-print-ui-scale));
+  border-radius: calc(4px * var(--ec-print-ui-scale));
+}
+
+.ec-map-print-preview-map :deep(.ol-scale-line-inner) {
+  margin: calc(1px * var(--ec-print-ui-scale));
+  border-width: calc(1px * var(--ec-print-ui-scale));
+  font-size: calc(10px * var(--ec-print-ui-scale));
+  /* Interligne relatif : celui hérité du DSFR (fixe en rem) gonflait la hauteur de la barre. */
+  line-height: 1.2;
 }
 </style>
 

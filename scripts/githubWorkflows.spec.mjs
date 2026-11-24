@@ -25,7 +25,7 @@ describe('pages.yml', () => {
 })
 
 describe('ci.yml', () => {
-  it('vérifie l’absence d’eval dans les bundles construits', () => {
-    expect(ci).toMatch(/npm run verify:no-eval/)
+  it('contrôle les bundles construits (eval, sources .ts)', () => {
+    expect(ci).toMatch(/npm run verify:dist/)
   })
 })

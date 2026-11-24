@@ -26,6 +26,7 @@ On main map: **48px** layout column (`--ec-sketch-column-width`), vertical scrol
 
 - Dedicated vector layer (`zIndex` default **500**, property `ec-sketch`)
 - Tools: Point, LineString, Polygon, Rectangle, Disc (+ modify / delete)
+- **Snapping**: drawing and shape editing snap to vertices and edges of existing sketch features (OL `Snap`, kept as the last map interaction)
 - Option `toolsToggle`: menu button (tools icon) in a corner
 - Toolbar **vertically scrollable** if taller than map (wheel / touch on button column or **modify sub-bar** when open). Sub-bar stays **visible** in modify mode; **max height** limited to main bar visible scrollport (internal scroll if needed).
 - Option `clearAll`: “delete all” button
@@ -38,13 +39,13 @@ On main map: **48px** layout column (`--ec-sketch-column-width`), vertical scrol
 
 ## `extraTools`
 
-| Id                | Behaviour                                                                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Id                | Behaviour                                                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `Text`            | Label only; style popup (text, size, colour, outline, rotation) if `enableFeatureStyleEditor`; drag + rotation icon in modify mode       |
-| `Import`          | `*.kml`, `*.json` or `*.geojson` file (picker filter) → sketch features; KML via safe parser, JSON/GeoJSON via `readSketchGeoJsonObject`  |
-| `Export`          | Dialog (GeoJSON/KML select + Cancel / Export)                                                                                             |
+| `Import`          | `*.kml`, `*.json` or `*.geojson` file (picker filter) → sketch features; KML via safe parser, JSON/GeoJSON via `readSketchGeoJsonObject` |
+| `Export`          | Dialog (GeoJSON/KML select + Cancel / Export)                                                                                            |
 | `MeasureDistance` | Dashed LineString on `measureLayer` + distance popup (location shape, Delete button only); Remix icon `ri-ruler-line`                    |
-| `MeasureArea`     | Dashed Polygon on `measureLayer` + area popup (same); Remix icon `ri-custom-size`                                                         |
+| `MeasureArea`     | Dashed Polygon on `measureLayer` + area popup (same); Remix icon `ri-custom-size`                                                        |
 
 ## Style popup (`enableFeatureStyleEditor`)
 
@@ -70,13 +71,13 @@ Attributes popup: max height **265px** (internal scroll); open without map **aut
 
 In **modify**, **shape** / **move** sub-tools: no “pointer” cursor on feature body; **shape** → `pointer` near vertices (or rectangle / radius resize cursor); **move** → translation cursor when feature hovered (lines / labels: small hit tolerance). Default sub-tool when opening Modify: **shape edit**. In **move**, **rotation** (except point and disc) and **style** modes, and **Delete** mode, hovered feature (top if stacked) is **highlighted** (stronger outline); on **mousedown** (modify) original style restored. **Undo** closes attributes popup if edited feature was removed. **Save locally** button does not interrupt active draw tool.
 
-| Type                          | Basic fields                              | Advanced (preview)                                                  |
-| ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
-| Text                          | text, size, colour, outline, rotation     | font, bold, italic, outline width, zIndex                          |
-| Point                         | radius, fill, outline, width              | shape, symbol rotation (except circle), zIndex                      |
-| Line                          | outline, width                            | dashes, caps, joins, offset, tip limit, zIndex                      |
-| Polygon / Rectangle / Disc    | fill, outline, width                      | same as line                                                        |
-| Circle                        | outline, width                            | same as line                                                        |
+| Type                       | Basic fields                          | Advanced (preview)                             |
+| -------------------------- | ------------------------------------- | ---------------------------------------------- |
+| Text                       | text, size, colour, outline, rotation | font, bold, italic, outline width, zIndex      |
+| Point                      | radius, fill, outline, width          | shape, symbol rotation (except circle), zIndex |
+| Line                       | outline, width                        | dashes, caps, joins, offset, tip limit, zIndex |
+| Polygon / Rectangle / Disc | fill, outline, width                  | same as line                                   |
+| Circle                     | outline, width                        | same as line                                   |
 
 GeometryEditor does **not** enable `enableFeatureStyleEditor` (historical behaviour).
 
@@ -109,33 +110,33 @@ const handle = EntreeCartoSketch.mountSketch('#sketch-map', {
 
 ### `mountSketch` options (container + map)
 
-| Option          | Default | Description                                                                 |
-| --------------- | ------- | --------------------------------------------------------------------------- |
-| `showSettings`  | `false` | Cog button (top right): live options form; zoom shifts below (like GeometryEditor) |
-| `showZoom`      | `true`  | OpenLayers +/- control (top right)                                          |
-| `width` / `height` | `'100%'` / `480` | Map container size                                                     |
-| `lon` / `lat` / `zoom` | France defaults | Initial view                                                      |
-| `minZoom` / `maxZoom` | `4` / `19` | View limits                                                          |
-| `tileLayers`    | Plan IGN | Background XYZ tiles                                                       |
+| Option                 | Default          | Description                                                                        |
+| ---------------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| `showSettings`         | `false`          | Cog button (top right): live options form; zoom shifts below (like GeometryEditor) |
+| `showZoom`             | `true`           | OpenLayers +/- control (top right)                                                 |
+| `width` / `height`     | `'100%'` / `480` | Map container size                                                                 |
+| `lon` / `lat` / `zoom` | France defaults  | Initial view                                                                       |
+| `minZoom` / `maxZoom`  | `4` / `19`       | View limits                                                                        |
+| `tileLayers`           | Plan IGN         | Background XYZ tiles                                                               |
 
 After mount: `handle.getOptions()`, `handle.setOptions(patch)`, `handle.resetOptions()` (initial mount snapshot).
 
 ## Options (TS class)
 
-| Option                     | Default      | Description                                                    |
-| -------------------------- | ------------ | -------------------------------------------------------------- |
-| `geometryType`             | `'Geometry'` | Tool types (CSV accepted)                                      |
-| `toolsToggle`              | `null`       | `null` = bar always visible; else menu button corner           |
-| `position`                 | —            | geopf corner for main map                                      |
-| `source` / `layer`         | created      | Reuse existing source / layer                                  |
-| `style`                    | France blue  | OL style for features / sketch                                 |
-| `zIndex`                   | `500`        | zIndex if layer created here                                   |
-| `onChange`                 | —            | Callback after draw / edit / delete                              |
-| `localStorageKey`          | `null`       | `localStorage` key (restore + Save button)                     |
-| `clearAll`                 | `false`      | Delete-all button                                              |
-| `history`                  | `false`      | Undo / Redo (persisted on Save, `{key}:history`)               |
-| `extraTools`               | `[]`         | Text, Import, Export, Measure*                                 |
-| `enableFeatureStyleEditor` | `false`      | Style popup on create (+ palette icon in modify)               |
+| Option                     | Default      | Description                                          |
+| -------------------------- | ------------ | ---------------------------------------------------- |
+| `geometryType`             | `'Geometry'` | Tool types (CSV accepted)                            |
+| `toolsToggle`              | `null`       | `null` = bar always visible; else menu button corner |
+| `position`                 | —            | geopf corner for main map                            |
+| `source` / `layer`         | created      | Reuse existing source / layer                        |
+| `style`                    | France blue  | OL style for features / sketch                       |
+| `zIndex`                   | `500`        | zIndex if layer created here                         |
+| `onChange`                 | —            | Callback after draw / edit / delete                  |
+| `localStorageKey`          | `null`       | `localStorage` key (restore + Save button)           |
+| `clearAll`                 | `false`      | Delete-all button                                    |
+| `history`                  | `false`      | Undo / Redo (persisted on Save, `{key}:history`)     |
+| `extraTools`               | `[]`         | Text, Import, Export, Measure*                       |
+| `enableFeatureStyleEditor` | `false`      | Style popup on create (+ palette icon in modify)     |
 
 ## Vue props (`SketchControl.vue`)
 

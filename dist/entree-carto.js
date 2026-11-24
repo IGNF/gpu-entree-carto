@@ -30661,8 +30661,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       map2.value = mapInstance;
     });
     onUnmounted(() => {
-      var _a2;
+      var _a2, _b;
       (_a2 = map2.value) == null ? void 0 : _a2.setTarget(void 0);
+      (_b = map2.value) == null ? void 0 : _b.dispose();
       map2.value = null;
     });
     return { map: map2 };
@@ -67850,6 +67851,29 @@ Expected function or array of functions, received type ${typeof value2}.`
   function tryUseMapMode() {
     return inject(MAP_MODE_KEY) ?? null;
   }
+  const FICHE_UNAVAILABLE_SOURCE = "fiche-service-unavailable";
+  const RETRY_ATTR = "data-ec-fiche-retry";
+  const UNAVAILABLE_BODY_HTML = `<p class="ec-fiche-info__unavailable">Indisponibilité du service <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" title="Réessayer" aria-label="Réessayer" ${RETRY_ATTR}><i class="ri-refresh-line" aria-hidden="true"></i></button></p>`;
+  function ficheServiceUnavailableSelection(title2, retry) {
+    return {
+      title: title2,
+      bodyHtml: UNAVAILABLE_BODY_HTML,
+      raw: { source: FICHE_UNAVAILABLE_SOURCE, retry }
+    };
+  }
+  function isFicheUnavailableSelection(selection) {
+    const raw = selection == null ? void 0 : selection.raw;
+    return Boolean(raw && typeof raw === "object" && raw.source === FICHE_UNAVAILABLE_SOURCE);
+  }
+  function ficheRetryParamsFromSelection(selection) {
+    if (!isFicheUnavailableSelection(selection)) return null;
+    const retry = (selection == null ? void 0 : selection.raw).retry;
+    return retry && Number.isFinite(retry.lon) && Number.isFinite(retry.lat) ? retry : null;
+  }
+  function isFicheRetryClick(event) {
+    const target2 = event.target;
+    return target2 instanceof Element && Boolean(target2.closest(`[${RETRY_ATTR}]`));
+  }
   const legendPanelFocusRef = /* @__PURE__ */ shallowRef(null);
   const TAB_PANELS_KEY = Symbol("ecTabPanels");
   const tabPanelsApiRef = /* @__PURE__ */ shallowRef(null);
@@ -71153,7 +71177,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return getDemoConfig().document ?? null;
   }
-  function appendFicheInfoQueryParams(url, params2) {
+  function appendFicheInfoQueryParams(url, params2, trackSupersede = true) {
     var _a2, _b;
     url.searchParams.set("lon", String(params2.lon));
     url.searchParams.set("lat", String(params2.lat));
@@ -71170,8 +71194,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         url.searchParams.set("partition", partition.trim());
       }
     }
-    url.searchParams.set("client", getOrCreateFicheClientId());
-    url.searchParams.set("seq", String(assignFicheInfoRequestSeqForUrl()));
+    if (trackSupersede) {
+      url.searchParams.set("client", getOrCreateFicheClientId());
+      url.searchParams.set("seq", String(assignFicheInfoRequestSeqForUrl()));
+    }
     const families = (_a2 = params2.activeFamilies) == null ? void 0 : _a2.filter(Boolean);
     if (families == null ? void 0 : families.length) {
       for (const family of families) {
@@ -71283,6 +71309,20 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function legacyFicheModeValue(mode2) {
     return mode2 === MAP_MODE_PARCEL ? String(MAP_MODE_PARCEL) : String(MAP_MODE_TERRITORY);
+  }
+  const OPEN_CATALOG_ATTR = "data-ec-open-catalog";
+  const CATALOG_LINK_HTML = `<a href="#" ${OPEN_CATALOG_ATTR}>catalogue de couches</a>`;
+  const TERRITORY_NO_DOCUMENT_HTML = `<p>Pas de document trouvé sur ce territoire dans les données correspondant au ${CATALOG_LINK_HTML} actuel.</p>`;
+  const PARCEL_NO_RULE_HTML = `<p>Pas de règle d’urbanisme trouvé dans les données correspondant au ${CATALOG_LINK_HTML} actuel intersectant cette parcelle.</p>`;
+  function stripFicheNoDataHtml(html2) {
+    return html2.replaceAll(TERRITORY_NO_DOCUMENT_HTML, "").replaceAll(PARCEL_NO_RULE_HTML, "").trim();
+  }
+  function onFicheCatalogLinkClick(event) {
+    var _a2;
+    const target2 = event.target;
+    if (!(target2 instanceof Element) || !target2.closest(`[${OPEN_CATALOG_ATTR}]`)) return;
+    event.preventDefault();
+    (_a2 = tabPanelsApiRef.value) == null ? void 0 : _a2.openTab(TAB_PANEL_IDS.catalogue);
   }
   function coerceDisplayString(value2, fallback = "") {
     if (value2 == null) return fallback;
@@ -73251,7 +73291,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
     }
     if (!parts.length) {
-      return "<p>Aucune règle d’urbanisme intersectant cette parcelle.</p>";
+      return PARCEL_NO_RULE_HTML;
     }
     return parts.join("");
   }
@@ -73695,7 +73735,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       data.proceduresByDocument
     );
     if (lowScaleHtml) return lowScaleHtml;
-    return "<p>Aucun document disponible à cet emplacement.</p>";
+    return TERRITORY_NO_DOCUMENT_HTML;
   }
   function extractParcelFichePayload(data) {
     var _a2;
@@ -73876,7 +73916,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     const promise = fetchGpuFicheInfoPayloadFromUrl(
       fetchBase,
       { ...params2, mode: MAP_MODE_TERRITORY },
-      signal
+      signal,
+      role
     ).finally(() => {
       inflightPayloadByPoint.delete(inflightKey);
       if (role === "panel" && (activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.signal) === signal) {
@@ -73900,7 +73941,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (existing) return existing;
     const role = params2.fetchRole ?? "panel";
     const signal = takeoverFicheNetworkSignal(params2.abortSignal, role);
-    const promise = fetchGpuFicheInfoPayloadImpl(params2, signal).finally(() => {
+    const promise = fetchGpuFicheInfoPayloadImpl(params2, signal, role).finally(() => {
       inflightPayloadByPoint.delete(inflightKey);
       if (role === "panel" && (activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.signal) === signal) {
         activePanelNetworkAbort = null;
@@ -73909,15 +73950,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     inflightPayloadByPoint.set(inflightKey, promise);
     return promise;
   }
-  async function fetchGpuFicheInfoPayloadImpl(params2, signal) {
+  async function fetchGpuFicheInfoPayloadImpl(params2, signal, role) {
     const fetchBase = resolveFicheInfoFetchUrl(params2.mode);
     if (!fetchBase) return null;
-    return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal);
+    return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal, role);
   }
-  async function fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal) {
+  async function fetchGpuFicheInfoPayloadFromUrl(fetchBase, params2, signal, role) {
     const resolved = resolveConfigUrlForFetch(fetchBase);
     const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
-    appendFicheInfoQueryParams(url, params2);
+    appendFicheInfoQueryParams(url, params2, role === "panel");
     if (shouldAppendLegacyFicheModeParam(resolved)) {
       url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
     }
@@ -74594,13 +74635,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const trimmed = raw.trim();
     return trimmed.length ? trimmed : null;
   }
-  function ficheServiceUnavailableSelection(title2) {
-    return {
-      title: title2,
-      bodyHtml: FICHE_UNAVAILABLE_BODY,
-      raw: { source: "fiche-service-unavailable" }
-    };
-  }
   function showLoading(title2) {
     var _a2;
     (_a2 = tabPanelsApiRef.value) == null ? void 0 : _a2.showSelection({
@@ -74930,7 +74964,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         params2.lon,
         params2.lat,
         params2.mode,
-        ficheServiceUnavailableSelection(loadingTitle),
+        ficheServiceUnavailableSelection(loadingTitle, {
+          lon: params2.lon,
+          lat: params2.lat,
+          mode: params2.mode,
+          zoom: params2.zoom,
+          loadingTitle: params2.loadingTitle
+        }),
         markerPlacedAtClick,
         skipLocationMarker,
         silent
@@ -85082,11 +85122,62 @@ Expected function or array of functions, received type ${typeof value2}.`
   function convertMmToPx(valueMm, dpiValue) {
     return Math.round(valueMm / MM_PER_INCH * dpiValue);
   }
+  function paperFormatSelectOptions() {
+    return Object.entries(PAPER_FORMATS_MM).map(([format, dimension]) => ({
+      value: format,
+      text: `${format} (${dimension.width} x ${dimension.height} mm)`
+    }));
+  }
+  function dpiSelectOptions(paperFormat) {
+    const highAllowed = isPaperFormatAllowedAtHighDpi(paperFormat);
+    return [
+      { value: BASE_DPI, text: "96 DPI (écran)" },
+      {
+        value: HIGH_DPI_VALUE,
+        text: highAllowed ? "300 DPI (impression)" : "300 DPI (impression) — formats ≤ B4",
+        disabled: !highAllowed
+      }
+    ];
+  }
+  function resolveDpiForPaperFormat(dpi, paperFormat) {
+    if (dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) return BASE_DPI;
+    return dpi;
+  }
   function copyViewState(from, to2) {
     to2.setCenter(from.getCenter());
     to2.setResolution(from.getResolution());
     to2.setRotation(from.getRotation());
   }
+  function renderSyncIfAttached(map2) {
+    if (map2 == null ? void 0 : map2.getTargetElement()) map2.renderSync();
+  }
+  function waitForMapRender(map2, passes = 2, timeoutMs = 1e4) {
+    return new Promise((resolve2) => {
+      if (!map2.getTargetElement()) {
+        resolve2();
+        return;
+      }
+      let done = 0;
+      const finish = () => {
+        map2.un("rendercomplete", onComplete);
+        resolve2();
+      };
+      const timer = typeof window !== "undefined" ? window.setTimeout(finish, timeoutMs) : void 0;
+      const onComplete = () => {
+        done += 1;
+        if (done >= passes) {
+          if (timer !== void 0) window.clearTimeout(timer);
+          finish();
+          return;
+        }
+        map2.render();
+      };
+      map2.on("rendercomplete", onComplete);
+      map2.renderSync();
+    });
+  }
+  const SEARCH_LAYER_PRINT_Z_INDEX = 1e6;
+  const PRINT_SEARCH_LAYER_PROP = "ec-print-search-layer";
   function cloneTileLayer(layer) {
     return new TileLayer({
       source: layer.getSource() ?? void 0,
@@ -85142,12 +85233,56 @@ Expected function or array of functions, received type ${typeof value2}.`
   function rebuildPrintPreviewMap(sourceMap, targetMap2, options = {}) {
     targetMap2.getLayers().clear();
     copyVisibleMapLayers(sourceMap.getLayers().getArray(), targetMap2);
+    const host = searchEngineLayerHostRef.value;
+    const searchLayer = (host == null ? void 0 : host.getMap()) === sourceMap ? host.layer : null;
+    const searchClone = (searchLayer == null ? void 0 : searchLayer.getVisible()) ? cloneLayerForPrint(searchLayer) : null;
+    if (searchClone) {
+      searchClone.setZIndex(SEARCH_LAYER_PRINT_Z_INDEX);
+      searchClone.set(PRINT_SEARCH_LAYER_PROP, true);
+      targetMap2.addLayer(searchClone);
+    }
     if (options.syncViewFromSource !== false) {
       copyViewState(sourceMap.getView(), targetMap2.getView());
     }
-    targetMap2.renderSync();
+    renderSyncIfAttached(targetMap2);
   }
-  function mergeMapLayerCanvases(mapViewport, targetCtx) {
+  const PRINT_ATTRIBUTION_LOGO_HEIGHT_MM_A4 = 19.3 / 2;
+  const PRINT_ATTRIBUTION_LOGO_HEIGHT_PX = 34;
+  const A4_SHORT_SIDE_MM = 210;
+  function printAttributionLogoHeightMm(paper) {
+    return PRINT_ATTRIBUTION_LOGO_HEIGHT_MM_A4 * Math.min(paper.widthMm, paper.heightMm) / A4_SHORT_SIDE_MM;
+  }
+  function printMapUiScale(paper, previewPxPerMm) {
+    return printAttributionLogoHeightMm(paper) * previewPxPerMm / PRINT_ATTRIBUTION_LOGO_HEIGHT_PX;
+  }
+  const FIT_PADDING_PX = 24;
+  function searchLayerFeatures(map2) {
+    var _a2;
+    const layer = map2.getLayers().getArray().find((l) => l.get(PRINT_SEARCH_LAYER_PROP));
+    return layer instanceof VectorLayer ? ((_a2 = layer.getSource()) == null ? void 0 : _a2.getFeatures()) ?? [] : [];
+  }
+  function recenterPrintPreviewOnPlace(map2, markerFallback) {
+    const view = map2.getView();
+    const features = searchLayerFeatures(map2);
+    const empriseExtent = createEmpty();
+    for (const feature of features) {
+      const geometry = feature.getGeometry();
+      if (feature.get(MODE_EMPRISE_PROP) && geometry) extend$3(empriseExtent, geometry.getExtent());
+    }
+    if (!isEmpty(empriseExtent)) {
+      view.fit(empriseExtent, {
+        size: map2.getSize(),
+        padding: [FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX]
+      });
+      return true;
+    }
+    const pin = features.map((f2) => f2.getGeometry()).find((g) => g instanceof Point$1);
+    const center = (pin == null ? void 0 : pin.getCoordinates()) ?? markerFallback;
+    if (!center) return false;
+    view.setCenter(center);
+    return true;
+  }
+  function mergeMapLayerCanvases(mapViewport, targetCtx, pixelRatio = 1) {
     const canvases = mapViewport.querySelectorAll(".ol-layer canvas, canvas.ol-layer");
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
     targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
@@ -85167,18 +85302,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (transform2) {
         const matrix2 = (_d = (_c2 = transform2.match(/^matrix\(([^)]*)\)$/)) == null ? void 0 : _c2[1]) == null ? void 0 : _d.split(",").map(Number);
         if ((matrix2 == null ? void 0 : matrix2.length) === 6) {
-          targetCtx.setTransform(...matrix2);
+          const [a3, b, c, d, e2, f2] = matrix2.map((v) => v * pixelRatio);
+          targetCtx.setTransform(a3, b, c, d, e2, f2);
         }
       } else {
         const style = getComputedStyle(layerCanvas);
         const scaleX = parseFloat(style.width) / layerCanvas.width;
         const scaleY = parseFloat(style.height) / layerCanvas.height;
-        targetCtx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+        targetCtx.setTransform(scaleX * pixelRatio, 0, 0, scaleY * pixelRatio, 0, 0);
       }
       targetCtx.drawImage(layerCanvas, 0, 0);
     });
     targetCtx.globalAlpha = 1;
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  function printExportPixelRatio(exportWidthPx, previewWidthPx) {
+    const ratio = exportWidthPx / previewWidthPx;
+    if (!Number.isFinite(ratio) || ratio <= 0) return 1;
+    const extraZoomLevels = Math.max(0, Math.round(Math.log2(ratio)) - 1);
+    return ratio / 2 ** extraZoomLevels;
+  }
+  function abortError() {
+    return new DOMException("Rendu carte interrompu.", "AbortError");
   }
   function tileSourceFromLayer(layer) {
     if (!(layer instanceof Layer) || !layer.getVisible()) return null;
@@ -85199,6 +85344,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     return [...sources];
   }
   async function waitForMapExportReady(map2, options = {}) {
+    var _a2;
+    if ((_a2 = options.signal) == null ? void 0 : _a2.aborted) throw abortError();
     const timeoutMs = options.timeoutMs ?? 12e4;
     const stablePasses = Math.max(1, options.stablePasses ?? 2);
     const sources = collectTileSources(map2);
@@ -85206,8 +85353,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     let loadedTiles = 0;
     const sourceKeys = [];
     const report = () => {
-      var _a2;
-      (_a2 = options.onProgress) == null ? void 0 : _a2.call(options, { pendingTiles, loadedTiles });
+      var _a3;
+      (_a3 = options.onProgress) == null ? void 0 : _a3.call(options, { pendingTiles, loadedTiles });
     };
     for (const source of sources) {
       sourceKeys.push(
@@ -85227,6 +85374,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     report();
     try {
       await new Promise((resolve2, reject) => {
+        var _a3;
         let stableRenderCount = 0;
         const onRenderComplete = () => {
           if (pendingTiles > 0) {
@@ -85243,9 +85391,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
         };
         const renderKey = map2.on("rendercomplete", onRenderComplete);
+        const onAbort = () => {
+          cleanup();
+          reject(abortError());
+        };
+        (_a3 = options.signal) == null ? void 0 : _a3.addEventListener("abort", onAbort, { once: true });
         const cleanup = () => {
+          var _a4;
           if (timer !== void 0) window.clearTimeout(timer);
           unByKey(renderKey);
+          (_a4 = options.signal) == null ? void 0 : _a4.removeEventListener("abort", onAbort);
         };
         const timer = typeof window !== "undefined" ? window.setTimeout(() => {
           cleanup();
@@ -85271,8 +85426,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function buildPrintMapRenderCacheKey(parts) {
     return [
-      "map-v1",
+      "map-v2",
       parts.dpi,
+      Math.round(parts.previewWidthPx),
       parts.mapWidthPx,
       parts.mapHeightPx,
       roundExtent(parts.extent),
@@ -85280,7 +85436,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       parts.layerFingerprint
     ].join(";");
   }
-  const renderCache = new globalThis.Map();
+  const renderCache = /* @__PURE__ */ new Map();
   function getCachedPrintMapCanvas(key2) {
     var _a2;
     const cached = renderCache.get(key2);
@@ -85319,22 +85475,50 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return offscreenHost;
   }
+  const inflightRenders = new globalThis.Map();
   async function renderOffscreenPrintMapCanvas(previewMap, options) {
-    var _a2, _b, _c2, _d;
-    const { widthPx, heightPx, extent } = options;
+    var _a2, _b;
+    const { widthPx, heightPx } = options;
     if (widthPx < 16 || heightPx < 16) {
       throw new Error("Dimensions carte invalides pour l’export (largeur ou hauteur nulle).");
     }
-    if (options.cacheKey) {
-      const cached = getCachedPrintMapCanvas(options.cacheKey);
+    const { cacheKey } = options;
+    if (cacheKey) {
+      const pending2 = inflightRenders.get(cacheKey);
+      if (pending2) {
+        (_a2 = options.onStage) == null ? void 0 : _a2.call(options, "Chargement des tuiles cartographiques…");
+        await pending2;
+      }
+      const cached = getCachedPrintMapCanvas(cacheKey);
       if (cached) {
-        (_a2 = options.onStage) == null ? void 0 : _a2.call(options, "Carte réutilisée depuis le cache…");
+        (_b = options.onStage) == null ? void 0 : _b.call(options, "Carte réutilisée depuis le cache…");
         return cached;
       }
     }
+    const render2 = renderUncached(previewMap, options);
+    if (!cacheKey) return render2;
+    const done = render2.then(
+      () => {
+      },
+      () => {
+      }
+    );
+    inflightRenders.set(cacheKey, done);
+    try {
+      return await render2;
+    } finally {
+      if (inflightRenders.get(cacheKey) === done) inflightRenders.delete(cacheKey);
+    }
+  }
+  async function renderUncached(previewMap, options) {
+    var _a2, _b, _c2, _d;
+    const { widthPx, heightPx, extent } = options;
+    const pixelRatio = printExportPixelRatio(widthPx, ((_a2 = previewMap.getSize()) == null ? void 0 : _a2[0]) ?? widthPx);
+    const cssWidth = Math.max(1, Math.round(widthPx / pixelRatio));
+    const cssHeight = Math.max(1, Math.round(heightPx / pixelRatio));
     const host = getOffscreenPrintMapHost();
-    host.style.width = `${widthPx}px`;
-    host.style.height = `${heightPx}px`;
+    host.style.width = `${cssWidth}px`;
+    host.style.height = `${cssHeight}px`;
     const previewView = previewMap.getView();
     const exportView = new View({
       projection: previewView.getProjection(),
@@ -85344,17 +85528,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       target: host,
       view: exportView,
       controls: [],
-      interactions: []
+      interactions: [],
+      pixelRatio
     });
     try {
       (_b = options.onStage) == null ? void 0 : _b.call(options, "Préparation de la carte haute résolution…");
       rebuildPrintPreviewMap(previewMap, exportMap, { syncViewFromSource: false });
-      exportMap.setSize([widthPx, heightPx]);
-      exportView.fit(extent, { size: [widthPx, heightPx], nearest: true, duration: 0 });
+      exportMap.setSize([cssWidth, cssHeight]);
+      exportView.fit(extent, { size: [cssWidth, cssHeight], duration: 0 });
       (_c2 = options.onStage) == null ? void 0 : _c2.call(options, "Chargement des tuiles cartographiques…");
       await waitForMapExportReady(exportMap, {
         timeoutMs: 12e4,
         stablePasses: 2,
+        signal: options.signal,
         onProgress: ({ pendingTiles, loadedTiles }) => {
           var _a3;
           (_a3 = options.onTileProgress) == null ? void 0 : _a3.call(options, loadedTiles, pendingTiles);
@@ -85372,7 +85558,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!viewportEl) {
         throw new Error("Viewport carte indisponible.");
       }
-      mergeMapLayerCanvases(viewportEl, exportCtx);
+      mergeMapLayerCanvases(viewportEl, exportCtx, widthPx / cssWidth);
       if (options.cacheKey) {
         storePrintMapCanvasCache(options.cacheKey, exportCanvas);
       }
@@ -85478,25 +85664,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const withDpi = injectDpiInPngBytes(dataUrlToUint8Array(dataUrl), dpi);
     return URL.createObjectURL(new Blob([withDpi], { type: "image/png" }));
   }
-  function waitForMapRender(map2, passes = 2, timeoutMs = 1e4) {
-    return new Promise((resolve2) => {
-      let done = 0;
-      const finish = () => {
-        map2.un("rendercomplete", onComplete);
-        resolve2();
-      };
-      const timer = typeof window !== "undefined" ? window.setTimeout(finish, timeoutMs) : void 0;
-      const onComplete = () => {
-        done += 1;
-        if (done >= passes) {
-          if (timer !== void 0) window.clearTimeout(timer);
-          finish();
-        }
-      };
-      map2.on("rendercomplete", onComplete);
-      map2.renderSync();
-    });
-  }
   function computeScaleCoeff(containerWidth, containerHeight, contentWidth, contentHeight) {
     const ratioBloc1 = containerWidth / containerHeight;
     const ratioBloc2 = contentWidth / contentHeight;
@@ -85505,7 +85672,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return containerHeight / contentHeight;
   }
-  function captureScaleLineSnapshot(mapRef, domScaleCoeff = 1) {
+  function captureScaleLineSnapshot(mapRef) {
     const scaleLine = mapRef.getElementsByClassName("ol-scale-line")[0];
     const scaleLineInner = scaleLine == null ? void 0 : scaleLine.children[0];
     if (!scaleLine || !scaleLineInner) return null;
@@ -85539,11 +85706,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         fontFamily: styleInner.fontFamily,
         color: styleInner.color || "#333333",
         text: scaleLineInner.textContent || ""
-      },
-      domScaleCoeff
+      }
     };
   }
-  function drawScale(ctx, mapRef, _canvasWidth, canvasHeight, scaleSnapshot = null, domScaleCoeff = 1) {
+  function drawScale(ctx, mapRef, _canvasWidth, canvasHeight, scaleSnapshot = null) {
     let mapRect;
     let outerRect;
     let innerRect;
@@ -85612,8 +85778,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (!mapRect.width || !mapRect.height) return;
     const scaleFactorY = canvasHeight / mapRect.height;
-    const effectiveDomScaleCoeff = scaleSnapshot ? scaleSnapshot.domScaleCoeff ?? 1 : domScaleCoeff;
-    const computedStyleScaleFactor = scaleFactorY * effectiveDomScaleCoeff;
+    const computedStyleScaleFactor = scaleFactorY;
     const outerX = (outerRect.left - mapRect.left) * scaleFactorY;
     const outerY = (outerRect.top - mapRect.top) * scaleFactorY;
     const outerWidth2 = outerRect.width * scaleFactorY;
@@ -85646,6 +85811,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     ctx.textBaseline = "middle";
     ctx.fillStyle = innerColor;
     ctx.fillText(scaleContent, innerX + innerWidth / 2, innerY + innerHeight / 2);
+  }
+  const PREVIEW_FRAME_MARGIN_PX = { top: 6, bottom: 12, horizontal: 10 };
+  function printPreviewPaperScale(column, paperPx) {
+    const m = PREVIEW_FRAME_MARGIN_PX;
+    const width = column.width - 2 * m.horizontal;
+    const height = column.height - m.top - m.bottom;
+    if (width < 16 || height < 16 || paperPx.width <= 0 || paperPx.height <= 0) return 0;
+    return computeScaleCoeff(width, height, paperPx.width, paperPx.height);
   }
   const PRINT_PAGE_LABELS = {
     map: "Carte",
@@ -85718,6 +85891,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   ].join(", ");
   const SUPPLEMENT_VISIBILITY_MARKERS = SUPPLEMENT_PAGINATION_MARKERS;
   const SUPPLEMENT_VISIBILITY_RESET_MARKERS = `${SUPPLEMENT_VISIBILITY_MARKERS}, .ec-fiche-info__body, .ec-print-fiche__section`;
+  const SLICE_OVERFLOW_TOLERANCE_PX = 1;
   const LEGEND_ROW_TOP_TOLERANCE_PX = 10;
   function computePrintSupplementInnerPx(paperWidthMm, paperHeightMm, marginMm, dpi) {
     const paperWidthPx = convertMmToPx(paperWidthMm, dpi);
@@ -85738,23 +85912,35 @@ Expected function or array of functions, received type ${typeof value2}.`
     const inset = supplementSliceContentInsetPx(dpi);
     return Math.max(40, innerHeightPx - inset * 2);
   }
-  function printSupplementCssVars(innerWidthPx, dpi) {
+  const MIN_READABLE_BODY_FONT_MM = 2.5;
+  const PRINT_BODY_FONT_MM = 2.8;
+  const PRINT_LEGEND_IMG_MM = 5;
+  function printSupplementScale(paper, dpi) {
+    const dpiBoost = dpi >= HIGH_DPI_VALUE ? 1.5 : 1;
+    const paperRatio = Math.min(paper.widthMm, paper.heightMm) / 210;
+    const minScale = MIN_READABLE_BODY_FONT_MM / PRINT_BODY_FONT_MM;
+    return Math.max(dpiBoost * paperRatio, minScale);
+  }
+  function printSupplementCssVars(innerWidthPx, dpi, paper) {
+    const k = printSupplementScale(paper, dpi);
     const px = (mm) => `${convertMmToPx(mm, dpi)}px`;
     const legendImgMm = dpi >= HIGH_DPI_VALUE ? 13.2 : 11;
-    return {
+    const vars = {
       "--print-inner-width": `${Math.max(innerWidthPx, 120)}px`,
-      "--print-body-font": px(2.8),
-      "--print-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
-      "--print-section-font": px(3.4),
-      "--print-small-font": px(2.4),
-      "--print-fiche-label-font": px(2.5),
-      "--print-fiche-desc-font": px(2.2),
-      "--print-img-max": px(16),
-      "--print-legend-img-max": px(legendImgMm),
-      "--print-block-gap": px(PRINT_SUPPLEMENT_BLOCK_GAP_MM),
-      "--print-map-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
+      "--print-body-font": px(PRINT_BODY_FONT_MM * k),
+      "--print-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM * k),
+      "--print-section-font": px(3.4 * k),
+      "--print-small-font": px(2.4 * k),
+      "--print-fiche-label-font": px(2.5 * k),
+      "--print-fiche-desc-font": px(2.2 * k),
+      "--print-img-max": px(16 * k),
+      "--print-legend-img-max": px(legendImgMm * k),
+      "--print-block-gap": px(PRINT_SUPPLEMENT_BLOCK_GAP_MM * k),
+      "--print-map-title-font": px(PRINT_SUPPLEMENT_TITLE_FONT_MM * k),
       "--print-supplement-slice-inset": px(SUPPLEMENT_SLICE_CONTENT_INSET_MM)
     };
+    if (dpi >= HIGH_DPI_VALUE) vars["--print-legend-img-size"] = px(PRINT_LEGEND_IMG_MM * k);
+    return vars;
   }
   async function waitForPrintSupplementImages(root, options = {}) {
     const timeoutMs = options.timeoutMs ?? 8e3;
@@ -85797,8 +85983,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     return supplementMarkerElements(page, SUPPLEMENT_VISIBILITY_MARKERS);
   }
   function elementTopInPage(el2, page, layoutScale = 1) {
-    const scale2 = layoutScale > 0 ? layoutScale : 1;
     const pageRect = page.getBoundingClientRect();
+    const scale2 = page.offsetWidth > 0 && pageRect.width > 0 ? pageRect.width / page.offsetWidth : layoutScale > 0 ? layoutScale : 1;
     const elRect = el2.getBoundingClientRect();
     return (elRect.top - pageRect.top) / scale2;
   }
@@ -85954,7 +86140,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const footBottom = ficheFootnoteBlockBottom(page);
     if (footBottom < 1 || footTop < 1) return plan;
     const epsilon = Math.max(4, pageHeightPx * 8e-3);
-    if (footBottom <= pageHeightPx + epsilon) return plan;
+    if (footBottom <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) return plan;
     const splitAt = Math.max(0, footTop);
     const starts = [...plan.sliceStarts];
     if (plan.sliceCount < 2) {
@@ -86010,12 +86196,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (!Number.isFinite(footTop)) return cut;
     const sliceEndUniform = sliceStartPx + pageHeightPx;
-    const footnotesFitInSlice = footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + epsilon;
+    const footnotesFitInSlice = footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + SLICE_OVERFLOW_TOLERANCE_PX;
     if (footnotesFitInSlice) return cut;
     if (footTop > sliceStartPx + epsilon && footTop < cut + epsilon) {
       return Math.min(cut, footTop);
     }
-    if (footBottom > cut + epsilon && footTop < cut + epsilon) {
+    if (footBottom > cut + SLICE_OVERFLOW_TOLERANCE_PX && footTop < cut + epsilon) {
       return Math.min(cut, footTop > sliceStartPx + epsilon ? footTop : cut);
     }
     return cut;
@@ -86035,7 +86221,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (!firstRow) continue;
       const titleTop = titleBlock.top;
       const titleBottom = titleBlock.bottom;
-      if (titleTop >= tailZoneStart && titleTop < nextCut - epsilon && firstRow.bottom > nextCut + epsilon) {
+      if (titleTop >= tailZoneStart && titleTop < nextCut - epsilon && firstRow.bottom > nextCut + SLICE_OVERFLOW_TOLERANCE_PX) {
         nextCut = Math.min(nextCut, titleTop);
       }
       if (titleBottom <= nextCut + epsilon && firstRow.top >= nextCut - epsilon && titleTop > sliceStart + epsilon) {
@@ -86064,13 +86250,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     const minTailRatio = 0.05;
     const tailZoneStart = sliceStartPx + pageHeightPx * (1 - minTailRatio);
     for (const block of blocks) {
-      if (block.top >= tailZoneStart && block.top < cut - epsilon && block.bottom > cut + epsilon && block.top > sliceStartPx + epsilon) {
+      if (block.top >= tailZoneStart && block.top < cut - epsilon && block.bottom > cut + SLICE_OVERFLOW_TOLERANCE_PX && block.top > sliceStartPx + epsilon) {
         cut = Math.min(cut, block.top);
       }
     }
     for (const block of blocks) {
       if (block.top >= cut - epsilon) break;
-      if (block.bottom > cut + epsilon && block.top > sliceStartPx + epsilon) {
+      if (block.bottom > cut + SLICE_OVERFLOW_TOLERANCE_PX && block.top > sliceStartPx + epsilon) {
         cut = Math.min(cut, block.top);
       }
     }
@@ -86099,12 +86285,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     const blocks = contentBlocksForPage(page);
     const maxBottom = maxContentBottom(page, blocks);
     const epsilon = Math.max(4, pageHeightPx * 8e-3);
-    if (maxBottom <= pageHeightPx + epsilon) {
+    if (maxBottom <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) {
       return { sliceCount: 1, sliceStarts: [0] };
     }
     const sliceStarts = [0];
     let sliceStart = 0;
-    while (sliceStart + pageHeightPx < maxBottom - epsilon) {
+    while (sliceStart + pageHeightPx < maxBottom - SLICE_OVERFLOW_TOLERANCE_PX) {
       const nextStart = resolveSupplementSliceEndPx(page, sliceStart, pageHeightPx);
       if (nextStart >= maxBottom - epsilon) break;
       if (sliceStarts[sliceStarts.length - 1] !== nextStart) {
@@ -86138,12 +86324,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function measureSupplementSlicePlanFromPage(page, pageHeightPx) {
     const footnoteBottom = ficheFootnoteBlockBottom(page);
     const contentHeight = Math.max(resolveSupplementContentHeightForPage(page), footnoteBottom);
-    let targetCount = countSupplementSlices(contentHeight, pageHeightPx);
-    if (footnoteBottom > pageHeightPx + 2) {
-      targetCount = Math.max(targetCount, 2);
-    }
     let plan;
-    if (targetCount <= 1 && footnoteBottom <= pageHeightPx + 2) {
+    if (contentHeight <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) {
       plan = { sliceCount: 1, sliceStarts: [0] };
     } else {
       const blockPlan = computeSupplementSlicePlan(page, pageHeightPx);
@@ -86180,7 +86362,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const shouldHide = (top, bottom) => {
       if (bottom <= sliceStartPx + epsilon) return true;
       if (top >= sliceEndPx - epsilon) return true;
-      return top < sliceEndPx - epsilon && bottom > sliceEndPx + epsilon;
+      return top < sliceEndPx - epsilon && bottom > sliceEndPx + SLICE_OVERFLOW_TOLERANCE_PX;
     };
     for (const el2 of supplementVisibilityElements(page)) {
       const top = elementTopInPage(el2, page, layoutScale);
@@ -86320,6 +86502,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   async function prewarmPrintMapRenderCache(params2) {
+    var _a2;
     if (params2.mapWidthPx < 16 || params2.mapHeightPx < 16) return false;
     const view = params2.previewMap.getView();
     const layerFingerprint = buildVisibleLayerFingerprint(params2.previewMap);
@@ -86329,17 +86512,52 @@ Expected function or array of functions, received type ${typeof value2}.`
       mapHeightPx: params2.mapHeightPx,
       extent: params2.extent,
       layerFingerprint,
-      rotation: view.getRotation()
+      rotation: view.getRotation(),
+      previewWidthPx: ((_a2 = params2.previewMap.getSize()) == null ? void 0 : _a2[0]) ?? 0
     });
     if (getCachedPrintMapCanvas(cacheKey)) return true;
     const canvas = await renderOffscreenPrintMapCanvas(params2.previewMap, {
       widthPx: params2.mapWidthPx,
       heightPx: params2.mapHeightPx,
       extent: params2.extent,
-      cacheKey
+      cacheKey,
+      signal: params2.signal
     });
     canvas.remove();
     return true;
+  }
+  class PrintPrewarmScheduler {
+    constructor(idleMs) {
+      __publicField(this, "timer", null);
+      __publicField(this, "controller", null);
+      this.idleMs = idleMs;
+    }
+    schedule(task) {
+      this.interrupt();
+      this.timer = setTimeout(() => {
+        this.timer = null;
+        const controller2 = new AbortController();
+        this.controller = controller2;
+        void task(controller2.signal).catch(() => {
+        }).finally(() => {
+          if (this.controller === controller2) this.controller = null;
+        });
+      }, this.idleMs);
+    }
+    interrupt() {
+      var _a2;
+      if (this.timer !== null) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
+      (_a2 = this.controller) == null ? void 0 : _a2.abort();
+      this.controller = null;
+    }
+  }
+  function previewNeedsSourceViewResync(previous, current, previewCustomized) {
+    if (!previous) return false;
+    if (current.location !== previous.location) return true;
+    return !previewCustomized && current.layers !== previous.layers;
   }
   function isArrayBufferValue(value2) {
     if (value2 instanceof ArrayBuffer) return true;
@@ -86373,10 +86591,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return null;
   }
-  function resolvePrintExportWorkerUrl() {
-    const resolved = resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET);
-    if (resolved) return resolved;
-    return new URL("data:video/mp2t;base64,aW1wb3J0IHsgUERGRG9jdW1lbnQgfSBmcm9tICdwZGYtbGliJwppbXBvcnQgeyBpbmplY3REcGlJblBuZ0J5dGVzIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3BuZ0RwaScKaW1wb3J0IHsgaXNBcnJheUJ1ZmZlclZhbHVlIH0gZnJvbSAnQC9saWIvbWFwL3ByaW50L3ByaW50RXhwb3J0VHJhbnNmZXInCgovKiogUG9pbnRzIFBERiAoMS83MiBpbikgZGVwdWlzIG1pbGxpbcOodHJlcyBwYXBpZXIuICovCmNvbnN0IE1NX1RPX1BUID0gNzIgLyAyNS40Cgp0eXBlIFdvcmtlclJlcXVlc3QgPQogIHwgewogICAgICBpZDogbnVtYmVyCiAgICAgIHR5cGU6ICdwbmctZHBpJwogICAgICBwbmc6IEFycmF5QnVmZmVyCiAgICAgIGRwaTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ2pwZWcnCiAgICAgIHBuZzogQXJyYXlCdWZmZXIKICAgICAgcXVhbGl0eTogbnVtYmVyCiAgICB9CiAgfCB7CiAgICAgIGlkOiBudW1iZXIKICAgICAgdHlwZTogJ3BkZicKICAgICAgcGFnZXM6IEFycmF5QnVmZmVyW10KICAgICAgcGFwZXJXaWR0aE1tOiBudW1iZXIKICAgICAgcGFwZXJIZWlnaHRNbTogbnVtYmVyCiAgICAgIG9yaWVudGF0aW9uOiAncG9ydHJhaXQnIHwgJ2xhbmRzY2FwZScKICAgICAgZmlsZU5hbWU6IHN0cmluZwogICAgfQoKdHlwZSBXb3JrZXJTdWNjZXNzID0gewogIGlkOiBudW1iZXIKICBvazogdHJ1ZQogIGJ1ZmZlcjogQXJyYXlCdWZmZXIKICBtaW1lOiBzdHJpbmcKfQoKdHlwZSBXb3JrZXJGYWlsdXJlID0gewogIGlkOiBudW1iZXIKICBvazogZmFsc2UKICBlcnJvcjogc3RyaW5nCn0KCmFzeW5jIGZ1bmN0aW9uIHBuZ1RvSnBlZyhwbmdCdWZmZXI6IEFycmF5QnVmZmVyLCBxdWFsaXR5OiBudW1iZXIpOiBQcm9taXNlPEFycmF5QnVmZmVyPiB7CiAgY29uc3QgYmxvYiA9IG5ldyBCbG9iKFtwbmdCdWZmZXJdLCB7IHR5cGU6ICdpbWFnZS9wbmcnIH0pCiAgY29uc3QgYml0bWFwID0gYXdhaXQgY3JlYXRlSW1hZ2VCaXRtYXAoYmxvYikKICBjb25zdCBjYW52YXMgPSBuZXcgT2Zmc2NyZWVuQ2FudmFzKGJpdG1hcC53aWR0aCwgYml0bWFwLmhlaWdodCkKICBjb25zdCBjdHggPSBjYW52YXMuZ2V0Q29udGV4dCgnMmQnKQogIGlmICghY3R4KSB0aHJvdyBuZXcgRXJyb3IoJ0NvbnRleHRlIDJEIGluZGlzcG9uaWJsZSBkYW5zIGxlIHdvcmtlci4nKQogIGN0eC5kcmF3SW1hZ2UoYml0bWFwLCAwLCAwKQogIGJpdG1hcC5jbG9zZSgpCiAgY29uc3QganBlZ0Jsb2IgPSBhd2FpdCBjYW52YXMuY29udmVydFRvQmxvYih7IHR5cGU6ICdpbWFnZS9qcGVnJywgcXVhbGl0eSB9KQogIHJldHVybiBqcGVnQmxvYi5hcnJheUJ1ZmZlcigpCn0KCmFzeW5jIGZ1bmN0aW9uIGJ1aWxkUGRmRnJvbVBuZ1BhZ2VzKAogIHBhZ2VzOiBBcnJheUJ1ZmZlcltdLAogIHBhcGVyV2lkdGhNbTogbnVtYmVyLAogIHBhcGVySGVpZ2h0TW06IG51bWJlciwKKTogUHJvbWlzZTxBcnJheUJ1ZmZlcj4gewogIGNvbnN0IHBkZkRvYyA9IGF3YWl0IFBERkRvY3VtZW50LmNyZWF0ZSgpCiAgY29uc3Qgd2lkdGhQdCA9IHBhcGVyV2lkdGhNbSAqIE1NX1RPX1BUCiAgY29uc3QgaGVpZ2h0UHQgPSBwYXBlckhlaWdodE1tICogTU1fVE9fUFQKICBmb3IgKGNvbnN0IHBhZ2VCdWZmZXIgb2YgcGFnZXMpIHsKICAgIGNvbnN0IHBhZ2UgPSBwZGZEb2MuYWRkUGFnZShbd2lkdGhQdCwgaGVpZ2h0UHRdKQogICAgY29uc3QgcG5nID0gYXdhaXQgcGRmRG9jLmVtYmVkUG5nKHBhZ2VCdWZmZXIpCiAgICBwYWdlLmRyYXdJbWFnZShwbmcsIHsKICAgICAgeDogMCwKICAgICAgeTogMCwKICAgICAgd2lkdGg6IHdpZHRoUHQsCiAgICAgIGhlaWdodDogaGVpZ2h0UHQsCiAgICB9KQogIH0KICBjb25zdCBieXRlcyA9IGF3YWl0IHBkZkRvYy5zYXZlKCkKICByZXR1cm4gYnl0ZXMuYnVmZmVyLnNsaWNlKGJ5dGVzLmJ5dGVPZmZzZXQsIGJ5dGVzLmJ5dGVPZmZzZXQgKyBieXRlcy5ieXRlTGVuZ3RoKQp9CgpmdW5jdGlvbiBpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGRhdGE6IHVua25vd24pOiBkYXRhIGlzIFdvcmtlclJlcXVlc3QgewogIGlmICghZGF0YSB8fCB0eXBlb2YgZGF0YSAhPT0gJ29iamVjdCcpIHJldHVybiBmYWxzZQogIGNvbnN0IHJlY29yZCA9IGRhdGEgYXMgUmVjb3JkPHN0cmluZywgdW5rbm93bj4KICBpZiAodHlwZW9mIHJlY29yZC5pZCAhPT0gJ251bWJlcicgfHwgdHlwZW9mIHJlY29yZC50eXBlICE9PSAnc3RyaW5nJykgcmV0dXJuIGZhbHNlCiAgaWYgKHJlY29yZC50eXBlID09PSAncG5nLWRwaScpIHsKICAgIHJldHVybiBpc0FycmF5QnVmZmVyVmFsdWUocmVjb3JkLnBuZykgJiYgdHlwZW9mIHJlY29yZC5kcGkgPT09ICdudW1iZXInCiAgfQogIGlmIChyZWNvcmQudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICByZXR1cm4gaXNBcnJheUJ1ZmZlclZhbHVlKHJlY29yZC5wbmcpICYmIHR5cGVvZiByZWNvcmQucXVhbGl0eSA9PT0gJ251bWJlcicKICB9CiAgaWYgKHJlY29yZC50eXBlID09PSAncGRmJykgewogICAgcmV0dXJuICgKICAgICAgQXJyYXkuaXNBcnJheShyZWNvcmQucGFnZXMpICYmCiAgICAgIHJlY29yZC5wYWdlcy5ldmVyeSgocGFnZSkgPT4gaXNBcnJheUJ1ZmZlclZhbHVlKHBhZ2UpKSAmJgogICAgICB0eXBlb2YgcmVjb3JkLnBhcGVyV2lkdGhNbSA9PT0gJ251bWJlcicgJiYKICAgICAgdHlwZW9mIHJlY29yZC5wYXBlckhlaWdodE1tID09PSAnbnVtYmVyJyAmJgogICAgICAocmVjb3JkLm9yaWVudGF0aW9uID09PSAncG9ydHJhaXQnIHx8IHJlY29yZC5vcmllbnRhdGlvbiA9PT0gJ2xhbmRzY2FwZScpCiAgICApCiAgfQogIHJldHVybiBmYWxzZQp9CgpzZWxmLm9ubWVzc2FnZSA9IChldmVudDogTWVzc2FnZUV2ZW50KSA9PiB7CiAgaWYgKGV2ZW50Lm9yaWdpbiAhPT0gc2VsZi5sb2NhdGlvbi5vcmlnaW4pIHsKICAgIGlmIChldmVudC5vcmlnaW4gIT09ICcnICYmIGV2ZW50Lm9yaWdpbiAhPT0gJ251bGwnKSByZXR1cm4KICB9CiAgaWYgKCFpc1dvcmtlclJlcXVlc3RQYXlsb2FkKGV2ZW50LmRhdGEpKSByZXR1cm4KCiAgdm9pZCAoYXN5bmMgKCkgPT4gewogICAgY29uc3QgbWVzc2FnZSA9IGV2ZW50LmRhdGEKICAgIHRyeSB7CiAgICAgIGlmIChtZXNzYWdlLnR5cGUgPT09ICdwbmctZHBpJykgewogICAgICAgIGNvbnN0IHdpdGhEcGkgPSBpbmplY3REcGlJblBuZ0J5dGVzKG5ldyBVaW50OEFycmF5KG1lc3NhZ2UucG5nKSwgbWVzc2FnZS5kcGkpCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiB3aXRoRHBpLmJ1ZmZlciwKICAgICAgICAgIG1pbWU6ICdpbWFnZS9wbmcnLAogICAgICAgIH0KICAgICAgICBzZWxmLnBvc3RNZXNzYWdlKHJlc3BvbnNlLCB7IHRyYW5zZmVyOiBbd2l0aERwaS5idWZmZXJdIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ2pwZWcnKSB7CiAgICAgICAgY29uc3QganBlZyA9IGF3YWl0IHBuZ1RvSnBlZyhtZXNzYWdlLnBuZywgbWVzc2FnZS5xdWFsaXR5KQogICAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJTdWNjZXNzID0gewogICAgICAgICAgaWQ6IG1lc3NhZ2UuaWQsCiAgICAgICAgICBvazogdHJ1ZSwKICAgICAgICAgIGJ1ZmZlcjoganBlZywKICAgICAgICAgIG1pbWU6ICdpbWFnZS9qcGVnJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW2pwZWddIH0pCiAgICAgICAgcmV0dXJuCiAgICAgIH0KICAgICAgaWYgKG1lc3NhZ2UudHlwZSA9PT0gJ3BkZicpIHsKICAgICAgICBjb25zdCBwZGYgPSBhd2FpdCBidWlsZFBkZkZyb21QbmdQYWdlcygKICAgICAgICAgIG1lc3NhZ2UucGFnZXMsCiAgICAgICAgICBtZXNzYWdlLnBhcGVyV2lkdGhNbSwKICAgICAgICAgIG1lc3NhZ2UucGFwZXJIZWlnaHRNbSwKICAgICAgICApCiAgICAgICAgY29uc3QgcmVzcG9uc2U6IFdvcmtlclN1Y2Nlc3MgPSB7CiAgICAgICAgICBpZDogbWVzc2FnZS5pZCwKICAgICAgICAgIG9rOiB0cnVlLAogICAgICAgICAgYnVmZmVyOiBwZGYsCiAgICAgICAgICBtaW1lOiAnYXBwbGljYXRpb24vcGRmJywKICAgICAgICB9CiAgICAgICAgc2VsZi5wb3N0TWVzc2FnZShyZXNwb25zZSwgeyB0cmFuc2ZlcjogW3BkZl0gfSkKICAgICAgfQogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgIGNvbnN0IHJlc3BvbnNlOiBXb3JrZXJGYWlsdXJlID0gewogICAgICAgIGlkOiBtZXNzYWdlLmlkLAogICAgICAgIG9rOiBmYWxzZSwKICAgICAgICBlcnJvcjogZXJyIGluc3RhbmNlb2YgRXJyb3IgPyBlcnIubWVzc2FnZSA6IFN0cmluZyhlcnIpLAogICAgICB9CiAgICAgIHNlbGYucG9zdE1lc3NhZ2UocmVzcG9uc2UpCiAgICB9CiAgfSkoKQp9Cg==", _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href).href;
+  function resolveEmbedPrintExportWorkerUrl() {
+    return resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET);
   }
   let worker = null;
   let requestId = 0;
@@ -86403,9 +86619,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       throw new Error("Web Workers indisponibles.");
     }
     if (!worker) {
-      const instance = new Worker(resolvePrintExportWorkerUrl(), {
-        type: "module"
-      });
+      const embedUrl = resolveEmbedPrintExportWorkerUrl();
+      const instance = embedUrl ? new Worker(embedUrl, { type: "module" }) : new Worker(new URL(
+        /* @vite-ignore */
+        "" + new URL("assets/printExport.worker-embed.js", document.currentScript && document.currentScript.tagName.toUpperCase() === "SCRIPT" && document.currentScript.src || document.baseURI).href,
+        _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("entree-carto.js", document.baseURI).href
+      ), { type: "module" });
       instance.onmessage = (event) => {
         if (!isTrustedPrintExportWorkerMessage(event)) return;
         const data = event.data;
@@ -94360,6 +94579,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function isParcelFichePrintReady(selection) {
     var _a2, _b;
     if (!selection || selection.loading === "data" || selection.parcelMissingAtPoint) return false;
+    if (isFicheUnavailableSelection(selection)) return false;
     if (selection.cadastreReferences) return true;
     if (((_a2 = selection.parcelInfosHtml) == null ? void 0 : _a2.trim()) || ((_b = selection.parcelDocumentsHtml) == null ? void 0 : _b.trim())) return true;
     if (parcelFichePayloadFromSelection(selection)) return true;
@@ -94370,6 +94590,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   function isTerritoryFichePrintReady(selection) {
     var _a2, _b;
     if (!selection || selection.loading === "data") return false;
+    if (isFicheUnavailableSelection(selection)) return false;
+    if (selection.bodyHtml === DEFAULT_FICHE_EMPTY.bodyHtml) return false;
     if ((((_a2 = selection.documentTabs) == null ? void 0 : _a2.length) ?? 0) > 0) return true;
     if ((_b = selection.bodyHtml) == null ? void 0 : _b.trim()) return true;
     const payload = gpuPayloadFromSelection(selection);
@@ -94409,7 +94631,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (payload) {
       const raw = selection == null ? void 0 : selection.raw;
       const ficheApi = raw && typeof raw === "object" && isGpuFicheInfoPayload(raw) ? raw : null;
-      return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi));
+      const infos = stripFicheNoDataHtml(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi));
+      return infos ? sanitizeFicheHtmlForPrint(infos) : "";
     }
     if ((_a2 = selection.parcelInfosHtml) == null ? void 0 : _a2.trim()) {
       return sanitizeFicheHtmlForPrint(selection.parcelInfosHtml);
@@ -94443,8 +94666,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   function parcelPrintTitle(selection) {
     return (selection == null ? void 0 : selection.parcelLabel) ?? (selection == null ? void 0 : selection.title) ?? "Parcelle";
   }
-  function territoryEmptyFallbackHtml() {
-    return DEFAULT_FICHE_EMPTY.bodyHtml ?? "<p>Aucune donnée territoire.</p>";
+  function territoryBodyPrintHtml(bodyHtml) {
+    const body = stripFicheNoDataHtml(bodyHtml ?? "");
+    return body ? sanitizeFicheHtmlForPrint(body) : "";
   }
   const mapPrintPanelsKey = Symbol("mapPrintPanels");
   const mapPrintPanelsRef = /* @__PURE__ */ shallowRef(null);
@@ -94468,6 +94692,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       button.remove();
     }
   }
+  const UI_SCALE_VAR = "--ec-print-ui-scale";
   async function drawAttributionOnMapExport(ctx, mapRoot, mapHeightPx) {
     const attr = mapRoot.querySelector(".ol-attribution");
     if (!(attr instanceof HTMLElement)) return;
@@ -94475,11 +94700,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     const attrRect = attr.getBoundingClientRect();
     if (!mapRect.width || !mapRect.height || !attrRect.width || !attrRect.height) return;
     const domToExportScale = mapHeightPx / mapRect.height;
+    const uiScale = parseFloat(getComputedStyle(mapRoot).getPropertyValue(UI_SCALE_VAR)) || 1;
     const shot = await html2canvas(attr, {
       backgroundColor: null,
-      scale: domToExportScale,
+      scale: 1,
       useCORS: true,
-      logging: false
+      logging: false,
+      // Mise en page directement à la taille d’export dans la copie : un texte de ~2 px CSS
+      // agrandi après coup est placé et dessiné à des tailles différentes (lettres espacées).
+      onclone: (_doc, clonedAttr) => {
+        const clonedMap = clonedAttr.closest(".ec-map-print-preview-map");
+        clonedMap == null ? void 0 : clonedMap.style.setProperty(UI_SCALE_VAR, String(uiScale * domToExportScale));
+      }
     });
     const x = (attrRect.left - mapRect.left) * domToExportScale;
     const y = (attrRect.top - mapRect.top) * domToExportScale;
@@ -94516,10 +94748,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     __name: "MapPrintFicheTerritoryPage",
     props: {
       documentTabs: {},
-      title: {}
+      title: {},
+      bodyHtml: {}
     },
     setup(__props) {
       const props = __props;
+      const bodyPrintHtml = computed(() => territoryBodyPrintHtml(props.bodyHtml));
       const sanitizedTabs = computed(
         () => props.documentTabs.map((tab) => ({
           ...tab,
@@ -94542,11 +94776,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }, null, 8, ["html"])
               ]);
             }), 128))
-          ])) : (openBlock(), createBlock(_sfc_main$l, {
+          ])) : bodyPrintHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
             key: 1,
             class: "ec-fiche-info__body",
-            html: unref(territoryEmptyFallbackHtml)()
-          }, null, 8, ["html"]))
+            html: bodyPrintHtml.value
+          }, null, 8, ["html"])) : createCommentVNode("", true)
         ]);
       };
     }
@@ -94608,8 +94842,14 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const _hoisted_5$c = { class: "ec-print-fiche__cadastre-headline" };
   const _hoisted_6$b = { class: "ec-print-fiche__cadastre-dl" };
-  const _hoisted_7$9 = { class: "ec-print-fiche__section" };
-  const _hoisted_8$8 = { class: "ec-print-fiche__section ec-print-fiche__section--documents" };
+  const _hoisted_7$9 = {
+    key: 1,
+    class: "ec-print-fiche__section"
+  };
+  const _hoisted_8$8 = {
+    key: 2,
+    class: "ec-print-fiche__section ec-print-fiche__section--documents"
+  };
   const _hoisted_9$8 = { class: "ec-print-fiche__section ec-print-fiche__section--footnotes" };
   const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "MapPrintFicheParcelPage",
@@ -94639,20 +94879,20 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }), 128))
               ])
             ])) : createCommentVNode("", true),
-            createBaseVNode("section", _hoisted_7$9, [
+            __props.infosHtml.trim() ? (openBlock(), createElementBlock("section", _hoisted_7$9, [
               _cache[1] || (_cache[1] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Règles d’urbanisme", -1)),
               createVNode(_sfc_main$l, {
                 class: "ec-fiche-info__body",
                 html: __props.infosHtml
               }, null, 8, ["html"])
-            ]),
-            createBaseVNode("section", _hoisted_8$8, [
+            ])) : createCommentVNode("", true),
+            __props.documentsHtml.trim() ? (openBlock(), createElementBlock("section", _hoisted_8$8, [
               _cache[2] || (_cache[2] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Documents couvrant la parcelle", -1)),
               createVNode(_sfc_main$l, {
                 class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
-                html: __props.documentsHtml || "<p>Aucun document.</p>"
+                html: __props.documentsHtml
               }, null, 8, ["html"])
-            ]),
+            ])) : createCommentVNode("", true),
             createBaseVNode("section", _hoisted_9$8, [
               createVNode(_sfc_main$l, {
                 class: "ec-fiche-info__body",
@@ -94848,6 +95088,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function buildAnnexContentMeasureSnapshot(input) {
     return {
       territoryTabCount: input.territoryTabCount,
+      territoryBodyLength: input.territoryBodyLength,
       parcelInfosLength: input.parcelInfosLength,
       parcelDocumentsLength: input.parcelDocumentsLength,
       parcelLegendScale: input.parcelLegendScale,
@@ -94860,7 +95101,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function annexKindsToInvalidateForContentChange(previous, next) {
     if (!previous) return [];
     const kinds = [];
-    if (previous.territoryTabCount !== next.territoryTabCount) {
+    if (previous.territoryTabCount !== next.territoryTabCount || previous.territoryBodyLength !== next.territoryBodyLength) {
       kinds.push("ficheTerritory");
     }
     if (previous.parcelInfosLength !== next.parcelInfosLength || previous.parcelDocumentsLength !== next.parcelDocumentsLength || previous.parcelLegendScale !== next.parcelLegendScale) {
@@ -94873,7 +95114,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function supplementContentSuffixForKind(kind, fingerprints) {
     if (kind === "ficheTerritory") {
-      return `t:${fingerprints.territoryTabCount}`;
+      return `t:${fingerprints.territoryTabCount}:${fingerprints.territoryBodyLength}`;
     }
     if (kind === "ficheParcel") {
       return `p:${fingerprints.parcelInfosLength}:${fingerprints.parcelDocumentsLength}|${fingerprints.parcelLegendScale}`;
@@ -94898,6 +95139,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return `${layoutKey}|${contentSuffix}`;
   }
   const PRINT_TEMPLATE_CUSTOM_ID = "custom";
+  const DEFAULT_PRINT_TEMPLATE_ID = "a4-impression";
   const PRINT_TEMPLATE_LAYOUTS = [
     {
       id: "a4-apercu",
@@ -94962,7 +95204,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       paperWidthMm: paper.width,
       paperHeightMm: paper.height,
       inner,
-      cssVars: printSupplementCssVars(inner.innerWidthPx, form.dpi)
+      cssVars: printSupplementCssVars(inner.innerWidthPx, form.dpi, {
+        widthMm: paper.width,
+        heightMm: paper.height
+      })
     };
   }
   function isPrintTemplateAvailable(template) {
@@ -94986,21 +95231,26 @@ Expected function or array of functions, received type ${typeof value2}.`
     form.dpi = template.dpi;
     form.format = template.exportFormat;
   }
-  const _hoisted_1$g = {
+  const _hoisted_1$g = { class: "print-form" };
+  const _hoisted_2$b = {
     key: 0,
     class: "fr-text--xs fr-mb-2w print-form__title-hint"
   };
-  const _hoisted_2$b = { class: "mt-10" };
   const _hoisted_3$b = { class: "mt-10" };
   const _hoisted_4$b = { class: "mt-10" };
   const _hoisted_5$a = { class: "mt-10" };
   const _hoisted_6$9 = { class: "mt-10" };
-  const _hoisted_7$7 = { class: "mt-10 ec-map-print-form__indent" };
-  const _hoisted_8$6 = { class: "print-preview-panel" };
-  const _hoisted_9$6 = { class: "print-preview-pagination__label" };
-  const _hoisted_10$6 = { class: "print-preview-container" };
-  const _hoisted_11$6 = { class: "print-preview-page" };
-  const _hoisted_12$6 = {
+  const _hoisted_7$7 = { class: "mt-10" };
+  const _hoisted_8$6 = { class: "mt-10 ec-map-print-form__indent" };
+  const _hoisted_9$6 = { class: "print-preview-panel" };
+  const _hoisted_10$6 = {
+    class: "print-preview-pagination",
+    "aria-label": "Pages à imprimer"
+  };
+  const _hoisted_11$6 = { class: "print-preview-pagination__label" };
+  const _hoisted_12$6 = { class: "print-preview-container" };
+  const _hoisted_13$6 = { class: "print-preview-page" };
+  const _hoisted_14$4 = {
     key: 0,
     class: "print-preview-patience",
     role: "status",
@@ -95012,7 +95262,6 @@ Expected function or array of functions, received type ${typeof value2}.`
   const PREVIEW_COLUMN_ZOOM_MIN = 0.6;
   const PREVIEW_COLUMN_ZOOM_MAX = 2.5;
   const PREVIEW_COLUMN_ZOOM_STEP = 0.08;
-  const previewColumnGapPx = 8;
   const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "MapPrintModal",
     setup(__props, { expose: __expose }) {
@@ -95047,7 +95296,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (options.hasAllLegends !== void 0) printFormState.hasAllLegends = options.hasAllLegends;
         if (!printFormState.hasLegends) printFormState.hasAllLegends = false;
       }
+      const printPlaceMarker = /* @__PURE__ */ ref(null);
+      function recenterPreviewOnPlace() {
+        const map2 = previewMap.value;
+        const marker = printPlaceMarker.value;
+        if (!map2 || !marker) return;
+        const projection = map2.getView().getProjection();
+        recenterPrintPreviewOnPlace(map2, fromLonLat([marker.lon, marker.lat], projection));
+      }
       function onModalPrintOpen(options) {
+        printPlaceMarker.value = readMapPermalinkMarker(getMapPermalinkParams());
         applyPrintOpenOptions(options);
         dismissGuardUntil = Date.now() + 500;
         printModalOpened.value = true;
@@ -95057,7 +95315,6 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
       }
       function onModalPrintClose() {
-        var _a2;
         if (Date.now() < dismissGuardUntil) {
           void nextTick(() => {
             printModalOpened.value = true;
@@ -95067,6 +95324,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         isExportInProgress.value = false;
         isPreviewLayoutPending.value = false;
         printMapPrewarmGeneration += 1;
+        printMapPrewarmScheduler.interrupt();
         clearPrintMapRenderCache();
         terminatePrintExportWorker();
         printTemplatePrewarmGeneration += 1;
@@ -95074,7 +95332,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         previewColumnZoom.value = 1;
         printModalOpened.value = false;
         document.body.classList.remove("modal-open");
-        (_a2 = sourceMapRef.value) == null ? void 0 : _a2.renderSync();
+        renderSyncIfAttached(sourceMapRef.value);
       }
       __expose({
         open: onModalPrintOpen,
@@ -95090,15 +95348,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       const supplementSliceCounts = /* @__PURE__ */ ref({});
       const supplementSliceStarts = /* @__PURE__ */ ref({});
       const supplementPreviewSliceStartPx = /* @__PURE__ */ ref(0);
-      const supplementSlicePlanByKey = new globalThis.Map();
+      const supplementSlicePlanByKey = /* @__PURE__ */ new Map();
       let printTemplatePrewarmGeneration = 0;
       const measureLayoutOverride = /* @__PURE__ */ ref(null);
       const selectedPrintTemplateId = /* @__PURE__ */ ref("a4-apercu");
       let applyingPrintTemplate = false;
       const previewPageIndex = /* @__PURE__ */ ref(0);
       const printPage = /* @__PURE__ */ ref(null);
-      const printForm = /* @__PURE__ */ ref(null);
-      const previewPaginationEl = /* @__PURE__ */ ref(null);
+      const previewColumnEl = /* @__PURE__ */ ref(null);
       const previewZoomHostEl = /* @__PURE__ */ ref(null);
       const previewColumnZoom = /* @__PURE__ */ ref(1);
       const previewMap = /* @__PURE__ */ shallowRef(null);
@@ -95117,7 +95374,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         dpi: BASE_DPI,
         format: "PNG"
       });
-      const defaultPrintTemplate = PRINT_TEMPLATE_LAYOUTS.find((t) => t.id === "a4-apercu");
+      const defaultPrintTemplate = PRINT_TEMPLATE_LAYOUTS.find((t) => t.id === DEFAULT_PRINT_TEMPLATE_ID);
       if (defaultPrintTemplate) {
         applyPrintTemplateToForm(defaultPrintTemplate, printFormState);
       }
@@ -95273,25 +95530,30 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       const annexContentSnapshot = computed(
-        () => buildAnnexContentMeasureSnapshot({
-          territoryTabCount: territoryDocumentTabs.value.length,
-          parcelInfosLength: parcelInfosHtml.value.length,
-          parcelDocumentsLength: parcelDocumentsHtml.value.length,
-          parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
-          legendsIncludeAll: printFormState.hasAllLegends,
-          legendPreviewZoom: printPreviewLegendZoom.value,
-          legendLayerIds: printLegendLayerSource.value.map((layer) => layer.id).join(","),
-          legendItemCount: printLegendLayerSource.value.reduce(
-            (count, layer) => {
-              var _a2;
-              return count + (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0);
-            },
-            0
-          )
-        })
+        () => {
+          var _a2, _b;
+          return buildAnnexContentMeasureSnapshot({
+            territoryTabCount: territoryDocumentTabs.value.length,
+            territoryBodyLength: ((_b = (_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.bodyHtml) == null ? void 0 : _b.length) ?? 0,
+            parcelInfosLength: parcelInfosHtml.value.length,
+            parcelDocumentsLength: parcelDocumentsHtml.value.length,
+            parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
+            legendsIncludeAll: printFormState.hasAllLegends,
+            legendPreviewZoom: printPreviewLegendZoom.value,
+            legendLayerIds: printLegendLayerSource.value.map((layer) => layer.id).join(","),
+            legendItemCount: printLegendLayerSource.value.reduce(
+              (count, layer) => {
+                var _a3;
+                return count + (((_a3 = layer.legend) == null ? void 0 : _a3.length) ?? 0);
+              },
+              0
+            )
+          });
+        }
       );
       const supplementContentFingerprints = computed(() => ({
         territoryTabCount: annexContentSnapshot.value.territoryTabCount,
+        territoryBodyLength: annexContentSnapshot.value.territoryBodyLength,
         parcelInfosLength: annexContentSnapshot.value.parcelInfosLength,
         parcelDocumentsLength: annexContentSnapshot.value.parcelDocumentsLength,
         parcelLegendScale: annexContentSnapshot.value.parcelLegendScale,
@@ -95477,17 +95739,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           window.setTimeout(run, 400);
         }
       }
+      const printMapPrewarmScheduler = new PrintPrewarmScheduler(3e3);
       function schedulePrintMapPrewarm() {
-        const run = () => {
-          void runPrintMapPrewarm();
-        };
-        if (typeof requestIdleCallback !== "undefined") {
-          requestIdleCallback(run, { timeout: 2e4 });
-        } else {
-          window.setTimeout(run, 800);
-        }
+        printMapPrewarmScheduler.schedule((signal) => runPrintMapPrewarm(signal));
       }
-      async function runPrintMapPrewarm() {
+      async function runPrintMapPrewarm(signal) {
         var _a2;
         const generation = ++printMapPrewarmGeneration;
         if (!printModalOpened.value || isExportInProgress.value || isPreviewLayoutPending.value) return;
@@ -95513,9 +95769,12 @@ Expected function or array of functions, received type ${typeof value2}.`
             dpi: dpiValue,
             mapWidthPx,
             mapHeightPx,
-            extent
+            extent,
+            signal
           });
         } catch (err) {
+          if (signal.aborted) ;
+          return;
         }
         if (generation !== printMapPrewarmGeneration) return;
       }
@@ -95633,10 +95892,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       watch(
         () => [previewMapHostSize.width, previewMapHostSize.height],
         () => {
-          var _a2, _b;
+          var _a2;
           if (!printModalOpened.value) return;
           (_a2 = previewMap.value) == null ? void 0 : _a2.updateSize();
-          (_b = previewMap.value) == null ? void 0 : _b.renderSync();
+          renderSyncIfAttached(previewMap.value);
           sanitizePrintPreviewAttributions(previewMapEl.value);
         }
       );
@@ -95644,73 +95903,31 @@ Expected function or array of functions, received type ${typeof value2}.`
         { label: "Portrait", value: "portrait" },
         { label: "Paysage", value: "landscape" }
       ];
-      const paperFormatOptions = computed(
-        () => Object.entries(PAPER_FORMATS_MM).map(([format, dimension]) => {
-          const id2 = format;
-          const disabled = printFormState.dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(id2);
-          return {
-            value: id2,
-            text: `${format} (${dimension.width} x ${dimension.height} mm)`,
-            disabled
-          };
-        })
-      );
-      const dpiOptions = computed(() => [
-        { value: BASE_DPI, text: "96 DPI (écran)" },
-        {
-          value: HIGH_DPI_VALUE,
-          text: "300 DPI (impression)",
-          disabled: !isPaperFormatAllowedAtHighDpi(printFormState.paperFormat)
-        }
-      ]);
+      const paperFormatOptions = computed(() => paperFormatSelectOptions());
+      const dpiOptions = computed(() => dpiSelectOptions(printFormState.paperFormat));
       watch(
         () => [printFormState.dpi, printFormState.paperFormat],
         ([dpiValue, paperFormat]) => {
-          if (dpiValue === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) {
-            printFormState.paperFormat = "A4";
-          }
+          printFormState.dpi = resolveDpiForPaperFormat(dpiValue, paperFormat);
         },
         { immediate: true }
       );
-      const printPageSize = /* @__PURE__ */ reactive(
-        useElementSize(printPage, { width: 0, height: 0 }, { box: "border-box" })
+      const previewColumnSize = /* @__PURE__ */ reactive(
+        useElementSize(previewColumnEl, { width: 0, height: 0 }, { box: "content-box" })
       );
-      const printFormSize = /* @__PURE__ */ reactive(
-        useElementSize(printForm, { width: 0, height: 0 }, { box: "border-box" })
-      );
-      const previewPaginationSize = /* @__PURE__ */ reactive(
-        useElementSize(previewPaginationEl, { width: 0, height: 0 }, { box: "border-box" })
-      );
-      const previewFrameMarginPx = {
-        top: 6,
-        bottom: 12,
-        horizontal: 10
-      };
-      const previewPaginationReservePx = computed(() => {
-        const measured = previewPaginationSize.height;
-        const barHeight = measured > 4 ? measured : 48;
-        return barHeight + previewColumnGapPx;
-      });
-      const previewLayoutChromeReservePx = computed(() => {
-        const vertical = previewFrameMarginPx.top + previewFrameMarginPx.bottom + previewPaginationReservePx.value;
-        const horizontal = previewFrameMarginPx.horizontal * 2;
-        return { vertical, horizontal };
-      });
       const paperDimensionPx = computed(() => ({
         width: paperDimension.value.width / COEFF_PX2MM,
         height: paperDimension.value.height / COEFF_PX2MM
       }));
-      const paper2PreviewScaleCoeff = computed(() => {
-        const { vertical, horizontal } = previewLayoutChromeReservePx.value;
-        const containerHeight = Math.max(0, printPageSize.height - vertical);
-        const containerWidth = Math.max(0, printPageSize.width - printFormSize.width - horizontal);
-        return computeScaleCoeff(
-          containerWidth,
-          containerHeight,
-          paperDimensionPx.value.width,
-          paperDimensionPx.value.height
-        );
-      });
+      const previewMapUiScale = computed(
+        () => printMapUiScale(
+          { widthMm: paperDimension.value.width, heightMm: paperDimension.value.height },
+          paper2PreviewScaleCoeff.value / COEFF_PX2MM
+        )
+      );
+      const paper2PreviewScaleCoeff = computed(
+        () => printPreviewPaperScale(previewColumnSize, paperDimensionPx.value)
+      );
       const printableAreaMm = computed(() => ({
         width: paperDimension.value.width - 2 * printFormState.margin,
         height: paperDimension.value.height - 2 * printFormState.margin
@@ -95780,7 +95997,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         () => supplementSliceLayoutHeightPx(supplementExportInner.value.innerHeightPx, printFormState.dpi)
       );
       const supplementLayoutStyle = computed(
-        () => printSupplementCssVars(supplementExportInner.value.innerWidthPx, printFormState.dpi)
+        () => printSupplementCssVars(supplementExportInner.value.innerWidthPx, printFormState.dpi, {
+          widthMm: paperDimension.value.width,
+          heightMm: paperDimension.value.height
+        })
       );
       const measureExportInner = computed(() => {
         if (measureLayoutOverride.value) {
@@ -95807,7 +96027,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         const sliceH = supplementSliceLayoutHeight.value;
         return {
           width: previewW,
-          height: Math.max(sliceH, 1) * scale2,
+          // Zone intérieure complète (marges intérieures haut/bas comprises) : avec la seule hauteur de
+          // tranche, le bas du contenu était coupé et la capture d’export étirée verticalement.
+          height: innerHeightPx * scale2,
           scale: scale2,
           sliceHeightPx: sliceH
         };
@@ -95986,27 +96208,32 @@ Expected function or array of functions, received type ${typeof value2}.`
         const preview = previewMap.value;
         if (!preview) return;
         const view = preview.getView();
-        const handler = () => markPreviewMapViewCustomized();
+        const handler = () => {
+          markPreviewMapViewCustomized();
+          schedulePrintMapPrewarm();
+        };
         previewViewCustomizationListeners = [
           view.on("change:center", handler),
           view.on("change:resolution", handler),
           view.on("change:rotation", handler)
         ];
       }
-      let printPreviewSessionSourceViewKey = "";
+      let printPreviewSessionSourceViewKey = null;
       let printPreviewSessionViewCustomized = false;
       function computeSourceMapViewKey() {
         const source = sourceMapRef.value;
-        if (!source) return "";
+        if (!source) return null;
         const view = source.getView();
         const center = view.getCenter();
         const resolution = view.getResolution();
-        return [
-          (center == null ? void 0 : center.map((value2) => value2.toFixed(2)).join(",")) ?? "",
-          (resolution == null ? void 0 : resolution.toFixed(8)) ?? "",
-          view.getRotation().toFixed(6),
-          buildVisibleLayerFingerprint(source)
-        ].join("|");
+        return {
+          location: [
+            (center == null ? void 0 : center.map((value2) => value2.toFixed(2)).join(",")) ?? "",
+            (resolution == null ? void 0 : resolution.toFixed(8)) ?? "",
+            view.getRotation().toFixed(6)
+          ].join("|"),
+          layers: buildVisibleLayerFingerprint(source)
+        };
       }
       function detachPreviewMap() {
         var _a2;
@@ -96028,7 +96255,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!source || !preview) return;
         runWithoutPreviewViewCustomizationTracking(() => {
           copyViewState(source.getView(), preview.getView());
-          preview.renderSync();
+          renderSyncIfAttached(preview);
         });
         previewMapViewCustomized.value = false;
       }
@@ -96038,7 +96265,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       function createScaleLineControl() {
         return new ScaleLine({
           units: "metric",
-          minWidth: 100,
+          minWidth: Math.max(8, Math.round(100 * previewMapUiScale.value)),
           bar: false
         });
       }
@@ -96062,7 +96289,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           map2.addControl(createScaleLineControl());
         }
         configureDisplayOnlyOlControls(map2);
-        map2.renderSync();
+        renderSyncIfAttached(map2);
       }
       function wirePreviewMapDisplayControls(map2) {
         configureDisplayOnlyOlControls(map2);
@@ -96117,13 +96344,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         schedulePrintMapPrewarm();
         return map2;
       }
-      function previewNeedsSourceViewResync(sourceViewKey) {
-        return Boolean(previewMap.value) && !printPreviewSessionViewCustomized && Boolean(printPreviewSessionSourceViewKey) && sourceViewKey !== printPreviewSessionSourceViewKey;
-      }
       async function preparePreviewMapOnModalOpen() {
         const sourceViewKey = computeSourceMapViewKey();
         const reusePreviewMap = Boolean(previewMap.value);
-        const needsViewResync = previewNeedsSourceViewResync(sourceViewKey);
+        const needsViewResync = Boolean(previewMap.value) && sourceViewKey !== null && previewNeedsSourceViewResync(
+          printPreviewSessionSourceViewKey,
+          sourceViewKey,
+          printPreviewSessionViewCustomized
+        );
         if (!reusePreviewMap) {
           await ensurePreviewMap(true);
           printPreviewSessionSourceViewKey = sourceViewKey;
@@ -96204,7 +96432,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       });
       watch(
-        () => printFormState.hasScale,
+        () => [printFormState.hasScale, previewMapUiScale.value],
         () => {
           if (!printModalOpened.value) return;
           void nextTick(() => syncPreviewScaleLineControl());
@@ -96219,13 +96447,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         () => {
           if (!printModalOpened.value) return;
           void nextTick(() => {
-            var _a2, _b;
+            var _a2;
             (_a2 = previewMap.value) == null ? void 0 : _a2.updateSize();
-            (_b = previewMap.value) == null ? void 0 : _b.renderSync();
+            renderSyncIfAttached(previewMap.value);
           });
         }
       );
-      onUnmounted(() => destroyPreviewMap());
+      onUnmounted(() => {
+        printMapPrewarmScheduler.interrupt();
+        destroyPreviewMap();
+      });
       function getPrintMapInstance() {
         if (printModalOpened.value) return previewMap.value;
         return previewMap.value ?? sourceMapRef.value;
@@ -96291,7 +96522,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           );
         }
         const mapElement = previewMapEl.value;
-        const scaleSnapshot = printFormState.hasScale && dpiValue === HIGH_DPI_VALUE && mapElement ? captureScaleLineSnapshot(mapElement, paper2PreviewScaleCoeff.value) : null;
+        const scaleSnapshot = printFormState.hasScale && dpiValue === HIGH_DPI_VALUE && mapElement ? captureScaleLineSnapshot(mapElement) : null;
         const map2 = getPrintMapInstance();
         if (!map2) throw new Error("Carte indisponible pour l’export.");
         progress.setDetail(`${prefix}Synchronisation de la vue carte…`);
@@ -96306,7 +96537,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           mapHeightPx,
           extent: mapExtent,
           layerFingerprint: buildVisibleLayerFingerprint(map2),
-          rotation: map2.getView().getRotation()
+          rotation: map2.getView().getRotation(),
+          previewWidthPx: (previewSize == null ? void 0 : previewSize[0]) ?? 0
         });
         const mapCanvas = await renderOffscreenPrintMapCanvas(map2, {
           widthPx: mapWidthPx,
@@ -96360,14 +96592,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           if (overlayCtx) {
             await drawAttributionOnMapExport(overlayCtx, mapElement, mapHeightPx);
             if (printFormState.hasScale) {
-              drawScale(
-                overlayCtx,
-                mapElement,
-                mapWidthPx,
-                mapHeightPx,
-                scaleSnapshot,
-                paper2PreviewScaleCoeff.value
-              );
+              drawScale(overlayCtx, mapElement, mapWidthPx, mapHeightPx, scaleSnapshot);
             }
             finalCtx.drawImage(overlayCanvas, marginPx, marginPx + titleHeightPx);
           }
@@ -96513,6 +96738,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         exportProgressPercent.value = 1;
         exportProgressDetail.value = "Préparation de l’export…";
         const savedPreviewPageIndex = previewPageIndex.value;
+        const savedPreviewColumnZoom = previewColumnZoom.value;
+        previewColumnZoom.value = 1;
         const finalizeStepIndexRef = { value: 0 };
         try {
           await syncAnnexPaginationForExport((label, percent) => {
@@ -96537,6 +96764,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           syncExportProgressUi(exportProgressPercent.value, message);
         } finally {
           previewPageIndex.value = savedPreviewPageIndex;
+          previewColumnZoom.value = savedPreviewColumnZoom;
           await nextTick();
           isExportInProgress.value = false;
           exportProgressPercent.value = 0;
@@ -96544,6 +96772,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       return (_ctx, _cache) => {
+        var _a2;
         return openBlock(), createBlock(Teleport, { to: "body" }, [
           createVNode(unref(xo), {
             opened: printModalOpened.value,
@@ -96553,18 +96782,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             onClose: onModalPrintClose
           }, {
             default: withCtx(() => {
-              var _a2, _b, _c2, _d, _e2, _f;
+              var _a3, _b, _c2, _d, _e2, _f, _g;
               return [
                 createBaseVNode("div", {
                   ref_key: "printPage",
                   ref: printPage,
                   class: "print-page"
                 }, [
-                  createBaseVNode("div", {
-                    ref_key: "printForm",
-                    ref: printForm,
-                    class: "print-form"
-                  }, [
+                  createBaseVNode("div", _hoisted_1$g, [
                     createVNode(unref(ln), {
                       modelValue: selectedPrintTemplateId.value,
                       "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => selectedPrintTemplateId.value = $event),
@@ -96608,8 +96833,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                       name: "titre",
                       class: "mb-10"
                     }, null, 8, ["modelValue", "disabled", "maxlength"]),
-                    printFormState.hasTitle ? (openBlock(), createElementBlock("p", _hoisted_1$g, " 100 caractères maximum. Un titre long réduit automatiquement la taille du texte. ")) : createCommentVNode("", true),
-                    createBaseVNode("div", _hoisted_2$b, [
+                    printFormState.hasTitle ? (openBlock(), createElementBlock("p", _hoisted_2$b, " 100 caractères maximum. Un titre long réduit automatiquement la taille du texte. ")) : createCommentVNode("", true),
+                    createBaseVNode("div", _hoisted_3$b, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasTitle,
                         "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => printFormState.hasTitle = $event),
@@ -96618,7 +96843,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher le titre"
                       }, null, 8, ["modelValue"])
                     ]),
-                    createBaseVNode("div", _hoisted_3$b, [
+                    createBaseVNode("div", _hoisted_4$b, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasScale,
                         "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => printFormState.hasScale = $event),
@@ -96627,7 +96852,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher l'échelle"
                       }, null, 8, ["modelValue"])
                     ]),
-                    createBaseVNode("div", _hoisted_4$b, [
+                    createBaseVNode("div", _hoisted_5$a, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasTerritoryFiche,
                         "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => printFormState.hasTerritoryFiche = $event),
@@ -96637,7 +96862,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher la fiche info territoire"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createBaseVNode("div", _hoisted_5$a, [
+                    createBaseVNode("div", _hoisted_6$9, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasParcelFiche,
                         "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => printFormState.hasParcelFiche = $event),
@@ -96647,7 +96872,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher la fiche info parcelle"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createBaseVNode("div", _hoisted_6$9, [
+                    createBaseVNode("div", _hoisted_7$7, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasLegends,
                         "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => printFormState.hasLegends = $event),
@@ -96657,7 +96882,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher la légende"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createBaseVNode("div", _hoisted_7$7, [
+                    createBaseVNode("div", _hoisted_8$6, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasAllLegends,
                         "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => printFormState.hasAllLegends = $event),
@@ -96681,10 +96906,20 @@ Expected function or array of functions, received type ${typeof value2}.`
                       options: dpiOptions.value
                     }, null, 8, ["modelValue", "options"]),
                     createVNode(unref(nt), {
+                      id: "print-page-recenter-place",
+                      class: "print-form__recenter-place",
+                      label: "Recentrer sur le lieu",
+                      title: "Recentrer l’aperçu sur le lieu sélectionné (emprise ou cerise)",
+                      tertiary: "",
+                      disabled: !printPlaceMarker.value || isExportInProgress.value || isPreviewLayoutPending.value || !previewMap.value,
+                      icon: "",
+                      onClick: recenterPreviewOnPlace
+                    }, null, 8, ["disabled"]),
+                    createVNode(unref(nt), {
                       id: "print-page-reset-map-view",
                       class: "print-form__replacer-carte",
-                      label: "Replacer la carte",
-                      title: "Replacer la carte",
+                      label: "Vue par défaut",
+                      title: "Vue par défaut : aligner l’aperçu sur la vue de la carte principale",
                       secondary: "",
                       disabled: !previewMapViewCustomized.value || isExportInProgress.value || isPreviewLayoutPending.value || !previewMap.value,
                       icon: "",
@@ -96699,14 +96934,9 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "no-outline": "",
                       onClick: onClickExportMap
                     }, null, 8, ["label", "title", "disabled"])
-                  ], 512),
-                  createBaseVNode("div", _hoisted_8$6, [
-                    createBaseVNode("nav", {
-                      ref_key: "previewPaginationEl",
-                      ref: previewPaginationEl,
-                      class: "print-preview-pagination",
-                      "aria-label": "Pages à imprimer"
-                    }, [
+                  ]),
+                  createBaseVNode("div", _hoisted_9$6, [
+                    createBaseVNode("nav", _hoisted_10$6, [
                       previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
                         key: 0,
                         type: "button",
@@ -96719,7 +96949,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                           "aria-hidden": "true"
                         }, null, -1)
                       ])])) : createCommentVNode("", true),
-                      createBaseVNode("span", _hoisted_9$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_a2 = currentPreviewPage.value) == null ? void 0 : _a2.label), 1),
+                      createBaseVNode("span", _hoisted_11$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_a3 = currentPreviewPage.value) == null ? void 0 : _a3.label), 1),
                       previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
                         key: 1,
                         type: "button",
@@ -96732,8 +96962,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                           "aria-hidden": "true"
                         }, null, -1)
                       ])])) : createCommentVNode("", true)
-                    ], 512),
+                    ]),
                     createBaseVNode("div", {
+                      ref_key: "previewColumnEl",
+                      ref: previewColumnEl,
                       class: "print-preview-column",
                       title: "Ctrl + molette : zoomer l’aperçu (hors carte)",
                       onWheel: onPreviewColumnWheel
@@ -96751,7 +96983,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                             class: "print-preview-column__scale-inner",
                             style: normalizeStyle(previewColumnScaleInnerStyle.value)
                           }, [
-                            createBaseVNode("div", _hoisted_10$6, [
+                            createBaseVNode("div", _hoisted_12$6, [
                               createBaseVNode("div", {
                                 class: "print-preview",
                                 style: normalizeStyle({
@@ -96764,7 +96996,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                                   ...supplementLayoutStyle.value
                                 })
                               }, [
-                                withDirectives(createBaseVNode("div", _hoisted_11$6, [
+                                withDirectives(createBaseVNode("div", _hoisted_13$6, [
                                   printFormState.hasTitle ? (openBlock(), createElementBlock("div", {
                                     key: 0,
                                     id: "map-title",
@@ -96776,7 +97008,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                                     ref_key: "previewMapEl",
                                     ref: previewMapEl,
                                     class: "map ec-map-print-preview-map",
-                                    style: normalizeStyle({ minHeight: `${previewMapMinHeightPx.value}px` })
+                                    style: normalizeStyle({
+                                      minHeight: `${previewMapMinHeightPx.value}px`,
+                                      "--ec-print-ui-scale": String(previewMapUiScale.value)
+                                    })
                                   }, null, 4)) : createCommentVNode("", true)
                                 ], 512), [
                                   [vShow, ((_b = currentPreviewPage.value) == null ? void 0 : _b.kind) === "map"]
@@ -96803,16 +97038,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                                         printModalOpened.value && ((_c2 = currentPreviewPage.value) == null ? void 0 : _c2.kind) === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
                                           key: 0,
                                           "document-tabs": territoryDocumentTabs.value,
+                                          "body-html": (_d = territorySelectionForPrint.value) == null ? void 0 : _d.bodyHtml,
                                           title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
-                                        }, null, 8, ["document-tabs", "title"])) : createCommentVNode("", true),
-                                        printModalOpened.value && ((_d = currentPreviewPage.value) == null ? void 0 : _d.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
+                                        }, null, 8, ["document-tabs", "body-html", "title"])) : createCommentVNode("", true),
+                                        printModalOpened.value && ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
                                           key: 1,
                                           title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
                                           "infos-html": parcelInfosHtml.value,
                                           "documents-html": parcelDocumentsHtml.value,
                                           "cadastre-references": parcelCadastreReferences.value
                                         }, null, 8, ["title", "infos-html", "documents-html", "cadastre-references"])) : createCommentVNode("", true),
-                                        printModalOpened.value && ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) === "legends" ? (openBlock(), createBlock(MapPrintLegendsPage, {
+                                        printModalOpened.value && ((_f = currentPreviewPage.value) == null ? void 0 : _f.kind) === "legends" ? (openBlock(), createBlock(MapPrintLegendsPage, {
                                           key: 2,
                                           layers: printLegendLayerSource.value,
                                           "map-zoom": unref(printPreviewLegendZoom),
@@ -96823,15 +97059,15 @@ Expected function or array of functions, received type ${typeof value2}.`
                                     ], 4)
                                   ], 4)
                                 ], 512), [
-                                  [vShow, ((_f = currentPreviewPage.value) == null ? void 0 : _f.kind) !== "map"]
+                                  [vShow, ((_g = currentPreviewPage.value) == null ? void 0 : _g.kind) !== "map"]
                                 ])
                               ], 4)
                             ])
                           ], 4)
                         ], 4),
-                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_12$6, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
+                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$4, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
                       ], 2)
-                    ], 32)
+                    ], 544)
                   ]),
                   isExportInProgress.value ? (openBlock(), createBlock(PrintExportProgressOverlay, {
                     key: 0,
@@ -96865,8 +97101,9 @@ Expected function or array of functions, received type ${typeof value2}.`
                 measureKind.value === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
                   key: 0,
                   "document-tabs": territoryDocumentTabs.value,
+                  "body-html": (_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.bodyHtml,
                   title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
-                }, null, 8, ["document-tabs", "title"])) : createCommentVNode("", true),
+                }, null, 8, ["document-tabs", "body-html", "title"])) : createCommentVNode("", true),
                 measureKind.value === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
                   key: 1,
                   title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
@@ -96888,7 +97125,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-f2832da4"]]);
+  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-79ca15d9"]]);
   const exceptions = ["GPoverviewMap", "GPfullScreen"];
   const gfiIncompatiblePanels = ["GPdrawing", "GPisochron", "GPmeasureArea", "GPmeasureAzimuth", "GPmeasureLength", "GProute", "GPelevationPath", "GPpanoramax", "GPreporting"];
   var gfiActiveBeforePanel = false;
@@ -105903,12 +106140,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
     </svg>`
   );
-  function resizeHandleStyle() {
-    return new Style({
-      image: new Icon$1({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
-      zIndex: 1
-    });
-  }
+  const RESIZE_HANDLE_STYLE = new Style({
+    image: new Icon$1({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
+    zIndex: 1
+  });
   function rotateCoordinate(coord, angle2, origin) {
     const cos = Math.cos(angle2);
     const sin = Math.sin(angle2);
@@ -106111,7 +106346,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         source: this.handleSource,
         zIndex: 1e4,
         className: "ec-geometry-editor__transform-handles",
-        style: () => resizeHandleStyle(),
+        style: RESIZE_HANDLE_STYLE,
         updateWhileAnimating: true,
         updateWhileInteracting: true
       });
@@ -107442,6 +107677,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
       });
       this.map.addInteraction(this.draw);
+      if (this.snap) {
+        this.map.removeInteraction(this.snap);
+        this.map.addInteraction(this.snap);
+      }
       this.bindMapHover();
       this.notifyToolState();
     }
@@ -118711,7 +118950,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const _hoisted_9$5 = { role: "presentation" };
   const _hoisted_10$5 = ["aria-selected"];
-  const _hoisted_11$5 = { role: "presentation" };
+  const _hoisted_11$5 = {
+    key: 0,
+    role: "presentation"
+  };
   const _hoisted_12$5 = ["aria-selected"];
   const _hoisted_13$5 = ["tabindex"];
   const _hoisted_14$3 = {
@@ -118742,22 +118984,21 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_24$1 = { class: "ec-fiche-info__mode-tags" };
   const _hoisted_25$1 = { class: "ec-fiche-info__territory-head" };
   const _hoisted_26$1 = { class: "ec-fiche-info__title" };
-  const _hoisted_27 = ["disabled"];
-  const _hoisted_28 = {
+  const _hoisted_27 = {
     key: 1,
     class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_29 = {
+  const _hoisted_28 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_30 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_31 = {
+  const _hoisted_29 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_30 = {
     key: 4,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_32 = { class: "ec-fiche-info__title" };
+  const _hoisted_31 = { class: "ec-fiche-info__title" };
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -118782,6 +119023,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       const effectiveMode = computed(() => {
         if (configLoading.value || dataLoading.value || isEmpty2.value) return null;
+        if (isFicheUnavailableSelection(props.selection)) return null;
         return mapMode.mode.value;
       });
       const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL);
@@ -118923,6 +119165,13 @@ Expected function or array of functions, received type ${typeof value2}.`
           parcelTabLoading.value = false;
         }
       }
+      function onFicheContentClick(event) {
+        onFicheCatalogLinkClick(event);
+        if (!isFicheRetryClick(event)) return;
+        const retry = ficheRetryParamsFromSelection(props.selection);
+        if (!retry) return;
+        void loadFicheForMapPoint({ ...retry, markerPlacedAtClick: true, skipLocationMarker: true });
+      }
       function printParcelFiche() {
         if (!printModal) return;
         printModal.open({
@@ -118972,6 +119221,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         return ((_b = props.selection) == null ? void 0 : _b.parcelDocumentsHtml) ?? "";
       });
+      const showParcelDocumentsTab = computed(
+        () => !parcelDetailReady.value || Boolean(parcelDocumentsDisplayHtml.value.trim())
+      );
+      watch(showParcelDocumentsTab, (visible) => {
+        if (!visible && activeParcelTab.value === "documents") activeParcelTab.value = "infos";
+      });
       const emptyBodyHtml = computed(
         () => {
           var _a2;
@@ -118985,7 +119240,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       return (_ctx, _cache) => {
         var _a2, _b, _c2, _d, _e2, _f, _g, _h, _i2;
         return openBlock(), createElementBlock("article", {
-          class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }])
+          class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }]),
+          onClick: onFicheContentClick
         }, [
           configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
             key: 0,
@@ -119055,7 +119311,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     onClick: _cache[1] || (_cache[1] = ($event) => activeParcelTab.value = "infos")
                   }, " Infos ", 8, _hoisted_10$5)
                 ]),
-                createBaseVNode("li", _hoisted_11$5, [
+                showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_11$5, [
                   createBaseVNode("button", {
                     id: "ec-fiche-parcel-tab-documents",
                     type: "button",
@@ -119065,7 +119321,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "aria-controls": "ec-fiche-parcel-panel-documents",
                     onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "documents")
                   }, " Documents ", 8, _hoisted_12$5)
-                ])
+                ])) : createCommentVNode("", true)
               ]),
               createBaseVNode("div", {
                 id: "ec-fiche-parcel-panel-infos",
@@ -119183,7 +119439,6 @@ Expected function or array of functions, received type ${typeof value2}.`
               createBaseVNode("button", {
                 type: "button",
                 class: "fr-btn fr-btn--secondary fr-btn--sm",
-                disabled: !documentTabs.value.length,
                 title: "Imprimer la fiche territoire",
                 onClick: printTerritoryFiche
               }, [..._cache[11] || (_cache[11] = [
@@ -119192,10 +119447,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "aria-hidden": "true"
                 }, null, -1),
                 createTextVNode(" Imprimer ", -1)
-              ])], 8, _hoisted_27)
+              ])])
             ]),
-            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_28, [
-              createBaseVNode("ul", _hoisted_29, [
+            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_27, [
+              createBaseVNode("ul", _hoisted_28, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                   var _a3;
                   return openBlock(), createElementBlock("li", {
@@ -119210,7 +119465,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "aria-selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id,
                       "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
                       onClick: ($event) => selectDocTab(tab.id)
-                    }, toDisplayString(tab.label), 9, _hoisted_30)
+                    }, toDisplayString(tab.label), 9, _hoisted_29)
                   ]);
                 }), 128))
               ]),
@@ -119230,8 +119485,8 @@ Expected function or array of functions, received type ${typeof value2}.`
               html: emptyBodyHtml.value,
               "link-target-blank": ""
             }, null, 8, ["html"]))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_31, [
-            createBaseVNode("h2", _hoisted_32, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
+          ])) : (openBlock(), createElementBlock("div", _hoisted_30, [
+            createBaseVNode("h2", _hoisted_31, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
             createVNode(_sfc_main$l, {
               class: "ec-fiche-info__body",
               html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
@@ -122798,6 +123053,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         map2.removeControl(control);
         map2.setTarget(void 0);
+        map2.dispose();
         container.innerHTML = "";
         container.classList.remove("ec-search-engine-standalone");
       }

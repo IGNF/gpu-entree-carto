@@ -3,6 +3,7 @@ import type { PrintTemplateMeasureContext } from '@/lib/map/print/printTemplates
 
 export type SupplementContentFingerprints = {
   territoryTabCount: number
+  territoryBodyLength: number
   parcelInfosLength: number
   parcelDocumentsLength: number
   /** Pictos règles parcelle (-lowscale / -highscale), pas le zoom continu. */
@@ -18,7 +19,7 @@ export function supplementContentSuffixForKind(
   fingerprints: SupplementContentFingerprints,
 ): string {
   if (kind === 'ficheTerritory') {
-    return `t:${fingerprints.territoryTabCount}`
+    return `t:${fingerprints.territoryTabCount}:${fingerprints.territoryBodyLength}`
   }
   if (kind === 'ficheParcel') {
     return `p:${fingerprints.parcelInfosLength}:${fingerprints.parcelDocumentsLength}|${fingerprints.parcelLegendScale}`

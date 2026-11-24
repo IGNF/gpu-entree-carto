@@ -47,6 +47,13 @@ const SUPPLEMENT_VISIBILITY_MARKERS = SUPPLEMENT_PAGINATION_MARKERS
 /** Réinitialisation après changement de tranche (inclut d’anciens repères grossiers). */
 const SUPPLEMENT_VISIBILITY_RESET_MARKERS = `${SUPPLEMENT_VISIBILITY_MARKERS}, .ec-fiche-info__body, .ec-print-fiche__section`
 
+/**
+ * Débordement toléré sous le bas d’une tranche (arrondis sous-pixel). Au-delà, le repère est
+ * reporté sur la tranche suivante : le cadre d’aperçu / d’export le tronquerait sinon.
+ * (Ne pas utiliser l’`epsilon` proportionnel, ≈ 26 px à 300 DPI, pour ce test.)
+ */
+const SLICE_OVERFLOW_TOLERANCE_PX = 1
+
 /** Tolérance verticale pour regrouper deux colonnes de légende sur une même ligne. */
 const LEGEND_ROW_TOP_TOLERANCE_PX = 10
 
@@ -86,23 +93,55 @@ export function supplementSliceLayoutHeightPx(innerHeightPx: number, dpi: number
   return Math.max(40, innerHeightPx - inset * 2)
 }
 
-export function printSupplementCssVars(innerWidthPx: number, dpi: number): Record<string, string> {
+/** Corps de texte minimal lisible une fois imprimé (≈ 7 pt). */
+export const MIN_READABLE_BODY_FONT_MM = 2.5
+
+/** Corps de texte annexes de référence (A4, 96 DPI). */
+const PRINT_BODY_FONT_MM = 2.8
+
+/** Pictos de légende et icônes de règles d’urbanisme (mm, avant coefficient), à partir de 300 DPI. */
+const PRINT_LEGEND_IMG_MM = 5
+
+/** Format papier (mm), orientation indifférente. */
+export type PrintPaperMm = { widthMm: number; heightMm: number }
+
+/**
+ * Coefficient des textes et images hors carte (fiches, légendes) :
+ * ×1,5 à 300 DPI, proportionnel au petit côté du papier (référence A4 = 210 mm),
+ * jamais sous un corps de texte de {@link MIN_READABLE_BODY_FONT_MM}.
+ */
+export function printSupplementScale(paper: PrintPaperMm, dpi: number): number {
+  const dpiBoost = dpi >= HIGH_DPI_VALUE ? 1.5 : 1
+  const paperRatio = Math.min(paper.widthMm, paper.heightMm) / 210
+  const minScale = MIN_READABLE_BODY_FONT_MM / PRINT_BODY_FONT_MM
+  return Math.max(dpiBoost * paperRatio, minScale)
+}
+
+export function printSupplementCssVars(
+  innerWidthPx: number,
+  dpi: number,
+  paper: PrintPaperMm,
+): Record<string, string> {
+  const k = printSupplementScale(paper, dpi)
   const px = (mm: number) => `${convertMmToPx(mm, dpi)}px`
   const legendImgMm = dpi >= HIGH_DPI_VALUE ? 13.2 : 11
-  return {
+  const vars: Record<string, string> = {
     '--print-inner-width': `${Math.max(innerWidthPx, 120)}px`,
-    '--print-body-font': px(2.8),
-    '--print-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
-    '--print-section-font': px(3.4),
-    '--print-small-font': px(2.4),
-    '--print-fiche-label-font': px(2.5),
-    '--print-fiche-desc-font': px(2.2),
-    '--print-img-max': px(16),
-    '--print-legend-img-max': px(legendImgMm),
-    '--print-block-gap': px(PRINT_SUPPLEMENT_BLOCK_GAP_MM),
-    '--print-map-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM),
+    '--print-body-font': px(PRINT_BODY_FONT_MM * k),
+    '--print-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM * k),
+    '--print-section-font': px(3.4 * k),
+    '--print-small-font': px(2.4 * k),
+    '--print-fiche-label-font': px(2.5 * k),
+    '--print-fiche-desc-font': px(2.2 * k),
+    '--print-img-max': px(16 * k),
+    '--print-legend-img-max': px(legendImgMm * k),
+    '--print-block-gap': px(PRINT_SUPPLEMENT_BLOCK_GAP_MM * k),
+    '--print-map-title-font': px(PRINT_SUPPLEMENT_TITLE_FONT_MM * k),
     '--print-supplement-slice-inset': px(SUPPLEMENT_SLICE_CONTENT_INSET_MM),
   }
+  // Pictos 30 px prévus pour l’écran : à 300 DPI taille physique (légendes + règles d’urbanisme).
+  if (dpi >= HIGH_DPI_VALUE) vars['--print-legend-img-size'] = px(PRINT_LEGEND_IMG_MM * k)
+  return vars
 }
 
 export type WaitForPrintSupplementImagesOptions = {
@@ -165,8 +204,15 @@ function supplementVisibilityElements(page: HTMLElement): HTMLElement[] {
  * `layoutScale` : facteur `transform: scale()` appliqué à un ancêtre (aperçu) ; 1 en mesure / export.
  */
 function elementTopInPage(el: HTMLElement, page: HTMLElement, layoutScale = 1): number {
-  const scale = layoutScale > 0 ? layoutScale : 1
   const pageRect = page.getBoundingClientRect()
+  // Échelle réelle d’affichage de la page (aperçu réduit) : un appelant sans layoutScale mesurait
+  // des positions réduites et retombait sur des coupures uniformes qui tranchaient les lignes.
+  const scale =
+    page.offsetWidth > 0 && pageRect.width > 0
+      ? pageRect.width / page.offsetWidth
+      : layoutScale > 0
+        ? layoutScale
+        : 1
   const elRect = el.getBoundingClientRect()
   return (elRect.top - pageRect.top) / scale
 }
@@ -382,7 +428,7 @@ export function finalizeFicheParcelFootnoteSlicePlan(
   if (footBottom < 1 || footTop < 1) return plan
 
   const epsilon = Math.max(4, pageHeightPx * 0.008)
-  if (footBottom <= pageHeightPx + epsilon) return plan
+  if (footBottom <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) return plan
 
   const splitAt = Math.max(0, footTop)
   const starts = [...plan.sliceStarts]
@@ -470,7 +516,7 @@ function adjustCutForFicheFootnotes(
 
   const sliceEndUniform = sliceStartPx + pageHeightPx
   const footnotesFitInSlice =
-    footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + epsilon
+    footTop >= sliceStartPx - epsilon && footBottom <= sliceEndUniform + SLICE_OVERFLOW_TOLERANCE_PX
 
   if (footnotesFitInSlice) return cut
 
@@ -478,7 +524,7 @@ function adjustCutForFicheFootnotes(
     return Math.min(cut, footTop)
   }
 
-  if (footBottom > cut + epsilon && footTop < cut + epsilon) {
+  if (footBottom > cut + SLICE_OVERFLOW_TOLERANCE_PX && footTop < cut + epsilon) {
     return Math.min(cut, footTop > sliceStartPx + epsilon ? footTop : cut)
   }
 
@@ -514,7 +560,7 @@ function adjustCutForLegendGroupTitles(
     if (
       titleTop >= tailZoneStart &&
       titleTop < nextCut - epsilon &&
-      firstRow.bottom > nextCut + epsilon
+      firstRow.bottom > nextCut + SLICE_OVERFLOW_TOLERANCE_PX
     ) {
       nextCut = Math.min(nextCut, titleTop)
     }
@@ -565,7 +611,7 @@ export function resolveSupplementSliceEndPx(
     if (
       block.top >= tailZoneStart &&
       block.top < cut - epsilon &&
-      block.bottom > cut + epsilon &&
+      block.bottom > cut + SLICE_OVERFLOW_TOLERANCE_PX &&
       block.top > sliceStartPx + epsilon
     ) {
       cut = Math.min(cut, block.top)
@@ -574,7 +620,7 @@ export function resolveSupplementSliceEndPx(
 
   for (const block of blocks) {
     if (block.top >= cut - epsilon) break
-    if (block.bottom > cut + epsilon && block.top > sliceStartPx + epsilon) {
+    if (block.bottom > cut + SLICE_OVERFLOW_TOLERANCE_PX && block.top > sliceStartPx + epsilon) {
       cut = Math.min(cut, block.top)
     }
   }
@@ -623,14 +669,14 @@ export function computeSupplementSlicePlan(
   const maxBottom = maxContentBottom(page, blocks)
   const epsilon = Math.max(4, pageHeightPx * 0.008)
 
-  if (maxBottom <= pageHeightPx + epsilon) {
+  if (maxBottom <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) {
     return { sliceCount: 1, sliceStarts: [0] }
   }
 
   const sliceStarts = [0]
   let sliceStart = 0
 
-  while (sliceStart + pageHeightPx < maxBottom - epsilon) {
+  while (sliceStart + pageHeightPx < maxBottom - SLICE_OVERFLOW_TOLERANCE_PX) {
     const nextStart = resolveSupplementSliceEndPx(page, sliceStart, pageHeightPx)
     if (nextStart >= maxBottom - epsilon) break
     if (sliceStarts[sliceStarts.length - 1] !== nextStart) {
@@ -678,13 +724,11 @@ export function measureSupplementSlicePlanFromPage(
 ): SupplementSlicePlan {
   const footnoteBottom = ficheFootnoteBlockBottom(page)
   const contentHeight = Math.max(resolveSupplementContentHeightForPage(page), footnoteBottom)
-  let targetCount = countSupplementSlices(contentHeight, pageHeightPx)
-  if (footnoteBottom > pageHeightPx + 2) {
-    targetCount = Math.max(targetCount, 2)
-  }
-
   let plan: SupplementSlicePlan
-  if (targetCount <= 1 && footnoteBottom <= pageHeightPx + 2) {
+  // Débordement réel (et non le seuil « dernière tranche ≥ 4 % » de countSupplementSlices,
+  // qui perdait une ligne entière placée juste sous le bas de feuille).
+  // contentHeight inclut le bas des encarts de fiche.
+  if (contentHeight <= pageHeightPx + SLICE_OVERFLOW_TOLERANCE_PX) {
     plan = { sliceCount: 1, sliceStarts: [0] }
   } else {
     const blockPlan = computeSupplementSlicePlan(page, pageHeightPx)
@@ -746,7 +790,7 @@ export function hideSupplementElementsForSlice(
   const shouldHide = (top: number, bottom: number): boolean => {
     if (bottom <= sliceStartPx + epsilon) return true
     if (top >= sliceEndPx - epsilon) return true
-    return top < sliceEndPx - epsilon && bottom > sliceEndPx + epsilon
+    return top < sliceEndPx - epsilon && bottom > sliceEndPx + SLICE_OVERFLOW_TOLERANCE_PX
   }
 
   for (const el of supplementVisibilityElements(page)) {

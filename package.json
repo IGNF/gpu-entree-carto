@@ -37,7 +37,7 @@
     "verify": "npm run lint && npm run format:check && npm run typecheck",
     "doc:icon-previews": "node scripts/sync-doc-icon-previews.mjs",
     "codeql:install": "bash scripts/codeql-install.sh",
-    "verify:no-eval": "node scripts/check-dist-no-eval.mjs dist",
+    "verify:dist": "node scripts/check-dist.mjs dist",
     "verify:codeql": "bash scripts/codeql-verify.sh",
     "verify:codeql:dist": "node scripts/prune-dist-orphans.mjs && CODEQL_SCOPE=dist bash scripts/codeql-verify.sh",
     "verify:codeql:all": "CODEQL_SCOPE=all bash scripts/codeql-verify.sh",

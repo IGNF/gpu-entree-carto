@@ -16,29 +16,50 @@
   line-height: inherit;
 }
 
-.ec-print-supplement-page :deep(h3:not(.fr-tile__title)),
-.ec-print-supplement-page :deep(h4) {
-  font-size: 1.05em;
+/*
+ * Paragraphes sans classe (« Aucun document. », textes d’état vide) : le DSFR fixe 1rem / 1.5rem,
+ * taille écran minuscule au DPI d’export. :where() garde la spécificité basse pour les <p> typés.
+ */
+.ec-print-supplement-page :where(p) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/*
+ * Titres : hauteur de ligne relative. Le DSFR fixe une hauteur de ligne en rem (h2 : 2.5rem = 40px)
+ * alors que la police est agrandie au DPI d’export (80px) : les lettres débordaient au-dessus de
+ * leur boîte et étaient coupées en haut de page.
+ */
+.ec-print-supplement-page :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.25;
-  margin: 0 0 0.25em;
-}
-
-.ec-print-supplement-page :deep(p),
-.ec-print-supplement-page :deep(li) {
-  font-size: 1em;
-  margin: 0 0 0.35em;
-}
-
-.ec-print-supplement-page :deep(img) {
-  max-width: var(--print-img-max, 96px) !important;
-  height: auto !important;
 }
 
 .ec-print-fiche__title {
   margin: 0 0 var(--print-block-gap, 8px);
   font-size: var(--print-title-font, 16px);
   font-weight: 700;
+  line-height: 1.2;
   text-align: center;
+}
+
+/* Sous-titres de fiche (ex. « Documents d’urbanisme » en territoire) : entre le titre de page et le titre de tuile. */
+.ec-print-fiche .ec-fiche-info__section-title {
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Icônes de règles d’urbanisme : même taille physique que les pictos de légende à 300 DPI. */
+.ec-print-fiche .ec-fiche-info__rule-icon {
+  width: auto;
+  min-width: calc(var(--print-legend-img-size, 2.5rem) + 0.25em);
+  min-height: var(--print-legend-img-size, 2.75rem);
+}
+
+.ec-print-fiche .ec-fiche-info__rule-icon-img {
+  width: var(--print-legend-img-size, 2.5rem);
+  height: var(--print-legend-img-size, 2.5rem);
 }
 
 .ec-print-fiche__sections {
@@ -63,6 +84,8 @@
 }
 
 .ec-print-fiche .ec-fiche-info__rule-row {
+  /* 1re colonne à la taille de l’icône agrandie (sinon 2.75rem fixe : l’icône chevauche le texte). */
+  grid-template-columns: auto 1fr auto;
   border-bottom: none;
   padding-bottom: 0;
 }
@@ -296,13 +319,15 @@
   margin: 0 0 var(--print-block-gap, 8px);
   font-size: var(--print-title-font, 16px);
   font-weight: 700;
+  line-height: 1.2;
   text-align: center;
 }
 
 .ec-print-legends__groups {
   display: flex;
   flex-direction: column;
-  gap: var(--print-block-gap, 8px);
+  /* Sections de légende bien séparées (ex. « Périmètres d’informations »). */
+  gap: calc(var(--print-block-gap, 8px) * 2.5);
 }
 
 .ec-print-legends__group-title {
@@ -335,7 +360,9 @@
 
 .ec-print-supplement-page .ec-layer-legends__img {
   max-width: var(--print-legend-img-max, 72px);
-  height: auto;
+  /* Taille physique à 300 DPI (sinon : taille naturelle, pictos 30 px prévus pour l’écran). */
+  width: auto;
+  height: var(--print-legend-img-size, auto);
 }
 
 .ec-print-supplement-page .ec-layer-legends__swatch {

@@ -72,6 +72,35 @@ describe('fetchGpuFicheInfoPayload', () => {
     expect(fetchMock).toHaveBeenCalled()
   })
 
+  it('fetch emprise (background) : sans client/seq, ne périme pas côté gpu-site la requête du panneau', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const urls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        urls.push(fetchInputToUrl(input))
+        return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
+      }),
+    )
+    const point = { lon: 5.68, lat: 45.05, mode: MAP_MODE_TERRITORY }
+    await Promise.all([
+      fetchGpuFicheInfoPayload({ ...point, zoom: 13 }),
+      fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' }),
+    ])
+    const panel = new URL(
+      urls.find((u) => u.includes('zoom=13'))!,
+      'http://x',
+    )
+    const background = new URL(
+      urls.find((u) => u.includes('zoom=6'))!,
+      'http://x',
+    )
+    expect(panel.searchParams.get('client')).toBeTruthy()
+    expect(panel.searchParams.get('seq')).toBeTruthy()
+    expect(background.searchParams.has('client')).toBe(false)
+    expect(background.searchParams.has('seq')).toBe(false)
+  })
+
   it('annule aussi les fetches emprise (background) au clic suivant', async () => {
     ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
     ;(config as { apiFicheInfoCombinedUrl?: string }).apiFicheInfoCombinedUrl = '/api/fiche-info-v2'

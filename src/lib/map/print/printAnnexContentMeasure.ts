@@ -4,6 +4,8 @@ import type { PrintPreviewPageKind } from '@/lib/map/print/printPageTypes'
 /** Contenu annexes : ce qui peut invalider la pagination (hors gabarit papier / DPI). */
 export type AnnexContentMeasureSnapshot = {
   territoryTabCount: number
+  /** Fiche sans onglets : longueur du contenu (RNU, documents petite échelle…). */
+  territoryBodyLength: number
   parcelInfosLength: number
   parcelDocumentsLength: number
   parcelLegendScale: ParcelLegendScaleBand
@@ -16,6 +18,8 @@ export type AnnexContentMeasureSnapshot = {
 
 export type BuildAnnexContentMeasureSnapshotInput = {
   territoryTabCount: number
+  /** Fiche sans onglets : longueur du contenu (RNU, documents petite échelle…). */
+  territoryBodyLength: number
   parcelInfosLength: number
   parcelDocumentsLength: number
   parcelLegendScale: ParcelLegendScaleBand
@@ -30,6 +34,7 @@ export function buildAnnexContentMeasureSnapshot(
 ): AnnexContentMeasureSnapshot {
   return {
     territoryTabCount: input.territoryTabCount,
+    territoryBodyLength: input.territoryBodyLength,
     parcelInfosLength: input.parcelInfosLength,
     parcelDocumentsLength: input.parcelDocumentsLength,
     parcelLegendScale: input.parcelLegendScale,
@@ -47,7 +52,10 @@ export function annexKindsToInvalidateForContentChange(
 ): PrintPreviewPageKind[] {
   if (!previous) return []
   const kinds: PrintPreviewPageKind[] = []
-  if (previous.territoryTabCount !== next.territoryTabCount) {
+  if (
+    previous.territoryTabCount !== next.territoryTabCount ||
+    previous.territoryBodyLength !== next.territoryBodyLength
+  ) {
     kinds.push('ficheTerritory')
   }
   if (

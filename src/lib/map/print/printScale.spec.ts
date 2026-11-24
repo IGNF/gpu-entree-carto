@@ -10,3 +10,43 @@ describe('computeScaleCoeff', () => {
     expect(computeScaleCoeff(100, 200, 100, 400)).toBe(0.5)
   })
 })
+
+describe('drawScale', () => {
+  it('texte et traits à l’échelle aperçu → export, comme les logos (WYSIWYG)', async () => {
+    const { captureScaleLineSnapshot, drawScale } = await import('@/lib/map/print/printScale')
+    const mapRef = document.createElement('div')
+    mapRef.innerHTML =
+      '<div class="ol-scale-line"><div style="font-size: 10px; border-bottom-width: 1px">100 m</div></div>'
+    const rect = (top: number, height: number) => () =>
+      ({
+        top,
+        bottom: top + height,
+        left: 0,
+        right: 100,
+        width: 100,
+        height,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      }) as DOMRect
+    mapRef.getBoundingClientRect = rect(0, 250)
+    ;(mapRef.querySelector('.ol-scale-line') as HTMLElement).getBoundingClientRect = rect(200, 20)
+    ;(mapRef.querySelector('.ol-scale-line > div') as HTMLElement).getBoundingClientRect = rect(
+      202,
+      16,
+    )
+    const fonts: string[] = []
+    const ctx = {
+      beginPath: () => {},
+      fillRect: () => {},
+      strokeRect: () => {},
+      fillText: () => {},
+      set font(v: string) {
+        fonts.push(v)
+      },
+    } as unknown as CanvasRenderingContext2D
+    // Carte d’aperçu de 250 px de haut exportée sur 1000 px : facteur 4.
+    drawScale(ctx, mapRef, 400, 1000, captureScaleLineSnapshot(mapRef))
+    expect(fonts.at(-1)).toContain(' 40px ')
+  })
+})

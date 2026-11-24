@@ -3,7 +3,7 @@ import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import type { FicheInfoDocumentTab } from '@/composables/tabPanels'
 import {
   sanitizeTerritoryTabHtmlForPrint,
-  territoryEmptyFallbackHtml,
+  territoryBodyPrintHtml,
 } from '@/lib/map/print/printFicheSnapshot'
 import { computed } from 'vue'
 import '@/styles/fiche-info.css'
@@ -12,7 +12,11 @@ import '@/styles/map-print-supplement.css'
 const props = defineProps<{
   documentTabs: FicheInfoDocumentTab[]
   title: string
+  /** Contenu de la fiche quand la commune n’a pas d’onglets documents. */
+  bodyHtml?: string
 }>()
+
+const bodyPrintHtml = computed(() => territoryBodyPrintHtml(props.bodyHtml))
 
 const sanitizedTabs = computed(() =>
   props.documentTabs.map((tab) => ({
@@ -33,6 +37,6 @@ const sanitizedTabs = computed(() =>
         <SanitizedHtml class="ec-fiche-info__body" :html="tab.bodyHtml" />
       </section>
     </div>
-    <SanitizedHtml v-else class="ec-fiche-info__body" :html="territoryEmptyFallbackHtml()" />
+    <SanitizedHtml v-else-if="bodyPrintHtml" class="ec-fiche-info__body" :html="bodyPrintHtml" />
   </article>
 </template>

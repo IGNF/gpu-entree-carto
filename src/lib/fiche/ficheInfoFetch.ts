@@ -131,6 +131,7 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
     fetchBase,
     { ...params, mode: MAP_MODE_TERRITORY },
     signal,
+    role,
   ).finally(() => {
     inflightPayloadByPoint.delete(inflightKey)
     if (role === 'panel' && activePanelNetworkAbort?.signal === signal) {
@@ -168,7 +169,7 @@ export async function fetchGpuFicheInfoPayload(params: {
   const role = params.fetchRole ?? 'panel'
   const signal = takeoverFicheNetworkSignal(params.abortSignal, role)
 
-  const promise = fetchGpuFicheInfoPayloadImpl(params, signal).finally(() => {
+  const promise = fetchGpuFicheInfoPayloadImpl(params, signal, role).finally(() => {
     inflightPayloadByPoint.delete(inflightKey)
     if (role === 'panel' && activePanelNetworkAbort?.signal === signal) {
       activePanelNetworkAbort = null
@@ -186,10 +187,11 @@ async function fetchGpuFicheInfoPayloadImpl(
     mode: MapModeId
   },
   signal: AbortSignal,
+  role: FicheInfoFetchRole,
 ): Promise<GpuFicheInfoPayload | null> {
   const fetchBase = resolveFicheInfoFetchUrl(params.mode)
   if (!fetchBase) return null
-  return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params, signal)
+  return fetchGpuFicheInfoPayloadFromUrl(fetchBase, params, signal, role)
 }
 
 async function fetchGpuFicheInfoPayloadFromUrl(
@@ -203,13 +205,14 @@ async function fetchGpuFicheInfoPayloadFromUrl(
     activeSupTypes?: string[] | null
   },
   signal: AbortSignal,
+  role: FicheInfoFetchRole,
 ): Promise<GpuFicheInfoPayload | null> {
   const resolved = resolveConfigUrlForFetch(fetchBase)
   const url = resolved.startsWith('/')
     ? new URL(resolved, window.location.origin)
     : new URL(resolved)
 
-  appendFicheInfoQueryParams(url, params)
+  appendFicheInfoQueryParams(url, params, role === 'panel')
 
   if (shouldAppendLegacyFicheModeParam(resolved)) {
     url.searchParams.set('mode', legacyFicheModeValue(params.mode))

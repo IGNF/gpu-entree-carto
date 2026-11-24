@@ -33,15 +33,18 @@ defineProps<{
           </template>
         </dl>
       </section>
-      <section class="ec-print-fiche__section">
+      <section v-if="infosHtml.trim()" class="ec-print-fiche__section">
         <h3 class="ec-print-fiche__section-title">Règles d’urbanisme</h3>
         <SanitizedHtml class="ec-fiche-info__body" :html="infosHtml" />
       </section>
-      <section class="ec-print-fiche__section ec-print-fiche__section--documents">
+      <section
+        v-if="documentsHtml.trim()"
+        class="ec-print-fiche__section ec-print-fiche__section--documents"
+      >
         <h3 class="ec-print-fiche__section-title">Documents couvrant la parcelle</h3>
         <SanitizedHtml
           class="ec-fiche-info__body ec-fiche-info__body--parcel-documents"
-          :html="documentsHtml || '<p>Aucun document.</p>'"
+          :html="documentsHtml"
         />
       </section>
       <section class="ec-print-fiche__section ec-print-fiche__section--footnotes">

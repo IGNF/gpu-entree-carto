@@ -30,6 +30,9 @@ export type PrintTemplateLayout = {
   exportFormat: 'PDF' | 'PNG' | 'JPEG'
 }
 
+/** Modèle appliqué à l’ouverture de la modale : A4 300 DPI (impression). */
+export const DEFAULT_PRINT_TEMPLATE_ID = 'a4-impression'
+
 /** Gabarits courants (aperçu 96 DPI + impression A4 300 DPI). */
 export const PRINT_TEMPLATE_LAYOUTS: PrintTemplateLayout[] = [
   {
@@ -124,7 +127,10 @@ export function measureContextForFormLayout(
     paperWidthMm: paper.width,
     paperHeightMm: paper.height,
     inner,
-    cssVars: printSupplementCssVars(inner.innerWidthPx, form.dpi),
+    cssVars: printSupplementCssVars(inner.innerWidthPx, form.dpi, {
+      widthMm: paper.width,
+      heightMm: paper.height,
+    }),
   }
 }
 

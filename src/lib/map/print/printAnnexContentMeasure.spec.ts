@@ -8,6 +8,7 @@ import {
 const snap = (overrides: Partial<BuildAnnexContentMeasureSnapshotInput> = {}) =>
   buildAnnexContentMeasureSnapshot({
     territoryTabCount: 2,
+    territoryBodyLength: 0,
     parcelInfosLength: 100,
     parcelDocumentsLength: 50,
     parcelLegendScale: 'highscale',
@@ -19,6 +20,12 @@ const snap = (overrides: Partial<BuildAnnexContentMeasureSnapshotInput> = {}) =>
   })
 
 describe('annexKindsToInvalidateForContentChange', () => {
+  it('territoire sans onglets : le contenu (RNU, documents petite échelle) change la pagination', () => {
+    const prev = snap({ territoryTabCount: 0, territoryBodyLength: 40 })
+    const next = snap({ territoryTabCount: 0, territoryBodyLength: 900 })
+    expect(annexKindsToInvalidateForContentChange(prev, next)).toEqual(['ficheTerritory'])
+  })
+
   it('ne fait rien au premier passage', () => {
     const next = snap()
     expect(annexKindsToInvalidateForContentChange(null, next)).toEqual([])

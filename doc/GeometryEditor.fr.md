@@ -91,6 +91,7 @@ Seules les clés présentes dans `patch` sont modifiées. Un changement de `geom
 - Dessin / modification / suppression → réécrit l’élément (GeoJSON geometry, FeatureCollection si plusieurs, bbox si `Rectangle`, format Circle/Disc, ou KML).
 - Événement carte `change:geometry` avec `{ geometry: string }` (compat).
 - **Aucun outil actif** : navigation seule (pas de modification au clic).
+- **Accrochage** : le dessin et la modification de forme s’accrochent aux sommets et segments des géométries existantes (`Snap` OL, maintenue en dernière interaction de la carte).
 - **Modification** : activer l’outil crayon (icône edit) affiche une **barre d’outils séparée**, juxtaposée au bouton « Modifier » (vers l’intérieur carte), avec **modification de forme** (défaut lorsqu’il est proposé), **déplacement**, **rotation**, **style** (palette, si éditeur de style activé). Les sous-outils visibles dépendent du **`geometryType`** :
   - **Point** / **MultiPoint** : **déplacement** uniquement ;
   - **Rectangle** : forme + déplacement (+ style si activé), **sans rotation** ;

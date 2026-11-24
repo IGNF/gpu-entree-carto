@@ -15,6 +15,8 @@ import {
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { ficheCatalogVisibilityRevision } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { sanitizeFicheHtmlForPrint } from '@/lib/map/print/sanitizeFicheHtmlForPrint'
+import { stripFicheNoDataHtml } from '@/lib/fiche/ficheNoDataMessages'
+import { isFicheUnavailableSelection } from '@/lib/fiche/ficheRetry'
 
 function parcelFichePayloadFromSelection(
   selection: FicheInfoSelection | null,
@@ -40,6 +42,7 @@ function gpuPayloadFromSelection(selection: FicheInfoSelection): GpuFicheInfoPay
 /** Activable dès que le contenu parcelle est disponible (mode panneau ou cache). */
 export function isParcelFichePrintReady(selection: FicheInfoSelection | null): boolean {
   if (!selection || selection.loading === 'data' || selection.parcelMissingAtPoint) return false
+  if (isFicheUnavailableSelection(selection)) return false
   if (selection.cadastreReferences) return true
   if (selection.parcelInfosHtml?.trim() || selection.parcelDocumentsHtml?.trim()) return true
   if (parcelFichePayloadFromSelection(selection)) return true
@@ -50,6 +53,9 @@ export function isParcelFichePrintReady(selection: FicheInfoSelection | null): b
 
 export function isTerritoryFichePrintReady(selection: FicheInfoSelection | null): boolean {
   if (!selection || selection.loading === 'data') return false
+  if (isFicheUnavailableSelection(selection)) return false
+  // Texte « aucune sélection » du panneau : pas une fiche récupérée.
+  if (selection.bodyHtml === DEFAULT_FICHE_EMPTY.bodyHtml) return false
   if ((selection.documentTabs?.length ?? 0) > 0) return true
   if (selection.bodyHtml?.trim()) return true
   const payload = gpuPayloadFromSelection(selection)
@@ -104,7 +110,9 @@ export function buildParcelInfosPrintHtml(
   if (payload) {
     const raw = selection?.raw
     const ficheApi = raw && typeof raw === 'object' && isGpuFicheInfoPayload(raw) ? raw : null
-    return sanitizeFicheHtmlForPrint(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi))
+    // Sans règle : chaîne vide, la section « Règles d’urbanisme » n’est pas imprimée.
+    const infos = stripFicheNoDataHtml(buildParcelInfosHtmlFromFiche(payload, mapZoom, ficheApi))
+    return infos ? sanitizeFicheHtmlForPrint(infos) : ''
   }
   if (selection.parcelInfosHtml?.trim()) {
     return sanitizeFicheHtmlForPrint(selection.parcelInfosHtml)
@@ -143,6 +151,8 @@ export function parcelPrintTitle(selection: FicheInfoSelection | null): string {
   return selection?.parcelLabel ?? selection?.title ?? 'Parcelle'
 }
 
-export function territoryEmptyFallbackHtml(): string {
-  return DEFAULT_FICHE_EMPTY.bodyHtml ?? '<p>Aucune donnée territoire.</p>'
+/** Fiche territoire sans onglets (RNU, documents petite échelle, aucun document) : même contenu que le panneau. */
+export function territoryBodyPrintHtml(bodyHtml: string | undefined): string {
+  const body = stripFicheNoDataHtml(bodyHtml ?? '')
+  return body ? sanitizeFicheHtmlForPrint(body) : ''
 }

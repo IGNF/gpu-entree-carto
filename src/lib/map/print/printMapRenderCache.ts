@@ -1,4 +1,4 @@
-import type Map from 'ol/Map'
+import type OlMap from 'ol/Map'
 import type { Extent } from 'ol/extent'
 
 export type PrintMapRenderCacheKeyParts = {
@@ -8,13 +8,15 @@ export type PrintMapRenderCacheKeyParts = {
   extent: Extent
   layerFingerprint: string
   rotation: number
+  /** Largeur CSS de la carte d’aperçu : fixe le pixelRatio et le niveau de tuiles de l’export. */
+  previewWidthPx: number
 }
 
 function roundExtent(extent: Extent): string {
   return extent.map((value) => value.toFixed(2)).join(',')
 }
 
-export function buildVisibleLayerFingerprint(sourceMap: Map): string {
+export function buildVisibleLayerFingerprint(sourceMap: OlMap): string {
   const ids: string[] = []
   for (const layer of sourceMap.getLayers().getArray()) {
     if (!layer.getVisible()) continue
@@ -26,8 +28,9 @@ export function buildVisibleLayerFingerprint(sourceMap: Map): string {
 
 export function buildPrintMapRenderCacheKey(parts: PrintMapRenderCacheKeyParts): string {
   return [
-    'map-v1',
+    'map-v2',
     parts.dpi,
+    Math.round(parts.previewWidthPx),
     parts.mapWidthPx,
     parts.mapHeightPx,
     roundExtent(parts.extent),
@@ -36,7 +39,7 @@ export function buildPrintMapRenderCacheKey(parts: PrintMapRenderCacheKeyParts):
   ].join(';')
 }
 
-const renderCache = new globalThis.Map<string, HTMLCanvasElement>()
+const renderCache = new Map<string, HTMLCanvasElement>()
 
 export function getCachedPrintMapCanvas(key: string): HTMLCanvasElement | null {
   const cached = renderCache.get(key)

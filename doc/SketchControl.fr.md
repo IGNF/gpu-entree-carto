@@ -26,6 +26,7 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 
 - Couche vectorielle dédiée (`zIndex` défaut **500**, propriété `ec-sketch`)
 - Outils : Point, LineString, Polygon, Rectangle, Disc (+ modifier / supprimer)
+- **Accrochage** : le dessin et la modification de forme s’accrochent aux sommets et segments des entités du croquis (`Snap` OL, maintenue en dernière interaction de la carte)
 - Option `toolsToggle` : bouton menu (picto outils) dans un coin
 - Barre d’outils **scrollable** verticalement si elle dépasse la hauteur carte (molette / touch sur la colonne boutons ou sur la **sous-barre modification** lorsqu’elle est ouverte). La sous-barre reste **visible** en mode modification ; sa **hauteur max.** est limitée au scrollport visible de la barre principale (scroll interne si besoin).
 - Option `clearAll` : bouton « tout supprimer »
@@ -38,13 +39,13 @@ Sur la carte principale : colonne layout **48px** (`--ec-sketch-column-width`), 
 
 ## Outils `extraTools`
 
-| Id                | Comportement                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification   |
+| Id                | Comportement                                                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Text`            | Label seul ; popup style (texte, taille, couleur, contour, rotation) si `enableFeatureStyleEditor` ; drag + icône rotation en modification               |
 | `Import`          | Fichier `*.kml`, `*.json` ou `*.geojson` (filtre du sélecteur) → features croquis ; KML via parseur sécurisé, JSON/GeoJSON via `readSketchGeoJsonObject` |
-| `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                           |
-| `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ri-ruler-line` |
-| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size`                                                         |
+| `Export`          | Dialogue (select GeoJSON/KML + Annuler / Exporter)                                                                                                       |
+| `MeasureDistance` | LineString tirets sur couche `measureLayer` + popup distance (forme localisation, bouton Supprimer uniquement) ; picto Remix `ri-ruler-line`             |
+| `MeasureArea`     | Polygon tirets sur `measureLayer` + popup aire (idem) ; picto Remix `ri-custom-size`                                                                     |
 
 ## Popup style (`enableFeatureStyleEditor`)
 
@@ -109,14 +110,14 @@ const handle = EntreeCartoSketch.mountSketch('#sketch-map', {
 
 ### Options `mountSketch` (conteneur + carte)
 
-| Option          | Défaut | Description                                                                 |
-| --------------- | ------ | --------------------------------------------------------------------------- |
-| `showSettings`  | `false` | Bouton roue crantée (haut droite) : formulaire d’options à chaud ; zoom décalé sous le bouton (comme GeometryEditor) |
-| `showZoom`      | `true`  | Contrôle +/- OpenLayers (haut droite)                                       |
-| `width` / `height` | `'100%'` / `480` | Taille du conteneur carte                                          |
-| `lon` / `lat` / `zoom` | défauts France | Vue initiale                                                       |
-| `minZoom` / `maxZoom` | `4` / `19` | Limites de zoom                                                         |
-| `tileLayers`    | Plan IGN | Fonds XYZ                                                                   |
+| Option                 | Défaut           | Description                                                                                                          |
+| ---------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `showSettings`         | `false`          | Bouton roue crantée (haut droite) : formulaire d’options à chaud ; zoom décalé sous le bouton (comme GeometryEditor) |
+| `showZoom`             | `true`           | Contrôle +/- OpenLayers (haut droite)                                                                                |
+| `width` / `height`     | `'100%'` / `480` | Taille du conteneur carte                                                                                            |
+| `lon` / `lat` / `zoom` | défauts France   | Vue initiale                                                                                                         |
+| `minZoom` / `maxZoom`  | `4` / `19`       | Limites de zoom                                                                                                      |
+| `tileLayers`           | Plan IGN         | Fonds XYZ                                                                                                            |
 
 Après montage : `handle.getOptions()`, `handle.setOptions(patch)`, `handle.resetOptions()` (snapshot du mount initial).
 

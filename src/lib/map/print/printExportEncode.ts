@@ -1,5 +1,5 @@
 import { isArrayBufferValue } from '@/lib/map/print/printExportTransfer'
-import { resolvePrintExportWorkerUrl } from '@/lib/map/print/printExportWorkerUrl'
+import { resolveEmbedPrintExportWorkerUrl } from '@/lib/map/print/printExportWorkerUrl'
 
 type WorkerRequest =
   | {
@@ -71,9 +71,12 @@ function getPrintExportWorker(): Worker {
     throw new Error('Web Workers indisponibles.')
   }
   if (!worker) {
-    const instance = new Worker(resolvePrintExportWorkerUrl(), {
-      type: 'module',
-    })
+    const embedUrl = resolveEmbedPrintExportWorkerUrl()
+    // Forme `new Worker(new URL(...))` obligatoire : c’est la seule que Vite compile en worker JS
+    // (une URL calculée à part copie le fichier .ts brut, servi en video/mp2t).
+    const instance = embedUrl
+      ? new Worker(embedUrl, { type: 'module' })
+      : new Worker(new URL('./printExport.worker.ts', import.meta.url), { type: 'module' })
     instance.onmessage = (event: MessageEvent) => {
       if (!isTrustedPrintExportWorkerMessage(event)) return
       const data = event.data

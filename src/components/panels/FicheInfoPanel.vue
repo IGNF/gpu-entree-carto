@@ -14,7 +14,11 @@ import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/m
 import { FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { gpuClientConfigStatus } from '@/lib/demo/gpuClientConfigState'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
-import { loadParcelFicheDetail, refreshFicheForMapModeChange } from '@/lib/fiche/ficheInfoService'
+import {
+  loadFicheForMapPoint,
+  loadParcelFicheDetail,
+  refreshFicheForMapModeChange,
+} from '@/lib/fiche/ficheInfoService'
 import { resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
 import { ficheCatalogVisibilityRevision } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { isGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
@@ -32,6 +36,12 @@ import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
 import '@gouvfr/dsfr/dist/component/tile/tile.min.css'
 import { syncFicheGeometryHighlight } from '@/lib/fiche/ficheGeometryHighlight'
+import { onFicheCatalogLinkClick } from '@/lib/fiche/ficheNoDataMessages'
+import {
+  ficheRetryParamsFromSelection,
+  isFicheRetryClick,
+  isFicheUnavailableSelection,
+} from '@/lib/fiche/ficheRetry'
 
 const props = defineProps<{
   selection: FicheInfoSelection | null
@@ -55,6 +65,9 @@ const isEmpty = computed(
 
 const effectiveMode = computed((): MapModeId | null => {
   if (configLoading.value || dataLoading.value || isEmpty.value) return null
+  // Requête en échec : affichage générique (message + Réessayer) — la mise en page parcelle
+  // n’affichait que des onglets vides.
+  if (isFicheUnavailableSelection(props.selection)) return null
   return mapMode.mode.value
 })
 
@@ -197,6 +210,16 @@ async function loadParcelDetail(): Promise<void> {
   }
 }
 
+/** Clics délégués dans le contenu HTML de la fiche : lien catalogue, bouton « Réessayer ». */
+function onFicheContentClick(event: MouseEvent): void {
+  onFicheCatalogLinkClick(event)
+  if (!isFicheRetryClick(event)) return
+  const retry = ficheRetryParamsFromSelection(props.selection)
+  if (!retry) return
+  // Cerise déjà en place : relance seulement la requête fiche-info.
+  void loadFicheForMapPoint({ ...retry, markerPlacedAtClick: true, skipLocationMarker: true })
+}
+
 function printParcelFiche(): void {
   if (!printModal) return
   printModal.open({
@@ -253,6 +276,14 @@ const parcelDocumentsDisplayHtml = computed((): string => {
   return props.selection?.parcelDocumentsHtml ?? ''
 })
 
+/** Onglet « Documents » masqué une fois le détail chargé s’il n’y a aucun document. */
+const showParcelDocumentsTab = computed(
+  () => !parcelDetailReady.value || Boolean(parcelDocumentsDisplayHtml.value.trim()),
+)
+watch(showParcelDocumentsTab, (visible) => {
+  if (!visible && activeParcelTab.value === 'documents') activeParcelTab.value = 'infos'
+})
+
 const emptyBodyHtml = computed(
   () => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? '',
 )
@@ -264,7 +295,11 @@ const parcelPanelFootnotesHtml = computed(() => {
 </script>
 
 <template>
-  <article class="ec-fiche-info" :class="{ 'ec-fiche-info--territory': showTerritoryLayout }">
+  <article
+    class="ec-fiche-info"
+    :class="{ 'ec-fiche-info--territory': showTerritoryLayout }"
+    @click="onFicheContentClick"
+  >
     <SanitizedHtml
       v-if="configLoading || dataLoading"
       class="ec-fiche-info__body"
@@ -330,7 +365,7 @@ const parcelPanelFootnotesHtml = computed(() => {
               Infos
             </button>
           </li>
-          <li role="presentation">
+          <li v-if="showParcelDocumentsTab" role="presentation">
             <button
               id="ec-fiche-parcel-tab-documents"
               type="button"
@@ -474,7 +509,6 @@ const parcelPanelFootnotesHtml = computed(() => {
         <button
           type="button"
           class="fr-btn fr-btn--secondary fr-btn--sm"
-          :disabled="!documentTabs.length"
           title="Imprimer la fiche territoire"
           @click="printTerritoryFiche"
         >

@@ -25,3 +25,35 @@ export function isPaperFormatAllowedAtHighDpi(paperFormat: PaperFormatId): boole
 export function convertMmToPx(valueMm: number, dpiValue: number): number {
   return Math.round((valueMm / MM_PER_INCH) * dpiValue)
 }
+
+/** Options du sélecteur « Dimensions » : toujours toutes sélectionnables. */
+export function paperFormatSelectOptions(): { value: PaperFormatId; text: string }[] {
+  return Object.entries(PAPER_FORMATS_MM).map(([format, dimension]) => ({
+    value: format as PaperFormatId,
+    text: `${format} (${dimension.width} x ${dimension.height} mm)`,
+  }))
+}
+
+/**
+ * Options du sélecteur « Résolution » : 300 DPI limité aux formats ≤ B4
+ * (au-delà, taille de canvas hors limites de certains navigateurs).
+ */
+export function dpiSelectOptions(
+  paperFormat: PaperFormatId,
+): { value: number; text: string; disabled?: boolean }[] {
+  const highAllowed = isPaperFormatAllowedAtHighDpi(paperFormat)
+  return [
+    { value: BASE_DPI, text: '96 DPI (écran)' },
+    {
+      value: HIGH_DPI_VALUE,
+      text: highAllowed ? '300 DPI (impression)' : '300 DPI (impression) — formats ≤ B4',
+      disabled: !highAllowed,
+    },
+  ]
+}
+
+/** DPI effectif pour un format : un grand format choisi à 300 DPI repasse en 96 DPI. */
+export function resolveDpiForPaperFormat(dpi: number, paperFormat: PaperFormatId): number {
+  if (dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) return BASE_DPI
+  return dpi
+}
