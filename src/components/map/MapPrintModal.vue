@@ -2558,7 +2558,8 @@ async function onClickExportMap(): Promise<void> {
   --ec-attribution-block-height: calc(
     var(--ec-attribution-logo-height) + 4px * var(--ec-print-ui-scale)
   );
-  --ec-scale-attribution-stack-gap: calc(2px * var(--ec-print-ui-scale));
+  /* Espace visible entre barre d’échelle et logos (≈ 1,4 mm en A4). */
+  --ec-scale-attribution-stack-gap: calc(5px * var(--ec-print-ui-scale));
 }
 
 .ec-map-print-preview-map :deep(.ol-control.ol-attribution) {
@@ -2581,6 +2582,12 @@ async function onClickExportMap(): Promise<void> {
   font-size: calc(0.28125rem * var(--ec-print-ui-scale));
   white-space: nowrap;
   line-height: 1.1;
+}
+
+.ec-map-print-preview-map :deep(.ol-attribution li) {
+  /* DSFR : padding-bottom fixe de 0.25rem sur les li, non proportionnel : le bloc dépassait la
+     hauteur prévue (--ec-attribution-block-height) et la barre d’échelle chevauchait les logos. */
+  padding-bottom: calc(4px * var(--ec-print-ui-scale));
 }
 
 .ec-map-print-preview-map :deep(.ol-attribution img.map-logo-ign-svg),
