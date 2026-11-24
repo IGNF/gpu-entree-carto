@@ -110,6 +110,8 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
   if (typeof window === 'undefined') return null
+  // Appel déjà dépassé : ni requête en cours partagée (servie ensuite à l’appel courant), ni reprise du signal panneau.
+  if (params.abortSignal?.aborted) return null
   const fetchBase = resolveFicheInfoCombinedFetchUrl()
   if (!fetchBase) return null
 
@@ -154,6 +156,8 @@ export async function fetchGpuFicheInfoPayload(params: {
   fetchRole?: FicheInfoFetchRole
 }): Promise<GpuFicheInfoPayload | null> {
   if (typeof window === 'undefined') return null
+  // Appel déjà dépassé : ni requête en cours partagée (servie ensuite à l’appel courant), ni reprise du signal panneau.
+  if (params.abortSignal?.aborted) return null
 
   const inflightKey = fichePayloadInflightKey(
     params.lon,

@@ -3,6 +3,7 @@ import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
   applyDocumentCatalogVisibility,
   catalogBranchForRootNode,
+  catalogCheckedForStartupDocument,
   documentCatalogBranchesForDocument,
 } from '@/lib/layerConfig/documentCatalogVisibility'
 
@@ -85,5 +86,36 @@ describe('catalogBranchForRootNode', () => {
         visible: false,
       }),
     ).toBe('du-detail')
+  })
+})
+
+describe('catalogCheckedForStartupDocument', () => {
+  const tree = (): TreeLayerNode[] => [
+    {
+      id: 'lowscale',
+      title: "VUE D'ENSEMBLE DES DOCUMENTS D'URBANISME",
+      visible: true,
+      children: [{ id: 'ls-child', title: 'Commune', visible: true, gpuMapLayer: true }],
+    },
+    {
+      id: 'sup',
+      title: "SERVITUDE D'UTILITE PUBLIQUE",
+      visible: false,
+      children: [{ id: 'sup-a', title: 'Cat', visible: false, gpuMapLayer: true }],
+    },
+  ]
+
+  it('document SUP : cases attendues au rechargement sans couche dans le permalink', () => {
+    expect(
+      catalogCheckedForStartupDocument(tree(), { id: 'x', type: 'SUP', name: 'SUP_AC4' }),
+    ).toEqual({ lowscale: false, 'ls-child': false, sup: true, 'sup-a': true })
+  })
+
+  it('sans document : null ; l’arbre d’origine n’est pas modifié', () => {
+    const roots = tree()
+    expect(catalogCheckedForStartupDocument(roots, null)).toBeNull()
+    catalogCheckedForStartupDocument(roots, { id: 'x', type: 'SUP', name: 'SUP_AC4' })
+    expect(roots[1].visible).toBe(false)
+    expect(roots[0].visible).toBe(true)
   })
 })

@@ -98,6 +98,8 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Fiche info au rechargement (gpu-site)** — la cerise était chargée deux fois ; l’appel dépassé enregistrait une requête déjà annulée comme « en cours » et l’appel suivant la réutilisait : « Indisponibilité du service » jusqu’au clic sur Réessayer. Un appel annulé ne lance ni ne partage plus de requête.
+- **Permalink du catalogue** — un groupe décoché n’était restauré que pour sa propre case : ses couches (ex. « Zonages », couches de la vue d’ensemble) revenaient cochées par défaut. La branche est désormais décochée en entier, puis les descendants du permalink réappliqués. Avec un document de démarrage (ex. SUP), les cases qui diffèrent de l’état imposé par ce document sont écrites (les SUP décochées ne sont plus recochées au rechargement).
 - **Impression de la carte** — barre d’échelle qui chevauchait les logos des attributions (marge basse DSFR fixe des éléments de liste, non proportionnelle) ; espace d’environ 1,4 mm en A4 entre les deux, proportionnel au format.
 - **Fiche info parcelle après une recherche** — la requête d’emprise (arrière-plan) envoyait le même identifiant et un numéro de clic plus récent que la requête du panneau : gpu-site abandonnait celle du panneau, et la fiche parcelle restait vide (titre du lieu, onglets vides, sans bouton territoire ni références cadastrales). Les requêtes d’arrière-plan n’envoient plus `client`/`seq`. Une fiche en échec s’affiche désormais aussi en mode parcelle (« Indisponibilité du service » + Réessayer).
 - **Impression de la carte** — la cerise de positionnement et les emprises en pointillés rouges (couche de recherche geopf, attachée hors collection) n’étaient pas imprimées.

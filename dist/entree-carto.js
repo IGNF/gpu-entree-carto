@@ -67993,6 +67993,240 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return out;
   }
+  function isCatalogAggregate(node) {
+    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
+  }
+  function directCatalogChildren(node) {
+    return catalogChildNodes(node);
+  }
+  function isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent) {
+    if (!node.gpuOnlyLegend || !(parent == null ? void 0 : parent.gpuVirtual)) return false;
+    const parentId = parent.id.toLowerCase();
+    if (!parentId.includes("scot")) return false;
+    const nodeId = node.id.toLowerCase();
+    if (nodeId.includes("dev-mec") || nodeId.includes("--mec")) return false;
+    return nodeId.includes("--dev-scot") || nodeId.endsWith("--scot");
+  }
+  function catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2) {
+    const node = index2.nodesById.get(nodeId);
+    if (!node) return nodeId;
+    const parent = index2.parentById.get(nodeId) ?? null;
+    if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
+      return parent.id;
+    }
+    return nodeId;
+  }
+  function shouldPersistOnlyLegendLayerInPermalink(nodeId, checked, index2, stateDiffersFromConfig, defaultChecked, currentChecked) {
+    if (currentChecked !== defaultChecked) return true;
+    if (stateDiffersFromConfig) return true;
+    if (currentChecked) return true;
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return false;
+    if (directCatalogChildren(parent).length <= 1) return false;
+    return !isCheckboxSameAsDirectChildren(checked, parent);
+  }
+  function isCheckboxSameAsDirectChildren(checked, node) {
+    const self2 = Boolean(checked[node.id]);
+    for (const child of directCatalogChildren(node)) {
+      if (Boolean(checked[child.id]) !== self2) return false;
+    }
+    return true;
+  }
+  function isSameAsChildrenState(checked, node, opacityById) {
+    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
+    return isOpacitySameAsDirectChildren(node, opacityById);
+  }
+  function isSameAsDescendants(checked, node, index2, opacityById) {
+    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
+    for (const child of directCatalogChildren(node)) {
+      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
+    }
+    return true;
+  }
+  function splitAggregateAncestorId(nodeId, index2, splitIds) {
+    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
+    let current = index2.nodesById.get(nodeId);
+    while (current) {
+      const parent = index2.parentById.get(current.id);
+      if (!parent) return null;
+      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
+      current = parent;
+    }
+    return null;
+  }
+  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    const parent = index2.parentById.get(node.id);
+    if (!parent) return false;
+    if (split == null ? void 0 : split.has(parent.id)) {
+      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+    }
+    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
+      return true;
+    }
+    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
+  }
+  function isOpacitySameAsDirectChildren(node, opacityById) {
+    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
+    for (const child of directCatalogChildren(node)) {
+      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
+      if (childOpacity !== selfOpacity) return false;
+    }
+    return true;
+  }
+  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
+    if (!node.gpuMapLayer || node.gpuVirtual) return false;
+    if (!checked[node.id]) return false;
+    const split = options == null ? void 0 : options.splitAggregateIds;
+    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
+      return false;
+    }
+    if (splitAggregateAncestorId(node.id, index2, split)) {
+      return true;
+    }
+    const parent = index2.parentById.get(node.id);
+    if (!parent) {
+      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
+      return catalogChildNodes(node).length === 0;
+    }
+    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
+      return true;
+    }
+    return false;
+  }
+  function propagateCheckedToDescendants(checked, node, value2) {
+    for (const child of directCatalogChildren(node)) {
+      checked[child.id] = value2;
+      propagateCheckedToDescendants(checked, child, value2);
+    }
+  }
+  function propagateCheckedToAncestors(checked, nodeId, index2) {
+    const parent = index2.parentById.get(nodeId);
+    if (!parent) return;
+    let parentChecked = false;
+    for (const child of directCatalogChildren(parent)) {
+      if (checked[child.id]) {
+        parentChecked = true;
+        break;
+      }
+    }
+    for (const child of directCatalogChildren(parent)) {
+      if (child.gpuOnlyLegend && !parentChecked) {
+        checked[child.id] = false;
+      }
+    }
+    if (Boolean(checked[parent.id]) !== parentChecked) {
+      checked[parent.id] = parentChecked;
+    }
+    propagateCheckedToAncestors(checked, parent.id, index2);
+  }
+  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
+    let effectiveId = nodeId;
+    if (!value2) {
+      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
+    }
+    const node = index2.nodesById.get(effectiveId);
+    if (!node) return;
+    checked[effectiveId] = value2;
+    propagateCheckedToAncestors(checked, effectiveId, index2);
+    propagateCheckedToDescendants(checked, node, value2);
+  }
+  function applyCatalogToggleFromPermalink(checked, nodeId, value2, index2) {
+    let effectiveId = nodeId;
+    if (!value2) {
+      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
+    }
+    const node = index2.nodesById.get(effectiveId);
+    if (!node) return;
+    checked[effectiveId] = value2;
+    propagateCheckedToAncestors(checked, effectiveId, index2);
+  }
+  function computeMapVisibilityById(checked, index2, opacityById, options) {
+    const out = {};
+    for (const node of index2.nodesById.values()) {
+      if (!node.gpuMapLayer) continue;
+      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
+    }
+    return out;
+  }
+  function catalogNodeDepth(nodeId, index2) {
+    let depth = 0;
+    for (let p5 = index2.parentById.get(nodeId); p5; p5 = index2.parentById.get(p5.id)) depth += 1;
+    return depth;
+  }
+  function hasDescendantInChanges(node, ids) {
+    return catalogChildNodes(node).some(
+      (child) => ids.has(child.id) || hasDescendantInChanges(child, ids)
+    );
+  }
+  function applyCatalogPermalinkChanges(checked, changes, index2) {
+    const ids = new Set(changes.map((c) => c.id));
+    const ordered = changes.filter((c) => index2.nodesById.has(c.id)).sort((a3, b) => catalogNodeDepth(a3.id, index2) - catalogNodeDepth(b.id, index2));
+    for (const { id: id2, checked: value2 } of ordered) {
+      const node = index2.nodesById.get(id2);
+      const hasChildren = catalogChildNodes(node).length > 0;
+      const cascade = hasChildren && (!value2 || !hasDescendantInChanges(node, ids));
+      if (cascade) applyUserCatalogToggle(checked, id2, value2, index2);
+      else applyCatalogToggleFromPermalink(checked, id2, value2, index2);
+    }
+  }
+  function buildCatalogTreeIndex(roots) {
+    const nodesById = /* @__PURE__ */ new Map();
+    const parentById = /* @__PURE__ */ new Map();
+    function walk(node, parent) {
+      nodesById.set(node.id, node);
+      parentById.set(node.id, parent);
+      for (const child of catalogChildNodes(node)) {
+        walk(child, node);
+      }
+    }
+    for (const root of roots) walk(root, null);
+    return { nodesById, parentById, roots };
+  }
+  function catalogAncestorIds(nodeId, parentById) {
+    const ids = [];
+    let parent = parentById.get(nodeId) ?? null;
+    while (parent) {
+      ids.unshift(parent.id);
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return ids;
+  }
+  function flattenCatalogNodes(roots) {
+    const flat = [];
+    function walk(node) {
+      flat.push(node);
+      catalogChildNodes(node).forEach(walk);
+    }
+    roots.forEach(walk);
+    return flat;
+  }
+  function catalogSubtreePartiallyChecked(node, checkedById) {
+    let anyChecked = false;
+    let anyUnchecked = false;
+    function walk(n) {
+      if (checkedById[n.id]) anyChecked = true;
+      else anyUnchecked = true;
+      for (const child of catalogChildNodes(n)) walk(child);
+    }
+    walk(node);
+    return anyChecked && anyUnchecked;
+  }
+  function catalogAncestorIdsToExpand(roots, checkedById) {
+    const expand = /* @__PURE__ */ new Set();
+    function visit(node) {
+      const children = catalogChildNodes(node);
+      if (!children.length) return;
+      if (catalogSubtreePartiallyChecked(node, checkedById)) {
+        expand.add(node.id);
+      }
+      for (const child of children) {
+        visit(child);
+      }
+    }
+    for (const root of roots) visit(root);
+    return expand;
+  }
   function normalizeCatalogTitle(title2) {
     return title2.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase().replace(/\s+/g, " ").trim();
   }
@@ -68074,6 +68308,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       setSubtreeVisible(root, enabled.has(branch));
     }
+  }
+  function cloneCatalogTree(nodes) {
+    return nodes.map((node) => ({
+      ...node,
+      children: node.children ? cloneCatalogTree(node.children) : node.children
+    }));
+  }
+  function catalogCheckedForStartupDocument(roots, document2) {
+    var _a2;
+    if (!((_a2 = documentCatalogBranchesForDocument(document2)) == null ? void 0 : _a2.size)) return null;
+    const clone2 = cloneCatalogTree(roots);
+    applyDocumentCatalogVisibility(clone2, document2);
+    const index2 = buildCatalogTreeIndex(clone2);
+    const checked = {};
+    for (const node of flattenCatalogNodes(clone2)) checked[node.id] = Boolean(node.visible);
+    for (const node of flattenCatalogNodes(clone2)) {
+      if (checked[node.id]) propagateCheckedToAncestors(checked, node.id, index2);
+    }
+    return checked;
   }
   function resolveGpuLayerVisible(layer, parentVisible) {
     if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
@@ -68264,162 +68517,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (isGpuDevProxyPath(val.trim())) continue;
       target2[key2] = resolveConfigUrl(val);
     }
-  }
-  function isCatalogAggregate(node) {
-    return Boolean(node.gpuMapLayer && !node.gpuVirtual && catalogChildNodes(node).length > 0);
-  }
-  function directCatalogChildren(node) {
-    return catalogChildNodes(node);
-  }
-  function isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent) {
-    if (!node.gpuOnlyLegend || !(parent == null ? void 0 : parent.gpuVirtual)) return false;
-    const parentId = parent.id.toLowerCase();
-    if (!parentId.includes("scot")) return false;
-    const nodeId = node.id.toLowerCase();
-    if (nodeId.includes("dev-mec") || nodeId.includes("--mec")) return false;
-    return nodeId.includes("--dev-scot") || nodeId.endsWith("--scot");
-  }
-  function catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2) {
-    const node = index2.nodesById.get(nodeId);
-    if (!node) return nodeId;
-    const parent = index2.parentById.get(nodeId) ?? null;
-    if (isScotWmsOnlyLegendUnderScotVirtualGroup(node, parent)) {
-      return parent.id;
-    }
-    return nodeId;
-  }
-  function shouldPersistOnlyLegendLayerInPermalink(nodeId, checked, index2, stateDiffersFromConfig, defaultChecked, currentChecked) {
-    if (currentChecked !== defaultChecked) return true;
-    if (stateDiffersFromConfig) return true;
-    if (currentChecked) return true;
-    const parent = index2.parentById.get(nodeId);
-    if (!parent) return false;
-    if (directCatalogChildren(parent).length <= 1) return false;
-    return !isCheckboxSameAsDirectChildren(checked, parent);
-  }
-  function isCheckboxSameAsDirectChildren(checked, node) {
-    const self2 = Boolean(checked[node.id]);
-    for (const child of directCatalogChildren(node)) {
-      if (Boolean(checked[child.id]) !== self2) return false;
-    }
-    return true;
-  }
-  function isSameAsChildrenState(checked, node, opacityById) {
-    if (!isCheckboxSameAsDirectChildren(checked, node)) return false;
-    return isOpacitySameAsDirectChildren(node, opacityById);
-  }
-  function isSameAsDescendants(checked, node, index2, opacityById) {
-    if (!isSameAsChildrenState(checked, node, opacityById)) return false;
-    for (const child of directCatalogChildren(node)) {
-      if (!isSameAsDescendants(checked, child, index2, opacityById)) return false;
-    }
-    return true;
-  }
-  function splitAggregateAncestorId(nodeId, index2, splitIds) {
-    if (!(splitIds == null ? void 0 : splitIds.size)) return null;
-    let current = index2.nodesById.get(nodeId);
-    while (current) {
-      const parent = index2.parentById.get(current.id);
-      if (!parent) return null;
-      if (splitIds.has(parent.id) && isCatalogAggregate(parent)) return parent.id;
-      current = parent;
-    }
-    return null;
-  }
-  function isAscendentParentAggregateActive(checked, node, index2, opacityById, options) {
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    const parent = index2.parentById.get(node.id);
-    if (!parent) return false;
-    if (split == null ? void 0 : split.has(parent.id)) {
-      return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-    }
-    if (isCatalogAggregate(parent) && isSameAsDescendants(checked, parent, index2, opacityById)) {
-      return true;
-    }
-    return isAscendentParentAggregateActive(checked, parent, index2, opacityById, options);
-  }
-  function isOpacitySameAsDirectChildren(node, opacityById) {
-    const selfOpacity = opacityById[node.id] ?? node.gpuDefaultOpacity ?? 70;
-    for (const child of directCatalogChildren(node)) {
-      const childOpacity = opacityById[child.id] ?? child.gpuDefaultOpacity ?? 70;
-      if (childOpacity !== selfOpacity) return false;
-    }
-    return true;
-  }
-  function shouldShowMapLayerForNode(checked, node, index2, opacityById, options) {
-    if (!node.gpuMapLayer || node.gpuVirtual) return false;
-    if (!checked[node.id]) return false;
-    const split = options == null ? void 0 : options.splitAggregateIds;
-    if (isCatalogAggregate(node) && (split == null ? void 0 : split.has(node.id))) {
-      return false;
-    }
-    if (splitAggregateAncestorId(node.id, index2, split)) {
-      return true;
-    }
-    const parent = index2.parentById.get(node.id);
-    if (!parent) {
-      if (isSameAsDescendants(checked, node, index2, opacityById)) return true;
-      return catalogChildNodes(node).length === 0;
-    }
-    if (isSameAsDescendants(checked, node, index2, opacityById) && !isAscendentParentAggregateActive(checked, node, index2, opacityById, options)) {
-      return true;
-    }
-    return false;
-  }
-  function propagateCheckedToDescendants(checked, node, value2) {
-    for (const child of directCatalogChildren(node)) {
-      checked[child.id] = value2;
-      propagateCheckedToDescendants(checked, child, value2);
-    }
-  }
-  function propagateCheckedToAncestors(checked, nodeId, index2) {
-    const parent = index2.parentById.get(nodeId);
-    if (!parent) return;
-    let parentChecked = false;
-    for (const child of directCatalogChildren(parent)) {
-      if (checked[child.id]) {
-        parentChecked = true;
-        break;
-      }
-    }
-    for (const child of directCatalogChildren(parent)) {
-      if (child.gpuOnlyLegend && !parentChecked) {
-        checked[child.id] = false;
-      }
-    }
-    if (Boolean(checked[parent.id]) !== parentChecked) {
-      checked[parent.id] = parentChecked;
-    }
-    propagateCheckedToAncestors(checked, parent.id, index2);
-  }
-  function applyUserCatalogToggle(checked, nodeId, value2, index2) {
-    let effectiveId = nodeId;
-    if (!value2) {
-      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
-    }
-    const node = index2.nodesById.get(effectiveId);
-    if (!node) return;
-    checked[effectiveId] = value2;
-    propagateCheckedToAncestors(checked, effectiveId, index2);
-    propagateCheckedToDescendants(checked, node, value2);
-  }
-  function applyCatalogToggleFromPermalink(checked, nodeId, value2, index2) {
-    let effectiveId = nodeId;
-    if (!value2) {
-      effectiveId = catalogIdToUncheckWhenRemovingScotGroup(nodeId, index2);
-    }
-    const node = index2.nodesById.get(effectiveId);
-    if (!node) return;
-    checked[effectiveId] = value2;
-    propagateCheckedToAncestors(checked, effectiveId, index2);
-  }
-  function computeMapVisibilityById(checked, index2, opacityById, options) {
-    const out = {};
-    for (const node of index2.nodesById.values()) {
-      if (!node.gpuMapLayer) continue;
-      out[node.id] = shouldShowMapLayerForNode(checked, node, index2, opacityById, options);
-    }
-    return out;
   }
   const DEFAULT_GPU_MIN_ZOOM = 0;
   const DEFAULT_GPU_MAX_ZOOM = 22;
@@ -73898,7 +73995,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   async function fetchGpuFicheInfoCombinedPayload(params2) {
+    var _a2;
     if (typeof window === "undefined") return null;
+    if ((_a2 = params2.abortSignal) == null ? void 0 : _a2.aborted) return null;
     const fetchBase = resolveFicheInfoCombinedFetchUrl();
     if (!fetchBase) return null;
     const inflightKey = fichePayloadInflightKey(
@@ -73928,7 +74027,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     return promise;
   }
   async function fetchGpuFicheInfoPayload(params2) {
+    var _a2;
     if (typeof window === "undefined") return null;
+    if ((_a2 = params2.abortSignal) == null ? void 0 : _a2.aborted) return null;
     const inflightKey = fichePayloadInflightKey(
       params2.lon,
       params2.lat,
@@ -74924,6 +75025,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       showLoading(loadingTitle);
     }
     await waitUntilGpuClientConfigScriptSettled();
+    if (fetchAbortSignal.aborted || requestId2 !== mapPointRequestSeq) return null;
     syncEntreeConfigFromGpuScript();
     finalizeGpuClientConfigStateIfInjected();
     const apiUrl = resolveApiFicheInfoUrl();
@@ -117854,63 +117956,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return layerPermalinkInInitialHash === true;
   }
-  function buildCatalogTreeIndex(roots) {
-    const nodesById = /* @__PURE__ */ new Map();
-    const parentById = /* @__PURE__ */ new Map();
-    function walk(node, parent) {
-      nodesById.set(node.id, node);
-      parentById.set(node.id, parent);
-      for (const child of catalogChildNodes(node)) {
-        walk(child, node);
-      }
-    }
-    for (const root of roots) walk(root, null);
-    return { nodesById, parentById, roots };
-  }
-  function catalogAncestorIds(nodeId, parentById) {
-    const ids = [];
-    let parent = parentById.get(nodeId) ?? null;
-    while (parent) {
-      ids.unshift(parent.id);
-      parent = parentById.get(parent.id) ?? null;
-    }
-    return ids;
-  }
-  function flattenCatalogNodes(roots) {
-    const flat = [];
-    function walk(node) {
-      flat.push(node);
-      catalogChildNodes(node).forEach(walk);
-    }
-    roots.forEach(walk);
-    return flat;
-  }
-  function catalogSubtreePartiallyChecked(node, checkedById) {
-    let anyChecked = false;
-    let anyUnchecked = false;
-    function walk(n) {
-      if (checkedById[n.id]) anyChecked = true;
-      else anyUnchecked = true;
-      for (const child of catalogChildNodes(n)) walk(child);
-    }
-    walk(node);
-    return anyChecked && anyUnchecked;
-  }
-  function catalogAncestorIdsToExpand(roots, checkedById) {
-    const expand = /* @__PURE__ */ new Set();
-    function visit(node) {
-      const children = catalogChildNodes(node);
-      if (!children.length) return;
-      if (catalogSubtreePartiallyChecked(node, checkedById)) {
-        expand.add(node.id);
-      }
-      for (const child of children) {
-        visit(child);
-      }
-    }
-    for (const root of roots) visit(root);
-    return expand;
-  }
   const MAP_ZOOM_DEBOUNCE_MS = 80;
   function useMapZoom() {
     const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
@@ -118539,33 +118584,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogChecked.value = { ...catalogChecked.value };
       reapplyCatalogMapState();
     }
-    function permalinkChangeHasDescendantInHash(nodeId, hashNodeIds) {
-      const node = treeIndex.nodesById.get(nodeId);
-      if (!node) return false;
-      for (const child of catalogChildNodes(node)) {
-        if (hashNodeIds.has(child.id)) return true;
-        if (permalinkChangeHasDescendantInHash(child.id, hashNodeIds)) return true;
-      }
-      return false;
-    }
     function applyCatalogCheckedFromPermalink(changes) {
       if (!changes.length) return;
-      const hashNodeIds = new Set(changes.map((c) => c.id));
       const next = { ...catalogChecked.value };
-      for (const { id: id2, checked } of changes) {
-        if (!treeIndex.nodesById.has(id2)) continue;
-        if (!checked) {
-          applyCatalogToggleFromPermalink(next, id2, false, treeIndex);
-          continue;
-        }
-        const node = treeIndex.nodesById.get(id2);
-        const hasChildren = node ? catalogChildNodes(node).length > 0 : false;
-        if (hasChildren && !permalinkChangeHasDescendantInHash(id2, hashNodeIds)) {
-          applyUserCatalogToggle(next, id2, true, treeIndex);
-        } else {
-          applyCatalogToggleFromPermalink(next, id2, true, treeIndex);
-        }
-      }
+      applyCatalogPermalinkChanges(next, changes, treeIndex);
       catalogChecked.value = next;
       reapplyCatalogMapState();
     }
@@ -121323,22 +121345,32 @@ Expected function or array of functions, received type ${typeof value2}.`
           opacityById[layer.id] = layer.opacity;
         }
         const checked = catalogCheckedById.value;
+        const startupDocChecked = catalogCheckedForStartupDocument(
+          layerNodesRef.value,
+          resolveDocumentForCatalogStartup()
+        );
+        const writtenUncheckedPaths = [];
         for (const entry of catalogEntries.value) {
           const state = layerPermalinkStateForEntry(entry);
           const onlyLegend = Boolean(entry.config.onlyLegend);
+          const differsFromStartupDoc = startupDocChecked !== null && state.checked !== Boolean(startupDocChecked[entry.id]);
+          const differs = layerStateDiffersFromConfig(entry) || differsFromStartupDoc;
+          if (!state.checked && !state.grayscale && Math.abs(state.opacity - defaultOpacityFromCatalogEntry(entry)) < 1e-4 && writtenUncheckedPaths.some((path) => entry.path.startsWith(`${path}/`))) {
+            continue;
+          }
           if (onlyLegend) {
             if (!shouldPersistOnlyLegendLayerInPermalink(
               entry.id,
               checked,
               treeIndex,
-              layerStateDiffersFromConfig(entry),
+              differs,
               configDefaultCatalogChecked(entry),
               state.checked
             )) {
               continue;
             }
           } else {
-            if (!state.checked && !layerStateDiffersFromConfig(entry)) continue;
+            if (!state.checked && !differs) continue;
             const node = findCatalogTreeNode(entry.id);
             if (state.checked && node && catalogChildNodes(node).length > 0 && !isSameAsDescendants(checked, node, treeIndex, opacityById)) {
               continue;
@@ -121347,6 +121379,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           const permalinkId = primaryPermalinkIdForEntry(entry);
           if (!permalinkId) continue;
           out[permalinkId] = encodeLayerPermalinkValue(state);
+          if (!state.checked) writtenUncheckedPaths.push(entry.path);
         }
         return out;
       }

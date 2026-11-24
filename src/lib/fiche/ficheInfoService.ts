@@ -609,6 +609,8 @@ async function loadFicheForMapPointImpl(params: {
   }
 
   await waitUntilGpuClientConfigScriptSettled()
+  // Dépassé pendant l’attente de la config (ex. double chargement de la cerise au rechargement).
+  if (fetchAbortSignal.aborted || requestId !== mapPointRequestSeq) return null
   syncEntreeConfigFromGpuScript()
   finalizeGpuClientConfigStateIfInjected()
 

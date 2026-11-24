@@ -281,3 +281,39 @@ export function computeMapVisibilityById(
   }
   return out
 }
+
+function catalogNodeDepth(nodeId: string, index: CatalogTreeIndex): number {
+  let depth = 0
+  for (let p = index.parentById.get(nodeId); p; p = index.parentById.get(p.id)) depth += 1
+  return depth
+}
+
+function hasDescendantInChanges(node: TreeLayerNode, ids: ReadonlySet<string>): boolean {
+  return catalogChildNodes(node).some(
+    (child) => ids.has(child.id) || hasDescendantInChanges(child, ids),
+  )
+}
+
+/**
+ * Restauration des cases du catalogue depuis le permalink.
+ * Un groupe écrit décoché l’est avec toute sa branche (l’écriture ne répète pas ses enfants décochés) :
+ * on décoche donc la branche, puis on réapplique les descendants listés (ancêtres d’abord).
+ * Un groupe coché sans descendant listé coche sa branche ; sinon seule sa case (sélection partielle).
+ */
+export function applyCatalogPermalinkChanges(
+  checked: Record<string, boolean>,
+  changes: ReadonlyArray<{ id: string; checked: boolean }>,
+  index: CatalogTreeIndex,
+): void {
+  const ids = new Set(changes.map((c) => c.id))
+  const ordered = changes
+    .filter((c) => index.nodesById.has(c.id))
+    .sort((a, b) => catalogNodeDepth(a.id, index) - catalogNodeDepth(b.id, index))
+  for (const { id, checked: value } of ordered) {
+    const node = index.nodesById.get(id)!
+    const hasChildren = catalogChildNodes(node).length > 0
+    const cascade = hasChildren && (!value || !hasDescendantInChanges(node, ids))
+    if (cascade) applyUserCatalogToggle(checked, id, value, index)
+    else applyCatalogToggleFromPermalink(checked, id, value, index)
+  }
+}
