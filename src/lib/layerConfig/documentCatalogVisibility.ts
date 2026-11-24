@@ -1,6 +1,8 @@
 import type { StandardViewerDocument } from '@/lib/types'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
+import { propagateCheckedToAncestors } from '@/lib/layerConfig/catalogCheckboxLogic'
+import { buildCatalogTreeIndex, flattenCatalogNodes } from '@/lib/layerConfig/catalogTreeIndex'
 
 export type DocumentCatalogBranch = 'du-overview' | 'du-detail' | 'sup' | 'scot'
 
@@ -115,4 +117,32 @@ export function applyDocumentCatalogVisibility(
     }
     setSubtreeVisible(root, enabled.has(branch))
   }
+}
+
+function cloneCatalogTree(nodes: TreeLayerNode[]): TreeLayerNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    children: node.children ? cloneCatalogTree(node.children) : node.children,
+  }))
+}
+
+/**
+ * Cases du catalogue qu’un rechargement sans couche dans le permalink produirait avec ce document
+ * de démarrage (mêmes règles que la case cochée initiale : `visible` du nœud, puis ses ancêtres).
+ * null sans document reconnu. L’arbre fourni n’est pas modifié.
+ */
+export function catalogCheckedForStartupDocument(
+  roots: TreeLayerNode[],
+  document: StandardViewerDocument | null | undefined,
+): Record<string, boolean> | null {
+  if (!documentCatalogBranchesForDocument(document)?.size) return null
+  const clone = cloneCatalogTree(roots)
+  applyDocumentCatalogVisibility(clone, document)
+  const index = buildCatalogTreeIndex(clone)
+  const checked: Record<string, boolean> = {}
+  for (const node of flattenCatalogNodes(clone)) checked[node.id] = Boolean(node.visible)
+  for (const node of flattenCatalogNodes(clone)) {
+    if (checked[node.id]) propagateCheckedToAncestors(checked, node.id, index)
+  }
+  return checked
 }

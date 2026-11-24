@@ -98,6 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche info on reload (gpu-site)** — the location pin fiche was loaded twice; the superseded call registered an already-aborted request as “in flight” and the next call reused it: “Indisponibilité du service” until Retry was clicked. An aborted call no longer starts nor shares a request.
+- **Catalogue permalink** — an unchecked group only restored its own checkbox: its layers (e.g. “Zonages”, overview layers) came back checked by default. The whole branch is now unchecked, then the permalink descendants are reapplied. With a startup document (e.g. SUP), checkboxes that differ from the state that document imposes are written (unchecked SUPs are no longer re-checked on reload).
 - **Map print** — scale line overlapping the attribution logos (fixed DSFR list-item bottom padding, not scaled); about 1.4 mm gap between them on A4, proportional to the format.
 - **Parcel fiche after a place search** — the outline (background) request sent the same client id and a newer click number than the panel request, so gpu-site abandoned the panel request and the parcel fiche stayed empty (place title, empty tabs, no territory button or cadastral references). Background requests no longer send `client`/`seq`. A failed fiche is now also shown in parcel mode (“Indisponibilité du service” + Retry).
 - **Map print** — the location pin and the red dashed outlines (geopf search layer, attached outside the layer collection) were not printed.

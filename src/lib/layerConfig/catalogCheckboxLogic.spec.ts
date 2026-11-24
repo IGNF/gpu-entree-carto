@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import {
+  applyCatalogPermalinkChanges,
   applyCatalogToggleFromPermalink,
   applyUserCatalogToggle,
   computeMapVisibilityById,
@@ -347,5 +348,76 @@ describe('catalogCheckboxLogic', () => {
     const mapVis = computeMapVisibilityById(checked, index, opacity)
     expect(mapVis.presc).toBe(true)
     expect(mapVis['presc-leaf']).toBe(false)
+  })
+})
+
+describe('applyCatalogPermalinkChanges (rechargement du permalink)', () => {
+  // Défauts config : tout coché (comme « Vue d’ensemble » / « Zonages »).
+  const roots: TreeLayerNode[] = [
+    {
+      id: 'lowscale',
+      title: 'Vue d’ensemble',
+      visible: true,
+      gpuVirtual: true,
+      children: [
+        { id: 'municipality', title: 'Communes', visible: true, gpuMapLayer: true },
+        { id: 'document', title: 'Documents', visible: true, gpuMapLayer: true },
+      ],
+    },
+    {
+      id: 'du',
+      title: 'Vue détaillée',
+      visible: true,
+      gpuVirtual: true,
+      children: [
+        { id: 'zone', title: 'Zonages', visible: true, gpuMapLayer: true },
+        {
+          id: 'presc',
+          title: 'Prescriptions',
+          visible: true,
+          gpuVirtual: true,
+          children: [{ id: 'presc-leaf', title: 'Presc', visible: true, gpuMapLayer: true }],
+        },
+      ],
+    },
+  ]
+  const index = buildCatalogTreeIndex(roots)
+  const allChecked = () =>
+    Object.fromEntries([...index.nodesById.keys()].map((id) => [id, true])) as Record<
+      string,
+      boolean
+    >
+
+  it('groupe décoché sans descendant listé : toute la branche décochée', () => {
+    const checked = allChecked()
+    applyCatalogPermalinkChanges(checked, [{ id: 'lowscale', checked: false }], index)
+    expect(checked).toMatchObject({ lowscale: false, municipality: false, document: false })
+  })
+
+  it('groupe décoché avec un sous-groupe listé : les enfants non listés (Zonages) restent décochés', () => {
+    const checked = allChecked()
+    applyCatalogPermalinkChanges(
+      checked,
+      [
+        { id: 'presc', checked: false },
+        { id: 'du', checked: false },
+      ],
+      index,
+    )
+    expect(checked).toMatchObject({ du: false, zone: false, presc: false, 'presc-leaf': false })
+  })
+
+  it('un descendant coché explicitement reste coché après la cascade du parent', () => {
+    const checked = allChecked()
+    applyCatalogPermalinkChanges(
+      checked,
+      [
+        { id: 'zone', checked: true },
+        { id: 'du', checked: false },
+      ],
+      index,
+    )
+    expect(checked.zone).toBe(true)
+    expect(checked['presc-leaf']).toBe(false)
   })
 })

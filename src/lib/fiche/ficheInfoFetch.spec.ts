@@ -101,6 +101,27 @@ describe('fetchGpuFicheInfoPayload', () => {
     expect(background.searchParams.has('seq')).toBe(false)
   })
 
+  it('un appel déjà annulé ne « contamine » pas l’appel suivant au même point (rechargement)', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      init?.signal?.aborted
+        ? Promise.reject(new DOMException('Aborted', 'AbortError'))
+        : Promise.resolve(new Response(JSON.stringify(payload), { status: 200 })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const point = { lon: 3.765, lat: 47.522, zoom: 15, mode: MAP_MODE_TERRITORY }
+    const aborted = new AbortController()
+    aborted.abort()
+    // Appel dépassé (son signal est déjà annulé) puis appel courant au même point.
+    const stale = fetchGpuFicheInfoPayload({ ...point, abortSignal: aborted.signal })
+    const current = fetchGpuFicheInfoPayload({
+      ...point,
+      abortSignal: new AbortController().signal,
+    })
+    expect(await stale).toBeNull()
+    expect(await current).toEqual(expect.objectContaining({ title: 'test' }))
+  })
+
   it('annule aussi les fetches emprise (background) au clic suivant', async () => {
     ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
     ;(config as { apiFicheInfoCombinedUrl?: string }).apiFicheInfoCombinedUrl = '/api/fiche-info-v2'

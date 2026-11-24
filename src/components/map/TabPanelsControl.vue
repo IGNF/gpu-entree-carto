@@ -43,7 +43,10 @@ import {
   type GpuLayerCatalogEntry,
 } from '@/lib/layerConfig/gpuLayerConfig'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
-import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
+import {
+  applyDocumentCatalogVisibility,
+  catalogCheckedForStartupDocument,
+} from '@/lib/layerConfig/documentCatalogVisibility'
 import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import { buildCatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
@@ -437,16 +440,35 @@ function collectLayerParamsForPermalink(): MapPermalinkParams {
     opacityById[layer.id] = layer.opacity
   }
   const checked = catalogCheckedById.value
+  // Document de démarrage (ex. SUP) : sans couche dans le permalink, le rechargement le réapplique.
+  // Une case qui en diffère doit donc être écrite, même si elle est identique à la config.
+  const startupDocChecked = catalogCheckedForStartupDocument(
+    layerNodesRef.value,
+    resolveDocumentForCatalogStartup(),
+  )
+  const writtenUncheckedPaths: string[] = []
   for (const entry of catalogEntries.value) {
     const state = layerPermalinkStateForEntry(entry)
     const onlyLegend = Boolean(entry.config.onlyLegend)
+    const differsFromStartupDoc =
+      startupDocChecked !== null && state.checked !== Boolean(startupDocChecked[entry.id])
+    const differs = layerStateDiffersFromConfig(entry) || differsFromStartupDoc
+    // Sous un groupe écrit décoché : restauré par la lecture (branche décochée en cascade).
+    if (
+      !state.checked &&
+      !state.grayscale &&
+      Math.abs(state.opacity - defaultOpacityFromCatalogEntry(entry)) < 0.0001 &&
+      writtenUncheckedPaths.some((path) => entry.path.startsWith(`${path}/`))
+    ) {
+      continue
+    }
     if (onlyLegend) {
       if (
         !shouldPersistOnlyLegendLayerInPermalink(
           entry.id,
           checked,
           treeIndex,
-          layerStateDiffersFromConfig(entry),
+          differs,
           configDefaultCatalogChecked(entry),
           state.checked,
         )
@@ -454,7 +476,7 @@ function collectLayerParamsForPermalink(): MapPermalinkParams {
         continue
       }
     } else {
-      if (!state.checked && !layerStateDiffersFromConfig(entry)) continue
+      if (!state.checked && !differs) continue
       const node = findCatalogTreeNode(entry.id)
       if (
         state.checked &&
@@ -468,6 +490,7 @@ function collectLayerParamsForPermalink(): MapPermalinkParams {
     const permalinkId = primaryPermalinkIdForEntry(entry)
     if (!permalinkId) continue
     out[permalinkId] = encodeLayerPermalinkValue(state)
+    if (!state.checked) writtenUncheckedPaths.push(entry.path)
   }
   return out
 }
