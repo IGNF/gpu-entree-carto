@@ -1,4 +1,5 @@
 import config from '@/lib/config'
+import { ficheServiceUnavailableSelection } from '@/lib/fiche/ficheRetry'
 import type { StandardViewerSearch } from '@/lib/types'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
@@ -225,14 +226,6 @@ export function resolveApiFicheInfoUrl(): string | null {
 
 export function isFicheInfoApiConfigured(): boolean {
   return resolveApiFicheInfoUrl() != null
-}
-
-function ficheServiceUnavailableSelection(title: string): FicheInfoSelection {
-  return {
-    title,
-    bodyHtml: FICHE_UNAVAILABLE_BODY,
-    raw: { source: 'fiche-service-unavailable' },
-  }
 }
 
 function showLoading(title: string): void {
@@ -663,7 +656,13 @@ async function loadFicheForMapPointImpl(params: {
       params.lon,
       params.lat,
       params.mode,
-      ficheServiceUnavailableSelection(loadingTitle),
+      ficheServiceUnavailableSelection(loadingTitle, {
+        lon: params.lon,
+        lat: params.lat,
+        mode: params.mode,
+        zoom: params.zoom,
+        loadingTitle: params.loadingTitle,
+      }),
       markerPlacedAtClick,
       skipLocationMarker,
       silent,

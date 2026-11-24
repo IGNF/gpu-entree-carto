@@ -37,16 +37,11 @@ function resolveAgainstEntreeCartoScript(assetPath: string): string | null {
 }
 
 /**
- * URL du worker d’export : relative au script entree-carto (embed gpu-site),
- * pas à `document.baseURI` (/map/ sur gpu-site).
+ * URL du worker d’export précompilé (`printExport.worker-embed.js`), relative au script
+ * entree-carto (embed gpu-site), pas à `document.baseURI` (/map/ sur gpu-site).
+ * `null` hors embed (démo, dev) : l’appelant crée alors le worker compilé par Vite.
  */
-export function resolvePrintExportWorkerUrl(): string {
-  if (import.meta.env?.DEV) {
-    return new URL('./printExport.worker.ts', import.meta.url).href
-  }
-
-  const resolved = resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET)
-  if (resolved) return resolved
-
-  return new URL('./printExport.worker.ts', import.meta.url).href
+export function resolveEmbedPrintExportWorkerUrl(): string | null {
+  if (import.meta.env?.DEV) return null
+  return resolveAgainstEntreeCartoScript(ENTREE_PRINT_WORKER_ASSET)
 }

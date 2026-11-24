@@ -699,6 +699,11 @@ export class DrawToolsBar {
       })
     })
     this.map.addInteraction(this.draw)
+    // Snap doit rester la dernière interaction pour accrocher aussi le dessin.
+    if (this.snap) {
+      this.map.removeInteraction(this.snap)
+      this.map.addInteraction(this.snap)
+    }
     this.bindMapHover()
     this.notifyToolState()
   }

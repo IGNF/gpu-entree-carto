@@ -1,4 +1,5 @@
 import config from '@/lib/config'
+import { PARCEL_NO_RULE_HTML } from '@/lib/fiche/ficheNoDataMessages'
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import {
@@ -836,7 +837,7 @@ export function buildParcelInfosHtmlFromFiche(
     )
   }
   if (!parts.length) {
-    return '<p>Aucune règle d’urbanisme intersectant cette parcelle.</p>'
+    return PARCEL_NO_RULE_HTML
   }
   return parts.join('')
 }

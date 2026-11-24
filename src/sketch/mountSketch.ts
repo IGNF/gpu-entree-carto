@@ -304,6 +304,7 @@ export function mountSketch(
       map.removeControl(sketch)
       if (zoomControl) map.removeControl(zoomControl)
       map.setTarget(undefined)
+      map.dispose()
       mapHost.replaceChildren()
       mapHost.classList.remove('ec-sketch-mount', 'ec-sketch-mount--has-settings')
       for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {

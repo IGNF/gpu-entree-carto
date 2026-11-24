@@ -61,3 +61,13 @@ describe('printFicheSnapshot', () => {
     expect(isTerritoryFichePrintReady(territory)).toBe(true)
   })
 })
+
+describe('fiche territoire : texte par défaut « aucune sélection »', () => {
+  it('n’active pas l’impression territoire tant qu’aucune fiche n’est récupérée', async () => {
+    const { DEFAULT_FICHE_EMPTY } = await import('@/composables/tabPanels')
+    expect(isTerritoryFichePrintReady(DEFAULT_FICHE_EMPTY)).toBe(false)
+    expect(
+      isTerritoryFichePrintReady({ ...DEFAULT_FICHE_EMPTY, title: 'Saint-Pere (89364)' }),
+    ).toBe(false)
+  })
+})

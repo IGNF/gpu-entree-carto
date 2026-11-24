@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import {
   libCssAssetFileName,
   libMinifyEsbuildOptions,
-  vitePrintWorkerBuildOptions,
+  vitePrintWorkerLibBuildOptions,
 } from './vite/libBuildOptions'
 import { remixiconExternal } from './vite/remixiconExternal'
 import { stubDsfrIconsCss } from './vite/stubDsfrIconsCss'
@@ -14,7 +14,7 @@ import { patchGeopfPanelManager, patchGeopfSearchEval } from './vite.geopfPlugin
 const minify = process.env.LIB_MINIFY === '1'
 
 export default defineConfig({
-  ...vitePrintWorkerBuildOptions,
+  ...vitePrintWorkerLibBuildOptions,
   /** URLs relatives (worker print, …) résolues depuis l’URL du script embed (gpu-site `/build/vendor/entree-carto/`). */
   base: './',
   plugins: [

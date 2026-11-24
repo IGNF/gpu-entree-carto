@@ -80,7 +80,7 @@ describe('buildParcelInfosHtmlFromFiche', () => {
       undefined,
       { dus: { DU_ORPHELIN: { documents: [] } } },
     )
-    expect(html).toContain('Aucune règle')
+    expect(html).toContain('Pas de règle d’urbanisme trouvé')
     expect(html).not.toContain('Zone urbaine centrale')
   })
 

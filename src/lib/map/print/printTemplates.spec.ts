@@ -29,3 +29,13 @@ describe('printTemplates', () => {
     expect(ctx.cssVars['--print-body-font']).toBeTruthy()
   })
 })
+
+describe('modèle d’impression par défaut', () => {
+  it('est le modèle A4 300 DPI (impression)', async () => {
+    const { DEFAULT_PRINT_TEMPLATE_ID, PRINT_TEMPLATE_LAYOUTS: layouts } =
+      await import('@/lib/map/print/printTemplates')
+    const template = layouts.find((t) => t.id === DEFAULT_PRINT_TEMPLATE_ID)
+    expect(template?.dpi).toBe(300)
+    expect(template?.paperFormat).toBe('A4')
+  })
+})

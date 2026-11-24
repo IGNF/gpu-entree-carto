@@ -37,13 +37,9 @@ export type ScaleLineSnapshot = {
     color: string
     text: string
   }
-  domScaleCoeff: number
 }
 
-export function captureScaleLineSnapshot(
-  mapRef: HTMLElement,
-  domScaleCoeff = 1,
-): ScaleLineSnapshot | null {
+export function captureScaleLineSnapshot(mapRef: HTMLElement): ScaleLineSnapshot | null {
   const scaleLine = mapRef.getElementsByClassName('ol-scale-line')[0] as HTMLElement | undefined
   const scaleLineInner = scaleLine?.children[0] as HTMLElement | undefined
   if (!scaleLine || !scaleLineInner) return null
@@ -81,7 +77,6 @@ export function captureScaleLineSnapshot(
       color: styleInner.color || '#333333',
       text: scaleLineInner.textContent || '',
     },
-    domScaleCoeff,
   }
 }
 
@@ -91,7 +86,6 @@ export function drawScale(
   _canvasWidth: number,
   canvasHeight: number,
   scaleSnapshot: ScaleLineSnapshot | null = null,
-  domScaleCoeff = 1,
 ): void {
   let mapRect: DOMRect | { width: number; height: number; left: number; top: number }
   let outerRect: { left: number; top: number; width: number; height: number }
@@ -165,9 +159,9 @@ export function drawScale(
 
   if (!mapRect.width || !mapRect.height) return
 
+  // Même facteur que la carte et les attributions : tailles CSS de l’aperçu → px export.
   const scaleFactorY = canvasHeight / mapRect.height
-  const effectiveDomScaleCoeff = scaleSnapshot ? (scaleSnapshot.domScaleCoeff ?? 1) : domScaleCoeff
-  const computedStyleScaleFactor = scaleFactorY * effectiveDomScaleCoeff
+  const computedStyleScaleFactor = scaleFactorY
 
   const outerX = (outerRect.left - mapRect.left) * scaleFactorY
   const outerY = (outerRect.top - mapRect.top) * scaleFactorY

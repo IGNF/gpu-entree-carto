@@ -65,12 +65,11 @@ const RESIZE_ICON =
     </svg>`,
   )
 
-function resizeHandleStyle(): Style {
-  return new Style({
-    image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
-    zIndex: 1,
-  })
-}
+/** Créé une fois : la couche de poignées est redessinée à chaque image pendant l’interaction. */
+const RESIZE_HANDLE_STYLE = new Style({
+  image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
+  zIndex: 1,
+})
 
 function rotateCoordinate(coord: Coordinate, angle: number, origin: Coordinate): Coordinate {
   const cos = Math.cos(angle)
@@ -317,7 +316,7 @@ export class ModifyTransformController {
       source: this.handleSource,
       zIndex: 10000,
       className: 'ec-geometry-editor__transform-handles',
-      style: () => resizeHandleStyle(),
+      style: RESIZE_HANDLE_STYLE,
       updateWhileAnimating: true,
       updateWhileInteracting: true,
     })

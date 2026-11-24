@@ -6,6 +6,14 @@ import Layer from 'ol/layer/Layer'
 import type Map from 'ol/Map'
 import VectorSource from 'ol/source/Vector'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
+import { renderSyncIfAttached } from '@/lib/map/print/waitForMapRender'
+import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
+
+/** Au-dessus de toutes les couches, comme une couche « non gérée » OpenLayers. */
+const SEARCH_LAYER_PRINT_Z_INDEX = 1_000_000
+
+/** Marque la copie de la couche recherche (cerise + emprises) dans l’aperçu. */
+export const PRINT_SEARCH_LAYER_PROP = 'ec-print-search-layer'
 
 function cloneTileLayer(layer: TileLayer): TileLayer {
   return new TileLayer({
@@ -71,8 +79,17 @@ export function rebuildPrintPreviewMap(
 ): void {
   targetMap.getLayers().clear()
   copyVisibleMapLayers(sourceMap.getLayers().getArray(), targetMap)
+  // Cerise + emprises (pointillés rouges) : couche geopf attachée par setMap(), hors getLayers().
+  const host = searchEngineLayerHostRef.value
+  const searchLayer = host?.getMap() === sourceMap ? (host.layer as BaseLayer | undefined) : null
+  const searchClone = searchLayer?.getVisible() ? cloneLayerForPrint(searchLayer) : null
+  if (searchClone) {
+    searchClone.setZIndex(SEARCH_LAYER_PRINT_Z_INDEX)
+    searchClone.set(PRINT_SEARCH_LAYER_PROP, true)
+    targetMap.addLayer(searchClone)
+  }
   if (options.syncViewFromSource !== false) {
     copyViewState(sourceMap.getView(), targetMap.getView())
   }
-  targetMap.renderSync()
+  renderSyncIfAttached(targetMap)
 }

@@ -144,6 +144,7 @@ export function mountSearchEngine(
       }
       map.removeControl(control)
       map.setTarget(undefined)
+      map.dispose()
       container.innerHTML = ''
       container.classList.remove('ec-search-engine-standalone')
     },

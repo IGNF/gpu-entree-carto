@@ -6,6 +6,7 @@ import {
 
 const base: SupplementContentFingerprints = {
   territoryTabCount: 3,
+  territoryBodyLength: 0,
   parcelInfosLength: 1000,
   parcelDocumentsLength: 500,
   parcelLegendScale: 'highscale',
@@ -17,7 +18,7 @@ const base: SupplementContentFingerprints = {
 
 describe('supplementContentSuffixForKind', () => {
   it('fiche territoire : pas de zoom carte', () => {
-    expect(supplementContentSuffixForKind('ficheTerritory', base)).toBe('t:3')
+    expect(supplementContentSuffixForKind('ficheTerritory', base)).toBe('t:3:0')
   })
 
   it('fiche parcelle : bande lowscale/highscale, pas le zoom entier', () => {
@@ -39,5 +40,21 @@ describe('supplementContentSuffixForKind', () => {
         legendPreviewZoom: 99,
       }),
     ).toBe('l:all:a,b|n:12')
+  })
+})
+
+describe('supplementContentSuffixForKind (territoire sans onglets)', () => {
+  it('deux communes sans onglets au contenu différent : clés de cache distinctes', () => {
+    const a = supplementContentSuffixForKind('ficheTerritory', {
+      ...base,
+      territoryTabCount: 0,
+      territoryBodyLength: 40,
+    })
+    const b = supplementContentSuffixForKind('ficheTerritory', {
+      ...base,
+      territoryTabCount: 0,
+      territoryBodyLength: 900,
+    })
+    expect(a).not.toBe(b)
   })
 })

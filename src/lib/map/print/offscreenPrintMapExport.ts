@@ -3,6 +3,7 @@ import View from 'ol/View'
 import type { Extent } from 'ol/extent'
 import { rebuildPrintPreviewMap } from '@/lib/map/print/cloneMapLayers'
 import { mergeMapLayerCanvases } from '@/lib/map/print/mapExport'
+import { printExportPixelRatio } from '@/lib/map/print/printExportPixelRatio'
 import { waitForMapExportReady } from '@/lib/map/print/waitForMapExportReady'
 import {
   getCachedPrintMapCanvas,
@@ -32,7 +33,12 @@ export type OffscreenPrintMapExportOptions = {
   cacheKey?: string
   onStage?: (label: string) => void
   onTileProgress?: (loadedTiles: number, pendingTiles: number) => void
+  /** Interrompt le rendu (préchauffage abandonné) : rejette avec une `AbortError`, sans cache. */
+  signal?: AbortSignal
 }
+
+/** Rendus en cours par clé de cache (préchauffage + export simultanés → un seul rendu). */
+const inflightRenders = new globalThis.Map<string, Promise<void>>()
 
 /**
  * Rasterise la carte pour l’export sans modifier la carte d’aperçu visible
@@ -42,20 +48,50 @@ export async function renderOffscreenPrintMapCanvas(
   previewMap: Map,
   options: OffscreenPrintMapExportOptions,
 ): Promise<HTMLCanvasElement> {
-  const { widthPx, heightPx, extent } = options
+  const { widthPx, heightPx } = options
   if (widthPx < 16 || heightPx < 16) {
     throw new Error('Dimensions carte invalides pour l’export (largeur ou hauteur nulle).')
   }
-  if (options.cacheKey) {
-    const cached = getCachedPrintMapCanvas(options.cacheKey)
+  const { cacheKey } = options
+  if (cacheKey) {
+    const pending = inflightRenders.get(cacheKey)
+    if (pending) {
+      options.onStage?.('Chargement des tuiles cartographiques…')
+      await pending
+    }
+    const cached = getCachedPrintMapCanvas(cacheKey)
     if (cached) {
       options.onStage?.('Carte réutilisée depuis le cache…')
       return cached
     }
   }
+  const render = renderUncached(previewMap, options)
+  if (!cacheKey) return render
+  // Ne rejette jamais : sert seulement à attendre la fin du rendu (sinon rejet non géré si interrompu).
+  const done = render.then(
+    () => {},
+    () => {},
+  )
+  inflightRenders.set(cacheKey, done)
+  try {
+    return await render
+  } finally {
+    if (inflightRenders.get(cacheKey) === done) inflightRenders.delete(cacheKey)
+  }
+}
+
+async function renderUncached(
+  previewMap: Map,
+  options: OffscreenPrintMapExportOptions,
+): Promise<HTMLCanvasElement> {
+  const { widthPx, heightPx, extent } = options
+  // Même emprise que l’aperçu, rendue à `pixelRatio` (voir printExportPixelRatio).
+  const pixelRatio = printExportPixelRatio(widthPx, previewMap.getSize()?.[0] ?? widthPx)
+  const cssWidth = Math.max(1, Math.round(widthPx / pixelRatio))
+  const cssHeight = Math.max(1, Math.round(heightPx / pixelRatio))
   const host = getOffscreenPrintMapHost()
-  host.style.width = `${widthPx}px`
-  host.style.height = `${heightPx}px`
+  host.style.width = `${cssWidth}px`
+  host.style.height = `${cssHeight}px`
 
   const previewView = previewMap.getView()
   const exportView = new View({
@@ -68,18 +104,20 @@ export async function renderOffscreenPrintMapCanvas(
     view: exportView,
     controls: [],
     interactions: [],
+    pixelRatio,
   })
 
   try {
     options.onStage?.('Préparation de la carte haute résolution…')
     rebuildPrintPreviewMap(previewMap, exportMap, { syncViewFromSource: false })
-    exportMap.setSize([widthPx, heightPx])
-    exportView.fit(extent, { size: [widthPx, heightPx], nearest: true, duration: 0 })
+    exportMap.setSize([cssWidth, cssHeight])
+    exportView.fit(extent, { size: [cssWidth, cssHeight], duration: 0 })
 
     options.onStage?.('Chargement des tuiles cartographiques…')
     await waitForMapExportReady(exportMap, {
       timeoutMs: 120_000,
       stablePasses: 2,
+      signal: options.signal,
       onProgress: ({ pendingTiles, loadedTiles }) => {
         options.onTileProgress?.(loadedTiles, pendingTiles)
       },
@@ -97,7 +135,7 @@ export async function renderOffscreenPrintMapCanvas(
     if (!viewportEl) {
       throw new Error('Viewport carte indisponible.')
     }
-    mergeMapLayerCanvases(viewportEl, exportCtx)
+    mergeMapLayerCanvases(viewportEl, exportCtx, widthPx / cssWidth)
     if (options.cacheKey) {
       storePrintMapCanvasCache(options.cacheKey, exportCanvas)
     }

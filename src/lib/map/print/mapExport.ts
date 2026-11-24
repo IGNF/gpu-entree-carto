@@ -1,6 +1,12 @@
+/**
+ * Fusionne les canvas des couches d’une carte OL dans `targetCtx`.
+ * `pixelRatio` : celui de la carte — les matrices CSS des couches sont en px CSS,
+ * le canvas cible en px physiques.
+ */
 export function mergeMapLayerCanvases(
   mapViewport: HTMLElement,
   targetCtx: CanvasRenderingContext2D,
+  pixelRatio = 1,
 ): void {
   const canvases = mapViewport.querySelectorAll('.ol-layer canvas, canvas.ol-layer')
   targetCtx.setTransform(1, 0, 0, 1, 0, 0)
@@ -24,13 +30,14 @@ export function mergeMapLayerCanvases(
         ?.split(',')
         .map(Number)
       if (matrix?.length === 6) {
-        targetCtx.setTransform(...(matrix as [number, number, number, number, number, number]))
+        const [a, b, c, d, e, f] = matrix.map((v) => v * pixelRatio)
+        targetCtx.setTransform(a, b, c, d, e, f)
       }
     } else {
       const style = getComputedStyle(layerCanvas)
       const scaleX = parseFloat(style.width) / layerCanvas.width
       const scaleY = parseFloat(style.height) / layerCanvas.height
-      targetCtx.setTransform(scaleX, 0, 0, scaleY, 0, 0)
+      targetCtx.setTransform(scaleX * pixelRatio, 0, 0, scaleY * pixelRatio, 0, 0)
     }
     targetCtx.drawImage(layerCanvas, 0, 0)
   })

@@ -183,7 +183,7 @@ describe('ficheSelectionFromGpuApi', () => {
       2.33,
       48.96,
     )
-    expect(sansBdd.parcelInfosHtml).toContain('Aucune règle')
+    expect(sansBdd.parcelInfosHtml).toContain('Pas de règle d’urbanisme trouvé')
     const avecBdd = ficheSelectionFromGpuApi(
       {
         ...samplePayload,

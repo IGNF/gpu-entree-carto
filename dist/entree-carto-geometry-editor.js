@@ -46910,12 +46910,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       <rect x="1" y="1" width="12" height="12" rx="1" fill="${RESIZE_FILL}" stroke="${HANDLE_BLUE}" stroke-width="2"/>
     </svg>`
   );
-  function resizeHandleStyle() {
-    return new Style({
-      image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
-      zIndex: 1
-    });
-  }
+  const RESIZE_HANDLE_STYLE = new Style({
+    image: new Icon({ src: RESIZE_ICON, anchor: [0.5, 0.5], scale: 1.2 }),
+    zIndex: 1
+  });
   function rotateCoordinate(coord, angle, origin) {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
@@ -47118,7 +47116,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         source: this.handleSource,
         zIndex: 1e4,
         className: "ec-geometry-editor__transform-handles",
-        style: () => resizeHandleStyle(),
+        style: RESIZE_HANDLE_STYLE,
         updateWhileAnimating: true,
         updateWhileInteracting: true
       });
@@ -48449,6 +48447,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         });
       });
       this.map.addInteraction(this.draw);
+      if (this.snap) {
+        this.map.removeInteraction(this.snap);
+        this.map.addInteraction(this.snap);
+      }
       this.bindMapHover();
       this.notifyToolState();
     }
@@ -51255,6 +51257,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       (_a = this.settingsPanel) == null ? void 0 : _a.destroy();
       this.settingsPanel = null;
       this.map.setTarget(void 0);
+      this.map.dispose();
       this.mapHost.remove();
       if (this.options.hide) {
         this.showSourceElement();

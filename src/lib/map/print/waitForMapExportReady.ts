@@ -16,6 +16,12 @@ export type WaitForMapExportReadyOptions = {
   timeoutMs?: number
   stablePasses?: number
   onProgress?: (progress: MapExportReadyProgress) => void
+  /** Interruption (préchauffage abandonné) : rejette avec une `AbortError`. */
+  signal?: AbortSignal
+}
+
+function abortError(): DOMException {
+  return new DOMException('Rendu carte interrompu.', 'AbortError')
 }
 
 function tileSourceFromLayer(layer: BaseLayer): TileSource | null {
@@ -46,6 +52,7 @@ export async function waitForMapExportReady(
   map: Map,
   options: WaitForMapExportReadyOptions = {},
 ): Promise<void> {
+  if (options.signal?.aborted) throw abortError()
   const timeoutMs = options.timeoutMs ?? 120_000
   const stablePasses = Math.max(1, options.stablePasses ?? 2)
   const sources = collectTileSources(map)
@@ -96,9 +103,16 @@ export async function waitForMapExportReady(
 
       const renderKey = map.on('rendercomplete', onRenderComplete)
 
+      const onAbort = (): void => {
+        cleanup()
+        reject(abortError())
+      }
+      options.signal?.addEventListener('abort', onAbort, { once: true })
+
       const cleanup = (): void => {
         if (timer !== undefined) window.clearTimeout(timer)
         unByKey(renderKey)
+        options.signal?.removeEventListener('abort', onAbort)
       }
 
       const timer =

@@ -51648,6 +51648,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         }
         map.removeControl(control);
         map.setTarget(void 0);
+        map.dispose();
         container.innerHTML = "";
         container.classList.remove("ec-search-engine-standalone");
       }

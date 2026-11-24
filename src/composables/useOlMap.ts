@@ -81,8 +81,11 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
     map.value = mapInstance
   })
 
+  // onUnmounted (et non onBeforeUnmount) : les contrôles enfants utilisent encore la carte
+  // pendant leur propre démontage, qui a lieu après le onBeforeUnmount du parent.
   onUnmounted(() => {
     map.value?.setTarget(undefined)
+    map.value?.dispose()
     map.value = null
   })
 

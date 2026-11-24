@@ -409,6 +409,7 @@ export class GeometryEditor {
     this.settingsPanel?.destroy()
     this.settingsPanel = null
     this.map.setTarget(undefined)
+    this.map.dispose()
     this.mapHost.remove()
     if (this.options.hide) {
       this.showSourceElement()

@@ -80,6 +80,8 @@ export function appendFicheInfoQueryParams(
     activeFamilies?: string[]
     activeSupTypes?: string[] | null
   },
+  /** false pour les requêtes d’arrière-plan : elles ne doivent pas périmer le clic panneau côté gpu-site. */
+  trackSupersede = true,
 ): void {
   url.searchParams.set('lon', String(params.lon))
   url.searchParams.set('lat', String(params.lat))
@@ -98,8 +100,10 @@ export function appendFicheInfoQueryParams(
     }
   }
 
-  url.searchParams.set('client', getOrCreateFicheClientId())
-  url.searchParams.set('seq', String(assignFicheInfoRequestSeqForUrl()))
+  if (trackSupersede) {
+    url.searchParams.set('client', getOrCreateFicheClientId())
+    url.searchParams.set('seq', String(assignFicheInfoRequestSeqForUrl()))
+  }
 
   const families = params.activeFamilies?.filter(Boolean)
   if (families?.length) {

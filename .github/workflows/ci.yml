@@ -30,5 +30,5 @@ jobs:
         run: npm run test
       - name: Build (vérification)
         run: npm run build:demo
-      - name: Aucun eval() dans les bundles
-        run: npm run verify:no-eval
+      - name: Contrôle des bundles (eval, sources .ts)
+        run: npm run verify:dist

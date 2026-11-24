@@ -1088,29 +1088,50 @@ a.ec-fiche-info__doc-card-title:hover {
   line-height: inherit;
 }
 
-.ec-print-supplement-page :deep(h3:not(.fr-tile__title)),
-.ec-print-supplement-page :deep(h4) {
-  font-size: 1.05em;
+/*
+ * Paragraphes sans classe (« Aucun document. », textes d’état vide) : le DSFR fixe 1rem / 1.5rem,
+ * taille écran minuscule au DPI d’export. :where() garde la spécificité basse pour les <p> typés.
+ */
+.ec-print-supplement-page :where(p) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/*
+ * Titres : hauteur de ligne relative. Le DSFR fixe une hauteur de ligne en rem (h2 : 2.5rem = 40px)
+ * alors que la police est agrandie au DPI d’export (80px) : les lettres débordaient au-dessus de
+ * leur boîte et étaient coupées en haut de page.
+ */
+.ec-print-supplement-page :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.25;
-  margin: 0 0 0.25em;
-}
-
-.ec-print-supplement-page :deep(p),
-.ec-print-supplement-page :deep(li) {
-  font-size: 1em;
-  margin: 0 0 0.35em;
-}
-
-.ec-print-supplement-page :deep(img) {
-  max-width: var(--print-img-max, 96px) !important;
-  height: auto !important;
 }
 
 .ec-print-fiche__title {
   margin: 0 0 var(--print-block-gap, 8px);
   font-size: var(--print-title-font, 16px);
   font-weight: 700;
+  line-height: 1.2;
   text-align: center;
+}
+
+/* Sous-titres de fiche (ex. « Documents d’urbanisme » en territoire) : entre le titre de page et le titre de tuile. */
+.ec-print-fiche .ec-fiche-info__section-title {
+  margin: 0 0 0.35em;
+  font-size: var(--print-section-font, 14px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Icônes de règles d’urbanisme : même taille physique que les pictos de légende à 300 DPI. */
+.ec-print-fiche .ec-fiche-info__rule-icon {
+  width: auto;
+  min-width: calc(var(--print-legend-img-size, 2.5rem) + 0.25em);
+  min-height: var(--print-legend-img-size, 2.75rem);
+}
+
+.ec-print-fiche .ec-fiche-info__rule-icon-img {
+  width: var(--print-legend-img-size, 2.5rem);
+  height: var(--print-legend-img-size, 2.5rem);
 }
 
 .ec-print-fiche__sections {
@@ -1135,6 +1156,8 @@ a.ec-fiche-info__doc-card-title:hover {
 }
 
 .ec-print-fiche .ec-fiche-info__rule-row {
+  /* 1re colonne à la taille de l’icône agrandie (sinon 2.75rem fixe : l’icône chevauche le texte). */
+  grid-template-columns: auto 1fr auto;
   border-bottom: none;
   padding-bottom: 0;
 }
@@ -1368,13 +1391,15 @@ a.ec-fiche-info__doc-card-title:hover {
   margin: 0 0 var(--print-block-gap, 8px);
   font-size: var(--print-title-font, 16px);
   font-weight: 700;
+  line-height: 1.2;
   text-align: center;
 }
 
 .ec-print-legends__groups {
   display: flex;
   flex-direction: column;
-  gap: var(--print-block-gap, 8px);
+  /* Sections de légende bien séparées (ex. « Périmètres d’informations »). */
+  gap: calc(var(--print-block-gap, 8px) * 2.5);
 }
 
 .ec-print-legends__group-title {
@@ -1407,7 +1432,9 @@ a.ec-fiche-info__doc-card-title:hover {
 
 .ec-print-supplement-page .ec-layer-legends__img {
   max-width: var(--print-legend-img-max, 72px);
-  height: auto;
+  /* Taille physique à 300 DPI (sinon : taille naturelle, pictos 30 px prévus pour l’écran). */
+  width: auto;
+  height: var(--print-legend-img-size, auto);
 }
 
 .ec-print-supplement-page .ec-layer-legends__swatch {
@@ -1582,26 +1609,41 @@ a.ec-fiche-info__doc-card-title:hover {
   color: var(--text-mention-grey, #666);
 }
 
-.mb-20[data-v-f2832da4] {
+.mb-20[data-v-1573ad29] {
   margin-bottom: 12px;
 }
-.mb-10[data-v-f2832da4] {
+.mb-10[data-v-1573ad29] {
   margin-bottom: 6px;
 }
-.mt-10[data-v-f2832da4] {
+.mt-10[data-v-1573ad29] {
   margin-top: 6px;
 }
-.ec-map-print-form__indent[data-v-f2832da4] {
+.ec-map-print-form__indent[data-v-1573ad29] {
   padding-left: 1.25rem;
 }
-.print-page[data-v-f2832da4] {
+
+/*
+ * Modale d’impression à hauteur d’écran : le corps DSFR prend sa hauteur maximale et la zone
+ * formulaire + aperçu remplit le reste ; chaque colonne défile seule (la modale ne défile plus),
+ * la barre de progression (absolue sur .print-page) reste donc toujours visible.
+ */
+.fr-modal__body:has(.print-page) {
+  height: 100%;
+}
+.fr-modal__content:has(.print-page) > div:has(> .print-page) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.print-page[data-v-1573ad29] {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: row;
-  min-height: min(35rem, calc(100dvh - 6rem));
-  height: auto;
+  min-height: 0;
   position: relative;
 }
-.print-preview-panel[data-v-f2832da4] {
+.print-preview-panel[data-v-1573ad29] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -1612,19 +1654,21 @@ a.ec-fiche-info__doc-card-title:hover {
   gap: 0.5rem;
   box-sizing: border-box;
 }
-.print-preview-column[data-v-f2832da4] {
+.print-preview-column[data-v-1573ad29] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Centrage par marges auto (scale-slot) : une feuille zoomée plus large que la colonne
+     reste atteignable par défilement (align-items: center la ferait déborder à gauche). */
+  align-items: stretch;
   justify-content: flex-start;
   gap: 0.5rem;
   overflow: auto;
   box-sizing: border-box;
 }
-.print-preview-column__viewport[data-v-f2832da4] {
+.print-preview-column__viewport[data-v-1573ad29] {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
@@ -1632,27 +1676,28 @@ a.ec-fiche-info__doc-card-title:hover {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
 }
-.print-preview-column__viewport--pending .print-preview-column__scale-slot[data-v-f2832da4] {
+.print-preview-column__viewport--pending .print-preview-column__scale-slot[data-v-1573ad29] {
   pointer-events: none;
 }
-.print-preview-column__scale-slot[data-v-f2832da4] {
+.print-preview-column__scale-slot[data-v-1573ad29] {
   flex: 0 0 auto;
   max-width: none;
   margin: 0 auto;
   overflow: visible;
 }
-.print-preview-column__scale-inner[data-v-f2832da4] {
+.print-preview-column__scale-inner[data-v-1573ad29] {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
   width: max-content;
-  max-width: 100%;
+  /* Pas de max-width : la largeur du slot dérive de celle-ci (boucle figeant la largeur portrait). */
+  max-width: none;
   box-sizing: border-box;
 }
-.print-preview-patience[data-v-f2832da4] {
+.print-preview-patience[data-v-1573ad29] {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -1668,7 +1713,7 @@ a.ec-fiche-info__doc-card-title:hover {
   text-align: center;
   pointer-events: none;
 }
-.print-preview-container[data-v-f2832da4] {
+.print-preview-container[data-v-1573ad29] {
   flex: 0 0 auto;
   justify-content: flex-start;
   align-items: flex-start;
@@ -1677,13 +1722,13 @@ a.ec-fiche-info__doc-card-title:hover {
   margin: 6px auto 12px;
   box-shadow: 3px 3px 5px 6px #ccc;
 }
-.print-preview-page[data-v-f2832da4] {
+.print-preview-page[data-v-1573ad29] {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-.print-preview-page--supplement[data-v-f2832da4] {
+.print-preview-page--supplement[data-v-1573ad29] {
   background: #fff;
   min-height: 0;
   flex: 1 1 auto;
@@ -1691,18 +1736,18 @@ a.ec-fiche-info__doc-card-title:hover {
   align-items: center;
   justify-content: flex-start;
 }
-.print-supplement-preview-frame[data-v-f2832da4] {
+.print-supplement-preview-frame[data-v-1573ad29] {
   position: relative;
   flex: 0 0 auto;
   overflow: hidden;
   box-sizing: border-box;
   background: #fff;
 }
-.print-preview-supplement-content[data-v-f2832da4] {
+.print-preview-supplement-content[data-v-1573ad29] {
   width: 100%;
   height: auto;
 }
-.print-supplement-measure[data-v-f2832da4] {
+.print-supplement-measure[data-v-1573ad29] {
   position: fixed;
   left: -10000px;
   top: 0;
@@ -1710,15 +1755,15 @@ a.ec-fiche-info__doc-card-title:hover {
   z-index: -1;
   overflow: visible;
 }
-.print-supplement-measure__viewport[data-v-f2832da4] {
+.print-supplement-measure__viewport[data-v-1573ad29] {
   box-sizing: border-box;
   overflow: visible;
 }
-.print-supplement-measure__content[data-v-f2832da4] {
+.print-supplement-measure__content[data-v-1573ad29] {
   box-sizing: border-box;
   overflow: visible;
 }
-.print-preview-pagination[data-v-f2832da4] {
+.print-preview-pagination[data-v-1573ad29] {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -1729,17 +1774,17 @@ a.ec-fiche-info__doc-card-title:hover {
   padding: 0.15rem 0.5rem 0;
   box-sizing: border-box;
 }
-.print-preview-pagination__label[data-v-f2832da4] {
+.print-preview-pagination__label[data-v-1573ad29] {
   font-size: 0.8125rem;
   text-align: center;
 }
-.print-preview[data-v-f2832da4] {
+.print-preview[data-v-1573ad29] {
   flex: 0 0 auto;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
-.print-form[data-v-f2832da4] {
+.print-form[data-v-1573ad29] {
   flex: 0 0 230px;
   margin-right: 10px;
   max-height: 100%;
@@ -1748,29 +1793,33 @@ a.ec-fiche-info__doc-card-title:hover {
   overflow-y: auto;
   align-self: stretch;
 }
-.print-form[data-v-f2832da4] .fr-select-group,
-.print-form[data-v-f2832da4] .fr-input-group,
-.print-form[data-v-f2832da4] .fr-checkbox-group,
-.print-form[data-v-f2832da4] .fr-fieldset {
+.print-form[data-v-1573ad29] .fr-select-group,
+.print-form[data-v-1573ad29] .fr-input-group,
+.print-form[data-v-1573ad29] .fr-checkbox-group,
+.print-form[data-v-1573ad29] .fr-fieldset {
   margin-bottom: 8px;
 }
-.print-form__replacer-carte[data-v-f2832da4] {
+.print-form__recenter-place[data-v-1573ad29] {
   margin-top: 12px;
+  width: 100%;
+}
+.print-form__replacer-carte[data-v-1573ad29] {
+  margin-top: 8px;
   margin-bottom: 8px;
   width: 100%;
 }
-.print-form__title-hint[data-v-f2832da4] {
+.print-form__title-hint[data-v-1573ad29] {
   margin-top: -0.25rem;
   color: var(--text-mention-grey, #666);
 }
-.map-title[data-v-f2832da4] {
+.map-title[data-v-1573ad29] {
   flex: 0 0 auto;
   margin: 0;
   font-weight: 700;
   text-align: center;
   color: #161616;
 }
-.map[data-v-f2832da4] {
+.map[data-v-1573ad29] {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -1778,19 +1827,24 @@ a.ec-fiche-info__doc-card-title:hover {
   position: relative;
   background: #fff;
 }
-.map[data-v-f2832da4] .ol-viewport {
+.map[data-v-1573ad29] .ol-viewport {
   position: absolute !important;
   inset: 0 !important;
 }
-.ec-map-print-preview-map[data-v-f2832da4] {
-  --ec-scale-line-right: 6px;
-  --ec-widget-gap: 4px;
-  --ec-attribution-logo-width: 32px;
-  --ec-attribution-logo-height: 34px;
-  --ec-attribution-block-height: calc(var(--ec-attribution-logo-height) + 4px);
-  --ec-scale-attribution-stack-gap: 2px;
+.ec-map-print-preview-map[data-v-1573ad29] {
+  /* Facteur papier (printMapUiScale) : attributions et échelle en mm, proportionnelles au format. */
+  --ec-print-ui-scale: 1;
+  --ec-scale-line-right: calc(6px * var(--ec-print-ui-scale));
+  --ec-widget-gap: calc(4px * var(--ec-print-ui-scale));
+  --ec-attribution-logo-width: calc(32px * var(--ec-print-ui-scale));
+  --ec-attribution-logo-height: calc(34px * var(--ec-print-ui-scale));
+  --ec-attribution-block-height: calc(
+    var(--ec-attribution-logo-height) + 4px * var(--ec-print-ui-scale)
+  );
+  /* Espace visible entre barre d’échelle et logos (≈ 1,4 mm en A4). */
+  --ec-scale-attribution-stack-gap: calc(5px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-f2832da4] .ol-control.ol-attribution {
+.ec-map-print-preview-map[data-v-1573ad29] .ol-control.ol-attribution {
   left: auto;
   right: var(--ec-scale-line-right);
   bottom: var(--ec-widget-gap);
@@ -1798,20 +1852,26 @@ a.ec-fiche-info__doc-card-title:hover {
   max-width: none;
   pointer-events: none !important;
 }
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution ul {
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution ul {
   display: flex;
   flex-flow: row nowrap;
   align-items: flex-end;
   justify-content: flex-end;
-  gap: 0.125rem;
+  gap: calc(0.125rem * var(--ec-print-ui-scale));
   margin: 0;
   padding: 0;
-  font-size: 0.28125rem;
+  font-size: calc(0.28125rem * var(--ec-print-ui-scale));
+  white-space: nowrap;
   line-height: 1.1;
 }
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution img.map-logo-ign-svg,
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution img.map-logo-marianne-svg,
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution img.map-logo-ministere-svg {
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution li {
+  /* DSFR : padding-bottom fixe de 0.25rem sur les li, non proportionnel : le bloc dépassait la
+     hauteur prévue (--ec-attribution-block-height) et la barre d’échelle chevauchait les logos. */
+  padding-bottom: calc(4px * var(--ec-print-ui-scale));
+}
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-ign-svg,
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-marianne-svg,
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-ministere-svg {
   display: block;
   width: var(--ec-attribution-logo-width);
   height: var(--ec-attribution-logo-height);
@@ -1820,15 +1880,15 @@ a.ec-fiche-info__doc-card-title:hover {
   margin: 0;
   max-height: none;
   background-color: #fff !important;
-  padding: 2px;
+  padding: calc(2px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution a::after,
-.ec-map-print-preview-map[data-v-f2832da4] .ol-attribution span::after {
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution a::after,
+.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution span::after {
   content: none !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
 }
-.ec-map-print-preview-map[data-v-f2832da4] .ol-control.ol-scale-line {
+.ec-map-print-preview-map[data-v-1573ad29] .ol-control.ol-scale-line {
   left: auto;
   right: var(--ec-scale-line-right);
   bottom: calc(
@@ -1837,6 +1897,15 @@ a.ec-fiche-info__doc-card-title:hover {
   );
   pointer-events: none !important;
   background: var(--background-default-grey, #fff);
+  padding: calc(2px * var(--ec-print-ui-scale));
+  border-radius: calc(4px * var(--ec-print-ui-scale));
+}
+.ec-map-print-preview-map[data-v-1573ad29] .ol-scale-line-inner {
+  margin: calc(1px * var(--ec-print-ui-scale));
+  border-width: calc(1px * var(--ec-print-ui-scale));
+  font-size: calc(10px * var(--ec-print-ui-scale));
+  /* Interligne relatif : celui hérité du DSFR (fixe en rem) gonflait la hauteur de la barre. */
+  line-height: 1.2;
 }
 
 body > dialog.fr-modal:has(.print-page) {
