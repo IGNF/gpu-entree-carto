@@ -119,3 +119,17 @@ describe('catalogCheckedForStartupDocument', () => {
     expect(roots[0].visible).toBe(true)
   })
 })
+
+describe('documentCatalogBranchesForDocument — types de document gpu-site (DocumentType)', () => {
+  const branches = (type: string, name = '') =>
+    [...(documentCatalogBranchesForDocument({ id: 'x', type, name }) ?? [])].sort()
+  it.each(['PLU', 'POS', 'CC', 'PLUi', 'PSMV'])('%s → vue d’ensemble + vue détaillée', (type) => {
+    expect(branches(type)).toEqual(['du-detail', 'du-overview'])
+  })
+  it('SUP → servitudes', () => expect(branches('SUP')).toEqual(['sup']))
+  it('SCoT → SCoT', () => expect(branches('SCoT')).toEqual(['scot']))
+  it('MEC DU → vues DU ; MEC SCoT → SCoT', () => {
+    expect(branches('MEC', 'MEC_2_DU_31526')).toEqual(['du-detail', 'du-overview'])
+    expect(branches('MEC', 'MEC_1_scot_200051183')).toEqual(['scot'])
+  })
+})

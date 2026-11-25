@@ -35,6 +35,40 @@ describe('demoConfig', () => {
     expect(resolveDemoLayerNodes(cfg)).toEqual([{ id: 'x', title: 'Test', visible: true }])
   })
 
+  it('arbre du catalogue : visibilité de la layerConfig, sans surcharge par le document (appliqué au démarrage seulement sans permalink)', () => {
+    const w = window as Window & { LAYER_CONFIG?: unknown }
+    const prevLayerConfig = w.LAYER_CONFIG
+    w.LAYER_CONFIG = [
+      {
+        name: 'lowscale',
+        title: "VUE D'ENSEMBLE DES DOCUMENTS D'URBANISME",
+        virtual: true,
+        visible: true,
+        layers: [{ name: 'municipality', title: 'Communes', visible: true }],
+      },
+      {
+        name: 'sup',
+        title: "SERVITUDE D'UTILITE PUBLIQUE",
+        virtual: true,
+        visible: false,
+        layers: [{ name: 'ac4', title: 'AC4', visible: false }],
+      },
+    ]
+    try {
+      const nodes = resolveDemoLayerNodes({
+        map: { zoom: 6 },
+        document: { id: 'x', type: 'SUP', name: '172014607_SUP_18_AC4' },
+      })
+      const visibleByTitle = Object.fromEntries(nodes.map((n) => [n.title, n.visible]))
+      expect(visibleByTitle).toEqual({
+        "VUE D'ENSEMBLE DES DOCUMENTS D'URBANISME": true,
+        "SERVITUDE D'UTILITE PUBLIQUE": false,
+      })
+    } finally {
+      w.LAYER_CONFIG = prevLayerConfig
+    }
+  })
+
   it('mappe les anciens ids de fond plan/ortho', () => {
     expect(resolveDemoBaseLayerId({ map: { baseLayerId: 'plan' } })).toBe('carte')
     expect(resolveDemoBaseLayerId({ map: { baseLayerId: 'ortho' } })).toBe('photo')

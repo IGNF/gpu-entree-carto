@@ -1,5 +1,4 @@
 import type { TreeLayerNode } from '@/types/treeLayerNode'
-import { applyDocumentCatalogVisibility } from '@/lib/layerConfig/documentCatalogVisibility'
 import { layerConfigToTreeNodes } from '@/lib/layerConfig/layerConfigToTree'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
 import type { GpuBaseLayerId } from '@/ol/gpuBaseLayerPresets'
@@ -298,11 +297,9 @@ export function resolveDemoLayerNodes(cfg: DemoConfig): TreeLayerNode[] {
   const fromGpu = resolveLayerConfig()
   if (fromGpu?.length) {
     const zoom = cfg.map?.zoom ?? 6
-    const nodes = layerConfigToTreeNodes(fromGpu, zoom)
-    if (cfg.document) {
-      applyDocumentCatalogVisibility(nodes, cfg.document)
-    }
-    return nodes
+    // Visibilité de la layerConfig : le document de démarrage n’est appliqué que par TabPanels,
+    // et seulement sans couche dans le permalink (sinon le permalink prime).
+    return layerConfigToTreeNodes(fromGpu, zoom)
   }
   if (cfg.configScriptUrl?.trim()) {
     return []

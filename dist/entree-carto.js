@@ -31708,6 +31708,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return { startMobileSearchPopoverSync: startShellClassObserver };
   }
+  const MIN_AUTOCOMPLETE_CHARS = 3;
+  function installAutocompleteTrim(engine) {
+    const original = engine.autocomplete.bind(engine);
+    engine.autocomplete = (value2) => {
+      const text2 = value2.trim();
+      if (text2.length < MIN_AUTOCOMPLETE_CHARS) return;
+      original(text2);
+    };
+  }
   var checkDsfr = function() {
     var style = getComputedStyle(document.documentElement);
     var color2 = style.getPropertyValue("--blue-france-sun-113-625");
@@ -67547,7 +67556,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       geocodeGetCapabilitiesUrl: `${base}/geocodage/getCapabilities`
     };
     const advancedSearchOptions = { searchOptions };
-    return new SearchEngineAdvancedAnimated({
+    const control = new SearchEngineAdvancedAnimated({
       collapsed: options.collapsed ?? false,
       collapsible: options.collapsible ?? false,
       returnTrueGeometry: true,
@@ -67584,6 +67593,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         new ParcelAdvancedSearch({ ...advancedSearchOptions, name: "Parcelles cadastrales" })
       ]
     });
+    installAutocompleteTrim(
+      control.baseSearchEngine
+    );
+    return control;
   }
   const MAP_PERMALINK_RESERVED_KEYS = /* @__PURE__ */ new Set([
     "lon",
@@ -67968,6 +67981,196 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
     });
   }
+  function resolveGpuLayerVisible(layer, parentVisible) {
+    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
+      return Boolean(layer.visible);
+    }
+    return parentVisible;
+  }
+  function pathToCatalogId(path) {
+    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
+    if (!normalized) return "root";
+    return normalized.split("/").map(
+      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    ).join("--");
+  }
+  function pathSegment(layer) {
+    var _a2, _b;
+    if ((_a2 = layer.path) == null ? void 0 : _a2.startsWith("/")) {
+      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
+      return parts[parts.length - 1] ?? "couche";
+    }
+    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
+    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
+      for (const value2 of layer.filterValue) {
+        uniqueName += value2;
+      }
+    }
+    if (layer.filterAttribute && layer.filterValueLike) {
+      uniqueName += `_${layer.filterValueLike}`;
+    }
+    return uniqueName.toLowerCase();
+  }
+  function buildLayerPath(layer, parentPath) {
+    var _a2;
+    if ((_a2 = layer.path) == null ? void 0 : _a2.startsWith("/")) {
+      return layer.path.replace(/\/+/g, "/");
+    }
+    const segment = pathSegment(layer);
+    if (!parentPath) return `/${segment}`;
+    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+    return `${base}/${segment}`.replace(/\/+/g, "/");
+  }
+  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
+    var _a2, _b;
+    for (const layer of layers) {
+      if (layer.hideHimself) {
+        if ((_a2 = layer.layers) == null ? void 0 : _a2.length) {
+          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
+        }
+        continue;
+      }
+      const path = buildLayerPath(layer, parentPath || "");
+      const id2 = pathToCatalogId(path);
+      registry.push({ id: id2, path, config: layer });
+      if ((_b = layer.layers) == null ? void 0 : _b.length) {
+        layerConfigToCatalogEntries(layer.layers, path, registry);
+      }
+    }
+    return registry;
+  }
+  function readLayerConfigFromWindow() {
+    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
+    if (!Array.isArray(raw) || !raw.length) return null;
+    return raw;
+  }
+  function resolveLayerConfig(paramsLayerConfig) {
+    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
+      return paramsLayerConfig;
+    }
+    return readLayerConfigFromWindow();
+  }
+  const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
+  const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
+  function isGpuDevProxyPath(url) {
+    const t = url.trim();
+    return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`);
+  }
+  function normalizeLocalGpuSiteUrl(url) {
+    if (!LOCAL_GPU_SITE.test(url)) return url;
+    try {
+      const u2 = new URL(url);
+      u2.pathname = u2.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, "") || "/";
+      return u2.href;
+    } catch {
+      return url;
+    }
+  }
+  function rewriteLocalGpuSiteUrl(url) {
+    if (!url || true) return url;
+    if (isGpuDevProxyPath(url)) return url;
+    const normalized = normalizeLocalGpuSiteUrl(url);
+    if (!LOCAL_GPU_SITE.test(normalized)) return url;
+    return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
+  }
+  function canonicalGpuClientConfigScriptUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) return trimmed;
+    if (typeof window === "undefined") return trimmed;
+    try {
+      const u2 = new URL(trimmed, window.location.href);
+      if (u2.pathname.startsWith(GPU_VITE_DEV_PROXY_PREFIX)) {
+        const path = u2.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+        return `http://127.0.0.1:8000${path}${u2.search}${u2.hash}`;
+      }
+    } catch {
+    }
+    if (isGpuDevProxyPath(trimmed)) {
+      const path = trimmed.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+      return `http://127.0.0.1:8000${path}`;
+    }
+    const normalized = normalizeLocalGpuSiteUrl(trimmed);
+    if (/^https?:\/\//i.test(normalized) || normalized.startsWith("//")) {
+      return normalized;
+    }
+    if (trimmed.startsWith("/")) {
+      try {
+        return new URL(trimmed, window.location.href).href;
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+  function gpuSiteNavigationUrlFromProxy(raw) {
+    var _a2, _b;
+    const trimmed = raw.trim();
+    if (!trimmed || typeof window === "undefined") return trimmed;
+    let pathname = trimmed;
+    let search = "";
+    let hash2 = "";
+    if (trimmed.includes(GPU_VITE_DEV_PROXY_PREFIX)) {
+      try {
+        const u2 = new URL(trimmed, window.location.href);
+        pathname = u2.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
+        search = u2.search;
+        hash2 = u2.hash;
+      } catch {
+        pathname = trimmed.replace(GPU_VITE_DEV_PROXY_PREFIX, "") || "/";
+      }
+    } else if (LOCAL_GPU_SITE.test(trimmed)) {
+      return trimmed;
+    }
+    const scriptBase = getGpuClientConfigScriptUrl() ?? (typeof document !== "undefined" ? ((_a2 = document.querySelector("script#gpu-client-config[src]")) == null ? void 0 : _a2.src) ?? ((_b = document.querySelector("script[data-ec-demo-config][src]")) == null ? void 0 : _b.src) : null);
+    if (scriptBase && pathname.startsWith("/")) {
+      return new URL(`${pathname}${search}${hash2}`, scriptBase).href;
+    }
+    return `${pathname}${search}${hash2}`;
+  }
+  let gpuClientConfigScriptUrl = null;
+  function setGpuClientConfigScriptUrl(url) {
+    const trimmed = url == null ? void 0 : url.trim();
+    gpuClientConfigScriptUrl = trimmed ? canonicalGpuClientConfigScriptUrl(trimmed) : null;
+  }
+  function getGpuClientConfigScriptUrl() {
+    return gpuClientConfigScriptUrl;
+  }
+  function isAbsoluteUrl$1(value2) {
+    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
+  }
+  function resolveConfigUrl(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed || isAbsoluteUrl$1(trimmed)) return trimmed;
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    if (typeof window === "undefined") return trimmed;
+    const baseHref = gpuClientConfigScriptUrl ?? (typeof document !== "undefined" ? window.location.href : "http://localhost/");
+    return new URL(trimmed, baseHref).href;
+  }
+  function resolveConfigUrlForFetch(raw) {
+    const trimmed = raw.trim();
+    if (isGpuDevProxyPath(trimmed)) return trimmed;
+    return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
+  }
+  const CONFIG_URL_KEY = /Url$/i;
+  const CONFIG_RELATIVE_RESOURCE_KEYS = /* @__PURE__ */ new Set(["legendImageDetailDirectory"]);
+  function resolveConfigUrlsInRecord(target2) {
+    if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
+      const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
+      if (fallback == null ? void 0 : fallback.src) {
+        setGpuClientConfigScriptUrl(fallback.src);
+      }
+    }
+    if (!gpuClientConfigScriptUrl) return;
+    for (const [key2, val] of Object.entries(target2)) {
+      if (typeof val !== "string" || !val.trim()) continue;
+      const isConfigUrlKey = CONFIG_URL_KEY.test(key2);
+      const isResourcePath = CONFIG_RELATIVE_RESOURCE_KEYS.has(key2);
+      if (!isConfigUrlKey && !isResourcePath) continue;
+      if (isAbsoluteUrl$1(val.trim())) continue;
+      if (isGpuDevProxyPath(val.trim())) continue;
+      target2[key2] = resolveConfigUrl(val);
+    }
+  }
   const GPU_FORCE_OPACITY_PERCENT = 100;
   function catalogNodeOpacityPercent(node) {
     if (node.gpuForceOpacity) return GPU_FORCE_OPACITY_PERCENT;
@@ -68168,354 +68371,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       const cascade = hasChildren && (!value2 || !hasDescendantInChanges(node, ids));
       if (cascade) applyUserCatalogToggle(checked, id2, value2, index2);
       else applyCatalogToggleFromPermalink(checked, id2, value2, index2);
-    }
-  }
-  function buildCatalogTreeIndex(roots) {
-    const nodesById = /* @__PURE__ */ new Map();
-    const parentById = /* @__PURE__ */ new Map();
-    function walk(node, parent) {
-      nodesById.set(node.id, node);
-      parentById.set(node.id, parent);
-      for (const child of catalogChildNodes(node)) {
-        walk(child, node);
-      }
-    }
-    for (const root of roots) walk(root, null);
-    return { nodesById, parentById, roots };
-  }
-  function catalogAncestorIds(nodeId, parentById) {
-    const ids = [];
-    let parent = parentById.get(nodeId) ?? null;
-    while (parent) {
-      ids.unshift(parent.id);
-      parent = parentById.get(parent.id) ?? null;
-    }
-    return ids;
-  }
-  function flattenCatalogNodes(roots) {
-    const flat = [];
-    function walk(node) {
-      flat.push(node);
-      catalogChildNodes(node).forEach(walk);
-    }
-    roots.forEach(walk);
-    return flat;
-  }
-  function catalogSubtreePartiallyChecked(node, checkedById) {
-    let anyChecked = false;
-    let anyUnchecked = false;
-    function walk(n) {
-      if (checkedById[n.id]) anyChecked = true;
-      else anyUnchecked = true;
-      for (const child of catalogChildNodes(n)) walk(child);
-    }
-    walk(node);
-    return anyChecked && anyUnchecked;
-  }
-  function catalogAncestorIdsToExpand(roots, checkedById) {
-    const expand = /* @__PURE__ */ new Set();
-    function visit(node) {
-      const children = catalogChildNodes(node);
-      if (!children.length) return;
-      if (catalogSubtreePartiallyChecked(node, checkedById)) {
-        expand.add(node.id);
-      }
-      for (const child of children) {
-        visit(child);
-      }
-    }
-    for (const root of roots) visit(root);
-    return expand;
-  }
-  function normalizeCatalogTitle(title2) {
-    return title2.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase().replace(/\s+/g, " ").trim();
-  }
-  function documentCatalogBranchesForDocument(document2) {
-    var _a2;
-    if (!((_a2 = document2 == null ? void 0 : document2.type) == null ? void 0 : _a2.trim())) return null;
-    const typeLower = document2.type.trim().toLowerCase();
-    const nameLower = (document2.name ?? "").trim().toLowerCase();
-    const branches = /* @__PURE__ */ new Set();
-    if (typeLower === "sup") {
-      branches.add("sup");
-      return branches;
-    }
-    if (typeLower === "scot") {
-      branches.add("scot");
-      return branches;
-    }
-    if (["plu", "pos", "cc", "plui", "psmv", "du"].includes(typeLower)) {
-      branches.add("du-overview");
-      branches.add("du-detail");
-      return branches;
-    }
-    if (typeLower === "mec") {
-      if (/^mec_.+_scot_/i.test(nameLower) || nameLower.includes("_scot")) {
-        branches.add("scot");
-      }
-      if (/^mec_.+_du_/i.test(nameLower) || nameLower.includes("_du")) {
-        branches.add("du-overview");
-        branches.add("du-detail");
-      }
-      return branches.size ? branches : null;
-    }
-    return null;
-  }
-  function catalogBranchForRootNode(node) {
-    const title2 = normalizeCatalogTitle(node.title);
-    const id2 = node.id.toLowerCase();
-    if (title2.includes("vue d'ensemble") || title2.includes("vue") && title2.includes("ensemble") && title2.includes("urbanisme")) {
-      return "du-overview";
-    }
-    if (title2.includes("vue detail") || title2.includes("vue") && title2.includes("detail") && title2.includes("urbanisme")) {
-      return "du-detail";
-    }
-    if (title2.includes("servitude") && title2.includes("utilite publique")) {
-      return "sup";
-    }
-    if (title2.includes("schema") && title2.includes("coherence territoriale")) {
-      return "scot";
-    }
-    if (id2.includes("lowscale")) return "du-overview";
-    if (id2.includes("du-psmv")) return "du-detail";
-    if (id2 === "sup" || id2.endsWith("--sup") || /--sup--/.test(id2)) return "sup";
-    if (id2.includes("scot")) return "scot";
-    return null;
-  }
-  function branchForCatalogSubtree(root) {
-    const self2 = catalogBranchForRootNode(root);
-    if (self2) return self2;
-    for (const child of catalogChildNodes(root)) {
-      const branch = catalogBranchForRootNode(child);
-      if (branch) return branch;
-    }
-    return null;
-  }
-  function setSubtreeVisible(node, visible) {
-    node.visible = visible;
-    for (const child of catalogChildNodes(node)) {
-      setSubtreeVisible(child, visible);
-    }
-  }
-  function applyDocumentCatalogVisibility(roots, document2) {
-    const enabled = documentCatalogBranchesForDocument(document2);
-    if (!(enabled == null ? void 0 : enabled.size)) return;
-    for (const root of roots) {
-      const branch = branchForCatalogSubtree(root);
-      if (!branch) {
-        setSubtreeVisible(root, false);
-        continue;
-      }
-      setSubtreeVisible(root, enabled.has(branch));
-    }
-  }
-  function cloneCatalogTree(nodes) {
-    return nodes.map((node) => ({
-      ...node,
-      children: node.children ? cloneCatalogTree(node.children) : node.children
-    }));
-  }
-  function catalogCheckedForStartupDocument(roots, document2) {
-    var _a2;
-    if (!((_a2 = documentCatalogBranchesForDocument(document2)) == null ? void 0 : _a2.size)) return null;
-    const clone2 = cloneCatalogTree(roots);
-    applyDocumentCatalogVisibility(clone2, document2);
-    const index2 = buildCatalogTreeIndex(clone2);
-    const checked = {};
-    for (const node of flattenCatalogNodes(clone2)) checked[node.id] = Boolean(node.visible);
-    for (const node of flattenCatalogNodes(clone2)) {
-      if (checked[node.id]) propagateCheckedToAncestors(checked, node.id, index2);
-    }
-    return checked;
-  }
-  function resolveGpuLayerVisible(layer, parentVisible) {
-    if (Object.prototype.hasOwnProperty.call(layer, "visible")) {
-      return Boolean(layer.visible);
-    }
-    return parentVisible;
-  }
-  function pathToCatalogId(path) {
-    const normalized = path.replace(/^\/+/, "").replace(/\/+/g, "/");
-    if (!normalized) return "root";
-    return normalized.split("/").map(
-      (part) => part.toLowerCase().normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    ).join("--");
-  }
-  function pathSegment(layer) {
-    var _a2, _b;
-    if ((_a2 = layer.path) == null ? void 0 : _a2.startsWith("/")) {
-      const parts = layer.path.replace(/\/+/g, "/").split("/").filter(Boolean);
-      return parts[parts.length - 1] ?? "couche";
-    }
-    let uniqueName = (layer.name ?? layer.title ?? "couche").trim();
-    if (layer.filterAttribute && ((_b = layer.filterValue) == null ? void 0 : _b.length)) {
-      for (const value2 of layer.filterValue) {
-        uniqueName += value2;
-      }
-    }
-    if (layer.filterAttribute && layer.filterValueLike) {
-      uniqueName += `_${layer.filterValueLike}`;
-    }
-    return uniqueName.toLowerCase();
-  }
-  function buildLayerPath(layer, parentPath) {
-    var _a2;
-    if ((_a2 = layer.path) == null ? void 0 : _a2.startsWith("/")) {
-      return layer.path.replace(/\/+/g, "/");
-    }
-    const segment = pathSegment(layer);
-    if (!parentPath) return `/${segment}`;
-    const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
-    return `${base}/${segment}`.replace(/\/+/g, "/");
-  }
-  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
-    var _a2, _b;
-    for (const layer of layers) {
-      if (layer.hideHimself) {
-        if ((_a2 = layer.layers) == null ? void 0 : _a2.length) {
-          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
-        }
-        continue;
-      }
-      const path = buildLayerPath(layer, parentPath || "");
-      const id2 = pathToCatalogId(path);
-      registry.push({ id: id2, path, config: layer });
-      if ((_b = layer.layers) == null ? void 0 : _b.length) {
-        layerConfigToCatalogEntries(layer.layers, path, registry);
-      }
-    }
-    return registry;
-  }
-  function readLayerConfigFromWindow() {
-    const raw = typeof window !== "undefined" ? window.LAYER_CONFIG : void 0;
-    if (!Array.isArray(raw) || !raw.length) return null;
-    return raw;
-  }
-  function resolveLayerConfig(paramsLayerConfig) {
-    if (Array.isArray(paramsLayerConfig) && paramsLayerConfig.length) {
-      return paramsLayerConfig;
-    }
-    return readLayerConfigFromWindow();
-  }
-  const GPU_VITE_DEV_PROXY_PREFIX = "/__gpu_dev_proxy__";
-  const LOCAL_GPU_SITE = /^https?:\/\/(?:127\.0\.0\.1|localhost):8000(?=\/|$)/i;
-  function isGpuDevProxyPath(url) {
-    const t = url.trim();
-    return t === GPU_VITE_DEV_PROXY_PREFIX || t.startsWith(`${GPU_VITE_DEV_PROXY_PREFIX}/`);
-  }
-  function normalizeLocalGpuSiteUrl(url) {
-    if (!LOCAL_GPU_SITE.test(url)) return url;
-    try {
-      const u2 = new URL(url);
-      u2.pathname = u2.pathname.replace(/(?:\/__gpu_dev_proxy__)+/g, "") || "/";
-      return u2.href;
-    } catch {
-      return url;
-    }
-  }
-  function rewriteLocalGpuSiteUrl(url) {
-    if (!url || true) return url;
-    if (isGpuDevProxyPath(url)) return url;
-    const normalized = normalizeLocalGpuSiteUrl(url);
-    if (!LOCAL_GPU_SITE.test(normalized)) return url;
-    return normalized.replace(LOCAL_GPU_SITE, GPU_VITE_DEV_PROXY_PREFIX);
-  }
-  function canonicalGpuClientConfigScriptUrl(raw) {
-    const trimmed = raw.trim();
-    if (!trimmed) return trimmed;
-    if (typeof window === "undefined") return trimmed;
-    try {
-      const u2 = new URL(trimmed, window.location.href);
-      if (u2.pathname.startsWith(GPU_VITE_DEV_PROXY_PREFIX)) {
-        const path = u2.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
-        return `http://127.0.0.1:8000${path}${u2.search}${u2.hash}`;
-      }
-    } catch {
-    }
-    if (isGpuDevProxyPath(trimmed)) {
-      const path = trimmed.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
-      return `http://127.0.0.1:8000${path}`;
-    }
-    const normalized = normalizeLocalGpuSiteUrl(trimmed);
-    if (/^https?:\/\//i.test(normalized) || normalized.startsWith("//")) {
-      return normalized;
-    }
-    if (trimmed.startsWith("/")) {
-      try {
-        return new URL(trimmed, window.location.href).href;
-      } catch {
-        return trimmed;
-      }
-    }
-    return trimmed;
-  }
-  function gpuSiteNavigationUrlFromProxy(raw) {
-    var _a2, _b;
-    const trimmed = raw.trim();
-    if (!trimmed || typeof window === "undefined") return trimmed;
-    let pathname = trimmed;
-    let search = "";
-    let hash2 = "";
-    if (trimmed.includes(GPU_VITE_DEV_PROXY_PREFIX)) {
-      try {
-        const u2 = new URL(trimmed, window.location.href);
-        pathname = u2.pathname.replace(new RegExp(`^${GPU_VITE_DEV_PROXY_PREFIX}`), "") || "/";
-        search = u2.search;
-        hash2 = u2.hash;
-      } catch {
-        pathname = trimmed.replace(GPU_VITE_DEV_PROXY_PREFIX, "") || "/";
-      }
-    } else if (LOCAL_GPU_SITE.test(trimmed)) {
-      return trimmed;
-    }
-    const scriptBase = getGpuClientConfigScriptUrl() ?? (typeof document !== "undefined" ? ((_a2 = document.querySelector("script#gpu-client-config[src]")) == null ? void 0 : _a2.src) ?? ((_b = document.querySelector("script[data-ec-demo-config][src]")) == null ? void 0 : _b.src) : null);
-    if (scriptBase && pathname.startsWith("/")) {
-      return new URL(`${pathname}${search}${hash2}`, scriptBase).href;
-    }
-    return `${pathname}${search}${hash2}`;
-  }
-  let gpuClientConfigScriptUrl = null;
-  function setGpuClientConfigScriptUrl(url) {
-    const trimmed = url == null ? void 0 : url.trim();
-    gpuClientConfigScriptUrl = trimmed ? canonicalGpuClientConfigScriptUrl(trimmed) : null;
-  }
-  function getGpuClientConfigScriptUrl() {
-    return gpuClientConfigScriptUrl;
-  }
-  function isAbsoluteUrl$1(value2) {
-    return /^https?:\/\//i.test(value2) || value2.startsWith("//");
-  }
-  function resolveConfigUrl(raw) {
-    const trimmed = raw.trim();
-    if (!trimmed || isAbsoluteUrl$1(trimmed)) return trimmed;
-    if (isGpuDevProxyPath(trimmed)) return trimmed;
-    if (typeof window === "undefined") return trimmed;
-    const baseHref = gpuClientConfigScriptUrl ?? (typeof document !== "undefined" ? window.location.href : "http://localhost/");
-    return new URL(trimmed, baseHref).href;
-  }
-  function resolveConfigUrlForFetch(raw) {
-    const trimmed = raw.trim();
-    if (isGpuDevProxyPath(trimmed)) return trimmed;
-    return rewriteLocalGpuSiteUrl(resolveConfigUrl(raw));
-  }
-  const CONFIG_URL_KEY = /Url$/i;
-  const CONFIG_RELATIVE_RESOURCE_KEYS = /* @__PURE__ */ new Set(["legendImageDetailDirectory"]);
-  function resolveConfigUrlsInRecord(target2) {
-    if (!gpuClientConfigScriptUrl && typeof window !== "undefined" && typeof document !== "undefined") {
-      const fallback = document.querySelector('script[src*="gpu_map_client_config"]') ?? document.querySelector("script#gpu-client-config[src]");
-      if (fallback == null ? void 0 : fallback.src) {
-        setGpuClientConfigScriptUrl(fallback.src);
-      }
-    }
-    if (!gpuClientConfigScriptUrl) return;
-    for (const [key2, val] of Object.entries(target2)) {
-      if (typeof val !== "string" || !val.trim()) continue;
-      const isConfigUrlKey = CONFIG_URL_KEY.test(key2);
-      const isResourcePath = CONFIG_RELATIVE_RESOURCE_KEYS.has(key2);
-      if (!isConfigUrlKey && !isResourcePath) continue;
-      if (isAbsoluteUrl$1(val.trim())) continue;
-      if (isGpuDevProxyPath(val.trim())) continue;
-      target2[key2] = resolveConfigUrl(val);
     }
   }
   const DEFAULT_GPU_MIN_ZOOM = 0;
@@ -71497,6 +71352,164 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (!grid || typeof grid !== "object") return false;
     return Boolean(grid.insee || grid.name);
   }
+  function buildCatalogTreeIndex(roots) {
+    const nodesById = /* @__PURE__ */ new Map();
+    const parentById = /* @__PURE__ */ new Map();
+    function walk(node, parent) {
+      nodesById.set(node.id, node);
+      parentById.set(node.id, parent);
+      for (const child of catalogChildNodes(node)) {
+        walk(child, node);
+      }
+    }
+    for (const root of roots) walk(root, null);
+    return { nodesById, parentById, roots };
+  }
+  function catalogAncestorIds(nodeId, parentById) {
+    const ids = [];
+    let parent = parentById.get(nodeId) ?? null;
+    while (parent) {
+      ids.unshift(parent.id);
+      parent = parentById.get(parent.id) ?? null;
+    }
+    return ids;
+  }
+  function flattenCatalogNodes(roots) {
+    const flat = [];
+    function walk(node) {
+      flat.push(node);
+      catalogChildNodes(node).forEach(walk);
+    }
+    roots.forEach(walk);
+    return flat;
+  }
+  function catalogSubtreePartiallyChecked(node, checkedById) {
+    let anyChecked = false;
+    let anyUnchecked = false;
+    function walk(n) {
+      if (checkedById[n.id]) anyChecked = true;
+      else anyUnchecked = true;
+      for (const child of catalogChildNodes(n)) walk(child);
+    }
+    walk(node);
+    return anyChecked && anyUnchecked;
+  }
+  function catalogAncestorIdsToExpand(roots, checkedById) {
+    const expand = /* @__PURE__ */ new Set();
+    function visit(node) {
+      const children = catalogChildNodes(node);
+      if (!children.length) return;
+      if (catalogSubtreePartiallyChecked(node, checkedById)) {
+        expand.add(node.id);
+      }
+      for (const child of children) {
+        visit(child);
+      }
+    }
+    for (const root of roots) visit(root);
+    return expand;
+  }
+  function normalizeCatalogTitle(title2) {
+    return title2.normalize("NFD").replace(new RegExp("\\p{M}", "gu"), "").toLowerCase().replace(/\s+/g, " ").trim();
+  }
+  function documentCatalogBranchesForDocument(document2) {
+    var _a2;
+    if (!((_a2 = document2 == null ? void 0 : document2.type) == null ? void 0 : _a2.trim())) return null;
+    const typeLower = document2.type.trim().toLowerCase();
+    const nameLower = (document2.name ?? "").trim().toLowerCase();
+    const branches = /* @__PURE__ */ new Set();
+    if (typeLower === "sup") {
+      branches.add("sup");
+      return branches;
+    }
+    if (typeLower === "scot") {
+      branches.add("scot");
+      return branches;
+    }
+    if (["plu", "pos", "cc", "plui", "psmv", "du"].includes(typeLower)) {
+      branches.add("du-overview");
+      branches.add("du-detail");
+      return branches;
+    }
+    if (typeLower === "mec") {
+      if (/^mec_.+_scot_/i.test(nameLower) || nameLower.includes("_scot")) {
+        branches.add("scot");
+      }
+      if (/^mec_.+_du_/i.test(nameLower) || nameLower.includes("_du")) {
+        branches.add("du-overview");
+        branches.add("du-detail");
+      }
+      return branches.size ? branches : null;
+    }
+    return null;
+  }
+  function catalogBranchForRootNode(node) {
+    const title2 = normalizeCatalogTitle(node.title);
+    const id2 = node.id.toLowerCase();
+    if (title2.includes("vue d'ensemble") || title2.includes("vue") && title2.includes("ensemble") && title2.includes("urbanisme")) {
+      return "du-overview";
+    }
+    if (title2.includes("vue detail") || title2.includes("vue") && title2.includes("detail") && title2.includes("urbanisme")) {
+      return "du-detail";
+    }
+    if (title2.includes("servitude") && title2.includes("utilite publique")) {
+      return "sup";
+    }
+    if (title2.includes("schema") && title2.includes("coherence territoriale")) {
+      return "scot";
+    }
+    if (id2.includes("lowscale")) return "du-overview";
+    if (id2.includes("du-psmv")) return "du-detail";
+    if (id2 === "sup" || id2.endsWith("--sup") || /--sup--/.test(id2)) return "sup";
+    if (id2.includes("scot")) return "scot";
+    return null;
+  }
+  function branchForCatalogSubtree(root) {
+    const self2 = catalogBranchForRootNode(root);
+    if (self2) return self2;
+    for (const child of catalogChildNodes(root)) {
+      const branch = catalogBranchForRootNode(child);
+      if (branch) return branch;
+    }
+    return null;
+  }
+  function setSubtreeVisible(node, visible) {
+    node.visible = visible;
+    for (const child of catalogChildNodes(node)) {
+      setSubtreeVisible(child, visible);
+    }
+  }
+  function applyDocumentCatalogVisibility(roots, document2) {
+    const enabled = documentCatalogBranchesForDocument(document2);
+    if (!(enabled == null ? void 0 : enabled.size)) return;
+    for (const root of roots) {
+      const branch = branchForCatalogSubtree(root);
+      if (!branch) {
+        setSubtreeVisible(root, false);
+        continue;
+      }
+      setSubtreeVisible(root, enabled.has(branch));
+    }
+  }
+  function cloneCatalogTree(nodes) {
+    return nodes.map((node) => ({
+      ...node,
+      children: node.children ? cloneCatalogTree(node.children) : node.children
+    }));
+  }
+  function catalogCheckedForStartupDocument(roots, document2) {
+    var _a2;
+    if (!((_a2 = documentCatalogBranchesForDocument(document2)) == null ? void 0 : _a2.size)) return null;
+    const clone2 = cloneCatalogTree(roots);
+    applyDocumentCatalogVisibility(clone2, document2);
+    const index2 = buildCatalogTreeIndex(clone2);
+    const checked = {};
+    for (const node of flattenCatalogNodes(clone2)) checked[node.id] = Boolean(node.visible);
+    for (const node of flattenCatalogNodes(clone2)) {
+      if (checked[node.id]) propagateCheckedToAncestors(checked, node.id, index2);
+    }
+    return checked;
+  }
   let activeSupTypes = null;
   let activeDuRuleScope = null;
   function setFicheCatalogSupTypes(types) {
@@ -73217,7 +73230,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function filterScotPartitionsByWfsGpuId(scots, parcelFiche) {
     if (!scots || !Object.keys(scots).length) return scots ?? {};
-    const features = (parcelFiche == null ? void 0 : parcelFiche.features) ?? [];
+    if (!parcelFiche) return scots;
+    const features = parcelFiche.features ?? [];
     const scotIds = /* @__PURE__ */ new Set();
     for (const feature of features) {
       if (classifyFeature(feature) !== "scot") continue;
@@ -73326,7 +73340,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return false;
   }
   function shouldIncludeParcelRuleFeature(feature, section, ficheApi, lookup2) {
-    var _a2;
+    var _a2, _b;
     if (section === "mec") {
       return isParcelMecFeatureAllowed(feature, ficheApi);
     }
@@ -73336,8 +73350,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     if (section === "sup") {
       const suptype = coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.suptype);
-      if (!suptype) return true;
-      return isSupCategoryCatalogVisible(suptype);
+      if (suptype && !isSupCategoryCatalogVisible(suptype)) return false;
+      if (!ficheApi) return false;
+      const partition = coerceDisplayString((_b = feature.properties) == null ? void 0 : _b.partition);
+      return Boolean(partition) && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup2);
     }
     if (section === "scot") {
       const props = feature.properties ?? {};
@@ -73447,10 +73463,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return tiles;
   }
+  function documentFeatureFamily(feature) {
+    var _a2;
+    return /^psmv_/i.test(coerceDisplayString((_a2 = feature.properties) == null ? void 0 : _a2.partition)) ? "psmv" : "du";
+  }
   function buildParcelDocumentsHtmlFromFiche(data, ficheApi) {
     const all2 = data.features ?? [];
     const lookup2 = gpuSiteDocumentLookupFromFicheApi(ficheApi);
-    const documentFeatures = all2.filter((f2) => classifyFeature(f2) === "document");
+    const documentFeatures = all2.filter(
+      (f2) => classifyFeature(f2) === "document" && isFicheDocumentFamilyVisible(documentFeatureFamily(f2))
+    );
     const scotFeatures = all2.filter((f2) => classifyFeature(f2) === "scot");
     const mecFeatures = all2.filter((f2) => classifyFeature(f2) === "mec");
     const supOnParcel = all2.filter((f2) => classifyFeature(f2) === "sup");
@@ -73725,6 +73747,19 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return prependNonExecutoireCalloutForPartitionMap(html2, partitions);
   }
+  function scotWfsFeaturesWithoutDocument(scots) {
+    var _a2;
+    const out = [];
+    for (const [partition, panel] of Object.entries(normalizePartitionsMap(scots))) {
+      if ((_a2 = panel.documents) == null ? void 0 : _a2.length) continue;
+      for (const properties of panel.features ?? []) {
+        if (properties && typeof properties === "object") {
+          out.push({ id: `scot.${partition}`, properties });
+        }
+      }
+    }
+    return out;
+  }
   function buildDocumentTabs(data, mode2) {
     var _a2;
     const tabs = [];
@@ -73761,7 +73796,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       normalizePartitionsMap(data.scots),
       isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : void 0
     );
-    const scotStatusTiles = buildScotWfsStatusTiles(((_a2 = extractParcelFichePayload(data)) == null ? void 0 : _a2.features) ?? []);
+    const scotStatusTiles = buildScotWfsStatusTiles(
+      ((_a2 = extractParcelFichePayload(data)) == null ? void 0 : _a2.features) ?? scotWfsFeaturesWithoutDocument(data.scots)
+    );
     if ((mapHasProductionDocument(scots) || scotStatusTiles.length) && isFicheDocumentFamilyVisible("scot")) {
       const bodyHtml = buildScotTabTilesHtml(scots, data, scotStatusTiles);
       tabs.push({
@@ -73940,16 +73977,16 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const inflightPayloadByPoint = /* @__PURE__ */ new Map();
   let activePanelNetworkAbort = null;
-  const activeBackgroundNetworkAborts = /* @__PURE__ */ new Set();
+  const activeBackgroundNetworkAborts = /* @__PURE__ */ new Map();
   function fichePayloadInflightKey(lon, lat, zoom, mode2, activeFamilies, activeSupTypes2) {
     const families = (activeFamilies == null ? void 0 : activeFamilies.length) ? [...activeFamilies].sort().join(",") : "all";
     const supTypes = (activeSupTypes2 == null ? void 0 : activeSupTypes2.length) ? [...activeSupTypes2].sort().join(",") : "all-sup";
     return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}|${families}|${supTypes}`;
   }
-  function takeoverFicheNetworkSignal(external, role = "panel") {
+  function takeoverFicheNetworkSignal(external, role, inflightKey) {
     if (role === "background") {
       const controller2 = new AbortController();
-      activeBackgroundNetworkAborts.add(controller2);
+      activeBackgroundNetworkAborts.set(controller2, inflightKey);
       controller2.signal.addEventListener(
         "abort",
         () => activeBackgroundNetworkAborts.delete(controller2),
@@ -73974,21 +74011,29 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return signal;
   }
-  function clearInflightFichePayloads() {
-    inflightPayloadByPoint.clear();
-  }
   function resolveFicheInfoSupersedeBaseUrl() {
     return resolveFicheInfoCombinedFetchUrl() ?? resolveFicheInfoFetchUrl(MAP_MODE_TERRITORY) ?? (typeof config.apiFicheInfoUrl === "string" ? config.apiFicheInfoUrl.trim() : null) ?? null;
   }
-  function abortInflightFicheInfoFetch() {
+  function fichePointInflightPrefix(point) {
+    return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|${Math.round(point.zoom)}|`;
+  }
+  function abortInflightFicheInfoFetch(options) {
     const hadPanel = activePanelNetworkAbort !== null;
     activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.abort();
     activePanelNetworkAbort = null;
-    for (const controller2 of [...activeBackgroundNetworkAborts]) {
+    const keepPrefix = (options == null ? void 0 : options.keepBackgroundAt) ? fichePointInflightPrefix(options.keepBackgroundAt) : null;
+    const keptKeys = /* @__PURE__ */ new Set();
+    for (const [controller2, key2] of [...activeBackgroundNetworkAborts]) {
+      if (keepPrefix && key2.startsWith(keepPrefix)) {
+        keptKeys.add(key2);
+        continue;
+      }
       controller2.abort();
+      activeBackgroundNetworkAborts.delete(controller2);
     }
-    activeBackgroundNetworkAborts.clear();
-    clearInflightFichePayloads();
+    for (const key2 of [...inflightPayloadByPoint.keys()]) {
+      if (!keptKeys.has(key2)) inflightPayloadByPoint.delete(key2);
+    }
     if (hadPanel) {
       const base = resolveFicheInfoSupersedeBaseUrl();
       if (base) notifyFicheInfoSupersede(base);
@@ -74011,7 +74056,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const existing = inflightPayloadByPoint.get(inflightKey);
     if (existing) return existing;
     const role = params2.fetchRole ?? "panel";
-    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role);
+    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role, inflightKey);
     const promise = fetchGpuFicheInfoPayloadFromUrl(
       fetchBase,
       { ...params2, mode: MAP_MODE_TERRITORY },
@@ -74041,7 +74086,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const existing = inflightPayloadByPoint.get(inflightKey);
     if (existing) return existing;
     const role = params2.fetchRole ?? "panel";
-    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role);
+    const signal = takeoverFicheNetworkSignal(params2.abortSignal, role, inflightKey);
     const promise = fetchGpuFicheInfoPayloadImpl(params2, signal, role).finally(() => {
       inflightPayloadByPoint.delete(inflightKey);
       if (role === "panel" && (activePanelNetworkAbort == null ? void 0 : activePanelNetworkAbort.signal) === signal) {
@@ -74975,7 +75020,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function loadFicheForMapPointImpl(params2) {
     const requestId2 = ++mapPointRequestSeq;
     mapPointFetchAbort == null ? void 0 : mapPointFetchAbort.abort();
-    abortInflightFicheInfoFetch();
+    abortInflightFicheInfoFetch({
+      keepBackgroundAt: { lon: params2.lon, lat: params2.lat, zoom: params2.zoom }
+    });
     mapPointFetchAbort = new AbortController();
     const fetchAbortSignal = mapPointFetchAbort.signal;
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
@@ -76963,6 +77010,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  let geopfSlotSeq = 0;
   function placeElementInGeopfContainer(map2, element, corner, options) {
     const attempt = (options == null ? void 0 : options.attempt) ?? 0;
     const target2 = map2.getTargetElement();
@@ -76980,6 +77028,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return;
     }
     if (options == null ? void 0 : options.slotClass) element.classList.add(options.slotClass);
+    if (!element.id) element.id = `ecGeopfSlot-${++geopfSlotSeq}`;
     if (element.parentElement !== container) {
       container.appendChild(element);
     }
@@ -118591,8 +118640,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogChecked.value = next;
       reapplyCatalogMapState();
     }
-    function syncCatalogCheckedFromTreeVisible() {
-      initCatalogCheckedFromConfig(nodes.value);
+    function replaceCatalogChecked(next) {
+      catalogChecked.value = { ...next };
       reapplyCatalogMapState();
     }
     function setInStack(id2, inStack) {
@@ -118760,7 +118809,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       regroupAggregate,
       notifyStackOrder,
       reapplyCatalogMapState,
-      syncCatalogCheckedFromTreeVisible,
+      replaceCatalogChecked,
       catalogEntryInZoomRange
     };
   }
@@ -121113,7 +121162,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         regroupAggregate,
         notifyStackOrder,
         reapplyCatalogMapState,
-        syncCatalogCheckedFromTreeVisible
+        replaceCatalogChecked
       } = useManagedLayers(
         layerNodesRef,
         (id2, visible) => emit2("toggle-layer", id2, visible),
@@ -121408,8 +121457,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       function applyDocumentCatalogFromStartupConfig() {
         const doc2 = resolveDocumentForCatalogStartup();
         if (!(doc2 == null ? void 0 : doc2.type) || !layerNodesRef.value.length) return;
-        applyDocumentCatalogVisibility(layerNodesRef.value, doc2);
-        syncCatalogCheckedFromTreeVisible();
+        const checked = catalogCheckedForStartupDocument(layerNodesRef.value, doc2);
+        if (!checked) return;
+        replaceCatalogChecked(checked);
         replaceLayerPermalinkParams(collectLayerParamsForPermalink());
       }
       function applyLayerParamsFromPermalink(params2) {

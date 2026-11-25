@@ -18755,6 +18755,15 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       return this.options;
     }
   }
+  const MIN_AUTOCOMPLETE_CHARS = 3;
+  function installAutocompleteTrim(engine) {
+    const original = engine.autocomplete.bind(engine);
+    engine.autocomplete = (value2) => {
+      const text2 = value2.trim();
+      if (text2.length < MIN_AUTOCOMPLETE_CHARS) return;
+      original(text2);
+    };
+  }
   var checkDsfr = function() {
     var style = getComputedStyle(document.documentElement);
     var color = style.getPropertyValue("--blue-france-sun-113-625");
@@ -51249,7 +51258,7 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
       geocodeGetCapabilitiesUrl: `${base}/geocodage/getCapabilities`
     };
     const advancedSearchOptions = { searchOptions };
-    return new SearchEngineAdvancedAnimated({
+    const control = new SearchEngineAdvancedAnimated({
       collapsed: options.collapsed ?? false,
       collapsible: options.collapsible ?? false,
       returnTrueGeometry: true,
@@ -51286,6 +51295,10 @@ var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "acce
         new ParcelAdvancedSearch({ ...advancedSearchOptions, name: "Parcelles cadastrales" })
       ]
     });
+    installAutocompleteTrim(
+      control.baseSearchEngine
+    );
+    return control;
   }
   function isAdvancedPanel(panel) {
     return panel.classList.contains("GPAdvancedContainer");

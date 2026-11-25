@@ -622,3 +622,84 @@ describe('buildParcelDocumentsHtmlFromFiche', () => {
     setFicheCatalogFamilyVisibility(null)
   })
 })
+
+describe('onglet Documents de la fiche parcelle : familles du catalogue', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  const docId = 'c'.repeat(32)
+  const ficheApi: GpuFicheInfoPayload = {
+    dus: {
+      DU_31526: {
+        documents: [
+          {
+            id: docId,
+            title: 'PLU La Salvetat',
+            name: 'DU_31526',
+            status: 'document.production',
+            effectiveStatus: 'NON_EXECUTOIRE',
+          },
+        ],
+      },
+    },
+  }
+  const parcelFiche = {
+    features: [
+      {
+        id: 'document.1',
+        properties: {
+          title: 'PLU La Salvetat',
+          partition: 'DU_31526',
+          id: docId,
+          status: 'document.production',
+        },
+      },
+    ],
+  }
+  const visibility = (du: boolean) =>
+    setFicheCatalogFamilyVisibility({ du, psmv: du, sup: true, scot: true, mec: true })
+
+  it('DU décochés (vues d’ensemble et détaillée) : ni tuile DU ni encart non exécutoire', () => {
+    visibility(false)
+    const html = buildParcelDocumentsHtmlFromFiche(parcelFiche, ficheApi)
+    expect(html).not.toContain('PLU La Salvetat')
+    expect(html).not.toContain('ec-fiche-info__callout')
+  })
+
+  it('DU cochés : tuile DU affichée', () => {
+    visibility(true)
+    expect(buildParcelDocumentsHtmlFromFiche(parcelFiche, ficheApi)).toContain('PLU La Salvetat')
+  })
+})
+
+describe('règles d’urbanisme SUP : document en base requis (comme les DU)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  const supFeature = {
+    id: 'assiette_sup_s.185691',
+    properties: {
+      suptype: 'ac1',
+      partition: '172014607_SUP_44_AC1',
+      typeass: 'Périmètre des abords',
+      nomass: 'AC1_La-Touche-IFIL0B_abor',
+    },
+  }
+  const ficheApi = (documents: Array<Record<string, unknown>>): GpuFicheInfoPayload => ({
+    sups: { '172014607_SUP_44_AC1': { documents } },
+  })
+
+  it('SUP sur la carte sans document en production dans la base : règle masquée', () => {
+    const html = buildParcelInfosHtmlFromFiche({ features: [supFeature] }, undefined, ficheApi([]))
+    expect(html).not.toContain('Servitudes d’utilité publique')
+  })
+
+  it('SUP avec document en production (lien par la partition) : règle affichée', () => {
+    const html = buildParcelInfosHtmlFromFiche(
+      { features: [supFeature] },
+      undefined,
+      ficheApi([
+        { id: 'd'.repeat(32), name: '172014607_SUP_44_AC1', status: 'document.production' },
+      ]),
+    )
+    expect(html).toContain('Servitudes d’utilité publique')
+  })
+})
