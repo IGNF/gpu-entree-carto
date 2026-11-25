@@ -223,3 +223,80 @@ describe('ficheSelectionFromGpuApi', () => {
     expect(avecBdd.raw?._parcelFiche).toBeTruthy()
   })
 })
+
+describe('fiche territoire sans parcelle au point', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  it('affiche le SCoT de la commune (pas de filtre par la fiche parcelle absente)', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const payload = {
+      parcel: null,
+      grid: { name: 'EGUILLES', insee: '13032', is_rnu: false },
+      dus: [],
+      psmvs: [],
+      sups: [],
+      scots: {
+        scot_200054807: {
+          documents: [
+            {
+              id: '160033dee4d62bdc5485ba6b5ace47c9',
+              title: 'Schéma de Cohérence Territorial (SCoT) METROPOLE AIX-MARSEILLE-PROVENCE',
+              name: 'scot_200054807',
+              type: 'SCoT',
+              status: 'document.production',
+            },
+          ],
+        },
+      },
+    }
+    const sel = ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, 5.3387, 43.5682)
+    expect(sel.documentTabs?.map((t) => t.label).join(' ')).toMatch(/SCoT/)
+    expect(sel.documentTabs?.find((t) => /SCoT/.test(t.label))?.bodyHtml).toContain(
+      'METROPOLE AIX-MARSEILLE-PROVENCE',
+    )
+  })
+})
+
+describe('fiche territoire sans parcelle : SCoT hors base (données carte)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  const payload = (title: string, approved: boolean) => ({
+    parcel: null,
+    grid: { name: 'COMMUNE', insee: '76000', is_rnu: false },
+    dus: [],
+    psmvs: [],
+    sups: [],
+    scots: {
+      scot_200049591: {
+        documents: [],
+        features: [
+          { partition: 'scot_200049591', name: 'scot_200049591', title, gpu_id: '', approved },
+        ],
+      },
+    },
+  })
+
+  it('SCoT arrêté : tuile avec badge « ARRÊTÉ »', () => {
+    const sel = ficheSelectionFromGpuApi(
+      payload('SCOT DU PAYS DE BRAY', false),
+      MAP_MODE_TERRITORY,
+      1.44,
+      49.47,
+    )
+    const body = sel.documentTabs?.find((t) => /SCoT/.test(t.label))?.bodyHtml ?? ''
+    expect(body).toContain('ARRÊTÉ')
+    expect(body).toMatch(/pays de bray/i)
+  })
+
+  it('SCoT approuvé non publié : tuile avec badge « NON PUBLIÉ »', () => {
+    const sel = ficheSelectionFromGpuApi(
+      payload("SCOT DE L'AGGLOMERATION TOULOUSAINE", true),
+      MAP_MODE_TERRITORY,
+      1.26,
+      43.57,
+    )
+    expect(sel.documentTabs?.find((t) => /SCoT/.test(t.label))?.bodyHtml ?? '').toContain(
+      'NON PUBLIÉ',
+    )
+  })
+})

@@ -553,7 +553,11 @@ async function loadFicheForMapPointImpl(params: {
 }): Promise<FicheInfoSelection | null> {
   const requestId = ++mapPointRequestSeq
   mapPointFetchAbort?.abort()
-  abortInflightFicheInfoFetch()
+  // L’emprise de ce même point (lancée juste avant, ex. cerise au chargement) est réutilisée
+  // si la requête est identique, au lieu d’être annulée puis refaite.
+  abortInflightFicheInfoFetch({
+    keepBackgroundAt: { lon: params.lon, lat: params.lat, zoom: params.zoom },
+  })
   mapPointFetchAbort = new AbortController()
   const fetchAbortSignal = mapPointFetchAbort.signal
   const markerPlacedAtClick = params.markerPlacedAtClick === true

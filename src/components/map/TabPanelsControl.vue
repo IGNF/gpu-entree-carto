@@ -43,10 +43,7 @@ import {
   type GpuLayerCatalogEntry,
 } from '@/lib/layerConfig/gpuLayerConfig'
 import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
-import {
-  applyDocumentCatalogVisibility,
-  catalogCheckedForStartupDocument,
-} from '@/lib/layerConfig/documentCatalogVisibility'
+import { catalogCheckedForStartupDocument } from '@/lib/layerConfig/documentCatalogVisibility'
 import { initialHashHadLayerPermalinkParams } from '@/lib/layerConfig/documentCatalogStartup'
 import { catalogChildNodes } from '@/lib/layerConfig/catalogLayerTargets'
 import { buildCatalogTreeIndex } from '@/lib/layerConfig/catalogTreeIndex'
@@ -174,7 +171,7 @@ const {
   regroupAggregate,
   notifyStackOrder,
   reapplyCatalogMapState,
-  syncCatalogCheckedFromTreeVisible,
+  replaceCatalogChecked,
 } = useManagedLayers(
   layerNodesRef,
   (id, visible) => emit('toggle-layer', id, visible),
@@ -524,8 +521,11 @@ function syncGpuWmsRegistryFromLayerConfig(): void {
 function applyDocumentCatalogFromStartupConfig(): void {
   const doc = resolveDocumentForCatalogStartup()
   if (!doc?.type || !layerNodesRef.value.length) return
-  applyDocumentCatalogVisibility(layerNodesRef.value, doc)
-  syncCatalogCheckedFromTreeVisible()
+  // Sur les cases seulement : l’arbre garde la visibilité de la layerConfig, référence du permalink
+  // (le modifier faisait omettre les couches décochées par le document, recochées au rechargement).
+  const checked = catalogCheckedForStartupDocument(layerNodesRef.value, doc)
+  if (!checked) return
+  replaceCatalogChecked(checked)
   replaceLayerPermalinkParams(collectLayerParamsForPermalink())
 }
 

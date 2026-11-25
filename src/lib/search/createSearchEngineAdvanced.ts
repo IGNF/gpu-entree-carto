@@ -1,4 +1,5 @@
 import type SearchEngineAdvanced from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/SearchEngineAdvanced.js'
+import { installAutocompleteTrim } from '@/lib/search/trimAutocompleteInput'
 import SearchEngineAdvancedAnimated from '@/lib/search/SearchEngineAdvancedAnimated'
 import InseeAdvancedSearch from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/InseeAdvancedSearch.js'
 import LocationAdvancedSearch from 'geopf-extensions-openlayers/src/packages/Controls/SearchEngine/LocationAdvancedSearch.js'
@@ -30,7 +31,7 @@ export function createSearchEngineAdvanced(
   }
   const advancedSearchOptions = { searchOptions }
 
-  return new SearchEngineAdvancedAnimated({
+  const control = new SearchEngineAdvancedAnimated({
     collapsed: options.collapsed ?? false,
     collapsible: options.collapsible ?? false,
     returnTrueGeometry: true,
@@ -67,4 +68,9 @@ export function createSearchEngineAdvanced(
       new ParcelAdvancedSearch({ ...advancedSearchOptions, name: 'Parcelles cadastrales' }),
     ],
   })
+  installAutocompleteTrim(
+    (control as unknown as { baseSearchEngine: { autocomplete: (value: string) => void } })
+      .baseSearchEngine,
+  )
+  return control
 }

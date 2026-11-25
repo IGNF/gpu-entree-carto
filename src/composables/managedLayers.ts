@@ -439,9 +439,9 @@ export function useManagedLayers(
     reapplyCatalogMapState()
   }
 
-  /** Recalcule les cases catalogue depuis `node.visible` (ex. document démo sans changer l’arbre). */
-  function syncCatalogCheckedFromTreeVisible(): void {
-    initCatalogCheckedFromConfig(nodes.value)
+  /** Remplace toutes les cases du catalogue (ex. état du document de démarrage). */
+  function replaceCatalogChecked(next: Record<string, boolean>): void {
+    catalogChecked.value = { ...next }
     reapplyCatalogMapState()
   }
 
@@ -644,7 +644,7 @@ export function useManagedLayers(
     regroupAggregate,
     notifyStackOrder,
     reapplyCatalogMapState,
-    syncCatalogCheckedFromTreeVisible,
+    replaceCatalogChecked,
     catalogEntryInZoomRange,
   }
 }

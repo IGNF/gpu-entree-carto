@@ -60,6 +60,8 @@ export default defineConfig({
         '**/.git/**',
         '**/.github/**',
         '**/.cursor/**',
+        // Fichiers locaux hors dépôt (captures, notes) : déjà ignorés par git.
+        '**/_local/**',
       ],
     },
     proxy: {

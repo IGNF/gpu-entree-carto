@@ -373,6 +373,22 @@ function wrapTerritoryTabBody(
   return prependNonExecutoireCalloutForPartitionMap(html, partitions)
 }
 
+/** Partitions SCoT sans document en base : propriétés WFS (titre, approuvé…) au format couche `scot.*`. */
+function scotWfsFeaturesWithoutDocument(
+  scots: GpuFicheInfoPayload['scots'],
+): Array<{ id: string; properties: Record<string, unknown> }> {
+  const out: Array<{ id: string; properties: Record<string, unknown> }> = []
+  for (const [partition, panel] of Object.entries(normalizePartitionsMap(scots))) {
+    if (panel.documents?.length) continue
+    for (const properties of panel.features ?? []) {
+      if (properties && typeof properties === 'object') {
+        out.push({ id: `scot.${partition}`, properties })
+      }
+    }
+  }
+  return out
+}
+
 function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInfoDocumentTab[] {
   const tabs: FicheInfoDocumentTab[] = []
   const proceduresByDocument = data.proceduresByDocument
@@ -419,8 +435,11 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
     normalizePartitionsMap(data.scots),
     isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : undefined,
   )
-  // SCoT présents sur la carte mais absents de la base (non publié / arrêté).
-  const scotStatusTiles = buildScotWfsStatusTiles(extractParcelFichePayload(data)?.features ?? [])
+  // SCoT présents sur la carte mais absents de la base (non publié / arrêté) : couches WFS de la fiche
+  // parcelle, ou, sans parcelle au point, celles renvoyées par gpu-site avec la partition sans document.
+  const scotStatusTiles = buildScotWfsStatusTiles(
+    extractParcelFichePayload(data)?.features ?? scotWfsFeaturesWithoutDocument(data.scots),
+  )
   if (
     (mapHasProductionDocument(scots) || scotStatusTiles.length) &&
     isFicheDocumentFamilyVisible('scot')

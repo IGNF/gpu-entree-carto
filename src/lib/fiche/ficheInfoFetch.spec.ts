@@ -183,3 +183,80 @@ describe('fetchGpuFicheInfoPayload', () => {
     ).toBe(true)
   })
 })
+
+describe('chargement de la fiche : réutilise la requête emprise du même point', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl
+  })
+
+  /** fetch en attente, résolu par `release()` ; rejeté si son signal est annulé. */
+  function deferredFetch() {
+    const releases: Array<() => void> = []
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          const signal = init?.signal
+          if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'))
+          signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+          releases.push(() => resolve(new Response(JSON.stringify(payload), { status: 200 })))
+        }),
+    )
+    return { fetchMock, release: () => releases.splice(0).forEach((r) => r()) }
+  }
+
+  const point = { lon: -61.1125877, lat: 14.67981083, zoom: 13, mode: MAP_MODE_TERRITORY }
+
+  it('même point, même zoom : un seul appel réseau, emprise et fiche servies', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const { fetchMock, release } = deferredFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const background = fetchGpuFicheInfoPayload({ ...point, fetchRole: 'background' })
+    abortInflightFicheInfoFetch({ keepBackgroundAt: point })
+    const panel = fetchGpuFicheInfoPayload({ ...point, abortSignal: new AbortController().signal })
+    release()
+    expect(await background).toEqual(expect.objectContaining({ title: 'test' }))
+    expect(await panel).toEqual(expect.objectContaining({ title: 'test' }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('zoom différent (ex. recherche) : l’emprise est annulée comme avant', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const { fetchMock, release } = deferredFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const background = fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' })
+    abortInflightFicheInfoFetch({ keepBackgroundAt: point })
+    expect(await background).toBeNull()
+    const panel = fetchGpuFicheInfoPayload({ ...point, abortSignal: new AbortController().signal })
+    release()
+    expect(await panel).toEqual(expect.objectContaining({ title: 'test' }))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('autre point : l’emprise est annulée comme avant', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const { fetchMock } = deferredFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const background = fetchGpuFicheInfoPayload({ ...point, fetchRole: 'background' })
+    abortInflightFicheInfoFetch({ keepBackgroundAt: { ...point, lon: 2.35, lat: 48.85 } })
+    expect(await background).toBeNull()
+  })
+
+  it('requête panneau en vol au même point : toujours annulée (une requête annulée ne doit pas être partagée)', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    const { fetchMock, release } = deferredFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const firstPanel = fetchGpuFicheInfoPayload({
+      ...point,
+      abortSignal: new AbortController().signal,
+    })
+    abortInflightFicheInfoFetch({ keepBackgroundAt: point })
+    expect(await firstPanel).toBeNull()
+    const secondPanel = fetchGpuFicheInfoPayload({
+      ...point,
+      abortSignal: new AbortController().signal,
+    })
+    release()
+    expect(await secondPanel).toEqual(expect.objectContaining({ title: 'test' }))
+  })
+})

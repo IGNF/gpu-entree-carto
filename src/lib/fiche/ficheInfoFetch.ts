@@ -15,8 +15,8 @@ const inflightPayloadByPoint = new Map<string, Promise<GpuFicheInfoPayload | nul
 /** Fetch « panneau » (clic / recherche) : un seul en vol, annulé au point suivant. */
 let activePanelNetworkAbort: AbortController | null = null
 
-/** Fetches emprise / enrichissement : annulés avec le panneau au clic suivant. */
-const activeBackgroundNetworkAborts = new Set<AbortController>()
+/** Fetches emprise / enrichissement (→ clé de requête en vol) : annulés avec le panneau au clic suivant. */
+const activeBackgroundNetworkAborts = new Map<AbortController, string>()
 
 export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
@@ -38,12 +38,13 @@ function fichePayloadInflightKey(
 export type FicheInfoFetchRole = 'panel' | 'background'
 
 function takeoverFicheNetworkSignal(
-  external?: AbortSignal,
-  role: FicheInfoFetchRole = 'panel',
+  external: AbortSignal | undefined,
+  role: FicheInfoFetchRole,
+  inflightKey: string,
 ): AbortSignal {
   if (role === 'background') {
     const controller = new AbortController()
-    activeBackgroundNetworkAborts.add(controller)
+    activeBackgroundNetworkAborts.set(controller, inflightKey)
     controller.signal.addEventListener(
       'abort',
       () => activeBackgroundNetworkAborts.delete(controller),
@@ -70,10 +71,6 @@ function takeoverFicheNetworkSignal(
   return signal
 }
 
-function clearInflightFichePayloads(): void {
-  inflightPayloadByPoint.clear()
-}
-
 function resolveFicheInfoSupersedeBaseUrl(): string | null {
   return (
     resolveFicheInfoCombinedFetchUrl() ??
@@ -83,16 +80,38 @@ function resolveFicheInfoSupersedeBaseUrl(): string | null {
   )
 }
 
-/** Annule le fetch réseau en cours (clic suivant) et vide les promesses partagées. */
-export function abortInflightFicheInfoFetch(): void {
+/** Début de clé de requête en vol propre à un point et un zoom. */
+function fichePointInflightPrefix(point: { lon: number; lat: number; zoom: number }): string {
+  return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|${Math.round(point.zoom)}|`
+}
+
+/**
+ * Annule le fetch réseau en cours (clic suivant) et vide les promesses partagées.
+ * `keepBackgroundAt` : les fetches emprise (arrière-plan) de ce point et ce zoom continuent et restent
+ * partagés — la fiche qui démarre au même point les réutilise (une seule requête au chargement).
+ * Les fetches panneau sont toujours annulés : une requête annulée ne doit jamais être partagée.
+ */
+export function abortInflightFicheInfoFetch(options?: {
+  keepBackgroundAt?: { lon: number; lat: number; zoom: number }
+}): void {
   const hadPanel = activePanelNetworkAbort !== null
   activePanelNetworkAbort?.abort()
   activePanelNetworkAbort = null
-  for (const controller of [...activeBackgroundNetworkAborts]) {
+  const keepPrefix = options?.keepBackgroundAt
+    ? fichePointInflightPrefix(options.keepBackgroundAt)
+    : null
+  const keptKeys = new Set<string>()
+  for (const [controller, key] of [...activeBackgroundNetworkAborts]) {
+    if (keepPrefix && key.startsWith(keepPrefix)) {
+      keptKeys.add(key)
+      continue
+    }
     controller.abort()
+    activeBackgroundNetworkAborts.delete(controller)
   }
-  activeBackgroundNetworkAborts.clear()
-  clearInflightFichePayloads()
+  for (const key of [...inflightPayloadByPoint.keys()]) {
+    if (!keptKeys.has(key)) inflightPayloadByPoint.delete(key)
+  }
   if (hadPanel) {
     const base = resolveFicheInfoSupersedeBaseUrl()
     if (base) notifyFicheInfoSupersede(base)
@@ -127,7 +146,7 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   if (existing) return existing
 
   const role = params.fetchRole ?? 'panel'
-  const signal = takeoverFicheNetworkSignal(params.abortSignal, role)
+  const signal = takeoverFicheNetworkSignal(params.abortSignal, role, inflightKey)
 
   const promise = fetchGpuFicheInfoPayloadFromUrl(
     fetchBase,
@@ -171,7 +190,7 @@ export async function fetchGpuFicheInfoPayload(params: {
   if (existing) return existing
 
   const role = params.fetchRole ?? 'panel'
-  const signal = takeoverFicheNetworkSignal(params.abortSignal, role)
+  const signal = takeoverFicheNetworkSignal(params.abortSignal, role, inflightKey)
 
   const promise = fetchGpuFicheInfoPayloadImpl(params, signal, role).finally(() => {
     inflightPayloadByPoint.delete(inflightKey)

@@ -613,7 +613,9 @@ export function filterScotPartitionsByWfsGpuId(
   parcelFiche: GpuParcelFichePayload | null | undefined,
 ): Record<string, GpuFichePartition> {
   if (!scots || !Object.keys(scots).length) return scots ?? {}
-  const features = parcelFiche?.features ?? []
+  // Sans parcelle au point (pas de fiche parcelle) : rien à recouper, SCoT de la commune conservés.
+  if (!parcelFiche) return scots
+  const features = parcelFiche.features ?? []
   const scotIds = new Set<string>()
   for (const feature of features) {
     if (classifyFeature(feature) !== 'scot') continue
@@ -779,8 +781,12 @@ function shouldIncludeParcelRuleFeature(
   }
   if (section === 'sup') {
     const suptype = coerceDisplayString(feature.properties?.suptype)
-    if (!suptype) return true
-    return isSupCategoryCatalogVisible(suptype)
+    if (suptype && !isSupCategoryCatalogVisible(suptype)) return false
+    // Comme les DU : SUP présente sur la carte mais sans document en production dans la base → règle
+    // masquée. Pas de gpu_id sur les couches SUP : lien par la partition.
+    if (!ficheApi) return false
+    const partition = coerceDisplayString(feature.properties?.partition)
+    return Boolean(partition) && partitionHasGpuSiteProductionDocument(partition, ficheApi, lookup)
   }
   if (section === 'scot') {
     const props = feature.properties ?? {}
@@ -919,13 +925,22 @@ export function buildScotWfsStatusTiles(
   return tiles
 }
 
+/** Famille catalogue d’un élément de la couche `document` (partition `PSMV_…` → psmv, sinon DU). */
+function documentFeatureFamily(feature: ParcelFicheFeature): 'du' | 'psmv' {
+  return /^psmv_/i.test(coerceDisplayString(feature.properties?.partition)) ? 'psmv' : 'du'
+}
+
 export function buildParcelDocumentsHtmlFromFiche(
   data: GpuParcelFichePayload,
   ficheApi?: GpuFicheInfoPayload | null,
 ): string {
   const all = data.features ?? []
   const lookup = gpuSiteDocumentLookupFromFicheApi(ficheApi)
-  const documentFeatures = all.filter((f) => classifyFeature(f) === 'document')
+  // Comme la fiche territoire : DU / PSMV seulement si leur famille est cochée dans le catalogue.
+  const documentFeatures = all.filter(
+    (f) =>
+      classifyFeature(f) === 'document' && isFicheDocumentFamilyVisible(documentFeatureFamily(f)),
+  )
   const scotFeatures = all.filter((f) => classifyFeature(f) === 'scot')
   const mecFeatures = all.filter((f) => classifyFeature(f) === 'mec')
   const supOnParcel = all.filter((f) => classifyFeature(f) === 'sup')
