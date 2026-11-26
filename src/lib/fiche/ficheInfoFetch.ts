@@ -20,17 +20,20 @@ export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
 }
 
+/**
+ * Clé de partage d’une requête en vol, sans le zoom : la réponse de gpu-site n’en dépend pas
+ * (la fiche réutilise ainsi l’emprise lancée après une recherche, une seule requête comptée).
+ */
 function fichePayloadInflightKey(
   lon: number,
   lat: number,
-  zoom: number,
   mode: MapModeId | 'combined',
   activeFamilies?: string[],
   activeSupTypes?: string[] | null,
 ): string {
   const families = activeFamilies?.length ? [...activeFamilies].sort().join(',') : 'all'
   const supTypes = activeSupTypes?.length ? [...activeSupTypes].sort().join(',') : 'all-sup'
-  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode}|${families}|${supTypes}`
+  return `${lon.toFixed(6)}|${lat.toFixed(6)}|${mode}|${families}|${supTypes}`
 }
 
 export type FicheInfoFetchRole = 'panel' | 'background'
@@ -78,19 +81,19 @@ function resolveFicheInfoSupersedeBaseUrl(): string | null {
   )
 }
 
-/** Début de clé de requête en vol propre à un point et un zoom. */
-function fichePointInflightPrefix(point: { lon: number; lat: number; zoom: number }): string {
-  return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|${Math.round(point.zoom)}|`
+/** Début de clé de requête en vol propre à un point. */
+function fichePointInflightPrefix(point: { lon: number; lat: number }): string {
+  return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|`
 }
 
 /**
  * Annule le fetch réseau en cours (clic suivant) et vide les promesses partagées.
- * `keepBackgroundAt` : les fetches emprise (arrière-plan) de ce point et ce zoom continuent et restent
+ * `keepBackgroundAt` : les fetches emprise (arrière-plan) de ce point continuent et restent
  * partagés — la fiche qui démarre au même point les réutilise (une seule requête au chargement).
  * Les fetches panneau sont toujours annulés : une requête annulée ne doit jamais être partagée.
  */
 export function abortInflightFicheInfoFetch(options?: {
-  keepBackgroundAt?: { lon: number; lat: number; zoom: number }
+  keepBackgroundAt?: { lon: number; lat: number }
 }): void {
   const hadPanel = activePanelNetworkAbort !== null
   activePanelNetworkAbort?.abort()
@@ -135,7 +138,6 @@ export async function fetchGpuFicheInfoCombinedPayload(params: {
   const inflightKey = fichePayloadInflightKey(
     params.lon,
     params.lat,
-    params.zoom,
     'combined',
     params.activeFamilies,
     params.activeSupTypes,
@@ -179,7 +181,6 @@ export async function fetchGpuFicheInfoPayload(params: {
   const inflightKey = fichePayloadInflightKey(
     params.lon,
     params.lat,
-    params.zoom,
     params.mode,
     params.activeFamilies,
     params.activeSupTypes,

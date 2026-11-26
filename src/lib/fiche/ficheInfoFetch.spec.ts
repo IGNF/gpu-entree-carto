@@ -89,14 +89,14 @@ describe('fetchGpuFicheInfoPayload', () => {
     const point = { lon: 5.68, lat: 45.05, mode: MAP_MODE_TERRITORY }
     await Promise.all([
       fetchGpuFicheInfoPayload({ ...point, zoom: 13 }),
-      fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' }),
+      fetchGpuFicheInfoPayload({ ...point, lon: 5.69, zoom: 6, fetchRole: 'background' }),
     ])
     const panel = new URL(
-      urls.find((u) => u.includes('zoom=13'))!,
+      urls.find((u) => u.includes('lon=5.68'))!,
       'http://x',
     )
     const background = new URL(
-      urls.find((u) => u.includes('zoom=6'))!,
+      urls.find((u) => u.includes('lon=5.69'))!,
       'http://x',
     )
     expect(panel.searchParams.get('client')).toBeTruthy()
@@ -244,17 +244,17 @@ describe('chargement de la fiche : réutilise la requête emprise du même point
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('zoom différent (ex. recherche) : l’emprise est annulée comme avant', async () => {
+  it('zoom différent (ex. recherche) : emprise réutilisée, la réponse gpu-site ne dépend pas du zoom', async () => {
     ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const { fetchMock, release } = deferredFetch()
     vi.stubGlobal('fetch', fetchMock)
     const background = fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' })
     abortInflightFicheInfoFetch({ keepBackgroundAt: point })
-    expect(await background).toBeNull()
     const panel = fetchGpuFicheInfoPayload({ ...point, abortSignal: new AbortController().signal })
     release()
+    expect(await background).toEqual(expect.objectContaining({ title: 'test' }))
     expect(await panel).toEqual(expect.objectContaining({ title: 'test' }))
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('autre point : l’emprise est annulée comme avant', async () => {

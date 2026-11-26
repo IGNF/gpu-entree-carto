@@ -560,7 +560,7 @@ async function loadFicheForMapPointImpl(params: {
   // L’emprise de ce même point (lancée juste avant, ex. cerise au chargement) est réutilisée
   // si la requête est identique, au lieu d’être annulée puis refaite.
   abortInflightFicheInfoFetch({
-    keepBackgroundAt: { lon: params.lon, lat: params.lat, zoom: params.zoom },
+    keepBackgroundAt: { lon: params.lon, lat: params.lat },
   })
   mapPointFetchAbort = new AbortController()
   const fetchAbortSignal = mapPointFetchAbort.signal
