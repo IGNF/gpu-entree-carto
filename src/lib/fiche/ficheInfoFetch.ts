@@ -3,10 +3,8 @@ import { MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import { resolveConfigUrlForFetch } from '@/lib/configUrls'
 import { appendFicheInfoQueryParams, notifyFicheInfoSupersede } from '@/lib/fiche/ficheInfoQuery'
 import {
-  legacyFicheModeValue,
   resolveFicheInfoCombinedFetchUrl,
   resolveFicheInfoFetchUrl,
-  shouldAppendLegacyFicheModeParam,
 } from '@/lib/fiche/ficheInfoApiUrls'
 import { isGpuFicheInfoPayload, type GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 
@@ -237,15 +235,7 @@ async function fetchGpuFicheInfoPayloadFromUrl(
 
   appendFicheInfoQueryParams(url, params, role === 'panel')
 
-  if (shouldAppendLegacyFicheModeParam(resolved)) {
-    url.searchParams.set('mode', legacyFicheModeValue(params.mode))
-  }
-
-  if (
-    url.pathname.includes('fiche-info-v2') &&
-    !url.pathname.endsWith('/territoire') &&
-    !url.pathname.endsWith('/parcelle')
-  ) {
+  if (!url.pathname.endsWith('/territoire') && !url.pathname.endsWith('/parcelle')) {
     url.searchParams.set('scope', 'both')
   }
 

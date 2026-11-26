@@ -86,9 +86,6 @@ export function appendFicheInfoQueryParams(
   url.searchParams.set('lon', String(params.lon))
   url.searchParams.set('lat', String(params.lat))
   url.searchParams.set('zoom', String(Math.round(params.zoom)))
-  if (!url.pathname.includes('fiche-info-v2')) {
-    url.searchParams.set('includeParcel', 'true')
-  }
 
   const preview = getActivePreviewDocument()
   if (preview?.status === 'document.preview' && preview.id) {

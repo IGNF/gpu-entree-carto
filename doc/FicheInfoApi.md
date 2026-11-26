@@ -9,35 +9,35 @@ Client reference for **entree-carto** — routes are implemented in **gpu-site**
 
 | Route | Use |
 | ----- | --- |
-| `GET /api/fiche-info-v2/territoire?lon=&lat=&zoom=` | Territory fiche (commune / arrondissement) |
-| `GET /api/fiche-info-v2/parcelle?lon=&lat=&zoom=` | Parcel fiche |
-| `GET /api/fiche-info-v2?lon=&lat=&zoom=` | Combined payload (optional, avoids duplicate calls on mode switch) |
+| `GET /api/fiche-info/territoire?lon=&lat=&zoom=` | Territory fiche (commune / arrondissement) |
+| `GET /api/fiche-info/parcelle?lon=&lat=&zoom=` | Parcel fiche |
+| `GET /api/fiche-info?lon=&lat=&zoom=` | Combined payload (avoids duplicate calls on mode switch) |
 
-Legacy: `GET /api/fiche-info` with `mode`, `includeParcel`, preview params (`ficheInfoQuery.ts`).
+These routes replace `/api/fiche-info-v2*`; the former `/api/fiche-info` (`mode`, `includeParcel` params) is no longer supported by entree-carto. Only the URL comes from config: the client no longer infers behaviour from the path.
 
 ### Config keys (`gpu.config`)
 
 | Key | Role |
 | --- | ---- |
-| `apiFicheInfoUrl` | Base URL (legacy or v2 root) |
+| `apiFicheInfoUrl` | Base URL (combined; `/territoire` and `/parcelle` are derived from it) |
 | `apiFicheInfoTerritoireUrl` | Override territory endpoint |
 | `apiFicheInfoParcelleUrl` | Override parcel endpoint |
-| `apiFicheInfoCombinedUrl` | Combined v2 endpoint |
-| `apiFicheInfoPreferCombined` | `false` to force split `/territoire` and `/parcelle` calls (default: combined when v2 is configured) |
-| `apiFicheInfoCatalogFamilies` | `false` to disable catalog-driven `activeFamilies` filtering (default: `true` with v2) |
+| `apiFicheInfoCombinedUrl` | Override combined endpoint |
+| `apiFicheInfoPreferCombined` | `false` to force split `/territoire` and `/parcelle` calls (default: combined) |
+| `apiFicheInfoCatalogFamilies` | `false` to disable catalog-driven `activeFamilies` filtering (default: `true`) |
 
 Relative paths resolve against the gpu-client-config script host (`configUrls.ts`).
 
 ### Server-side rules
 
-- **v2 documents (gpu-site)** — three-step pipeline: resolve **parcel + commune** at the click; load **DB** documents for the **commune grid** (DU, PSMV…), **SUP** via **`municipality_sup`** (INSEE → partitions `{idgest}_SUP_{department}_{suptype}`), **SCoT** at the point when the commune grid has no SCoT document, WFS partitions **at the point** when no commune is resolved, and WFS partitions intersecting the **parcel**; **synthesize** by scope (`territoire` = commune catalogue when INSEE is resolved, otherwise point partitions only; `parcelle` = partitions intersecting the parcel only). On **territoire**, a DB document is omitted unless WFS returns urbanism entities at the click for that partition (SUP commune entries via `municipality_sup` still apply). **Lookup cache** (5 min, tags `published_documents`, commune INSEE, parcel id, document grid); on publish/status change, commune tags cleared via grid **descendance** (SCoT / EPCI / department → municipalities). Legacy `/api/fiche-info` unchanged.
+- **Documents (gpu-site)** — three-step pipeline: resolve **parcel + commune** at the click; load **DB** documents for the **commune grid** (DU, PSMV…), **SUP** via **`municipality_sup`** (INSEE → partitions `{idgest}_SUP_{department}_{suptype}`), **SCoT** at the point when the commune grid has no SCoT document, WFS partitions **at the point** when no commune is resolved, and WFS partitions intersecting the **parcel**; **synthesize** by scope (`territoire` = commune catalogue when INSEE is resolved, otherwise point partitions only; `parcelle` = partitions intersecting the parcel only). On **territoire**, a DB document is omitted unless WFS returns urbanism entities at the click for that partition (SUP commune entries via `municipality_sup` still apply). **Lookup cache** (5 min, tags `published_documents`, commune INSEE, parcel id, document grid); on publish/status change, commune tags cleared via grid **descendance** (SCoT / EPCI / department → municipalities).
 - **APICarto** (`cadastre/commune`, `cadastre/parcelle`) must be called **only from gpu-site**, not from the browser.
 - Responses should include stable cache keys: `grid.insee`, parcel cadastre id (`parcelId` or `parcel` properties).
 - Optional client hints: `knownParcelId`, `knownGridInsee` (for server cache / 304 — future).
 
-### v2 payload slimming (gpu-site)
+### Payload slimming (gpu-site)
 
-Applied only on **`/api/fiche-info-v2*`** (not legacy `/api/fiche-info`):
+Applied on **`/api/fiche-info*`**:
 
 | Removed / slimmed | Reason |
 | ----------------- | ------ |
@@ -70,8 +70,8 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 ## entree-carto behaviour
 
 - No APICarto fallback in the browser.
-- **Map click**: when v2 split endpoints are configured, a single `GET` on `apiFicheInfoCombinedUrl` (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
 - **Catalog**: Données checkboxes (DU/PSMV/MEC → `du`, SUP, SCoT) are sent as `activeFamilies[]`; checked SUP sub-layers send `activeSupTypes[]` from `config_layers.json` `supType` (e.g. `AC1`). At the same cherry point, newly checked families or SUP types trigger an incremental fetch (local JSON merge, `ensureFicheCatalogSupplementAtMarker`).
+- **Map click**: a single `GET` on the combined URL (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
 - **Split** (`apiFicheInfoPreferCombined = false`): per-mode requests; territory still may call `/parcelle` silently for the back-to-parcel CTA metadata.
 - **Parcel — Infos** — zoning, prescriptions, and information rules are shown only when the partition’s document is **in production** in the fiche-info API (same rule as Document tiles).
 - **Per-mode** cache at the cherry point (`ficheInfoService.ts`); repeat click or mode switch at the same point uses cache (no refetch).
