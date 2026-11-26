@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Copy DSFR / Remix / custom SVG previews into doc/img/icon-previews/
- * and refresh the Preview column in doc/icone-references*.md
+ * and refresh the Aperçu column in doc/icone-references.md
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -80,11 +80,13 @@ function syncAssets(lookup) {
 
   const md = fs.readFileSync(path.join(docDir, 'icone-references.md'), 'utf8')
   const classes = [
-    ...new Set([
-      ...md.matchAll(/`(fr-icon-[a-z0-9-]+)`/g),
-      ...md.matchAll(/`(ri-[a-z0-9-]+)`/g),
-      ...md.matchAll(/`(ec-icon-[a-z0-9-]+)`/g),
-    ].map((m) => m[1])),
+    ...new Set(
+      [
+        ...md.matchAll(/`(fr-icon-[a-z0-9-]+)`/g),
+        ...md.matchAll(/`(ri-[a-z0-9-]+)`/g),
+        ...md.matchAll(/`(ec-icon-[a-z0-9-]+)`/g),
+      ].map((m) => m[1]),
+    ),
   ]
 
   const missing = []
@@ -133,21 +135,13 @@ function previewCell(htmlClassCell) {
   return imgs.join(' ')
 }
 
-const TABLE_HEADER =
-  /^\| (?:(Preview|Aperçu) \| )?(Label|Libellé) \| (HTML class|Classe HTML) \| (Catalog|Catalogue) \| URL \|$/
+const TABLE_HEADER = /^\| (?:(Aperçu) \| )?Libellé \| Classe HTML \| Catalogue \| URL \|$/
 
-function tableMeta(fileName, headerLine) {
-  const fr = fileName.includes('.fr.')
-  const previewCol = fr ? 'Aperçu' : 'Preview'
-  const labelCol = fr ? 'Libellé' : 'Label'
-  const classCol = fr ? 'Classe HTML' : 'HTML class'
-  const catalogCol = fr ? 'Catalogue' : 'Catalog'
-  const sep =
-    fr
-      ? '| ------- | ------- | ------------ | --------- | --- |'
-      : '| ------- | ----- | ---------- | ------- | --- |'
-  const fullHeader = `| ${previewCol} | ${labelCol} | ${classCol} | ${catalogCol} | URL |`
-  return { previewCol, labelCol, classCol, catalogCol, sep, fullHeader }
+function tableMeta() {
+  return {
+    sep: '| ------- | ------- | ------------ | --------- | --- |',
+    fullHeader: '| Aperçu | Libellé | Classe HTML | Catalogue | URL |',
+  }
 }
 
 function refreshPreviewColumn(fileName) {
@@ -162,7 +156,7 @@ function refreshPreviewColumn(fileName) {
     const line = lines[i]
     const headerMatch = line.match(TABLE_HEADER)
     if (headerMatch) {
-      meta = tableMeta(fileName, line)
+      meta = tableMeta()
       inTable = true
       const hasPreviewCol = Boolean(headerMatch[1])
       out.push(meta.fullHeader)
@@ -182,7 +176,10 @@ function refreshPreviewColumn(fileName) {
     }
 
     if (inTable && meta && line.startsWith('| ') && line.endsWith(' |')) {
-      const parts = line.slice(1, -1).split('|').map((p) => p.trim())
+      const parts = line
+        .slice(1, -1)
+        .split('|')
+        .map((p) => p.trim())
       let label
       let htmlClass
       let catalog
@@ -195,9 +192,7 @@ function refreshPreviewColumn(fileName) {
         out.push(line)
         continue
       }
-      out.push(
-        `| ${previewCell(htmlClass)} | ${label} | ${htmlClass} | ${catalog} | ${url} |`,
-      )
+      out.push(`| ${previewCell(htmlClass)} | ${label} | ${htmlClass} | ${catalog} | ${url} |`)
       continue
     }
 
@@ -212,62 +207,7 @@ function refreshPreviewColumn(fileName) {
   fs.writeFileSync(filePath, out.join('\n'))
 }
 
-function updateMaintenanceSection() {
-  const enPath = path.join(docDir, 'icone-references.md')
-  let en = fs.readFileSync(enPath, 'utf8')
-  if (!en.includes('doc:icon-previews')) {
-    en = en.replace(
-      '2. Update this file and [icone-references.fr.md](./icone-references.fr.md) in the same change.\n3. For geopf-only',
-      '2. Update this file and [icone-references.fr.md](./icone-references.fr.md) in the same change.\n3. Run `npm run doc:icon-previews` and commit `doc/img/icon-previews/` (Preview column).\n4. For geopf-only',
-    )
-    fs.writeFileSync(enPath, en)
-  }
-  const frPath = path.join(docDir, 'icone-references.fr.md')
-  let fr = fs.readFileSync(frPath, 'utf8')
-  if (!fr.includes('doc:icon-previews')) {
-    fr = fr.replace(
-      '2. Mettre à jour ce fichier et [icone-references.md](./icone-references.md) dans le même changement.\n3. Pour une évolution geopf',
-      '2. Mettre à jour ce fichier et [icone-references.md](./icone-references.md) dans le même changement.\n3. Exécuter `npm run doc:icon-previews` et versionner `doc/img/icon-previews/` (colonne Aperçu).\n4. Pour une évolution geopf',
-    )
-    fs.writeFileSync(frPath, fr)
-  }
-}
-
-function addPreviewSectionIntro() {
-  for (const [fileName, en] of [
-    ['icone-references.md', true],
-    ['icone-references.fr.md', false],
-  ]) {
-    const filePath = path.join(docDir, fileName)
-    let text = fs.readFileSync(filePath, 'utf8')
-    text = text.replace(
-      / \(typical markup\), \*\*catalog\*\*, \*\*documentation URL\*\*\./g,
-      '',
-    )
-    text = text.replace(/ \(balisage type\), \*\*catalogue\*\*, \*\*URL de documentation\*\*\./g, '')
-    if (!text.includes('npm run doc:icon-previews')) {
-      const block = en
-        ? 'Columns: **preview** (SVG under `doc/img/icon-previews/`), **label**, **HTML class**, **catalog**, **documentation URL**.\n\nPreviews: `npm run doc:icon-previews` (from `@gouvfr/dsfr`, `remixicon`, project assets). Some DSFR-only font glyphs use a Remix SVG proxy; commit updated previews with doc changes.'
-        : 'Colonnes : **aperçu** (SVG dans `doc/img/icon-previews/`), **libellé**, **classe HTML**, **catalogue**, **URL**.\n\nAperçus : `npm run doc:icon-previews` (`@gouvfr/dsfr`, `remixicon`, assets projet). Certains glyphes DSFR-only utilisent un SVG Remix de substitution ; versionner les aperçus avec la doc.'
-      text = text.replace(
-        /Inventory of pictograms[\s\S]*?\n\n## URL patterns/m,
-        `Inventory of pictograms used in **entree-carto** (\`src/\` and bundled geopf controls).  \n${block}\n\n## URL patterns`,
-      )
-      if (!en) {
-        text = text.replace(
-          /Inventaire des pictogrammes[\s\S]*?\n\n## Formats d’URL/m,
-          `Inventaire des pictogrammes utilisés dans **entree-carto** (\`src/\` et contrôles geopf bundlés).  \n${block}\n\n## Formats d’URL`,
-        )
-      }
-    }
-    fs.writeFileSync(filePath, text)
-  }
-}
-
 const lookup = buildLookup()
 syncAssets(lookup)
 refreshPreviewColumn('icone-references.md')
-refreshPreviewColumn('icone-references.fr.md')
-addPreviewSectionIntro()
-updateMaintenanceSection()
 console.log(`Synced ${previewByClass.size} icon previews to doc/img/icon-previews/`)

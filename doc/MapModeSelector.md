@@ -1,44 +1,41 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](MapModeSelector.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](MapModeSelector.fr.md)
-
 # MapModeSelector
 
-Parcel / territory mode switch (gpu-client parity: permalink `mode=1` or `mode=2`, **territory default**).
+Commutateur de mode **Parcelle** / **Territoire** (aligné gpu-client : permalink `mode=1` ou `mode=2`, **territoire par défaut**).
 
-**Source:** `src/components/map/MapModeSelector.vue`  
-**State:** `provideMapMode()` / `useMapMode()` — `src/composables/mapMode.ts`  
-**URL helpers:** `src/lib/map/mapMode.ts`
+**Source :** `src/components/map/MapModeSelector.vue`  
+**État :** `provideMapMode()` / `useMapMode()` — `src/composables/mapMode.ts`  
+**URL :** `src/lib/map/mapMode.ts`
 
-## UI
+## Interface
 
-- Segmented **button group to the right of SearchEngine** (white background, shadow, rounded corners — `--ec-map-control-*`; gap `--ec-map-mode-search-gap`, 0 px default).
-- **`Teleport` to `.ol-overlaycontainer-stopevent`** (OL controls layer): `z-index` 2, **below** TabPanels tabs (`z-index` 3) and **below** the TabPanels surface / mobile sheet (`ec-tab-panels-shell`, `z-index` 2).
-- **Territories geopf active** (button `aria-pressed`): selector hidden to avoid overlapping the territories panel (especially on mobile).
-- Two options **Parcelle** / **Territoire**: icon + label; idle = blue icon and text on white; active = white on blue France. No **Mode** heading, no visible radio circles (hidden `radio` inputs for accessibility).
-- **Mobile** (bar below search): same group, **icons only** (labels visually hidden, still in the DOM for screen readers).
+- Groupe de boutons segmentés **à droite du SearchEngine** (fond blanc, ombre, coins arrondis — tokens `--ec-map-control-*` ; écart `--ec-map-mode-search-gap`, 0 px par défaut).
+- Rendu via **`Teleport` vers `.ol-overlaycontainer-stopevent`** (couche contrôles OL) : `z-index` 2, **sous** les onglets TabPanels (`z-index` 3) et **sous** la surface / feuille mobile TabPanels (`ec-tab-panels-shell`, `z-index` 2).
+- **Territoires geopf actif** (`aria-pressed` sur le bouton) : sélecteur masqué (`visibility: hidden`) pour éviter la superposition avec le panneau territoires (mobile notamment).
+- Deux options **Parcelle** / **Territoire** : picto + libellé ; inactif = picto et texte bleu France sur blanc ; actif = blanc sur fond bleu France. Pas de libellé « Mode », pas de pastilles radio visibles (entrées `radio` masquées pour l’accessibilité).
+- **Mobile** (barre sous la recherche) : même groupe, **icônes seules** (libellés masqués visuellement, toujours dans le DOM pour les lecteurs d’écran).
 
 ## Props
 
-| Prop         | Type        | Default | Description                          |
-| ------------ | ----------- | ------- | ------------------------------------ |
-| `modelValue` | `1 \| 2`    | inject  | Optional `v-model` (`1` = parcel)   |
+| Prop         | Type     | Défaut  | Description                                    |
+| ------------ | -------- | ------- | ---------------------------------------------- |
+| `modelValue` | `1 \| 2` | inject  | `v-model` optionnel (`1` = parcelle)           |
 
-Without `modelValue`, uses `provideMapMode()` context on the map view.
+Sans `modelValue`, utilise le contexte `provideMapMode()` de la vue carte.
 
 ## Permalink
 
-- `mode=1` — parcel mode  
-- `mode=2` — territory mode (default if parameter missing)  
-- Changing the selector updates the URL **hash** (`#mode=…`) via `history.replaceState` (no reload). Legacy `?mode=` is migrated into the hash on load.
+- `mode=1` — mode parcelle  
+- `mode=2` — mode territoire (défaut si paramètre absent)  
+- Changer le sélecteur met à jour le **fragment** (`#mode=…`, `history.replaceState`, sans rechargement). L’ancien `?mode=` est migré dans le hash au chargement.
 
-## Map behaviour
+## Comportement carte
 
-With a cherry marker (`mlon` / `mlat` or last mode-emprise point), the selector refreshes the red dashed mode emprise (fiche-info v2 geometries) and animates the view to fit it (place-search padding). Zoom cap: **19** in Parcel mode (tight parcel outline), **15** in Territory mode (commune). The geopf place outline (blue dashed) stays visible alongside it.
+Avec une cerise (`mlon` / `mlat` ou dernier point d’emprise mode), le composant met à jour l’emprise rouge pointillée (géométries fiche-info v2) et anime la vue pour l’englober (padding recherche lieu). Plafond de zoom : **19** en mode Parcelle (contour parcellaire serré), **15** en mode Territoire (commune). L’emprise lieu geopf (bleu pointillé) reste affichée en parallèle.
 
-- **Permalink restore** (`MapPermalinkSync`): cherry + emprise + fit once the search layer is ready.
-- **Parcel / Territory switch** (`MapModeSelector`): animated fit + fiche refresh for the new mode.
+- **Restauration permalink** (`MapPermalinkSync`) : cerise + emprise + vol une fois la couche recherche prête.
+- **Changement Parcelle / Territoire** (`MapModeSelector`) : vol + refresh fiche pour le mode choisi.
 
-## Integration
+## Intégration
 
 ```vue
 <script setup lang="ts">
@@ -57,9 +54,9 @@ provideMapMode({ initial: 2 })
 </template>
 ```
 
-Mounted on `/map` demo and `EmbedMapViewer` (`createStandardViewer`).
+Présent sur la démo `/map` et `EmbedMapViewer` (`createStandardViewer`).
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell` (absolute positioning)
-- Future: fiche tab content and click-info behaviour depend on `useMapMode()`
+- Enfant de `MapShell` (positionnement absolu)
+- À venir : contenu onglet fiche et clic info selon `useMapMode()`

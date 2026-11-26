@@ -7,3 +7,6 @@ package-lock.json
 .codeql-db
 .codeql-db-test
 .codeql-results.sarif
+
+# Documentation : mise en forme manuelle
+*.md

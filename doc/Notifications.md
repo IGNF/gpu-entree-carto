@@ -1,32 +1,29 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](Notifications.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](Notifications.fr.md)
-
 # Notifications (Notivue)
 
-**cartes.gouv.fr-style** toasts for user feedback (success, error, warning, info).
+Toasts **style cartes.gouv.fr** pour retours utilisateur (succès, erreur, avertissement, info).
 
-**Reference:** [cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto) — `Main.vue`, `main.ts`, icons `src/icons/Notification*.vue`.
+**Référence :** [cartes.gouv.fr-entree-carto](https://github.com/IGNF/cartes.gouv.fr-entree-carto) — `Main.vue`, `main.ts`, icônes `src/icons/Notification*.vue`.
 
 ## Stack
 
-| Element           | File                                                  |
+| Élément           | Fichier                                               |
 | ----------------- | ----------------------------------------------------- |
-| Vue plugin        | [notivue](https://docs.notivue.smastrom.io/) `^2.4.x` |
-| Container + theme | `src/components/notifications/CartoNotifications.vue` |
-| DSFR theme        | `src/lib/notifications/cartoNotificationsTheme.ts`    |
-| `push.*` API      | `src/lib/notifications/cartoNotifications.ts`         |
-| CSS overrides     | `src/styles/notifications.css`                        |
-| Icons             | `src/components/notifications/icons/`                 |
+| Plugin Vue        | [notivue](https://docs.notivue.smastrom.io/) `^2.4.x` |
+| Conteneur + thème | `src/components/notifications/CartoNotifications.vue` |
+| Thème DSFR        | `src/lib/notifications/cartoNotificationsTheme.ts`    |
+| API `push.*`      | `src/lib/notifications/cartoNotifications.ts`         |
+| Surcharges CSS    | `src/styles/notifications.css`                        |
+| Icônes            | `src/components/notifications/icons/`                 |
 
-## Global configuration
+## Configuration globale
 
-In `src/main.ts`:
+Dans `src/main.ts` :
 
-- `createNotivue({ position: 'bottom-center', limit: 3, enqueue: true, duration: 5000, … })` — auto-dismiss after **5 s**
-- CSS: `notivue/notification.css`, `notivue/animations.css`, `styles/notifications.css`
-- Mount: `<CartoNotifications />` in `App.vue`
+- `createNotivue({ position: 'bottom-center', limit: 3, enqueue: true, duration: 5000, … })` — disparition automatique après **5 s**
+- CSS : `notivue/notification.css`, `notivue/animations.css`, `styles/notifications.css`
+- Montage : `<CartoNotifications />` dans `App.vue`
 
-## Usage
+## Utilisation
 
 ```ts
 import { push } from '@/lib/notifications/cartoNotifications'
@@ -37,20 +34,20 @@ push.warning({ title: 'Attention', message: '…' })
 push.info({ title: 'Information', message: '…' })
 ```
 
-Theme follows DSFR light / dark scheme (`useScheme`).
+Le thème suit le schéma clair / sombre DSFR (`useScheme`).
 
-## Demo
+## Démo
 
-On `/map` (`DemoView.vue`), fixed **“Notif test”** button (top left) → `pushRandomLifeNotification()` to validate rendering (random text, random type). **Temporary** — remove once business integrations are in place.
+Sur `/map` (`DemoView.vue`), bouton fixe **« Notif test »** (haut gauche) → `pushRandomLifeNotification()` pour valider le rendu (texte aléatoire, type aléatoire). **Temporaire** — à retirer une fois les intégrations métier en place.
 
-## Customisation
+## Personnalisation
 
-Overridden Notivue variables (DSFR colours):
+Variables Notivue surchargées (couleurs DSFR) :
 
-- Success: `#18753c`
-- Error: `#ce0500`
-- Warning: `#b34000`
-- Info: `#0063cb`
-- Width: `350px`, corners: `--nv-radius: 0`
+- Succès : `#18753c`
+- Erreur : `#ce0500`
+- Avertissement : `#b34000`
+- Info : `#0063cb`
+- Largeur : `350px`, coins : `--nv-radius: 0`
 
-Long messages: scroll in `.Notivue__content-message` (max `min(32vh, 12rem)`).
+Messages longs : scroll dans `.Notivue__content-message` (max `min(32vh, 12rem)`).

@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
 set -e
 
-npm run verify
+# ESLint + Prettier sur les fichiers indexés ; types et tests vérifiés en CI.
+npx lint-staged

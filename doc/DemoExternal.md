@@ -1,43 +1,40 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](DemoExternal.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](DemoExternal.fr.md)
+# Assets externes démo (`public/external/`)
 
-# Demo external assets (`public/external/`)
+Répond au point d’audit gpu-site **4.2** (icônes DSFR dupliquées dans le CSS entree-carto sur `/map/`).
 
-Addresses gpu-site audit item **4.2** (DSFR icons duplicated in entree-carto CSS on `/map/`).
+## Rôles
 
-## Roles
+| Contexte | DSFR + icônes + Remix | CSS `dist/css/*.css` entree-carto |
+| -------- | --------------------- | --------------------------------- |
+| **Démo Vite** (`make dev`, `make build`) | Chargés depuis `public/external/` (`index.html`) | Chunks appli sans `icons.min.css` |
+| **Intégration gpu-site** | Déjà sur la page (`dsfr.min.css`, `utility.main.min.css`, …) | Bundles avec `stubDsfrIconsCss` (pas de feuille icônes embarquée) |
+| **Embed sans icônes hôte** | `ensureEmbedSharedStylesheets()` charge `external/…/icons.min.css` + Remix si besoin | Mêmes bundles allégés |
 
-| Context | DSFR base + icons + Remix | entree-carto `dist/css/*.css` |
-| ------- | ------------------------- | ------------------------------ |
-| **Vite demo** (`npm run dev`, `build:demo`) | Loaded from `public/external/` via `index.html` | App chunks without `icons.min.css` |
-| **gpu-site embed** | Already on the page (`dsfr.min.css`, `utility.main.min.css`, …) | Bundles built with `stubDsfrIconsCss` (no embedded icon font sheet) |
-| **Embed without site icons** | `ensureEmbedSharedStylesheets()` loads `external/…/icons.min.css` + Remix if missing | Same slim bundles |
-
-## Layout
+## Arborescence
 
 ```
 public/external/
   dsfr/dsfr.min.css
   dsfr/dsfr.module.min.js
-  dsfr/fonts/          (Marianne + Spectral, referenced by dsfr.min.css)
-  dsfr/icons/          (SVG masks for `fr-icon-*`, referenced by icons.min.css)
+  dsfr/fonts/          (Marianne + Spectral, référencées par dsfr.min.css)
+  dsfr/icons/          (SVG masques des `fr-icon-*`, référencés par icons.min.css)
   dsfr/utility/icons/icons.min.css
   remixicon/remixicon.css
   remixicon/remixicon.woff2
 ```
 
-Sync from `node_modules` (pinned DSFR / Remix versions):
+Synchronisation depuis `node_modules` (versions DSFR / Remix du `package.json`) :
 
 ```bash
-npm run sync:demo-external
+node scripts/sync-demo-external.mjs
 ```
 
-`npm run dev` and `npm run build:demo` run this automatically.
+Exécuté automatiquement par `make dev` et `make build`.
 
-## Integration notes
+## Intégration
 
-- Do **not** import `@gouvfr/dsfr/dist/utility/icons/icons.min.css` in library entry points; use the Vite plugin `stubDsfrIconsCss` on lib builds.
-- gpu-site must keep loading DSFR utility (icons) before entree-carto CSS — see [INTEGRATION.md](./INTEGRATION.md).
-- Demo on GitHub Pages: `external/` is copied with `public/` into `dist/`.
+- Ne pas importer `@gouvfr/dsfr/dist/utility/icons/icons.min.css` dans les entrées **lib** ; le plugin Vite `stubDsfrIconsCss` neutralise cet import au build `dist/`.
+- gpu-site doit continuer à charger l’utility DSFR (icônes) avant le CSS entree-carto — voir [INTEGRATION.md](./INTEGRATION.md).
+- Démo GitHub Pages : `external/` est copié avec `public/` dans `dist/`.
 
-See also [DemoConfig.md](./DemoConfig.md), [LibCssBundles.md](./LibCssBundles.md).
+Voir aussi [DemoConfig.md](./DemoConfig.md), [LibCssBundles.md](./LibCssBundles.md).

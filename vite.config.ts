@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { demoManualChunks } from './vite.manualChunks'
-import { patchDemoConfigForPages, serveDistLibAssets } from './vite.demoPlugins'
-import { patchGeopfPanelManager, patchGeopfSearchEval } from './vite.geopfPlugins'
+import { demoManualChunks } from './vite/manualChunks'
+import { patchDemoConfigForPages, serveDistLibAssets } from './vite/demoPlugins'
+import { patchGeopfPanelManager, patchGeopfSearchEval } from './vite/geopfPlugins'
 import { vitePrintWorkerBuildOptions } from './vite/libBuildOptions'
 
 /**
@@ -59,7 +59,6 @@ export default defineConfig({
         '**/dist/**',
         '**/.git/**',
         '**/.github/**',
-        '**/.cursor/**',
         // Fichiers locaux hors dépôt (captures, notes) : déjà ignorés par git.
         '**/_local/**',
       ],

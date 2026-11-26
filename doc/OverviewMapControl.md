@@ -1,30 +1,27 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](OverviewMapControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](OverviewMapControl.fr.md)
-
 # OverviewMapControl
 
-Géoplateforme overview map (`GeoportalOverviewMap`).
+Mini-carte Géoplateforme (`GeoportalOverviewMap`).
 
-**Source:** `src/components/map/OverviewMapControl.vue`  
-**Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `overviewMapOptions: 'bottom-left'`  
-**Dependency:** `geopf-extensions-openlayers`
+**Source :** `src/components/map/OverviewMapControl.vue`  
+**Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `overviewMapOptions: 'bottom-left'`  
+**Dépendance :** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop        | Type                   | Default         | Description                    |
-| ----------- | ---------------------- | --------------- | ------------------------------ |
-| `position`  | `GeopfControlPosition` | `'bottom-left'` | geopf position                 |
-| `collapsed` | `boolean`              | `true`          | Overview collapsed on load     |
+| Prop        | Type                   | Défaut          | Description                      |
+| ----------- | ---------------------- | --------------- | -------------------------------- |
+| `position`  | `GeopfControlPosition` | `'bottom-left'` | Position geopf                   |
+| `collapsed` | `boolean`              | `true`          | Mini-carte repliée au chargement |
 
 ## Placement
 
-Bottom-left, **above** the territory selector (`order: -1` in `map-controls.css`), below [MapPrintControl](./MapPrintControl.md) (`order: -2`) and sketch (`order: -3`).
+Bas-gauche, **au-dessus** du sélecteur de territoire (`order: -1` dans `map-controls.css`), sous [MapPrintControl](./MapPrintControl.md) (`order: -2`) et le croquis (`order: -3`).
 
 ## Styles
 
-- Active state / tooltip: same rules as Territories (`map-controls.css`, append aligned on button edge).
+- État actif / infobulle : mêmes règles que Territories (`map-controls.css`, alignement appendice sur le bord du bouton).
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell`
-- geopf DSFR CSS + DSFR icons (`utility/icons`)
+- Enfant de `MapShell`
+- CSS geopf DSFR + icônes DSFR (`utility/icons`)

@@ -7,41 +7,28 @@
   },
   "type": "module",
   "description": "Entrée cartographique GPU (Vue 3, VueDSFR, OpenLayers)",
+  "license": "CECILL-B",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IGNF/gpu-entree-carto.git"
+  },
+  "homepage": "https://ignf.github.io/gpu-entree-carto/",
+  "bugs": "https://github.com/IGNF/gpu-entree-carto/issues",
   "main": "./dist/entree-carto.js",
   "files": [
     "dist"
   ],
   "scripts": {
-    "dev": "npm run sync:demo-external && vite",
-    "dev:polling": "npm run sync:demo-external && VITE_USE_POLLING=1 vite",
-    "build": "npm run build:demo && npm run build:lib && npm run build:location-search && npm run build:search-engine && npm run build:geometry-editor && npm run build:sketch",
-    "sync:demo-external": "node scripts/sync-demo-external.mjs",
-    "build:demo": "npm run sync:demo-external && vue-tsc --noEmit && vite build",
-    "build:demo:pages": "ENTREE_CARTO_DEMO_PAGES=1 GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run build:demo",
-    "build:print-export-worker": "node scripts/build-print-export-worker.mjs",
-    "build:lib": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.lib.config.ts && LIB_MINIFY=1 vite build --config vite.lib.config.ts && npm run build:print-export-worker",
-    "build:location-search": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.location-search.config.ts && LIB_MINIFY=1 vite build --config vite.location-search.config.ts",
-    "build:search-engine": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.search-engine.config.ts && LIB_MINIFY=1 vite build --config vite.search-engine.config.ts",
-    "build:geometry-editor": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.geometry-editor.config.ts && LIB_MINIFY=1 vite build --config vite.geometry-editor.config.ts",
-    "build:sketch": "vue-tsc --noEmit && LIB_MINIFY=0 vite build --config vite.sketch.config.ts && LIB_MINIFY=1 vite build --config vite.sketch.config.ts",
-    "preview": "vite preview",
-    "preview:pages": "GITHUB_REPOSITORY=ignf/gpu-entree-carto vite preview",
-    "serve:pages": "npm run build:demo:pages && npm run preview:pages",
-    "test": "vitest run && vitest run eslint/groupVueFiles.spec.mjs",
-    "test:watch": "vitest",
-    "typecheck": "vue-tsc --noEmit",
-    "lint": "eslint src --max-warnings 0",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier --write src",
-    "format:check": "prettier --check src",
-    "verify": "npm run lint && npm run format:check && npm run typecheck",
-    "doc:icon-previews": "node scripts/sync-doc-icon-previews.mjs",
-    "codeql:install": "bash scripts/codeql-install.sh",
+    "dev": "node scripts/sync-demo-external.mjs && vite",
+    "build": "vue-tsc --noEmit && node scripts/sync-demo-external.mjs && vite build && node scripts/build-bundles.mjs",
+    "build:demo:pages": "node scripts/sync-demo-external.mjs && ENTREE_CARTO_DEMO_PAGES=1 GITHUB_REPOSITORY=ignf/gpu-entree-carto vite build",
+    "serve:pages": "npm run build:demo:pages && GITHUB_REPOSITORY=ignf/gpu-entree-carto vite preview",
+    "test": "vitest run",
+    "verify": "eslint . --max-warnings 0 && prettier --check . && vue-tsc --noEmit",
     "verify:dist": "node scripts/check-dist.mjs dist",
     "verify:codeql": "bash scripts/codeql-verify.sh",
-    "verify:codeql:dist": "node scripts/prune-dist-orphans.mjs && CODEQL_SCOPE=dist bash scripts/codeql-verify.sh",
-    "verify:codeql:all": "CODEQL_SCOPE=all bash scripts/codeql-verify.sh",
-    "fix": "npm run lint:fix && npm run format",
+    "codeql:install": "bash scripts/codeql-install.sh",
+    "fix": "eslint . --fix && prettier --write .",
     "prepare": "husky"
   },
   "dependencies": {
@@ -71,7 +58,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/dompurify": "^3.2.0",
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vue/test-utils": "^2.6.0",
@@ -81,6 +67,7 @@
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "jsdom": "^31.0.1",
+    "lint-staged": "^17.6.2",
     "prettier": "^3.10.1",
     "typescript": "~5.7.3",
     "typescript-eslint": "^8.73.0",
@@ -91,7 +78,13 @@
   },
   "allowScripts": {
     "@gouvfr/dsfr@1.15.4": true,
-    "@gouvfr/dsfr@1.14.4": true,
     "esbuild@0.25.12": true
+  },
+  "lint-staged": {
+    "*.{js,mjs,ts,vue}": [
+      "eslint --max-warnings 0 --no-warn-ignored --fix",
+      "prettier --write"
+    ],
+    "*.{json,yml,css}": "prettier --write"
   }
 }

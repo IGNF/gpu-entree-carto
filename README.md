@@ -1,119 +1,36 @@
 # entree-carto
 
-[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](README.fr.md)
-
 [![CI](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml/badge.svg)](https://github.com/IGNF/gpu-entree-carto/actions/workflows/ci.yml)
-[![Live demo](https://img.shields.io/badge/demo-GitHub%20Pages-blue)](https://ignf.github.io/gpu-entree-carto/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OpenLayers](https://img.shields.io/badge/OpenLayers-10-1F6B75)](https://openlayers.org/)
-[![DSFR](https://img.shields.io/badge/DSFR-VueDSFR-000091)](https://vue-ds.fr/)
+[![Démo en ligne](https://img.shields.io/badge/démo-GitHub%20Pages-blue)](https://ignf.github.io/gpu-entree-carto/)
 
-**entree-carto** is the GPU (Géoportail de l’urbanisme) cartographic entry point: a Vue 3 + OpenLayers library and demo SPA, aligned with the [French State design system (DSFR)](https://www.systeme-de-design.gouv.fr/) and the new GPU UX/UI mockups. It replaces the legacy **gpu-client** stack for embedding an urban planning map (documents, layers, legend, search, sketch tools) in **gpu-site** and related portals.
+**entree-carto** est la refonte de l’entrée cartographique GPU (gpu-client), alignée sur la nouvelle maquette UX/UI et sur le [Système de Design de l’État (DSFR)](https://www.systeme-de-design.gouv.fr/version-courante/fr).
 
-**Live demo:** https://ignf.github.io/gpu-entree-carto/
+Objectif : proposer une carte interactive d’urbanisme (documents, couches, légende, outils…) avec une interface cohérente avec l’écosystème IGN / cartes.gouv.fr, en **Vue 3** + **OpenLayers**.
 
-- [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Installation steps](#installation-steps)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Features](#features)
-- [Documentation and support](#documentation-and-support)
-- [Contributing](#contributing)
-- [License](#license)
+**Démo en ligne :** https://ignf.github.io/gpu-entree-carto/
 
-## Installation
+## Démarrage rapide
 
-### Requirements
-
-- **Node.js** ≥ 24.15 — **recommended:** 24 LTS via `.nvmrc` (`nvm use` / `fnm use`); see `package.json` → `engines`
-- **npm** (bundled with Node)
-- **Git**
-
-Optional: [gpu-site](http://127.0.0.1:8000/) locally for `gpu-client-config.js`, legends, and proxy-backed dev (see [doc/DemoConfig.md](doc/DemoConfig.md)).
-
-### Installation steps
-
-```bash
-git clone https://github.com/IGNF/gpu-entree-carto.git
-cd gpu-entree-carto
-make install   # npm install
-make dev       # Vite dev server → http://localhost:5173/
+```sh
+make install
+make dev       # http://localhost:5173/
 ```
 
-Production-like preview after a full build:
+Node **≥ 24.15** — **recommandé :** 24 LTS (`.nvmrc`, ex. 24.21.0) : `nvm use` / `fnm use` avant `npm install`.
 
-```bash
-make build
-make preview   # http://localhost:4173/ — do not open dist/index.html via file://
-```
+| Commande | Effet |
+| -------- | ----- |
+| `make build` | Démo + bibliothèques `dist/` |
+| `make preview` | Prévisualiser le build (pas de `file://` sur `dist/index.html`) |
+| `make verify` | Lint, format, TypeScript + CodeQL local (`SKIP_CODEQL=1` pour l’ignorer) |
+| `make test` | Vitest |
 
-Build and toolchain details: [COMPILE.md](COMPILE.md).
+## Documentation
 
-## Configuration
+Toute la documentation est dans [doc/](doc/README.md) : [développement et build](doc/CODING.md), [intégration gpu-site](doc/INTEGRATION.md), [configuration démo](doc/DemoConfig.md), [journal des modifications](doc/CHANGELOG.md).
 
-**Demo SPA (no rebuild):** edit `public/js/demo-config.js` → `window.DEMO_CONFIG` (GPU config script URL, document, bbox, map layers, home search widget, `useMinimified`, …). See [doc/DemoConfig.md](doc/DemoConfig.md).
+Maquette : [Figma GPU UX/UI](https://www.figma.com/design/ARSe9rthrHEp6UFJOh5rdn/GPU---UX-UI?node-id=310-7048&p=f&t=8oFaUS97xpJPgep7-0).
 
-**Embedded library:** runtime options via `gpu.createStandardViewer(params)` and `window.gpu.config` (same model as gpu-client). See [doc/INTEGRATION.md](doc/INTEGRATION.md).
+## Licence
 
-## Usage
-
-### Demo application
-
-| Route | Purpose |
-| ----- | ------- |
-| `/` | Home banner + location / SearchEngine widget |
-| `/map` | Full map + side panel + controls |
-| `/geometry-editor` | Standalone geometry editor bundle demo |
-| `/sketch` | Standalone sketch bundle demo |
-
-See [doc/Demo.md](doc/Demo.md).
-
-### Library bundles (`dist/`)
-
-After `make build`, publish or copy artifacts described in [doc/INTEGRATION.md](doc/INTEGRATION.md):
-
-- `entree-carto[.min].js` — `window.gpu` (`createStandardViewer`, `mountSearchEngine`, …)
-- `entree-carto-search-engine[.min].js`, `entree-carto-location-search[.min].js`
-- `entree-carto-geometry-editor[.min].js`, `entree-carto-sketch[.min].js`
-- Matching CSS under `dist/css/`
-
-## Features
-
-- DSFR / VueDSFR UI, GPU UX alignment
-- OpenLayers map with geopf extensions (SearchEngine, territories, overview, sketch, …)
-- Side panel (catalog, legend, info, base layers)
-- IIFE bundles for gpu-site integration (`window.gpu`)
-- Standalone geometry editor and sketch entry points
-- Vitest unit tests, ESLint, Prettier, optional CodeQL locally
-
-Planned work: [ROADMAP.md](ROADMAP.md). Release history: [CHANGELOG.md](CHANGELOG.md).
-
-## Documentation and support
-
-| Topic | Location |
-| ----- | -------- |
-| Integration in gpu-site | [doc/INTEGRATION.md](doc/INTEGRATION.md) |
-| Map controls & components | [doc/README.md](doc/README.md) · [doc/README.fr.md](doc/README.fr.md) |
-| Demo & GitHub Pages | [doc/Demo.md](doc/Demo.md) |
-| Build & dependencies | [COMPILE.md](COMPILE.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| Developer conventions | [CODING.md](CODING.md) |
-| Changelog & roadmap | [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md) |
-
-French translations of root governance files: `*.fr.md` (e.g. [README.fr.md](README.fr.md), [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md)). Keep EN/FR pairs in sync when editing.
-
-- **Issues:** https://github.com/IGNF/gpu-entree-carto/issues
-
-## Contributing
-
-Contributions (code, documentation, bug reports) are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODING.md](CODING.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-## License
-
-**entree-carto** is released under the [CeCILL-B licence](LICENCE.md).
-
-Third-party licences: [LICENCE.md](LICENCE.md), [DEPENDENCIES.md](DEPENDENCIES.md).
-
-Contributors: [CONTRIBUTORS.md](CONTRIBUTORS.md).
+CeCILL-B — voir [LICENCE.md](LICENCE.md).

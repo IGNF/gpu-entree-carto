@@ -1,37 +1,34 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](MapShell.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](MapShell.fr.md)
-
 # MapShell
 
-OpenLayers map container. Creates the map and exposes the instance to child controls via Vue injection (`olMap`).
+Conteneur de la carte OpenLayers. Crée la map, expose l’instance aux contrôles enfants via injection Vue (`olMap`).
 
-**Source:** `src/components/map/MapShell.vue`  
-**Composable:** `src/composables/useOlMap.ts`
+**Source :** `src/components/map/MapShell.vue`  
+**Composable :** `src/composables/useOlMap.ts`
 
 ## Props
 
-| Prop     | Type          | Default | Description                         |
-| -------- | ------------- | ------- | ----------------------------------- |
-| `layers` | `BaseLayer[]` | `[]`    | Initial layers passed to `ol.Map`   |
-| `zoom`   | `number`      | `6`     | Initial zoom (same as gpu-client)   |
+| Prop     | Type          | Défaut | Description                          |
+| -------- | ------------- | ------ | ------------------------------------ |
+| `layers` | `BaseLayer[]` | `[]`   | Couches initiales passées à `ol.Map` |
+| `zoom`   | `number`      | `6`    | Zoom initial (comme gpu-client)      |
 
 ## Slot
 
-Default slot receives `{ map }`; typically controls (`ZoomControl`, `ScaleLineControl`, …).
+Slot par défaut : reçoit `{ map }` ; typiquement les contrôles (`ZoomControl`, `ScaleLineControl`, …).
 
-## Exposed API
+## API exposée
 
-| Method / ref               | Description                                     |
+| Méthode / ref              | Description                                     |
 | -------------------------- | ----------------------------------------------- |
-| `map` (via `defineExpose`) | `ShallowRef<Map \| null>` — OpenLayers instance |
+| `map` (via `defineExpose`) | `ShallowRef<Map \| null>` — instance OpenLayers |
 
 ## Injection
 
-Provides `olMap` (`ShallowRef<Map | null>`) to descendants for attaching / detaching OL controls.
+Fournit `olMap` (`ShallowRef<Map | null>`) aux descendants pour attacher / détacher des contrôles OL.
 
 ## Notes
 
-- Projection: EPSG:3857, France center, minZoom 5 / maxZoom 19.
-- OL attribution **enabled**, not collapsible (`collapsible: false`, as gpu-client); IGN text and logos via `ignGeoportalAttributions` (`title` on IGN and ministry logos); INSPIRE cadastre WMS uses Marianne + ministry logos via `dgfInspireCadastreAttributions` (`public/img/logos/logo-marianne.svg`, DGFIP text in `title`); bottom-right strip under the scale bar (`map-controls.css`). Display-only controls (`.ol-attribution`, scale bar) are moved from `ol-overlaycontainer-stopevent` to `ol-overlaycontainer` and use `pointer-events: none` on the root (`configureDisplayOnlyOlControls` in `useOlMap.ts`, CSS in `map-controls.css`) so **ClickInfo** / pan work over the transparent strip; links and buttons stay clickable.
-- Native zoom / rotate disabled (dedicated controls).
-- Map container exposes `id="gpu-map"` for gpu-site compatibility (`gpu-map.css`).
+- Projection : EPSG:3857, centre France, minZoom 5 / maxZoom 19.
+- Attribution OL **activée**, non repliable (`collapsible: false`, comme gpu-client) ; texte et logos IGN via `ignGeoportalAttributions` (`title` sur les logos IGN et ministère) ; cadastre INSPIRE : logos Marianne + ministère via `dgfInspireCadastreAttributions` (`public/img/logos/logo-marianne.svg`, texte DGFIP en `title`) ; bandeau bas-droite sous l’échelle (`map-controls.css`). Les contrôles affichage seul (`.ol-attribution`, barre d’échelle) sont déplacés de `ol-overlaycontainer-stopevent` vers `ol-overlaycontainer`, avec `pointer-events: none` sur la racine (`configureDisplayOnlyOlControls` dans `useOlMap.ts`, CSS dans `map-controls.css`) pour que **ClickInfo** / le pan fonctionnent au-dessus du bandeau transparent ; liens et boutons restent cliquables.
+- Zoom / rotate natifs désactivés (contrôles dédiés).
+- Le conteneur carte expose `id="gpu-map"` pour compatibilité gpu-site (`gpu-map.css`).

@@ -65,7 +65,7 @@ ${classRules}
       const base64Woff2 = /url\(["']?data:font\/woff2;base64,[^"')]+["']?\)/g
       for (const name of cssFiles) {
         const file = path.join(cssDir, name)
-        let source = readFileSync(file, 'utf8')
+        const source = readFileSync(file, 'utf8')
         if (!source.includes('remixicon') && !source.includes('data:font/woff2')) continue
         const next = source
           .replace(base64Woff2, `url("${fontUrl}")`)
