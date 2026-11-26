@@ -11,3 +11,8 @@ export const mapPermalinkLayersBridgeRef = shallowRef<MapPermalinkLayersBridge |
 export function registerMapPermalinkLayersBridge(api: MapPermalinkLayersBridge | null): void {
   mapPermalinkLayersBridgeRef.value = api
 }
+
+/** Démontage : n’efface que si cette passerelle est encore l’enregistrée. */
+export function unregisterMapPermalinkLayersBridge(api: MapPermalinkLayersBridge): void {
+  if (mapPermalinkLayersBridgeRef.value === api) mapPermalinkLayersBridgeRef.value = null
+}

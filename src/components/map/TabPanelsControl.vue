@@ -25,7 +25,10 @@ import {
   setFicheSupInZoomRange,
 } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { refreshFicheForCatalogVisibility } from '@/lib/fiche/ficheInfoService'
-import { registerMapPermalinkLayersBridge } from '@/composables/mapPermalinkLayersBridge'
+import {
+  registerMapPermalinkLayersBridge,
+  unregisterMapPermalinkLayersBridge,
+} from '@/composables/mapPermalinkLayersBridge'
 import {
   getMapPermalinkParams,
   layerPermalinkEntriesFromParams,
@@ -61,8 +64,11 @@ import type Map from 'ol/Map'
 import {
   legendPanelFocusRef,
   registerTabPanelsApi,
+  unregisterTabPanelsApi,
   TAB_PANELS_KEY,
   TAB_PANEL_IDS,
+  panelTabs,
+  type PanelTabDef,
   type FicheInfoSelection,
   type TabPanelsApi,
 } from '@/composables/tabPanels'
@@ -74,7 +80,11 @@ import DataLayersManagerPanel from '@/components/panels/DataLayersManagerPanel.v
 import LayerLegendsPanel from '@/components/panels/LayerLegendsPanel.vue'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
-import { mapPrintPanelsKey, registerMapPrintPanels } from '@/map/mapPrintPanelsContext'
+import {
+  mapPrintPanelsKey,
+  registerMapPrintPanels,
+  unregisterMapPrintPanels,
+} from '@/map/mapPrintPanelsContext'
 import { TAB_PANELS_AUTO_OPEN_SNAP, type TabPanelsSheetSnapIndex } from '@/lib/map/tabPanelsLayout'
 import { useTabPanelsLayout } from '@/composables/useTabPanelsLayout'
 import { useTabPanelsMobileSheet } from '@/composables/useTabPanelsMobileSheet'
@@ -89,6 +99,10 @@ const props = withDefaults(
     layerNodes?: TreeLayerNode[]
     layerMapHooks?: LayerMapHooks
     catalogLayersLoading?: boolean
+    /** Onglets retirés (`TAB_PANEL_IDS`) — ex. démo fiche info sans couches ni légendes. */
+    hiddenTabs?: number[]
+    /** Onglet supplémentaire, contenu fourni par le slot `extra`. */
+    extraTab?: Omit<PanelTabDef, 'id'>
   }>(),
   {
     basePresets: () => [],
@@ -96,6 +110,8 @@ const props = withDefaults(
     layerNodes: () => [],
     layerMapHooks: undefined,
     catalogLayersLoading: false,
+    hiddenTabs: () => [],
+    extraTab: undefined,
   },
 )
 
@@ -190,42 +206,10 @@ watch(
   { immediate: true },
 )
 
-type TabDef = {
-  id: number
-  label: string
-  iconKind: 'dsfr' | 'remix'
-  iconClass: string
-}
-
-const tabs: TabDef[] = [
-  {
-    id: TAB_PANEL_IDS.fiche,
-    label: 'Informations / localisation',
-    iconKind: 'dsfr',
-    iconClass: 'fr-icon-map-pin-2-line',
-  },
-  {
-    id: TAB_PANEL_IDS.catalogue,
-    label: 'Catalogue',
-    iconKind: 'remix',
-    iconClass: 'ri-map-2-line',
-  },
-  {
-    id: TAB_PANEL_IDS.dataLayers,
-    label: 'Couches de données',
-    iconKind: 'remix',
-    iconClass: 'ri-stack-line',
-  },
-  {
-    id: TAB_PANEL_IDS.legends,
-    label: 'Légendes',
-    iconKind: 'remix',
-    iconClass: 'ri-list-indefinite',
-  },
-]
+const tabs = computed(() => panelTabs({ hiddenTabs: props.hiddenTabs, extraTab: props.extraTab }))
 
 function openTab(index: number, sheetSnap?: TabPanelsSheetSnapIndex) {
-  if (index < 0 || index >= tabs.length) return
+  if (!tabs.value.some((tab) => tab.id === index)) return
   activeTab.value = index
   if (layoutMode.value === 'bottom') {
     if (sheetSnap !== undefined) setSheetSnap(sheetSnap)
@@ -580,10 +564,11 @@ function scheduleApplyLayerParamsFromPermalink(): void {
   })
 }
 
-registerMapPermalinkLayersBridge({
+const permalinkLayersBridge = {
   applyLayerParamsFromPermalink,
   collectLayerParamsForPermalink,
-})
+}
+registerMapPermalinkLayersBridge(permalinkLayersBridge)
 
 watch(
   () => [catalogEntries.value.length, layerNodesRef.value.length, wmsDocumentSyncKey()] as const,
@@ -645,10 +630,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  registerMapPrintPanels(null)
+  // Seulement si encore enregistrés : en changeant d’onglet, le panneau de la page suivante est déjà monté.
+  unregisterMapPrintPanels(mapPrintPanelsCtx)
   syncShellOpenClass(false)
-  registerMapPermalinkLayersBridge(null)
-  registerTabPanelsApi(null)
+  unregisterMapPermalinkLayersBridge(permalinkLayersBridge)
+  unregisterTabPanelsApi(api)
   if (olControl && mapRef.value) {
     mapRef.value.removeControl(olControl)
   }
@@ -831,6 +817,17 @@ onUnmounted(() => {
               :map-zoom="mapZoom"
               :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
             />
+          </div>
+
+          <div
+            v-if="extraTab"
+            :id="`ec-tab-panel-${TAB_PANEL_IDS.extra}`"
+            class="ec-tab-panels__pane"
+            role="tabpanel"
+            :hidden="activeTab !== TAB_PANEL_IDS.extra"
+            :aria-labelledby="`ec-tab-${TAB_PANEL_IDS.extra}`"
+          >
+            <slot name="extra" />
           </div>
         </div>
       </div>

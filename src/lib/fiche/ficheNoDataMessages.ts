@@ -8,12 +8,19 @@ const CATALOG_LINK_HTML = `<a href="#" ${OPEN_CATALOG_ATTR}>catalogue de couches
 /** Fiche territoire sans document (hors RNU / documents petite échelle). */
 export const TERRITORY_NO_DOCUMENT_HTML = `<p>Pas de document trouvé sur ce territoire dans les données correspondant au ${CATALOG_LINK_HTML} actuel.</p>`
 
+/** Fiche territoire sans commune au point (ex. en mer) et sans document. */
+export const NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML = `<p>Pas de document trouvé à cet emplacement dans les données correspondant au ${CATALOG_LINK_HTML} actuel.</p>`
+
 /** Fiche parcelle sans règle d’urbanisme. */
 export const PARCEL_NO_RULE_HTML = `<p>Pas de règle d’urbanisme trouvé dans les données correspondant au ${CATALOG_LINK_HTML} actuel intersectant cette parcelle.</p>`
 
 /** Impression : ces messages (et leur lien vers l’interface) ne sont pas imprimés. */
 export function stripFicheNoDataHtml(html: string): string {
-  return html.replaceAll(TERRITORY_NO_DOCUMENT_HTML, '').replaceAll(PARCEL_NO_RULE_HTML, '').trim()
+  return html
+    .replaceAll(TERRITORY_NO_DOCUMENT_HTML, '')
+    .replaceAll(NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML, '')
+    .replaceAll(PARCEL_NO_RULE_HTML, '')
+    .trim()
 }
 
 /** Écouteur de clic posé sur la fiche : le lien « catalogue de couches » ouvre le catalogue. */

@@ -673,6 +673,29 @@ describe('onglet Documents de la fiche parcelle : familles du catalogue', () => 
   })
 })
 
+describe('onglet Documents de la fiche parcelle : servitude de passage sur le littoral (EL9)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  it('parcelle dans la zone d’alerte (is_el9_alert) : section SUP avec la tuile EL9', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const html = buildParcelDocumentsHtmlFromFiche({ features: [] }, { is_el9_alert: true })
+    expect(html).toContain('Servitudes d’utilité publique')
+    expect(html).toContain('legifrance.gouv.fr')
+  })
+
+  it('hors zone d’alerte : pas de tuile EL9', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const html = buildParcelDocumentsHtmlFromFiche({ features: [] }, { is_el9_alert: false })
+    expect(html).not.toContain('legifrance.gouv.fr')
+  })
+
+  it('SUP décochées dans le catalogue : pas de tuile EL9', () => {
+    setFicheCatalogFamilyVisibility({ du: true, psmv: true, sup: false, scot: true, mec: true })
+    const html = buildParcelDocumentsHtmlFromFiche({ features: [] }, { is_el9_alert: true })
+    expect(html).not.toContain('legifrance.gouv.fr')
+  })
+})
+
 describe('règles d’urbanisme SUP : document en base requis (comme les DU)', () => {
   afterEach(() => setFicheCatalogFamilyVisibility(null))
 

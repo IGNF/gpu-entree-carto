@@ -24,7 +24,6 @@ import {
   readExplicitMapModeFromLocation,
   type MapModeId,
 } from '@/lib/map/mapMode'
-import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { StandardViewerDocument, StandardViewerSearch } from '@/lib/types'
 import { takeLocationHandoff } from '@/lib/search/locationSearch'
 import { pushRandomLifeNotification } from '@/lib/notifications/cartoNotifications'
@@ -33,10 +32,7 @@ import {
   getDemoConfig,
   isValidBbox,
   prepareDemoEnvironment,
-  resolveDemoBaseLayerId,
-  resolveDemoLayerNodes,
 } from '@/lib/demo/demoConfig'
-import { markGpuClientConfigLoading } from '@/lib/demo/gpuClientConfigState'
 import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import { parseDocumentBbox } from '@/lib/fiche/ficheInfoQuery'
 import config from '@/lib/config'
@@ -46,13 +42,8 @@ import {
   loadLibBundle,
 } from '@/lib/demo/demoLibAssets'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
-import { gpuWmsLayerRegistry } from '@/lib/layerConfig/gpuWmsLayers'
 import { resolveLayerConfig } from '@/lib/layerConfig/gpuLayerConfig'
-import {
-  createGpuBaseLayerEnvironment,
-  setActiveGpuBaseLayer,
-  type GpuBaseLayerId,
-} from '@/ol/gpuBaseLayerPresets'
+import { useDemoLayerCatalog } from '@/composables/useDemoLayerCatalog'
 import 'ol/ol.css'
 import 'geopf-extensions-openlayers/css/Dsfr.css'
 import '@/styles/map-controls.css'
@@ -90,26 +81,25 @@ provideMapMode({
 const demoCfg = getDemoConfig()
 const useMinified = computed(() => demoUsesMinifiedAssets(demoCfg))
 let bundleViewer: MountedViewer | null = null
-const gpuBaseEnv = createGpuBaseLayerEnvironment()
-const gpuBasePresets = gpuBaseEnv.presets
-const activeBase = ref<GpuBaseLayerId>(resolveDemoBaseLayerId(demoCfg))
+const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
+const {
+  basePresets: gpuBasePresets,
+  activeBase,
+  mapLayers,
+  layerNodes,
+  catalogLayersLoading,
+  layerMapHooks,
+  applyLayerNodes,
+  onUpdateBase,
+  onToggleLayer,
+} = useDemoLayerCatalog(computed(() => mapShellRef.value?.map ?? null))
 
 const mapZoom = ref(demoCfg.map?.zoom ?? 6)
-const mapLayers = computed(() => gpuBaseEnv.allLayers)
 
 const initialSearch = ref<StandardViewerSearch | null>(
   locationHandoff?.search ?? demoCfg.map?.search ?? null,
 )
 const hasLocationHandoff = Boolean(locationHandoff)
-const expectsRemoteLayerConfig = Boolean(demoCfg.configScriptUrl?.trim())
-if (expectsRemoteLayerConfig) {
-  markGpuClientConfigLoading()
-}
-const layerNodes = ref<TreeLayerNode[]>(
-  expectsRemoteLayerConfig ? [] : resolveDemoLayerNodes(demoCfg),
-)
-const catalogLayersLoading = ref(expectsRemoteLayerConfig)
-const mapShellRef = ref<InstanceType<typeof MapShell> | null>(null)
 const printModalRef = ref<InstanceType<typeof MapPrintModal> | null>(null)
 
 provide(mapPrintModalKey, {
@@ -120,17 +110,6 @@ const pendingBbox = ref<number[] | null>(
   !hasLocationHandoff && isValidBbox(demoCfg.bbox) ? demoCfg.bbox : null,
 )
 const gpuDocument = ref<StandardViewerDocument | null>(demoCfg.document ?? null)
-
-if (gpuBasePresets.some((p) => p.id === activeBase.value)) {
-  setActiveGpuBaseLayer(gpuBaseEnv, activeBase.value)
-}
-
-const layerMapHooks = {
-  onVisible: (id: string, visible: boolean) => gpuWmsLayerRegistry.setVisible(id, visible),
-  onOpacity: (id: string, opacity: number) => gpuWmsLayerRegistry.setOpacity(id, opacity),
-  onGrayscale: (id: string, grayscale: boolean) => gpuWmsLayerRegistry.setGrayscale(id, grayscale),
-  onStackOrder: (ids: string[]) => gpuWmsLayerRegistry.applyStackOrder(ids),
-}
 
 onMounted(async () => {
   const cfg = await prepareDemoEnvironment(getDemoConfig())
@@ -151,23 +130,18 @@ onMounted(async () => {
     return
   }
 
-  catalogLayersLoading.value = false
-  layerNodes.value = resolveDemoLayerNodes(getDemoConfig())
+  applyLayerNodes()
   tryApplyDemoDocumentAndBboxStartup()
 })
 
 onUnmounted(() => {
   bundleViewer?.destroy()
   bundleViewer = null
-  gpuWmsLayerRegistry.detachMap()
 })
 
 watch(
   () => mapShellRef.value?.map ?? null,
   (map) => {
-    if (map && resolveLayerConfig()?.length) {
-      gpuWmsLayerRegistry.attachMap(map)
-    }
     if (map) tryApplyDemoDocumentAndBboxStartup()
   },
 )
@@ -219,32 +193,12 @@ watch(
   { immediate: true },
 )
 
-function onUpdateBase(id: GpuBaseLayerId) {
-  activeBase.value = id
-  setActiveGpuBaseLayer(gpuBaseEnv, id)
-}
-
 provideMapPermalinkUi({
   presets: gpuBasePresets,
   getActiveBaseId: () => activeBase.value,
   setActiveBaseId: onUpdateBase,
   activeBaseIdRef: activeBase,
 })
-
-function onToggleLayer(id: string, visible: boolean) {
-  const flat = (nodes: TreeLayerNode[]): TreeLayerNode | undefined => {
-    for (const n of nodes) {
-      if (n.id === id) return n
-      if (n.children?.length) {
-        const hit = flat(n.children)
-        if (hit) return hit
-      }
-    }
-    return undefined
-  }
-  const node = flat(layerNodes.value)
-  if (node) node.visible = visible
-}
 </script>
 
 <template>

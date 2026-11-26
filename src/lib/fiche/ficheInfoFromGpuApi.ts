@@ -1,9 +1,13 @@
 import type { FicheInfoDocumentTab, FicheInfoSelection } from '@/composables/tabPanels'
-import { TERRITORY_NO_DOCUMENT_HTML } from '@/lib/fiche/ficheNoDataMessages'
+import {
+  NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML,
+  TERRITORY_NO_DOCUMENT_HTML,
+} from '@/lib/fiche/ficheNoDataMessages'
 import { cadastreReferencesFromParcel, parcelShortLabel } from '@/lib/fiche/ficheCadastreReferences'
 import {
   ficheHasParcelAtPoint,
   ficheHasTerritoryAtPoint,
+  NO_MUNICIPALITY_AT_POINT_TITLE,
   NO_PARCEL_AT_POINT_MESSAGE,
   NO_PARCEL_AT_POINT_SWITCH_LABEL,
 } from '@/lib/fiche/ficheAvailability'
@@ -91,7 +95,14 @@ export type GpuFicheInfoPayload = {
   /** Contour commune « ville » (Paris / Lyon / Marseille) lorsque le point est dans un arrondissement. */
   parentGridGeometry?: unknown
   territoryParcelId?: string
-  grid?: { name?: string; insee?: string; is_rnu?: boolean; viewUrl?: string } | null
+  grid?: {
+    name?: string
+    insee?: string
+    is_rnu?: boolean
+    /** Commune littorale : fiche territoire avec la servitude de passage EL9. */
+    is_coastline?: boolean | null
+    viewUrl?: string
+  } | null
   deletedGrids?: GpuFicheDeletedGrid[]
   /** Référentiel cadastral (CNIG), renvoyé par `/api/fiche-info` — pilote la couche cadastre basse. */
   typeref?: string | null
@@ -420,12 +431,11 @@ function buildDocumentTabs(data: GpuFicheInfoPayload, mode: MapModeId): FicheInf
   }
 
   const sups = normalizePartitionsMap(data.sups)
-  if (
-    isFicheDocumentFamilyVisible('sup') &&
-    (mapHasProductionDocument(sups) || data.is_el9_alert)
-  ) {
+  // Territoire : servitude EL9 pour toute commune littorale (la zone d’alerte `is_el9_alert` sert à la parcelle).
+  const isCoastline = data.grid?.is_coastline === true
+  if (isFicheDocumentFamilyVisible('sup') && (mapHasProductionDocument(sups) || isCoastline)) {
     const body =
-      buildGroupedSupTabHtml(sups, { isEl9Alert: data.is_el9_alert === true }) ||
+      buildGroupedSupTabHtml(sups, { isEl9Alert: isCoastline }) ||
       buildDocumentTypeTabHtml(sups, 'sup', proceduresByDocument)
     tabs.push({
       id: TAB_SUP,
@@ -519,7 +529,9 @@ function fallbackBodyHtml(data: GpuFicheInfoPayload): string {
     data.proceduresByDocument,
   )
   if (lowScaleHtml) return lowScaleHtml
-  return TERRITORY_NO_DOCUMENT_HTML
+  return ficheHasTerritoryAtPoint(data)
+    ? TERRITORY_NO_DOCUMENT_HTML
+    : NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML
 }
 
 export function extractParcelFichePayload(data: GpuFicheInfoPayload): GpuParcelFichePayload | null {
@@ -541,7 +553,7 @@ export function ficheSelectionFromGpuApi(
   const hasParcel = ficheHasParcelAtPoint(data)
   const hasTerritory = ficheHasTerritoryAtPoint(data)
   const parcel = data.parcel ?? null
-  const territoryTitle = hasTerritory ? municipalityTitle(data) : 'Territoire'
+  const territoryTitle = hasTerritory ? municipalityTitle(data) : NO_MUNICIPALITY_AT_POINT_TITLE
   const parcelLabel = hasParcel
     ? parcelShortLabel(parcel) || 'Parcelle'
     : NO_PARCEL_AT_POINT_MESSAGE

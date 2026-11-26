@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  parseParcelIdInput,
   buildParcelIdFromProperties,
   parcelGpuIdFromCadastralIdu,
   resolveParcelIdFromRaw,
@@ -68,5 +69,32 @@ describe('resolveParcelIdFromRaw', () => {
 describe('parcelGpuIdFromCadastralIdu', () => {
   it('rejette les chaînes déjà au format underscore', () => {
     expect(parcelGpuIdFromCadastralIdu('95_197_000_000_AK_0432')).toBeNull()
+  })
+})
+
+describe('parseParcelIdInput (saisie démo fiche parcelle)', () => {
+  const expected = {
+    dep: '34',
+    com: '301',
+    arr: '000',
+    comAbs: '000',
+    section: 'AS',
+    numero: '0136',
+  }
+
+  it('forme avec séparateurs et forme compacte (17 caractères)', () => {
+    expect(parseParcelIdInput('34_301_000_000_AS_0136')).toEqual(expected)
+    expect(parseParcelIdInput('34301000000AS0136')).toEqual(expected)
+  })
+
+  it('espaces et minuscules tolérés ; Corse et section avec chiffre', () => {
+    expect(parseParcelIdInput('  34301000000as0136 ')).toEqual(expected)
+    expect(parseParcelIdInput('2A_004_000_000_0A_0012')).toMatchObject({ dep: '2A', section: '0A' })
+  })
+
+  it('format invalide : null', () => {
+    for (const raw of ['', '34_301_AS_0136', '34301000AS0136', '34301000000AS013', 'abc']) {
+      expect(parseParcelIdInput(raw)).toBeNull()
+    }
   })
 })

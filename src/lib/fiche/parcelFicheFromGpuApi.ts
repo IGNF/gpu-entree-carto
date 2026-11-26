@@ -27,7 +27,11 @@ import {
   mecNoticeHtmlForDocumentName,
   mecProcedureTileHtmlForParcelFeature,
 } from '@/lib/fiche/ficheMecPresentation'
-import { supCategoryForDocument, supCategoryLibelle } from '@/lib/fiche/ficheSupGroupedPresentation'
+import {
+  buildEl9SupGroupHtml,
+  supCategoryForDocument,
+  supCategoryLibelle,
+} from '@/lib/fiche/ficheSupGroupedPresentation'
 import {
   duRuleFeatureMatchesCatalogScope,
   isSupCategoryCatalogVisible,
@@ -958,9 +962,11 @@ export function buildParcelDocumentsHtmlFromFiche(
     ...(mecCatalogVisible ? buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) : []),
     ...buildDuDocumentTiles(documentFeatures, blockedParents, lookup, ficheApi),
   ]
-  const supTiles = isFicheDocumentFamilyVisible('sup')
-    ? buildSupDocumentTiles(ficheApi, supOnParcel)
-    : []
+  const supVisible = isFicheDocumentFamilyVisible('sup')
+  const supTiles = supVisible ? buildSupDocumentTiles(ficheApi, supOnParcel) : []
+  // Parcelle dans la zone d’alerte EL9 : servitude de passage sur le littoral en tête des SUP.
+  const el9Html = supVisible && ficheApi?.is_el9_alert === true ? buildEl9SupGroupHtml() : ''
+  const hasSup = supTiles.length > 0 || el9Html !== ''
   const scotTiles = buildScotDocumentTiles(
     scotFeatures,
     mecFeatures,
@@ -970,13 +976,13 @@ export function buildParcelDocumentsHtmlFromFiche(
     mecCatalogVisible,
   )
 
-  if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
+  if (!duTiles.length && !hasSup && !scotTiles.length && ficheApi) {
     const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, 'du')
     if (duSection) parts.push(duSection)
     return parts.join('')
   }
 
-  if (!duTiles.length && !supTiles.length && !scotTiles.length) {
+  if (!duTiles.length && !hasSup && !scotTiles.length) {
     return parts.join('')
   }
 
@@ -987,8 +993,9 @@ export function buildParcelDocumentsHtmlFromFiche(
     const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, 'du')
     if (duSection) parts.push(duSection)
   }
-  if (supTiles.length) {
+  if (hasSup) {
     parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>')
+    parts.push(el9Html)
     parts.push(documentTilesListHtml(supTiles))
   }
   if (scotTiles.length) {

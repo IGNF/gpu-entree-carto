@@ -14,6 +14,8 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Panneau latéral mobile en bottom sheet.
 - Démo autonome avec assets DSFR / Remix locaux ([DemoExternal](./DemoExternal.md)).
 - Référence des icônes ([icone-references](./icone-references.md)).
+- Démo « Fiche info » : carte, catalogue, recherche de lieu, sélecteur de mode, recherche par identifiant de parcelle (`34_301_000_000_AS_0136` ou `34301000000AS0136`) et onglet « Données brutes » (champs non utilisés grisés).
+- Démo « Fiche info » : bouton pour activer / désactiver l’interrogation au clic, vue recentrée sur la parcelle ou la commune trouvée.
 
 ### Modifié
 
@@ -30,6 +32,8 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Corrigé
 
+- Fiche territoire : titre « Pas de commune à cet emplacement » et message adapté hors commune (en mer).
+- Fiche info : servitude de passage sur le littoral (EL9) affichée pour les communes littorales (territoire) et dans la zone d’alerte (parcelle), avec lien vers l’article L. 121-31 du code de l’urbanisme.
 - Couches WMS : héritage des niveaux de zoom du groupe parent.
 - Carte : plus de zonage absent entre les zooms 11 et 11,4 ; catalogue grisé selon l’affichage réel des couches.
 - Fiche info : chargements en double ou bloqués au rechargement et après une recherche.

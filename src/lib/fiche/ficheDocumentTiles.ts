@@ -110,14 +110,18 @@ function tileBadgesRow(model: FicheDocumentTileModel, includeEffective: boolean)
 function dsfrHorizontalTile(
   title: string,
   href: string | undefined,
-  detail: string | null,
+  detail: string | readonly string[] | null,
 ): string {
   const enlarge = href ? ' fr-enlarge-link' : ''
   const titleInner = escapeHtml(title)
   const titleBlock = href
     ? `<h3 class="fr-tile__title"><a class="fr-tile__link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a></h3>`
     : `<h3 class="fr-tile__title">${titleInner}</h3>`
-  const detailBlock = detail ? `<p class="fr-tile__detail">${escapeHtml(detail)}</p>` : ''
+  // Plusieurs lignes : échappées une à une, séparées par un retour à la ligne.
+  const detailHtml = (typeof detail === 'string' ? [detail] : (detail ?? []))
+    .map((line) => escapeHtml(line))
+    .join('<br>')
+  const detailBlock = detailHtml ? `<p class="fr-tile__detail">${detailHtml}</p>` : ''
   return `<div class="fr-tile fr-tile--horizontal${enlarge} ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`
 }
 
@@ -150,10 +154,14 @@ export function documentUrbanismTileHtml(model: FicheDocumentTileModel): string 
 
 /** Tuile SUP : titre = catégorie SUP, détail = titre du document (optionnel). */
 export function documentSupTileHtml(
-  model: Pick<FicheDocumentTileModel, 'title' | 'href'> & { detail?: string | null },
+  model: Pick<FicheDocumentTileModel, 'title' | 'href'> & {
+    detail?: string | readonly string[] | null
+  },
 ): string {
-  const detail = model.detail?.trim() || null
-  return dsfrHorizontalTile(model.title, model.href, detail)
+  const lines = (typeof model.detail === 'string' ? [model.detail] : (model.detail ?? []))
+    .map((line) => line.trim())
+    .filter(Boolean)
+  return dsfrHorizontalTile(model.title, model.href, lines.length ? lines : null)
 }
 
 /** Tuile procédure. */

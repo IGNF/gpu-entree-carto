@@ -6,6 +6,7 @@ import { sanitizeDisplayHtml } from '@/components/common/sanitizedHtmlCore'
 import { TAB_PANEL_IDS, tabPanelsApiRef, type TabPanelsApi } from '@/composables/tabPanels'
 import { ficheSelectionFromGpuApi } from '@/lib/fiche/ficheInfoFromGpuApi'
 import {
+  NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML,
   PARCEL_NO_RULE_HTML,
   TERRITORY_NO_DOCUMENT_HTML,
   onFicheCatalogLinkClick,
@@ -31,7 +32,15 @@ describe('messages « pas de données » de la fiche info', () => {
     expect(text(PARCEL_NO_RULE_HTML)).toBe(
       'Pas de règle d’urbanisme trouvé dans les données correspondant au catalogue de couches actuel intersectant cette parcelle.',
     )
-    for (const html of [TERRITORY_NO_DOCUMENT_HTML, PARCEL_NO_RULE_HTML]) {
+    expect(text(NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML)).toBe(
+      'Pas de document trouvé à cet emplacement dans les données correspondant au catalogue de couches actuel.',
+    )
+    expect(stripFicheNoDataHtml(NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML)).toBe('')
+    for (const html of [
+      TERRITORY_NO_DOCUMENT_HTML,
+      PARCEL_NO_RULE_HTML,
+      NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML,
+    ]) {
       const div = document.createElement('div')
       // Passe par le même nettoyage que l’affichage du panneau.
       div.innerHTML = sanitizeDisplayHtml(html, true)
