@@ -12,8 +12,6 @@
 
 Objectif : ne plus versionner `dist/` ; gpu-site (aujourd'hui `"entree-carto": "github:IGNF/gpu-entree-carto#main"`) se fixe sur une version publiée.
 
-Pour mémoire, gpu-client (GitLab) : `dist/` versionné, commit « vX.Y.Z » + tag manuels, gpu-site fixé sur `git+…/gpu-client.git#vX.Y.Z`, aucune CI de release.
-
 Choix : **tarball `npm pack` attaché à une release GitHub** (pas d'auth). GitHub Packages imposerait un nom scopé (`@ignf/…`) et un token même pour installer un paquet public, donc un secret à gérer dans la CI GitLab de gpu-site.
 
 Côté entree-carto :

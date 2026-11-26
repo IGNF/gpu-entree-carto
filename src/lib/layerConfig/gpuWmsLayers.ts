@@ -1,5 +1,5 @@
 import TileLayer from 'ol/layer/Tile'
-import TileWMS, { type Options as TileWMSOptions } from 'ol/source/TileWMS'
+import TileWMS from 'ol/source/TileWMS'
 import { createXYZ } from 'ol/tilegrid.js'
 import type OlMap from 'ol/Map'
 import config from '@/lib/config'
@@ -11,12 +11,6 @@ import {
 } from '@/lib/layerConfig/gpuLayerConfig'
 import type View from 'ol/View'
 import { getLayerResolutionRange } from '@/lib/layerConfig/layerResolutionRange'
-
-/**
- * Propriété de couche : options de la source WMS GPU, pour que l'impression la recrée en hidpi
- * (la carte demande des tuiles à 1x, voir `createWmsTileLayer`).
- */
-export const GPU_WMS_SOURCE_OPTIONS_PROP = 'ecGpuWmsSourceOptions'
 
 function wmsUrl(): string {
   const url = config.wmsExterneUrl
@@ -83,18 +77,14 @@ function createWmsTileLayer(
   const maxZoom = entry.maxZoomLevel ?? 22
   const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom)
 
-  const sourceOptions: TileWMSOptions = {
-    url,
-    params,
-    crossOrigin: 'anonymous',
-    serverType: 'geoserver',
-    tileGrid: createXYZ({ tileSize: 512 }),
-  }
-
   return new TileLayer({
-    // hidpi désactivé : sur écran haute densité, tuiles 512 px agrandies par le navigateur plutôt que
-    // 1024 px rendues par GeoServer (4 fois moins de pixels) ; libellés un peu moins nets
-    source: new TileWMS({ ...sourceOptions, hidpi: false }),
+    source: new TileWMS({
+      url,
+      params,
+      crossOrigin: 'anonymous',
+      serverType: 'geoserver',
+      tileGrid: createXYZ({ tileSize: 512 }),
+    }),
     visible: false,
     opacity: layer.forceOpacity ? 1 : typeof layer.opacity === 'number' ? layer.opacity : 0.7,
     minResolution,
@@ -103,7 +93,6 @@ function createWmsTileLayer(
     properties: {
       ecGpuCatalogId: entry.id,
       ecGpuLayerName: layerName,
-      [GPU_WMS_SOURCE_OPTIONS_PROP]: sourceOptions,
     },
   })
 }
