@@ -24,6 +24,7 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Documentation en français uniquement, regroupée dans `doc/`.
 - Mises à jour des dépendances.
 - Carte : zoom par niveaux entiers, comme gpu-client (moins de tuiles chargées).
+- Carte : couches GPU en résolution standard sur écran haute densité (tuiles 4 fois plus légères) ; impression toujours nette.
 
 ### Corrigé
 
