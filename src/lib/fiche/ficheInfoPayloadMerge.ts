@@ -55,6 +55,11 @@ function mergeParcelFiche(
   return { features: [...byId.values()] }
 }
 
+function hasLowScaleDocuments(value: GpuFicheInfoPayload['lowScaleDocument']): boolean {
+  if (!value) return false
+  return Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0
+}
+
 /** Fusionne une réponse partielle (activeFamilies restreint) dans le JSON déjà en cache au point. */
 export function mergeGpuFicheInfoPayloads(
   base: GpuFicheInfoPayload,
@@ -68,7 +73,9 @@ export function mergeGpuFicheInfoPayloads(
   merged.scots = mergeRecordPartitions(base.scots, partial.scots)
   merged.mecsDu = mergeRecordPartitions(base.mecsDu, partial.mecsDu)
   merged.mecsScot = mergeRecordPartitions(base.mecsScot, partial.mecsScot)
-  merged.lowScaleDocument = partial.lowScaleDocument ?? base.lowScaleDocument
+  // complément sans du : lowScaleDocument vide, documents DU déjà connus conservés
+  if (hasLowScaleDocuments(partial.lowScaleDocument))
+    merged.lowScaleDocument = partial.lowScaleDocument
   merged.proceduresByDocument = mergeProcedureMaps(
     base.proceduresByDocument,
     partial.proceduresByDocument,
@@ -86,7 +93,8 @@ export function mergeGpuFicheInfoPayloads(
   merged.gridGeometry = partial.gridGeometry ?? base.gridGeometry
   merged.parentGridGeometry = partial.parentGridGeometry ?? base.parentGridGeometry
   merged.typeref = partial.typeref ?? base.typeref
-  if (partial.is_el9_alert !== undefined) merged.is_el9_alert = partial.is_el9_alert
+  // null : zone d’alerte EL9 non interrogée (complément sans sup) ou en échec, valeur déjà connue conservée
+  if (typeof partial.is_el9_alert === 'boolean') merged.is_el9_alert = partial.is_el9_alert
 
   const parcelBase = isGpuParcelFichePayload(base.parcelFiche) ? base.parcelFiche : undefined
   const parcelExtra = isGpuParcelFichePayload(partial.parcelFiche) ? partial.parcelFiche : undefined

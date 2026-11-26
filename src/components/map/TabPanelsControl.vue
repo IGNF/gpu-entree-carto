@@ -20,7 +20,9 @@ import {
 import { syncFicheCatalogLayerScopes } from '@/lib/fiche/ficheCatalogLayerScope'
 import {
   computeFicheCatalogFamilyVisibility,
+  computeFicheSupInZoomRange,
   setFicheCatalogFamilyVisibility,
+  setFicheSupInZoomRange,
 } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { refreshFicheForCatalogVisibility } from '@/lib/fiche/ficheInfoService'
 import { registerMapPermalinkLayersBridge } from '@/composables/mapPermalinkLayersBridge'
@@ -616,6 +618,16 @@ watch(
     refreshFicheForCatalogVisibility()
     scheduleLayerPermalinkSync()
   },
+)
+
+/** SUP demandées à la fiche seulement dans leur plage de zoom : complément au point si on y entre. */
+watch(
+  () => computeFicheSupInZoomRange(layerNodesRef.value, mapZoom.value),
+  (inRange, wasInRange) => {
+    setFicheSupInZoomRange(inRange)
+    if (wasInRange !== undefined) refreshFicheForCatalogVisibility()
+  },
+  { immediate: true },
 )
 
 watch(

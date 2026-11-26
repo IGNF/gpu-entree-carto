@@ -70,8 +70,8 @@ Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extens
 ## entree-carto behaviour
 
 - No APICarto fallback in the browser.
-- **Catalog**: Données checkboxes (DU/PSMV/MEC → `du`, SUP, SCoT) are sent as `activeFamilies[]`; checked SUP sub-layers send `activeSupTypes[]` from `config_layers.json` `supType` (e.g. `AC1`). At the same cherry point, newly checked families or SUP types trigger an incremental fetch (local JSON merge, `ensureFicheCatalogSupplementAtMarker`).
 - **Map click**: a single `GET` on the combined URL (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
+- **Catalog**: `activeFamilies[]` always contains `du` (commune, DU and SCoT MECs at the point), `sup` when a SUP layer is checked **and** within its zoom range (not at small scale), `scot` when a SCoT layer is checked; checked SUP sub-layers send `activeSupTypes[]` from `config_layers.json` `supType` (e.g. `AC1`). At the same cherry point, newly checked families or SUP types trigger an incremental fetch (local JSON merge, `ensureFicheCatalogSupplementAtMarker`), as does the SUP layer entering its zoom range. A family flagged `supIncluded` / `scotIncluded` `false` in the response (missing = included) is not considered acquired.
 - **Split** (`apiFicheInfoPreferCombined = false`): per-mode requests; territory still may call `/parcelle` silently for the back-to-parcel CTA metadata.
 - **Parcel — Infos** — zoning, prescriptions, and information rules are shown only when the partition’s document is **in production** in the fiche-info API (same rule as Document tiles).
 - **Per-mode** cache at the cherry point (`ficheInfoService.ts`); repeat click or mode switch at the same point uses cache (no refetch).

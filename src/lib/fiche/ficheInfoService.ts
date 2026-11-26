@@ -54,7 +54,6 @@ import {
   isCatalogDrivenFicheFetchEnabled,
   missingFicheInfoFamilies,
   resolveFicheInfoActiveFamiliesForFetch,
-  familiesForTerritoryNetworkFetch,
   unionFicheInfoFamilies,
 } from '@/lib/fiche/ficheActiveFamilies'
 import {
@@ -121,9 +120,15 @@ function recordGpuPayloadAcquisition(
     ? mergeGpuFicheInfoPayloads(fichePointCache!.mergedGpuPayload, payload)
     : payload
   fichePointCache!.mergedGpuPayload = merged
+  // Indicateurs serveur : famille absente de la réponse malgré la demande (absent = incluse).
+  const includedFamilies = fetchedFamilies.filter(
+    (family) =>
+      !(family === 'sup' && payload.supIncluded === false) &&
+      !(family === 'scot' && payload.scotIncluded === false),
+  )
   fichePointCache!.acquiredFamilies = unionFicheInfoFamilies(
     fichePointCache!.acquiredFamilies,
-    fetchedFamilies,
+    includedFamilies,
   )
   fichePointCache!.acquiredSupTypes = unionAcquiredSupTypes(
     fichePointCache!.acquiredSupTypes,
@@ -406,9 +411,8 @@ export async function ensureFicheCatalogSupplementAtMarker(): Promise<void> {
   abortInflightFicheInfoFetch()
   mapPointFetchAbort = new AbortController()
 
-  const familiesToFetch: FicheInfoApiFamily[] = missingFamilies.length
-    ? familiesForTerritoryNetworkFetch(missingFamilies, mode)
-    : ['sup']
+  // sans du : gpu-site résout la commune en base, les couches DU déjà récupérées ne sont pas redemandées
+  const familiesToFetch: FicheInfoApiFamily[] = missingFamilies.length ? missingFamilies : ['sup']
   const supTypesToFetch =
     missingSup.length > 0
       ? missingSup
@@ -638,10 +642,7 @@ async function loadFicheForMapPointImpl(params: {
     isCatalogDrivenFicheFetchEnabled() && fichePointCache?.mergedGpuPayload
       ? missingFicheInfoFamilies(desiredFamilies, fichePointCache.acquiredFamilies)
       : desiredFamilies
-  const familiesToFetch = familiesForTerritoryNetworkFetch(
-    missingFamilies.length ? missingFamilies : desiredFamilies,
-    params.mode,
-  )
+  const familiesToFetch = missingFamilies.length ? missingFamilies : desiredFamilies
   const acquiredFamilies = fichePointCache?.acquiredFamilies ?? []
   const supTypesToFetch = activeSupTypesForFetch(
     familiesToFetch,

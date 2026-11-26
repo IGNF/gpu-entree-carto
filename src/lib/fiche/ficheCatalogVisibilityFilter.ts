@@ -1,5 +1,6 @@
 import { shallowRef } from 'vue'
 import { branchForCatalogSubtree } from '@/lib/layerConfig/documentCatalogVisibility'
+import { isCatalogNodeInZoomRange } from '@/lib/layerConfig/catalogLayerZoomRange'
 import {
   resetFicheCatalogLayerScopes,
   setFicheCatalogDuRuleScope,
@@ -185,6 +186,24 @@ function familyVisibleFromPermalink(family: FicheDocumentFamily): boolean {
 export function isFicheDocumentFamilyVisible(family: FicheDocumentFamily): boolean {
   if (catalogFamilyVisibility) return catalogFamilyVisibility[family]
   return familyVisibleFromPermalink(family)
+}
+
+/** Couche SUP du catalogue dans sa plage de zoom (`null` : inconnu, considéré dans la plage). */
+let supInZoomRange: boolean | null = null
+
+export function setFicheSupInZoomRange(inRange: boolean | null): void {
+  supInZoomRange = inRange
+}
+
+/** Hors plage (petite échelle), la carte ne dessine pas les SUP : la fiche ne les demande pas. */
+export function isFicheSupInZoomRange(): boolean {
+  return supInZoomRange !== false
+}
+
+/** Plage de zoom des racines catalogue SUP ; sans racine SUP : dans la plage. */
+export function computeFicheSupInZoomRange(catalogRoots: TreeLayerNode[], zoom: number): boolean {
+  const supRoots = catalogRoots.filter((root) => branchForCatalogSubtree(root) === 'sup')
+  return !supRoots.length || supRoots.some((root) => isCatalogNodeInZoomRange(root, zoom))
 }
 
 /** Onglet « procedures » n’est pas listé ici : il agrège plusieurs familles (filtré dans la fiche). */

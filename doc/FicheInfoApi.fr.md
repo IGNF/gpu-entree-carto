@@ -70,8 +70,8 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 ## Comportement entree-carto
 
 - Plus de repli APICarto dans le navigateur.
-- **Catalogue** : les cases Données (DU/PSMV/MEC → `du`, SUP, SCoT) partent en `activeFamilies[]` ; les sous-couches SUP cochées (`supType` dans `config_layers.json`) en `activeSupTypes[]` (ex. `AC1`). Au même point cerise, les familles ou types SUP nouvellement cochés déclenchent un complément réseau (fusion JSON locale, `ensureFicheCatalogSupplementAtMarker`).
 - **Clic carte** : un seul `GET` sur l’URL combinée (`scope=both`) remplit le cache territoire **et** parcelle au point cerise ; pas d’enrichissement silencieux `/parcelle` dans ce cas.
+- **Catalogue** : `activeFamilies[]` contient toujours `du` (commune, MEC DU et SCoT au point), `sup` si une couche SUP est cochée **et** dans sa plage de zoom (hors petite échelle), `scot` si une couche SCoT est cochée ; les sous-couches SUP cochées (`supType` dans `config_layers.json`) en `activeSupTypes[]` (ex. `AC1`). Au même point cerise, les familles ou types SUP nouvellement cochés déclenchent un complément réseau (fusion JSON locale, `ensureFicheCatalogSupplementAtMarker`), de même que l’entrée de la couche SUP dans sa plage de zoom. Une famille marquée `supIncluded` / `scotIncluded` à `false` dans la réponse (absent = incluse) n’est pas considérée comme acquise.
 - **Split** : avec `apiFicheInfoPreferCombined = false`, appels par mode ; en territoire, second appel `/parcelle` (ou cache) pour les métadonnées parcelle du CTA retour.
 - **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
 - Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).
