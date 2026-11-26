@@ -102,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Fiche info: layer checked while loading** — a family or SUP type checked while the fiche is loading is supplemented as soon as loading ends, instead of on the next catalogue action.
 - **Parcel fiche, SUP rules** — a SUP present on the map but with no production document in the database appeared in the urban planning rules, while missing from the Documents tab and the territory fiche. As for DU, its rules are now hidden; the map → database link uses the partition (SUP layers carry no `gpu_id`).
 - **Parcel fiche, Documents tab** — a DU (or PSMV) document coming from the parcel layers was shown even with the “Vue d’ensemble” and “Vue détaillée des documents d’urbanisme” layers unchecked (the territory fiche hid it). These documents now follow the family checked in the catalogue, “non exécutoire” callout included.
 - **Place search** — input with leading or trailing spaces (e.g. “10” followed by a space) was sent to IGN completion as soon as it had 3 raw characters, which answered 400 (“must contain between 3 and 200 chars and start with a number or a letter”). The text is now sent trimmed, and not below 3 useful characters (`installAutocompleteTrim`).

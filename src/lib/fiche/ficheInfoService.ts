@@ -321,6 +321,16 @@ function readFicheCherryPoint(): { lon: number; lat: number } | null {
 /** Message d’échec du dernier complément au point (familles ou types SUP cochés), null sinon. */
 export const ficheSupplementError = shallowRef<string | null>(null)
 
+/** Familles ou types SUP voulus par le catalogue mais pas encore récupérés au point de la fiche. */
+function ficheCatalogSupplementMissing(): boolean {
+  if (!fichePointCache?.mergedGpuPayload || !isCatalogDrivenFicheFetchEnabled()) return false
+  return !catalogFicheAcquisitionComplete(
+    resolveFicheInfoActiveFamiliesForFetch(),
+    fichePointCache.acquiredFamilies,
+    fichePointCache.acquiredSupTypes,
+  )
+}
+
 /** Réaffiche la fiche courante après changement de visibilité catalogue (permalink). */
 export function refreshFicheForCatalogVisibility(): void {
   const api = tabPanelsApiRef.value
@@ -753,7 +763,16 @@ export function loadFicheForMapPoint(params: {
 }): Promise<FicheInfoSelection | null> {
   return new Promise((resolve) => {
     whenGpuClientConfigReady(() => {
-      void loadFicheForMapPointImpl(params).then(resolve, () => resolve(null))
+      void loadFicheForMapPointImpl(params).then(
+        (selection) => {
+          // case du catalogue cochée pendant le chargement : familles figées au début de la requête
+          if (selection && !params.silent && ficheCatalogSupplementMissing()) {
+            refreshFicheForCatalogVisibility()
+          }
+          resolve(selection)
+        },
+        () => resolve(null),
+      )
     })
   })
 }
