@@ -1,5 +1,6 @@
 import config from '@/lib/config'
 import { PARCEL_NO_RULE_HTML } from '@/lib/fiche/ficheNoDataMessages'
+import { FICHE_RATE_LIMITED_MESSAGE } from '@/lib/fiche/ficheRetry'
 import { coerceDisplayString } from '@/lib/coerceDisplayString'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 import {
@@ -1017,6 +1018,7 @@ export async function fetchGpuParcelFiche(parcelId: string): Promise<GpuParcelFi
   const url = buildParcelFicheFetchUrl(parcelId)
   if (!url) throw new Error('Service fiche parcelle non configuré (apiParcelFicheUrl).')
   const res = await fetch(url, { credentials: 'same-origin' })
+  if (res.status === 429) throw new Error(FICHE_RATE_LIMITED_MESSAGE)
   if (!res.ok) {
     throw new Error(`Parcel fiche HTTP ${res.status}`)
   }

@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import config from '@/lib/config'
 import { MAP_MODE_TERRITORY } from '@/lib/map/mapMode'
-import { abortInflightFicheInfoFetch, fetchGpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFetch'
+import {
+  abortInflightFicheInfoFetch,
+  fetchGpuFicheInfoCombinedPayload,
+  fetchGpuFicheInfoPayload,
+  wasLastFicheInfoPanelFetchRateLimited,
+} from '@/lib/fiche/ficheInfoFetch'
 
 const payload = {
   title: 'test',
@@ -22,7 +27,7 @@ describe('fetchGpuFicheInfoPayload', () => {
   })
 
   it('ne coupe pas le fetch panneau quand un fetch emprise (background) démarre après', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
 
     let panelResolve: (value: Response) => void = () => {}
     const panelDeferred = new Promise<Response>((resolve) => {
@@ -73,7 +78,7 @@ describe('fetchGpuFicheInfoPayload', () => {
   })
 
   it('fetch emprise (background) : sans client/seq, ne périme pas côté gpu-site la requête du panneau', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const urls: string[] = []
     vi.stubGlobal(
       'fetch',
@@ -85,14 +90,14 @@ describe('fetchGpuFicheInfoPayload', () => {
     const point = { lon: 5.68, lat: 45.05, mode: MAP_MODE_TERRITORY }
     await Promise.all([
       fetchGpuFicheInfoPayload({ ...point, zoom: 13 }),
-      fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' }),
+      fetchGpuFicheInfoPayload({ ...point, lon: 5.69, zoom: 6, fetchRole: 'background' }),
     ])
     const panel = new URL(
-      urls.find((u) => u.includes('zoom=13'))!,
+      urls.find((u) => u.includes('lon=5.68'))!,
       'http://x',
     )
     const background = new URL(
-      urls.find((u) => u.includes('zoom=6'))!,
+      urls.find((u) => u.includes('lon=5.69'))!,
       'http://x',
     )
     expect(panel.searchParams.get('client')).toBeTruthy()
@@ -102,7 +107,7 @@ describe('fetchGpuFicheInfoPayload', () => {
   })
 
   it('un appel déjà annulé ne « contamine » pas l’appel suivant au même point (rechargement)', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
       init?.signal?.aborted
         ? Promise.reject(new DOMException('Aborted', 'AbortError'))
@@ -123,8 +128,8 @@ describe('fetchGpuFicheInfoPayload', () => {
   })
 
   it('annule aussi les fetches emprise (background) au clic suivant', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
-    ;(config as { apiFicheInfoCombinedUrl?: string }).apiFicheInfoCombinedUrl = '/api/fiche-info-v2'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
+    ;(config as { apiFicheInfoCombinedUrl?: string }).apiFicheInfoCombinedUrl = '/api/fiche-info'
 
     let resolveBackground: () => void = () => {}
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -155,7 +160,7 @@ describe('fetchGpuFicheInfoPayload', () => {
   })
 
   it('envoie supersede=true au gpu-site quand un fetch panneau est interrompu', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info'
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = fetchInputToUrl(input)
@@ -181,6 +186,44 @@ describe('fetchGpuFicheInfoPayload', () => {
     expect(
       fetchMock.mock.calls.some((call) => fetchInputToUrl(call[0]).includes('supersede=true')),
     ).toBe(true)
+  })
+
+  it('appel combiné : scope=both, sans paramètres legacy mode / includeParcel', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info'
+    const urls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        urls.push(fetchInputToUrl(input))
+        return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
+      }),
+    )
+
+    await fetchGpuFicheInfoCombinedPayload({ lon: 2.35, lat: 48.85, zoom: 16 })
+
+    const url = new URL(urls[0])
+    expect(url.pathname).toBe('/api/fiche-info')
+    expect(url.searchParams.get('scope')).toBe('both')
+    expect(url.searchParams.has('mode')).toBe(false)
+    expect(url.searchParams.has('includeParcel')).toBe(false)
+  })
+
+  it('HTTP 429 : pas de payload, limitation de débit signalée pour le panneau', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{}', { status: 429 }))),
+    )
+
+    const result = await fetchGpuFicheInfoPayload({
+      lon: 2.36,
+      lat: 48.86,
+      zoom: 16,
+      mode: MAP_MODE_TERRITORY,
+    })
+
+    expect(result).toBeNull()
+    expect(wasLastFicheInfoPanelFetchRateLimited()).toBe(true)
   })
 })
 
@@ -208,7 +251,7 @@ describe('chargement de la fiche : réutilise la requête emprise du même point
   const point = { lon: -61.1125877, lat: 14.67981083, zoom: 13, mode: MAP_MODE_TERRITORY }
 
   it('même point, même zoom : un seul appel réseau, emprise et fiche servies', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const { fetchMock, release } = deferredFetch()
     vi.stubGlobal('fetch', fetchMock)
     const background = fetchGpuFicheInfoPayload({ ...point, fetchRole: 'background' })
@@ -220,21 +263,21 @@ describe('chargement de la fiche : réutilise la requête emprise du même point
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('zoom différent (ex. recherche) : l’emprise est annulée comme avant', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+  it('zoom différent (ex. recherche) : emprise réutilisée, la réponse gpu-site ne dépend pas du zoom', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const { fetchMock, release } = deferredFetch()
     vi.stubGlobal('fetch', fetchMock)
     const background = fetchGpuFicheInfoPayload({ ...point, zoom: 6, fetchRole: 'background' })
     abortInflightFicheInfoFetch({ keepBackgroundAt: point })
-    expect(await background).toBeNull()
     const panel = fetchGpuFicheInfoPayload({ ...point, abortSignal: new AbortController().signal })
     release()
+    expect(await background).toEqual(expect.objectContaining({ title: 'test' }))
     expect(await panel).toEqual(expect.objectContaining({ title: 'test' }))
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('autre point : l’emprise est annulée comme avant', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const { fetchMock } = deferredFetch()
     vi.stubGlobal('fetch', fetchMock)
     const background = fetchGpuFicheInfoPayload({ ...point, fetchRole: 'background' })
@@ -243,7 +286,7 @@ describe('chargement de la fiche : réutilise la requête emprise du même point
   })
 
   it('requête panneau en vol au même point : toujours annulée (une requête annulée ne doit pas être partagée)', async () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2/territoire'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info/territoire'
     const { fetchMock, release } = deferredFetch()
     vi.stubGlobal('fetch', fetchMock)
     const firstPanel = fetchGpuFicheInfoPayload({

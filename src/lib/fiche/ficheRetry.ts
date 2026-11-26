@@ -14,16 +14,28 @@ export type FicheRetryParams = {
   loadingTitle?: string
 }
 
-const UNAVAILABLE_BODY_HTML = `<p class="ec-fiche-info__unavailable">Indisponibilité du service <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" title="Réessayer" aria-label="Réessayer" ${RETRY_ATTR}><i class="ri-refresh-line" aria-hidden="true"></i></button></p>`
+/** Réponse HTTP 429 de gpu-site (limitation de débit des API exposant des SUP). */
+export const FICHE_RATE_LIMITED_MESSAGE = 'Service temporairement saturé, réessayez.'
+
+const UNAVAILABLE_MESSAGE = 'Indisponibilité du service'
+
+/** Complément de la fiche (couche cochée au même point) en échec : la fiche affichée reste incomplète. */
+export const FICHE_SUPPLEMENT_UNAVAILABLE_MESSAGE =
+  'Indisponibilité du service : les informations des couches cochées n’ont pas pu être chargées.'
+
+function unavailableBodyHtml(message: string): string {
+  return `<p class="ec-fiche-info__unavailable">${message} <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" title="Réessayer" aria-label="Réessayer" ${RETRY_ATTR}><i class="ri-refresh-line" aria-hidden="true"></i></button></p>`
+}
 
 /** Requête fiche-info échouée : message + bouton « Réessayer » (paramètres conservés pour la relance). */
 export function ficheServiceUnavailableSelection(
   title: string,
   retry: FicheRetryParams,
+  rateLimited = false,
 ): FicheInfoSelection {
   return {
     title,
-    bodyHtml: UNAVAILABLE_BODY_HTML,
+    bodyHtml: unavailableBodyHtml(rateLimited ? FICHE_RATE_LIMITED_MESSAGE : UNAVAILABLE_MESSAGE),
     raw: { source: FICHE_UNAVAILABLE_SOURCE, retry },
   }
 }

@@ -1,12 +1,14 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import {
   computeFicheCatalogFamilyVisibility,
+  computeFicheSupInZoomRange,
   filterParcelDocumentsHtmlByCatalog,
   filterParcelInfosHtmlByCatalog,
   isFicheDocumentFamilyVisible,
   setFicheCatalogFamilyVisibility,
 } from '@/lib/fiche/ficheCatalogVisibilityFilter'
 import { setMapPermalinkParams } from '@/lib/map/mapPermalink'
+import type { TreeLayerNode } from '@/types/treeLayerNode'
 
 describe('filterParcelDocumentsHtmlByCatalog', () => {
   const html = `<p class="ec-fiche-info__intro">Intro</p>
@@ -134,5 +136,26 @@ describe('filterParcelInfosHtmlByCatalog', () => {
     const html = `<section class="ec-fiche-info__rules-section"><h4>Zonage(s)</h4></section>`
     expect(filterParcelInfosHtmlByCatalog(html)).toBe('')
     setMapPermalinkParams({})
+  })
+})
+
+describe('computeFicheSupInZoomRange', () => {
+  const supRoot: TreeLayerNode = {
+    id: 'sup',
+    title: "Servitudes d'utilité publique",
+    visible: true,
+    gpuMapLayer: true,
+    gpuMinZoomLevel: 12,
+    gpuMaxZoomLevel: 22,
+  }
+  const duRoot: TreeLayerNode = { id: 'du', title: 'Autre', visible: true }
+
+  it('suit la plage de zoom de la racine SUP', () => {
+    expect(computeFicheSupInZoomRange([duRoot, supRoot], 10)).toBe(false)
+    expect(computeFicheSupInZoomRange([duRoot, supRoot], 14)).toBe(true)
+  })
+
+  it('sans racine SUP au catalogue : dans la plage', () => {
+    expect(computeFicheSupInZoomRange([duRoot], 5)).toBe(true)
   })
 })

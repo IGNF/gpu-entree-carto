@@ -3,7 +3,7 @@ import { appendFicheInfoQueryParams } from '@/lib/fiche/ficheInfoQuery'
 
 describe('appendFicheInfoQueryParams', () => {
   it('ajoute activeSupTypes[] pour gpu-site', () => {
-    const url = new URL('https://example.com/api/fiche-info-v2', 'https://example.com')
+    const url = new URL('https://example.com/api/fiche-info', 'https://example.com')
     appendFicheInfoQueryParams(url, {
       lon: 1,
       lat: 2,
@@ -14,7 +14,7 @@ describe('appendFicheInfoQueryParams', () => {
   })
 
   it('ajoute activeFamilies[] pour gpu-site', () => {
-    const url = new URL('http://localhost/api/fiche-info-v2')
+    const url = new URL('http://localhost/api/fiche-info')
     appendFicheInfoQueryParams(url, {
       lon: 1.05,
       lat: 48.45,

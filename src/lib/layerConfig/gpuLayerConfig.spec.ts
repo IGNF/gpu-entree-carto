@@ -106,6 +106,37 @@ describe('gpuLayerConfig paths', () => {
       ).length,
     ).toBe(2)
   })
+
+  it('fait hériter les zooms du groupe parent (hideHimself transparent)', () => {
+    const layers = [
+      {
+        title: 'Vue détaillée',
+        minZoomLevel: 12,
+        maxZoomLevel: 21,
+        layers: [
+          { name: 'zone_urba' },
+          { name: 'info', minZoomLevel: 16 },
+          {
+            title: 'masqué',
+            hideHimself: true,
+            minZoomLevel: 3,
+            layers: [{ name: 'prescription' }],
+          },
+        ],
+      },
+      { name: 'municipality' },
+    ]
+    const zooms = Object.fromEntries(
+      layerConfigToCatalogEntries(layers).map((e) => [
+        e.config.name ?? e.config.title,
+        [e.minZoomLevel, e.maxZoomLevel],
+      ]),
+    )
+    expect(zooms.zone_urba).toEqual([12, 21])
+    expect(zooms.info).toEqual([16, 21])
+    expect(zooms.prescription).toEqual([12, 21])
+    expect(zooms.municipality).toEqual([0, 22])
+  })
 })
 
 describe('resolveLayerConfig', () => {

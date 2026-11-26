@@ -1,8 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import config from '@/lib/config'
 import type { GpuFicheInfoPayload } from '@/lib/fiche/ficheInfoFromGpuApi'
 import {
   buildParcelDocumentsHtmlFromFiche,
   buildParcelInfosHtmlFromFiche,
+  fetchGpuParcelFiche,
   isGpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { setFicheCatalogFamilyVisibility } from '@/lib/fiche/ficheCatalogVisibilityFilter'
@@ -701,5 +703,24 @@ describe('règles d’urbanisme SUP : document en base requis (comme les DU)', (
       ]),
     )
     expect(html).toContain('Servitudes d’utilité publique')
+  })
+})
+
+describe('fetchGpuParcelFiche', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete (config as { apiParcelFicheUrl?: string }).apiParcelFicheUrl
+  })
+
+  it('HTTP 429 : « Service temporairement saturé, réessayez. »', async () => {
+    ;(config as { apiParcelFicheUrl?: string }).apiParcelFicheUrl =
+      '/api/feature-info/parcel/{parcelId}/fiche'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{}', { status: 429 }))),
+    )
+    await expect(fetchGpuParcelFiche('750560000AB0001')).rejects.toThrow(
+      'Service temporairement saturé, réessayez.',
+    )
   })
 })

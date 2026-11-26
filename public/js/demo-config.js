@@ -41,15 +41,15 @@ window.DEMO_CONFIG = {
   // bbox: [-0.467093, 49.0459842, -0.3386296, 49.1704163],
   /**
    * Surcharges de gpu.config (URLs WFS, WMS, API, etc.).
-   * Après chargement de configScriptUrl, les clés fiche info v2 sont déjà définies ;
+   * Après chargement de configScriptUrl, les clés fiche info sont déjà définies ;
    * ne surcharger que pour tests sans script gpu (proxy Vite → gpu-site :8000).
    */
   gpuConfigOverrides: {},
   // gpuConfigOverrides: {
-  //   apiFicheInfoUrl: '/__gpu_dev_proxy__/api/fiche-info-v2',
-  //   apiFicheInfoCombinedUrl: '/__gpu_dev_proxy__/api/fiche-info-v2',
-  //   apiFicheInfoTerritoireUrl: '/__gpu_dev_proxy__/api/fiche-info-v2/territoire',
-  //   apiFicheInfoParcelleUrl: '/__gpu_dev_proxy__/api/fiche-info-v2/parcelle',
+  //   apiFicheInfoUrl: '/__gpu_dev_proxy__/api/fiche-info',
+  //   apiFicheInfoCombinedUrl: '/__gpu_dev_proxy__/api/fiche-info',
+  //   apiFicheInfoTerritoireUrl: '/__gpu_dev_proxy__/api/fiche-info/territoire',
+  //   apiFicheInfoParcelleUrl: '/__gpu_dev_proxy__/api/fiche-info/parcelle',
   // },
 
   /** Options carte démo (`/map`). */

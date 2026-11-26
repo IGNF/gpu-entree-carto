@@ -22,7 +22,7 @@ describe('ficheActiveSupTypes', () => {
   })
 
   it('dérive activeSupTypesForFetch pour un complément catalogue', () => {
-    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info-v2'
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info'
     setFicheCatalogFamilyVisibility({
       du: false,
       psmv: false,

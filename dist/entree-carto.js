@@ -67866,11 +67866,16 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const FICHE_UNAVAILABLE_SOURCE = "fiche-service-unavailable";
   const RETRY_ATTR = "data-ec-fiche-retry";
-  const UNAVAILABLE_BODY_HTML = `<p class="ec-fiche-info__unavailable">Indisponibilité du service <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" title="Réessayer" aria-label="Réessayer" ${RETRY_ATTR}><i class="ri-refresh-line" aria-hidden="true"></i></button></p>`;
-  function ficheServiceUnavailableSelection(title2, retry) {
+  const FICHE_RATE_LIMITED_MESSAGE = "Service temporairement saturé, réessayez.";
+  const UNAVAILABLE_MESSAGE = "Indisponibilité du service";
+  const FICHE_SUPPLEMENT_UNAVAILABLE_MESSAGE = "Indisponibilité du service : les informations des couches cochées n’ont pas pu être chargées.";
+  function unavailableBodyHtml(message) {
+    return `<p class="ec-fiche-info__unavailable">${message} <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" title="Réessayer" aria-label="Réessayer" ${RETRY_ATTR}><i class="ri-refresh-line" aria-hidden="true"></i></button></p>`;
+  }
+  function ficheServiceUnavailableSelection(title2, retry, rateLimited = false) {
     return {
       title: title2,
-      bodyHtml: UNAVAILABLE_BODY_HTML,
+      bodyHtml: unavailableBodyHtml(rateLimited ? FICHE_RATE_LIMITED_MESSAGE : UNAVAILABLE_MESSAGE),
       raw: { source: FICHE_UNAVAILABLE_SOURCE, retry }
     };
   }
@@ -68021,20 +68026,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     const base = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
     return `${base}/${segment}`.replace(/\/+/g, "/");
   }
-  function layerConfigToCatalogEntries(layers, parentPath = "", registry = []) {
+  function layerConfigToCatalogEntries(layers, parentPath = "", registry = [], inheritedMinZoom = 0, inheritedMaxZoom = 22) {
     var _a2, _b;
     for (const layer of layers) {
       if (layer.hideHimself) {
         if ((_a2 = layer.layers) == null ? void 0 : _a2.length) {
-          layerConfigToCatalogEntries(layer.layers, parentPath, registry);
+          layerConfigToCatalogEntries(
+            layer.layers,
+            parentPath,
+            registry,
+            inheritedMinZoom,
+            inheritedMaxZoom
+          );
         }
         continue;
       }
       const path = buildLayerPath(layer, parentPath || "");
       const id2 = pathToCatalogId(path);
-      registry.push({ id: id2, path, config: layer });
+      const minZoomLevel = layer.minZoomLevel ?? inheritedMinZoom;
+      const maxZoomLevel = layer.maxZoomLevel ?? inheritedMaxZoom;
+      registry.push({ id: id2, path, config: layer, minZoomLevel, maxZoomLevel });
       if ((_b = layer.layers) == null ? void 0 : _b.length) {
-        layerConfigToCatalogEntries(layer.layers, path, registry);
+        layerConfigToCatalogEntries(layer.layers, path, registry, minZoomLevel, maxZoomLevel);
       }
     }
     return registry;
@@ -71134,9 +71147,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     url.searchParams.set("lon", String(params2.lon));
     url.searchParams.set("lat", String(params2.lat));
     url.searchParams.set("zoom", String(Math.round(params2.zoom)));
-    if (!url.pathname.includes("fiche-info-v2")) {
-      url.searchParams.set("includeParcel", "true");
-    }
     const preview = getActivePreviewDocument();
     if ((preview == null ? void 0 : preview.status) === "document.preview" && preview.id) {
       url.searchParams.set("zone", "validation");
@@ -71187,13 +71197,6 @@ Expected function or array of functions, received type ${typeof value2}.`
   function normalizeBaseUrl(raw) {
     return raw.trim().replace(/\/$/, "");
   }
-  function ficheInfoUsesV2SplitEndpoints(base) {
-    const normalized = normalizeBaseUrl(base);
-    if (normalized.includes("fiche-info-v2")) return true;
-    return Boolean(
-      readConfigUrl("apiFicheInfoTerritoireUrl") || readConfigUrl("apiFicheInfoParcelleUrl")
-    );
-  }
   function resolveFicheInfoEndpointUrl(kind) {
     if (kind === "combined") {
       const combined = readConfigUrl("apiFicheInfoCombinedUrl");
@@ -71210,9 +71213,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const base = readConfigUrl("apiFicheInfoUrl");
     if (!base) return null;
     const normalized = normalizeBaseUrl(base);
-    if (!normalized.includes("fiche-info-v2")) {
-      return normalized;
-    }
     if (kind === "combined") {
       if (normalized.endsWith("/territoire") || normalized.endsWith("/parcelle")) {
         return normalized.replace(/\/(territoire|parcelle)$/, "");
@@ -71226,41 +71226,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     return `${normalized}/${suffix}`;
   }
   function resolveFicheInfoCombinedFetchUrl() {
-    const combined = resolveFicheInfoEndpointUrl("combined");
-    if (!(combined == null ? void 0 : combined.includes("fiche-info-v2"))) return null;
-    return combined;
+    return resolveFicheInfoEndpointUrl("combined");
   }
   function preferFicheInfoV2CombinedFetch() {
     if (!resolveFicheInfoCombinedFetchUrl()) return false;
-    const base = readConfigUrl("apiFicheInfoUrl");
-    const hasSplit = Boolean(
-      readConfigUrl("apiFicheInfoTerritoireUrl") || readConfigUrl("apiFicheInfoParcelleUrl")
-    ) || typeof base === "string" && ficheInfoUsesV2SplitEndpoints(base);
-    if (!hasSplit) return false;
     const bag = config;
-    if (bag.apiFicheInfoPreferCombined === false) return false;
-    return true;
+    return bag.apiFicheInfoPreferCombined !== false;
   }
   function resolveFicheInfoFetchUrl(mode2) {
-    const kind = mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle";
-    const explicitSplit = readConfigUrl(
-      mode2 === MAP_MODE_TERRITORY ? "apiFicheInfoTerritoireUrl" : "apiFicheInfoParcelleUrl"
-    );
-    if (explicitSplit) return explicitSplit;
-    const base = readConfigUrl("apiFicheInfoUrl");
-    if (base && ficheInfoUsesV2SplitEndpoints(base)) {
-      return resolveFicheInfoEndpointUrl(kind);
-    }
-    const combined = readConfigUrl("apiFicheInfoCombinedUrl");
-    if (combined) return combined;
-    if (base) return normalizeBaseUrl(base);
-    return resolveFicheInfoEndpointUrl(kind);
-  }
-  function shouldAppendLegacyFicheModeParam(resolvedUrl) {
-    return !resolvedUrl.includes("fiche-info-v2");
-  }
-  function legacyFicheModeValue(mode2) {
-    return mode2 === MAP_MODE_PARCEL ? String(MAP_MODE_PARCEL) : String(MAP_MODE_TERRITORY);
+    return resolveFicheInfoEndpointUrl(mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle");
   }
   const OPEN_CATALOG_ATTR = "data-ec-open-catalog";
   const CATALOG_LINK_HTML = `<a href="#" ${OPEN_CATALOG_ATTR}>catalogue de couches</a>`;
@@ -71787,6 +71761,17 @@ Expected function or array of functions, received type ${typeof value2}.`
   function isFicheDocumentFamilyVisible(family) {
     if (catalogFamilyVisibility) return catalogFamilyVisibility[family];
     return familyVisibleFromPermalink(family);
+  }
+  let supInZoomRange = null;
+  function setFicheSupInZoomRange(inRange) {
+    supInZoomRange = inRange;
+  }
+  function isFicheSupInZoomRange() {
+    return supInZoomRange !== false;
+  }
+  function computeFicheSupInZoomRange(catalogRoots, zoom) {
+    const supRoots = catalogRoots.filter((root) => branchForCatalogSubtree(root) === "sup");
+    return !supRoots.length || supRoots.some((root) => isCatalogNodeInZoomRange(root, zoom));
   }
   const TAB_FAMILY = {
     du: "du",
@@ -73538,6 +73523,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const url = buildParcelFicheFetchUrl(parcelId);
     if (!url) throw new Error("Service fiche parcelle non configuré (apiParcelFicheUrl).");
     const res = await fetch(url, { credentials: "same-origin" });
+    if (res.status === 429) throw new Error(FICHE_RATE_LIMITED_MESSAGE);
     if (!res.ok) {
       throw new Error(`Parcel fiche HTTP ${res.status}`);
     }
@@ -73978,10 +73964,14 @@ Expected function or array of functions, received type ${typeof value2}.`
   const inflightPayloadByPoint = /* @__PURE__ */ new Map();
   let activePanelNetworkAbort = null;
   const activeBackgroundNetworkAborts = /* @__PURE__ */ new Map();
-  function fichePayloadInflightKey(lon, lat, zoom, mode2, activeFamilies, activeSupTypes2) {
+  let lastPanelFetchRateLimited = false;
+  function wasLastFicheInfoPanelFetchRateLimited() {
+    return lastPanelFetchRateLimited;
+  }
+  function fichePayloadInflightKey(lon, lat, mode2, activeFamilies, activeSupTypes2) {
     const families = (activeFamilies == null ? void 0 : activeFamilies.length) ? [...activeFamilies].sort().join(",") : "all";
     const supTypes = (activeSupTypes2 == null ? void 0 : activeSupTypes2.length) ? [...activeSupTypes2].sort().join(",") : "all-sup";
-    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${Math.round(zoom)}|${mode2}|${families}|${supTypes}`;
+    return `${lon.toFixed(6)}|${lat.toFixed(6)}|${mode2}|${families}|${supTypes}`;
   }
   function takeoverFicheNetworkSignal(external, role, inflightKey) {
     if (role === "background") {
@@ -74015,7 +74005,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return resolveFicheInfoCombinedFetchUrl() ?? resolveFicheInfoFetchUrl(MAP_MODE_TERRITORY) ?? (typeof config.apiFicheInfoUrl === "string" ? config.apiFicheInfoUrl.trim() : null) ?? null;
   }
   function fichePointInflightPrefix(point) {
-    return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|${Math.round(point.zoom)}|`;
+    return `${point.lon.toFixed(6)}|${point.lat.toFixed(6)}|`;
   }
   function abortInflightFicheInfoFetch(options) {
     const hadPanel = activePanelNetworkAbort !== null;
@@ -74048,7 +74038,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const inflightKey = fichePayloadInflightKey(
       params2.lon,
       params2.lat,
-      params2.zoom,
       "combined",
       params2.activeFamilies,
       params2.activeSupTypes
@@ -74059,7 +74048,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const signal = takeoverFicheNetworkSignal(params2.abortSignal, role, inflightKey);
     const promise = fetchGpuFicheInfoPayloadFromUrl(
       fetchBase,
-      { ...params2, mode: MAP_MODE_TERRITORY },
+      { ...params2 },
       signal,
       role
     ).finally(() => {
@@ -74078,7 +74067,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const inflightKey = fichePayloadInflightKey(
       params2.lon,
       params2.lat,
-      params2.zoom,
       params2.mode,
       params2.activeFamilies,
       params2.activeSupTypes
@@ -74105,19 +74093,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     const resolved = resolveConfigUrlForFetch(fetchBase);
     const url = resolved.startsWith("/") ? new URL(resolved, window.location.origin) : new URL(resolved);
     appendFicheInfoQueryParams(url, params2, role === "panel");
-    if (shouldAppendLegacyFicheModeParam(resolved)) {
-      url.searchParams.set("mode", legacyFicheModeValue(params2.mode));
-    }
-    if (url.pathname.includes("fiche-info-v2") && !url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
+    if (!url.pathname.endsWith("/territoire") && !url.pathname.endsWith("/parcelle")) {
       url.searchParams.set("scope", "both");
     }
     const sendSessionCookies = url.searchParams.get("zone") === "validation" || url.searchParams.has("previewDocumentId");
+    if (role === "panel") lastPanelFetchRateLimited = false;
     try {
       const res = await fetch(url.toString(), {
         credentials: sendSessionCookies ? "include" : "same-origin",
         signal
       });
       if (res.status === 204) return null;
+      if (res.status === 429 && role === "panel") lastPanelFetchRateLimited = true;
       if (!res.ok) return null;
       const data = await res.json();
       if (!isGpuFicheInfoPayload(data)) return null;
@@ -74258,26 +74245,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     };
   }
   const ALL_API_FAMILIES = ["du", "sup", "scot"];
-  function readConfigFlag() {
-    const bag = config;
-    if (bag.apiFicheInfoCatalogFamilies === false) return false;
-    const apiUrl = config.apiFicheInfoUrl;
-    return preferFicheInfoV2CombinedFetch() || Boolean(apiUrl == null ? void 0 : apiUrl.includes("fiche-info-v2"));
-  }
   function isCatalogDrivenFicheFetchEnabled() {
-    return readConfigFlag();
+    const bag = config;
+    return bag.apiFicheInfoCatalogFamilies !== false;
   }
   function resolveFicheInfoActiveFamiliesForFetch() {
     if (!isCatalogDrivenFicheFetchEnabled()) {
       return [...ALL_API_FAMILIES];
     }
-    const families = [];
-    if (isFicheDocumentFamilyVisible("du") || isFicheDocumentFamilyVisible("psmv") || isFicheDocumentFamilyVisible("mec")) {
-      families.push("du");
-    }
-    if (isFicheDocumentFamilyVisible("sup")) families.push("sup");
+    const families = ["du"];
+    if (isFicheDocumentFamilyVisible("sup") && isFicheSupInZoomRange()) families.push("sup");
     if (isFicheDocumentFamilyVisible("scot")) families.push("scot");
-    return families.length ? families : ["du"];
+    return families;
   }
   function missingFicheInfoFamilies(desired, acquired) {
     const have = new Set(acquired);
@@ -74285,13 +74264,6 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function unionFicheInfoFamilies(a3, b) {
     return [.../* @__PURE__ */ new Set([...a3, ...b])];
-  }
-  function familiesForTerritoryNetworkFetch(missing, mode2) {
-    if (mode2 !== MAP_MODE_TERRITORY || !missing.length) return missing;
-    if (missing.some((f2) => f2 === "sup" || f2 === "scot") && !missing.includes("du") && isFicheDocumentFamilyVisible("du")) {
-      return unionFicheInfoFamilies(missing, ["du"]);
-    }
-    return missing;
   }
   function resolveFicheInfoActiveSupTypesForFetch() {
     if (!isCatalogDrivenFicheFetchEnabled()) return null;
@@ -74651,6 +74623,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return { features: [...byId.values()] };
   }
+  function hasLowScaleDocuments(value2) {
+    if (!value2) return false;
+    return Array.isArray(value2) ? value2.length > 0 : Object.keys(value2).length > 0;
+  }
   function mergeGpuFicheInfoPayloads(base, partial) {
     const merged = { ...base };
     merged.dus = mergeRecordPartitions(base.dus, partial.dus);
@@ -74659,7 +74635,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     merged.scots = mergeRecordPartitions(base.scots, partial.scots);
     merged.mecsDu = mergeRecordPartitions(base.mecsDu, partial.mecsDu);
     merged.mecsScot = mergeRecordPartitions(base.mecsScot, partial.mecsScot);
-    merged.lowScaleDocument = partial.lowScaleDocument ?? base.lowScaleDocument;
+    if (hasLowScaleDocuments(partial.lowScaleDocument))
+      merged.lowScaleDocument = partial.lowScaleDocument;
     merged.proceduresByDocument = mergeProcedureMaps(
       base.proceduresByDocument,
       partial.proceduresByDocument
@@ -74676,7 +74653,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     merged.gridGeometry = partial.gridGeometry ?? base.gridGeometry;
     merged.parentGridGeometry = partial.parentGridGeometry ?? base.parentGridGeometry;
     merged.typeref = partial.typeref ?? base.typeref;
-    if (partial.is_el9_alert !== void 0) merged.is_el9_alert = partial.is_el9_alert;
+    if (typeof partial.is_el9_alert === "boolean") merged.is_el9_alert = partial.is_el9_alert;
     const parcelBase = isGpuParcelFichePayload(base.parcelFiche) ? base.parcelFiche : void 0;
     const parcelExtra = isGpuParcelFichePayload(partial.parcelFiche) ? partial.parcelFiche : void 0;
     const parcelMerged = mergeParcelFiche(parcelBase, parcelExtra);
@@ -74708,9 +74685,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     syncFichePointCache(lon, lat);
     const merged = fichePointCache.mergedGpuPayload ? mergeGpuFicheInfoPayloads(fichePointCache.mergedGpuPayload, payload) : payload;
     fichePointCache.mergedGpuPayload = merged;
+    const includedFamilies = fetchedFamilies.filter(
+      (family) => !(family === "sup" && payload.supIncluded === false) && !(family === "scot" && payload.scotIncluded === false)
+    );
     fichePointCache.acquiredFamilies = unionFicheInfoFamilies(
       fichePointCache.acquiredFamilies,
-      fetchedFamilies
+      includedFamilies
     );
     fichePointCache.acquiredSupTypes = unionAcquiredSupTypes(
       fichePointCache.acquiredSupTypes,
@@ -74853,6 +74833,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat };
     return null;
   }
+  const ficheSupplementError = /* @__PURE__ */ shallowRef(null);
+  function ficheCatalogSupplementMissing() {
+    if (!(fichePointCache == null ? void 0 : fichePointCache.mergedGpuPayload) || !isCatalogDrivenFicheFetchEnabled()) return false;
+    return !catalogFicheAcquisitionComplete(
+      resolveFicheInfoActiveFamiliesForFetch(),
+      fichePointCache.acquiredFamilies,
+      fichePointCache.acquiredSupTypes
+    );
+  }
   function refreshFicheForCatalogVisibility() {
     const api = tabPanelsApiRef.value;
     const current = api == null ? void 0 : api.selection.value;
@@ -74879,6 +74868,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       })();
       return;
     }
+    ficheSupplementError.value = null;
     const next = refreshFicheSelectionCatalogVisibility(current);
     syncCadastreLowFromFicheSelectionRaw(next.raw);
     api == null ? void 0 : api.updateSelection(next);
@@ -74928,7 +74918,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     mapPointFetchAbort == null ? void 0 : mapPointFetchAbort.abort();
     abortInflightFicheInfoFetch();
     mapPointFetchAbort = new AbortController();
-    const familiesToFetch = missingFamilies.length ? familiesForTerritoryNetworkFetch(missingFamilies, mode2) : ["sup"];
+    const supplementSignal = mapPointFetchAbort.signal;
+    ficheSupplementError.value = null;
+    const familiesToFetch = missingFamilies.length ? missingFamilies : ["sup"];
     const supTypesToFetch = missingSup.length > 0 ? missingSup : activeSupTypesForFetch(
       familiesToFetch,
       fichePointCache.acquiredFamilies,
@@ -74938,9 +74930,15 @@ Expected function or array of functions, received type ${typeof value2}.`
       { lon, lat, zoom, mode: mode2 },
       [...familiesToFetch],
       supTypesToFetch,
-      mapPointFetchAbort.signal
+      supplementSignal
     );
-    if (!partial || requestId2 !== mapPointRequestSeq) return;
+    if (requestId2 !== mapPointRequestSeq) return;
+    if (!partial) {
+      if (!supplementSignal.aborted) {
+        ficheSupplementError.value = wasLastFicheInfoPanelFetchRateLimited() ? FICHE_RATE_LIMITED_MESSAGE : FICHE_SUPPLEMENT_UNAVAILABLE_MESSAGE;
+      }
+      return;
+    }
     const merged = recordGpuPayloadAcquisition(
       lon,
       lat,
@@ -75021,10 +75019,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     const requestId2 = ++mapPointRequestSeq;
     mapPointFetchAbort == null ? void 0 : mapPointFetchAbort.abort();
     abortInflightFicheInfoFetch({
-      keepBackgroundAt: { lon: params2.lon, lat: params2.lat, zoom: params2.zoom }
+      keepBackgroundAt: { lon: params2.lon, lat: params2.lat }
     });
     mapPointFetchAbort = new AbortController();
     const fetchAbortSignal = mapPointFetchAbort.signal;
+    ficheSupplementError.value = null;
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
     const skipLocationMarker = params2.skipLocationMarker === true;
     const silent = params2.silent === true;
@@ -75090,10 +75089,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
     }
     const missingFamilies = isCatalogDrivenFicheFetchEnabled() && (fichePointCache == null ? void 0 : fichePointCache.mergedGpuPayload) ? missingFicheInfoFamilies(desiredFamilies, fichePointCache.acquiredFamilies) : desiredFamilies;
-    const familiesToFetch = familiesForTerritoryNetworkFetch(
-      missingFamilies.length ? missingFamilies : desiredFamilies,
-      params2.mode
-    );
+    const familiesToFetch = missingFamilies.length ? missingFamilies : desiredFamilies;
     const acquiredFamilies = (fichePointCache == null ? void 0 : fichePointCache.acquiredFamilies) ?? [];
     const supTypesToFetch = activeSupTypesForFetch(
       familiesToFetch,
@@ -75113,13 +75109,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         params2.lon,
         params2.lat,
         params2.mode,
-        ficheServiceUnavailableSelection(loadingTitle, {
-          lon: params2.lon,
-          lat: params2.lat,
-          mode: params2.mode,
-          zoom: params2.zoom,
-          loadingTitle: params2.loadingTitle
-        }),
+        ficheServiceUnavailableSelection(
+          loadingTitle,
+          {
+            lon: params2.lon,
+            lat: params2.lat,
+            mode: params2.mode,
+            zoom: params2.zoom,
+            loadingTitle: params2.loadingTitle
+          },
+          wasLastFicheInfoPanelFetchRateLimited()
+        ),
         markerPlacedAtClick,
         skipLocationMarker,
         silent
@@ -75162,7 +75162,15 @@ Expected function or array of functions, received type ${typeof value2}.`
   function loadFicheForMapPoint(params2) {
     return new Promise((resolve2) => {
       whenGpuClientConfigReady(() => {
-        void loadFicheForMapPointImpl(params2).then(resolve2, () => resolve2(null));
+        void loadFicheForMapPointImpl(params2).then(
+          (selection) => {
+            if (selection && !params2.silent && ficheCatalogSupplementMissing()) {
+              refreshFicheForCatalogVisibility();
+            }
+            resolve2(selection);
+          },
+          () => resolve2(null)
+        );
       });
     });
   }
@@ -117852,8 +117860,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (cql) {
       params2.cql_filter = layerName.split(",").map(() => cql).join(";");
     }
-    const minZoom = layer.minZoomLevel ?? 0;
-    const maxZoom = layer.maxZoomLevel ?? 22;
+    const minZoom = entry.minZoomLevel ?? 0;
+    const maxZoom = entry.maxZoomLevel ?? 22;
     const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
     return new TileLayer({
       source: new TileWMS({
@@ -119002,74 +119010,79 @@ Expected function or array of functions, received type ${typeof value2}.`
     source == null ? void 0 : source.addFeatures(features);
   }
   const _hoisted_1$c = {
-    key: 1,
+    key: 0,
+    class: "ec-fiche-info__error ec-fiche-info__supplement-error",
+    role: "alert"
+  };
+  const _hoisted_2$9 = {
+    key: 2,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_2$9 = { class: "ec-fiche-info__title" };
-  const _hoisted_3$9 = {
-    key: 2,
+  const _hoisted_3$9 = { class: "ec-fiche-info__title" };
+  const _hoisted_4$9 = {
+    key: 3,
     class: "ec-fiche-info__inner ec-fiche-info__inner--parcel"
   };
-  const _hoisted_4$9 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_5$8 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_6$7 = { class: "ec-fiche-info__title" };
-  const _hoisted_7$6 = { class: "fr-tabs ec-fiche-info__tabs" };
-  const _hoisted_8$5 = {
+  const _hoisted_5$8 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_6$7 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_7$6 = { class: "ec-fiche-info__title" };
+  const _hoisted_8$5 = { class: "fr-tabs ec-fiche-info__tabs" };
+  const _hoisted_9$5 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Fiche parcelle"
   };
-  const _hoisted_9$5 = { role: "presentation" };
-  const _hoisted_10$5 = ["aria-selected"];
-  const _hoisted_11$5 = {
+  const _hoisted_10$5 = { role: "presentation" };
+  const _hoisted_11$5 = ["aria-selected"];
+  const _hoisted_12$5 = {
     key: 0,
     role: "presentation"
   };
-  const _hoisted_12$5 = ["aria-selected"];
-  const _hoisted_13$5 = ["tabindex"];
-  const _hoisted_14$3 = {
-    key: 0,
-    class: "ec-fiche-info__load-wrap"
-  };
+  const _hoisted_13$5 = ["aria-selected"];
+  const _hoisted_14$3 = ["tabindex"];
   const _hoisted_15$2 = {
-    key: 2,
-    class: "ec-fiche-info__error"
-  };
-  const _hoisted_16$2 = { class: "ec-fiche-info__infos-toolbar" };
-  const _hoisted_17$2 = ["disabled"];
-  const _hoisted_18$2 = ["tabindex"];
-  const _hoisted_19$1 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
   };
-  const _hoisted_20$1 = {
+  const _hoisted_16$2 = {
     key: 2,
     class: "ec-fiche-info__error"
   };
-  const _hoisted_21$1 = { class: "ec-fiche-info__parcel-footnotes" };
-  const _hoisted_22$1 = {
-    key: 3,
+  const _hoisted_17$2 = { class: "ec-fiche-info__infos-toolbar" };
+  const _hoisted_18$2 = ["disabled"];
+  const _hoisted_19$1 = ["tabindex"];
+  const _hoisted_20$1 = {
+    key: 0,
+    class: "ec-fiche-info__load-wrap"
+  };
+  const _hoisted_21$1 = {
+    key: 2,
+    class: "ec-fiche-info__error"
+  };
+  const _hoisted_22$1 = { class: "ec-fiche-info__parcel-footnotes" };
+  const _hoisted_23$1 = {
+    key: 4,
     class: "ec-fiche-info__inner ec-fiche-info__inner--territory"
   };
-  const _hoisted_23$1 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_24$1 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_25$1 = { class: "ec-fiche-info__territory-head" };
-  const _hoisted_26$1 = { class: "ec-fiche-info__title" };
-  const _hoisted_27 = {
+  const _hoisted_24$1 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_25$1 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_26$1 = { class: "ec-fiche-info__territory-head" };
+  const _hoisted_27 = { class: "ec-fiche-info__title" };
+  const _hoisted_28 = {
     key: 1,
     class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_28 = {
+  const _hoisted_29 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_29 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_30 = {
-    key: 4,
+  const _hoisted_30 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_31 = {
+    key: 5,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_31 = { class: "ec-fiche-info__title" };
+  const _hoisted_32 = { class: "ec-fiche-info__title" };
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -119314,27 +119327,46 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }]),
           onClick: onFicheContentClick
         }, [
+          unref(ficheSupplementError) && !configLoading.value && !dataLoading.value && !isEmpty2.value ? (openBlock(), createElementBlock("p", _hoisted_1$c, [
+            createTextVNode(toDisplayString(unref(ficheSupplementError)) + " ", 1),
+            createBaseVNode("button", {
+              type: "button",
+              class: "fr-btn fr-btn--tertiary fr-btn--sm",
+              title: "Réessayer",
+              "aria-label": "Réessayer",
+              onClick: _cache[0] || (_cache[0] = withModifiers(
+                //@ts-ignore
+                (...args) => unref(refreshFicheForCatalogVisibility) && unref(refreshFicheForCatalogVisibility)(...args),
+                ["stop"]
+              ))
+            }, [..._cache[5] || (_cache[5] = [
+              createBaseVNode("i", {
+                class: "ri-refresh-line",
+                "aria-hidden": "true"
+              }, null, -1)
+            ])])
+          ])) : createCommentVNode("", true),
           configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
-            key: 0,
+            key: 1,
             class: "ec-fiche-info__body",
             html: unref(FICHE_LOADING_SPINNER_HTML),
             "aria-live": "polite",
             "link-target-blank": ""
-          }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_1$c, [
-            createBaseVNode("h2", _hoisted_2$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
+          }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_2$9, [
+            createBaseVNode("h2", _hoisted_3$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
             createVNode(_sfc_main$l, {
               class: "ec-fiche-info__body",
               html: emptyBodyHtml.value,
               "link-target-blank": ""
             }, null, 8, ["html"])
-          ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", _hoisted_3$9, [
-            createBaseVNode("header", _hoisted_4$9, [
-              createBaseVNode("div", _hoisted_5$8, [
+          ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", _hoisted_4$9, [
+            createBaseVNode("header", _hoisted_5$8, [
+              createBaseVNode("div", _hoisted_6$7, [
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link",
                   onClick: withModifiers(activateParcelMode, ["prevent"])
-                }, [..._cache[4] || (_cache[4] = [
+                }, [..._cache[6] || (_cache[6] = [
                   createBaseVNode("span", {
                     class: "ec-fiche-info__mode-tag-icon ec-icon-parcelle",
                     "aria-hidden": "true"
@@ -119347,8 +119379,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 type: "button",
                 class: "ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left",
                 title: "Références cadastrales",
-                onClick: _cache[0] || (_cache[0] = ($event) => cadastreModalOpen.value = true)
-              }, [..._cache[5] || (_cache[5] = [
+                onClick: _cache[1] || (_cache[1] = ($event) => cadastreModalOpen.value = true)
+              }, [..._cache[7] || (_cache[7] = [
                 createBaseVNode("span", {
                   class: "ri-information-line",
                   "aria-hidden": "true"
@@ -119356,7 +119388,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createBaseVNode("span", { class: "visually-hidden" }, "Références cadastrales", -1)
               ])])) : createCommentVNode("", true)
             ]),
-            createBaseVNode("h2", _hoisted_6$7, toDisplayString(parcelLabel.value), 1),
+            createBaseVNode("h2", _hoisted_7$6, toDisplayString(parcelLabel.value), 1),
             ((_b = __props.selection) == null ? void 0 : _b.territoryTitle) ? (openBlock(), createElementBlock("button", {
               key: 0,
               type: "button",
@@ -119364,14 +119396,14 @@ Expected function or array of functions, received type ${typeof value2}.`
               onClick: activateTerritoryMode
             }, [
               createTextVNode(toDisplayString(territoryTitle.value) + " ", 1),
-              _cache[6] || (_cache[6] = createBaseVNode("span", {
+              _cache[8] || (_cache[8] = createBaseVNode("span", {
                 class: "ri-arrow-right-line",
                 "aria-hidden": "true"
               }, null, -1))
             ])) : createCommentVNode("", true),
-            createBaseVNode("div", _hoisted_7$6, [
-              createBaseVNode("ul", _hoisted_8$5, [
-                createBaseVNode("li", _hoisted_9$5, [
+            createBaseVNode("div", _hoisted_8$5, [
+              createBaseVNode("ul", _hoisted_9$5, [
+                createBaseVNode("li", _hoisted_10$5, [
                   createBaseVNode("button", {
                     id: "ec-fiche-parcel-tab-infos",
                     type: "button",
@@ -119379,10 +119411,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "fr-tabs__tab",
                     "aria-selected": activeParcelTab.value === "infos",
                     "aria-controls": "ec-fiche-parcel-panel-infos",
-                    onClick: _cache[1] || (_cache[1] = ($event) => activeParcelTab.value = "infos")
-                  }, " Infos ", 8, _hoisted_10$5)
+                    onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "infos")
+                  }, " Infos ", 8, _hoisted_11$5)
                 ]),
-                showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_11$5, [
+                showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_12$5, [
                   createBaseVNode("button", {
                     id: "ec-fiche-parcel-tab-documents",
                     type: "button",
@@ -119390,8 +119422,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "fr-tabs__tab",
                     "aria-selected": activeParcelTab.value === "documents",
                     "aria-controls": "ec-fiche-parcel-panel-documents",
-                    onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "documents")
-                  }, " Documents ", 8, _hoisted_12$5)
+                    onClick: _cache[3] || (_cache[3] = ($event) => activeParcelTab.value = "documents")
+                  }, " Documents ", 8, _hoisted_13$5)
                 ])) : createCommentVNode("", true)
               ]),
               createBaseVNode("div", {
@@ -119401,7 +119433,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "aria-labelledby": "ec-fiche-parcel-tab-infos",
                 tabindex: activeParcelTab.value === "infos" ? 0 : -1
               }, [
-                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_14$3, [
+                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_15$2, [
                   parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 0,
                     class: "ec-fiche-info__body",
@@ -119413,23 +119445,23 @@ Expected function or array of functions, received type ${typeof value2}.`
                     html: __props.selection.parcelInfosHtml,
                     "link-target-blank": ""
                   }, null, 8, ["html"])) : createCommentVNode("", true),
-                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_15$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_16$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
                 ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                  createBaseVNode("div", _hoisted_16$2, [
-                    _cache[8] || (_cache[8] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
+                  createBaseVNode("div", _hoisted_17$2, [
+                    _cache[10] || (_cache[10] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
                     createBaseVNode("button", {
                       type: "button",
                       class: "fr-btn fr-btn--secondary fr-btn--sm",
                       disabled: !parcelDetailCached.value,
                       title: "Imprimer la fiche parcelle",
                       onClick: printParcelFiche
-                    }, [..._cache[7] || (_cache[7] = [
+                    }, [..._cache[9] || (_cache[9] = [
                       createBaseVNode("span", {
                         class: "ri-printer-line",
                         "aria-hidden": "true"
                       }, null, -1),
                       createTextVNode(" Imprimer ", -1)
-                    ])], 8, _hoisted_17$2)
+                    ])], 8, _hoisted_18$2)
                   ]),
                   createVNode(_sfc_main$l, {
                     class: "ec-fiche-info__body",
@@ -119437,7 +119469,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "link-target-blank": ""
                   }, null, 8, ["html"])
                 ], 64)) : createCommentVNode("", true)
-              ], 10, _hoisted_13$5),
+              ], 10, _hoisted_14$3),
               createBaseVNode("div", {
                 id: "ec-fiche-parcel-panel-documents",
                 class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
@@ -119445,7 +119477,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "aria-labelledby": "ec-fiche-parcel-tab-documents",
                 tabindex: activeParcelTab.value === "documents" ? 0 : -1
               }, [
-                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_19$1, [
+                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_20$1, [
                   parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 0,
                     class: "ec-fiche-info__body",
@@ -119457,30 +119489,30 @@ Expected function or array of functions, received type ${typeof value2}.`
                     html: parcelDocumentsDisplayHtml.value,
                     "link-target-blank": ""
                   }, null, 8, ["html"])) : createCommentVNode("", true),
-                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_20$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_21$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
                 ])) : (openBlock(), createBlock(_sfc_main$l, {
                   key: 1,
                   class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
                   html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>",
                   "link-target-blank": ""
                 }, null, 8, ["html"]))
-              ], 10, _hoisted_18$2)
+              ], 10, _hoisted_19$1)
             ]),
-            createBaseVNode("div", _hoisted_21$1, [
+            createBaseVNode("div", _hoisted_22$1, [
               createVNode(_sfc_main$l, {
                 class: "ec-fiche-info__body",
                 html: parcelPanelFootnotesHtml.value,
                 "link-target-blank": ""
               }, null, 8, ["html"])
             ])
-          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_22$1, [
+          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_23$1, [
             ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e2 = __props.selection) == null ? void 0 : _e2.parcelLabel) ? (openBlock(), createElementBlock("button", {
               key: 0,
               type: "button",
               class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
               onClick: activateParcelMode
             }, [
-              _cache[9] || (_cache[9] = createBaseVNode("span", {
+              _cache[11] || (_cache[11] = createBaseVNode("span", {
                 class: "ri-arrow-left-line",
                 "aria-hidden": "true"
               }, null, -1)),
@@ -119490,13 +119522,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
               ], 64))
             ])) : createCommentVNode("", true),
-            createBaseVNode("header", _hoisted_23$1, [
-              createBaseVNode("div", _hoisted_24$1, [
+            createBaseVNode("header", _hoisted_24$1, [
+              createBaseVNode("div", _hoisted_25$1, [
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
                   onClick: withModifiers(activateTerritoryMode, ["prevent"])
-                }, [..._cache[10] || (_cache[10] = [
+                }, [..._cache[12] || (_cache[12] = [
                   createBaseVNode("span", {
                     class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
                     "aria-hidden": "true"
@@ -119505,14 +119537,14 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ])])
               ])
             ]),
-            createBaseVNode("div", _hoisted_25$1, [
-              createBaseVNode("h2", _hoisted_26$1, toDisplayString(territoryTitle.value), 1),
+            createBaseVNode("div", _hoisted_26$1, [
+              createBaseVNode("h2", _hoisted_27, toDisplayString(territoryTitle.value), 1),
               createBaseVNode("button", {
                 type: "button",
                 class: "fr-btn fr-btn--secondary fr-btn--sm",
                 title: "Imprimer la fiche territoire",
                 onClick: printTerritoryFiche
-              }, [..._cache[11] || (_cache[11] = [
+              }, [..._cache[13] || (_cache[13] = [
                 createBaseVNode("span", {
                   class: "ri-printer-line",
                   "aria-hidden": "true"
@@ -119520,8 +119552,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createTextVNode(" Imprimer ", -1)
               ])])
             ]),
-            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_27, [
-              createBaseVNode("ul", _hoisted_28, [
+            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_28, [
+              createBaseVNode("ul", _hoisted_29, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                   var _a3;
                   return openBlock(), createElementBlock("li", {
@@ -119536,7 +119568,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "aria-selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id,
                       "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
                       onClick: ($event) => selectDocTab(tab.id)
-                    }, toDisplayString(tab.label), 9, _hoisted_29)
+                    }, toDisplayString(tab.label), 9, _hoisted_30)
                   ]);
                 }), 128))
               ]),
@@ -119556,8 +119588,8 @@ Expected function or array of functions, received type ${typeof value2}.`
               html: emptyBodyHtml.value,
               "link-target-blank": ""
             }, null, 8, ["html"]))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_30, [
-            createBaseVNode("h2", _hoisted_31, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
+          ])) : (openBlock(), createElementBlock("div", _hoisted_31, [
+            createBaseVNode("h2", _hoisted_32, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
             createVNode(_sfc_main$l, {
               class: "ec-fiche-info__body",
               html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
@@ -119568,7 +119600,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             createVNode(_sfc_main$d, {
               open: cadastreModalOpen.value,
               references: ((_i2 = __props.selection) == null ? void 0 : _i2.cadastreReferences) ?? null,
-              onClose: _cache[3] || (_cache[3] = ($event) => cadastreModalOpen.value = false)
+              onClose: _cache[4] || (_cache[4] = ($event) => cadastreModalOpen.value = false)
             }, null, 8, ["open", "references"])
           ]))
         ], 2);
@@ -121543,6 +121575,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           refreshFicheForCatalogVisibility();
           scheduleLayerPermalinkSync();
         }
+      );
+      watch(
+        () => computeFicheSupInZoomRange(layerNodesRef.value, mapZoom.value),
+        (inRange, wasInRange) => {
+          setFicheSupInZoomRange(inRange);
+          if (wasInRange !== void 0) refreshFicheForCatalogVisibility();
+        },
+        { immediate: true }
       );
       watch(
         () => layers.value.map((l) => `${l.id}:${l.inStack}:${l.visible}:${l.opacity}:${l.grayscale}`).join("|"),

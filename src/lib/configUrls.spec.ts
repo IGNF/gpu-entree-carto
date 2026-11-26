@@ -31,22 +31,22 @@ describe('resolveConfigUrlsInRecord', () => {
   it('résout les api*Url après canonicalisation du script proxy Vite', () => {
     setGpuClientConfigScriptUrl('http://localhost:5173/__gpu_dev_proxy__/map/gpu-client-config.js')
     const cfg: Record<string, unknown> = {
-      apiFicheInfoUrl: '/api/fiche-info-v2',
+      apiFicheInfoUrl: '/api/fiche-info',
     }
     resolveConfigUrlsInRecord(cfg)
-    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info-v2')
+    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info')
   })
 
   it('résout legendImageDetailDirectory', () => {
     setGpuClientConfigScriptUrl('http://127.0.0.1:8000/js/gpu-client-config.js')
     const cfg: Record<string, unknown> = {
-      apiFicheInfoUrl: '/api/fiche-info-v2',
+      apiFicheInfoUrl: '/api/fiche-info',
       legendImageDetailDirectory: '/build/gpu/images/map_legend/',
     }
     resolveConfigUrlsInRecord(cfg)
     expect(cfg.legendImageDetailDirectory).toBe(
       'http://127.0.0.1:8000/build/gpu/images/map_legend/',
     )
-    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info-v2')
+    expect(cfg.apiFicheInfoUrl).toBe('http://127.0.0.1:8000/api/fiche-info')
   })
 })

@@ -15,8 +15,10 @@ import { FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { gpuClientConfigStatus } from '@/lib/demo/gpuClientConfigState'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
 import {
+  ficheSupplementError,
   loadFicheForMapPoint,
   loadParcelFicheDetail,
+  refreshFicheForCatalogVisibility,
   refreshFicheForMapModeChange,
 } from '@/lib/fiche/ficheInfoService'
 import { resolveParcelIdFromRaw } from '@/lib/fiche/parcelId'
@@ -300,6 +302,23 @@ const parcelPanelFootnotesHtml = computed(() => {
     :class="{ 'ec-fiche-info--territory': showTerritoryLayout }"
     @click="onFicheContentClick"
   >
+    <p
+      v-if="ficheSupplementError && !configLoading && !dataLoading && !isEmpty"
+      class="ec-fiche-info__error ec-fiche-info__supplement-error"
+      role="alert"
+    >
+      {{ ficheSupplementError }}
+      <button
+        type="button"
+        class="fr-btn fr-btn--tertiary fr-btn--sm"
+        title="Réessayer"
+        aria-label="Réessayer"
+        @click.stop="refreshFicheForCatalogVisibility"
+      >
+        <i class="ri-refresh-line" aria-hidden="true"></i>
+      </button>
+    </p>
+
     <SanitizedHtml
       v-if="configLoading || dataLoading"
       class="ec-fiche-info__body"

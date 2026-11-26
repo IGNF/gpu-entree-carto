@@ -104,7 +104,10 @@ export type GpuFicheInfoPayload = {
   notUnforceableByDocument?: Record<string, boolean>
   mecsDu?: Record<string, GpuFichePartition> | GpuFichePartition[]
   mecsScot?: Record<string, GpuFichePartition> | GpuFichePartition[]
-  is_el9_alert?: boolean
+  is_el9_alert?: boolean | null
+  /** `false` : famille non demandée (`activeFamilies`), à compléter si elle devient affichable. */
+  supIncluded?: boolean
+  scotIncluded?: boolean
 }
 
 const TAB_DU = 'du'
