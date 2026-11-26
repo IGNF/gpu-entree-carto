@@ -32,13 +32,13 @@ function tileUrlAtPixelRatio2(layer: TileLayer): URL {
 }
 
 describe('couches WMS GPU et densité d’écran', () => {
-  it('carte : tuiles rendues à la densité de l’écran (hidpi), sinon agrandies et floues', () => {
+  it('carte : tuiles demandées en 512 px, sans DPI agrandi (hidpi désactivé)', () => {
     const url = tileUrlAtPixelRatio2(visibleZoneUrbaLayer())
-    expect(url.searchParams.get('WIDTH')).toBe('1024')
-    expect(url.searchParams.get('FORMAT_OPTIONS')).toBe('dpi:180')
+    expect(url.searchParams.get('WIDTH')).toBe('512')
+    expect(url.searchParams.has('FORMAT_OPTIONS')).toBe(false)
   })
 
-  it('impression : copie de la couche rendue à la densité de l’export', () => {
+  it('impression : copie de la couche redessinée à la densité de l’export (hidpi)', () => {
     const printLayer = cloneLayerForPrint(visibleZoneUrbaLayer()) as TileLayer
     const url = tileUrlAtPixelRatio2(printLayer)
     expect(url.searchParams.get('WIDTH')).toBe('1024')

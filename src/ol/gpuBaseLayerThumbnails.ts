@@ -1,3 +1,5 @@
+import { geopfWmtsMatrixSet } from '@/ol/createGeopfWmtsSource'
+
 /**
  * Tuile d’aperçu — `TileLayerSwitcherControl.settings.tileCoord` (gpu-client).
  * 3e valeur = (tileRow × −1 − 1) ; TILEROW WMTS = −stored − 1.
@@ -49,6 +51,6 @@ export function wmtsPreviewTileUrl(entry: GpuBaseLayerThumbnailWmts): string {
   return (
     `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
     `&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}` +
-    `&TILEMATRIXSET=PM&TILEMATRIX=${matrix}&TILEROW=${row}&TILECOL=${col}`
+    `&TILEMATRIXSET=${geopfWmtsMatrixSet(entry.layer).id}&TILEMATRIX=${matrix}&TILEROW=${row}&TILECOL=${col}`
   )
 }

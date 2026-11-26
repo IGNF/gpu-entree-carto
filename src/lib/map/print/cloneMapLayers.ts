@@ -5,6 +5,10 @@ import type BaseLayer from 'ol/layer/Base'
 import Layer from 'ol/layer/Layer'
 import type Map from 'ol/Map'
 import VectorSource from 'ol/source/Vector'
+import type TileSource from 'ol/source/Tile'
+import TileWMS, { type Options as TileWMSOptions } from 'ol/source/TileWMS'
+import { geopfWmtsPrintSource } from '@/ol/createGeopfWmtsSource'
+import { GPU_WMS_SOURCE_OPTIONS_PROP } from '@/lib/layerConfig/gpuWmsLayers'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
 import { renderSyncIfAttached } from '@/lib/map/print/waitForMapRender'
 import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
@@ -15,9 +19,21 @@ const SEARCH_LAYER_PRINT_Z_INDEX = 1_000_000
 /** Marque la copie de la couche recherche (cerise + emprises) dans l’aperçu. */
 export const PRINT_SEARCH_LAYER_PROP = 'ec-print-search-layer'
 
+/**
+ * Source de la copie d'impression :
+ * - WMS GPU (hidpi désactivé sur la carte) : redessiné net au pixelRatio de l'export ;
+ * - fonds WMTS Géoplateforme : grille 512 px, libellés lisibles une fois imprimés.
+ */
+function printTileSource(layer: TileLayer): TileSource | undefined {
+  const gpuWmsOptions = layer.get(GPU_WMS_SOURCE_OPTIONS_PROP) as TileWMSOptions | undefined
+  if (gpuWmsOptions) return new TileWMS({ ...gpuWmsOptions, hidpi: true })
+  const source = layer.getSource()
+  return geopfWmtsPrintSource(source) ?? source ?? undefined
+}
+
 function cloneTileLayer(layer: TileLayer): TileLayer {
   return new TileLayer({
-    source: layer.getSource() ?? undefined,
+    source: printTileSource(layer),
     visible: layer.getVisible(),
     opacity: layer.getOpacity(),
     zIndex: layer.getZIndex(),

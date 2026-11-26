@@ -19,10 +19,12 @@ Liste verticale de **boutons radio** pour les fonds de plan, avec **vignette** e
 - Une seule sélection (pastille `.ec-base-radio`, tokens DSFR bleu France), alignée au centre de la vignette carrée.
 - Bouton **caret** (`fr-icon-arrow-*-s-line`) à droite du titre : affiche/masque sous-titre + description (HTML dans `description`, rendu via `SanitizedHtml` / DOMPurify).
 - **Titre** (label) en gris foncé ; **sous-titre** et **description** en gris mention (même teinte).
-- Vignettes carrées : empilement de tuiles WMTS (comme gpu-client `TileLayerSwitcher`), coordonnées `[9, 253, -177]`, couches filtrées selon `minResolution` / `maxResolution` au zoom d’aperçu (`gpuBaseLayerThumbnails.ts`). Images `loading="lazy"` / `decoding="async"`.
+- Vignettes carrées : empilement de tuiles WMTS (comme gpu-client `TileLayerSwitcher`), coordonnées `[9, 253, -177]` dans le TileMatrixSet de chaque couche, couches filtrées selon `minResolution` / `maxResolution` au zoom d’aperçu (`gpuBaseLayerThumbnails.ts`). Images `loading="lazy"` / `decoding="async"`.
 
 ## Intégration carte
 
 Le parent crée un `GpuBaseLayerEnvironment` (`createGpuBaseLayerEnvironment`), appelle `setActiveGpuBaseLayer(env, id)` et passe `env.allLayers` à `MapShell` (voir `DemoView.vue`). Une seule instance OpenLayers par couche WMTS / limite (pool `mainLayers`, comme gpu-client).
+
+Sources WMTS (`src/ol/createGeopfWmtsSource.ts`) : tuiles Géoplateforme de 256 px affichées à leur taille nominale, donc au même niveau de tuiles que cartes.gouv.fr à zoom égal (gpu-client agrandit 2× les tuiles du niveau inférieur). Chaque couche utilise le TileMatrixSet déclaré dans les GetCapabilities (`PM_0_19` pour Plan IGN, ortho et PCI Express, `PM_0_20` pour la BD Parcellaire, `PM_6_18` pour noms et routes, `PM_6_16` pour les limites administratives) ; hors de ces niveaux, OpenLayers réutilise le niveau le plus proche. L’aperçu et l’export d’impression utilisent une variante en grille 512 px (`geopfWmtsPrintSource`) pour garder des libellés lisibles sur papier.
 
 Piles de couches par fond : alignées sur gpu-client `createStandardViewer` / `TileLayerSwitcher` (`cadastreLow`/`cadastreHigh`, limites région/département GeoJSON dans `public/json-data/` (`resolveLimitGeoJsonDataRoot` : `BASE_URL` en démo autonome ; gpu-site via `gpu.config.baseUrl` à la racine web, pas sous `/map/`), mixte sans plan IGN). Définition : `src/ol/gpuBaseLayerPresets.ts`, `src/ol/gpuLimitOverlayLayers.ts`.
