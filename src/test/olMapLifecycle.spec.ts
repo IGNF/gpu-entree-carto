@@ -44,6 +44,24 @@ describe('useOlMap', () => {
     expect(exposed!.value).toBeNull()
   })
 
+  it('contraint la vue aux zooms entiers (setZoom, fit)', () => {
+    let exposed: ReturnType<typeof useOlMap>['map'] | null = null
+    const Comp = defineComponent({
+      setup() {
+        const el = ref<HTMLElement | null>(null)
+        exposed = useOlMap({ target: el }).map
+        return () => h('div', { ref: el, style: 'height:100px' })
+      },
+    })
+    const wrapper = mount(Comp, { attachTo: document.body })
+    const view = exposed!.value!.getView()
+    view.setZoom(11.4)
+    expect(view.getZoom()).toBe(11)
+    view.fit([0, 0, 30000, 20000], { size: [512, 512] })
+    expect(Number.isInteger(view.getZoom())).toBe(true)
+    wrapper.unmount()
+  })
+
   it('un enfant peut encore retirer son contrôle pendant son propre démontage', () => {
     const errors: unknown[] = []
     const Child = defineComponent({

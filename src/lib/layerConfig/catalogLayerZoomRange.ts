@@ -32,8 +32,9 @@ export function isHighScaleLegendZoom(zoom: number, threshold: number): boolean 
   return zoom >= t - GPU_WMS_ZOOM_BAND_MARGIN
 }
 
+/** Même règle que les tuiles WMS (`getLayerResolutionRange`) : visible pour `minZoom - 1 < zoom <= maxZoom`. */
 export function isZoomInLayerRange(zoom: number, minZoom: number, maxZoom: number): boolean {
-  return zoom >= minZoom && zoom <= maxZoom
+  return zoom > minZoom - 1 && zoom <= maxZoom
 }
 
 export function effectiveZoomLevelsFromConfig(

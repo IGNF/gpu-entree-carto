@@ -73,6 +73,9 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
         zoom: options.zoom ?? 6,
         minZoom: options.minZoom ?? 5,
         maxZoom: options.maxZoom ?? 19,
+        // zooms entiers (molette, pincement, fit, setZoom) : tuiles WMS 512 px à leur taille nominale,
+        // plages de zoom des couches et seuils SLD alignés (pas de zoom fractionnaire sans couche)
+        constrainResolution: true,
         projection: 'EPSG:3857',
       }),
     })

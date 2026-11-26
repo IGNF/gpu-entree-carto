@@ -58,7 +58,8 @@ export function useMapViewportControls() {
     const view = map.getView()
     const current = view.getZoom()
     if (current == null) return
-    view.animate({ zoom: current + delta, duration: 200 })
+    // animate ne contraint pas la cible : arrondi au zoom entier (clic pendant une animation)
+    view.animate({ zoom: view.getConstrainedZoom(current + delta), duration: 200 })
   }
 
   async function toggleFullscreen() {

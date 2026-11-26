@@ -23,10 +23,12 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Contrôles carte harmonisés (couleurs, mobile, plein écran).
 - Documentation en français uniquement, regroupée dans `doc/`.
 - Mises à jour des dépendances.
+- Carte : zoom par niveaux entiers, comme gpu-client (moins de tuiles chargées).
 
 ### Corrigé
 
 - Couches WMS : héritage des niveaux de zoom du groupe parent.
+- Carte : plus de zonage absent entre les zooms 11 et 11,4 ; catalogue grisé selon l’affichage réel des couches.
 - Fiche info : chargements en double ou bloqués au rechargement et après une recherche.
 - Fiche info : documents et règles SUP / SCoT / MEC affichés à tort ou manquants.
 - Permalink : état des couches du catalogue mal restauré.
