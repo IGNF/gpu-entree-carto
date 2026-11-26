@@ -1,85 +1,82 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](FicheInfoApi.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](FicheInfoApi.fr.md)
+# API fiche info (contrat gpu-site)
 
-# Fiche info API (gpu-site contract)
+Référence client **entree-carto** — les routes sont implémentées côté **gpu-site** (Symfony).
 
-Client reference for **entree-carto** — routes are implemented in **gpu-site** (Symfony).
+## Routes
 
-## Endpoints
+| Route | Usage |
+| ----- | ----- |
+| `GET /api/fiche-info/territoire?lon=&lat=&zoom=` | Fiche territoire (commune / arrondissement) |
+| `GET /api/fiche-info/parcelle?lon=&lat=&zoom=` | Fiche parcelle |
+| `GET /api/fiche-info?lon=&lat=&zoom=` | Réponse combinée (évite deux appels au changement de mode) |
 
-| Route | Use |
-| ----- | --- |
-| `GET /api/fiche-info/territoire?lon=&lat=&zoom=` | Territory fiche (commune / arrondissement) |
-| `GET /api/fiche-info/parcelle?lon=&lat=&zoom=` | Parcel fiche |
-| `GET /api/fiche-info?lon=&lat=&zoom=` | Combined payload (avoids duplicate calls on mode switch) |
+Ces routes remplacent `/api/fiche-info-v2*` ; l’ancienne `/api/fiche-info` (paramètres `mode`, `includeParcel`) n’est plus gérée par entree-carto. Seule l’URL vient de la config : le client ne déduit plus de comportement du chemin.
 
-These routes replace `/api/fiche-info-v2*`; the former `/api/fiche-info` (`mode`, `includeParcel` params) is no longer supported by entree-carto. Only the URL comes from config: the client no longer infers behaviour from the path.
+### Clés de config (`gpu.config`)
 
-### Config keys (`gpu.config`)
-
-| Key | Role |
+| Clé | Rôle |
 | --- | ---- |
-| `apiFicheInfoUrl` | Base URL (combined; `/territoire` and `/parcelle` are derived from it) |
-| `apiFicheInfoTerritoireUrl` | Override territory endpoint |
-| `apiFicheInfoParcelleUrl` | Override parcel endpoint |
-| `apiFicheInfoCombinedUrl` | Override combined endpoint |
-| `apiFicheInfoPreferCombined` | `false` to force split `/territoire` and `/parcelle` calls (default: combined) |
-| `apiFicheInfoCatalogFamilies` | `false` to disable catalog-driven `activeFamilies` filtering (default: `true`) |
+| `apiFicheInfoUrl` | URL de base (combinée ; `/territoire` et `/parcelle` en sont dérivées) |
+| `apiFicheInfoTerritoireUrl` | Surcharge endpoint territoire |
+| `apiFicheInfoParcelleUrl` | Surcharge endpoint parcelle |
+| `apiFicheInfoCombinedUrl` | Surcharge endpoint combiné |
+| `apiFicheInfoPreferCombined` | `false` pour forcer les appels split `/territoire` et `/parcelle` (défaut : combiné) |
+| `apiFicheInfoCatalogFamilies` | `false` pour désactiver le filtrage `activeFamilies` piloté par le catalogue (défaut : `true`) |
 
-Relative paths resolve against the gpu-client-config script host (`configUrls.ts`).
+Les chemins relatifs se résolvent par rapport à l’hôte du script gpu-client-config (`configUrls.ts`).
 
-### Server-side rules
+### Règles serveur
 
-- **Documents (gpu-site)** — three-step pipeline: resolve **parcel + commune** at the click; load **DB** documents for the **commune grid** (DU, PSMV…), **SUP** via **`municipality_sup`** (INSEE → partitions `{idgest}_SUP_{department}_{suptype}`), **SCoT** at the point when the commune grid has no SCoT document, WFS partitions **at the point** when no commune is resolved, and WFS partitions intersecting the **parcel**; **synthesize** by scope (`territoire` = commune catalogue when INSEE is resolved, otherwise point partitions only; `parcelle` = partitions intersecting the parcel only). On **territoire**, a DB document is omitted unless WFS returns urbanism entities at the click for that partition (SUP commune entries via `municipality_sup` still apply). **Lookup cache** (5 min, tags `published_documents`, commune INSEE, parcel id, document grid); on publish/status change, commune tags cleared via grid **descendance** (SCoT / EPCI / department → municipalities).
-- **APICarto** (`cadastre/commune`, `cadastre/parcelle`) must be called **only from gpu-site**, not from the browser.
-- Responses should include stable cache keys: `grid.insee`, parcel cadastre id (`parcelId` or `parcel` properties).
-- Optional client hints: `knownParcelId`, `knownGridInsee` (for server cache / 304 — future).
+- **Documents (gpu-site)** — pipeline en trois temps : résolution **parcelle + commune** au clic ; chargement BDD pour le **maillage communal** (DU, PSMV…), **SUP** via **`municipality_sup`** (INSEE → partitions `{idgest}_SUP_{département}_{suptype}`), **SCoT** au point si la commune n’a pas de maillage SCoT, partitions WFS **au point** si aucune commune, et partitions WFS sur la **parcelle** ; **synthèse** par scope (`territoire` = catalogue communal si INSEE résolu, sinon partitions au point ; `parcelle` = partitions intersectant la parcelle). En **territoire**, un document BDD sans entité d’urbanisme WFS au clic (hors SUP via `municipality_sup`) n’est pas affiché. **Cache lookup** (5 min, tags `published_documents`, INSEE commune, id parcelle, maillage document) ; invalidation à la publication : communes déduites par **descendance** maillage (SCoT / EPCI / département → communes).
+- **APICarto** (`cadastre/commune`, `cadastre/parcelle`) uniquement **côté gpu-site**, jamais depuis le navigateur.
+- Réponses avec clés de cache stables : `grid.insee`, identifiant parcelle (`parcelId` ou propriétés `parcel`).
+- Indices client optionnels : `knownParcelId`, `knownGridInsee` (cache serveur / 304 — évolution).
 
-### Payload slimming (gpu-site)
+### Allègement payload (gpu-site)
 
-Applied on **`/api/fiche-info*`**:
+Appliqué sur **`/api/fiche-info*`** :
 
-| Removed / slimmed | Reason |
-| ----------------- | ------ |
-| `rawFeatures`, `partitions`, `documentPartitions`, `notUnforceableByDocument`, `duLowScale`, `territoryParcelId`, root `features` | Not used by entree-carto fiche |
-| `dus` / … partition `features`, `pets` | Territory UI uses `documents` only; parcel rules use `parcelFiche.features` |
-| `lowScaleDocument` | Omitted when `dus` already has production documents |
-| `parcelFeature` | Omitted when `parcelGeometry` is present |
-| `grid` | Reduced to `name`, `insee`, `is_rnu` |
-| `parcel` | Cadastre fields only (section, numero, insee, id, …) |
-| `deletedGrids[]` | `properties.insee` / `name` / `is_rnu` only |
-| Panel / low-scale **documents** | Whitelist: `id`, `title`, `name`, `originalName`, `type`, `status`, `effectiveStatus`, `legalStatus`, `viewUrl`, `archiveUrl`, `typepsc`, `typeref` |
-| `proceduresByDocument` | Procedure + `procedureType.title`, file `url` / dates only |
-| `parcelFiche` | `{ features }` only (combined / parcelle scope); omitted on `/territoire` |
-| `parcelGeometry` | Omitted on `/territoire` |
+| Retiré / allégé | Motif |
+| --------------- | ----- |
+| `rawFeatures`, `partitions`, `documentPartitions`, `notUnforceableByDocument`, `duLowScale`, `territoryParcelId`, `features` racine | Non utilisés par la fiche entree-carto |
+| `features` et `pets` des partitions `dus` / … | Territoire : tuiles `documents` ; parcelle : `parcelFiche.features` |
+| `lowScaleDocument` | Absent si `dus` a déjà des documents en production |
+| `parcelFeature` | Absent si `parcelGeometry` est présent |
+| `grid` | Réduit à `name`, `insee`, `is_rnu` |
+| `parcel` | Champs cadastre utiles (section, numero, insee, id, …) |
+| `deletedGrids[]` | `properties.insee` / `name` / `is_rnu` seulement |
+| Documents (panneaux / low-scale) | Liste blanche : `id`, `title`, `name`, `originalName`, `type`, `status`, `effectiveStatus`, `legalStatus`, `viewUrl`, `archiveUrl`, `typepsc`, `typeref` |
+| `proceduresByDocument` | Procédure + `procedureType.title`, fichiers (`url`, dates) |
+| `parcelFiche` | `{ features }` seulement (combiné / parcelle) ; absent sur `/territoire` |
+| `parcelGeometry` | Absent sur `/territoire` |
 
-Clients must not rely on fields outside this contract on v2 responses.
+Les clients v2 ne doivent pas compter sur d’autres champs que ce contrat.
 
-## JSON payload (subset)
+## Payload JSON (extrait)
 
-Same shape as today’s `/api/fiche-info` (`GpuFicheInfoPayload`) plus v2 extensions (including map mode emprises: `parcelGeometry`, `gridGeometry`, `parentGridGeometry` for Paris/Lyon/Marseille arrondissements):
+Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2 (emprises carte : `parcelGeometry`, `gridGeometry`, `parentGridGeometry` pour les arrondissements Paris/Lyon/Marseille) :
 
-| Field | Description |
+| Champ | Description |
 | ----- | ----------- |
-| `parcel`, `grid`, `dus`, `psmvs`, `sups`, `scots`, `proceduresByDocument` | Existing gpu-site fiche |
-| `parcelFiche` or `features` | Full parcel urbanism rules + document features (replaces separate `gpu_api_parcel_fiche` when present) |
-| `parcelGeometry`, `gridGeometry` | GeoJSON for map highlight (EPSG:4326) |
-| `parcelId`, `territoryParcelId` | Mode-switch CTAs |
-| Document `id`, `viewUrl`, `legalStatus`, `effectiveStatus` | DSFR tiles + badges |
+| `parcel`, `grid`, `dus`, `psmvs`, `sups`, `scots`, `proceduresByDocument` | Fiche gpu-site existante |
+| `parcelFiche` ou `features` | Règles + documents parcelle (remplace `gpu_api_parcel_fiche` si présent) |
+| `parcelGeometry`, `gridGeometry` | GeoJSON pour surbrillance carte (EPSG:4326) |
+| `parcelId`, `territoryParcelId` | Bascules mode parcelle / territoire |
+| Document : `id`, `viewUrl`, `legalStatus`, `effectiveStatus` | Tuiles DSFR + badges |
 
-## entree-carto behaviour
+## Comportement entree-carto
 
-- No APICarto fallback in the browser.
-- **Map click**: a single `GET` on the combined URL (`scope=both`) fills territory **and** parcel cache at the cherry point; no silent `/parcelle` enrichment in that case.
-- **Catalog**: `activeFamilies[]` always contains `du` (commune, DU and SCoT MECs at the point), `sup` when a SUP layer is checked **and** within its zoom range (not at small scale), `scot` when a SCoT layer is checked; checked SUP sub-layers send `activeSupTypes[]` from `config_layers.json` `supType` (e.g. `AC1`). At the same cherry point, newly checked families or SUP types trigger an incremental fetch (local JSON merge, `ensureFicheCatalogSupplementAtMarker`), as does the SUP layer entering its zoom range. A family flagged `supIncluded` / `scotIncluded` `false` in the response (missing = included) is not considered acquired.
-- **Rate limiting**: gpu-site counts per IP the requests exposing SUPs (fiche with `sup`, parcel fiche). On HTTP 429 the fiche shows « Service temporairement saturé, réessayez. » (with the Retry button), the parcel fiche the same message.
-- **Split** (`apiFicheInfoPreferCombined = false`): per-mode requests; territory still may call `/parcelle` silently for the back-to-parcel CTA metadata.
-- **Parcel — Infos** — zoning, prescriptions, and information rules are shown only when the partition’s document is **in production** in the fiche-info API (same rule as Document tiles).
-- **Per-mode** cache at the cherry point (`ficheInfoService.ts`); repeat click or mode switch at the same point uses cache (no refetch).
-- Previous in-flight `fetch` aborted on the next click (`AbortController`); lightweight `supersede=true` with `client` / `seq` stops stale Symfony work before the main request.
-- Presentation: DSFR horizontal tiles (`ficheDocumentTiles.ts`).
-- **SCoT**: a tile is shown only when the gpu-site document `id` matches the WFS feature `gpu_id` (or `gpu_doc_id`) at the click point (no partition-only fallback).
-- **SCoT not in the database** (map/WFS data only, no `gpu_id`): `approved` true → grey **NON PUBLIÉ** badge, otherwise → grey **ARRÊTÉ** badge (`scotWfsStatus.ts`, same rule as the WMS styles and gpu-client). The tile has no link (the document does not exist) and is shown in parcel **Documents** and in the territory **SCoT** tab (from `parcelFiche.features`). Parcel **Infos** rows get the ` - non publié` / ` - arrêté` suffix and the `SCOT_NOT_PUBLISHED` / `SCOT_PERIMETER` legend picture.
-- **MEC (territory)**: gpu-site also queries WFS layer `mec` against the **commune footprint** (`ign_grid` outline), not only the cherry point — so a SCoT (or DU) MEC overlapping the commune is detected even when the marker is elsewhere on the municipality.
+- Plus de repli APICarto dans le navigateur.
+- **Clic carte** : un seul `GET` sur l’URL combinée (`scope=both`) remplit le cache territoire **et** parcelle au point cerise ; pas d’enrichissement silencieux `/parcelle` dans ce cas.
+- **Catalogue** : `activeFamilies[]` contient toujours `du` (commune, MEC DU et SCoT au point), `sup` si une couche SUP est cochée **et** dans sa plage de zoom (hors petite échelle), `scot` si une couche SCoT est cochée ; les sous-couches SUP cochées (`supType` dans `config_layers.json`) en `activeSupTypes[]` (ex. `AC1`). Au même point cerise, les familles ou types SUP nouvellement cochés déclenchent un complément réseau (fusion JSON locale, `ensureFicheCatalogSupplementAtMarker`), de même que l’entrée de la couche SUP dans sa plage de zoom. Une famille marquée `supIncluded` / `scotIncluded` à `false` dans la réponse (absent = incluse) n’est pas considérée comme acquise.
+- **Limitation de débit** : gpu-site compte par IP les requêtes exposant des SUP (fiche avec `sup`, fiche parcelle). Sur HTTP 429, la fiche affiche « Service temporairement saturé, réessayez. » (avec le bouton Réessayer), la fiche parcelle le même message.
+- **Split** : avec `apiFicheInfoPreferCombined = false`, appels par mode ; en territoire, second appel `/parcelle` (ou cache) pour les métadonnées parcelle du CTA retour.
+- **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
+- Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).
+- Annulation du `fetch` précédent au clic suivant (`AbortController`) ; requête légère `supersede=true` avec `client` / `seq` pour couper le travail Symfony en cours avant le nouvel appel.
+- Présentation : tuiles DSFR horizontales (`ficheDocumentTiles.ts`).
+- **SCoT** : une tuile n’est affichée que si l’`id` document gpu-site correspond au `gpu_id` (ou `gpu_doc_id`) de l’entité WFS au point (plus de seul rapprochement par partition `scot_*`).
+- **SCoT absent de la base** (données carte / WFS uniquement, sans `gpu_id`) : `approved` vrai → badge gris **NON PUBLIÉ**, sinon → badge gris **ARRÊTÉ** (`scotWfsStatus.ts`, même règle que les styles WMS et gpu-client). La tuile n’a pas de lien (le document n’existe pas) ; elle apparaît dans **Documents** (parcelle) et dans l’onglet **SCoT** (territoire, à partir de `parcelFiche.features`). Les lignes **Infos** parcelle reçoivent le suffixe ` - non publié` / ` - arrêté` et le pictogramme de légende `SCOT_NOT_PUBLISHED` / `SCOT_PERIMETER`.
+- **MEC (territoire)** : gpu-site interroge aussi la couche WFS `mec` sur l’**emprise communale** (intersection avec le contour `ign_grid`), pas uniquement au cerise — pour détecter une MEC SCoT (ou DU) qui recouvre la commune sans intersecter le point de localisation.
 
-See also [FicheInfo](./FicheInfo.md).
+Voir aussi [FicheInfo](./FicheInfo.md).

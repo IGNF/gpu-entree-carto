@@ -8,7 +8,7 @@ export const vitePrintWorkerBuildOptions = {
 
 /**
  * Build lib : le repli `new Worker(new URL('./printExport.worker.ts', import.meta.url))` est émis
- * sous le nom fixe du worker embed (réécrit ensuite par `build:print-export-worker`) au lieu d’un
+ * sous le nom fixe du worker embed (réécrit ensuite par `scripts/build-print-export-worker.mjs`) au lieu d’un
  * second fichier haché d’1 Mo. Un seul worker dans la lib : nom fixe sans collision.
  */
 export const vitePrintWorkerLibBuildOptions = {

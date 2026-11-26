@@ -30,12 +30,12 @@ Indépendant de GitHub :
 
 ```bash
 npm run codeql:install      # une fois
-npm run verify:codeql       # src/ (défaut ; make verify)
-npm run verify:codeql:dist  # dist/ — repro alertes GitHub sur bundles (après npm run build)
-npm run verify:codeql:all   # src/ + dist/
+npm run verify:codeql                     # src/ (défaut ; make verify)
+CODEQL_SCOPE=dist npm run verify:codeql   # dist/ — repro alertes GitHub sur bundles (après make build)
+CODEQL_SCOPE=all npm run verify:codeql    # src/ + dist/
 ```
 
-`verify:codeql:dist` analyse surtout les **bundles non minifiés** : l’extracteur JS ignore les fichiers « minified » (`Skipping file … File appears to be minified`), d’où un petit nombre de fichiers (~13) malgré tout `dist/`. Les alertes typiques (code **tiers** bundlé) :
+Le périmètre `dist` analyse surtout les **bundles non minifiés** : l’extracteur JS ignore les fichiers « minified » (`Skipping file … File appears to be minified`), d’où un petit nombre de fichiers (~13) malgré tout `dist/`. Les alertes typiques (code **tiers** bundlé) :
 
 | Règle | Fichier(s) | Origine |
 | ----- | ---------- | ------- |
@@ -43,7 +43,7 @@ npm run verify:codeql:all   # src/ + dist/
 | `js/redos` | `assets/index.es-*.js` (obsolète) | canvg, ex-dépendance jsPDF |
 | `js/double-escaping` | anciens `printExport.worker-*.js` | jsPDF (remplacé par **pdf-lib**) |
 
-Après `npm run build:lib`, exécuter `node scripts/prune-dist-orphans.mjs` (ou `npm run verify:codeql:dist`) pour retirer les chunks hashés non référencés (`emptyOutDir: false`).
+`make build` purge à la fin les chunks hashés non référencés de `dist/assets/` (`emptyOutDir: false`) via `scripts/prune-dist-orphans.mjs`.
 
 Code de sortie **1** = alertes présentes (comportement voulu). Ce n’est pas un échec du script d’installation CodeQL.
 

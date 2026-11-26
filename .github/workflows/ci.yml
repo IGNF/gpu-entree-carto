@@ -16,19 +16,15 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: .nvmrc
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Format check
-        run: npm run format:check
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Lint, format, types
+        run: npm run verify
       - name: Tests
         run: npm run test
-      - name: Build (vérification)
-        run: npm run build:demo
+      - name: Build (démo + bundles)
+        run: npm run build
       - name: Contrôle des bundles (eval, sources .ts)
         run: npm run verify:dist

@@ -21,7 +21,10 @@ describe('groupVueFiles', () => {
       path.join(tmpDir, 'Typed.vue'),
       '<script setup lang="ts">\nexport default {}\n</script>\n',
     )
-    fs.writeFileSync(path.join(tmpDir, 'Plain.vue'), '<script setup>\nexport default {}\n</script>\n')
+    fs.writeFileSync(
+      path.join(tmpDir, 'Plain.vue'),
+      '<script setup>\nexport default {}\n</script>\n',
+    )
 
     const { typeCheckable, nonTypeCheckable } = groupVueFiles(tmpDir)
     expect(typeCheckable).toEqual(['Typed.vue'])

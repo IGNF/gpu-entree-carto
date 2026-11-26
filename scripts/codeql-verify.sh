@@ -8,7 +8,7 @@
 #
 # Exemples :
 #   npm run verify:codeql
-#   npm run verify:codeql:dist
+#   CODEQL_SCOPE=dist npm run verify:codeql
 #   CODEQL_SCOPE=all npm run verify:codeql
 set -euo pipefail
 
@@ -88,7 +88,7 @@ prepare_scope() {
     dist)
       SOURCE_ROOT="${ROOT}/dist"
       if [[ ! -d "${SOURCE_ROOT}" ]]; then
-        echo "CodeQL: dist/ absent — exécutez npm run build avant verify:codeql:dist." >&2
+        echo "CodeQL: dist/ absent — exécutez make build avant CODEQL_SCOPE=dist." >&2
         exit 1
       fi
       echo "CodeQL: périmètre dist/ (CODEQL_SCOPE=dist)."

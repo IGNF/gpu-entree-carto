@@ -1,27 +1,24 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](TileLayerSwitcher.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](TileLayerSwitcher.fr.md)
-
 # TileLayerSwitcher
 
-**Base map** selector as clickable tiles (gpu-client `TileLayerSwitcherControl` equivalent).
+Sélecteur de **fonds de plan** en tuiles cliquables (équivalent `TileLayerSwitcherControl` de gpu-client).
 
-**Source:** `src/components/layers/TileLayerSwitcher.vue`  
-**Used in:** demos / lightweight integrations (tile grid). gpu Catalogue panel uses [BaseLayerRadioList](./BaseLayerRadioList.md).
+**Source :** `src/components/layers/TileLayerSwitcher.vue`  
+**Utilisé dans :** démos / intégrations légères (grille de tuiles). Le panneau Catalogue gpu utilise [BaseLayerRadioList](./BaseLayerRadioList.md).
 
 ## Props
 
 | Prop         | Type                | Description                      |
 | ------------ | ------------------- | -------------------------------- |
-| `presets`    | `BaseLayerPreset[]` | Bases (`createBaseLayerPresets`) |
-| `modelValue` | `BaseLayerId`       | Active base                      |
+| `presets`    | `BaseLayerPreset[]` | Fonds (`createBaseLayerPresets`) |
+| `modelValue` | `BaseLayerId`       | Fond actif                       |
 
-Emits `update:modelValue` and calls `setActiveBaseLayer`.
+Émet `update:modelValue` et appelle `setActiveBaseLayer`.
 
-## Behaviour
+## Comportement
 
-Tile grid (preview + label). Active tile has France blue border.
+Grille de tuiles (aperçu + label). La tuile active est bordée en bleu France.
 
-## Current limits
+## Limites actuelles
 
-- “Plan / Ortho / Blank” bases (`createBaseLayerPresets`) — distinct from 6 gpu bases ([BaseLayerRadioList](./BaseLayerRadioList.md)).
-- CSS previews (no WMTS thumbnails).
+- Fonds « Plan / Ortho / Blanc » (`createBaseLayerPresets`) — distincts des 6 fonds gpu ([BaseLayerRadioList](./BaseLayerRadioList.md)).
+- Aperçus CSS (pas d’imagettes WMTS).

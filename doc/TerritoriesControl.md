@@ -1,48 +1,45 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](TerritoriesControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](TerritoriesControl.fr.md)
-
 # TerritoriesControl
 
-Géoplateforme territory selector (`Territories`) — metropolitan France, overseas departments, etc.
+Sélecteur de territoire Géoplateforme (`Territories`) — France métropolitaine, DOM-TOM, etc.
 
-**Source:** `src/components/map/TerritoriesControl.vue`  
-**Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `territoriesOptions` (`bottom-left`, `view.active`)  
-**Dependency:** `geopf-extensions-openlayers`
+**Source :** `src/components/map/TerritoriesControl.vue`  
+**Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `territoriesOptions` (`bottom-left`, `view.active`)  
+**Dépendance :** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop         | Type                   | Default         | Description                              |
-| ------------ | ---------------------- | --------------- | ---------------------------------------- |
-| `position`   | `GeopfControlPosition` | `'bottom-left'` | geopf position                           |
-| `collapsed`  | `boolean`              | `true`          | Panel collapsed on load                  |
-| `auto`       | `boolean`              | `true`          | Load default territory list              |
-| `viewActive` | `boolean`              | `true`          | Show “Modify territories”                |
+| Prop         | Type                   | Défaut          | Description                                |
+| ------------ | ---------------------- | --------------- | ------------------------------------------ |
+| `position`   | `GeopfControlPosition` | `'bottom-left'` | Position geopf                             |
+| `collapsed`  | `boolean`              | `true`          | Panneau replié au chargement               |
+| `auto`       | `boolean`              | `true`          | Charge la liste par défaut des territoires |
+| `viewActive` | `boolean`              | `true`          | Affiche « Modifier les territoires »       |
 
-## geopf options passed
+## Options geopf passées
 
 - `panel: true`, `title: 'Sélectionner un territoire'`
 - `view: { active, title: 'Modifier les territoires', description: 'Modifier la vue' }`
-- DOM patch after creation:
-  - header title (geopf still hardcodes “Sélecteur de territoires”);
-  - DSFR `<dialog>` accessible name (`aria-labelledby` → header title `#…-title`, else `aria-label`);
-  - close button `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, flush right in header.
+- Patch DOM après création :
+  - titre header (geopf hardcode encore « Sélecteur de territoires ») ;
+  - nom accessible du `<dialog>` DSFR (`aria-labelledby` → `#…-title` sur le titre du header, sinon `aria-label`) ;
+  - bouton fermer `#GPterritoriesPanelClose` + `gpf-btn-icon-close`, collé à droite du header.
 
 ## Placement
 
-Bottom-left, **below** the overview map.
+Bas-gauche, **sous** la minimap.
 
 ## Styles
 
-- Button active state: blue background (`map-controls.css`), not geopf `::after` bar
-- Tooltip: append aligned on button edge
-- Long titles in `.gpf-tile`: reduced font + 3-line clamp
-- Close button `#GPterritoriesPanelClose`: `position: absolute; right` in header
-- **Desktop**: dialog `#gpf-territories-views-container-id` flush right of the panel (`left: 100%`), bottoms aligned; bottom-left panel `max-height: 100cqb`
-- **Mobile** (`ec-map-shell--tab-panels-layout-bottom`): France pictogram in the slot (`--ec-map-control-*`); panels **fixed** (`--ec-mobile-territories-panel-top` / `--ec-mobile-territories-panel-bottom`, `--ec-widget-gap` insets); **in-panel** buttons match desktop geopf/DSFR (`map-controls.css`, `ol.css` neutralisation on dialog buttons — not the 48×48 bar slot style)
-- Widget as containing block (avoids geopf `top: 0` over full map height)
+- État actif du bouton : fond bleu (`map-controls.css`), pas la barre `::after` geopf
+- Infobulle : appendice aligné sur le bord du bouton
+- Titres longs dans `.gpf-tile` : police réduite + clamp 3 lignes
+- Bouton fermer `#GPterritoriesPanelClose` : `position: absolute; right` dans le header
+- **Bureau** : dialog `#gpf-territories-views-container-id` à droite du panneau (`left: 100%`), bas alignés ; panneau bas-gauche `max-height: 100cqb`
+- **Mobile** (`ec-map-shell--tab-panels-layout-bottom`) : picto France dans le slot (`--ec-map-control-*`) ; panneaux en **fixed** (`--ec-mobile-territories-panel-top` / `--ec-mobile-territories-panel-bottom`, marges `--ec-widget-gap`) ; boutons **dans** les panneaux = rendu geopf/DSFR comme au bureau (`map-controls.css`, neutralisation `ol.css` sur les `button` du dialog — hors style barre 48×48 du slot)
+- Widget en containing block (évite le `top: 0` geopf sur toute la hauteur de la carte)
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell`
-- DSFR icon CSS (`utility/icons/icons.min.css`) for `fr-icon-*` pictograms
-- Network for territory thumbnails / icons (Géoplateforme URLs)
+- Enfant de `MapShell`
+- CSS icônes DSFR (`utility/icons/icons.min.css`) pour les pictos `fr-icon-*`
+- Réseau pour vignettes / icônes territoires (URLs Géoplateforme)

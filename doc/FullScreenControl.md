@@ -1,34 +1,31 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](FullScreenControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](FullScreenControl.fr.md)
-
 # FullScreenControl
 
-Géoplateforme full-screen control (`GeoportalFullScreen`).
+Contrôle plein écran Géoplateforme (`GeoportalFullScreen`).
 
-**Source:** `src/components/map/FullScreenControl.vue`  
-**Placement reference:** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `fullscreenOptions: 'bottom-right'`  
-**Dependency:** `geopf-extensions-openlayers`
+**Source :** `src/components/map/FullScreenControl.vue`  
+**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `fullscreenOptions: 'bottom-right'`  
+**Dépendance :** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop       | Type                   | Default          | Description    |
+| Prop       | Type                   | Défaut           | Description    |
 | ---------- | ---------------------- | ---------------- | -------------- |
-| `position` | `GeopfControlPosition` | `'bottom-right'` | geopf position |
+| `position` | `GeopfControlPosition` | `'bottom-right'` | Position geopf |
 
 ## Placement
 
-Bottom-right, above zoom (geopf `prepend` in `bottom-*`).  
-geopf `bottom: 0.5em` offset cancelled in the bottom-right column (`map-controls.css`) to align with the scale bar.
+Bas-droite, au-dessus du zoom (geopf `prepend` en `bottom-*`).  
+Offset geopf `bottom: 0.5em` annulé en colonne bas-droite (`map-controls.css`) pour l’aligner avec l’échelle.
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell`.
-- geopf DSFR CSS loaded in demo / embed.
+- Enfant de `MapShell`.
+- CSS geopf DSFR chargé dans la démo / l’embed.
 
-## Behaviour / CSS
+## Comportement / CSS
 
-- **Fullscreen target**: OpenLayers `source` is `.ec-map-shell` (not `#gpu-map` alone), so the lateral panel / mobile sheet and Vue overlays stay visible in fullscreen.
-- **Mobile**: bottom bar button in `TabPanelsControl` (`useMapViewportControls`) uses the same target; icon toggles `ri-fullscreen-line` / `ri-fullscreen-exit-line`.
-- Icon via `::after` (geopf mask), no Classic sprite or OpenLayers label.
-- `map-controls.css` forces `background-image: none` and hides the inner `<span>` to avoid duplication when the host also loads full DSFR (gpu-site).
-- Button uses `font-size: 0` (hide OL label): tooltip `::before` forces `font-size: 0.75rem` to match zoom / territory controls.
+- **Cible plein écran** : option OpenLayers `source` = `.ec-map-shell` (pas seule `#gpu-map`), pour conserver le panneau latéral / feuille mobile et les overlays Vue dans le shell.
+- **Mobile** : le bouton plein écran de la barre basse (`TabPanelsControl`, `useMapViewportControls`) utilise la même cible ; picto `ri-fullscreen-line` / `ri-fullscreen-exit-line` selon l’état.
+- Picto via `::after` (mask geopf), pas de sprite Classic ni label OpenLayers.
+- `map-controls.css` force `background-image: none` et masque le `<span>` interne pour éviter un doublon sous un hôte qui charge aussi le DSFR complet (gpu-site).
+- Le bouton a `font-size: 0` (cacher le label OL) : l’infobulle `::before` force `font-size: 0.75rem` pour rester à la même taille que zoom / territoire.

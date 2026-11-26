@@ -14,36 +14,36 @@ const assetsDir = path.join(distRoot, 'assets')
 function collectReferencedAssetNames(dir) {
   const names = new Set()
   function walk(current) {
-  let entries
-  try {
-    entries = readdirSync(current, { withFileTypes: true })
-  } catch {
-    return
-  }
-  for (const entry of entries) {
-    const full = path.join(current, entry.name)
-    if (entry.isDirectory()) {
-      walk(full)
-      continue
-    }
-    if (!/\.(js|html|css)$/i.test(entry.name)) continue
-    let text
+    let entries
     try {
-      text = readFileSync(full, 'utf8')
+      entries = readdirSync(current, { withFileTypes: true })
     } catch {
-      continue
+      return
     }
-    for (const match of text.matchAll(/(?:assets\/|\.\/)([A-Za-z0-9_.-]+\.(?:js|css))/g)) {
-      names.add(match[1])
+    for (const entry of entries) {
+      const full = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        walk(full)
+        continue
+      }
+      if (!/\.(js|html|css)$/i.test(entry.name)) continue
+      let text
+      try {
+        text = readFileSync(full, 'utf8')
+      } catch {
+        continue
+      }
+      for (const match of text.matchAll(/(?:assets\/|\.\/)([A-Za-z0-9_.-]+\.(?:js|css))/g)) {
+        names.add(match[1])
+      }
+      // Worker Vite : new URL("printExport.worker-….js", import.meta.url) sans préfixe assets/
+      for (const match of text.matchAll(/printExport\.worker-[A-Za-z0-9_.-]+\.js/g)) {
+        names.add(match[0])
+      }
+      if (text.includes('printExport.worker-embed.js')) {
+        names.add('printExport.worker-embed.js')
+      }
     }
-    // Worker Vite : new URL("printExport.worker-….js", import.meta.url) sans préfixe assets/
-    for (const match of text.matchAll(/printExport\.worker-[A-Za-z0-9_.-]+\.js/g)) {
-      names.add(match[0])
-    }
-    if (text.includes('printExport.worker-embed.js')) {
-      names.add('printExport.worker-embed.js')
-    }
-  }
   }
   walk(dir)
   return names
@@ -70,7 +70,9 @@ function main() {
     removed += 1
     console.log(`supprimé: dist/assets/${name}`)
   }
-  console.log(removed > 0 ? `${removed} artefact(s) obsolète(s) retiré(s).` : 'Aucun artefact obsolète.')
+  console.log(
+    removed > 0 ? `${removed} artefact(s) obsolète(s) retiré(s).` : 'Aucun artefact obsolète.',
+  )
 }
 
 main()

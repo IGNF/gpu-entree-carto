@@ -1,27 +1,24 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](ZoomControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](ZoomControl.fr.md)
-
 # ZoomControl
 
-Géoplateforme zoom control (`GeoportalZoom` via `geopf-extensions-openlayers`).
+Contrôle de zoom Géoplateforme (`GeoportalZoom` via `geopf-extensions-openlayers`).
 
-**Source:** `src/components/map/ZoomControl.vue`  
-**Placement reference:** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `zoomOptions: 'bottom-right'`  
-**Dependency:** `geopf-extensions-openlayers`
+**Source :** `src/components/map/ZoomControl.vue`  
+**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/) — `zoomOptions: 'bottom-right'`  
+**Dépendance :** `geopf-extensions-openlayers`
 
 ## Props
 
-| Prop       | Type                   | Default          | Description    |
+| Prop       | Type                   | Défaut           | Description    |
 | ---------- | ---------------------- | ---------------- | -------------- |
-| `position` | `GeopfControlPosition` | `'bottom-right'` | geopf position |
+| `position` | `GeopfControlPosition` | `'bottom-right'` | Position geopf |
 
 ## Placement
 
-Bottom-right, **below** full screen (column `position-container-bottom-right`, same `bottom` as scale bar).  
-Styles: `src/styles/map-controls.css`.
+Bas-droite, **sous** le plein écran (colonne `position-container-bottom-right`, même `bottom` que l’échelle).  
+Styles : `src/styles/map-controls.css`.
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell` (`olMap` injection).
+- Enfant de `MapShell` (injection `olMap`).
 - OpenLayers ≥ 10.
-- Lifecycle via `useOlControl`.
+- Cycle de vie via `useOlControl`.

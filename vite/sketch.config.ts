@@ -1,0 +1,45 @@
+import { defineConfig } from 'vite'
+import { fileURLToPath, URL } from 'node:url'
+import { libCssAssetFileName, libMinifyEsbuildOptions } from './libBuildOptions'
+import { remixiconExternal } from './remixiconExternal'
+import { stubDsfrIconsCss } from './stubDsfrIconsCss'
+import { isUnsafeXmlContextAlias } from './isUnsafeXmlContextAlias'
+import { MONOLITHIC_IIFE_CHUNK_LIMIT_KB } from './manualChunks'
+
+const minify = process.env.LIB_MINIFY === '1'
+
+/**
+ * Bundle standalone : entree-carto-sketch[.min].js + css/
+ * OpenLayers inclus.
+ */
+export default defineConfig({
+  plugins: [isUnsafeXmlContextAlias(), stubDsfrIconsCss(), remixiconExternal()],
+  esbuild: libMinifyEsbuildOptions(minify),
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('../src', import.meta.url)),
+    },
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(minify ? 'production' : 'development'),
+  },
+  build: {
+    chunkSizeWarningLimit: MONOLITHIC_IIFE_CHUNK_LIMIT_KB,
+    outDir: 'dist',
+    emptyOutDir: false,
+    minify,
+    cssCodeSplit: false,
+    lib: {
+      entry: fileURLToPath(new URL('../src/sketch/index.ts', import.meta.url)),
+      name: 'EntreeCartoSketch',
+      formats: ['iife'],
+      fileName: () => (minify ? 'entree-carto-sketch.min.js' : 'entree-carto-sketch.js'),
+    },
+    rollupOptions: {
+      output: {
+        exports: 'named',
+        assetFileNames: libCssAssetFileName('entree-carto-sketch', minify),
+      },
+    },
+  },
+})

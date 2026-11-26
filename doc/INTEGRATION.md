@@ -1,31 +1,28 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](INTEGRATION.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](INTEGRATION.fr.md)
+# Intégration dans un site tiers (gpu-site)
 
-# Third-party site integration (gpu-site)
-
-Guide to replace **gpu-client** with **entree-carto** in gpu-site (`dsfr` branch).
+Guide pour remplacer **gpu-client** par **entree-carto** dans gpu-site (branche `dsfr`).
 
 ---
 
-## Goal
+## Objectif
 
-gpu-site currently loads gpu-client as a JS library (`window.gpu`) via npm + webpack.  
-entree-carto provides the same global entry **`window.gpu`** and a **`dist/`** folder ready to copy into `public/build/vendor/`.
+gpu-site charge aujourd’hui gpu-client comme bibliothèque JS (`window.gpu`) via npm + webpack.  
+entree-carto fournit le même point d’entrée global **`window.gpu`** et un dossier **`dist/`** prêt à copier dans `public/build/vendor/`.
 
 ---
 
-## `dist/` contents (library)
+## Contenu de `dist/` (bibliothèque)
 
-After `make build-lib`, `make build-location-search`, `make build-search-engine`, `make build-geometry-editor`, and `make build-sketch`:
+Après `make build` :
 
 ```
 dist/
   entree-carto.js / .min.js
-  entree-carto-location-search.js / .min.js   # light home (mountLocationSearch)
-  entree-carto-search-engine.js / .min.js     # home geopf SearchEngine (mountSearchEngine)
-  entree-carto-geometry-editor.js / .min.js   # form mini-map (replaces ol-geometry-editor)
-  entree-carto-sketch.js / .min.js            # standalone sketch (mountSketch / SketchControl)
-  assets/                                     # Remix fonts (woff2), map print worker printExport.worker-*.js, …
+  entree-carto-location-search.js / .min.js   # accueil léger (mountLocationSearch)
+  entree-carto-search-engine.js / .min.js     # accueil SearchEngine geopf (mountSearchEngine)
+  entree-carto-geometry-editor.js / .min.js   # mini-carte formulaires (remplace ol-geometry-editor)
+  entree-carto-sketch.js / .min.js            # croquis standalone (mountSketch / SketchControl)
+  assets/                                     # polices Remix (woff2), worker impression printExport.worker-*.js, …
   css/
     entree-carto.css / .min.css
     entree-carto-location-search.css / .min.css
@@ -34,119 +31,119 @@ dist/
     entree-carto-sketch.css / .min.css
 ```
 
-Per-page CSS detail: [LibCssBundles.md](./LibCssBundles.md) (chunks, webpack SVGO, minimal home).
+Détail des CSS par page : [LibCssBundles.md](./LibCssBundles.md) (chunks, SVGO webpack, accueil minimal).
 
-Vue 3, OpenLayers ≥ 9 and map styles are **bundled** (no site-side OpenLayers v4 for the map).  
-geometry-editor and sketch also embed OpenLayers (standalone bundles).
+Vue 3, OpenLayers ≥ 9 et les styles carte sont **inclus dans le bundle** (plus besoin d’OpenLayers v4 côté site pour la carte).  
+Le geometry-editor et le sketch embarquent aussi OpenLayers (bundles autonomes).
 
 ---
 
-## Exposed API (`window.gpu`)
+## API exposée (`window.gpu`)
 
-| Member                              | Status     | gpu-site usage                                              |
+| Membre                              | Statut     | Usage gpu-site                                              |
 | ----------------------------------- | ---------- | ----------------------------------------------------------- |
-| `gpu.config`                        | Compatible | Enriched by `gpu_client_config.js.twig`                     |
-| `gpu.createStandardViewer(params)`  | Partial    | `/map/` — map + centre if `params.search`                   |
-| `gpu.mountSearchEngine(el, opts)`   | Yes        | Home — same SearchEngine as map → redirect `/map/`          |
-| `gpu.mountLocationSearch(el, opts)` | Fallback   | Home — autocomplete only                                    |
-| `gpu.ParcelViewer`                  | Stub       | `/map/parcel-info/` — map only, no parcel sheet             |
-| `gpu.services.Geocode`              | Partial    | Home — autocomplete (Gp or Géoplateforme fetch)             |
-| `gpu.control.LocateControl`         | Compatible | Home autocomplete filters                                   |
+| `gpu.config`                        | Compatible | Enrichi par `gpu_client_config.js.twig`                     |
+| `gpu.createStandardViewer(params)`  | Partiel    | `/map/` — carte + centrage si `params.search`               |
+| `gpu.mountSearchEngine(el, opts)`   | Oui        | Accueil — même SearchEngine que la carte → redirect `/map/` |
+| `gpu.mountLocationSearch(el, opts)` | Fallback   | Accueil — autocomplete seul                                 |
+| `gpu.ParcelViewer`                  | Stub       | `/map/parcel-info/` — carte seule, pas de fiche parcelle    |
+| `gpu.services.Geocode`              | Partiel    | Accueil — autocomplétion (Gp ou fetch Géoplateforme)        |
+| `gpu.control.LocateControl`         | Compatible | Filtres d’autocomplétion accueil                            |
 
-### Current limits (plan on gpu-site side)
+### Limites actuelles (à prévoir côté gpu-site)
 
-The following pages are **not fully functional** until features are ported from gpu-client:
+Les pages suivantes **ne sont pas totalement fonctionnelles** tant que les fonctionnalités ne sont pas portées depuis gpu-client :
 
-| gpu-site page    | Route                    | Main gaps                                               |
-| ---------------- | ------------------------ | ------------------------------------------------------- |
-| Mapping          | `/map/`                  | Business layers, legend, info sheet, tools, document, search |
-| Parcel sheet     | `/map/parcel-info/{id}/` | Parcel info sheet, parcel legend, dedicated scale       |
-| Home (geoloc)    | `/`                      | OK if `Gp` loaded; no map                               |
+| Page gpu-site    | Route                    | Manques principaux                                               |
+| ---------------- | ------------------------ | ---------------------------------------------------------------- |
+| Cartographie     | `/map/`                  | Couches métier, légende, fiche info, outils, document, recherche |
+| Fiche parcelle   | `/map/parcel-info/{id}/` | Fiche info parcelle, légende parcelle, échelle dédiée            |
+| Accueil (géoloc) | `/`                      | OK si `Gp` chargé ; pas de carte                                 |
 
 ---
 
-## Integration steps in gpu-site
+## Étapes d’intégration dans gpu-site
 
-### 1. npm dependency
+### 1. Dépendance npm
 
-In gpu-site `package.json`, replace gpu-client. Locally (sibling clones):
+Dans `package.json` de gpu-site, remplacer gpu-client. En local (clones voisins) :
 
 ```json
 "entree-carto": "file:../entree-carto"
 ```
 
-In CI / after publishing `main` with up-to-date `dist/`:
+En CI / après publication de `main` avec `dist/` à jour :
 
 ```json
 "entree-carto": "git+https://github.com/IGNF/gpu-entree-carto.git#main"
 ```
 
-Then `npm install` (and `make build-lib` in entree-carto if `file:` dependency).
+Puis `npm install` (et `node scripts/build-bundles.mjs lib` dans entree-carto si dépendance `file:`).
 
-### 2. Webpack — asset copy
+### 2. Webpack — copie des assets
 
-In `webpack.config.js`, replace gpu-client copy:
+Dans `webpack.config.js`, remplacer la copie gpu-client :
 
 ```js
 { from: "node_modules/gpu-client/dist", to: "vendor/gpu-client" },
 ```
 
-with:
+par :
 
 ```js
 { from: "node_modules/entree-carto/dist", to: "vendor/entree-carto" },
 ```
 
-Region/department limit GeoJSON for base maps (`department-fr-geojson.json`, `region-fr-geojson.json`) stay on the gpu-site web root at `public/json-data/` (requested as `/json-data/…`), not inside the entree-carto vendor bundle.
+Les GeoJSON limites région/département des fonds de plan (`department-fr-geojson.json`, `region-fr-geojson.json`) restent à la racine web gpu-site dans `public/json-data/` (requêtes `/json-data/…`), et non dans le bundle vendor entree-carto.
 
-gpu-site usually does **not** copy all of `dist/assets/` (Vite demo artefacts). Copy at least `assets/remixicon*.woff2` and **`assets/printExport.worker*.js`** (including `printExport.worker-embed.js` from the lib build) into `vendor/entree-carto/assets/`: the map bundle loads the worker with a URL **relative** to `entree-carto.min.js`.
+gpu-site ne copie en général **pas** tout `dist/assets/` (artefacts démo Vite). Copier au minimum `assets/remixicon*.woff2` et **`assets/printExport.worker*.js`** (dont `printExport.worker-embed.js`, build lib) vers `vendor/entree-carto/assets/` : le bundle carte charge le worker via une URL **relative** à `entree-carto.min.js`.
 
-### 3. Twig templates — mapping (`templates/map/index.html.twig`)
+### 3. Templates Twig — cartographie (`templates/map/index.html.twig`)
 
-**Remove** (OpenLayers v4 — bundled in entree-carto):
+**Retirer** (OpenLayers v4 — bundlé dans entree-carto) :
 
 ```twig
 <link rel="stylesheet" href="{{ asset('build/gpu/css/ol.css') }}" />
 <script src="{{ asset('build/gpu/js/openlayers/ol.js') }}"></script>
 ```
 
-**Replace** gpu-client with entree-carto:
+**Remplacer** gpu-client par entree-carto :
 
 ```twig
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto.js') }}"></script>
 ```
 
-Keep:
+Conserver :
 
-- `GpServices.js` (home geocoding / Géoplateforme services)
-- `gpu_map_client_config_js` (dynamic config)
-- `cartographie.js` (calls `gpu.createStandardViewer`)
+- `GpServices.js` (géocodage accueil / services Géoplateforme)
+- `gpu_map_client_config_js` (config dynamique)
+- `cartographie.js` (appelle `gpu.createStandardViewer`)
 
-### 4. Parcel sheet template (`templates/map/parcel.html.twig`)
+### 4. Template fiche parcelle (`templates/map/parcel.html.twig`)
 
-Same CSS/JS replacement as above.  
-`parcel.js` unchanged; `ParcelViewer` shows minimal map and logs a warning.
+Même remplacement CSS/JS que ci-dessus.  
+`parcel.js` reste inchangé ; `ParcelViewer` affiche une carte minimale et logue un avertissement.
 
-### 5. Home page (`templates/default/index.html.twig` + banner)
+### 5. Page d’accueil (`templates/default/index.html.twig` + banner)
 
-**geopf SearchEngine** (recommended, same UX as `/map/`):
+**SearchEngine geopf** (recommandé, même UX que `/map/`) :
 
 ```twig
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-search-engine.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-search-engine.min.js') }}"></script>
 ```
 
-**Autocomplete-only fallback** ([LocationSearchWidget](./LocationSearchWidget.md)) — CSS ≈ 1 KB:
+**Fallback autocomplete seul** ([LocationSearchWidget](./LocationSearchWidget.md)) — CSS ≈ 1 Ko :
 
 ```twig
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-location-search.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-location-search.min.js') }}"></script>
 ```
 
-(Site DSFR already loaded; no need for `entree-carto.min.css` on home alone.)
+(DSFR site déjà chargé ; pas besoin de `entree-carto.min.css` sur l’accueil seul.)
 
-**Replace** gazetteer form (`#searchForm` / `callGazetteerService.js`) with the **same** SearchEngine as on the map:
+**Remplacer** le formulaire gazetteer (`#searchForm` / `callGazetteerService.js`) par le **même** SearchEngine que sur la carte :
 
 ```twig
 {# banner_part.html.twig #}
@@ -167,29 +164,28 @@ gpu.mountSearchEngine(document.getElementById('gpu-location-search'), {
 })
 ```
 
-See [mountSearchEngine.md](./mountSearchEngine.md).  
-Light fallback: `gpu.mountLocationSearch` ([LocationSearchWidget.md](./LocationSearchWidget.md)).
+Voir [mountSearchEngine.md](./mountSearchEngine.md).  
+Fallback léger : `gpu.mountLocationSearch` ([LocationSearchWidget.md](./LocationSearchWidget.md)).
 
-### 6. JavaScript config
+### 6. Config JavaScript
 
-`templates/map/gpu_client_config.js.twig` does `Object.assign(gpu.config, { … })`. API endpoints (`apiFicheInfo*`, `apiFeatureInfo*`, `apiDocument*`, etc.) should use Symfony **`path()`** (cache-friendly relative paths), not **`url()`** (absolute host). entree-carto resolves those paths against the gpu-client-config script URL (gpu-site embed or Vite demo via `configScriptUrl`).  
-Optional later rename to `map_config.js.twig`.
+`templates/map/gpu_client_config.js.twig` fait `Object.assign(gpu.config, { … })`. Les endpoints API (`apiFicheInfo*`, `apiFeatureInfo*`, `apiDocument*`, etc.) doivent utiliser Symfony **`path()`** (chemins relatifs cacheables), pas **`url()`** (hôte absolu). entree-carto résout ces chemins par rapport à l’URL du script gpu-client-config (embed gpu-site ou démo Vite via `configScriptUrl`).
 
-### 7. Site CSS
+### 7. CSS site
 
-`assets/css/gpu-map.css` targets `#gpu-map`: entree-carto sets `id="gpu-map"` on the map container to keep height (726 px).
+`assets/css/gpu-map.css` cible `#gpu-map` : entree-carto pose `id="gpu-map"` sur le conteneur carte pour conserver la hauteur (726 px).
 
-Gradually adapt selectors tied to legacy gpu-client controls (`.ol-control`, panels, etc.).
+Adapter au fil de l’eau les sélecteurs liés aux anciens contrôles gpu-client (`.ol-control`, panneaux, etc.).
 
-**Icons:** gpu-site already loads DSFR (`dsfr.min.css` + `utility/utility.min.css`). entree-carto **`dist/css/*.css` no longer embeds `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Keep site utility CSS **before** entree-carto styles. **Remix Icon (`ri-*`):** serve `build/vendor/remixicon/remixicon.css` + `remixicon.woff2` next to the entree-carto bundle (gpu-site template helper), or rely on `ensureEmbedSharedStylesheets()` which resolves `../remixicon/remixicon.css` from the script URL, then falls back to `public/external/` for standalone demos. geopf buttons with `fr-icon-*` used to paint twice (`::before` DSFR + geopf `::after`); neutralised in `map-controls.css`.
+**Icônes :** gpu-site charge déjà le DSFR (`dsfr.min.css` + `utility/utility.min.css`). Les **`dist/css/*.css` n’embarquent plus `icons.min.css`** (audit 4.2 — plugin `stubDsfrIconsCss`). Conserver l’utility DSFR **avant** les styles entree-carto. **Remix Icon (`ri-*`) :** servir `build/vendor/remixicon/remixicon.css` + `remixicon.woff2` à côté du bundle (helper Twig gpu-site), ou laisser `ensureEmbedSharedStylesheets()` résoudre `../remixicon/remixicon.css` depuis l’URL du script, puis repli `public/external/` en démo. Hôte sans utility DSFR : `public/external/dsfr/utility/icons/icons.min.css` ou `ensureEmbedSharedStylesheets()` ([DemoExternal.md](./DemoExternal.md)). Boutons geopf `fr-icon-*` : double picto neutralisé dans `map-controls.css`.
 
-### Webpack — do not re-minify vendor CSS
+### Webpack — ne pas re-minifier le CSS vendeur
 
-entree-carto `*.min.css` files are already minified by Vite. Excluding `vendor/entree-carto/css/` from `CssMinimizerPlugin` avoids **postcss-svgo** warnings (`Parsed entity count exceeds max entity count` on legacy Remix SVG fonts). See [LibCssBundles.md](./LibCssBundles.md).
+Les `*.min.css` entree-carto sont déjà minifiés par Vite. Exclure `vendor/entree-carto/css/` du `CssMinimizerPlugin` évite des avertissements **postcss-svgo** (`Parsed entity count exceeds max entity count` sur d’anciennes polices Remix SVG). Voir [LibCssBundles.md](./LibCssBundles.md).
 
 ---
 
-## Script load order (mapping)
+## Ordre de chargement des scripts (cartographie)
 
 ```html
 <script src="…/geoportal-access-lib/GpServices.js"></script>
@@ -199,65 +195,65 @@ entree-carto `*.min.css` files are already minified by Vite. Excluding `vendor/e
 <script src="…/gpu/js/map/cartographie.js"></script>
 ```
 
-**Do not load** v4 `ol.js` on these pages.
+**Ne plus charger** `ol.js` v4 sur ces pages.
 
 ---
 
-## Build entree-carto before release
+## Build entree-carto avant publication
 
 ```sh
 cd entree-carto
 make install
-make build-lib   # or make build (demo + lib)
+make build       # démo + bundles (ou node scripts/build-bundles.mjs lib)
 ```
 
-Verify `dist/entree-carto.js` and `dist/entree-carto.min.js` exist before tag / merge to `main`.
+Vérifier la présence de `dist/entree-carto.js` et `dist/entree-carto.min.js` avant tag / merge sur `main`.
 
 ---
 
-## Coupled local development
+## Développement local couplé
 
 ```sh
 # Terminal 1 — entree-carto
 cd ../entree-carto && make dev
 
-# Terminal 2 — gpu-site (dsfr branch, after npm link or path integration)
+# Terminal 2 — gpu-site (branche dsfr, après intégration npm link ou path)
 cd ../gpu-site && npm install && npm run watch
 ```
 
-To test without publishing: in gpu-site `package.json`, replace the GitHub dependency with the local repo:
+Pour tester sans publier : dans gpu-site `package.json`, remplacer la dépendance GitHub par le dépôt local :
 
 ```json
 "entree-carto": "file:../entree-carto"
 ```
 
-Then:
+Puis :
 
 ```sh
 cd ../entree-carto && npm run build
 cd ../gpu-site && npm install && npm run watch
 ```
 
-Webpack copies `node_modules/entree-carto/dist/*.min.js` into `build/vendor/entree-carto/`. gpu-site runs `npm run copy:entree-carto-vendor` before `watch` / `build`, watches `node_modules/entree-carto/dist` in watch mode, and uses CopyPlugin `force: true` for those assets. After updating entree-carto: `npm run build` in entree-carto, then `npm install` (or `file:../entree-carto`) and `npm run watch` in gpu-site. Check: `md5sum node_modules/entree-carto/dist/entree-carto.min.js public/build/vendor/entree-carto/entree-carto.min.js`.
+Webpack copie `node_modules/entree-carto/dist/*.min.js` vers `build/vendor/entree-carto/`. gpu-site exécute `npm run copy:entree-carto-vendor` avant `watch` / `build`, surveille `node_modules/entree-carto/dist` en mode watch et force la recopie CopyPlugin (`force: true`). Après mise à jour de entree-carto : `npm run build` dans entree-carto, puis `npm install` (ou lien `file:../entree-carto`) et `npm run watch` dans gpu-site. Contrôle : `md5sum node_modules/entree-carto/dist/entree-carto.min.js public/build/vendor/entree-carto/entree-carto.min.js`.
 
 ---
 
-## Functional roadmap
+## Feuille de route fonctionnelle
 
-- [ ] `createStandardViewer`: WMS/WFS layers, legend, info sheet, tools
-- [x] Home place search → `/map/` (`mountSearchEngine` + `params.search` → `SearchEngineControl.initialSearch`)
-- [ ] Full `ParcelViewer`
-- [x] 4-tab side panel shell (`TabPanelsControl`) + switcher stubs
-- [ ] Wire `layerConfig` / legends from gpu-client-config
-- [ ] GetFeatureInfo → sheet + raw
-- [ ] Avoid double DSFR / `icons` load (site `utility.min.css` + bundle) if needed
-- [x] Duplicate geopf `::after` + DSFR `fr-icon-*` icons (fixed in `map-controls.css`)
-- [ ] gpu-site integration tests (map, parcel, home journeys)
+- [ ] `createStandardViewer` : couches WMS/WFS, légende, fiche info, outils
+- [x] Recherche lieu accueil → `/map/` (`mountSearchEngine` + `params.search` → `SearchEngineControl.initialSearch`)
+- [ ] `ParcelViewer` complet
+- [x] Shell panneau latéral 4 onglets (`TabPanelsControl`) + switchers stubs
+- [ ] Brancher `layerConfig` / légendes depuis gpu-client-config
+- [ ] GetFeatureInfo → fiche + raw
+- [ ] Éviter le double chargement DSFR / `icons` (site `utility.min.css` + bundle) si nécessaire
+- [x] Doublon d’icônes geopf `::after` + DSFR `fr-icon-*` (fixé dans `map-controls.css`)
+- [ ] Tests d’intégration gpu-site (parcours carte, parcelle, accueil)
 
 ---
 
-## See also
+## Voir aussi
 
-- [Project README](../README.md)
-- [Map controls](./README.md)
-- Historical reference: gpu-client
+- [README projet](../README.md)
+- [Contrôles carte](./README.md)
+- Référence historique : gpu-client

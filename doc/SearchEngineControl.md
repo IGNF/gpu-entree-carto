@@ -1,55 +1,52 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](SearchEngineControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](SearchEngineControl.fr.md)
-
 # SearchEngineControl
 
-Full Géoplateforme search bar (`SearchEngineAdvanced`): places, geolocation, advanced search.
+Barre de recherche Géoplateforme complète (`SearchEngineAdvanced`) : lieux, géolocalisation, recherche avancée.
 
-**Source:** `src/components/map/SearchEngineControl.vue`  
-**Reference:** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `SearchEngine.vue` (clone `cartes.gouv.fr-entree-carto`)  
-**Dependency:** `geopf-extensions-openlayers` (`SearchEngineAdvanced`, `InseeAdvancedSearch`, `LocationAdvancedSearch`, `CoordinateAdvancedSearch`, `ParcelAdvancedSearch`)
+**Source :** `src/components/map/SearchEngineControl.vue`  
+**Référence :** [cartes.gouv.fr](https://cartes.gouv.fr/explorer-les-cartes/) — `SearchEngine.vue` (clone `cartes.gouv.fr-entree-carto`)  
+**Dépendance :** `geopf-extensions-openlayers` (`SearchEngineAdvanced`, `InseeAdvancedSearch`, `LocationAdvancedSearch`, `CoordinateAdvancedSearch`, `ParcelAdvancedSearch`)
 
-At build time, `vite.geopfPlugins.ts` applies upstream fixes: `patchGeopfSearchEval` replaces `eval` in `Services/Search.js` with a string assignment (fixed HTTPS service URLs); `patchGeopfPanelManager` skips DOM nodes without a geopf-style id (`GP…-123456`) in `PanelManager.js` when entree-carto controls (e.g. map print) share the same `.position-container-*` slot.
+Au build, `vite/geopfPlugins.ts` applique des correctifs upstream : `patchGeopfSearchEval` remplace l’`eval` de `Services/Search.js` par une affectation de chaîne (URLs HTTPS fixes) ; `patchGeopfPanelManager` ignore dans `PanelManager.js` les nœuds sans id geopf (`GP…-123456`) lorsque des contrôles entree-carto (ex. impression) partagent la même zone `.position-container-*`.
 
 ## Props
 
-| Prop             | Type                           | Default                   | Description                                                                  |
+| Prop             | Type                           | Défaut                    | Description                                                                  |
 | ---------------- | ------------------------------ | ------------------------- | ---------------------------------------------------------------------------- |
-| `placeholder`    | `string`                       | `'Rechercher un lieu...'` | Main field placeholder                                                       |
-| `collapsed`      | `boolean`                      | `false`                   | Bar collapsed on load                                                        |
-| `collapsible`    | `boolean`                      | `false`                   | Allow collapsing                                                             |
-| `serviceBaseUrl` | `string`                       | `'https://data.geopf.fr'` | Geocoding / WFS base URL                                                     |
-| `initialSearch`  | `StandardViewerSearch \| null` | `null`                    | Replay a search (home → map): same geocode as clicking a suggestion          |
+| `placeholder`    | `string`                       | `'Rechercher un lieu...'` | Placeholder du champ principal                                               |
+| `collapsed`      | `boolean`                      | `false`                   | Barre repliée au chargement                                                  |
+| `collapsible`    | `boolean`                      | `false`                   | Autorise le repli                                                            |
+| `serviceBaseUrl` | `string`                       | `'https://data.geopf.fr'` | Base URL géocodage / WFS Géoplateforme                                       |
+| `initialSearch`  | `StandardViewerSearch \| null` | `null`                    | Rejoue une recherche (accueil → carte) : même géocode que le clic suggestion |
 
-## Behaviour
+## Comportement
 
-- IGN autocomplete / geocode (Géoplateforme services)
-- **Advanced** button: INSEE code, places and toponyms, coordinates, cadastral parcels
-- **Locate me** (browser) in autocomplete and advanced panel
-- Markers / popup / extent (`returnTrueGeometry`) handled by geopf
-- Advanced searches receive `searchOptions.serverUrl` (otherwise geopf passes `{}` → `url.split is not a function`)
-- `initialSearch`: prefills the field and calls `baseSearchEngine.search({ location })` → cherry marker, extent, popup (no custom red marker)
-- `initialSearch` with `type: 'geolocate'` (home **Locate me** → `/map`): `createMarker` + TabPanels info tab **without** text geocode (otherwise the service fails on “Ma localisation” and geopf clears the layer → no marker)
-- When [TabPanelsControl](./TabPanelsControl.md) is mounted: opens the info tab **before** the marker, then recentres the view with **right padding** (= panel width) so marker + geopf popup stay visible (otherwise `view.fit` centres under the opaque panel); reattaches the pin if the layer was cleared and enforces a visible pin style
-- Location search with coordinates updates the URL hash **`mlon` / `mlat`** (cherry position) via `setMapPermalinkMarker` — see [MapPermalink](./MapPermalink.md)
-- Fiche tab content after each geopf `search` event (and `initialSearch`): `loadFicheForSearch` via [MapModeSelector](./MapModeSelector.md) mode — parcel or document at result coordinates (`ficheInfoService`, API or APICarto)
-- **Animated** fly-to to the full result **extent** (cherry + `trueGeometry` dashed polygon), `maxZoom: 19` so small linear / narrow features stay framed (previous cap 15 left them tiny on screen) — instant geopf `fit` disabled via `SearchEngineAdvancedAnimated`; extra right padding when the fiche panel is open
-- **Search submit (magnifying glass)** — if the main field still shows the last resolved place label, the autocomplete list is closed, and the map view has moved since that search, clicking submit recentres on the **stored place search extent** (geopf / cherry — not the red mode emprise), then refreshes mode emprise and fiche (`placeSearchSubmitReplay.ts`)
-- **Advanced forms** do not emit geopf `search` by default — `SearchEngineAdvancedAnimated.onAdvancedSearchResult` dispatches it after `addResultToMap` so pin styling, animation, fiche, and `mlon`/`mlat` match autocomplete
-- Fiche load from search (`loadFicheForSearch`) skips `createMarker` (`skipLocationMarker`) so cherry and extent stay visible while fiche-info loads
-- **No geopf map popup** (`SearchEngineAdvancedAnimated._setPopupInfo` + CSS) — details only in the fiche tab
-- Keeps the geopf **place** dashed extent (`trueGeometry`) and animated fly-to; adds the same **mode emprise** as click-info (red parcel; Territoire: red commune, orange arrondissement + city commune in Paris/Lyon/Marseille) without changing the search zoom target
-- Geoloc popup: geopf content format (`<strong>…</strong><br/>…`, no `<p>`) + CSS fix for append (line between bubble and pointer)
-- Off-map home: [mountSearchEngine](./mountSearchEngine.md)
-- Lightweight autocomplete fallback: [LocationSearchWidget](./LocationSearchWidget.md)
+- Autocomplétion / géocode IGN (services Géoplateforme)
+- Bouton **Avancée** : Code INSEE, Lieux et toponymes, Coordonnées, Parcelles cadastrales
+- **Me géolocaliser** (navigateur) dans l’autocomplete et le panneau avancé
+- Marqueurs / popup / emprise (`returnTrueGeometry`) gérés par geopf
+- Les recherches avancées reçoivent `searchOptions.serverUrl` (sinon geopf passe `{}` → `url.split is not a function`)
+- `initialSearch` : préremplit le champ et appelle `baseSearchEngine.search({ location })` → **cerise**, emprise, popup (pas de marqueur rouge custom)
+- `initialSearch` avec `type: 'geolocate'` (accueil **Me géolocaliser** → `/map`) : `createMarker` + fiche TabPanels **sans** géocode texte (sinon le service échoue sur « Ma localisation » et geopf vide la couche → plus de marker)
+- Si un [TabPanelsControl](./TabPanelsControl.md) est monté : ouvre l’onglet fiche **avant** le marker, puis recentre la vue avec un **padding à droite** (= largeur du panneau) pour que marker + popup geopf restent visibles (sinon `view.fit` centre sous le panneau opaque) ; réattache le pin si la couche a été vidée et impose un style pin visible
+- Recherche par localisation avec coordonnées : mise à jour du fragment **`mlon` / `mlat`** (cerise) via `setMapPermalinkMarker` — voir [MapPermalink](./MapPermalink.md)
+- Contenu de l’onglet fiche après chaque événement geopf `search` (et `initialSearch`) : `loadFicheForSearch` selon le mode [MapModeSelector](./MapModeSelector.md) — parcelle ou document aux coordonnées du résultat (`ficheInfoService`, API ou APICarto)
+- Recentrage **animé** sur l’**emprise complète** du résultat (cerise + polygone `trueGeometry` / pointillés), `maxZoom: 19` pour que les petites emprises linéaires (ex. cours d’eau, pont) remplissent mieux l’écran (l’ancien plafond 15 les laissait minuscules) — geopf ne fait plus de `fit` instantané (`SearchEngineAdvancedAnimated`) ; padding à droite si le panneau fiche est ouvert
+- **Bouton Rechercher (loupe)** — si le champ affiche encore le libellé du dernier lieu trouvé, l’autocomplétion est fermée et la vue a bougé depuis cette recherche, un clic sur la loupe recentre l’**emprise mémorisée de la recherche lieu** (geopf / cerise — pas l’emprise rouge du mode), puis met à jour emprise mode et fiche (`placeSearchSubmitReplay.ts`)
+- Les **formulaires avancés** n’émettent pas l’événement geopf `search` — `SearchEngineAdvancedAnimated.onAdvancedSearchResult` le redispatche après `addResultToMap` pour aligner cerise, animation, fiche et `mlon`/`mlat` sur l’autocomplete
+- La fiche depuis la recherche (`loadFicheForSearch`) **ne rappelle pas** `createMarker` (`skipLocationMarker`) afin de conserver cerise et emprise pendant le chargement fiche-info
+- **Pas de popup** geopf sur la carte (`SearchEngineAdvancedAnimated._setPopupInfo` + CSS) — informations dans l’onglet fiche uniquement
+- Conserve l’emprise **lieu** geopf (`trueGeometry`) et le vol animé ; ajoute la même **emprise mode** qu’au clic (parcelle rouge ; Territoire : commune rouge, arrondissement orange + commune ville à Paris/Lyon/Marseille) sans modifier la cible de zoom de la recherche
+- Popup géoloc : contenu au format geopf (`<strong>…</strong><br/>…`, sans `<p>`) + correctif CSS appendice (trait entre bulle et pointe)
+- Accueil hors carte : [mountSearchEngine](./mountSearchEngine.md)
+- Fallback autocomplete seul : [LocationSearchWidget](./LocationSearchWidget.md)
 
 ## Placement
 
-**Top-left** via CSS (`.gpf-widget[id^='GPsearchEngine-Advanced']`), not geopf `position`.  
-When **SketchControl** is mounted: horizontal offset `--ec-search-left-inset` (= sketch column width + gap) to avoid overlap with the toolbar and autocomplete / advanced panels.
+**Haut-gauche** via CSS (`.gpf-widget[id^='GPsearchEngine-Advanced']`), pas via `position` geopf.  
+Si **SketchControl** est monté : décalage horizontal `--ec-search-left-inset` (= largeur colonne croquis + gap) pour éviter le chevauchement avec la barre d’outils et les panneaux autocomplete / avancée.
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell`
-- geopf CSS `Dsfr.css` + `map-controls.css`
-- HTTPS / browser permission for geolocation
+- Enfant de `MapShell`
+- CSS geopf `Dsfr.css` + `map-controls.css`
+- HTTPS / permission navigateur pour la géoloc

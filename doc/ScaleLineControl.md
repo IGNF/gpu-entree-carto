@@ -1,33 +1,30 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](ScaleLineControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](ScaleLineControl.fr.md)
-
 # ScaleLineControl
 
-OpenLayers metric scale bar (`ol/control/ScaleLine`), `ol-scale-line` styling + DSFR background.
+Barre d’échelle métrique OpenLayers (`ol/control/ScaleLine`), style `ol-scale-line` + fond DSFR.
 
-**Source:** `src/components/map/ScaleLineControl.vue`  
-**Placement reference:** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/)  
-(IGNF `ScaleLine.vue`: `right: $widget-panel-x` = 48px + 2×8px)
+**Source :** `src/components/map/ScaleLineControl.vue`  
+**Référence placement :** [cartes.gouv.fr / explorer-les-cartes](https://cartes.gouv.fr/explorer-les-cartes/)  
+(IGNF `ScaleLine.vue` : `right: $widget-panel-x` = 48px + 2×8px)
 
 ## Props
 
-None for now.
+Aucune pour l’instant.
 
-## OpenLayers options
+## Options OpenLayers
 
-| Option     | Value      | Description              |
-| ---------- | ---------- | ------------------------ |
-| `units`    | `'metric'` | Metric units (m / km)    |
-| `minWidth` | `100`      | Same as gpu-client       |
+| Option     | Valeur     | Description               |
+| ---------- | ---------- | ------------------------- |
+| `units`    | `'metric'` | Unités métriques (m / km) |
+| `minWidth` | `100`      | Comme gpu-client          |
 
 ## Placement / style
 
-- Bottom-right: `--ec-scale-line-right` (aligned with `.position-container-bottom-right` + widget column)
-- **Attributions** at the bottom (`bottom: gap`), at the former scale bar horizontal position
-- **Scale bar** above attributions (`--ec-scale-attribution-stack-gap`, 6px)
-- Scale background: `var(--background-default-grey)` (as on cartes.gouv)
+- Bas-droite : `--ec-scale-line-right` (aligné sur `.position-container-bottom-right` + colonne widgets)
+- **Attributions** en bas (`bottom: gap`), à l’emplacement horizontal de l’ancienne échelle
+- **Échelle** au-dessus des attributions (`--ec-scale-attribution-stack-gap`, 6px)
+- Fond échelle : `var(--background-default-grey)` (comme cartes.gouv)
 
-## Dependencies
+## Dépendances
 
-- Child of `MapShell`.
+- Enfant de `MapShell`.
 - `ol/ol.css` + `src/styles/map-controls.css`.

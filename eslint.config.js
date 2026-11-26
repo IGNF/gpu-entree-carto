@@ -11,9 +11,7 @@ import { escapePathForGlob, groupVueFiles } from './eslint/groupVueFiles.mjs'
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
 const eslintLintRoot = path.join(tsconfigRootDir, 'src')
 const vueFiles = groupVueFiles(eslintLintRoot)
-const typeCheckableVueGlobs = vueFiles.typeCheckable.map(
-  (file) => `src/${escapePathForGlob(file)}`,
-)
+const typeCheckableVueGlobs = vueFiles.typeCheckable.map((file) => `src/${escapePathForGlob(file)}`)
 const nonTypeCheckableVueGlobs = vueFiles.nonTypeCheckable.map(
   (file) => `src/${escapePathForGlob(file)}`,
 )
@@ -40,7 +38,7 @@ const typeAwareVueSafetyRules = {
 const skipTypeCheckingConfigs = [
   {
     name: 'entree-carto/skip-type-checking-js',
-    files: ['src/**/*.js', 'src/**/*.jsx', 'src/**/*.cjs', 'src/**/*.mjs'],
+    files: ['**/*.js', '**/*.jsx', '**/*.cjs', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
 ]
@@ -52,9 +50,7 @@ if (nonTypeCheckableVueGlobs.length > 0) {
     ...tseslint.configs.disableTypeChecked,
     rules: {
       ...tseslint.configs.disableTypeChecked.rules,
-      ...Object.fromEntries(
-        additionalRulesRequiringParserServices.map((rule) => [rule, 'off']),
-      ),
+      ...Object.fromEntries(additionalRulesRequiringParserServices.map((rule) => [rule, 'off'])),
     },
   })
 }
@@ -62,7 +58,7 @@ if (nonTypeCheckableVueGlobs.length > 0) {
 const projectServiceConfigs = [
   {
     name: 'entree-carto/project-service-ts',
-    files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.mts'],
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.mts', 'vite/**/*.ts', 'vite.config.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
@@ -147,7 +143,7 @@ export default [
   },
   {
     name: 'entree-carto/vitest-specs',
-    files: ['src/**/*.spec.ts'],
+    files: ['src/**/*.spec.ts', 'vite/**/*.spec.ts'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
     },

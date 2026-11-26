@@ -7,7 +7,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { patchGeopfSearchEval } from '../vite.geopfPlugins'
+import { patchGeopfSearchEval } from './geopfPlugins'
 
 type LoadFn = (id: string) => string | null | undefined
 

@@ -1,58 +1,55 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](MapPermalink.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](MapPermalink.fr.md)
+# Permalink carte (gpu-client)
 
-# Map permalink (gpu-client)
+Fragment d’URL (`#…`) synchronisé avec l’état carte, comme `PermalinkControl` gpu-client. Le mode `mode=1|2` est dans le hash ([MapModeSelector](./MapModeSelector.md)) ; l’ancien `?mode=` en query est lu une fois puis retiré.
 
-URL **fragment** (`#…`) synced with map state, like gpu-client `PermalinkControl`. Map mode `mode=1|2` lives in the hash ([MapModeSelector](./MapModeSelector.md)); legacy `?mode=` in the query is read once then removed.
+**Bibliothèque :** `src/lib/map/mapPermalink.ts`  
+**Composant sync :** `src/components/map/MapPermalinkSync.vue`  
+**Pont couches :** `TabPanelsControl` → `mapPermalinkLayersBridgeRef`
 
-**Library:** `src/lib/map/mapPermalink.ts`  
-**Sync component:** `src/components/map/MapPermalinkSync.vue`  
-**Layer bridge:** `TabPanelsControl` → `mapPermalinkLayersBridgeRef`
+## Paramètres hash
 
-## Hash parameters
-
-| Key | Description |
+| Clé | Description |
 | --- | ----------- |
-| `lon`, `lat` | View center (WGS84), **8 decimal places** max in the hash |
-| `z` | Zoom level (`zoom` read as alias) |
-| `tile` | Base map preset index **1…n** (order of `gpuBasePresets`) |
-| `mlon`, `mlat` | Cherry / fiche query point (WGS84), **8 decimal places** max |
-| `mode` | Parcel / territory (`1` / `2`) |
-| *layer id* | Catalog layer state (see below) |
+| `lon`, `lat` | Centre vue (WGS84), **8 décimales** max dans le hash |
+| `z` | Niveau de zoom (`zoom` accepté en lecture) |
+| `tile` | Index fond de plan **1…n** (ordre `gpuBasePresets`) |
+| `mlon`, `mlat` | Point cerise / fiche (WGS84), **8 décimales** max |
+| `mode` | Parcelle / territoire (`1` / `2`) |
+| *id couche* | État couche catalogue (ci-dessous) |
 
-Updates are **debounced** (300 ms) on `moveend`, on **catalog / data-layer** changes (`TabPanelsControl`), and on **base map** change (`tile`). `mlon`/`mlat` flush immediately when the marker moves.
+Mises à jour **debouncées** (300 ms) sur `moveend`, sur les changements **catalogue / Couches de données** (`TabPanelsControl`) et sur le **fond de plan** (`tile`). `mlon`/`mlat` : flush immédiat au déplacement de la cerise.
 
-Layer keys and values are **percent-encoded** in the hash (`encodeURIComponent`), including commas and `%` in gpu-client ids (e.g. `mec_mec_%_du_%` → `%25`). Legacy unencoded gpu-client hashes are normalized on load so Vue Router can decode the fragment safely.
+Les clés et valeurs de couche sont **encodées** (`encodeURIComponent`), y compris les `,` et `%` des identifiants gpu-client. Les hash legacy non encodés sont **normalisés** au chargement (compatibilité Vue Router).
 
-## Layer keys
+## Clés couche
 
-Last segment of the gpu-client layer path (`pathToPermalinkId`), e.g. `prescription,prescription_psmv021319505199`.
+Dernier segment du chemin gpu-client (`pathToPermalinkId`), ex. `prescription,prescription_psmv021319505199`.
 
-Value: `v:w:x:y:z` (gpu-client)
+Valeur : `v:w:x:y:z` (gpu-client)
 
-| Field | Meaning |
-| ----- | ------- |
-| `v` | Catalog checkbox — `1` checked, `0` unchecked. Missing key → **LAYER_CONFIG** default; `0:…` = explicit unchecked. |
-| `w` | Opacity `0`–`1` (data layers range slider) |
-| `x` | Stack order in data layers (0 = top; drag handle) |
-| `y` | Grayscale — `0` colour, `1` grey |
-| `z` | Layer shown on map — `1` visible, `0` hidden (hide/show button) |
+| Champ | Signification |
+| ----- | ------------- |
+| `v` | Case catalogue — `1` coché, `0` décoché. Clé absente → défaut **LAYER_CONFIG** ; `0:…` = décoché explicite. |
+| `w` | Opacité `0`–`1` (curseur Couches de données) |
+| `x` | Ordre dans la pile (0 = haut ; poignée « Glisser… ») |
+| `y` | Niveaux de gris — `0` couleur, `1` gris |
+| `z` | Affichage carte — `1` visible, `0` masquée (bouton Masquer/Afficher) |
 
-Legacy **4** segments `v:w:x:y` are still read (`y` = grayscale; `z` defaults to `1` when `v=1`).
+Ancien format **4** segments `v:w:x:y` encore lu (`y` = gris ; `z` = `1` si `v=1`).
 
-Example:
+Exemple :
 
 ```text
 #lon=2.35&lat=48.85&z=14&tile=1&mode=2&scot=1:0.8:8:0:1&prescription,prescription_psmv021319505199=1:0.7:2:0:1
 ```
 
-## Restore on load
+## Restauration au chargement
 
-1. View + `tile` from hash  
-2. Layer params via `TabPanelsControl` when `LAYER_CONFIG` is available  
-3. `mlon`/`mlat` → cerise + fiche (unless `skipMarkerRestore` when `initialSearch` is set)
+1. Vue + `tile` depuis le hash  
+2. Couches via `TabPanelsControl` si `LAYER_CONFIG` est disponible  
+3. `mlon`/`mlat` → cerise + fiche (sauf `skipMarkerRestore` si `initialSearch` est défini)
 
-## Integration
+## Intégration
 
 ```vue
 <MapShell>
@@ -60,8 +57,6 @@ Example:
   <MapPermalinkSync :skip-marker-restore="Boolean(initialSearch?.fullText)" />
 </MapShell>
 ```
-
-Provide base presets:
 
 ```typescript
 provideMapPermalinkUi({

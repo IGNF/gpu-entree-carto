@@ -1,69 +1,66 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](LibCssBundles.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](LibCssBundles.fr.md)
+# CSS des bundles bibliothèque (`dist/css/`)
 
-# Library bundle CSS (`dist/css/`)
+Les builds **lib** (intégration gpu-site) produisent un fichier CSS par bundle JS, sur le même modèle que les scripts.
 
-**Lib** builds (gpu-site integration) produce one CSS file per JS bundle, same pattern as scripts.
+## Fichiers
 
-## Files
-
-| CSS | Associated JS | gpu-site usage |
+| CSS | JS associé | Usage gpu-site |
 | --- | --- | --- |
-| `entree-carto.css` / `.min.css` | `entree-carto.js` | Mapping `/map/`, embed `createStandardViewer` |
-| `entree-carto-location-search.css` / `.min.css` | `entree-carto-location-search.js` | **Light** home — `gpu.mountLocationSearch` ([LocationSearchWidget](./LocationSearchWidget.md)) |
-| `entree-carto-search-engine.css` / `.min.css` | `entree-carto-search-engine.js` | Home **geopf SearchEngine** — `gpu.mountSearchEngine` ([mountSearchEngine](./mountSearchEngine.md)) |
-| `entree-carto-geometry-editor.css` / `.min.css` | `entree-carto-geometry-editor.js` | Geometry forms |
-| `entree-carto-sketch.css` / `.min.css` | `entree-carto-sketch.js` | Standalone sketch |
+| `entree-carto.css` / `.min.css` | `entree-carto.js` | Cartographie `/map/`, embed `createStandardViewer` |
+| `entree-carto-location-search.css` / `.min.css` | `entree-carto-location-search.js` | Accueil **léger** — `gpu.mountLocationSearch` ([LocationSearchWidget](./LocationSearchWidget.md)) |
+| `entree-carto-search-engine.css` / `.min.css` | `entree-carto-search-engine.js` | Accueil **SearchEngine geopf** — `gpu.mountSearchEngine` ([mountSearchEngine](./mountSearchEngine.md)) |
+| `entree-carto-geometry-editor.css` / `.min.css` | `entree-carto-geometry-editor.js` | Formulaires géométrie |
+| `entree-carto-sketch.css` / `.min.css` | `entree-carto-sketch.js` | Croquis standalone |
 
-Build: `make build-lib`, `make build-location-search`, `make build-search-engine`, etc. (see [INTEGRATION.md](./INTEGRATION.md)).
+Build : `make build` (tous) ou `node scripts/build-bundles.mjs lib search-engine …` (voir [INTEGRATION.md](./INTEGRATION.md)).
 
-**DSFR icons:** lib CSS bundles do **not** include `@gouvfr/dsfr/dist/utility/icons/icons.min.css` (gpu-site audit 4.2). The host page must load DSFR utility (or `public/external/…` for standalone demos — [DemoExternal.md](./DemoExternal.md)).
+**Icônes DSFR :** les bundles CSS **n’embarquent plus** `@gouvfr/dsfr/dist/utility/icons/icons.min.css` (audit gpu-site 4.2). La page hôte doit charger l’utility DSFR (ou `public/external/…` pour la démo autonome — [DemoExternal.md](./DemoExternal.md)).
 
-## Home — minimal CSS
+## Accueil — CSS minimal
 
-**Autocomplete only** (no geopf SearchEngine):
+**Autocomplete seul** (pas de SearchEngine geopf) :
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-location-search.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-location-search.min.js') }}"></script>
 ```
 
-Site must already load **DSFR** (`dsfr.min.css`): widget reuses `fr-search-bar`, `fr-input`, `fr-label`.
+Le site doit déjà charger le **DSFR** (`dsfr.min.css`) : le widget réutilise `fr-search-bar`, `fr-input`, `fr-label`.
 
-**Full SearchEngine** (home banner = same UX as map):
+**SearchEngine complet** (bandeau accueil = même UX que la carte) :
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto-search-engine.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto-search-engine.min.js') }}"></script>
 ```
 
-Or keep `entree-carto.min.js` (global API) + **only** `entree-carto-search-engine.min.css` (styles removed from `mountSearchEngine` path in main bundle).
+Ou conserver `entree-carto.min.js` (API globale) + **uniquement** `entree-carto-search-engine.min.css` (styles retirés du chemin `mountSearchEngine` dans le bundle principal).
 
-## Map
+## Carte
 
 ```html
 <link rel="stylesheet" href="{{ asset('build/vendor/entree-carto/css/entree-carto.min.css') }}" />
 <script src="{{ asset('build/vendor/entree-carto/entree-carto.min.js') }}"></script>
 ```
 
-**Remix Icon** fonts: referenced as `url(../assets/remixicon-*.woff2)` from `css/` — copy full `dist/` (`css/` and `assets/` folders) to `vendor/entree-carto/`.
+Polices **Remix Icon** : référencées en `url(../assets/remixicon-*.woff2)` depuis `css/` — copier tout `dist/` (dossiers `css/` et `assets/`) dans `vendor/entree-carto/`.
 
-## SVGO errors (gpu-site webpack)
+## Erreurs SVGO (webpack gpu-site)
 
-Symptom on gpu-site `npm run build`:
+Symptôme lors de `npm run build` gpu-site :
 
 ```text
 postcss-svgo: … Parsed entity count exceeds max entity count
 … unicode='&#xEC03;' … remixicon …
 ```
 
-**Cause:** older entree-carto builds embedded Remix **SVG font** as data-URI in CSS (thousands of glyphs). webpack **CssMinimizerPlugin** re-ran SVGO on CSS **already minified** by Vite.
+**Cause :** les anciennes builds entree-carto intégraient la **police SVG** Remix en data-URI dans le CSS (des milliers de glyphes). Le **CssMinimizerPlugin** de webpack relançait SVGO sur ce CSS **déjà minifié** par Vite.
 
-**entree-carto side (fixed):** plugin `vite/remixiconExternal.ts` — no inline SVG font, external woff2 under `dist/assets/`.
+**Côté entree-carto (corrigé) :** plugin `vite/remixiconExternal.ts` — pas de police SVG inline, woff2 externe sous `dist/assets/`.
 
-**gpu-site side (recommended):**
+**Côté gpu-site (recommandé) :**
 
-1. Use delivered **`*.min.css`** in `vendor/entree-carto/css/` **without** passing them through `CssMinimizerPlugin`, e.g.:
+1. Utiliser les fichiers **`*.min.css`** livrés dans `vendor/entree-carto/css/` **sans** les repasser dans `CssMinimizerPlugin`, par ex. :
 
 ```js
 new CssMinimizerPlugin({
@@ -71,7 +68,7 @@ new CssMinimizerPlugin({
 })
 ```
 
-2. Or disable SVGO for those files:
+2. Ou désactiver SVGO pour ces fichiers :
 
 ```js
 new CssMinimizerPlugin({
@@ -82,10 +79,10 @@ new CssMinimizerPlugin({
 })
 ```
 
-3. Update entree-carto vendor after `make build` in repo (CSS ≈ 3 MB map, ≈ 1.6 MB geometry-editor/sketch, ≈ 1 KB location-search).
+3. Mettre à jour le vendeur entree-carto après `make build` dans le dépôt (CSS ≈ 3 Mo carte, ≈ 1,6 Mo geometry-editor/sketch, ≈ 1 Ko location-search).
 
-## Dependencies
+## Dépendances
 
-- [INTEGRATION.md](./INTEGRATION.md) — webpack copy, script order
+- [INTEGRATION.md](./INTEGRATION.md) — copie webpack, ordre des scripts
 - [LocationSearchWidget.md](./LocationSearchWidget.md)
 - [mountSearchEngine.md](./mountSearchEngine.md)

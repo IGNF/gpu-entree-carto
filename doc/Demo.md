@@ -1,67 +1,64 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](Demo.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](Demo.fr.md)
+# Démonstration (Vite)
 
-# Demo (Vite)
-
-Local demo pages (`npm run dev`) to validate controls and the home → map journey.
+Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours accueil → carte.
 
 ## Configuration (`demo-config.js`)
 
-Like gpu-client `exemple-config.js`: edit **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) for `gpu-client-config` URL, document, bbox, API overrides, catalogue layers, etc. — no rebuild. See [DemoConfig.md](./DemoConfig.md).
+Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) pour URL `gpu-client-config`, document, bbox, surcharges API, couches catalogue, etc. — sans rebuild. Voir [DemoConfig.md](./DemoConfig.md).
 
 ## Routes
 
-| Route              | View                     | Role                                                                                                                                                                                                                |
+| Route              | Vue                      | Rôle                                                                                                                                                                                                                |
 | ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                | `HomeView.vue`           | gpu-site-style home (`GpuHomeBanner`: title, CONSULTER badge, DSFR decor); location widget or `mountSearchEngine` per `home.searchWidget` → `/map` (SPA handoff). If `useMinimified: true`: `dist/` bundles instead of Vite imports. |
-| `/map`             | `DemoView.vue`           | Full-frame map + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md); centre via in-memory handoff; temporary **Notif test** button ([Notivue](./Notifications.md)). If `useMinimified: true`: `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
-| `/geometry-editor` | `GeometryEditorView.vue` | Standalone [GeometryEditor](./GeometryEditor.md) demo (`EntreeCartoGeometryEditor` if `useMinimified`)                                                                                                                                                               |
-| `/sketch`          | `SketchDemoView.vue`     | [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` demo if `useMinimified` (options panel + map)                                                                                                                    |
+| `/`                | `HomeView.vue`           | Accueil type gpu-site (`GpuHomeBanner` : titre, badge CONSULTER, décor DSFR) ; widget localisation ou `mountSearchEngine` selon `home.searchWidget` → `/map` (handoff SPA). Si `useMinimified: true` : bundles `dist/` au lieu des imports Vite. |
+| `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)). Si `useMinimified: true` : `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
+| `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone (`EntreeCartoGeometryEditor` si `useMinimified`)                                                                                                                                                               |
+| `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` si `useMinimified` (encart options + carte)                                                                                                                    |
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR, same pattern as gpu-site): **Home**, **Map**, **Geometries**, **Sketch** links. From the **`lg`** breakpoint downward, the bar is hidden behind the header **Menu** button (`fr-btn--menu`); navigation opens in the `fr-header__menu fr-modal` overlay. DSFR JavaScript runs in **Vue** mode (`window.dsfr` in `index.html`, `startDsfrForVueApp()` after `app.mount` in `main.ts`).
+`DemoHeader.vue` (DSFR, même schéma que gpu-site) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**. En dessous du breakpoint **`lg`**, la barre est masquée ; le bouton **Menu** (`fr-btn--menu`) ouvre la navigation dans la modale `fr-header__menu fr-modal`. Le JavaScript DSFR tourne en mode **Vue** (`window.dsfr` dans `index.html`, `startDsfrForVueApp()` après `app.mount` dans `main.ts`).
 
-## Location flow
+## Flux localisation
 
-1. Validated search on `/` (`LocationSearchWidget` or `mountSearchEngine` per `demo-config`)
-2. `prepareLocationHandoff` (`{ search, mapMode }` in memory; `mapMode` from geopf place kind and layer e.g. `StreetAddress` → parcel) + `router.push({ name: 'map' })` — **no** query, POST, or `sessionStorage`
-3. `DemoView` reads `takeLocationHandoff()` → `provideMapMode` + `SearchEngineControl.initialSearch` (`search`; permalink mode still wins)
+1. Recherche validée sur `/` (`LocationSearchWidget` ou `mountSearchEngine` selon `demo-config`)
+2. `prepareLocationHandoff` (`{ search, mapMode }` en mémoire ; `mapMode` dérivé du sous-type lieu et de la couche geopf, ex. `StreetAddress` → parcelle) + `router.push({ name: 'map' })` — **pas** de query, POST ni `sessionStorage`
+3. `DemoView` lit `takeLocationHandoff()` → `provideMapMode` + `SearchEngineControl.initialSearch` (`search` ; le mode permalink reste prioritaire)
 
-On **gpu-site** (separate pages): `mode: 'redirect'` + POST form (`municipality`, `position_x`, …) then server injection of `params.search`.
+Sur **gpu-site** (pages distinctes) : `mode: 'redirect'` + formulaire POST (`municipality`, `position_x`, …) puis injection serveur de `params.search`.
 
 ## GitHub Pages
 
-Demo published by workflow `pages.yml` (default branch):
+La démo est publiée par le workflow `pages.yml` (branche par défaut) :
 
-1. `npm run build:demo:pages` (`base` from `GITHUB_REPOSITORY`, `configScriptUrl` → prod GPU)
-2. Artifact `public/` (+ `404.html` = `index.html` for SPA routing)
+1. `npm run build:demo:pages` (`base` dérivé de `GITHUB_REPOSITORY`, `configScriptUrl` → prod GPU)
+2. Artefact `public/` (+ `404.html` = `index.html` pour le routage SPA)
 
-After green workflow: **Settings → Pages** (source _GitHub Actions_), URL typically
-`https://ignf.github.io/entree-carto/`. Admin boundary GeoJSON served under
-`{BASE_URL}json-data/` (not at domain root `ignf.github.io/json-data/…` on GitHub Pages; gpu-site serves the same paths from `public/json-data/`).
+Après le workflow vert : **Settings → Pages** (source _GitHub Actions_), URL typiquement du type
+`https://ignf.github.io/entree-carto/`. Les GeoJSON limites admin sont servis sous
+`{BASE_URL}json-data/` (pas à la racine du domaine `ignf.github.io/json-data/…` sur GitHub Pages ; gpu-site sert les mêmes chemins depuis `public/json-data/`).
 
-Locally, simulate GitHub Pages (same `base` at **build** and **preview**):
+En local, simuler GitHub Pages (même `base` au **build** et au **preview**) :
 
 ```bash
 npm run serve:pages
 ```
 
-Then open the URL shown by Vite (e.g. `http://localhost:4173/gpu-entree-carto/`), not root `http://localhost:4173/`.
+Puis ouvrir l’URL affichée par Vite (ex. `http://localhost:4173/gpu-entree-carto/`), pas la racine `http://localhost:4173/`.
 
-Manual equivalent (adapt `GITHUB_REPOSITORY` to repo):
+Équivalent manuel (adapter `GITHUB_REPOSITORY` au dépôt) :
 
 ```bash
-GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run build:demo
-GITHUB_REPOSITORY=ignf/gpu-entree-carto npm run preview
+GITHUB_REPOSITORY=ignf/gpu-entree-carto npx vite build
+GITHUB_REPOSITORY=ignf/gpu-entree-carto npx vite preview
 ```
 
-If Pages build used `GITHUB_REPOSITORY` but `npm run preview` runs without it, assets return HTML → MIME errors in console.
+Si le build Pages a été fait avec `GITHUB_REPOSITORY` mais `vite preview` sans, les assets renvoient du HTML → erreurs MIME en console.
 
-### Local build (`make build`)
+### Build local (`make build`)
 
-`vite` uses `base: './'` (relative paths) to serve demo via **`npm run preview`**.
+`vite` utilise `base: './'` (chemins relatifs) pour servir la démo via **`make preview`**.
 
-**Do not** open `dist/index.html` as `file://`: Firefox and Chrome **block ES modules** (`type="module"`) on local files — CORS / “disallowed URI” errors even with correct `./assets/` paths. A help page shows if you try anyway.
+**Ne pas** ouvrir `dist/index.html` en `file://` : Firefox et Chrome **bloquent les modules ES** (`type="module"`) en local fichier — erreurs CORS / « URI non autorisée », même avec des chemins `./assets/` corrects. Une page d’aide s’affiche si vous essayez quand même.
 
-After `make build`: **`npm run preview`** then `http://localhost:4173/`.
+Après `make build` : **`make preview`** puis `http://localhost:4173/`.

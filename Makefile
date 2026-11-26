@@ -1,4 +1,4 @@
-.PHONY: install dev dev-polling build build-lib build-location-search build-search-engine build-demo build-geometry-editor build-sketch test preview preview-pages typecheck verify fix
+.PHONY: install dev build preview test verify fix
 
 install:
 	npm install
@@ -6,43 +6,16 @@ install:
 dev:
 	npm run dev
 
-dev-polling:
-	npm run dev:polling
-
 build:
 	npm run build
-	@echo "→ Prévisualiser : make preview (ne pas ouvrir dist/index.html en file://)"
 
-build-lib:
-	npm run build:lib
-
-build-location-search:
-	npm run build:location-search
-
-build-search-engine:
-	npm run build:search-engine
-
-build-demo:
-	npm run build:demo
-
-build-geometry-editor:
-	npm run build:geometry-editor
-
-build-sketch:
-	npm run build:sketch
+preview:
+	npx vite preview
 
 test:
 	npm run test
 
-preview:
-	npm run preview
-
-preview-pages:
-	npm run serve:pages
-
-typecheck:
-	npm run typecheck
-
+# Lint + format + types, puis CodeQL local (SKIP_CODEQL=1 pour l’ignorer)
 verify:
 	npm run verify
 	npm run verify:codeql

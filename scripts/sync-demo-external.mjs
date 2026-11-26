@@ -40,7 +40,9 @@ function syncRemixCss() {
 /** Évite les 404 / erreurs DevTools : pas de .map copiés dans public/external. */
 function stripSourceMapComment(filePath) {
   let source = readFileSync(filePath, 'utf8')
-  const next = source.replace(/\n?\/\/# sourceMappingURL=.*$/m, '').replace(/\n?\/\*# sourceMappingURL=.*?\*\/\s*$/m, '')
+  const next = source
+    .replace(/\n?\/\/# sourceMappingURL=.*$/m, '')
+    .replace(/\n?\/\*# sourceMappingURL=.*?\*\/\s*$/m, '')
   if (next !== source) writeFileSync(filePath, next)
 }
 

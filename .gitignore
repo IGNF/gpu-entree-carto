@@ -5,6 +5,8 @@ _local/
 node_modules/
 
 # Build
+# Assets démo copiés depuis node_modules (scripts/sync-demo-external.mjs)
+public/external/
 *.local
 
 # Logs / cache

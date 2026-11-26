@@ -1,35 +1,32 @@
-[![en](https://img.shields.io/badge/lang-en-red.svg)](ClickInfoControl.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](ClickInfoControl.fr.md)
-
 # ClickInfoControl
 
-Always-on map click that fills the **fiche** tab (first lateral panel tab) with parcel or urban-planning document information, depending on [MapModeSelector](./MapModeSelector.md) (`mode=1` parcel, `mode=2` territory).
+Clic carte **permanent** qui remplit l’onglet **fiche** (premier onglet du panneau latéral) avec des informations parcelle ou document d’urbanisme, selon le [MapModeSelector](./MapModeSelector.md) (`mode=1` parcelle, `mode=2` territoire).
 
-**Source:** `src/components/map/ClickInfoControl.vue`  
-**Service:** `src/lib/fiche/ficheInfoService.ts`  
-**Target spec (Territory / Parcel modes, APIs, backlog):** [FicheInfo.md](./FicheInfo.md)  
-**Styles:** `src/styles/click-info.css`  
-**Sketch gate:** `src/composables/sketchToolEngaged.ts` (set from `SketchControl`)
+**Source :** `src/components/map/ClickInfoControl.vue`  
+**Service :** `src/lib/fiche/ficheInfoService.ts`  
+**Spécification cible (Territoire / Parcelle, APIs, backlog) :** [FicheInfo.md](./FicheInfo.md)  
+**Styles :** `src/styles/click-info.css`  
+**Verrou croquis :** `src/composables/sketchToolEngaged.ts` (mis à jour par `SketchControl`)
 
-## Behaviour
+## Comportement
 
-- Listens to OpenLayers `singleclick` on the injected map (`olMap`).
-- **Disabled** while a sketch tool is active (draw, modify, remove, measure, text, etc.).
-- Ignores clicks on UI (tab panels, search widget, mode selector, sketch bar, form controls) and hits on sketch/measure vector layers.
-- Calls `loadFicheForMapPoint({ lon, lat, mode, zoom })`:
-  - **Territory:** only `config.apiFicheInfoUrl` (from gpu-client-config); if missing or request fails → “Indisponibilité du service” (no APICarto `gpu/document`); gpu-site JSON fills the fiche: municipality title, then tabs per document type (DU, PSMV, SUP, SCoT) plus an “Procédures en cours” tab when applicable;
-  - **Parcel:** gpu-site API only (`apiFicheInfoUrl` / v2 parcel endpoint); no browser APICarto fallback; unavailability message when the API is missing or fails.
-- Opens the fiche tab via `tabPanelsApiRef.showSelection`.
-- Places the geopf **cherry** on `singleclick` (no map popup — fiche in the side panel), then loads the fiche **asynchronously**; **no map recentering**.
-- Draws a **mode emprise** on the SearchEngine layer (`searchResultGraphics`) from **fiche-info v2** fields **`parcelGeometry` / `gridGeometry` / `parentGridGeometry`** (gpu-site): **parcel** (red) in **Parcelle** mode; **municipality** (red) in **Territoire** mode, plus **arrondissement** (orange) and **city-wide municipality** (red) in Paris, Lyon, and Marseille; at all zoom levels; no geopf place extent on click; **no APICarto or geo.api calls from the browser**.
+- Écoute `singleclick` OpenLayers sur la carte injectée (`olMap`).
+- **Désactivé** tant qu’un outil croquis est actif (dessin, modification, suppression, mesure, texte, etc.).
+- Ignore les clics sur l’UI (panneaux, recherche, sélecteur de mode, barre croquis, champs de formulaire) et les pixels touchant les couches vectorielles croquis / mesure.
+- Appelle `loadFicheForMapPoint({ lon, lat, mode, zoom })` :
+  - **Territoire** : uniquement `config.apiFicheInfoUrl` (fourni par gpu-client-config) ; sans URL ou en cas d’échec → « Indisponibilité du service » (pas d’appel APICarto `gpu/document`) ; la réponse JSON gpu-site alimente la fiche : titre commune, puis onglets par type de document (DU, PSMV, SUP, SCoT) et onglet « Procédures en cours » si applicable ;
+  - **Parcelle** : uniquement l’API gpu-site (`apiFicheInfoUrl` / v2 parcelle) ; plus d’appel APICarto depuis le navigateur ; message d’indisponibilité si l’API est absente ou en échec.
+- Ouvre l’onglet fiche via `tabPanelsApiRef.showSelection`.
+- Pose la **cerise** geopf dès le `singleclick` (sans bulle popup — fiche dans le panneau), puis charge la fiche en **asynchrone** ; **sans recentrer** la vue.
+- Affiche une **emprise mode** sur la couche SearchEngine (`searchResultGraphics`) : géométries **`parcelGeometry` / `gridGeometry` / `parentGridGeometry`** renvoyées par **fiche-info v2** (gpu-site) ; **parcelle** (rouge) en mode **Parcelle** ; **commune** (rouge) en mode **Territoire**, et **arrondissement** (orange) + **commune ville** (rouge) à Paris, Lyon et Marseille ; indépendant du niveau de zoom ; pas d’emprise « lieu » geopf au clic ; **aucun appel APICarto / geo.api depuis le navigateur**.
 
-## Cursor
+## Curseur
 
-When click-info is active and sketch tools are idle, adds `ec-map-shell--click-info` on `.ec-map-shell`. CSS sets a composite pointer + “i” cursor on the map viewport (Remix-inspired glyph).
+Quand le clic info est actif et les croquis inactifs, ajoute `ec-map-shell--click-info` sur `.ec-map-shell`. Le CSS applique un curseur composite pointeur + « i » sur le viewport carte (glyph inspiré Remix).
 
-## Integration
+## Intégration
 
-Mount as a sibling of other map controls under `MapShell` (after `provideMapMode()`):
+À monter en frère des autres contrôles sous `MapShell` (après `provideMapMode()`) :
 
 ```vue
 <script setup lang="ts">
@@ -48,9 +45,9 @@ import '@/styles/click-info.css'
 </template>
 ```
 
-No props. Requires `provideMapMode()` on the same view for mode-aware fiche content.
+Sans props. Nécessite `provideMapMode()` sur la même vue pour une fiche adaptée au mode.
 
-## Related
+## Voir aussi
 
-- [SearchEngineControl](./SearchEngineControl.md) — also fills the fiche tab after a location search (`loadFicheForSearch`).
-- [TabPanelsControl](./TabPanelsControl.md) — fiche tab (index 0).
+- [SearchEngineControl](./SearchEngineControl.md) — remplit aussi la fiche après une recherche (`loadFicheForSearch`).
+- [TabPanelsControl](./TabPanelsControl.md) — onglet fiche (index 0).
