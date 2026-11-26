@@ -11353,6 +11353,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const DEVICE_PIXEL_RATIO = typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1;
   const WORKER_OFFSCREEN_CANVAS = typeof WorkerGlobalScope !== "undefined" && typeof OffscreenCanvas !== "undefined" && self instanceof WorkerGlobalScope;
   const IMAGE_DECODE = typeof Image !== "undefined" && Image.prototype.decode;
+  const CREATE_IMAGE_BITMAP = typeof createImageBitmap === "function";
   const PASSIVE_EVENT_LISTENERS = (function() {
     let passive = false;
     try {
@@ -23175,8 +23176,115 @@ Expected function or array of functions, received type ${typeof value2}.`
     IDLE: 0,
     LOADING: 1,
     LOADED: 2,
-    ERROR: 3
+    ERROR: 3,
+    EMPTY: 4
   };
+  class ImageWrapper extends Target {
+    /**
+     * @param {import("./extent.js").Extent} extent Extent.
+     * @param {number|Array<number>|undefined} resolution Resolution. If provided as array, x and y
+     * resolution will be assumed.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {import("./ImageState.js").default|Loader} stateOrLoader State.
+     */
+    constructor(extent, resolution, pixelRatio, stateOrLoader) {
+      super();
+      this.extent = extent;
+      this.pixelRatio_ = pixelRatio;
+      this.resolution = resolution;
+      this.state = typeof stateOrLoader === "function" ? ImageState.IDLE : stateOrLoader;
+      this.image_ = null;
+      this.loader = typeof stateOrLoader === "function" ? stateOrLoader : null;
+    }
+    /**
+     * @protected
+     */
+    changed() {
+      this.dispatchEvent(EventType.CHANGE);
+    }
+    /**
+     * @return {import("./extent.js").Extent} Extent.
+     */
+    getExtent() {
+      return this.extent;
+    }
+    /**
+     * @return {import('./DataTile.js').ImageLike|null} Image.
+     */
+    getImage() {
+      return this.image_;
+    }
+    /**
+     * @return {number} PixelRatio.
+     */
+    getPixelRatio() {
+      return this.pixelRatio_;
+    }
+    /**
+     * @return {number|Array<number>} Resolution.
+     */
+    getResolution() {
+      return (
+        /** @type {number} */
+        this.resolution
+      );
+    }
+    /**
+     * @return {import("./ImageState.js").default} State.
+     */
+    getState() {
+      return this.state;
+    }
+    /**
+     * Load not yet loaded URI.
+     */
+    load() {
+      if (this.state == ImageState.IDLE) {
+        const loader = this.loader;
+        if (loader) {
+          this.state = ImageState.LOADING;
+          this.changed();
+          const resolution = this.getResolution();
+          const requestResolution = Array.isArray(resolution) ? resolution[0] : resolution;
+          toPromise(
+            () => loader(this.getExtent(), requestResolution, this.getPixelRatio())
+          ).then((image2) => {
+            if ("image" in image2) {
+              this.image_ = image2.image;
+            }
+            if ("extent" in image2 && image2.extent) {
+              this.extent = image2.extent;
+            }
+            if ("resolution" in image2 && image2.resolution !== void 0) {
+              this.resolution = image2.resolution;
+            }
+            if ("pixelRatio" in image2 && image2.pixelRatio !== void 0) {
+              this.pixelRatio_ = image2.pixelRatio;
+            }
+            if (image2 instanceof HTMLImageElement || CREATE_IMAGE_BITMAP && image2 instanceof ImageBitmap || image2 instanceof HTMLCanvasElement || image2 instanceof HTMLVideoElement) {
+              this.image_ = image2;
+            }
+            this.state = ImageState.LOADED;
+          }).catch((error) => {
+            this.state = ImageState.ERROR;
+            console.error(error);
+          }).finally(() => this.changed());
+        }
+      }
+    }
+    /**
+     * @param {import('./DataTile.js').ImageLike} image The image.
+     */
+    setImage(image2) {
+      this.image_ = image2;
+    }
+    /**
+     * @param {number|Array<number>} resolution Resolution.
+     */
+    setResolution(resolution) {
+      this.resolution = resolution;
+    }
+  }
   function listenImage(image2, loadHandler, errorHandler) {
     const img = (
       /** @type {HTMLImageElement} */
@@ -30642,6 +30750,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       const mapInstance = new Map$1({
         target: el2,
         layers: options.layers ?? [],
+        // 16 par défaut : file vite saturée (fonds WMTS 256 px + couches WMS) ; serveurs en HTTP/2
+        maxTilesLoading: 32,
         controls: defaults$2({
           attribution: true,
           zoom: false,
@@ -55020,6 +55130,255 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return tileRange.containsXY(x, y);
   }
+  class CanvasImageLayerRenderer extends CanvasLayerRenderer {
+    /**
+     * @param {import("../../layer/Image.js").default<import("../../source/Image.js").default>} imageLayer Image layer.
+     */
+    constructor(imageLayer) {
+      super(imageLayer);
+      this.image = null;
+      this.renderedSourceRevision_ = 0;
+      this.renderedRotation = 0;
+    }
+    /**
+     * @return {import('../../DataTile.js').ImageLike|null} Image.
+     */
+    getImage() {
+      return !this.image ? null : this.image.getImage();
+    }
+    /**
+     * Determine whether render should be called.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {boolean} Layer is ready to be rendered.
+     * @override
+     */
+    prepareFrame(frameState) {
+      const layerState = frameState.layerStatesArray[frameState.layerIndex];
+      const pixelRatio = frameState.pixelRatio;
+      const viewState = frameState.viewState;
+      const viewResolution = viewState.resolution;
+      const imageSource = this.getLayer().getSource();
+      const hints = frameState.viewHints;
+      let renderedExtent = (
+        /** @type {import("../../extent.js").Extent} */
+        frameState.extent
+      );
+      if (layerState.extent !== void 0) {
+        renderedExtent = getIntersection(
+          renderedExtent,
+          fromUserExtent(layerState.extent, viewState.projection)
+        );
+      }
+      if (!hints[ViewHint.ANIMATING] && !hints[ViewHint.INTERACTING] && !isEmpty(renderedExtent)) {
+        if (imageSource) {
+          if (!/** @type {{rendered: (boolean|undefined)}} */
+          /** @type {unknown} */
+          this.getLayer().rendered && this.renderedSourceRevision_ !== imageSource.getRevision()) {
+            this.image = null;
+          }
+          this.renderedSourceRevision_ = imageSource.getRevision();
+          const projection = viewState.projection;
+          const image2 = imageSource.getImage(
+            renderedExtent,
+            viewResolution,
+            pixelRatio,
+            projection
+          );
+          if (image2) {
+            if (this.loadImage(image2)) {
+              this.image = image2;
+              this.renderedRotation = this.sourceRotates() ? viewState.rotation : 0;
+            } else if (image2.getState() === ImageState.EMPTY) {
+              this.image = null;
+            }
+          }
+        } else {
+          this.image = null;
+        }
+      }
+      return !!this.image;
+    }
+    /**
+     * @param {import("../../pixel.js").Pixel} pixel Pixel.
+     * @return {Uint8ClampedArray|null} Data at the pixel location.
+     * @override
+     */
+    getData(pixel) {
+      const frameState = this.frameState;
+      if (!frameState || !this.image) {
+        return null;
+      }
+      const layer = this.getLayer();
+      const coordinate = apply$1(
+        frameState.pixelToCoordinateTransform,
+        pixel.slice()
+      );
+      const layerExtent = layer.getExtent();
+      if (layerExtent) {
+        if (!containsCoordinate(layerExtent, coordinate)) {
+          return null;
+        }
+      }
+      const imageExtent = this.image.getExtent();
+      const img = this.image.getImage();
+      if (!img) {
+        return null;
+      }
+      const imageRotation = this.renderedRotation;
+      if (imageRotation !== 0) {
+        const imageCenter = getCenter(imageExtent);
+        const cosRotation = Math.cos(-imageRotation);
+        const sinRotation = Math.sin(-imageRotation);
+        const deltaX = coordinate[0] - imageCenter[0];
+        const deltaY = coordinate[1] - imageCenter[1];
+        coordinate[0] = imageCenter[0] + cosRotation * deltaX - sinRotation * deltaY;
+        coordinate[1] = imageCenter[1] + sinRotation * deltaX + cosRotation * deltaY;
+      }
+      const imageMapWidth = getWidth(imageExtent);
+      const col = Math.floor(
+        img.width * ((coordinate[0] - imageExtent[0]) / imageMapWidth)
+      );
+      if (col < 0 || col >= img.width) {
+        return null;
+      }
+      const imageMapHeight = getHeight(imageExtent);
+      const row = Math.floor(
+        img.height * ((imageExtent[3] - coordinate[1]) / imageMapHeight)
+      );
+      if (row < 0 || row >= img.height) {
+        return null;
+      }
+      return this.getImageData(img, col, row);
+    }
+    /**
+     * Render the layer.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {HTMLElement} target Target that may be used to render content to.
+     * @return {HTMLElement} The rendered element.
+     * @override
+     */
+    renderFrame(frameState, target2) {
+      const image2 = this.image;
+      if (!image2) {
+        return this.getContainerElement();
+      }
+      const imageExtent = image2.getExtent();
+      const imageResolution = image2.getResolution();
+      const [imageResolutionX, imageResolutionY] = Array.isArray(imageResolution) ? imageResolution : [imageResolution, imageResolution];
+      const imagePixelRatio = image2.getPixelRatio();
+      const imageRotation = this.renderedRotation;
+      const imageSource = this.getLayer().getSource();
+      const sourceRotates = this.sourceRotates();
+      const layerState = frameState.layerStatesArray[frameState.layerIndex];
+      const pixelRatio = frameState.pixelRatio;
+      const viewState = frameState.viewState;
+      const viewCenter = viewState.center;
+      const viewResolution = viewState.resolution;
+      const viewRotation = viewState.rotation;
+      const scaleX = pixelRatio * imageResolutionX / (viewResolution * imagePixelRatio);
+      const scaleY = pixelRatio * imageResolutionY / (viewResolution * imagePixelRatio);
+      this.prepareContainer(frameState, target2);
+      const width = this.getCanvasContext().canvas.width;
+      const height = this.getCanvasContext().canvas.height;
+      const context = this.getRenderContext(frameState);
+      let clipped = false;
+      let render2 = true;
+      if (layerState.extent) {
+        const layerExtent = fromUserExtent(
+          layerState.extent,
+          viewState.projection
+        );
+        const frameExtent = (
+          /** @type {import("../../extent.js").Extent} */
+          frameState.extent
+        );
+        render2 = intersects$1(layerExtent, frameExtent);
+        clipped = render2 && !containsExtent(layerExtent, frameExtent);
+        if (clipped) {
+          this.clipUnrotated(context, frameState, layerExtent);
+        }
+      }
+      const img = image2.getImage();
+      if (!img) {
+        return this.getContainerElement();
+      }
+      let transform2, dw, dh;
+      if (!sourceRotates) {
+        transform2 = compose(
+          this.tempTransform,
+          width / 2,
+          height / 2,
+          scaleX,
+          scaleY,
+          0,
+          imagePixelRatio * (imageExtent[0] - viewCenter[0]) / imageResolutionX,
+          imagePixelRatio * (viewCenter[1] - imageExtent[3]) / imageResolutionY
+        );
+        dw = img.width * transform2[0];
+        dh = img.height * transform2[3];
+      } else {
+        const scale2 = pixelRatio / viewResolution;
+        const cosRotation = Math.cos(viewRotation);
+        const sinRotation = Math.sin(viewRotation);
+        const imageCenter = getCenter(imageExtent);
+        const centerX = imageCenter[0] - viewCenter[0];
+        const centerY = imageCenter[1] - viewCenter[1];
+        transform2 = compose(
+          this.tempTransform,
+          width / 2 + scale2 * (cosRotation * centerX + sinRotation * centerY),
+          height / 2 + scale2 * (sinRotation * centerX - cosRotation * centerY),
+          scaleX,
+          scaleY,
+          viewRotation - imageRotation,
+          -img.width / 2,
+          -img.height / 2
+        );
+        dw = img.width * scaleX;
+        dh = img.height * scaleY;
+      }
+      this.renderedResolution = imageResolutionY * pixelRatio / imagePixelRatio;
+      if (!(imageSource == null ? void 0 : imageSource.getInterpolate()) && (!sourceRotates || viewRotation === imageRotation)) {
+        context.imageSmoothingEnabled = false;
+      }
+      this.preRender(context, frameState);
+      if (render2 && dw >= 0.5 && dh >= 0.5) {
+        const opacity2 = layerState.opacity;
+        if (!sourceRotates) {
+          const dx = transform2[4];
+          const dy = transform2[5];
+          if (opacity2 !== 1) {
+            context.save();
+            context.globalAlpha = opacity2;
+          }
+          context.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
+          if (opacity2 !== 1) {
+            context.restore();
+          }
+        } else {
+          context.save();
+          if (opacity2 !== 1) {
+            context.globalAlpha = opacity2;
+          }
+          context.setTransform(
+            transform2[0],
+            transform2[1],
+            transform2[2],
+            transform2[3],
+            transform2[4],
+            transform2[5]
+          );
+          context.drawImage(img, 0, 0);
+          context.restore();
+        }
+      }
+      this.postRender(this.getCanvasContext(), frameState);
+      if (clipped) {
+        context.restore();
+      }
+      context.imageSmoothingEnabled = true;
+      return this.getContainerElement();
+    }
+  }
   function addTileToLookup(tilesByZ, tile, z2) {
     if (!(z2 in tilesByZ)) {
       tilesByZ[z2] = /* @__PURE__ */ new Set([tile]);
@@ -56019,6 +56378,305 @@ Expected function or array of functions, received type ${typeof value2}.`
       return new CanvasTileLayerRenderer(this, {
         cacheSize: this.getCacheSize()
       });
+    }
+  }
+  class ImageCanvas extends ImageWrapper {
+    /**
+     * @param {import("./extent.js").Extent} extent Extent.
+     * @param {number} resolution Resolution.
+     * @param {number} pixelRatio Pixel ratio.
+     * @param {HTMLCanvasElement|OffscreenCanvas} canvas Canvas.
+     * @param {Loader} [loader] Optional loader function to
+     *     support asynchronous canvas drawing.
+     */
+    constructor(extent, resolution, pixelRatio, canvas, loader) {
+      const state = loader !== void 0 ? ImageState.IDLE : ImageState.LOADED;
+      super(extent, resolution, pixelRatio, state);
+      this.loader_ = loader !== void 0 ? loader : null;
+      this.canvas_ = canvas;
+      this.error_ = null;
+    }
+    /**
+     * Get any error associated with asynchronous rendering.
+     * @return {?Error} Any error that occurred during rendering.
+     */
+    getError() {
+      return this.error_;
+    }
+    /**
+     * Handle async drawing complete.
+     * @param {Error} [err] Any error during drawing.
+     * @private
+     */
+    handleLoad_(err) {
+      if (err) {
+        this.error_ = err;
+        this.state = ImageState.ERROR;
+      } else {
+        this.state = ImageState.LOADED;
+      }
+      this.changed();
+    }
+    /**
+     * Load not yet loaded URI.
+     * @override
+     */
+    load() {
+      if (this.state == ImageState.IDLE && this.loader_) {
+        this.state = ImageState.LOADING;
+        this.changed();
+        this.loader_(this.handleLoad_.bind(this));
+      }
+    }
+    /**
+     * @return {HTMLCanvasElement|OffscreenCanvas} Canvas element.
+     * @override
+     */
+    getImage() {
+      return this.canvas_;
+    }
+  }
+  function fromResolutionLike(resolution) {
+    if (Array.isArray(resolution)) {
+      return Math.min(...resolution);
+    }
+    return resolution;
+  }
+  class CanvasVectorImageLayerRenderer extends CanvasImageLayerRenderer {
+    /**
+     * @param {import("../../layer/VectorImage.js").default} layer Vector image layer.
+     */
+    constructor(layer) {
+      super(
+        /** @type {import("../../layer/Image.js").default<any>} */
+        /** @type {unknown} */
+        layer
+      );
+      this.wantRotation = true;
+      this.vectorRenderer_ = new CanvasVectorLayerRenderer(
+        /** @type {import("../../layer/Vector.js").default} */
+        /** @type {unknown} */
+        layer,
+        { wantRotation: true }
+      );
+      this.layerImageRatio_ = layer.getImageRatio();
+      this.coordinateToVectorPixelTransform_ = create$1();
+      this.renderedPixelToCoordinateTransform_ = null;
+    }
+    /**
+     * Clean up.
+     * @override
+     */
+    disposeInternal() {
+      this.vectorRenderer_.dispose();
+      super.disposeInternal();
+    }
+    /**
+     * Asynchronous layer level hit detection.
+     * @param {import("../../pixel.js").Pixel} pixel Pixel.
+     * @return {Promise<Array<import("../../Feature.js").default>>} Promise that resolves with an array of features.
+     * @override
+     */
+    getFeatures(pixel) {
+      if (!this.vectorRenderer_) {
+        return Promise.resolve([]);
+      }
+      const vectorPixel = apply$1(
+        this.coordinateToVectorPixelTransform_,
+        apply$1(
+          /** @type {import("../../transform.js").Transform} */
+          this.renderedPixelToCoordinateTransform_,
+          pixel.slice()
+        )
+      );
+      return this.vectorRenderer_.getFeatures(vectorPixel);
+    }
+    /**
+     * Perform action necessary to get the layer rendered after new fonts have loaded
+     * @override
+     */
+    handleFontsChanged() {
+      this.vectorRenderer_.handleFontsChanged();
+    }
+    /**
+     * Determine whether render should be called.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @return {boolean} Layer is ready to be rendered.
+     * @override
+     */
+    prepareFrame(frameState) {
+      var _a2;
+      const pixelRatio = frameState.pixelRatio;
+      const viewState = frameState.viewState;
+      const viewResolution = viewState.resolution;
+      const hints = frameState.viewHints;
+      const vectorRenderer = this.vectorRenderer_;
+      const imageRotation = viewState.rotation;
+      const canvasWidth = Math.round(frameState.size[0] * pixelRatio);
+      const canvasHeight = Math.round(frameState.size[1] * pixelRatio);
+      const padX = Math.round(canvasWidth * (this.layerImageRatio_ - 1) / 2);
+      const padY = Math.round(canvasHeight * (this.layerImageRatio_ - 1) / 2);
+      const imageSize = [
+        (canvasWidth + 2 * padX) / pixelRatio,
+        (canvasHeight + 2 * padY) / pixelRatio
+      ];
+      const imageExtent = getForViewAndSize(
+        viewState.center,
+        viewResolution,
+        0,
+        imageSize
+      );
+      const renderedExtent = getForViewAndSize(
+        viewState.center,
+        viewResolution,
+        imageRotation,
+        imageSize
+      );
+      if (!hints[ViewHint.ANIMATING] && !hints[ViewHint.INTERACTING] && !isEmpty(renderedExtent)) {
+        vectorRenderer.useContainer(
+          /** @type {HTMLElement} */
+          /** @type {unknown} */
+          null,
+          /** @type {string} */
+          /** @type {unknown} */
+          null
+        );
+        const context = (
+          /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
+          vectorRenderer.context
+        );
+        const layerState = frameState.layerStatesArray[frameState.layerIndex];
+        const imageLayerState = Object.assign({}, layerState, { opacity: 1 });
+        const imageFrameState = (
+          /** @type {import("../../Map.js").FrameState} */
+          Object.assign({}, frameState, {
+            extent: renderedExtent,
+            size: imageSize,
+            layerStatesArray: [imageLayerState],
+            layerIndex: 0,
+            declutter: null
+          })
+        );
+        const declutter = this.getLayer().getDeclutter();
+        if (declutter) {
+          imageFrameState.declutter = {
+            [declutter]: new RBush$1(9)
+          };
+        }
+        const image2 = new ImageCanvas(
+          imageExtent,
+          viewResolution,
+          pixelRatio,
+          context.canvas,
+          (callback) => {
+            if (vectorRenderer.prepareFrame(imageFrameState) && // An unchanged replay group still needs a re-render when the
+            // rotation or the rendered footprint changed.
+            (vectorRenderer.replayGroupChanged || !this.image || this.renderedRotation !== imageRotation || !equals$1(this.image.getExtent(), imageExtent))) {
+              vectorRenderer.clipping = false;
+              vectorRenderer.renderFrame(
+                imageFrameState,
+                /** @type {HTMLElement} */
+                /** @type {unknown} */
+                null
+              );
+              vectorRenderer.renderDeclutter(imageFrameState);
+              vectorRenderer.renderDeferred(imageFrameState);
+              callback();
+            }
+          }
+        );
+        image2.addEventListener(EventType.CHANGE, () => {
+          if (image2.getState() !== ImageState.LOADED) {
+            return;
+          }
+          this.image = image2;
+          this.renderedRotation = imageRotation;
+          const imagePixelRatio = image2.getPixelRatio();
+          const renderedResolution = fromResolutionLike(image2.getResolution()) * pixelRatio / imagePixelRatio;
+          this.renderedResolution = renderedResolution;
+          this.coordinateToVectorPixelTransform_ = compose(
+            this.coordinateToVectorPixelTransform_,
+            imageSize[0] / 2,
+            imageSize[1] / 2,
+            1 / renderedResolution,
+            -1 / renderedResolution,
+            -imageRotation,
+            -viewState.center[0],
+            -viewState.center[1]
+          );
+        });
+        image2.load();
+      }
+      if (this.image) {
+        this.renderedPixelToCoordinateTransform_ = frameState.pixelToCoordinateTransform.slice();
+      }
+      return !((_a2 = this.getLayer().getSource()) == null ? void 0 : _a2.loading) && !!this.image;
+    }
+    /**
+     * @override
+     */
+    preRender() {
+    }
+    /**
+     * @override
+     */
+    postRender() {
+    }
+    /**
+     */
+    renderDeclutter() {
+    }
+    /**
+     * @param {import("../../coordinate.js").Coordinate} coordinate Coordinate.
+     * @param {import("../../Map.js").FrameState} frameState Frame state.
+     * @param {number} hitTolerance Hit tolerance in pixels.
+     * @param {import("../vector.js").FeatureCallback<T>} callback Feature callback.
+     * @param {Array<import("../Map.js").HitMatch<T>>} matches The hit detected matches with tolerance.
+     * @return {T|undefined} Callback result.
+     * @template T
+     * @override
+     */
+    forEachFeatureAtCoordinate(coordinate, frameState, hitTolerance, callback, matches2) {
+      if (this.vectorRenderer_) {
+        return this.vectorRenderer_.forEachFeatureAtCoordinate(
+          coordinate,
+          frameState,
+          hitTolerance,
+          callback,
+          matches2
+        );
+      }
+      return super.forEachFeatureAtCoordinate(
+        coordinate,
+        frameState,
+        hitTolerance,
+        callback,
+        matches2
+      );
+    }
+  }
+  class VectorImageLayer extends BaseVectorLayer {
+    /**
+     * @param {Options<VectorSourceType, FeatureType>} [options] Options.
+     */
+    constructor(options) {
+      options = options ? options : {};
+      const baseOptions = Object.assign({}, options);
+      delete baseOptions.imageRatio;
+      super(baseOptions);
+      this.imageRatio_ = options.imageRatio !== void 0 ? options.imageRatio : 1;
+    }
+    /**
+     * @return {number} Ratio between rendered extent size and viewport extent size.
+     */
+    getImageRatio() {
+      return this.imageRatio_;
+    }
+    /**
+     * @override
+     */
+    createRenderer() {
+      return new CanvasVectorImageLayerRenderer(this);
     }
   }
   const IMAGE_REPLAYS = {
@@ -70917,51 +71575,86 @@ Expected function or array of functions, received type ${typeof value2}.`
     ];
   }
   const GEOPF_WMTS_URL = "https://data.geopf.fr/wmts";
-  const TILE_SIZE_PX = 512;
-  const MATRIX_MIN = 5;
-  const MATRIX_MAX = 19;
-  function createGeopfWmtsTileGrid() {
+  const SERVER_TILE_SIZE_PX = 256;
+  const PRINT_TILE_SIZE_PX = 512;
+  const DEFAULT_MATRIX_SET = { id: "PM", minZoom: 0, maxZoom: 19 };
+  const MATRIX_SET_BY_LAYER = {
+    "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "ORTHOIMAGERY.ORTHOPHOTOS": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "CADASTRALPARCELS.PARCELLAIRE_EXPRESS": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "CADASTRALPARCELS.PARCELS": { id: "PM_0_20", minZoom: 0, maxZoom: 20 },
+    "GEOGRAPHICALNAMES.NAMES": { id: "PM_6_18", minZoom: 6, maxZoom: 18 },
+    "TRANSPORTNETWORKS.ROADS": { id: "PM_6_18", minZoom: 6, maxZoom: 18 },
+    "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST": { id: "PM_6_16", minZoom: 6, maxZoom: 16 }
+  };
+  function geopfWmtsMatrixSet(layer) {
+    return MATRIX_SET_BY_LAYER[layer] ?? DEFAULT_MATRIX_SET;
+  }
+  function createGeopfWmtsTileGrid(matrixSet, tileSizePx) {
     const projection = get$2("EPSG:3857");
     if (!projection) {
       throw new Error("EPSG:3857 required for Géoplateforme WMTS");
     }
     const extent = projection.getExtent();
-    const tileSizeMeters = getWidth(extent) / TILE_SIZE_PX;
+    const tileSizeMeters = getWidth(extent) / tileSizePx;
     const resolutions = [];
     const matrixIds = [];
-    for (let i2 = MATRIX_MIN; i2 <= MATRIX_MAX; i2++) {
-      matrixIds[i2] = String(i2);
-      resolutions[i2] = tileSizeMeters / 2 ** i2;
+    for (let i2 = matrixSet.minZoom; i2 <= matrixSet.maxZoom; i2++) {
+      matrixIds.push(String(i2));
+      resolutions.push(tileSizeMeters / 2 ** i2);
     }
     return new WMTSTileGrid({
       origin: getTopLeft(extent),
       resolutions,
       matrixIds,
-      tileSize: [TILE_SIZE_PX, TILE_SIZE_PX]
+      tileSize: [tileSizePx, tileSizePx]
     });
   }
-  let sharedTileGrid = null;
-  function geopfWmtsTileGrid() {
-    if (!sharedTileGrid) {
-      sharedTileGrid = createGeopfWmtsTileGrid();
+  const tileGridCache = /* @__PURE__ */ new Map();
+  function geopfWmtsTileGrid(matrixSet, tileSizePx) {
+    const key2 = `${matrixSet.id}:${tileSizePx}`;
+    let grid = tileGridCache.get(key2);
+    if (!grid) {
+      grid = createGeopfWmtsTileGrid(matrixSet, tileSizePx);
+      tileGridCache.set(key2, grid);
     }
-    return sharedTileGrid;
+    return grid;
   }
-  function createGeopfWmtsSource(options) {
+  const sourceOptions = /* @__PURE__ */ new WeakMap();
+  const printSources = /* @__PURE__ */ new WeakMap();
+  function buildSource(options, tileSizePx) {
     const format = options.format ?? "png";
+    const matrixSet = geopfWmtsMatrixSet(options.layer);
     return new WMTS$1({
       url: GEOPF_WMTS_URL,
       layer: options.layer,
       style: options.style ?? "normal",
       format: `image/${format}`,
-      matrixSet: "PM",
+      matrixSet: matrixSet.id,
       version: "1.0.0",
       crossOrigin: "anonymous",
       attributions: options.attributions ?? (() => ignGeoportalAttributions()),
       attributionsCollapsible: false,
-      tileGrid: geopfWmtsTileGrid(),
-      cacheSize: 256
+      tileGrid: geopfWmtsTileGrid(matrixSet, tileSizePx),
+      // tuiles 256 px : environ 4 fois plus de tuiles par écran qu’en grille 512
+      cacheSize: 512
     });
+  }
+  function createGeopfWmtsSource(options) {
+    const source = buildSource(options, SERVER_TILE_SIZE_PX);
+    sourceOptions.set(source, options);
+    return source;
+  }
+  function geopfWmtsPrintSource(source) {
+    if (!(source instanceof WMTS$1)) return null;
+    const options = sourceOptions.get(source);
+    if (!options) return null;
+    let printSource = printSources.get(source);
+    if (!printSource) {
+      printSource = buildSource(options, PRINT_TILE_SIZE_PX);
+      printSources.set(source, printSource);
+    }
+    return printSource;
   }
   const INSPIRE_WMS_TEMPLATE = "https://inspire.cadastre.gouv.fr/scpc/<inseeCommune>.wms";
   function createInspireWmsSource(inseeCommune) {
@@ -85305,6 +85998,318 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) return BASE_DPI;
     return dpi;
   }
+  const RESOLUTION_EPSILON = 1e-5;
+  function getLayerResolutionRange(view, minZoomLevel, maxZoomLevel) {
+    const viewMinZoom = view.getMinZoom();
+    let maxResolution;
+    if (minZoomLevel - 1 >= viewMinZoom) {
+      maxResolution = view.getResolutionForZoom(minZoomLevel - 1);
+    } else {
+      maxResolution = view.getResolutionForZoom(minZoomLevel) + RESOLUTION_EPSILON;
+    }
+    return {
+      minResolution: view.getResolutionForZoom(maxZoomLevel),
+      maxResolution
+    };
+  }
+  const GPU_WMS_SOURCE_OPTIONS_PROP = "ecGpuWmsSourceOptions";
+  function wmsUrl() {
+    const url = config.wmsExterneUrl;
+    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
+  }
+  function buildCqlFilter(layer, document2) {
+    var _a2;
+    const parts = [];
+    const configuredName = layer.name ?? "";
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
+      parts.push(`(partition like '${document2.name}')`);
+    }
+    if (layer.filterAttribute && ((_a2 = layer.filterValue) == null ? void 0 : _a2.length)) {
+      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
+    } else if (layer.filterAttribute && layer.filterValueLike) {
+      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
+    }
+    return parts.join(" AND ");
+  }
+  function createWmsTileLayer(entry, document2, view) {
+    const layer = entry.config;
+    if (layer.virtual || !layer.name) return null;
+    let layerName = layer.name;
+    let url = wmsUrl();
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
+      const validation = config.wmsValidationUrl;
+      if (typeof validation === "string" && validation.length) {
+        url = validation;
+      }
+      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
+    }
+    const cql = buildCqlFilter(layer, document2);
+    const params2 = {
+      LAYERS: layerName,
+      TRANSPARENT: true,
+      VERSION: "1.1.1",
+      FORMAT: "image/png",
+      TILED: true
+    };
+    if (cql) {
+      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
+    }
+    const minZoom = entry.minZoomLevel ?? 0;
+    const maxZoom = entry.maxZoomLevel ?? 22;
+    const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
+    const sourceOptions2 = {
+      url,
+      params: params2,
+      crossOrigin: "anonymous",
+      serverType: "geoserver",
+      tileGrid: createXYZ({ tileSize: 512 })
+    };
+    return new TileLayer({
+      // hidpi désactivé : sur écran haute densité, tuiles 512 px agrandies par le navigateur plutôt que
+      // 1024 px rendues par GeoServer (4 fois moins de pixels) ; libellés un peu moins nets
+      source: new TileWMS({ ...sourceOptions2, hidpi: false }),
+      visible: false,
+      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
+      minResolution,
+      maxResolution,
+      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
+      properties: {
+        ecGpuCatalogId: entry.id,
+        ecGpuLayerName: layerName,
+        [GPU_WMS_SOURCE_OPTIONS_PROP]: sourceOptions2
+      }
+    });
+  }
+  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
+  function applyWmsLayerGrayscale(layer, grayscale) {
+    const internal = layer;
+    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
+    layer.set("grayscale", grayscale);
+    layer.changed();
+  }
+  class GpuWmsLayerRegistry {
+    constructor() {
+      __publicField(this, "entries", /* @__PURE__ */ new Map());
+      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
+      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
+      __publicField(this, "map", null);
+      __publicField(this, "document", null);
+    }
+    loadFromLayerConfig(layers, document2) {
+      var _a2;
+      this.document = document2;
+      for (const layer of this.olLayers.values()) {
+        (_a2 = this.map) == null ? void 0 : _a2.removeLayer(layer);
+      }
+      this.entries.clear();
+      this.olLayers.clear();
+      this.grayscaleById.clear();
+      for (const entry of layerConfigToCatalogEntries(layers)) {
+        this.entries.set(entry.id, entry);
+      }
+    }
+    attachMap(map2) {
+      this.map = map2;
+      for (const layer of this.olLayers.values()) {
+        if (!map2.getLayers().getArray().includes(layer)) {
+          map2.addLayer(layer);
+        }
+      }
+    }
+    detachMap() {
+      if (!this.map) return;
+      for (const layer of this.olLayers.values()) {
+        this.map.removeLayer(layer);
+      }
+      this.map = null;
+    }
+    ensureLayer(catalogId) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) return layer;
+      const entry = this.entries.get(catalogId);
+      if (!entry) return void 0;
+      if (!this.map) return void 0;
+      const created = createWmsTileLayer(entry, this.document, this.map.getView());
+      if (!created) return void 0;
+      this.olLayers.set(catalogId, created);
+      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
+      if (this.map && !this.map.getLayers().getArray().includes(created)) {
+        this.map.addLayer(created);
+      }
+      return created;
+    }
+    setVisible(catalogId, visible) {
+      if (visible) {
+        const layer2 = this.ensureLayer(catalogId);
+        if (layer2) layer2.setVisible(true);
+        return;
+      }
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setVisible(false);
+    }
+    setOpacity(catalogId, opacityPercent) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
+    }
+    setGrayscale(catalogId, grayscale) {
+      this.grayscaleById.set(catalogId, grayscale);
+      const layer = this.olLayers.get(catalogId);
+      if (layer) applyWmsLayerGrayscale(layer, grayscale);
+    }
+    hasWmsLayer(catalogId) {
+      return this.entries.has(catalogId);
+    }
+    /**
+     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
+     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
+     */
+    applyStackOrder(catalogIdsBottomToTop) {
+      var _a2;
+      const normal = [];
+      const forceInList = [];
+      for (const id2 of catalogIdsBottomToTop) {
+        if ((_a2 = this.entries.get(id2)) == null ? void 0 : _a2.config.forceOpacity) forceInList.push(id2);
+        else normal.push(id2);
+      }
+      const forcePinned = [...forceInList];
+      for (const [id2, entry] of this.entries) {
+        if (!entry.config.forceOpacity) continue;
+        const layer = this.olLayers.get(id2);
+        if (!(layer == null ? void 0 : layer.getVisible())) continue;
+        if (!forcePinned.includes(id2)) forcePinned.push(id2);
+      }
+      const ordered = [...normal, ...forcePinned];
+      const baseZ = 200;
+      ordered.forEach((id2, index2) => {
+        const layer = this.olLayers.get(id2);
+        if (layer) layer.setZIndex(baseZ + index2);
+      });
+      if (!this.map) return;
+      for (const id2 of ordered) {
+        const layer = this.olLayers.get(id2);
+        if (!layer) continue;
+        this.map.removeLayer(layer);
+        this.map.addLayer(layer);
+      }
+    }
+  }
+  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
+  function resolveLimitGeoJsonDataRoot(fallbackBase = "./") {
+    const baseUrlRaw = typeof config.baseUrl === "string" ? config.baseUrl.trim() : "";
+    if (!baseUrlRaw) return normalizeRoot(fallbackBase);
+    if (baseUrlRaw === "/") {
+      if (typeof window !== "undefined") {
+        return normalizeRoot(`${window.location.origin}/`);
+      }
+      return "/";
+    }
+    if (/^https?:\/\//i.test(baseUrlRaw) || baseUrlRaw.startsWith("//")) {
+      try {
+        const resolved = new URL(baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`);
+        if (typeof window === "undefined" || resolved.origin === window.location.origin) {
+          return normalizeRoot(resolved.href);
+        }
+      } catch {
+      }
+      return normalizeRoot(fallbackBase);
+    }
+    if (baseUrlRaw.startsWith("/") && typeof window !== "undefined") {
+      const resolved = new URL(
+        baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`,
+        window.location.origin
+      );
+      return normalizeRoot(resolved.href);
+    }
+    return normalizeRoot(fallbackBase);
+  }
+  function limitGeoJsonAssetUrl(fileName, fallbackBase = "./") {
+    const root = resolveLimitGeoJsonDataRoot(fallbackBase);
+    const path = fileName.replace(/^\//, "");
+    return `${root}json-data/${path}`;
+  }
+  function normalizeRoot(root) {
+    return root.endsWith("/") ? root : `${root}/`;
+  }
+  const RES_REGION_MIN = 1222.99245256282;
+  const RES_REGION_MAX = 2445.98490512564;
+  const RES_DEPT_MAX = 1222.99245256282;
+  const MAP_PROJECTION = "EPSG:3857";
+  const DATA_PROJECTION = "EPSG:4326";
+  const limitStyle = new Style({
+    stroke: new Stroke({ width: 2, color: "#000000" })
+  });
+  const geoJson = new GeoJSON();
+  let regionsFeatures = null;
+  let departmentsFeatures = null;
+  let regionsLoad = null;
+  let departmentsLoad = null;
+  function readGeoJsonFeatures(data) {
+    return geoJson.readFeatures(data, {
+      dataProjection: DATA_PROJECTION,
+      featureProjection: MAP_PROJECTION
+    });
+  }
+  async function loadRegions() {
+    if (regionsFeatures) return regionsFeatures;
+    if (!regionsLoad) {
+      regionsLoad = fetch(limitGeoJsonAssetUrl("region-fr-geojson.json")).then(async (res) => {
+        if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`);
+        regionsFeatures = readGeoJsonFeatures(await res.json());
+        return regionsFeatures;
+      }).catch((err) => {
+        regionsLoad = null;
+        throw err;
+      });
+    }
+    return regionsLoad;
+  }
+  async function loadDepartments() {
+    if (departmentsFeatures) return departmentsFeatures;
+    if (!departmentsLoad) {
+      departmentsLoad = fetch(limitGeoJsonAssetUrl("department-fr-geojson.json")).then(async (res) => {
+        if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`);
+        departmentsFeatures = readGeoJsonFeatures(await res.json());
+        return departmentsFeatures;
+      }).catch((err) => {
+        departmentsLoad = null;
+        throw err;
+      });
+    }
+    return departmentsLoad;
+  }
+  const GPU_LIMIT_OVERLAY_PROP = "ecGpuLimitOverlay";
+  function createLimitVectorSource(load2) {
+    const source = new VectorSource({
+      loader: (_extent, _resolution, _projection, success) => {
+        load2().then((features) => {
+          source.addFeatures(features);
+          success == null ? void 0 : success(features);
+        }).catch((err) => {
+          console.warn("[entree-carto] limites administratives GeoJSON", err);
+          success == null ? void 0 : success([]);
+        });
+      }
+    });
+    return source;
+  }
+  function createLimitVectorLayer(load2, minResolution, maxResolution) {
+    return new VectorImageLayer({
+      visible: false,
+      minResolution,
+      maxResolution,
+      zIndex: 20,
+      style: limitStyle,
+      source: createLimitVectorSource(load2),
+      properties: { [GPU_LIMIT_OVERLAY_PROP]: true }
+    });
+  }
+  function createLimitRegionalLayer() {
+    return createLimitVectorLayer(loadRegions, RES_REGION_MIN, RES_REGION_MAX);
+  }
+  function createLimitDepartmentalLayer() {
+    return createLimitVectorLayer(loadDepartments, void 0, RES_DEPT_MAX);
+  }
   function copyViewState(from, to2) {
     to2.setCenter(from.getCenter());
     to2.setResolution(from.getResolution());
@@ -85340,9 +86345,15 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const SEARCH_LAYER_PRINT_Z_INDEX = 1e6;
   const PRINT_SEARCH_LAYER_PROP = "ec-print-search-layer";
+  function printTileSource(layer) {
+    const gpuWmsOptions = layer.get(GPU_WMS_SOURCE_OPTIONS_PROP);
+    if (gpuWmsOptions) return new TileWMS({ ...gpuWmsOptions, hidpi: true });
+    const source = layer.getSource();
+    return geopfWmtsPrintSource(source) ?? source ?? void 0;
+  }
   function cloneTileLayer(layer) {
     return new TileLayer({
-      source: layer.getSource() ?? void 0,
+      source: printTileSource(layer),
       visible: layer.getVisible(),
       opacity: layer.getOpacity(),
       zIndex: layer.getZIndex(),
@@ -85378,10 +86389,25 @@ Expected function or array of functions, received type ${typeof value2}.`
       maxResolution: layer.getMaxResolution()
     });
   }
+  function cloneLimitOverlayLayer(layer) {
+    return new VectorImageLayer({
+      source: layer.getSource() ?? void 0,
+      style: layer.getStyle(),
+      visible: layer.getVisible(),
+      opacity: layer.getOpacity(),
+      zIndex: layer.getZIndex(),
+      minResolution: layer.getMinResolution(),
+      maxResolution: layer.getMaxResolution(),
+      properties: { [GPU_LIMIT_OVERLAY_PROP]: true }
+    });
+  }
   function cloneLayerForPrint(layer) {
     if (!(layer instanceof Layer)) return null;
     if (layer instanceof VectorTileLayer) return cloneVectorTileLayer(layer);
     if (layer instanceof VectorLayer) return cloneVectorLayer(layer);
+    if (layer instanceof VectorImageLayer && layer.get(GPU_LIMIT_OVERLAY_PROP)) {
+      return cloneLimitOverlayLayer(layer);
+    }
     if (layer instanceof TileLayer) return cloneTileLayer(layer);
     return null;
   }
@@ -117808,198 +118834,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return 0.7;
   }
-  const RESOLUTION_EPSILON = 1e-5;
-  function getLayerResolutionRange(view, minZoomLevel, maxZoomLevel) {
-    const viewMinZoom = view.getMinZoom();
-    let maxResolution;
-    if (minZoomLevel - 1 >= viewMinZoom) {
-      maxResolution = view.getResolutionForZoom(minZoomLevel - 1);
-    } else {
-      maxResolution = view.getResolutionForZoom(minZoomLevel) + RESOLUTION_EPSILON;
-    }
-    return {
-      minResolution: view.getResolutionForZoom(maxZoomLevel),
-      maxResolution
-    };
-  }
-  function wmsUrl() {
-    const url = config.wmsExterneUrl;
-    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
-  }
-  function buildCqlFilter(layer, document2) {
-    var _a2;
-    const parts = [];
-    const configuredName = layer.name ?? "";
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
-      parts.push(`(partition like '${document2.name}')`);
-    }
-    if (layer.filterAttribute && ((_a2 = layer.filterValue) == null ? void 0 : _a2.length)) {
-      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
-    } else if (layer.filterAttribute && layer.filterValueLike) {
-      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
-    }
-    return parts.join(" AND ");
-  }
-  function createWmsTileLayer(entry, document2, view) {
-    const layer = entry.config;
-    if (layer.virtual || !layer.name) return null;
-    let layerName = layer.name;
-    let url = wmsUrl();
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
-      const validation = config.wmsValidationUrl;
-      if (typeof validation === "string" && validation.length) {
-        url = validation;
-      }
-      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
-    }
-    const cql = buildCqlFilter(layer, document2);
-    const params2 = {
-      LAYERS: layerName,
-      TRANSPARENT: true,
-      VERSION: "1.1.1",
-      FORMAT: "image/png",
-      TILED: true
-    };
-    if (cql) {
-      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
-    }
-    const minZoom = entry.minZoomLevel ?? 0;
-    const maxZoom = entry.maxZoomLevel ?? 22;
-    const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
-    return new TileLayer({
-      source: new TileWMS({
-        url,
-        params: params2,
-        crossOrigin: "anonymous",
-        serverType: "geoserver",
-        tileGrid: createXYZ({ tileSize: 512 })
-      }),
-      visible: false,
-      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
-      minResolution,
-      maxResolution,
-      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
-      properties: {
-        ecGpuCatalogId: entry.id,
-        ecGpuLayerName: layerName
-      }
-    });
-  }
-  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
-  function applyWmsLayerGrayscale(layer, grayscale) {
-    const internal = layer;
-    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
-    layer.set("grayscale", grayscale);
-    layer.changed();
-  }
-  class GpuWmsLayerRegistry {
-    constructor() {
-      __publicField(this, "entries", /* @__PURE__ */ new Map());
-      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
-      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
-      __publicField(this, "map", null);
-      __publicField(this, "document", null);
-    }
-    loadFromLayerConfig(layers, document2) {
-      var _a2;
-      this.document = document2;
-      for (const layer of this.olLayers.values()) {
-        (_a2 = this.map) == null ? void 0 : _a2.removeLayer(layer);
-      }
-      this.entries.clear();
-      this.olLayers.clear();
-      this.grayscaleById.clear();
-      for (const entry of layerConfigToCatalogEntries(layers)) {
-        this.entries.set(entry.id, entry);
-      }
-    }
-    attachMap(map2) {
-      this.map = map2;
-      for (const layer of this.olLayers.values()) {
-        if (!map2.getLayers().getArray().includes(layer)) {
-          map2.addLayer(layer);
-        }
-      }
-    }
-    detachMap() {
-      if (!this.map) return;
-      for (const layer of this.olLayers.values()) {
-        this.map.removeLayer(layer);
-      }
-      this.map = null;
-    }
-    ensureLayer(catalogId) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) return layer;
-      const entry = this.entries.get(catalogId);
-      if (!entry) return void 0;
-      if (!this.map) return void 0;
-      const created = createWmsTileLayer(entry, this.document, this.map.getView());
-      if (!created) return void 0;
-      this.olLayers.set(catalogId, created);
-      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
-      if (this.map && !this.map.getLayers().getArray().includes(created)) {
-        this.map.addLayer(created);
-      }
-      return created;
-    }
-    setVisible(catalogId, visible) {
-      if (visible) {
-        const layer2 = this.ensureLayer(catalogId);
-        if (layer2) layer2.setVisible(true);
-        return;
-      }
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setVisible(false);
-    }
-    setOpacity(catalogId, opacityPercent) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
-    }
-    setGrayscale(catalogId, grayscale) {
-      this.grayscaleById.set(catalogId, grayscale);
-      const layer = this.olLayers.get(catalogId);
-      if (layer) applyWmsLayerGrayscale(layer, grayscale);
-    }
-    hasWmsLayer(catalogId) {
-      return this.entries.has(catalogId);
-    }
-    /**
-     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
-     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
-     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
-     */
-    applyStackOrder(catalogIdsBottomToTop) {
-      var _a2;
-      const normal = [];
-      const forceInList = [];
-      for (const id2 of catalogIdsBottomToTop) {
-        if ((_a2 = this.entries.get(id2)) == null ? void 0 : _a2.config.forceOpacity) forceInList.push(id2);
-        else normal.push(id2);
-      }
-      const forcePinned = [...forceInList];
-      for (const [id2, entry] of this.entries) {
-        if (!entry.config.forceOpacity) continue;
-        const layer = this.olLayers.get(id2);
-        if (!(layer == null ? void 0 : layer.getVisible())) continue;
-        if (!forcePinned.includes(id2)) forcePinned.push(id2);
-      }
-      const ordered = [...normal, ...forcePinned];
-      const baseZ = 200;
-      ordered.forEach((id2, index2) => {
-        const layer = this.olLayers.get(id2);
-        if (layer) layer.setZIndex(baseZ + index2);
-      });
-      if (!this.map) return;
-      for (const id2 of ordered) {
-        const layer = this.olLayers.get(id2);
-        if (!layer) continue;
-        this.map.removeLayer(layer);
-        this.map.addLayer(layer);
-      }
-    }
-  }
-  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
   let layerPermalinkInInitialHash;
   function captureInitialLayerPermalinkFromLocation() {
     if (layerPermalinkInInitialHash !== void 0) return;
@@ -119901,7 +120735,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const row = wmtsPreviewTileRow(rowStored);
     const format = entry.format ?? "png";
     const style = entry.style ?? "normal";
-    return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
+    return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=${geopfWmtsMatrixSet(entry.layer).id}&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
   }
   const _hoisted_1$9 = {
     class: "ec-base-radio-list",
@@ -122168,121 +123002,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  function resolveLimitGeoJsonDataRoot(fallbackBase = "./") {
-    const baseUrlRaw = typeof config.baseUrl === "string" ? config.baseUrl.trim() : "";
-    if (!baseUrlRaw) return normalizeRoot(fallbackBase);
-    if (baseUrlRaw === "/") {
-      if (typeof window !== "undefined") {
-        return normalizeRoot(`${window.location.origin}/`);
-      }
-      return "/";
-    }
-    if (/^https?:\/\//i.test(baseUrlRaw) || baseUrlRaw.startsWith("//")) {
-      try {
-        const resolved = new URL(baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`);
-        if (typeof window === "undefined" || resolved.origin === window.location.origin) {
-          return normalizeRoot(resolved.href);
-        }
-      } catch {
-      }
-      return normalizeRoot(fallbackBase);
-    }
-    if (baseUrlRaw.startsWith("/") && typeof window !== "undefined") {
-      const resolved = new URL(
-        baseUrlRaw.endsWith("/") ? baseUrlRaw : `${baseUrlRaw}/`,
-        window.location.origin
-      );
-      return normalizeRoot(resolved.href);
-    }
-    return normalizeRoot(fallbackBase);
-  }
-  function limitGeoJsonAssetUrl(fileName, fallbackBase = "./") {
-    const root = resolveLimitGeoJsonDataRoot(fallbackBase);
-    const path = fileName.replace(/^\//, "");
-    return `${root}json-data/${path}`;
-  }
-  function normalizeRoot(root) {
-    return root.endsWith("/") ? root : `${root}/`;
-  }
-  const RES_REGION_MIN = 1222.99245256282;
-  const RES_REGION_MAX = 2445.98490512564;
-  const RES_DEPT_MAX = 1222.99245256282;
-  const MAP_PROJECTION = "EPSG:3857";
-  const DATA_PROJECTION = "EPSG:4326";
-  const limitStyle = new Style({
-    stroke: new Stroke({ width: 2, color: "#000000" })
-  });
-  const geoJson = new GeoJSON();
-  let regionsFeatures = null;
-  let departmentsFeatures = null;
-  let regionsLoad = null;
-  let departmentsLoad = null;
-  function readGeoJsonFeatures(data) {
-    return geoJson.readFeatures(data, {
-      dataProjection: DATA_PROJECTION,
-      featureProjection: MAP_PROJECTION
-    });
-  }
-  async function loadRegions() {
-    if (regionsFeatures) return regionsFeatures;
-    if (!regionsLoad) {
-      regionsLoad = fetch(limitGeoJsonAssetUrl("region-fr-geojson.json")).then(async (res) => {
-        if (!res.ok) throw new Error(`Limites régions : ${res.status} ${res.statusText}`);
-        regionsFeatures = readGeoJsonFeatures(await res.json());
-        return regionsFeatures;
-      }).catch((err) => {
-        regionsLoad = null;
-        throw err;
-      });
-    }
-    return regionsLoad;
-  }
-  async function loadDepartments() {
-    if (departmentsFeatures) return departmentsFeatures;
-    if (!departmentsLoad) {
-      departmentsLoad = fetch(limitGeoJsonAssetUrl("department-fr-geojson.json")).then(async (res) => {
-        if (!res.ok) throw new Error(`Limites départements : ${res.status} ${res.statusText}`);
-        departmentsFeatures = readGeoJsonFeatures(await res.json());
-        return departmentsFeatures;
-      }).catch((err) => {
-        departmentsLoad = null;
-        throw err;
-      });
-    }
-    return departmentsLoad;
-  }
-  function preloadLimitGeoJson() {
-    void loadRegions().catch((err) => {
-      console.warn("[entree-carto] limites régions", err);
-    });
-    void loadDepartments().catch((err) => {
-      console.warn("[entree-carto] limites départements", err);
-    });
-  }
-  function createLimitVectorLayer(load2, minResolution, maxResolution) {
-    const source = new VectorSource();
-    void load2().then((features) => {
-      source.addFeatures(features);
-      source.changed();
-    }).catch((err) => {
-      console.warn("[entree-carto] limites administratives GeoJSON", err);
-    });
-    return new VectorLayer({
-      visible: false,
-      minResolution,
-      maxResolution,
-      zIndex: 20,
-      style: limitStyle,
-      source,
-      properties: { ecGpuLimitOverlay: true }
-    });
-  }
-  function createLimitRegionalLayer() {
-    return createLimitVectorLayer(loadRegions, RES_REGION_MIN, RES_REGION_MAX);
-  }
-  function createLimitDepartmentalLayer() {
-    return createLimitVectorLayer(loadDepartments, void 0, RES_DEPT_MAX);
-  }
   const RES_ZOOM_17 = 156543.03392804097 / 2 ** 17;
   const THUMBNAIL_BY_MAIN_KEY = {
     cadastreLow: {
@@ -122412,7 +123131,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   ];
   function createGpuBaseLayerEnvironment() {
-    preloadLimitGeoJson();
     const mainLayers = createMainLayerPool();
     const presets = PRESET_INPUTS.map(buildPreset);
     return {
