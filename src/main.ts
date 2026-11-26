@@ -12,6 +12,7 @@ import HomeView from './views/HomeView.vue'
 import DemoView from './views/DemoView.vue'
 import GeometryEditorView from './views/GeometryEditorView.vue'
 import SketchDemoView from './views/SketchDemoView.vue'
+import FicheDemoView from './views/FicheDemoView.vue'
 import './styles/main.css'
 import './styles/location-search-host.css'
 import './styles/notifications.css'
@@ -56,6 +57,11 @@ const router = createRouter({
       path: '/sketch',
       name: 'sketch',
       component: SketchDemoView,
+    },
+    {
+      path: '/fiche-info',
+      name: 'fiche-info',
+      component: FicheDemoView,
     },
   ],
 })

@@ -92,3 +92,33 @@ export function resolveParcelIdFromRaw(
   }
   return buildParcelIdFromProperties(raw)
 }
+
+export type ParcelIdParts = {
+  dep: string
+  com: string
+  arr: string
+  comAbs: string
+  section: string
+  numero: string
+}
+
+const PARCEL_ID_INPUT_PATTERNS = [
+  /^(\d{2}|2[AB])_(\d{3})_(\d{3})_(\d{3})_([A-Z0-9]{2})_(\d{4})$/,
+  /^(\d{2}|2[AB])(\d{3})(\d{3})(\d{3})([A-Z0-9]{2})(\d{4})$/,
+]
+
+/**
+ * Saisie d’un identifiant de parcelle : `34_301_000_000_AS_0136` ou `34301000000AS0136`
+ * (département, commune, arrondissement, commune absorbée, section, numéro). null si invalide.
+ */
+export function parseParcelIdInput(raw: string): ParcelIdParts | null {
+  const value = raw.replace(/\s+/g, '').toUpperCase()
+  for (const pattern of PARCEL_ID_INPUT_PATTERNS) {
+    const m = pattern.exec(value)
+    if (m) {
+      const [, dep, com, arr, comAbs, section, numero] = m
+      return { dep, com, arr, comAbs, section, numero }
+    }
+  }
+  return null
+}

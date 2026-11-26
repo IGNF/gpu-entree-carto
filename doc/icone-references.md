@@ -26,6 +26,7 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | <img src="./img/icon-previews/remix/map-2-line.svg" width="24" height="24" alt="" /> | Onglet catalogue | `ri-map-2-line` | Remix | [map-2-line](https://remixicon.com/icon/map-2-line) |
 | <img src="./img/icon-previews/remix/stack-line.svg" width="24" height="24" alt="" /> | Onglet couches | `ri-stack-line` | Remix | [stack-line](https://remixicon.com/icon/stack-line) |
 | <img src="./img/icon-previews/remix/list-indefinite.svg" width="24" height="24" alt="" /> | Onglet légendes | `ri-list-indefinite` | Remix | [list-indefinite](https://remixicon.com/icon/list-indefinite) |
+| <img src="./img/icon-previews/remix/code-s-slash-line.svg" width="24" height="24" alt="" /> | Onglet données brutes (démo fiche info) | `ri-code-s-slash-line` | Remix | [code-s-slash-line](https://remixicon.com/icon/code-s-slash-line) |
 | <img src="./img/icon-previews/remix/fullscreen-line.svg" width="24" height="24" alt="" /> | Barre carte mobile — entrer en plein écran | `ri-fullscreen-line` | Remix | [fullscreen-line](https://remixicon.com/icon/fullscreen-line) |
 | <img src="./img/icon-previews/remix/fullscreen-exit-line.svg" width="24" height="24" alt="" /> | Barre carte mobile — quitter le plein écran | `ri-fullscreen-exit-line` | Remix | [fullscreen-exit-line](https://remixicon.com/icon/fullscreen-exit-line) |
 
@@ -98,6 +99,14 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | Aperçu | Libellé | Classe HTML | Catalogue | URL |
 | ------- | ------- | ------------ | --------- | --- |
 | <img src="./img/icon-previews/dsfr/printer-line.svg" width="24" height="24" alt="" /> | Imprimer la carte | `fr-icon-printer-line` | DSFR | [printer-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=printer-line) |
+
+---
+
+## Clic info (`ClickInfoControl.vue`, prop `toggleable`)
+
+| Aperçu | Libellé | Classe HTML | Catalogue | URL |
+| ------- | ------- | ------------ | --------- | --- |
+| <img src="./img/icon-previews/dsfr/information-line.svg" width="24" height="24" alt="" /> | Activer / désactiver le clic info | `fr-icon-information-line` | DSFR | [information-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=information-line) |
 
 ---
 

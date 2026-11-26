@@ -7311,6 +7311,32 @@ dialog[id^='GPterritoriesPanel-'] {
       6 4,
     auto;
 }
+
+/*
+ * Bouton activer / désactiver le clic (`ClickInfoControl` toggleable) : sous la barre de recherche, bord gauche
+ * aligné. Sous la recherche les suggestions (z-index 1) passent au-dessus.
+ */
+.ec-map-shell .ec-click-info-toggle {
+  position: absolute;
+  top: calc(var(--ec-widget-gap) + 3.25rem + var(--ec-widget-gap));
+  /* + 2px : bord visible de la barre (le conteneur geopf a un liseré). */
+  left: calc(var(--ec-widget-gap) + var(--ec-search-left-inset) + 2px);
+  margin: 0;
+}
+
+/* Écran étroit : le sélecteur de mode passe sous la recherche → bouton sous le sélecteur. */
+@media (max-width: 64rem) {
+  .ec-map-shell .ec-click-info-toggle {
+    top: calc(
+      var(--ec-widget-gap) + 3.25rem + var(--ec-widget-btn-size, 48px) + var(--ec-widget-gap)
+    );
+  }
+}
+
+.ec-map-shell--tab-panels-layout-bottom .ec-click-info-toggle {
+  top: calc(var(--ec-map-mode-top) + var(--ec-widget-btn-size, 48px) + var(--ec-widget-gap));
+  left: var(--ec-widget-gap);
+}
 /* SearchEngineAdvanced monté hors carte (accueil gpu-site / démo). */
 
 .ec-search-engine-standalone {

@@ -42,7 +42,7 @@ Appliqué sur **`/api/fiche-info*`** :
 | `features` et `pets` des partitions `dus` / … | Territoire : tuiles `documents` ; parcelle : `parcelFiche.features` |
 | `lowScaleDocument` | Absent si `dus` a déjà des documents en production |
 | `parcelFeature` | Absent si `parcelGeometry` est présent |
-| `grid` | Réduit à `name`, `insee`, `is_rnu` |
+| `grid` | Réduit à `name`, `insee`, `is_rnu`, `is_coastline` |
 | `parcel` | Champs cadastre utiles (section, numero, insee, id, …) |
 | `deletedGrids[]` | `properties.insee` / `name` / `is_rnu` seulement |
 | Documents (panneaux / low-scale) | Liste blanche : `id`, `title`, `name`, `originalName`, `type`, `status`, `effectiveStatus`, `legalStatus`, `viewUrl`, `archiveUrl`, `typepsc`, `typeref` |
@@ -71,6 +71,8 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 - **Catalogue** : `activeFamilies[]` contient toujours `du` (commune, MEC DU et SCoT au point), `sup` si une couche SUP est cochée **et** dans sa plage de zoom (hors petite échelle), `scot` si une couche SCoT est cochée ; les sous-couches SUP cochées (`supType` dans `config_layers.json`) en `activeSupTypes[]` (ex. `AC1`). Au même point cerise, les familles ou types SUP nouvellement cochés déclenchent un complément réseau (fusion JSON locale, `ensureFicheCatalogSupplementAtMarker`), de même que l’entrée de la couche SUP dans sa plage de zoom. Une famille marquée `supIncluded` / `scotIncluded` à `false` dans la réponse (absent = incluse) n’est pas considérée comme acquise.
 - **Limitation de débit** : gpu-site compte par IP les requêtes exposant des SUP (fiche avec `sup`, fiche parcelle). Sur HTTP 429, la fiche affiche « Service temporairement saturé, réessayez. » (avec le bouton Réessayer), la fiche parcelle le même message.
 - **Split** : avec `apiFicheInfoPreferCombined = false`, appels par mode ; en territoire, second appel `/parcelle` (ou cache) pour les métadonnées parcelle du CTA retour.
+- **Servitude de passage sur le littoral (EL9)** : tuile EL9 (texte + « article L. 121-31 du code de l’urbanisme », lien Légifrance) en tête des SUP — **territoire** : commune littorale (`grid.is_coastline`) ; **parcelle** (onglet Documents) : point dans la zone d’alerte (`is_el9_alert`). Affichée seulement si les SUP sont cochées.
+- **Pas de commune au point** (ex. en mer) : fiche territoire titrée « Pas de commune à cet emplacement », message « Pas de document trouvé à cet emplacement… ».
 - **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
 - Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).
 - Annulation du `fetch` précédent au clic suivant (`AbortController`) ; requête légère `supersede=true` avec `client` / `seq` pour couper le travail Symfony en cours avant le nouvel appel.

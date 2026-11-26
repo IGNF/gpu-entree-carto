@@ -63,6 +63,8 @@ const HASH_DEBOUNCE_MS = 300
 
 let cachedParams: MapPermalinkParams = createEmptyPermalinkParams()
 let hashDebounce: ReturnType<typeof setTimeout> | null = null
+/** Démos sans permalien : l’état reste en mémoire (cerise, couches) mais n’est pas écrit dans l’adresse. */
+let hashWritesSuspended = false
 
 export function pathToPermalinkId(path: string): string {
   const parts = path.split('/').filter(Boolean)
@@ -179,6 +181,32 @@ export function locationHashLooksLikeMapPermalink(
   )
 }
 
+/**
+ * Pages sans permalien (démo fiche info) : oublie la cerise et les couches mémorisées (sinon reprises de
+ * `/map`), retire le fragment de l’adresse et suspend son écriture jusqu’à
+ * {@link resumeMapPermalinkHashWrites}.
+ */
+export function resetMapPermalinkState(): void {
+  if (hashDebounce) {
+    clearTimeout(hashDebounce)
+    hashDebounce = null
+  }
+  hashWritesSuspended = true
+  cachedParams = createEmptyPermalinkParams()
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (url.hash) {
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`)
+  }
+}
+
+/** En quittant une démo sans permalien : réécrit l’état courant (ex. carte principale déjà montée). */
+export function resumeMapPermalinkHashWrites(): void {
+  if (!hashWritesSuspended) return
+  hashWritesSuspended = false
+  scheduleMapPermalinkHashWrite()
+}
+
 export function getMapPermalinkParams(): MapPermalinkParams {
   return { ...cachedParams }
 }
@@ -231,11 +259,12 @@ export function flushMapPermalinkHashNow(): void {
     clearTimeout(hashDebounce)
     hashDebounce = null
   }
+  if (hashWritesSuspended) return
   writeMapPermalinkToLocation(cachedParams)
 }
 
 function scheduleMapPermalinkHashWrite(): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || hashWritesSuspended) return
   if (hashDebounce) clearTimeout(hashDebounce)
   hashDebounce = setTimeout(() => {
     hashDebounce = null

@@ -27,6 +27,13 @@ export type BuildGroupedSupTabOptions = {
 export const EL9_SUP_ALERT_DETAIL =
   "Les propriétés privées riveraines du domaine public maritime (DPM) sont grevées d'une servitude destinée à assurer exclusivement le passage des piétons sur le littoral, sur une bande de trois mètres de largeur à partir de la limite du DPM. Elle s'applique directement sans qu'une mesure règlementaire soit nécessaire pour son instauration."
 
+/** Base légale de la servitude EL9, affichée sous le texte de la tuile. */
+export const EL9_SUP_LEGAL_REFERENCE = "(article L. 121-31 du code de l'urbanisme)"
+
+/** Article L. 121-31 sur Légifrance (tuile EL9 cliquable, nouvel onglet). */
+export const EL9_SUP_LEGAL_URL =
+  'https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031210502'
+
 export function findSupCategoryByName(
   name: string,
   categories: SupCategory[] = readSupCategories(),
@@ -102,13 +109,16 @@ function buildSupCategoryGroupHtml(
   return parts.join('')
 }
 
-/** Bloc SUP EL9 (alerte littoral) : lien juridique + tuile catégorie EL9. */
+/**
+ * Bloc SUP EL9 (servitude de passage sur le littoral) : lien juridique + tuile catégorie EL9 vers l’article
+ * L. 121-31. Territoire : commune littorale (`grid.is_coastline`) ; parcelle : zone d’alerte (`is_el9_alert`).
+ */
 export function buildEl9SupGroupHtml(categories: SupCategory[] = readSupCategories()): string {
   const el9Category = findSupCategoryByName('EL9', categories)
   const tile = documentSupTileHtml({
     title: supCategoryLibelle(el9Category),
-    detail: EL9_SUP_ALERT_DETAIL,
-    href: undefined,
+    detail: [EL9_SUP_ALERT_DETAIL, EL9_SUP_LEGAL_REFERENCE],
+    href: EL9_SUP_LEGAL_URL,
   })
   return buildSupCategoryGroupHtml(el9Category, 'EL9', [tile])
 }

@@ -14,10 +14,21 @@ Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`
 | `/map`             | `DemoView.vue`           | Carte plein cadre + [TabPanelsControl](./TabPanelsControl.md) + [SketchControl](./SketchControl.md) ; centrage via handoff mémoire ; bouton temporaire **Notif test** (notifications [Notivue](./Notifications.md)). Si `useMinimified: true` : `entree-carto[.min].js` + `#gpu-map-container` / `gpu.createStandardViewer`. |
 | `/geometry-editor` | `GeometryEditorView.vue` | Démo [GeometryEditor](./GeometryEditor.md) standalone (`EntreeCartoGeometryEditor` si `useMinimified`)                                                                                                                                                               |
 | `/sketch`          | `SketchDemoView.vue`     | Démo [SketchControl](./SketchControl.md) / `EntreeCartoSketch.mountSketch` si `useMinimified` (encart options + carte)                                                                                                                    |
+| `/fiche-info`      | `FicheDemoView.vue`      | Démo fiche info (voir [Démo fiche info](#démo-fiche-info)) |
 
 ## Navigation
 
-`DemoHeader.vue` (DSFR, même schéma que gpu-site) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**. En dessous du breakpoint **`lg`**, la barre est masquée ; le bouton **Menu** (`fr-btn--menu`) ouvre la navigation dans la modale `fr-header__menu fr-modal`. Le JavaScript DSFR tourne en mode **Vue** (`window.dsfr` dans `index.html`, `startDsfrForVueApp()` après `app.mount` dans `main.ts`).
+`DemoHeader.vue` (DSFR, même schéma que gpu-site) : liens **Accueil**, **Carte**, **Géométries**, **Croquis**, **Fiche info**. En dessous du breakpoint **`lg`**, la barre est masquée ; le bouton **Menu** (`fr-btn--menu`) ouvre la navigation dans la modale `fr-header__menu fr-modal`. Le JavaScript DSFR tourne en mode **Vue** (`window.dsfr` dans `index.html`, `startDsfrForVueApp()` après `app.mount` dans `main.ts`).
+
+## Démo fiche info
+
+Vue `FicheDemoView.vue` (route `/fiche-info`).
+
+- **Carte** : [TabPanelsControl](./TabPanelsControl.md) (même catalogue gpu-site que `/map`, via `useDemoLayerCatalog`) avec les onglets **Informations**, **Catalogue** et **Données brutes** (`hiddenTabs` / `extraTab`) ; [SearchEngineControl](./SearchEngineControl.md) ; [MapModeSelector](./MapModeSelector.md) (Parcelle au départ) ; [ClickInfoControl](./ClickInfoControl.md) `toggleable` (actif au départ, bouton sous la recherche) ; zoom et échelle. Pas d’impression : les boutons « Imprimer » de la fiche sont masqués.
+- **Entrées** : clic sur la carte, recherche de lieu et champ **identifiant de parcelle** au-dessus de la carte (`34_301_000_000_AS_0136` ou `34301000000AS0136`) — la parcelle est localisée par le géocodage Géoplateforme (index `parcel`), la carte passe en mode Parcelle puis le point est interrogé comme un clic.
+- **Résultat** : cerise, emprise rouge (parcelle) ou rouge pointillé (commune), **vue recentrée sur l’emprise** (`useFitOnModeEmprise`), fiche dans l’onglet Informations (filtrée par le catalogue).
+- **Onglet Données brutes** : réponse `/api/fiche-info` (`RawFicheData`) en arbre repliable. Les champs non lus par la fiche sont grisés, les objets partiellement lus sont signalés ; la liste des champs lus (`src/lib/demo/ficheUsedFields.ts`) est vérifiée par un test sur des réponses réelles.
+- **Sans permalien** : à l’ouverture, l’état du permalien (cerise, couches) est vidé et l’adresse n’est plus écrite ; l’écriture reprend en quittant la page.
 
 ## Flux localisation
 

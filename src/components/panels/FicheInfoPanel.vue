@@ -50,6 +50,7 @@ const props = defineProps<{
 }>()
 
 const mapMode = useMapMode()
+/** Absente (ex. démo fiche info) : boutons Imprimer masqués. */
 const printModal = inject(mapPrintModalKey, null)
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
 const { legendZoom } = useMapLegendZoom(mapRef)
@@ -429,6 +430,7 @@ const parcelPanelFootnotesHtml = computed(() => {
             <div class="ec-fiche-info__infos-toolbar">
               <h3 class="ec-fiche-info__section-title">Règles d’urbanisme</h3>
               <button
+                v-if="printModal"
                 type="button"
                 class="fr-btn fr-btn--secondary fr-btn--sm"
                 :disabled="!parcelDetailCached"
@@ -526,6 +528,7 @@ const parcelPanelFootnotesHtml = computed(() => {
       <div class="ec-fiche-info__territory-head">
         <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
         <button
+          v-if="printModal"
           type="button"
           class="fr-btn fr-btn--secondary fr-btn--sm"
           title="Imprimer la fiche territoire"

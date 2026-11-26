@@ -11,7 +11,7 @@
 - [Intégration gpu-site](./INTEGRATION.md) — remplacement de gpu-client, `dist/`, limites actuelles
 - [CSS bundles lib](./LibCssBundles.md) — chunks CSS (accueil léger, SVGO webpack)
 - [Équivalents gpu-client ↔ IGNF](./GPU_CLIENT_EQUIVALENTS.md) — matrice fonctionnalités / vue-components / geopf / entree-carto IGNF
-- [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch` + nav DSFR
+- [Démonstration](./Demo.md) — pages `/` (localisation), `/map` (carte), `/geometry-editor`, `/sketch`, `/fiche-info` + nav DSFR
 - [Configuration démo](./DemoConfig.md) — `public/js/demo-config.js` (équivalent gpu-client `exemple-config.js`)
 - [Assets externes démo](./DemoExternal.md) — `public/external/` (DSFR + Remix pour la démo autonome, pas d’icônes DSFR dans les bundles lib)
 - [Notifications](./Notifications.md) — toasts Notivue style cartes.gouv.fr

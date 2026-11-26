@@ -54,6 +54,8 @@ Panneau latéral à **4 onglets**, à droite de la carte. Seule la **barre d’o
 
 Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
 
+Liste calculée par `panelTabs({ hiddenTabs, extraTab })` (`src/composables/tabPanels.ts`) : les onglets masqués sont retirés, l’onglet supplémentaire (`TAB_PANEL_IDS.extra`, n° 4) est ajouté en dernier. `openTab` ignore un onglet non affiché.
+
 ## Props
 
 | Prop             | Type                   | Description                                       |
@@ -63,6 +65,19 @@ Icônes Remix : package `remixicon` (CSS global dans `main.ts`).
 | `layerNodes`     | `TreeLayerNode[]`      | Catalogue _Données_ / pile / légendes             |
 | `catalogLayersLoading` | `boolean`        | `true` tant que `LAYER_CONFIG` n’est pas prêt (roue dans le catalogue) |
 | `layerMapHooks`  | `LayerMapHooks?`       | Callbacks visibilité / opacité → carte (WMS démo) |
+| `hiddenTabs`     | `number[]`             | Onglets retirés (`TAB_PANEL_IDS`), défaut `[]`    |
+| `extraTab`       | `{ label, iconKind, iconClass }?` | Onglet supplémentaire ; contenu fourni par le slot `extra` |
+
+Exemple (démo fiche info) :
+
+```vue
+<TabPanelsControl
+  :hidden-tabs="[TAB_PANEL_IDS.dataLayers, TAB_PANEL_IDS.legends]"
+  :extra-tab="{ label: 'Données brutes', iconKind: 'remix', iconClass: 'ri-code-s-slash-line' }"
+>
+  <template #extra><RawFicheData :raw="selection?.raw" mode="parcel" /></template>
+</TabPanelsControl>
+```
 
 ## Events
 

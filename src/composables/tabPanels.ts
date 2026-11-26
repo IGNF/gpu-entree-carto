@@ -46,7 +46,7 @@ export type LegendPanelFocus = {
 }
 
 export interface TabPanelsApi {
-  /** Ouvre le panneau sur l’onglet `index` (0–3). */
+  /** Ouvre le panneau sur l’onglet `index` (`TAB_PANEL_IDS`, s’il est affiché). */
   openTab: (index: number) => void
   /** Ouvre l’onglet Légendes, déplie et scroll vers la couche `layerId`. */
   openLegendForLayer: (layerId: string) => void
@@ -78,12 +78,64 @@ export function registerTabPanelsApi(api: TabPanelsApi | null): void {
   tabPanelsApiRef.value = api
 }
 
+/** Démontage : n’efface que si ce panneau est encore l’enregistré (sinon celui de la page suivante). */
+export function unregisterTabPanelsApi(api: TabPanelsApi): void {
+  if (tabPanelsApiRef.value === api) tabPanelsApiRef.value = null
+}
+
 export const TAB_PANEL_IDS = {
   fiche: 0,
   catalogue: 1,
   dataLayers: 2,
   legends: 3,
+  /** Onglet propre à la page hôte (prop `extraTab` + slot `extra`). */
+  extra: 4,
 } as const
+
+export type PanelTabDef = {
+  id: number
+  label: string
+  iconKind: 'dsfr' | 'remix'
+  iconClass: string
+}
+
+const DEFAULT_PANEL_TABS: PanelTabDef[] = [
+  {
+    id: TAB_PANEL_IDS.fiche,
+    label: 'Informations / localisation',
+    iconKind: 'dsfr',
+    iconClass: 'fr-icon-map-pin-2-line',
+  },
+  {
+    id: TAB_PANEL_IDS.catalogue,
+    label: 'Catalogue',
+    iconKind: 'remix',
+    iconClass: 'ri-map-2-line',
+  },
+  {
+    id: TAB_PANEL_IDS.dataLayers,
+    label: 'Couches de données',
+    iconKind: 'remix',
+    iconClass: 'ri-stack-line',
+  },
+  {
+    id: TAB_PANEL_IDS.legends,
+    label: 'Légendes',
+    iconKind: 'remix',
+    iconClass: 'ri-list-indefinite',
+  },
+]
+
+/** Onglets affichés : ceux par défaut moins `hiddenTabs`, plus `extraTab` en dernier. */
+export function panelTabs(options?: {
+  hiddenTabs?: readonly number[]
+  extraTab?: Omit<PanelTabDef, 'id'>
+}): PanelTabDef[] {
+  const hidden = options?.hiddenTabs ?? []
+  const tabs = DEFAULT_PANEL_TABS.filter((tab) => !hidden.includes(tab.id))
+  if (options?.extraTab) tabs.push({ ...options.extraTab, id: TAB_PANEL_IDS.extra })
+  return tabs
+}
 
 /** Texte fiche lorsqu’aucune cerise / sélection n’est active. */
 export const DEFAULT_FICHE_EMPTY: FicheInfoSelection = {

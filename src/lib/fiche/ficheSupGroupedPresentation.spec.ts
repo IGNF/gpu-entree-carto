@@ -76,4 +76,15 @@ describe('buildEl9SupGroupHtml', () => {
     expect(html).toContain('Servitude de passage des piétons sur le littoral')
     expect(html).toContain(escapeHtml(EL9_SUP_ALERT_DETAIL))
   })
+
+  it('référence de l’article sur une nouvelle ligne, tuile cliquable vers Légifrance (nouvel onglet)', () => {
+    const html = buildEl9SupGroupHtml(categoriesFixture)
+    expect(html).toContain(
+      `${escapeHtml(EL9_SUP_ALERT_DETAIL)}<br>${escapeHtml("(article L. 121-31 du code de l'urbanisme)")}`,
+    )
+    expect(html).toContain(
+      'href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031210502" target="_blank" rel="noopener noreferrer"',
+    )
+    expect(html).toContain('fr-enlarge-link')
+  })
 })
