@@ -30653,6 +30653,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           zoom: options.zoom ?? 6,
           minZoom: options.minZoom ?? 5,
           maxZoom: options.maxZoom ?? 19,
+          // zooms entiers (molette, pincement, fit, setZoom) : tuiles WMS 512 px à leur taille nominale,
+          // plages de zoom des couches et seuils SLD alignés (pas de zoom fractionnaire sans couche)
+          constrainResolution: true,
           projection: "EPSG:3857"
         })
       });
@@ -31320,7 +31323,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       const view = map2.getView();
       const current = view.getZoom();
       if (current == null) return;
-      view.animate({ zoom: current + delta, duration: 200 });
+      view.animate({ zoom: view.getConstrainedZoom(current + delta), duration: 200 });
     }
     async function toggleFullscreen() {
       const root = getMapShellFullscreenElement(mapRef.value);
@@ -68400,7 +68403,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return zoom >= t - GPU_WMS_ZOOM_BAND_MARGIN;
   }
   function isZoomInLayerRange(zoom, minZoom, maxZoom) {
-    return zoom >= minZoom && zoom <= maxZoom;
+    return zoom > minZoom - 1 && zoom <= maxZoom;
   }
   function effectiveZoomLevelsFromConfig(layer, inheritedMin, inheritedMax) {
     return {
@@ -85302,6 +85305,203 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (dpi === HIGH_DPI_VALUE && !isPaperFormatAllowedAtHighDpi(paperFormat)) return BASE_DPI;
     return dpi;
   }
+  const RESOLUTION_EPSILON = 1e-5;
+  function getLayerResolutionRange(view, minZoomLevel, maxZoomLevel) {
+    const viewMinZoom = view.getMinZoom();
+    let maxResolution;
+    if (minZoomLevel - 1 >= viewMinZoom) {
+      maxResolution = view.getResolutionForZoom(minZoomLevel - 1);
+    } else {
+      maxResolution = view.getResolutionForZoom(minZoomLevel) + RESOLUTION_EPSILON;
+    }
+    return {
+      minResolution: view.getResolutionForZoom(maxZoomLevel),
+      maxResolution
+    };
+  }
+  const GPU_WMS_SOURCE_OPTIONS_PROP = "ecGpuWmsSourceOptions";
+  function wmsUrl() {
+    const url = config.wmsExterneUrl;
+    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
+  }
+  function buildCqlFilter(layer, document2) {
+    var _a2;
+    const parts = [];
+    const configuredName = layer.name ?? "";
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
+      parts.push(`(partition like '${document2.name}')`);
+    }
+    if (layer.filterAttribute && ((_a2 = layer.filterValue) == null ? void 0 : _a2.length)) {
+      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
+    } else if (layer.filterAttribute && layer.filterValueLike) {
+      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
+    }
+    return parts.join(" AND ");
+  }
+  function createWmsTileLayer(entry, document2, view) {
+    const layer = entry.config;
+    if (layer.virtual || !layer.name) return null;
+    let layerName = layer.name;
+    let url = wmsUrl();
+    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
+      const validation = config.wmsValidationUrl;
+      if (typeof validation === "string" && validation.length) {
+        url = validation;
+      }
+      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
+    }
+    const cql = buildCqlFilter(layer, document2);
+    const params2 = {
+      LAYERS: layerName,
+      TRANSPARENT: true,
+      VERSION: "1.1.1",
+      FORMAT: "image/png",
+      TILED: true
+    };
+    if (cql) {
+      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
+    }
+    const minZoom = entry.minZoomLevel ?? 0;
+    const maxZoom = entry.maxZoomLevel ?? 22;
+    const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
+    const sourceOptions = {
+      url,
+      params: params2,
+      crossOrigin: "anonymous",
+      serverType: "geoserver",
+      tileGrid: createXYZ({ tileSize: 512 })
+    };
+    return new TileLayer({
+      // hidpi désactivé : sur écran haute densité, tuiles 512 px agrandies par le navigateur plutôt que
+      // 1024 px rendues par GeoServer (4 fois moins de pixels) ; libellés un peu moins nets
+      source: new TileWMS({ ...sourceOptions, hidpi: false }),
+      visible: false,
+      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
+      minResolution,
+      maxResolution,
+      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
+      properties: {
+        ecGpuCatalogId: entry.id,
+        ecGpuLayerName: layerName,
+        [GPU_WMS_SOURCE_OPTIONS_PROP]: sourceOptions
+      }
+    });
+  }
+  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
+  function applyWmsLayerGrayscale(layer, grayscale) {
+    const internal = layer;
+    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
+    layer.set("grayscale", grayscale);
+    layer.changed();
+  }
+  class GpuWmsLayerRegistry {
+    constructor() {
+      __publicField(this, "entries", /* @__PURE__ */ new Map());
+      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
+      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
+      __publicField(this, "map", null);
+      __publicField(this, "document", null);
+    }
+    loadFromLayerConfig(layers, document2) {
+      var _a2;
+      this.document = document2;
+      for (const layer of this.olLayers.values()) {
+        (_a2 = this.map) == null ? void 0 : _a2.removeLayer(layer);
+      }
+      this.entries.clear();
+      this.olLayers.clear();
+      this.grayscaleById.clear();
+      for (const entry of layerConfigToCatalogEntries(layers)) {
+        this.entries.set(entry.id, entry);
+      }
+    }
+    attachMap(map2) {
+      this.map = map2;
+      for (const layer of this.olLayers.values()) {
+        if (!map2.getLayers().getArray().includes(layer)) {
+          map2.addLayer(layer);
+        }
+      }
+    }
+    detachMap() {
+      if (!this.map) return;
+      for (const layer of this.olLayers.values()) {
+        this.map.removeLayer(layer);
+      }
+      this.map = null;
+    }
+    ensureLayer(catalogId) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) return layer;
+      const entry = this.entries.get(catalogId);
+      if (!entry) return void 0;
+      if (!this.map) return void 0;
+      const created = createWmsTileLayer(entry, this.document, this.map.getView());
+      if (!created) return void 0;
+      this.olLayers.set(catalogId, created);
+      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
+      if (this.map && !this.map.getLayers().getArray().includes(created)) {
+        this.map.addLayer(created);
+      }
+      return created;
+    }
+    setVisible(catalogId, visible) {
+      if (visible) {
+        const layer2 = this.ensureLayer(catalogId);
+        if (layer2) layer2.setVisible(true);
+        return;
+      }
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setVisible(false);
+    }
+    setOpacity(catalogId, opacityPercent) {
+      const layer = this.olLayers.get(catalogId);
+      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
+    }
+    setGrayscale(catalogId, grayscale) {
+      this.grayscaleById.set(catalogId, grayscale);
+      const layer = this.olLayers.get(catalogId);
+      if (layer) applyWmsLayerGrayscale(layer, grayscale);
+    }
+    hasWmsLayer(catalogId) {
+      return this.entries.has(catalogId);
+    }
+    /**
+     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
+     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
+     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
+     */
+    applyStackOrder(catalogIdsBottomToTop) {
+      var _a2;
+      const normal = [];
+      const forceInList = [];
+      for (const id2 of catalogIdsBottomToTop) {
+        if ((_a2 = this.entries.get(id2)) == null ? void 0 : _a2.config.forceOpacity) forceInList.push(id2);
+        else normal.push(id2);
+      }
+      const forcePinned = [...forceInList];
+      for (const [id2, entry] of this.entries) {
+        if (!entry.config.forceOpacity) continue;
+        const layer = this.olLayers.get(id2);
+        if (!(layer == null ? void 0 : layer.getVisible())) continue;
+        if (!forcePinned.includes(id2)) forcePinned.push(id2);
+      }
+      const ordered = [...normal, ...forcePinned];
+      const baseZ = 200;
+      ordered.forEach((id2, index2) => {
+        const layer = this.olLayers.get(id2);
+        if (layer) layer.setZIndex(baseZ + index2);
+      });
+      if (!this.map) return;
+      for (const id2 of ordered) {
+        const layer = this.olLayers.get(id2);
+        if (!layer) continue;
+        this.map.removeLayer(layer);
+        this.map.addLayer(layer);
+      }
+    }
+  }
+  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
   function copyViewState(from, to2) {
     to2.setCenter(from.getCenter());
     to2.setResolution(from.getResolution());
@@ -85338,8 +85538,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   const SEARCH_LAYER_PRINT_Z_INDEX = 1e6;
   const PRINT_SEARCH_LAYER_PROP = "ec-print-search-layer";
   function cloneTileLayer(layer) {
+    const gpuWmsOptions = layer.get(GPU_WMS_SOURCE_OPTIONS_PROP);
     return new TileLayer({
-      source: layer.getSource() ?? void 0,
+      source: gpuWmsOptions ? new TileWMS({ ...gpuWmsOptions, hidpi: true }) : layer.getSource() ?? void 0,
       visible: layer.getVisible(),
       opacity: layer.getOpacity(),
       zIndex: layer.getZIndex(),
@@ -117805,198 +118006,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return 0.7;
   }
-  const RESOLUTION_EPSILON = 1e-5;
-  function getLayerResolutionRange(view, minZoomLevel, maxZoomLevel) {
-    const viewMinZoom = view.getMinZoom();
-    let maxResolution;
-    if (minZoomLevel - 1 >= viewMinZoom) {
-      maxResolution = view.getResolutionForZoom(minZoomLevel - 1);
-    } else {
-      maxResolution = view.getResolutionForZoom(minZoomLevel) + RESOLUTION_EPSILON;
-    }
-    return {
-      minResolution: view.getResolutionForZoom(maxZoomLevel),
-      maxResolution
-    };
-  }
-  function wmsUrl() {
-    const url = config.wmsExterneUrl;
-    return typeof url === "string" && url.length ? url : "https://data.geopf.fr/wms-v/ows";
-  }
-  function buildCqlFilter(layer, document2) {
-    var _a2;
-    const parts = [];
-    const configuredName = layer.name ?? "";
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && document2.name && !configuredName.endsWith("municipality")) {
-      parts.push(`(partition like '${document2.name}')`);
-    }
-    if (layer.filterAttribute && ((_a2 = layer.filterValue) == null ? void 0 : _a2.length)) {
-      parts.push(`${layer.filterAttribute} IN ('${layer.filterValue.join("','")}')`);
-    } else if (layer.filterAttribute && layer.filterValueLike) {
-      parts.push(`${layer.filterAttribute} LIKE '${layer.filterValueLike}'`);
-    }
-    return parts.join(" AND ");
-  }
-  function createWmsTileLayer(entry, document2, view) {
-    const layer = entry.config;
-    if (layer.virtual || !layer.name) return null;
-    let layerName = layer.name;
-    let url = wmsUrl();
-    if ((document2 == null ? void 0 : document2.status) === "document.preview" && !layerName.endsWith("municipality")) {
-      const validation = config.wmsValidationUrl;
-      if (typeof validation === "string" && validation.length) {
-        url = validation;
-      }
-      layerName = layerName.split(",").map((n) => `${n}_previsu`).join(",");
-    }
-    const cql = buildCqlFilter(layer, document2);
-    const params2 = {
-      LAYERS: layerName,
-      TRANSPARENT: true,
-      VERSION: "1.1.1",
-      FORMAT: "image/png",
-      TILED: true
-    };
-    if (cql) {
-      params2.cql_filter = layerName.split(",").map(() => cql).join(";");
-    }
-    const minZoom = entry.minZoomLevel ?? 0;
-    const maxZoom = entry.maxZoomLevel ?? 22;
-    const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
-    return new TileLayer({
-      source: new TileWMS({
-        url,
-        params: params2,
-        crossOrigin: "anonymous",
-        serverType: "geoserver",
-        tileGrid: createXYZ({ tileSize: 512 })
-      }),
-      visible: false,
-      opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
-      minResolution,
-      maxResolution,
-      zIndex: layer.zIndex ? Number(layer.zIndex) : void 0,
-      properties: {
-        ecGpuCatalogId: entry.id,
-        ecGpuLayerName: layerName
-      }
-    });
-  }
-  const WMS_LAYER_GRAYSCALE_CLASS = "ec-gpu-layer-grayscale";
-  function applyWmsLayerGrayscale(layer, grayscale) {
-    const internal = layer;
-    internal.className_ = grayscale ? `ol-layer ${WMS_LAYER_GRAYSCALE_CLASS}` : "ol-layer";
-    layer.set("grayscale", grayscale);
-    layer.changed();
-  }
-  class GpuWmsLayerRegistry {
-    constructor() {
-      __publicField(this, "entries", /* @__PURE__ */ new Map());
-      __publicField(this, "olLayers", /* @__PURE__ */ new Map());
-      __publicField(this, "grayscaleById", /* @__PURE__ */ new Map());
-      __publicField(this, "map", null);
-      __publicField(this, "document", null);
-    }
-    loadFromLayerConfig(layers, document2) {
-      var _a2;
-      this.document = document2;
-      for (const layer of this.olLayers.values()) {
-        (_a2 = this.map) == null ? void 0 : _a2.removeLayer(layer);
-      }
-      this.entries.clear();
-      this.olLayers.clear();
-      this.grayscaleById.clear();
-      for (const entry of layerConfigToCatalogEntries(layers)) {
-        this.entries.set(entry.id, entry);
-      }
-    }
-    attachMap(map2) {
-      this.map = map2;
-      for (const layer of this.olLayers.values()) {
-        if (!map2.getLayers().getArray().includes(layer)) {
-          map2.addLayer(layer);
-        }
-      }
-    }
-    detachMap() {
-      if (!this.map) return;
-      for (const layer of this.olLayers.values()) {
-        this.map.removeLayer(layer);
-      }
-      this.map = null;
-    }
-    ensureLayer(catalogId) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) return layer;
-      const entry = this.entries.get(catalogId);
-      if (!entry) return void 0;
-      if (!this.map) return void 0;
-      const created = createWmsTileLayer(entry, this.document, this.map.getView());
-      if (!created) return void 0;
-      this.olLayers.set(catalogId, created);
-      applyWmsLayerGrayscale(created, this.grayscaleById.get(catalogId) === true);
-      if (this.map && !this.map.getLayers().getArray().includes(created)) {
-        this.map.addLayer(created);
-      }
-      return created;
-    }
-    setVisible(catalogId, visible) {
-      if (visible) {
-        const layer2 = this.ensureLayer(catalogId);
-        if (layer2) layer2.setVisible(true);
-        return;
-      }
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setVisible(false);
-    }
-    setOpacity(catalogId, opacityPercent) {
-      const layer = this.olLayers.get(catalogId);
-      if (layer) layer.setOpacity(Math.min(100, Math.max(0, opacityPercent)) / 100);
-    }
-    setGrayscale(catalogId, grayscale) {
-      this.grayscaleById.set(catalogId, grayscale);
-      const layer = this.olLayers.get(catalogId);
-      if (layer) applyWmsLayerGrayscale(layer, grayscale);
-    }
-    hasWmsLayer(catalogId) {
-      return this.entries.has(catalogId);
-    }
-    /**
-     * Empile les couches WMS selon l’ordre utilisateur (bas → haut).
-     * Les entrées `forceOpacity` restent au sommet même si absentes de la liste.
-     * z-index de base 200 + index ; ré-ajout OL du bas vers le haut.
-     */
-    applyStackOrder(catalogIdsBottomToTop) {
-      var _a2;
-      const normal = [];
-      const forceInList = [];
-      for (const id2 of catalogIdsBottomToTop) {
-        if ((_a2 = this.entries.get(id2)) == null ? void 0 : _a2.config.forceOpacity) forceInList.push(id2);
-        else normal.push(id2);
-      }
-      const forcePinned = [...forceInList];
-      for (const [id2, entry] of this.entries) {
-        if (!entry.config.forceOpacity) continue;
-        const layer = this.olLayers.get(id2);
-        if (!(layer == null ? void 0 : layer.getVisible())) continue;
-        if (!forcePinned.includes(id2)) forcePinned.push(id2);
-      }
-      const ordered = [...normal, ...forcePinned];
-      const baseZ = 200;
-      ordered.forEach((id2, index2) => {
-        const layer = this.olLayers.get(id2);
-        if (layer) layer.setZIndex(baseZ + index2);
-      });
-      if (!this.map) return;
-      for (const id2 of ordered) {
-        const layer = this.olLayers.get(id2);
-        if (!layer) continue;
-        this.map.removeLayer(layer);
-        this.map.addLayer(layer);
-      }
-    }
-  }
-  const gpuWmsLayerRegistry = new GpuWmsLayerRegistry();
   let layerPermalinkInInitialHash;
   function captureInitialLayerPermalinkFromLocation() {
     if (layerPermalinkInInitialHash !== void 0) return;

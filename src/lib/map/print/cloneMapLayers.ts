@@ -5,6 +5,8 @@ import type BaseLayer from 'ol/layer/Base'
 import Layer from 'ol/layer/Layer'
 import type Map from 'ol/Map'
 import VectorSource from 'ol/source/Vector'
+import TileWMS, { type Options as TileWMSOptions } from 'ol/source/TileWMS'
+import { GPU_WMS_SOURCE_OPTIONS_PROP } from '@/lib/layerConfig/gpuWmsLayers'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
 import { renderSyncIfAttached } from '@/lib/map/print/waitForMapRender'
 import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
@@ -16,8 +18,12 @@ const SEARCH_LAYER_PRINT_Z_INDEX = 1_000_000
 export const PRINT_SEARCH_LAYER_PROP = 'ec-print-search-layer'
 
 function cloneTileLayer(layer: TileLayer): TileLayer {
+  // WMS GPU (hidpi désactivé sur la carte) : redessiné net au pixelRatio de l'export
+  const gpuWmsOptions = layer.get(GPU_WMS_SOURCE_OPTIONS_PROP) as TileWMSOptions | undefined
   return new TileLayer({
-    source: layer.getSource() ?? undefined,
+    source: gpuWmsOptions
+      ? new TileWMS({ ...gpuWmsOptions, hidpi: true })
+      : (layer.getSource() ?? undefined),
     visible: layer.getVisible(),
     opacity: layer.getOpacity(),
     zIndex: layer.getZIndex(),

@@ -11,6 +11,12 @@ describe('isZoomInLayerRange', () => {
     expect(isZoomInLayerRange(15, 10, 15)).toBe(true)
     expect(isZoomInLayerRange(9, 10, 15)).toBe(false)
   })
+
+  it('suit la règle des tuiles WMS : visible dès minZoom - 1 exclu', () => {
+    expect(isZoomInLayerRange(11.5, 12, 21)).toBe(true)
+    expect(isZoomInLayerRange(11, 12, 21)).toBe(false)
+    expect(isZoomInLayerRange(21.2, 12, 21)).toBe(false)
+  })
 })
 
 describe('isCatalogNodeInZoomRange', () => {
