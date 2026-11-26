@@ -16,6 +16,13 @@ let activePanelNetworkAbort: AbortController | null = null
 /** Fetches emprise / enrichissement (→ clé de requête en vol) : annulés avec le panneau au clic suivant. */
 const activeBackgroundNetworkAborts = new Map<AbortController, string>()
 
+/** Dernier fetch « panneau » refusé par la limitation de débit de gpu-site (HTTP 429). */
+let lastPanelFetchRateLimited = false
+
+export function wasLastFicheInfoPanelFetchRateLimited(): boolean {
+  return lastPanelFetchRateLimited
+}
+
 export class FicheInfoFetchAborted extends Error {
   override name = 'FicheInfoFetchAborted'
 }
@@ -243,12 +250,14 @@ async function fetchGpuFicheInfoPayloadFromUrl(
   const sendSessionCookies =
     url.searchParams.get('zone') === 'validation' || url.searchParams.has('previewDocumentId')
 
+  if (role === 'panel') lastPanelFetchRateLimited = false
   try {
     const res = await fetch(url.toString(), {
       credentials: sendSessionCookies ? 'include' : 'same-origin',
       signal,
     })
     if (res.status === 204) return null
+    if (res.status === 429 && role === 'panel') lastPanelFetchRateLimited = true
     if (!res.ok) return null
     const data: unknown = await res.json()
     if (!isGpuFicheInfoPayload(data)) return null

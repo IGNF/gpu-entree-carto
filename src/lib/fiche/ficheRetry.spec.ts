@@ -30,6 +30,16 @@ describe('fiche info : « Indisponibilité du service » + Réessayer', () => {
     expect(btn.querySelector('i.ri-refresh-line')).not.toBeNull()
   })
 
+  it('HTTP 429 : « Service temporairement saturé, réessayez. » avec le bouton Réessayer', () => {
+    const sel = ficheServiceUnavailableSelection('Parcelle', params, true)
+    const div = document.createElement('div')
+    div.innerHTML = sanitizeDisplayHtml(sel.bodyHtml ?? '', true)
+    const p = div.querySelector('p')!
+    expect(p.textContent?.trim()).toBe('Service temporairement saturé, réessayez.')
+    expect(p.querySelector('button')).not.toBeNull()
+    expect(ficheRetryParamsFromSelection(sel)).toEqual(params)
+  })
+
   it('relance avec les paramètres de la requête échouée', () => {
     const sel = ficheServiceUnavailableSelection('Parcelle', params)
     expect(ficheRetryParamsFromSelection(sel)).toEqual(params)

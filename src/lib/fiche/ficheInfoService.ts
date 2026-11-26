@@ -1,10 +1,14 @@
 import config from '@/lib/config'
-import { ficheServiceUnavailableSelection } from '@/lib/fiche/ficheRetry'
+import {
+  FICHE_RATE_LIMITED_MESSAGE,
+  FICHE_SUPPLEMENT_UNAVAILABLE_MESSAGE,
+  ficheServiceUnavailableSelection,
+} from '@/lib/fiche/ficheRetry'
 import type { StandardViewerSearch } from '@/lib/types'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
-import { watch } from 'vue'
+import { shallowRef, watch } from 'vue'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { escapeHtml, FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import {
@@ -22,6 +26,7 @@ import {
   abortInflightFicheInfoFetch,
   fetchGpuFicheInfoCombinedPayload,
   fetchGpuFicheInfoPayload,
+  wasLastFicheInfoPanelFetchRateLimited,
 } from '@/lib/fiche/ficheInfoFetch'
 import { preferFicheInfoV2CombinedFetch } from '@/lib/fiche/ficheInfoApiUrls'
 import {
@@ -313,6 +318,9 @@ function readFicheCherryPoint(): { lon: number; lat: number } | null {
   return null
 }
 
+/** Message d’échec du dernier complément au point (familles ou types SUP cochés), null sinon. */
+export const ficheSupplementError = shallowRef<string | null>(null)
+
 /** Réaffiche la fiche courante après changement de visibilité catalogue (permalink). */
 export function refreshFicheForCatalogVisibility(): void {
   const api = tabPanelsApiRef.value
@@ -348,6 +356,8 @@ export function refreshFicheForCatalogVisibility(): void {
     return
   }
 
+  // plus rien à compléter (ex. couche décochée) : message d’un complément en échec obsolète
+  ficheSupplementError.value = null
   const next = refreshFicheSelectionCatalogVisibility(current)
   syncCadastreLowFromFicheSelectionRaw(next.raw)
   api?.updateSelection(next)
@@ -410,6 +420,8 @@ export async function ensureFicheCatalogSupplementAtMarker(): Promise<void> {
   mapPointFetchAbort?.abort()
   abortInflightFicheInfoFetch()
   mapPointFetchAbort = new AbortController()
+  const supplementSignal = mapPointFetchAbort.signal
+  ficheSupplementError.value = null
 
   // sans du : gpu-site résout la commune en base, les couches DU déjà récupérées ne sont pas redemandées
   const familiesToFetch: FicheInfoApiFamily[] = missingFamilies.length ? missingFamilies : ['sup']
@@ -426,9 +438,17 @@ export async function ensureFicheCatalogSupplementAtMarker(): Promise<void> {
     { lon, lat, zoom, mode },
     [...familiesToFetch],
     supTypesToFetch,
-    mapPointFetchAbort.signal,
+    supplementSignal,
   )
-  if (!partial || requestId !== mapPointRequestSeq) return
+  if (requestId !== mapPointRequestSeq) return
+  if (!partial) {
+    if (!supplementSignal.aborted) {
+      ficheSupplementError.value = wasLastFicheInfoPanelFetchRateLimited()
+        ? FICHE_RATE_LIMITED_MESSAGE
+        : FICHE_SUPPLEMENT_UNAVAILABLE_MESSAGE
+    }
+    return
+  }
 
   const merged = recordGpuPayloadAcquisition(
     lon,
@@ -564,6 +584,7 @@ async function loadFicheForMapPointImpl(params: {
   })
   mapPointFetchAbort = new AbortController()
   const fetchAbortSignal = mapPointFetchAbort.signal
+  ficheSupplementError.value = null
   const markerPlacedAtClick = params.markerPlacedAtClick === true
   const skipLocationMarker = params.skipLocationMarker === true
   const silent = params.silent === true
@@ -663,13 +684,17 @@ async function loadFicheForMapPointImpl(params: {
       params.lon,
       params.lat,
       params.mode,
-      ficheServiceUnavailableSelection(loadingTitle, {
-        lon: params.lon,
-        lat: params.lat,
-        mode: params.mode,
-        zoom: params.zoom,
-        loadingTitle: params.loadingTitle,
-      }),
+      ficheServiceUnavailableSelection(
+        loadingTitle,
+        {
+          lon: params.lon,
+          lat: params.lat,
+          mode: params.mode,
+          zoom: params.zoom,
+          loadingTitle: params.loadingTitle,
+        },
+        wasLastFicheInfoPanelFetchRateLimited(),
+      ),
       markerPlacedAtClick,
       skipLocationMarker,
       silent,

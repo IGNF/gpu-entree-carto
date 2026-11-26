@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fiche info — rate limiting** — on HTTP 429 from gpu-site (requests exposing SUPs), the fiche shows « Service temporairement saturé, réessayez. » with the Retry button; the parcel fiche shows the same message. A failed supplement at the same point (layer checked after the click) shows a message with Retry at the top of the fiche instead of failing silently.
 - **Print — Recenter on place** — tertiary button above “Vue par défaut” (formerly “Replacer la carte”), enabled once a location pin is set: recenters the preview on the red dashed outline when present, otherwise on the pin at the same zoom.
 - **Fiche info — Retry** — when the fiche-info request fails, a tertiary “Réessayer” button (`ri-refresh-line` icon) next to “Indisponibilité du service” re-runs the request at the same point. An unavailable fiche no longer enables fiche printing.
 - **Map print** — `MapPrintControl` + DSFR modal (PDF/PNG/JPEG, cartes.gouv print pipeline); button between sketch and overview map; optional extra PDF pages (territory fiche, parcel fiche, legends) with preview pagination; map preview attributions and bottom-right scale line.

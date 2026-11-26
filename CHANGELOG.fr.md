@@ -12,6 +12,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Ajouté
 
+- **Fiche info — limitation de débit** — sur HTTP 429 de gpu-site (requêtes exposant des SUP), la fiche affiche « Service temporairement saturé, réessayez. » avec le bouton Réessayer ; la fiche parcelle affiche le même message. Un complément au même point en échec (couche cochée après le clic) affiche un message avec Réessayer en tête de fiche, au lieu d’échouer en silence.
 - **Impression — Recentrer sur le lieu** — bouton tertiaire au-dessus de « Vue par défaut » (ex-« Replacer la carte »), actif dès qu’une cerise est posée : recentre l’aperçu sur l’emprise rouge pointillé si elle existe, sinon sur la cerise au même zoom.
 - **Fiche info — Réessayer** — quand la requête fiche-info échoue, un bouton tertiaire « Réessayer » (icône `ri-refresh-line`) à côté de « Indisponibilité du service » relance la requête au même point. Une fiche indisponible n’active plus l’impression des fiches.
 - **Impression carte** — `MapPrintControl` + modale DSFR (PDF/PNG/JPEG, logique cartes.gouv) ; bouton entre croquis et minimap ; pages annexes optionnelles (fiche territoire, fiche parcelle, légendes) avec pagination d’aperçu ; attributions et échelle en bas à droite sur l’aperçu carte.

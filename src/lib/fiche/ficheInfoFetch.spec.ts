@@ -5,6 +5,7 @@ import {
   abortInflightFicheInfoFetch,
   fetchGpuFicheInfoCombinedPayload,
   fetchGpuFicheInfoPayload,
+  wasLastFicheInfoPanelFetchRateLimited,
 } from '@/lib/fiche/ficheInfoFetch'
 
 const payload = {
@@ -205,6 +206,24 @@ describe('fetchGpuFicheInfoPayload', () => {
     expect(url.searchParams.get('scope')).toBe('both')
     expect(url.searchParams.has('mode')).toBe(false)
     expect(url.searchParams.has('includeParcel')).toBe(false)
+  })
+
+  it('HTTP 429 : pas de payload, limitation de débit signalée pour le panneau', async () => {
+    ;(config as { apiFicheInfoUrl?: string }).apiFicheInfoUrl = '/api/fiche-info'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{}', { status: 429 }))),
+    )
+
+    const result = await fetchGpuFicheInfoPayload({
+      lon: 2.36,
+      lat: 48.86,
+      zoom: 16,
+      mode: MAP_MODE_TERRITORY,
+    })
+
+    expect(result).toBeNull()
+    expect(wasLastFicheInfoPanelFetchRateLimited()).toBe(true)
   })
 })
 
