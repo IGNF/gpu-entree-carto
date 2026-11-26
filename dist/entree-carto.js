@@ -67648,6 +67648,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const HASH_DEBOUNCE_MS = 300;
   let cachedParams = createEmptyPermalinkParams();
   let hashDebounce = null;
+  let hashWritesSuspended = false;
   function pathToPermalinkId(path) {
     const parts = path.split("/").filter(Boolean);
     return parts[parts.length - 1] ?? "";
@@ -67756,7 +67757,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     writeMapPermalinkToLocation(cachedParams);
   }
   function scheduleMapPermalinkHashWrite() {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || hashWritesSuspended) return;
     if (hashDebounce) clearTimeout(hashDebounce);
     hashDebounce = setTimeout(() => {
       hashDebounce = null;
@@ -67901,12 +67902,49 @@ Expected function or array of functions, received type ${typeof value2}.`
   function registerTabPanelsApi(api) {
     tabPanelsApiRef.value = api;
   }
+  function unregisterTabPanelsApi(api) {
+    if (tabPanelsApiRef.value === api) tabPanelsApiRef.value = null;
+  }
   const TAB_PANEL_IDS = {
     fiche: 0,
     catalogue: 1,
     dataLayers: 2,
-    legends: 3
+    legends: 3,
+    /** Onglet propre à la page hôte (prop `extraTab` + slot `extra`). */
+    extra: 4
   };
+  const DEFAULT_PANEL_TABS = [
+    {
+      id: TAB_PANEL_IDS.fiche,
+      label: "Informations / localisation",
+      iconKind: "dsfr",
+      iconClass: "fr-icon-map-pin-2-line"
+    },
+    {
+      id: TAB_PANEL_IDS.catalogue,
+      label: "Catalogue",
+      iconKind: "remix",
+      iconClass: "ri-map-2-line"
+    },
+    {
+      id: TAB_PANEL_IDS.dataLayers,
+      label: "Couches de données",
+      iconKind: "remix",
+      iconClass: "ri-stack-line"
+    },
+    {
+      id: TAB_PANEL_IDS.legends,
+      label: "Légendes",
+      iconKind: "remix",
+      iconClass: "ri-list-indefinite"
+    }
+  ];
+  function panelTabs(options) {
+    const hidden = (options == null ? void 0 : options.hiddenTabs) ?? [];
+    const tabs = DEFAULT_PANEL_TABS.filter((tab) => !hidden.includes(tab.id));
+    if (options == null ? void 0 : options.extraTab) tabs.push({ ...options.extraTab, id: TAB_PANEL_IDS.extra });
+    return tabs;
+  }
   const DEFAULT_FICHE_EMPTY = {
     title: "Aucune sélection en cours",
     bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
@@ -71242,9 +71280,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const OPEN_CATALOG_ATTR = "data-ec-open-catalog";
   const CATALOG_LINK_HTML = `<a href="#" ${OPEN_CATALOG_ATTR}>catalogue de couches</a>`;
   const TERRITORY_NO_DOCUMENT_HTML = `<p>Pas de document trouvé sur ce territoire dans les données correspondant au ${CATALOG_LINK_HTML} actuel.</p>`;
+  const NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML = `<p>Pas de document trouvé à cet emplacement dans les données correspondant au ${CATALOG_LINK_HTML} actuel.</p>`;
   const PARCEL_NO_RULE_HTML = `<p>Pas de règle d’urbanisme trouvé dans les données correspondant au ${CATALOG_LINK_HTML} actuel intersectant cette parcelle.</p>`;
   function stripFicheNoDataHtml(html2) {
-    return html2.replaceAll(TERRITORY_NO_DOCUMENT_HTML, "").replaceAll(PARCEL_NO_RULE_HTML, "").trim();
+    return html2.replaceAll(TERRITORY_NO_DOCUMENT_HTML, "").replaceAll(NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML, "").replaceAll(PARCEL_NO_RULE_HTML, "").trim();
   }
   function onFicheCatalogLinkClick(event) {
     var _a2;
@@ -71314,6 +71353,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const NO_PARCEL_AT_POINT_MESSAGE = "Pas de parcelle à cet emplacement.";
   const NO_PARCEL_AT_POINT_SWITCH_LABEL = "Pas de parcelle à cet emplacement";
+  const NO_MUNICIPALITY_AT_POINT_TITLE = "Pas de commune à cet emplacement";
   function ficheHasParcelAtPoint(data) {
     if (typeof data.territoryParcelId === "string" && data.territoryParcelId.trim()) return true;
     if (typeof data.parcelId === "string" && data.parcelId.trim()) return true;
@@ -72080,7 +72120,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     const enlarge = href ? " fr-enlarge-link" : "";
     const titleInner = escapeHtml(title2);
     const titleBlock = href ? `<h3 class="fr-tile__title"><a class="fr-tile__link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${titleInner}</a></h3>` : `<h3 class="fr-tile__title">${titleInner}</h3>`;
-    const detailBlock = detail ? `<p class="fr-tile__detail">${escapeHtml(detail)}</p>` : "";
+    const detailHtml = (typeof detail === "string" ? [detail] : detail ?? []).map((line) => escapeHtml(line)).join("<br>");
+    const detailBlock = detailHtml ? `<p class="fr-tile__detail">${detailHtml}</p>` : "";
     return `<div class="fr-tile fr-tile--horizontal${enlarge} ec-fiche-info__tile"><div class="fr-tile__body"><div class="fr-tile__content">${titleBlock}${detailBlock}</div></div></div>`;
   }
   function scotWfsStatusTileHtml(title2, state) {
@@ -72107,9 +72148,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     return core;
   }
   function documentSupTileHtml(model) {
-    var _a2;
-    const detail = ((_a2 = model.detail) == null ? void 0 : _a2.trim()) || null;
-    return dsfrHorizontalTile(model.title, model.href, detail);
+    const lines = (typeof model.detail === "string" ? [model.detail] : model.detail ?? []).map((line) => line.trim()).filter(Boolean);
+    return dsfrHorizontalTile(model.title, model.href, lines.length ? lines : null);
   }
   function procedureTileHtml(model) {
     const inProgress = model.inProgress === true;
@@ -72369,6 +72409,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     return parts.join(" ");
   }
   const EL9_SUP_ALERT_DETAIL = "Les propriétés privées riveraines du domaine public maritime (DPM) sont grevées d'une servitude destinée à assurer exclusivement le passage des piétons sur le littoral, sur une bande de trois mètres de largeur à partir de la limite du DPM. Elle s'applique directement sans qu'une mesure règlementaire soit nécessaire pour son instauration.";
+  const EL9_SUP_LEGAL_REFERENCE = "(article L. 121-31 du code de l'urbanisme)";
+  const EL9_SUP_LEGAL_URL = "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031210502";
   function findSupCategoryByName(name2, categories = readSupCategories()) {
     const key2 = name2.trim().toUpperCase();
     if (!key2) return null;
@@ -72422,8 +72464,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     const el9Category = findSupCategoryByName("EL9", categories);
     const tile = documentSupTileHtml({
       title: supCategoryLibelle(el9Category),
-      detail: EL9_SUP_ALERT_DETAIL,
-      href: void 0
+      detail: [EL9_SUP_ALERT_DETAIL, EL9_SUP_LEGAL_REFERENCE],
+      href: EL9_SUP_LEGAL_URL
     });
     return buildSupCategoryGroupHtml(el9Category, "EL9", [tile]);
   }
@@ -73474,7 +73516,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       ...mecCatalogVisible ? buildMecReplacementTiles(mecFeatures, blockedParents, ficheApi) : [],
       ...buildDuDocumentTiles(documentFeatures, blockedParents, lookup2, ficheApi)
     ];
-    const supTiles = isFicheDocumentFamilyVisible("sup") ? buildSupDocumentTiles(ficheApi, supOnParcel) : [];
+    const supVisible = isFicheDocumentFamilyVisible("sup");
+    const supTiles = supVisible ? buildSupDocumentTiles(ficheApi, supOnParcel) : [];
+    const el9Html = supVisible && (ficheApi == null ? void 0 : ficheApi.is_el9_alert) === true ? buildEl9SupGroupHtml() : "";
+    const hasSup = supTiles.length > 0 || el9Html !== "";
     const scotTiles = buildScotDocumentTiles(
       scotFeatures,
       mecFeatures,
@@ -73483,12 +73528,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       ficheApi,
       mecCatalogVisible
     );
-    if (!duTiles.length && !supTiles.length && !scotTiles.length && ficheApi) {
+    if (!duTiles.length && !hasSup && !scotTiles.length && ficheApi) {
       const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "du");
       if (duSection) parts.push(duSection);
       return parts.join("");
     }
-    if (!duTiles.length && !supTiles.length && !scotTiles.length) {
+    if (!duTiles.length && !hasSup && !scotTiles.length) {
       return parts.join("");
     }
     if (duTiles.length) {
@@ -73498,8 +73543,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const duSection = buildParcelDocumentsSectionFromFicheApi(ficheApi, "du");
       if (duSection) parts.push(duSection);
     }
-    if (supTiles.length) {
+    if (hasSup) {
       parts.push('<h3 class="ec-fiche-info__section-title">Servitudes d’utilité publique</h3>');
+      parts.push(el9Html);
       parts.push(documentTilesListHtml(supTiles));
     }
     if (scotTiles.length) {
@@ -73750,7 +73796,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return out;
   }
   function buildDocumentTabs(data, mode2) {
-    var _a2;
+    var _a2, _b;
     const tabs = [];
     const proceduresByDocument = data.proceduresByDocument;
     const territory = mode2 === MAP_MODE_TERRITORY;
@@ -73773,8 +73819,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
     }
     const sups = normalizePartitionsMap(data.sups);
-    if (isFicheDocumentFamilyVisible("sup") && (mapHasProductionDocument(sups) || data.is_el9_alert)) {
-      const body = buildGroupedSupTabHtml(sups, { isEl9Alert: data.is_el9_alert === true }) || buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
+    const isCoastline = ((_a2 = data.grid) == null ? void 0 : _a2.is_coastline) === true;
+    if (isFicheDocumentFamilyVisible("sup") && (mapHasProductionDocument(sups) || isCoastline)) {
+      const body = buildGroupedSupTabHtml(sups, { isEl9Alert: isCoastline }) || buildDocumentTypeTabHtml(sups, "sup", proceduresByDocument);
       tabs.push({
         id: TAB_SUP,
         label: territory ? territoryDocumentTabLabel(TAB_SUP, "Servitude") : "Servitude",
@@ -73786,7 +73833,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       isGpuParcelFichePayload(data.parcelFiche) ? data.parcelFiche : void 0
     );
     const scotStatusTiles = buildScotWfsStatusTiles(
-      ((_a2 = extractParcelFichePayload(data)) == null ? void 0 : _a2.features) ?? scotWfsFeaturesWithoutDocument(data.scots)
+      ((_b = extractParcelFichePayload(data)) == null ? void 0 : _b.features) ?? scotWfsFeaturesWithoutDocument(data.scots)
     );
     if ((mapHasProductionDocument(scots) || scotStatusTiles.length) && isFicheDocumentFamilyVisible("scot")) {
       const bodyHtml = buildScotTabTilesHtml(scots, data, scotStatusTiles);
@@ -73858,7 +73905,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       data.proceduresByDocument
     );
     if (lowScaleHtml) return lowScaleHtml;
-    return TERRITORY_NO_DOCUMENT_HTML;
+    return ficheHasTerritoryAtPoint(data) ? TERRITORY_NO_DOCUMENT_HTML : NO_MUNICIPALITY_AT_POINT_DOCUMENT_HTML;
   }
   function extractParcelFichePayload(data) {
     var _a2;
@@ -73874,7 +73921,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const hasParcel = ficheHasParcelAtPoint(data);
     const hasTerritory = ficheHasTerritoryAtPoint(data);
     const parcel = data.parcel ?? null;
-    const territoryTitle = hasTerritory ? municipalityTitle(data) : "Territoire";
+    const territoryTitle = hasTerritory ? municipalityTitle(data) : NO_MUNICIPALITY_AT_POINT_TITLE;
     const parcelLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_MESSAGE;
     const parcelSwitchLabel = hasParcel ? parcelShortLabel(parcel) || "Parcelle" : NO_PARCEL_AT_POINT_SWITCH_LABEL;
     const documentTabs = mode2 === MAP_MODE_TERRITORY ? buildDocumentTabs(data, mode2) : void 0;
@@ -95035,6 +95082,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   function registerMapPrintPanels(ctx) {
     mapPrintPanelsRef.value = ctx;
   }
+  function unregisterMapPrintPanels(ctx) {
+    if (mapPrintPanelsRef.value === ctx) mapPrintPanelsRef.value = null;
+  }
   function sanitizePrintPreviewAttributions(mapRoot) {
     if (!mapRoot) return;
     const attribution = mapRoot.querySelector(".ol-attribution");
@@ -95610,7 +95660,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_11$6 = { class: "print-preview-pagination__label" };
   const _hoisted_12$6 = { class: "print-preview-container" };
   const _hoisted_13$6 = { class: "print-preview-page" };
-  const _hoisted_14$4 = {
+  const _hoisted_14$5 = {
     key: 0,
     class: "print-preview-patience",
     role: "status",
@@ -97425,7 +97475,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                             ])
                           ], 4)
                         ], 4),
-                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$4, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
+                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$5, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
                       ], 2)
                     ], 544)
                   ]),
@@ -117919,6 +117969,9 @@ Expected function or array of functions, received type ${typeof value2}.`
   function registerMapPermalinkLayersBridge(api) {
     mapPermalinkLayersBridgeRef.value = api;
   }
+  function unregisterMapPermalinkLayersBridge(api) {
+    if (mapPermalinkLayersBridgeRef.value === api) mapPermalinkLayersBridgeRef.value = null;
+  }
   function formatPermalinkOpacity(opacity2) {
     const n = Math.min(1, Math.max(0, opacity2));
     const rounded = Math.round(n * 100) / 100;
@@ -118934,6 +118987,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (marker) {
       const key2 = empriseTargetKeyForModeFocus(marker.lon, marker.lat);
       extent = await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode2, key2) ?? extent;
+      const current = readMapPermalinkMarker(getMapPermalinkParams());
+      if (current && (current.lon !== marker.lon || current.lat !== marker.lat)) return;
     }
     if (!extent) return;
     const maxZoom = maxZoomForModeEmpriseFit(map2, mode2);
@@ -119048,7 +119103,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     role: "presentation"
   };
   const _hoisted_13$5 = ["aria-selected"];
-  const _hoisted_14$3 = ["tabindex"];
+  const _hoisted_14$4 = ["tabindex"];
   const _hoisted_15$2 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
@@ -119458,7 +119513,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
                   createBaseVNode("div", _hoisted_17$2, [
                     _cache[10] || (_cache[10] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
-                    createBaseVNode("button", {
+                    unref(printModal) ? (openBlock(), createElementBlock("button", {
+                      key: 0,
                       type: "button",
                       class: "fr-btn fr-btn--secondary fr-btn--sm",
                       disabled: !parcelDetailCached.value,
@@ -119470,7 +119526,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         "aria-hidden": "true"
                       }, null, -1),
                       createTextVNode(" Imprimer ", -1)
-                    ])], 8, _hoisted_18$2)
+                    ])], 8, _hoisted_18$2)) : createCommentVNode("", true)
                   ]),
                   createVNode(_sfc_main$l, {
                     class: "ec-fiche-info__body",
@@ -119478,7 +119534,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "link-target-blank": ""
                   }, null, 8, ["html"])
                 ], 64)) : createCommentVNode("", true)
-              ], 10, _hoisted_14$3),
+              ], 10, _hoisted_14$4),
               createBaseVNode("div", {
                 id: "ec-fiche-parcel-panel-documents",
                 class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
@@ -119548,7 +119604,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             ]),
             createBaseVNode("div", _hoisted_26$1, [
               createBaseVNode("h2", _hoisted_27, toDisplayString(territoryTitle.value), 1),
-              createBaseVNode("button", {
+              unref(printModal) ? (openBlock(), createElementBlock("button", {
+                key: 0,
                 type: "button",
                 class: "fr-btn fr-btn--secondary fr-btn--sm",
                 title: "Imprimer la fiche territoire",
@@ -119559,7 +119616,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "aria-hidden": "true"
                 }, null, -1),
                 createTextVNode(" Imprimer ", -1)
-              ])])
+              ])])) : createCommentVNode("", true)
             ]),
             documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_28, [
               createBaseVNode("ul", _hoisted_29, [
@@ -119931,7 +119988,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-base-radio-list__thumb ec-base-radio-list__thumb--blank"
   };
   const _hoisted_13$4 = { class: "ec-base-radio-list__title-slot" };
-  const _hoisted_14$2 = ["onClick"];
+  const _hoisted_14$3 = ["onClick"];
   const _hoisted_15$1 = { class: "ec-base-radio-list__caret-slot" };
   const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
   const _hoisted_17$1 = ["id"];
@@ -120014,7 +120071,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       type: "button",
                       class: "ec-base-radio-list__title",
                       onClick: ($event) => select(preset.id)
-                    }, toDisplayString(preset.label), 9, _hoisted_14$2)
+                    }, toDisplayString(preset.label), 9, _hoisted_14$3)
                   ]),
                   createBaseVNode("div", _hoisted_15$1, [
                     createBaseVNode("button", {
@@ -120250,7 +120307,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_11$2 = { class: "fr-sr-only" };
   const _hoisted_12$2 = ["onClick"];
   const _hoisted_13$2 = ["onDragstart"];
-  const _hoisted_14$1 = { class: "fr-sr-only" };
+  const _hoisted_14$2 = { class: "fr-sr-only" };
   const _hoisted_15 = { class: "ec-data-layers__toolbar" };
   const _hoisted_16 = ["title", "aria-pressed", "onClick"];
   const _hoisted_17 = { class: "fr-sr-only" };
@@ -120441,7 +120498,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                           class: "ri-drag-move-2-fill",
                           "aria-hidden": "true"
                         }, null, -1)),
-                        createBaseVNode("span", _hoisted_14$1, "Réordonner " + toDisplayString(layer.title), 1)
+                        createBaseVNode("span", _hoisted_14$2, "Réordonner " + toDisplayString(layer.title), 1)
                       ], 40, _hoisted_13$2)
                     ])
                   ]),
@@ -120557,7 +120614,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 1,
     class: "ec-layer-legends__hint"
   };
-  const _hoisted_14 = {
+  const _hoisted_14$1 = {
     key: 0,
     class: "ec-layer-legends__hint"
   };
@@ -120701,7 +120758,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 ], 10, _hoisted_7$1)
               ], 10, _hoisted_4$3);
             }), 128)),
-            !legendItems.value.length ? (openBlock(), createElementBlock("p", _hoisted_14, " Aucune entrée de légende disponible pour les couches affichées. ")) : createCommentVNode("", true)
+            !legendItems.value.length ? (openBlock(), createElementBlock("p", _hoisted_14$1, " Aucune entrée de légende disponible pour les couches affichées. ")) : createCommentVNode("", true)
           ]))
         ]);
       };
@@ -121129,6 +121186,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_11 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_12 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_13 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_14 = ["id", "hidden", "aria-labelledby"];
   const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     __name: "TabPanelsControl",
     props: {
@@ -121136,7 +121194,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       baseModelValue: { default: "carte" },
       layerNodes: { default: () => [] },
       layerMapHooks: { default: void 0 },
-      catalogLayersLoading: { type: Boolean, default: false }
+      catalogLayersLoading: { type: Boolean, default: false },
+      hiddenTabs: { default: () => [] },
+      extraTab: { default: void 0 }
     },
     emits: ["update:baseModelValue", "toggle-layer"],
     setup(__props, { expose: __expose, emit: __emit }) {
@@ -121214,34 +121274,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         () => notifyStackOrder(),
         { immediate: true }
       );
-      const tabs = [
-        {
-          id: TAB_PANEL_IDS.fiche,
-          label: "Informations / localisation",
-          iconKind: "dsfr",
-          iconClass: "fr-icon-map-pin-2-line"
-        },
-        {
-          id: TAB_PANEL_IDS.catalogue,
-          label: "Catalogue",
-          iconKind: "remix",
-          iconClass: "ri-map-2-line"
-        },
-        {
-          id: TAB_PANEL_IDS.dataLayers,
-          label: "Couches de données",
-          iconKind: "remix",
-          iconClass: "ri-stack-line"
-        },
-        {
-          id: TAB_PANEL_IDS.legends,
-          label: "Légendes",
-          iconKind: "remix",
-          iconClass: "ri-list-indefinite"
-        }
-      ];
+      const tabs = computed(() => panelTabs({ hiddenTabs: props.hiddenTabs, extraTab: props.extraTab }));
       function openTab(index2, sheetSnap) {
-        if (index2 < 0 || index2 >= tabs.length) return;
+        if (!tabs.value.some((tab) => tab.id === index2)) return;
         activeTab.value = index2;
         if (layoutMode.value === "bottom") {
           if (sheetSnap !== void 0) setSheetSnap(sheetSnap);
@@ -121550,10 +121585,11 @@ Expected function or array of functions, received type ${typeof value2}.`
           }
         });
       }
-      registerMapPermalinkLayersBridge({
+      const permalinkLayersBridge = {
         applyLayerParamsFromPermalink,
         collectLayerParamsForPermalink
-      });
+      };
+      registerMapPermalinkLayersBridge(permalinkLayersBridge);
       watch(
         () => [catalogEntries.value.length, layerNodesRef.value.length, wmsDocumentSyncKey()],
         ([entryLen, nodeLen], prev) => {
@@ -121603,10 +121639,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         startMobileBottomBarGeopfObserver();
       });
       onUnmounted(() => {
-        registerMapPrintPanels(null);
+        unregisterMapPrintPanels(mapPrintPanelsCtx);
         syncShellOpenClass(false);
-        registerMapPermalinkLayersBridge(null);
-        registerTabPanelsApi(null);
+        unregisterMapPermalinkLayersBridge(permalinkLayersBridge);
+        unregisterTabPanelsApi(api);
         if (olControl && mapRef.value) {
           mapRef.value.removeControl(olControl);
         }
@@ -121660,8 +121696,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "aria-orientation": tabListOrientation.value,
                 "aria-label": "Onglets du panneau"
               }, [
-                (openBlock(), createElementBlock(Fragment, null, renderList(tabs, (tab) => {
-                  return createBaseVNode("button", {
+                (openBlock(true), createElementBlock(Fragment, null, renderList(tabs.value, (tab) => {
+                  return openBlock(), createElementBlock("button", {
                     id: `ec-tab-${tab.id}`,
                     key: tab.id,
                     type: "button",
@@ -121681,7 +121717,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       "aria-hidden": "true"
                     }, null, 2)) : createCommentVNode("", true)
                   ], 10, _hoisted_4$2);
-                }), 64))
+                }), 128))
               ], 8, _hoisted_3$2)
             ], 2),
             withDirectives(createBaseVNode("div", _hoisted_5$1, [
@@ -121796,7 +121832,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "map-zoom": unref(mapZoom),
                     "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange)
                   }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range"])
-                ], 8, _hoisted_13)
+                ], 8, _hoisted_13),
+                __props.extraTab ? (openBlock(), createElementBlock("div", {
+                  key: 0,
+                  id: `ec-tab-panel-${unref(TAB_PANEL_IDS).extra}`,
+                  class: "ec-tab-panels__pane",
+                  role: "tabpanel",
+                  hidden: activeTab.value !== unref(TAB_PANEL_IDS).extra,
+                  "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).extra}`
+                }, [
+                  renderSlot(_ctx.$slots, "extra")
+                ], 8, _hoisted_14)) : createCommentVNode("", true)
               ])
             ])
           ], 2)
@@ -121905,16 +121951,61 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
+  function queryFicheAtMapPoint(params2) {
+    const { lon, lat, mode: mode2, zoom } = params2;
+    const empriseKey = empriseTargetKeyForPoint(lon, lat);
+    showMapLocationMarker(lon, lat, { label: "", origin: "ficheInfo", center: false });
+    void loadFicheForMapPoint({ lon, lat, mode: mode2, zoom, markerPlacedAtClick: true });
+    ensureModeEmpriseForMapPoint(lon, lat, mode2, empriseKey);
+  }
   const _hoisted_1$3 = {
     class: "ec-click-info-host",
     hidden: "",
     "aria-hidden": "true"
   };
+  const TOGGLE_LABEL_ON = "Désactiver l’interrogation au clic sur la carte";
+  const TOGGLE_LABEL_OFF = "Activer l’interrogation au clic sur la carte";
   const _sfc_main$3 = /* @__PURE__ */ defineComponent({
     __name: "ClickInfoControl",
+    props: {
+      toggleable: { type: Boolean, default: false }
+    },
     setup(__props) {
+      const props = __props;
       const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
       const mapMode = tryUseMapMode();
+      const enabled = /* @__PURE__ */ ref(true);
+      class ClickInfoToggleOlControl extends Control$1 {
+        constructor(onToggle) {
+          const root = document.createElement("div");
+          root.className = "gpf-widget-button ec-click-info-toggle ol-unselectable";
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "gpf-btn-icon fr-icon-information-line ec-click-info-toggle__btn";
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggle();
+          });
+          root.appendChild(button);
+          super({ element: root });
+          __publicField(this, "button");
+          this.button = button;
+        }
+      }
+      function syncToggleButton(control) {
+        if (!(control instanceof ClickInfoToggleOlControl)) return;
+        const label = enabled.value ? TOGGLE_LABEL_ON : TOGGLE_LABEL_OFF;
+        control.button.setAttribute("aria-pressed", String(enabled.value));
+        control.button.setAttribute("aria-label", label);
+        control.button.title = label;
+      }
+      const toggleControl = props.toggleable ? useOlControl(
+        () => new ClickInfoToggleOlControl(() => {
+          enabled.value = !enabled.value;
+        }),
+        { afterCreate: syncToggleButton }
+      ) : null;
       let clickKey = null;
       let shellEl = null;
       function mapShellFromMap(map2) {
@@ -121947,21 +122038,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         const map2 = mapRef.value;
         if (!map2 || !mapMode) return;
         const [lon, lat] = toLonLat(evt.coordinate);
-        const zoom = map2.getView().getZoom() ?? 6;
-        const empriseKey = empriseTargetKeyForPoint(lon, lat);
-        showMapLocationMarker(lon, lat, {
-          label: "",
-          origin: "ficheInfo",
-          center: false
-        });
-        void loadFicheForMapPoint({
-          lon,
-          lat,
-          mode: mapMode.mode.value,
-          zoom,
-          markerPlacedAtClick: true
-        });
-        ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey);
+        queryFicheAtMapPoint({ lon, lat, mode: mapMode.mode.value, zoom: map2.getView().getZoom() ?? 6 });
       }
       function syncCursor(map2) {
         const nextShell = map2 ? mapShellFromMap(map2) : null;
@@ -121987,10 +122064,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         shellEl = null;
       }
       watch(
-        mapRef,
-        (map2) => {
+        [mapRef, enabled],
+        ([map2, on2]) => {
           unbindMap();
-          if (map2) bindMap(map2);
+          if (map2 && on2) bindMap(map2);
+          syncToggleButton((toggleControl == null ? void 0 : toggleControl.value) ?? null);
         },
         { immediate: true }
       );

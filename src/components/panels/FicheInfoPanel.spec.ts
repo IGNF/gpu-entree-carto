@@ -2,10 +2,12 @@
  * @vitest-environment jsdom
  */
 import { mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, provide } from 'vue'
 import { afterEach, describe, expect, it } from 'vitest'
 import FicheInfoPanel from '@/components/panels/FicheInfoPanel.vue'
+import { mapPrintModalKey } from '@/map/mapPrintModalContext'
 import { provideMapMode } from '@/composables/mapMode'
+import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { ficheSupplementError } from '@/lib/fiche/ficheInfoService'
 import {
   FICHE_RATE_LIMITED_MESSAGE,
@@ -13,16 +15,22 @@ import {
 } from '@/lib/fiche/ficheRetry'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 
-function mountPanel(mode: MapModeId) {
-  const selection = ficheServiceUnavailableSelection('Les, 38450 Vif', {
-    lon: 5.68,
-    lat: 45.05,
-    mode,
-    zoom: 13,
-  })
+function mountPanel(
+  mode: MapModeId,
+  options: { selection?: FicheInfoSelection; withPrint?: boolean } = {},
+) {
+  const selection =
+    options.selection ??
+    ficheServiceUnavailableSelection('Les, 38450 Vif', {
+      lon: 5.68,
+      lat: 45.05,
+      mode,
+      zoom: 13,
+    })
   const Host = defineComponent({
     setup() {
       provideMapMode({ initial: mode, syncUrl: false })
+      if (options.withPrint) provide(mapPrintModalKey, { open: () => {}, close: () => {} })
       return () => h(FicheInfoPanel, { selection })
     },
   })
@@ -56,5 +64,23 @@ describe('FicheInfoPanel — complément au point en échec', () => {
 
   it('aucun message sans échec', () => {
     expect(mountPanel(MAP_MODE_PARCEL).find('[role=alert]').exists()).toBe(false)
+  })
+})
+
+describe('FicheInfoPanel — bouton Imprimer', () => {
+  const selection: FicheInfoSelection = {
+    title: 'Vif (38545)',
+    territoryTitle: 'Vif (38545)',
+    mapMode: MAP_MODE_TERRITORY,
+  }
+  const printButton = 'button[title="Imprimer la fiche territoire"]'
+
+  it('présent quand la page propose l’impression', () => {
+    const wrapper = mountPanel(MAP_MODE_TERRITORY, { selection, withPrint: true })
+    expect(wrapper.find(printButton).exists()).toBe(true)
+  })
+
+  it('masqué sans impression (ex. démo fiche info)', () => {
+    expect(mountPanel(MAP_MODE_TERRITORY, { selection }).find(printButton).exists()).toBe(false)
   })
 })

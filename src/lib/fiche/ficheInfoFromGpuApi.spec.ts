@@ -300,3 +300,42 @@ describe('fiche territoire sans parcelle : SCoT hors base (données carte)', () 
     )
   })
 })
+
+describe('fiche territoire : pas de commune au point', () => {
+  it('titre « Pas de commune à cet emplacement » et message « à cet emplacement »', () => {
+    const sel = ficheSelectionFromGpuApi(
+      { grid: null, dus: [], sups: [] },
+      MAP_MODE_TERRITORY,
+      -2.5,
+      47.0,
+    )
+    expect(sel.territoryTitle).toBe('Pas de commune à cet emplacement')
+    expect(sel.title).toBe('Pas de commune à cet emplacement')
+    expect(sel.bodyHtml).toContain('Pas de document trouvé à cet emplacement dans les données')
+    expect(sel.bodyHtml).not.toContain('sur ce territoire')
+  })
+})
+
+describe('fiche territoire : servitude de passage sur le littoral (EL9)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+  const supTab = (payload: Parameters<typeof ficheSelectionFromGpuApi>[0]) =>
+    ficheSelectionFromGpuApi(payload, MAP_MODE_TERRITORY, 3.69, 43.39).documentTabs?.find(
+      (t) => t.id === 'sup',
+    )
+
+  it('commune littorale (grid.is_coastline) : onglet Servitude avec le bloc EL9', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const tab = supTab({ grid: { name: 'SETE', insee: '34301', is_coastline: true }, sups: [] })
+    expect(tab?.bodyHtml).toContain('legifrance.gouv.fr')
+  })
+
+  it('zone d’alerte (is_el9_alert) sans commune littorale : pas de bloc EL9 en territoire', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const tab = supTab({
+      grid: { name: 'SETE', insee: '34301', is_coastline: false },
+      sups: [],
+      is_el9_alert: true,
+    })
+    expect(tab).toBeUndefined()
+  })
+})

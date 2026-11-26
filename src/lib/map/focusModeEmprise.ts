@@ -41,6 +41,9 @@ export async function focusModeEmpriseOnMap(
   if (marker) {
     const key = empriseTargetKeyForModeFocus(marker.lon, marker.lat)
     extent = (await ensureModeEmpriseForMapPointAsync(marker.lon, marker.lat, mode, key)) ?? extent
+    // Cerise déplacée pendant l’attente (nouvelle interrogation) : elle gère déjà vue et fiche.
+    const current = readMapPermalinkMarker(getMapPermalinkParams())
+    if (current && (current.lon !== marker.lon || current.lat !== marker.lat)) return
   }
   if (!extent) return
   const maxZoom = maxZoomForModeEmpriseFit(map, mode)

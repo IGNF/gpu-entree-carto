@@ -1,9 +1,11 @@
 <script setup lang="ts">
 /**
- * Clic info permanent (désactivé pendant l’usage des outils croquis : dessin, modification, suppression, mesure, texte…).
+ * Clic info (désactivé pendant l’usage des outils croquis : dessin, modification, suppression, mesure, texte…).
  * Remplit l’onglet fiche selon le mode Parcelle / Territoire.
+ * `toggleable` : bouton carte pour activer / désactiver le clic (actif au départ).
  */
-import { inject, onUnmounted, shallowRef, watch, type ShallowRef } from 'vue'
+import { inject, onUnmounted, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import Control from 'ol/control/Control'
 import type Map from 'ol/Map'
 import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type { EventsKey } from 'ol/events'
@@ -12,15 +14,59 @@ import { toLonLat } from 'ol/proj'
 import VectorLayer from 'ol/layer/Vector'
 import { sketchToolEngagedRef } from '@/composables/sketchToolEngaged'
 import { tryUseMapMode } from '@/composables/mapMode'
-import { showMapLocationMarker } from '@/composables/mapLocationMarker'
-import { loadFicheForMapPoint } from '@/lib/fiche/ficheInfoService'
-import {
-  empriseTargetKeyForPoint,
-  ensureModeEmpriseForMapPoint,
-} from '@/lib/map/searchResultGraphics'
+import { useOlControl } from '@/composables/useOlControl'
+import { queryFicheAtMapPoint } from '@/lib/fiche/queryFicheAtMapPoint'
+
+const props = withDefaults(defineProps<{ toggleable?: boolean }>(), { toggleable: false })
 
 const mapRef = inject<ShallowRef<Map | null>>('olMap', shallowRef(null))
 const mapMode = tryUseMapMode()
+const enabled = ref(true)
+
+const TOGGLE_LABEL_ON = 'Désactiver l’interrogation au clic sur la carte'
+const TOGGLE_LABEL_OFF = 'Activer l’interrogation au clic sur la carte'
+
+/**
+ * Bouton carte : active / désactive le clic info. Placement OL par défaut (couche des contrôles), positionné
+ * en CSS sous la barre de recherche (`click-info.css`).
+ */
+class ClickInfoToggleOlControl extends Control {
+  readonly button: HTMLButtonElement
+
+  constructor(onToggle: () => void) {
+    const root = document.createElement('div')
+    root.className = 'gpf-widget-button ec-click-info-toggle ol-unselectable'
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'gpf-btn-icon fr-icon-information-line ec-click-info-toggle__btn'
+    button.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      onToggle()
+    })
+    root.appendChild(button)
+    super({ element: root })
+    this.button = button
+  }
+}
+
+function syncToggleButton(control: Control | null): void {
+  if (!(control instanceof ClickInfoToggleOlControl)) return
+  const label = enabled.value ? TOGGLE_LABEL_ON : TOGGLE_LABEL_OFF
+  control.button.setAttribute('aria-pressed', String(enabled.value))
+  control.button.setAttribute('aria-label', label)
+  control.button.title = label
+}
+
+const toggleControl = props.toggleable
+  ? useOlControl(
+      () =>
+        new ClickInfoToggleOlControl(() => {
+          enabled.value = !enabled.value
+        }),
+      { afterCreate: syncToggleButton },
+    )
+  : null
 
 let clickKey: EventsKey | null = null
 let shellEl: HTMLElement | null = null
@@ -62,21 +108,7 @@ function onMapClick(evt: MapBrowserEvent): void {
   const map = mapRef.value
   if (!map || !mapMode) return
   const [lon, lat] = toLonLat(evt.coordinate)
-  const zoom = map.getView().getZoom() ?? 6
-  const empriseKey = empriseTargetKeyForPoint(lon, lat)
-  showMapLocationMarker(lon, lat, {
-    label: '',
-    origin: 'ficheInfo',
-    center: false,
-  })
-  void loadFicheForMapPoint({
-    lon,
-    lat,
-    mode: mapMode.mode.value,
-    zoom,
-    markerPlacedAtClick: true,
-  })
-  ensureModeEmpriseForMapPoint(lon, lat, mapMode.mode.value, empriseKey)
+  queryFicheAtMapPoint({ lon, lat, mode: mapMode.mode.value, zoom: map.getView().getZoom() ?? 6 })
 }
 
 function syncCursor(map: Map | null): void {
@@ -106,10 +138,11 @@ function unbindMap(): void {
 }
 
 watch(
-  mapRef,
-  (map) => {
+  [mapRef, enabled],
+  ([map, on]) => {
     unbindMap()
-    if (map) bindMap(map)
+    if (map && on) bindMap(map)
+    syncToggleButton(toggleControl?.value ?? null)
   },
   { immediate: true },
 )

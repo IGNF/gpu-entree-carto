@@ -15,6 +15,7 @@ const links = [
   { name: 'map', to: '/map', label: 'Carte' },
   { name: 'geometry-editor', to: '/geometry-editor', label: 'Géométries' },
   { name: 'sketch', to: '/sketch', label: 'Croquis' },
+  { name: 'fiche-info', to: '/fiche-info', label: 'Fiche info' },
 ] as const
 
 const isActive = computed(() => (name: string) => {

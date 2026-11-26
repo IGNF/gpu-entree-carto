@@ -48,7 +48,7 @@ Bouton déclencheur : `fr-icon-printer-line` (DSFR).
 
 ## Distinction
 
-- **Impression depuis la fiche info** — boutons « Imprimer » parcelle / territoire dans `FicheInfoPanel` ouvrent la modale carte avec la fiche correspondante précochée (autre fiche décochée).
+- **Impression depuis la fiche info** — boutons « Imprimer » parcelle / territoire dans `FicheInfoPanel` ouvrent la modale carte avec la fiche correspondante précochée (autre fiche décochée). Masqués quand la page ne fournit pas la modale (`mapPrintModalKey`), ex. démo fiche info.
 
 ## Dépendances
 

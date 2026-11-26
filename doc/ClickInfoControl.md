@@ -45,7 +45,23 @@ import '@/styles/click-info.css'
 </template>
 ```
 
-Sans props. Nécessite `provideMapMode()` sur la même vue pour une fiche adaptée au mode.
+Nécessite `provideMapMode()` sur la même vue pour une fiche adaptée au mode.
+
+## Props
+
+| Prop         | Type      | Défaut  | Rôle                                                                                                                                                             |
+| ------------ | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `toggleable` | `boolean` | `false` | Ajoute un bouton carte (`fr-icon-information-line`) pour activer / désactiver le clic, placé sous la barre de recherche, bord gauche aligné (sous le sélecteur de mode quand il passe sous la recherche). |
+
+Avec `toggleable`, le clic est **actif au départ** ; le bouton porte `aria-pressed` et un libellé « Désactiver / Activer l’interrogation au clic sur la carte ». Désactivé : plus d’écoute `singleclick` ni de curseur « i ». Sans la prop, comportement inchangé (clic permanent, pas de bouton) — c’est le cas de la carte `/map`.
+
+```vue
+<ClickInfoControl toggleable />
+```
+
+## Interrogation d’un point
+
+La séquence cerise → fiche → emprise est exposée par `queryFicheAtMapPoint({ lon, lat, mode, zoom })` (`src/lib/fiche/queryFicheAtMapPoint.ts`), réutilisée par la saisie d’identifiant de parcelle de la démo « Fiche parcelle ».
 
 ## Voir aussi
 

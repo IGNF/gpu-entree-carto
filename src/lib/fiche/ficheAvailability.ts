@@ -5,6 +5,9 @@ export const NO_PARCEL_AT_POINT_MESSAGE = 'Pas de parcelle à cet emplacement.'
 /** Libellé bouton retour parcelle (sans point final). */
 export const NO_PARCEL_AT_POINT_SWITCH_LABEL = 'Pas de parcelle à cet emplacement'
 
+/** Titre de la fiche territoire sans commune au point (ex. en mer). */
+export const NO_MUNICIPALITY_AT_POINT_TITLE = 'Pas de commune à cet emplacement'
+
 export function ficheHasParcelAtPoint(data: GpuFicheInfoPayload): boolean {
   if (typeof data.territoryParcelId === 'string' && data.territoryParcelId.trim()) return true
   if (typeof data.parcelId === 'string' && data.parcelId.trim()) return true

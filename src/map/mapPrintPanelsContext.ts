@@ -19,3 +19,8 @@ export const mapPrintPanelsRef: ShallowRef<MapPrintPanelsContext | null> = shall
 export function registerMapPrintPanels(ctx: MapPrintPanelsContext | null): void {
   mapPrintPanelsRef.value = ctx
 }
+
+/** Démontage : n’efface que si ce contexte est encore l’enregistré. */
+export function unregisterMapPrintPanels(ctx: MapPrintPanelsContext): void {
+  if (mapPrintPanelsRef.value === ctx) mapPrintPanelsRef.value = null
+}
