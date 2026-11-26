@@ -70955,51 +70955,86 @@ Expected function or array of functions, received type ${typeof value2}.`
     ];
   }
   const GEOPF_WMTS_URL = "https://data.geopf.fr/wmts";
-  const TILE_SIZE_PX = 512;
-  const MATRIX_MIN = 5;
-  const MATRIX_MAX = 19;
-  function createGeopfWmtsTileGrid() {
+  const SERVER_TILE_SIZE_PX = 256;
+  const PRINT_TILE_SIZE_PX = 512;
+  const DEFAULT_MATRIX_SET = { id: "PM", minZoom: 0, maxZoom: 19 };
+  const MATRIX_SET_BY_LAYER = {
+    "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "ORTHOIMAGERY.ORTHOPHOTOS": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "CADASTRALPARCELS.PARCELLAIRE_EXPRESS": { id: "PM_0_19", minZoom: 0, maxZoom: 19 },
+    "CADASTRALPARCELS.PARCELS": { id: "PM_0_20", minZoom: 0, maxZoom: 20 },
+    "GEOGRAPHICALNAMES.NAMES": { id: "PM_6_18", minZoom: 6, maxZoom: 18 },
+    "TRANSPORTNETWORKS.ROADS": { id: "PM_6_18", minZoom: 6, maxZoom: 18 },
+    "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST": { id: "PM_6_16", minZoom: 6, maxZoom: 16 }
+  };
+  function geopfWmtsMatrixSet(layer) {
+    return MATRIX_SET_BY_LAYER[layer] ?? DEFAULT_MATRIX_SET;
+  }
+  function createGeopfWmtsTileGrid(matrixSet, tileSizePx) {
     const projection = get$2("EPSG:3857");
     if (!projection) {
       throw new Error("EPSG:3857 required for Géoplateforme WMTS");
     }
     const extent = projection.getExtent();
-    const tileSizeMeters = getWidth(extent) / TILE_SIZE_PX;
+    const tileSizeMeters = getWidth(extent) / tileSizePx;
     const resolutions = [];
     const matrixIds = [];
-    for (let i2 = MATRIX_MIN; i2 <= MATRIX_MAX; i2++) {
-      matrixIds[i2] = String(i2);
-      resolutions[i2] = tileSizeMeters / 2 ** i2;
+    for (let i2 = matrixSet.minZoom; i2 <= matrixSet.maxZoom; i2++) {
+      matrixIds.push(String(i2));
+      resolutions.push(tileSizeMeters / 2 ** i2);
     }
     return new WMTSTileGrid({
       origin: getTopLeft(extent),
       resolutions,
       matrixIds,
-      tileSize: [TILE_SIZE_PX, TILE_SIZE_PX]
+      tileSize: [tileSizePx, tileSizePx]
     });
   }
-  let sharedTileGrid = null;
-  function geopfWmtsTileGrid() {
-    if (!sharedTileGrid) {
-      sharedTileGrid = createGeopfWmtsTileGrid();
+  const tileGridCache = /* @__PURE__ */ new Map();
+  function geopfWmtsTileGrid(matrixSet, tileSizePx) {
+    const key2 = `${matrixSet.id}:${tileSizePx}`;
+    let grid = tileGridCache.get(key2);
+    if (!grid) {
+      grid = createGeopfWmtsTileGrid(matrixSet, tileSizePx);
+      tileGridCache.set(key2, grid);
     }
-    return sharedTileGrid;
+    return grid;
   }
-  function createGeopfWmtsSource(options) {
+  const sourceOptions = /* @__PURE__ */ new WeakMap();
+  const printSources = /* @__PURE__ */ new WeakMap();
+  function buildSource(options, tileSizePx) {
     const format = options.format ?? "png";
+    const matrixSet = geopfWmtsMatrixSet(options.layer);
     return new WMTS$1({
       url: GEOPF_WMTS_URL,
       layer: options.layer,
       style: options.style ?? "normal",
       format: `image/${format}`,
-      matrixSet: "PM",
+      matrixSet: matrixSet.id,
       version: "1.0.0",
       crossOrigin: "anonymous",
       attributions: options.attributions ?? (() => ignGeoportalAttributions()),
       attributionsCollapsible: false,
-      tileGrid: geopfWmtsTileGrid(),
-      cacheSize: 256
+      tileGrid: geopfWmtsTileGrid(matrixSet, tileSizePx),
+      // tuiles 256 px : environ 4 fois plus de tuiles par écran qu’en grille 512
+      cacheSize: 512
     });
+  }
+  function createGeopfWmtsSource(options) {
+    const source = buildSource(options, SERVER_TILE_SIZE_PX);
+    sourceOptions.set(source, options);
+    return source;
+  }
+  function geopfWmtsPrintSource(source) {
+    if (!(source instanceof WMTS$1)) return null;
+    const options = sourceOptions.get(source);
+    if (!options) return null;
+    let printSource = printSources.get(source);
+    if (!printSource) {
+      printSource = buildSource(options, PRINT_TILE_SIZE_PX);
+      printSources.set(source, printSource);
+    }
+    return printSource;
   }
   const INSPIRE_WMS_TEMPLATE = "https://inspire.cadastre.gouv.fr/scpc/<inseeCommune>.wms";
   function createInspireWmsSource(inseeCommune) {
@@ -85411,7 +85446,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const minZoom = entry.minZoomLevel ?? 0;
     const maxZoom = entry.maxZoomLevel ?? 22;
     const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom);
-    const sourceOptions = {
+    const sourceOptions2 = {
       url,
       params: params2,
       crossOrigin: "anonymous",
@@ -85421,7 +85456,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return new TileLayer({
       // hidpi désactivé : sur écran haute densité, tuiles 512 px agrandies par le navigateur plutôt que
       // 1024 px rendues par GeoServer (4 fois moins de pixels) ; libellés un peu moins nets
-      source: new TileWMS({ ...sourceOptions, hidpi: false }),
+      source: new TileWMS({ ...sourceOptions2, hidpi: false }),
       visible: false,
       opacity: layer.forceOpacity ? 1 : typeof layer.opacity === "number" ? layer.opacity : 0.7,
       minResolution,
@@ -85430,7 +85465,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       properties: {
         ecGpuCatalogId: entry.id,
         ecGpuLayerName: layerName,
-        [GPU_WMS_SOURCE_OPTIONS_PROP]: sourceOptions
+        [GPU_WMS_SOURCE_OPTIONS_PROP]: sourceOptions2
       }
     });
   }
@@ -85584,10 +85619,15 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const SEARCH_LAYER_PRINT_Z_INDEX = 1e6;
   const PRINT_SEARCH_LAYER_PROP = "ec-print-search-layer";
-  function cloneTileLayer(layer) {
+  function printTileSource(layer) {
     const gpuWmsOptions = layer.get(GPU_WMS_SOURCE_OPTIONS_PROP);
+    if (gpuWmsOptions) return new TileWMS({ ...gpuWmsOptions, hidpi: true });
+    const source = layer.getSource();
+    return geopfWmtsPrintSource(source) ?? source ?? void 0;
+  }
+  function cloneTileLayer(layer) {
     return new TileLayer({
-      source: gpuWmsOptions ? new TileWMS({ ...gpuWmsOptions, hidpi: true }) : layer.getSource() ?? void 0,
+      source: printTileSource(layer),
       visible: layer.getVisible(),
       opacity: layer.getOpacity(),
       zIndex: layer.getZIndex(),
@@ -119964,7 +120004,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const row = wmtsPreviewTileRow(rowStored);
     const format = entry.format ?? "png";
     const style = entry.style ?? "normal";
-    return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=PM&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
+    return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=${geopfWmtsMatrixSet(entry.layer).id}&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
   }
   const _hoisted_1$9 = {
     class: "ec-base-radio-list",

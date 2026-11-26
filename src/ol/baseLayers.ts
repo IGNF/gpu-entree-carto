@@ -21,7 +21,7 @@ export function createBaseLayerPresets(): BaseLayerPreset[] {
   const plan = new TileLayer({
     properties: { id: 'plan', title: 'Plan IGN' },
     source: new XYZ({
-      url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+      url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
       attributions: () => ignGeoportalAttributions(),
       attributionsCollapsible: false,
       maxZoom: 19,
@@ -32,7 +32,7 @@ export function createBaseLayerPresets(): BaseLayerPreset[] {
     visible: false,
     properties: { id: 'ortho', title: 'Photographies aériennes' },
     source: new XYZ({
-      url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+      url: 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM_0_19&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
       attributions: () => ignGeoportalAttributions(),
       attributionsCollapsible: false,
       maxZoom: 19,
