@@ -116,7 +116,12 @@ describe('gpuLayerConfig paths', () => {
         layers: [
           { name: 'zone_urba' },
           { name: 'info', minZoomLevel: 16 },
-          { title: 'masqué', hideHimself: true, minZoomLevel: 3, layers: [{ name: 'prescription' }] },
+          {
+            title: 'masqué',
+            hideHimself: true,
+            minZoomLevel: 3,
+            layers: [{ name: 'prescription' }],
+          },
         ],
       },
       { name: 'municipality' },
