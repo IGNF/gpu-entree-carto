@@ -62,6 +62,8 @@ export function useOlMap(options: UseOlMapOptions): UseOlMapResult {
     const mapInstance = new Map({
       target: el,
       layers: (options.layers ?? []) as Layer[],
+      // 16 par défaut : file vite saturée (fonds WMTS 256 px + couches WMS) ; serveurs en HTTP/2
+      maxTilesLoading: 32,
       controls: defaultControls({
         attribution: true,
         zoom: false,
