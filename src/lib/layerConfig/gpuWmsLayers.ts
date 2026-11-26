@@ -73,8 +73,8 @@ function createWmsTileLayer(
       .join(';')
   }
 
-  const minZoom = layer.minZoomLevel ?? 0
-  const maxZoom = layer.maxZoomLevel ?? 22
+  const minZoom = entry.minZoomLevel ?? 0
+  const maxZoom = entry.maxZoomLevel ?? 22
   const { minResolution, maxResolution } = getLayerResolutionRange(view, minZoom, maxZoom)
 
   return new TileLayer({

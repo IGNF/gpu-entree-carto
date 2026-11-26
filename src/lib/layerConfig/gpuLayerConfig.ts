@@ -31,6 +31,9 @@ export interface GpuLayerCatalogEntry {
   id: string
   path: string
   config: GpuLayerConfig
+  /** Zooms effectifs : `minZoomLevel` / `maxZoomLevel` de la couche, sinon hérités du parent. */
+  minZoomLevel?: number
+  maxZoomLevel?: number
 }
 
 /** Comme {@link gpu.model.Layer} : `visible` absent → hérite du parent ; racine → false. */
@@ -93,22 +96,32 @@ export function layerConfigToCatalogEntries(
   layers: GpuLayerConfig[],
   parentPath = '',
   registry: GpuLayerCatalogEntry[] = [],
+  inheritedMinZoom = 0,
+  inheritedMaxZoom = 22,
 ): GpuLayerCatalogEntry[] {
   for (const layer of layers) {
     if (layer.hideHimself) {
       if (layer.layers?.length) {
-        layerConfigToCatalogEntries(layer.layers, parentPath, registry)
+        layerConfigToCatalogEntries(
+          layer.layers,
+          parentPath,
+          registry,
+          inheritedMinZoom,
+          inheritedMaxZoom,
+        )
       }
       continue
     }
 
     const path = buildLayerPath(layer, parentPath || '')
     const id = pathToCatalogId(path)
+    const minZoomLevel = layer.minZoomLevel ?? inheritedMinZoom
+    const maxZoomLevel = layer.maxZoomLevel ?? inheritedMaxZoom
 
-    registry.push({ id, path, config: layer })
+    registry.push({ id, path, config: layer, minZoomLevel, maxZoomLevel })
 
     if (layer.layers?.length) {
-      layerConfigToCatalogEntries(layer.layers, path, registry)
+      layerConfigToCatalogEntries(layer.layers, path, registry, minZoomLevel, maxZoomLevel)
     }
   }
   return registry

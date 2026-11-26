@@ -102,6 +102,7 @@ et le projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Corrigé
 
+- **Couches WMS : zooms du groupe parent** — une couche sans `minZoomLevel` / `maxZoomLevel` hérite désormais de ceux de son groupe (ex. vue détaillée 12-21), comme dans le catalogue : zonage, informations et prescriptions ne sont plus demandés en WMS aux petites échelles (images vides).
 - **Fiche info : couche cochée pendant le chargement** — la famille ou le type SUP coché pendant le chargement de la fiche est complété dès la fin de celui-ci, et non plus à l’action suivante sur le catalogue.
 - **Fiche parcelle, règles SUP** — une SUP présente sur la carte mais sans document en production dans la base apparaissait dans les règles d’urbanisme, alors qu’elle était absente de l’onglet Documents et de la fiche territoire. Comme pour les DU, ses règles sont masquées ; le lien carte → base se fait par la partition (les couches SUP n’ont pas de `gpu_id`).
 - **Fiche parcelle, onglet Documents** — un document DU (ou PSMV) issu des couches de la parcelle s’affichait même avec « Vue d’ensemble » et « Vue détaillée des documents d’urbanisme » décochées (la fiche territoire, elle, le masquait). Ces documents suivent désormais la famille cochée dans le catalogue, encart « non exécutoire » compris.

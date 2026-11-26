@@ -102,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **WMS layers: parent group zoom levels** — a layer without `minZoomLevel` / `maxZoomLevel` now inherits them from its group (e.g. detailed view 12-21), as the catalogue does: zoning, information and prescription layers are no longer requested over WMS at small scales (empty images).
 - **Fiche info: layer checked while loading** — a family or SUP type checked while the fiche is loading is supplemented as soon as loading ends, instead of on the next catalogue action.
 - **Parcel fiche, SUP rules** — a SUP present on the map but with no production document in the database appeared in the urban planning rules, while missing from the Documents tab and the territory fiche. As for DU, its rules are now hidden; the map → database link uses the partition (SUP layers carry no `gpu_id`).
 - **Parcel fiche, Documents tab** — a DU (or PSMV) document coming from the parcel layers was shown even with the “Vue d’ensemble” and “Vue détaillée des documents d’urbanisme” layers unchecked (the territory fiche hid it). These documents now follow the family checked in the catalogue, “non exécutoire” callout included.
