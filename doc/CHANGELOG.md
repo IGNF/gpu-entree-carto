@@ -29,6 +29,7 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Fonds de plan nets : mêmes tuiles que cartes.gouv.fr à zoom égal (libellés à leur taille normale) ; impression inchangée.
 - Carte : couches GPU en résolution standard sur écran haute densité (tuiles 4 fois plus légères) ; impression toujours nette.
 - Carte : affichage plus rapide et plus fluide (plus de chargements en parallèle, limites administratives chargées seulement quand elles s’affichent).
+- Carte : couches GPU affichées ensemble chargées en une seule requête (moins de requêtes et de données par tuile).
 
 ### Corrigé
 

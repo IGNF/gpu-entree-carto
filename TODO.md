@@ -30,7 +30,7 @@ Côté gpu-site :
 
 ## Performances carte
 
-[ ] Regrouper les couches WMS GPU cochées en une seule requête (`LAYERS=a,b,c`, `cql_filter` séparés par `;`) : aujourd'hui une source par couche, donc N requêtes par tuile pour N couches cochées.
+[x] Regrouper les couches WMS GPU cochées en une seule requête (`LAYERS=a,b,c`, `cql_filter` séparés par `;`) : aujourd'hui une source par couche, donc N requêtes par tuile pour N couches cochées.
   - Gain mesuré (tuile 512 px, zoom 15) : couches par défaut 6 → 2 requêtes par tuile (`mec`, opaque, reste à part), environ 30 à 50 % de volume en moins ; SUP en mode détaillé 29 → 1 requête, 205 → 17 Ko. Comparaison : https://claude.ai/artifact/X1ekcena2T1yrg3BcRhqo9
   - Rendu quasi identique : au plus 0,09 % de pixels différents (écart max 26/255), l'opacité appliquée au groupe ne se voit pas car prescriptions et périmètres sont surtout des hachures.
   - Cocher le groupe SUP entier affiche déjà la couche GeoServer `sup` (une requête) : le gain SUP ne concerne que le mode détaillé ou des catégories cochées une à une.
