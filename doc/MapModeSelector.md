@@ -30,9 +30,9 @@ Sans `modelValue`, utilise le contexte `provideMapMode()` de la vue carte.
 
 ## Comportement carte
 
-Avec une cerise (`mlon` / `mlat` ou dernier point d’emprise mode), le composant met à jour l’emprise rouge pointillée (géométries fiche-info v2) et anime la vue pour l’englober (padding recherche lieu). Plafond de zoom : **19** en mode Parcelle (contour parcellaire serré), **15** en mode Territoire (commune). L’emprise lieu geopf (bleu pointillé) reste affichée en parallèle.
+Avec une cerise (`mlon` / `mlat` ou dernier point d’emprise mode), le composant met à jour l’emprise rouge pointillée (géométries fiche-info v2) et la fiche, **sans déplacer la vue**. Le recentrage sur l’emprise se fait seulement au clic sur le tag **Parcelle** / **Territoire** de la fiche (« Recentrer sur la parcelle / le territoire » ; plafond de zoom **19** en Parcelle, **15** en Territoire). L’emprise lieu geopf (bleu pointillé) reste affichée en parallèle.
 
-- **Restauration permalink** (`MapPermalinkSync`) : cerise + emprise + vol une fois la couche recherche prête.
+- **Restauration permalink** (`MapPermalinkSync`) : cerise + emprise une fois la couche recherche prête (la vue reste celle du permalien).
 - **Changement Parcelle / Territoire** (`MapModeSelector`) : vol + refresh fiche pour le mode choisi.
 
 ## Intégration

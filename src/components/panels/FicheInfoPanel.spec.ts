@@ -84,3 +84,17 @@ describe('FicheInfoPanel — bouton Imprimer', () => {
     expect(mountPanel(MAP_MODE_TERRITORY, { selection }).find(printButton).exists()).toBe(false)
   })
 })
+
+describe('FicheInfoPanel — tags Parcelle / Territoire', () => {
+  it('tag Territoire : title « Recentrer sur le territoire »', () => {
+    const selection: FicheInfoSelection = {
+      title: 'Vif (38545)',
+      territoryTitle: 'Vif (38545)',
+      mapMode: MAP_MODE_TERRITORY,
+    }
+    const wrapper = mountPanel(MAP_MODE_TERRITORY, { selection })
+    expect(wrapper.find('a.ec-fiche-info__mode-tag-link').attributes('title')).toBe(
+      'Recentrer sur le territoire',
+    )
+  })
+})

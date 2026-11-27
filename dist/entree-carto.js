@@ -119042,14 +119042,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       if (current && (current.lon !== marker.lon || current.lat !== marker.lat)) return;
     }
     if (!extent) return;
-    const maxZoom = maxZoomForModeEmpriseFit(map2, mode2);
-    requestAnimationFrame(() => {
-      animateViewFit(map2, extent, {
-        padding: defaultMapViewFitPadding(),
-        maxZoom,
-        size: map2.getSize()
+    if (!options.skipFit) {
+      const maxZoom = maxZoomForModeEmpriseFit(map2, mode2);
+      requestAnimationFrame(() => {
+        animateViewFit(map2, extent, {
+          padding: defaultMapViewFitPadding(),
+          maxZoom,
+          size: map2.getSize()
+        });
       });
-    });
+    }
     if (options.skipFicheRefresh) return;
     const zoom = map2.getView().getZoom() ?? 6;
     refreshFicheForMapModeChange(mode2, zoom);
@@ -119332,25 +119334,19 @@ Expected function or array of functions, received type ${typeof value2}.`
       function selectDocTab(id2) {
         activeDocTabId.value = id2;
       }
-      async function activateParcelMode() {
-        const zoom = legendZoom.value;
-        if (mapMode.mode.value !== MAP_MODE_PARCEL) {
-          mapMode.setMode(MAP_MODE_PARCEL);
-          refreshFicheForMapModeChange(MAP_MODE_PARCEL, zoom);
-          return;
-        }
-        const map2 = mapRef.value;
-        if (map2) await focusModeEmpriseOnMap(map2, MAP_MODE_PARCEL);
+      function activateParcelMode() {
+        if (mapMode.mode.value === MAP_MODE_PARCEL) return;
+        mapMode.setMode(MAP_MODE_PARCEL);
+        refreshFicheForMapModeChange(MAP_MODE_PARCEL, legendZoom.value);
       }
-      async function activateTerritoryMode() {
-        const zoom = legendZoom.value;
-        if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
-          mapMode.setMode(MAP_MODE_TERRITORY);
-          refreshFicheForMapModeChange(MAP_MODE_TERRITORY, zoom);
-          return;
-        }
+      function activateTerritoryMode() {
+        if (mapMode.mode.value === MAP_MODE_TERRITORY) return;
+        mapMode.setMode(MAP_MODE_TERRITORY);
+        refreshFicheForMapModeChange(MAP_MODE_TERRITORY, legendZoom.value);
+      }
+      async function recenterOnModeEmprise() {
         const map2 = mapRef.value;
-        if (map2) await focusModeEmpriseOnMap(map2, MAP_MODE_TERRITORY);
+        if (map2) await focusModeEmpriseOnMap(map2, mapMode.mode.value, { skipFicheRefresh: true });
       }
       async function loadParcelDetail() {
         if (!props.selection || parcelDetailReady.value) return;
@@ -119480,7 +119476,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link",
-                  onClick: withModifiers(activateParcelMode, ["prevent"])
+                  title: "Recentrer sur la parcelle",
+                  onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
                 }, [..._cache[6] || (_cache[6] = [
                   createBaseVNode("span", {
                     class: "ec-fiche-info__mode-tag-icon ec-icon-parcelle",
@@ -119643,7 +119640,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                 createBaseVNode("a", {
                   href: "#",
                   class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
-                  onClick: withModifiers(activateTerritoryMode, ["prevent"])
+                  title: "Recentrer sur le territoire",
+                  onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
                 }, [..._cache[12] || (_cache[12] = [
                   createBaseVNode("span", {
                     class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
@@ -121950,7 +121948,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           if (!marker) return;
           const map2 = mapRef.value;
           if (!map2) return;
-          await focusModeEmpriseOnMap(map2, next);
+          await focusModeEmpriseOnMap(map2, next, { skipFit: true });
         }
       );
       return (_ctx, _cache) => {
@@ -122215,7 +122213,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         cherryEmpriseFocusPending = false;
         const mode2 = (mapMode == null ? void 0 : mapMode.mode.value) ?? 2;
-        await focusModeEmpriseOnMap(map2, mode2, { skipFicheRefresh: true });
+        await focusModeEmpriseOnMap(map2, mode2, { skipFicheRefresh: true, skipFit: true });
       }
       function restoreMarkerFromPermalink() {
         if (markerRestored || props.skipMarkerRestore) return;

@@ -15,10 +15,11 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Démo autonome avec assets DSFR / Remix locaux ([DemoExternal](./DemoExternal.md)).
 - Référence des icônes ([icone-references](./icone-references.md)).
 - Démo « Fiche info » : carte, catalogue, recherche de lieu, sélecteur de mode, recherche par identifiant de parcelle (`34_301_000_000_AS_0136` ou `34301000000AS0136`) et onglet « Données brutes » (champs non utilisés grisés).
-- Démo « Fiche info » : bouton pour activer / désactiver l’interrogation au clic, vue recentrée sur la parcelle ou la commune trouvée.
+- Démo « Fiche info » : bouton pour activer / désactiver l’interrogation au clic.
 
 ### Modifié
 
+- Carte : plus de recentrage automatique sur la parcelle ou la commune (changement de mode, permalien) ; les tags Parcelle / Territoire de la fiche recentrent la vue.
 - Fiche info : une seule requête par point, familles (DU, SUP, SCoT) demandées selon le catalogue.
 - Fiche info : contenu filtré selon les couches cochées, mis à jour sans nouvel appel.
 - Fonds Géoplateforme en WMTS et couche cadastre selon la commune, comme gpu-client.

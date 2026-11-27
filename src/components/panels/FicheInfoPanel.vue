@@ -177,26 +177,23 @@ function selectDocTab(id: string): void {
   activeDocTabId.value = id
 }
 
-async function activateParcelMode(): Promise<void> {
-  const zoom = legendZoom.value
-  if (mapMode.mode.value !== MAP_MODE_PARCEL) {
-    mapMode.setMode(MAP_MODE_PARCEL)
-    refreshFicheForMapModeChange(MAP_MODE_PARCEL, zoom)
-    return
-  }
-  const map = mapRef.value
-  if (map) await focusModeEmpriseOnMap(map, MAP_MODE_PARCEL)
+/** Boutons de bascule (« Parcelle … » / commune) : change de mode sans déplacer la vue. */
+function activateParcelMode(): void {
+  if (mapMode.mode.value === MAP_MODE_PARCEL) return
+  mapMode.setMode(MAP_MODE_PARCEL)
+  refreshFicheForMapModeChange(MAP_MODE_PARCEL, legendZoom.value)
 }
 
-async function activateTerritoryMode(): Promise<void> {
-  const zoom = legendZoom.value
-  if (mapMode.mode.value !== MAP_MODE_TERRITORY) {
-    mapMode.setMode(MAP_MODE_TERRITORY)
-    refreshFicheForMapModeChange(MAP_MODE_TERRITORY, zoom)
-    return
-  }
+function activateTerritoryMode(): void {
+  if (mapMode.mode.value === MAP_MODE_TERRITORY) return
+  mapMode.setMode(MAP_MODE_TERRITORY)
+  refreshFicheForMapModeChange(MAP_MODE_TERRITORY, legendZoom.value)
+}
+
+/** Tags Parcelle / Territoire : seul recentrage de la vue sur l’emprise (parcelle ou commune). */
+async function recenterOnModeEmprise(): Promise<void> {
   const map = mapRef.value
-  if (map) await focusModeEmpriseOnMap(map, MAP_MODE_TERRITORY)
+  if (map) await focusModeEmpriseOnMap(map, mapMode.mode.value, { skipFicheRefresh: true })
 }
 
 async function loadParcelDetail(): Promise<void> {
@@ -340,7 +337,8 @@ const parcelPanelFootnotesHtml = computed(() => {
           <a
             href="#"
             class="fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link"
-            @click.prevent="activateParcelMode"
+            title="Recentrer sur la parcelle"
+            @click.prevent="recenterOnModeEmprise"
           >
             <span class="ec-fiche-info__mode-tag-icon ec-icon-parcelle" aria-hidden="true" />
             Parcelle
@@ -514,7 +512,8 @@ const parcelPanelFootnotesHtml = computed(() => {
           <a
             href="#"
             class="fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link"
-            @click.prevent="activateTerritoryMode"
+            title="Recentrer sur le territoire"
+            @click.prevent="recenterOnModeEmprise"
           >
             <span
               class="ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill"
