@@ -18,7 +18,6 @@ import RawFicheData from '@/components/demo/RawFicheData.vue'
 import { provideMapMode } from '@/composables/mapMode'
 import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
 import { useDemoLayerCatalog } from '@/composables/useDemoLayerCatalog'
-import { useFitOnModeEmprise } from '@/composables/useFitOnModeEmprise'
 import { getDemoConfig, prepareDemoEnvironment } from '@/lib/demo/demoConfig'
 import { queryFicheAtMapPoint } from '@/lib/fiche/queryFicheAtMapPoint'
 import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY } from '@/lib/map/mapMode'
@@ -56,7 +55,6 @@ const {
   onUpdateBase,
   onToggleLayer,
 } = useDemoLayerCatalog(mapRef)
-useFitOnModeEmprise(mapRef, () => mapMode.mode.value)
 
 /** Même sélection que l’onglet fiche (catalogue, rechargements compris). */
 const selection = computed(() => tabPanelsApiRef.value?.selection.value ?? null)

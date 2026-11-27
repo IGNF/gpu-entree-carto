@@ -95,3 +95,9 @@
 .ec-layer-catalogue__panel[hidden] {
   display: none !important;
 }
+
+/* Onglets Données / Fonds de cartes : glissement latéral (`slide-transition.css`). */
+.ec-layer-catalogue__stage {
+  position: relative;
+  overflow-x: clip;
+}

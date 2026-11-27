@@ -29,7 +29,7 @@ describe('mecProcedureTileHtmlFromGpuDocument', () => {
       title: 'MEC test',
       archiveUrl: `http://example.test/api/document/${id}/download/mec.zip`,
     })
-    expect(html).toContain(`/document/${id}`)
+    expect(html).toContain(`/document/by-id/${id}`)
     expect(html).not.toContain('/download/')
     expect(html).toContain('ec-fiche-info__badge--procedure')
     expect(html).toContain('EN COURS DE PROCÉDURE')
@@ -68,7 +68,7 @@ describe('buildMecTerritoryProceduresHtml', () => {
         ],
       },
     })
-    expect(html.match(/\/document\/2e7fac47f27a0825cd0091dd1471d985/gi)?.length ?? 0).toBe(1)
+    expect(html.match(/\/document\/by-id\/2e7fac47f27a0825cd0091dd1471d985/gi)?.length ?? 0).toBe(1)
   })
 })
 

@@ -8,6 +8,14 @@ import {
   isGpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
 import { setFicheCatalogFamilyVisibility } from '@/lib/fiche/ficheCatalogVisibilityFilter'
+import {
+  computeDuRuleCatalogScope,
+  resetFicheCatalogLayerScopes,
+  setFicheCatalogDuRuleScope,
+} from '@/lib/fiche/ficheCatalogLayerScope'
+import { layerConfigToCatalogEntries } from '@/lib/layerConfig/gpuLayerConfig'
+import duLayerConfigMain from '@/test/fixtures/layer-config/du-gpu-site-main.json'
+import sullyFiche from '@/test/fixtures/fiche-info/sully-gpu-site-main.json'
 
 const sampleFicheApi: GpuFicheInfoPayload = {
   dus: {
@@ -696,6 +704,39 @@ describe('onglet Documents de la fiche parcelle : servitude de passage sur le li
   })
 })
 
+describe('onglet Documents de la fiche parcelle : liens des tuiles', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  const plu = (inDatabase: boolean) => ({
+    features: [
+      {
+        id: 'document.1',
+        properties: {
+          title: 'PLU de test',
+          partition: 'DU_31526',
+          name: 'DU_31526',
+          gpu_id: 'f'.repeat(32),
+          urlfic: 'https://example.com/plu.zip',
+          inDatabase,
+        },
+      },
+    ],
+  })
+
+  it('document hors base : ni archive ni urlfic exposés', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const html = buildParcelDocumentsHtmlFromFiche(plu(false), {})
+    expect(html).not.toContain('example.com')
+  })
+
+  it('document en base : lien vers la page du document', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const html = buildParcelDocumentsHtmlFromFiche(plu(true), {})
+    expect(html).toContain(`/document/by-id/${'f'.repeat(32)}`)
+    expect(html).not.toContain('example.com')
+  })
+})
+
 describe('règles d’urbanisme SUP : document en base requis (comme les DU)', () => {
   afterEach(() => setFicheCatalogFamilyVisibility(null))
 
@@ -745,5 +786,116 @@ describe('fetchGpuParcelFiche', () => {
     await expect(fetchGpuParcelFiche('750560000AB0001')).rejects.toThrow(
       'Service temporairement saturé, réessayez.',
     )
+  })
+})
+
+describe('règles d’urbanisme : réponse réelle gpu-site main (Sully-la-Chapelle, AB 0368)', () => {
+  const gpu = 'https://www.geoportail-urbanisme.gouv.fr'
+  const docFiles = `${gpu}/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files`
+
+  afterEach(() => {
+    resetFicheCatalogLayerScopes()
+    delete config.apiDocumentFileUrl
+    delete config.urlPlaceholders
+  })
+
+  it('catalogue de production tout coché : 8 règles, liens PDF par l’API fichiers', () => {
+    const data = sullyFiche as unknown as GpuFicheInfoPayload & { parcelFiche: { features: [] } }
+    const entries = layerConfigToCatalogEntries(duLayerConfigMain)
+    setFicheCatalogDuRuleScope(
+      computeDuRuleCatalogScope(Object.fromEntries(entries.map((e) => [e.id, true])), entries),
+    )
+    config.apiDocumentFileUrl = `${gpu}/api/document/00000000000000000000000000000000/files/__GPU_FILE_NAME__`
+    config.urlPlaceholders = {
+      documentId: '00000000000000000000000000000000',
+      fileName: '__GPU_FILE_NAME__',
+    }
+    const html = buildParcelInfosHtmlFromFiche(data.parcelFiche, 17, data)
+    expect(html.match(/ec-fiche-info__rule-title/g)?.length).toBe(8)
+    expect(html).toContain('Périmètre de droit de préemption urbain')
+    expect(html).toContain(`${docFiles}/45340_info_surf_11_00_20180202.pdf`)
+    expect(html).toContain(`${docFiles}/45340_reglement_20180202.pdf#page=15`)
+    // SCoT sans pièce écrite : pas d’icône PDF.
+    expect(html).not.toContain('rule-doc--muted')
+    expect(html.match(/ec-fiche-info__rule-doc/g)?.length).toBe(7)
+  })
+
+  it('SUP : pièce écrite via `fichier` et le document SUP de la partition', () => {
+    config.apiDocumentFileUrl = `${gpu}/api/document/00000000000000000000000000000000/files/__GPU_FILE_NAME__`
+    config.urlPlaceholders = {
+      documentId: '00000000000000000000000000000000',
+      fileName: '__GPU_FILE_NAME__',
+    }
+    const supId = 'c88982dd1ed196d51cedcd38ff1c39f0'
+    const html = buildParcelInfosHtmlFromFiche(
+      {
+        features: [
+          {
+            id: 'assiette_sup_s.175462',
+            properties: {
+              suptype: 'ac1',
+              partition: '172014607_SUP_31_AC1',
+              fichier: 'AC1_Chateau-IML8LS_20070806_act.pdf',
+            },
+          },
+        ],
+      },
+      17,
+      {
+        sups: {
+          '172014607_SUP_31_AC1': {
+            documents: [{ id: supId, name: '172014607_SUP_31_AC1', status: 'document.production' }],
+          },
+        },
+      },
+    )
+    expect(html).toContain(`${gpu}/api/document/${supId}/files/AC1_Chateau-IML8LS_20070806_act.pdf`)
+  })
+})
+
+describe('onglet Documents : MEC remplaçant un SCoT présent en plusieurs entités (Caen, KX 0013)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  it('une seule tuile MEC, même avec deux entités SCoT de la partition remplacée', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const scotFeature = (id: string, gpuId: string) => ({
+      id,
+      properties: {
+        partition: 'scot_200051183',
+        gpu_id: gpuId,
+        name: 'scot_200051183',
+        title: 'SCOT CAEN METROPOLE',
+      },
+    })
+    const html = buildParcelDocumentsHtmlFromFiche(
+      {
+        features: [
+          scotFeature('scot.4799', '2e7fac47f27a0825cd0091dd1471d985'),
+          scotFeature('scot.4800', 'd6fff17e8f63fbc0c495aeb97a1f758c'),
+          {
+            id: 'mec.20',
+            properties: {
+              partition: 'MEC_1_scot_200051183',
+              idurba: '200051183_SCOT_MEC1_20250909',
+              libelle: 'Centre Pénitentiaire scot',
+            },
+          },
+        ],
+      },
+      {
+        mecsScot: {
+          MEC_1_scot_200051183: {
+            documents: [
+              {
+                id: '70988e89fab69afbbe73e04615b10d2e',
+                title: 'MEC SCoT Caen',
+                status: 'document.production',
+              },
+            ],
+          },
+        },
+      },
+    )
+    expect(html.split('MEC SCoT Caen').length - 1).toBe(1)
   })
 })

@@ -103,7 +103,8 @@ async function syncCherryEmpriseFocusFromPermalink(map: Map): Promise<void> {
   }
   cherryEmpriseFocusPending = false
   const mode = mapMode?.mode.value ?? 2
-  await focusModeEmpriseOnMap(map, mode, { skipFicheRefresh: true })
+  // La vue vient du permalien (lon, lat, z) : pas de recentrage sur l’emprise.
+  await focusModeEmpriseOnMap(map, mode, { skipFicheRefresh: true, skipFit: true })
 }
 
 function restoreMarkerFromPermalink(): void {

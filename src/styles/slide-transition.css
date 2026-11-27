@@ -1,0 +1,38 @@
+/**
+ * Glissement latéral entre deux vues (durée et sens des onglets DSFR) : `ec-slide-next` (la suivante arrive
+ * par la droite) / `ec-slide-prev`. Le conteneur doit être `position: relative; overflow-x: clip`.
+ * Utilisé par la fiche info (mode Parcelle ↔ Territoire) et le catalogue (Données ↔ Fonds de cartes).
+ */
+.ec-slide-next-enter-active,
+.ec-slide-next-leave-active,
+.ec-slide-prev-enter-active,
+.ec-slide-prev-leave-active {
+  transition: transform 0.3s;
+}
+
+.ec-slide-next-leave-active,
+.ec-slide-prev-leave-active {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.ec-slide-next-enter-from,
+.ec-slide-prev-leave-to {
+  transform: translateX(100%);
+}
+
+.ec-slide-next-leave-to,
+.ec-slide-prev-enter-from {
+  transform: translateX(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ec-slide-next-enter-active,
+  .ec-slide-next-leave-active,
+  .ec-slide-prev-enter-active,
+  .ec-slide-prev-leave-active {
+    transition: none;
+  }
+}

@@ -54,7 +54,9 @@ export function modeEmprisePartsFromFichePayload(
 
   const insee = gridInseeFromPayload(payload)
   const parentGeometry = readGeometry(payload.parentGridGeometry)
-  const gridGeometry = readGeometry(payload.gridGeometry)
+  // gpu-site main (démo en ligne) : pas de `gridGeometry`, la géométrie est dans `grid.feature`.
+  const gridGeometry =
+    readGeometry(payload.gridGeometry) ?? readGeometry(payload.grid?.feature?.geometry)
   const parts: ModeEmpriseGeometryPart[] = []
 
   if (parentGeometry) {

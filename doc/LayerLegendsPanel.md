@@ -20,7 +20,8 @@ Onglet **Légendes** du panneau latéral : symboles des couches **visibles** dan
 - Contenu déplié : liste d’entrées `LegendItem` (`title`, une ou plusieurs images **pct / lin / surf** sur la même ligne, ordre gpu-client).
 - **`onlyLegend: true`** : absent du sélecteur catalogue ; ligne dans **Couches de données** si active ; légende ici (sans doublon si déjà dans la pile).
 - **Dédoublonnage** : une entrée déjà affichée (même libellé + mêmes symboles) n’est pas répétée ; un second accordéon au même **titre** et à la **même légende** est masqué (`dedupeLegendLayersForPanel`).
-- **Hors plage de zoom** LAYER_CONFIG : accordéon grisé (`ec-not-in-zoom-range`, même règle que le catalogue).
+- **Hors plage de zoom** LAYER_CONFIG : accordéon grisé (`ec-not-in-zoom-range`, même règle que le catalogue) : titre et libellés en gris désactivé, pictos désaturés et atténués (`catalog-zoom-range.css`, `layer-legends.css`).
+- **Images** : clé stable (id de l’entrée + rang), sans le zoom : au changement de zoom, seul `src` change au seuil d’échelle (pas de recréation des images, donc pas de saut des lignes).
 - Pas de réglage d’opacité ici (réservé à [DataLayersManagerPanel](./DataLayersManagerPanel.md)).
 - URLs d’images : **`legendImageDetailDirectory`** (injecté dans `gpu.config` par `gpu-client-config.js`, aussi fusionné dans `@/lib/config`) + chemin relatif de l’image + `.png`, comme gpu-client `LegendImages#getUrl`.
 - Symboles dérivés de `LEGEND_CONFIG` / `LEGEND_REFERENCES` (`gpuLegendItems.ts`, aligné gpu-client `CreateTreeLayerSwitcherItems`) : chemins filtrés `info_surf/05`, sous-filtres `hasfilter2`, blocs « other », etc.

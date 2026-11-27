@@ -62,7 +62,8 @@ watch(
     if (!marker) return
     const map = mapRef.value
     if (!map) return
-    await focusModeEmpriseOnMap(map, next)
+    // Pas de recentrage automatique : seuls les tags de la fiche recentrent la vue.
+    await focusModeEmpriseOnMap(map, next, { skipFit: true })
   },
 )
 </script>

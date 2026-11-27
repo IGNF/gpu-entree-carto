@@ -1,0 +1,721 @@
+{
+  "parcel": {
+    "gid": 52449192,
+    "numero": "0368",
+    "feuille": 1,
+    "section": "AB",
+    "code_dep": "45",
+    "nom_com": "Villemurlin",
+    "code_com": "340",
+    "com_abs": "000",
+    "code_arr": "000",
+    "idu": "45340000AB0368",
+    "contenance": 4322,
+    "code_insee": "45340",
+    "id": "45_340_000_000_AB_0368"
+  },
+  "grid": {
+    "gid": 14101251,
+    "insee": "45340",
+    "name": "VILLEMURLIN",
+    "is_rnu": false,
+    "is_deleted": false,
+    "is_coastline": false
+  },
+  "dus": {
+    "DU_45340": {
+      "documents": [
+        {
+          "id": "1cd9c54a1775550e0f77ff0e1fac59d2",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "26/09/2023 16:51:11",
+          "updateDate": "27/09/2023 08:48:19",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "45340_PLU_20180202",
+          "type": "PLU",
+          "supCategory": null,
+          "name": "DU_45340",
+          "legalControlStatus": 102,
+          "title": "Plan Local d'Urbanisme (PLU) de la commune de VILLEMURLIN",
+          "projectionCode": "EPSG:2154",
+          "fileIdentifier": "GPU-1cd9c54a1775550e0f77ff0e1fac59d2",
+          "protected": false,
+          "grid": { "name": "45340", "title": "VILLEMURLIN" },
+          "publicationDate": "27/09/2023 08:48:19",
+          "statusDate": "27/09/2023 08:48:19",
+          "typeref": "01",
+          "typeproc": null,
+          "producer": "Mairie de Villemurlin",
+          "acteSupCount": null,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/download/45340_PLU_20180202.zip",
+          "typeproc_title": null,
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": false
+    }
+  },
+  "psmvs": [],
+  "sups": [],
+  "scots": {
+    "scot_200075364": {
+      "documents": [
+        {
+          "id": "ae59371291b6f3cc72426ee349010574",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "08/03/2021 09:46:47",
+          "updateDate": "08/03/2021 10:05:47",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "200075364_SCOT_20200312",
+          "type": "SCoT",
+          "supCategory": null,
+          "name": "scot_200075364",
+          "legalControlStatus": -1,
+          "title": "Schéma de Cohérence Territorial (SCoT) PETR FORET D'ORLEANS LOIRE SOLOGNE",
+          "projectionCode": null,
+          "fileIdentifier": "GPU-ae59371291b6f3cc72426ee349010574",
+          "protected": false,
+          "grid": { "name": "scot_200075364", "title": "SCOT PETR FORET D'ORLEANS LOIRE SOLOGNE" },
+          "publicationDate": "08/03/2021 10:05:47",
+          "statusDate": "08/03/2021 10:05:47",
+          "typeref": "01",
+          "typeproc": null,
+          "producer": "DDT_45",
+          "acteSupCount": null,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/ae59371291b6f3cc72426ee349010574/download/200075364_SCOT_20200312.zip",
+          "typeproc_title": null,
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": false
+    }
+  },
+  "mecsDu": [],
+  "mecsScot": [],
+  "is_el9_alert": false,
+  "lowScaleDocument": {
+    "DU_45340": {
+      "id": "1cd9c54a1775550e0f77ff0e1fac59d2",
+      "status": "document.production",
+      "documentSource": "UPLOAD",
+      "uploadDate": "26/09/2023 16:51:11",
+      "updateDate": "27/09/2023 08:48:19",
+      "legalStatus": "APPROVED",
+      "effectiveStatus": "EN_VIGUEUR",
+      "originalName": "45340_PLU_20180202",
+      "type": "PLU",
+      "supCategory": null,
+      "name": "DU_45340",
+      "legalControlStatus": 102,
+      "title": "Plan Local d'Urbanisme (PLU) de la commune de VILLEMURLIN",
+      "projectionCode": "EPSG:2154",
+      "fileIdentifier": "GPU-1cd9c54a1775550e0f77ff0e1fac59d2",
+      "protected": false,
+      "grid": { "name": "45340", "title": "VILLEMURLIN", "type": "municipality", "rnu": false },
+      "publicationDate": "27/09/2023 08:48:19",
+      "bbox": [2.2821717, 47.6317852, 2.4062367, 47.722451],
+      "statusDate": "27/09/2023 08:48:19",
+      "typeref": "01",
+      "typeproc": null,
+      "files": [
+        "45340_procedure_20180202.pdf",
+        "45340_rapport_20180202.pdf",
+        "45340_padd_20180202.pdf",
+        "45340_prescription_lin_07_00_20180202.pdf",
+        "45340_prescription_pct_07_00_20180202.pdf",
+        "45340_prescription_surf_02_00_1_20180202.pdf",
+        "45340_prescription_surf_02_00_2_20180202.pdf",
+        "45340_prescription_surf_03_00_20180202.pdf",
+        "45340_prescription_surf_05_00_20180202.pdf",
+        "45340_reglement_20180202.pdf",
+        "45340_reglement_graphique_0_20180202.pdf",
+        "45340_reglement_graphique_1_20180202.pdf",
+        "45340_reglement_graphique_2_20180202.pdf",
+        "45340_reglement_graphique_3_20180202.pdf",
+        "45340_reglement_graphique_4_20180202.pdf",
+        "45340_annexes_1_20180202.pdf",
+        "45340_annexes_2_20180202.pdf",
+        "45340_info_lin_19_01_1_20180202.pdf",
+        "45340_info_lin_19_01_2_20180202.pdf",
+        "45340_info_lin_19_01_3_20180202.pdf",
+        "45340_info_pct_16_00_20180202.pdf",
+        "45340_info_surf_04_00_20180202.pdf",
+        "45340_info_surf_05_00_20180202.pdf",
+        "45340_info_surf_11_00_20180202.pdf",
+        "45340_info_surf_32_00_20180202.pdf",
+        "45340_liste_des_annexes_20180202.pdf",
+        "45340_liste_sup_20180202.pdf",
+        "45340_plan_sup_20180202.pdf",
+        "45340_orientations_amenagement_18_00_20180202.pdf"
+      ],
+      "fileEntries": [
+        {
+          "name": "45340_procedure_20180202.pdf",
+          "original_path": "Pieces_ecrites/0_Procedure/45340_procedure_20180202.pdf"
+        },
+        {
+          "name": "45340_rapport_20180202.pdf",
+          "original_path": "Pieces_ecrites/1_Rapport_de_presentation/45340_rapport_20180202.pdf"
+        },
+        {
+          "name": "45340_padd_20180202.pdf",
+          "original_path": "Pieces_ecrites/2_PADD/45340_padd_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_lin_07_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_lin_07_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_pct_07_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_pct_07_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_02_00_1_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_surf_02_00_1_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_02_00_2_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_surf_02_00_2_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_03_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_surf_03_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_05_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_prescription_surf_05_00_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_0_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_0_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_1_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_1_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_2_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_2_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_3_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_3_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_4_20180202.pdf",
+          "original_path": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_4_20180202.pdf"
+        },
+        {
+          "name": "45340_annexes_1_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_annexes_1_20180202.pdf"
+        },
+        {
+          "name": "45340_annexes_2_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_annexes_2_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_1_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_1_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_2_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_2_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_3_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_3_20180202.pdf"
+        },
+        {
+          "name": "45340_info_pct_16_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_pct_16_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_04_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_surf_04_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_05_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_surf_05_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_11_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_surf_11_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_32_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_info_surf_32_00_20180202.pdf"
+        },
+        {
+          "name": "45340_liste_des_annexes_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_liste_des_annexes_20180202.pdf"
+        },
+        {
+          "name": "45340_liste_sup_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_liste_sup_20180202.pdf"
+        },
+        {
+          "name": "45340_plan_sup_20180202.pdf",
+          "original_path": "Pieces_ecrites/4_Annexes/45340_plan_sup_20180202.pdf"
+        },
+        {
+          "name": "45340_orientations_amenagement_18_00_20180202.pdf",
+          "original_path": "Pieces_ecrites/5_Orientations_amenagement/45340_orientations_amenagement_18_00_20180202.pdf"
+        }
+      ],
+      "filePaths": {
+        "45340_procedure_20180202.pdf": "Pieces_ecrites/0_Procedure/45340_procedure_20180202.pdf",
+        "45340_rapport_20180202.pdf": "Pieces_ecrites/1_Rapport_de_presentation/45340_rapport_20180202.pdf",
+        "45340_padd_20180202.pdf": "Pieces_ecrites/2_PADD/45340_padd_20180202.pdf",
+        "45340_prescription_lin_07_00_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_lin_07_00_20180202.pdf",
+        "45340_prescription_pct_07_00_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_pct_07_00_20180202.pdf",
+        "45340_prescription_surf_02_00_1_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_surf_02_00_1_20180202.pdf",
+        "45340_prescription_surf_02_00_2_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_surf_02_00_2_20180202.pdf",
+        "45340_prescription_surf_03_00_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_surf_03_00_20180202.pdf",
+        "45340_prescription_surf_05_00_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_prescription_surf_05_00_20180202.pdf",
+        "45340_reglement_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_20180202.pdf",
+        "45340_reglement_graphique_0_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_0_20180202.pdf",
+        "45340_reglement_graphique_1_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_1_20180202.pdf",
+        "45340_reglement_graphique_2_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_2_20180202.pdf",
+        "45340_reglement_graphique_3_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_3_20180202.pdf",
+        "45340_reglement_graphique_4_20180202.pdf": "Pieces_ecrites/3_Reglement/45340_reglement_graphique_4_20180202.pdf",
+        "45340_annexes_1_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_annexes_1_20180202.pdf",
+        "45340_annexes_2_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_annexes_2_20180202.pdf",
+        "45340_info_lin_19_01_1_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_1_20180202.pdf",
+        "45340_info_lin_19_01_2_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_2_20180202.pdf",
+        "45340_info_lin_19_01_3_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_lin_19_01_3_20180202.pdf",
+        "45340_info_pct_16_00_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_pct_16_00_20180202.pdf",
+        "45340_info_surf_04_00_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_surf_04_00_20180202.pdf",
+        "45340_info_surf_05_00_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_surf_05_00_20180202.pdf",
+        "45340_info_surf_11_00_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_surf_11_00_20180202.pdf",
+        "45340_info_surf_32_00_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_info_surf_32_00_20180202.pdf",
+        "45340_liste_des_annexes_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_liste_des_annexes_20180202.pdf",
+        "45340_liste_sup_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_liste_sup_20180202.pdf",
+        "45340_plan_sup_20180202.pdf": "Pieces_ecrites/4_Annexes/45340_plan_sup_20180202.pdf",
+        "45340_orientations_amenagement_18_00_20180202.pdf": "Pieces_ecrites/5_Orientations_amenagement/45340_orientations_amenagement_18_00_20180202.pdf"
+      },
+      "metadata": "fr-000045340-plu20180202",
+      "producer": "Mairie de Villemurlin",
+      "acteSupCount": null,
+      "writingMaterials": {
+        "45340_procedure_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_procedure_20180202.pdf",
+        "45340_rapport_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_rapport_20180202.pdf",
+        "45340_padd_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_padd_20180202.pdf",
+        "45340_prescription_lin_07_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_lin_07_00_20180202.pdf",
+        "45340_prescription_pct_07_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_pct_07_00_20180202.pdf",
+        "45340_prescription_surf_02_00_1_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_surf_02_00_1_20180202.pdf",
+        "45340_prescription_surf_02_00_2_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_surf_02_00_2_20180202.pdf",
+        "45340_prescription_surf_03_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_surf_03_00_20180202.pdf",
+        "45340_prescription_surf_05_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_prescription_surf_05_00_20180202.pdf",
+        "45340_reglement_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_20180202.pdf",
+        "45340_reglement_graphique_0_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_graphique_0_20180202.pdf",
+        "45340_reglement_graphique_1_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_graphique_1_20180202.pdf",
+        "45340_reglement_graphique_2_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_graphique_2_20180202.pdf",
+        "45340_reglement_graphique_3_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_graphique_3_20180202.pdf",
+        "45340_reglement_graphique_4_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_reglement_graphique_4_20180202.pdf",
+        "45340_annexes_1_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_annexes_1_20180202.pdf",
+        "45340_annexes_2_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_annexes_2_20180202.pdf",
+        "45340_info_lin_19_01_1_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_lin_19_01_1_20180202.pdf",
+        "45340_info_lin_19_01_2_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_lin_19_01_2_20180202.pdf",
+        "45340_info_lin_19_01_3_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_lin_19_01_3_20180202.pdf",
+        "45340_info_pct_16_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_pct_16_00_20180202.pdf",
+        "45340_info_surf_04_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_surf_04_00_20180202.pdf",
+        "45340_info_surf_05_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_surf_05_00_20180202.pdf",
+        "45340_info_surf_11_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_surf_11_00_20180202.pdf",
+        "45340_info_surf_32_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_info_surf_32_00_20180202.pdf",
+        "45340_liste_des_annexes_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_liste_des_annexes_20180202.pdf",
+        "45340_liste_sup_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_liste_sup_20180202.pdf",
+        "45340_plan_sup_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_plan_sup_20180202.pdf",
+        "45340_orientations_amenagement_18_00_20180202.pdf": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/files/45340_orientations_amenagement_18_00_20180202.pdf"
+      },
+      "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/1cd9c54a1775550e0f77ff0e1fac59d2/download/45340_PLU_20180202.zip",
+      "typeproc_title": null,
+      "notEnforceable": null,
+      "filesInfos": [
+        {
+          "name": "45340_procedure_20180202.pdf",
+          "title": "Procédure",
+          "path": "Procédures",
+          "depot_path": "45340_procedure_20180202.pdf"
+        },
+        {
+          "name": "45340_rapport_20180202.pdf",
+          "title": "Rapport",
+          "path": "Rapport de présentation",
+          "depot_path": "45340_rapport_20180202.pdf"
+        },
+        {
+          "name": "45340_padd_20180202.pdf",
+          "title": "Projet d’aménagement et de développement durables",
+          "path": null,
+          "depot_path": "45340_padd_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_lin_07_00_20180202.pdf",
+          "title": "Patrimoine bâti, paysager ou éléments de paysages à protéger pour des motifs d'ordre culturel, historique, architectural ou écologique",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_lin_07_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_pct_07_00_20180202.pdf",
+          "title": "Patrimoine bâti, paysager ou éléments de paysages à protéger pour des motifs d'ordre culturel, historique, architectural ou écologique",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_pct_07_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_02_00_1_20180202.pdf",
+          "title": "Limitations de la constructibilité pour des raisons environnementales, de risques, d’intérêt général (1)",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_surf_02_00_1_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_02_00_2_20180202.pdf",
+          "title": "Limitations de la constructibilité pour des raisons environnementales, de risques, d’intérêt général (2)",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_surf_02_00_2_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_03_00_20180202.pdf",
+          "title": "Secteur avec disposition de reconstruction / démolition",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_surf_03_00_20180202.pdf"
+        },
+        {
+          "name": "45340_prescription_surf_05_00_20180202.pdf",
+          "title": "Emplacement réservé",
+          "path": "Règlements",
+          "depot_path": "45340_prescription_surf_05_00_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_20180202.pdf",
+          "title": "Règlement écrit",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_0_20180202.pdf",
+          "title": "Tableau d’assemblage",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_graphique_0_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_1_20180202.pdf",
+          "title": "Règlement graphique 1",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_graphique_1_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_2_20180202.pdf",
+          "title": "Règlement graphique 2",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_graphique_2_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_3_20180202.pdf",
+          "title": "Règlement graphique 3",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_graphique_3_20180202.pdf"
+        },
+        {
+          "name": "45340_reglement_graphique_4_20180202.pdf",
+          "title": "Règlement graphique 4",
+          "path": "Règlements",
+          "depot_path": "45340_reglement_graphique_4_20180202.pdf"
+        },
+        {
+          "name": "45340_annexes_1_20180202.pdf",
+          "title": "Annexes 1",
+          "path": "Annexes",
+          "depot_path": "45340_annexes_1_20180202.pdf"
+        },
+        {
+          "name": "45340_annexes_2_20180202.pdf",
+          "title": "Annexes 2",
+          "path": "Annexes",
+          "depot_path": "45340_annexes_2_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_1_20180202.pdf",
+          "title": "Zone d'assainissement collectif/non collectif, eaux usées/eaux pluviales, schéma de réseaux eau et assainissement, systèmes d'élimination des déchets (1)",
+          "path": "Annexes",
+          "depot_path": "45340_info_lin_19_01_1_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_2_20180202.pdf",
+          "title": "Zone d'assainissement collectif/non collectif, eaux usées/eaux pluviales, schéma de réseaux eau et assainissement, systèmes d'élimination des déchets (2)",
+          "path": "Annexes",
+          "depot_path": "45340_info_lin_19_01_2_20180202.pdf"
+        },
+        {
+          "name": "45340_info_lin_19_01_3_20180202.pdf",
+          "title": "Zone d'assainissement collectif/non collectif, eaux usées/eaux pluviales, schéma de réseaux eau et assainissement, systèmes d'élimination des déchets (3)",
+          "path": "Annexes",
+          "depot_path": "45340_info_lin_19_01_3_20180202.pdf"
+        },
+        {
+          "name": "45340_info_pct_16_00_20180202.pdf",
+          "title": "Site archéologique",
+          "path": "Annexes",
+          "depot_path": "45340_info_pct_16_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_04_00_20180202.pdf",
+          "title": "Périmètre de droit de préemption urbain",
+          "path": "Annexes",
+          "depot_path": "45340_info_surf_04_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_05_00_20180202.pdf",
+          "title": "Zone d'aménagement différé",
+          "path": "Annexes",
+          "depot_path": "45340_info_surf_05_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_11_00_20180202.pdf",
+          "title": "Périmètre des zones délimitées - divisions foncières soumises à déclaration préalable",
+          "path": "Annexes",
+          "depot_path": "45340_info_surf_11_00_20180202.pdf"
+        },
+        {
+          "name": "45340_info_surf_32_00_20180202.pdf",
+          "title": "Secteur de taxe d'aménagement",
+          "path": "Annexes",
+          "depot_path": "45340_info_surf_32_00_20180202.pdf"
+        },
+        {
+          "name": "45340_liste_des_annexes_20180202.pdf",
+          "title": "Liste des annexes",
+          "path": "Annexes",
+          "depot_path": "45340_liste_des_annexes_20180202.pdf"
+        },
+        {
+          "name": "45340_liste_sup_20180202.pdf",
+          "title": "Liste sup",
+          "path": "Annexes",
+          "depot_path": "45340_liste_sup_20180202.pdf"
+        },
+        {
+          "name": "45340_plan_sup_20180202.pdf",
+          "title": "Plan sup",
+          "path": "Annexes",
+          "depot_path": "45340_plan_sup_20180202.pdf"
+        },
+        {
+          "name": "45340_orientations_amenagement_18_00_20180202.pdf",
+          "title": "OAP 18 00",
+          "path": "Orientations d’aménagement et de programmation",
+          "depot_path": "45340_orientations_amenagement_18_00_20180202.pdf"
+        }
+      ],
+      "isAbsorbedMunicipality": false,
+      "du_type": "PLU",
+      "grid_title": "VILLEMURLIN"
+    }
+  },
+  "proceduresByDocument": { "200075364_SCOT_20200312": [], "45340_PLU_20180202": [] },
+  "notUnforceableByDocument": { "200075364_SCOT_20200312": false, "45340_PLU_20180202": false },
+  "typeref": "01",
+  "duLowScale": false,
+  "parcelIncluded": true,
+  "el9Included": true,
+  "duDetailed": true,
+  "parcelFiche": {
+    "features": [
+      {
+        "type": "Feature",
+        "id": "document.6763",
+        "properties": {
+          "gid": 6763,
+          "id": "1cd9c54a1775550e0f77ff0e1fac59d2",
+          "grid_name": "45340",
+          "grid_title": "VILLEMURLIN",
+          "name": "45340_PLU_20180202",
+          "partition": "DU_45340",
+          "du_type": "PLU"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "info_surf.1034321",
+        "properties": {
+          "gid": 1034321,
+          "partition": "DU_45340",
+          "libelle": "Périmètre des zones délimitées - divisions foncières soumises à déclaration préalable",
+          "txt": null,
+          "typeinf": "11",
+          "typep": null,
+          "nomfic": "45340_info_surf_11_00_20180202.pdf",
+          "urlfic": null,
+          "insee": null,
+          "idurba": "45340_PLU_20180202",
+          "datvalid": "20180202",
+          "stypeinf": "00",
+          "stypep": null,
+          "idinfo": null,
+          "lib_idinfo": "IS00000003",
+          "nature": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "info_surf.1034326",
+        "properties": {
+          "gid": 1034326,
+          "partition": "DU_45340",
+          "libelle": "Périmètre de droit de préemption urbain",
+          "txt": null,
+          "typeinf": "04",
+          "typep": null,
+          "nomfic": "45340_info_surf_04_00_20180202.pdf",
+          "urlfic": null,
+          "insee": null,
+          "idurba": "45340_PLU_20180202",
+          "datvalid": "20180202",
+          "stypeinf": "00",
+          "stypep": null,
+          "idinfo": null,
+          "lib_idinfo": "IS00000001",
+          "nature": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "info_surf.1034323",
+        "properties": {
+          "gid": 1034323,
+          "partition": "DU_45340",
+          "libelle": "Secteur de taxe d'aménagement à 3%",
+          "txt": null,
+          "typeinf": "32",
+          "typep": null,
+          "nomfic": "45340_info_surf_32_00_20180202.pdf",
+          "urlfic": null,
+          "insee": null,
+          "idurba": "45340_PLU_20180202",
+          "datvalid": "20180202",
+          "stypeinf": "00",
+          "stypep": null,
+          "idinfo": null,
+          "lib_idinfo": "IS00000006",
+          "nature": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "prescription_surf.2587573",
+        "properties": {
+          "gid": 2587573,
+          "partition": "DU_45340",
+          "libelle": "Permis de démolir",
+          "txt": null,
+          "typepsc": "03",
+          "nomfic": "45340_prescription_surf_03_00_20180202.pdf",
+          "urlfic": null,
+          "insee": null,
+          "datappro": null,
+          "datvalid": "20180202",
+          "idurba": "45340_PLU_20180202",
+          "stypepsc": "00",
+          "idpsc": null,
+          "lib_idpsc": "PS00000089",
+          "nature": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "prescription_surf.2587576",
+        "properties": {
+          "gid": 2587576,
+          "partition": "DU_45340",
+          "libelle": "Secteur comportant des orientations d'aménagement et de programmation (OAP)",
+          "txt": null,
+          "typepsc": "18",
+          "nomfic": "45340_orientations_amenagement_18_00_20180202.pdf",
+          "urlfic": null,
+          "insee": null,
+          "datappro": null,
+          "datvalid": "20180202",
+          "idurba": "45340_PLU_20180202",
+          "stypepsc": "00",
+          "idpsc": null,
+          "lib_idpsc": "PS00000092",
+          "nature": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "zone_urba.775645",
+        "properties": {
+          "gid": 775645,
+          "partition": "DU_45340",
+          "libelle": "AUs",
+          "libelong": "AUs : Secteur dont l'ouverture à l'urbanisation est subordonnée à une modification du PLU",
+          "typezone": "AUs",
+          "destdomi": null,
+          "nomfic": "45340_reglement_20180202.pdf#page=24",
+          "urlfic": null,
+          "insee": null,
+          "datappro": null,
+          "datvalid": "20180202",
+          "idurba": "45340_PLU_20180202",
+          "idzone": null,
+          "lib_idzone": "ZO00000002",
+          "formdomi": null,
+          "destoui": null,
+          "destcdt": null,
+          "destnon": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "zone_urba.775654",
+        "properties": {
+          "gid": 775654,
+          "partition": "DU_45340",
+          "libelle": "UB",
+          "libelong": "UB : Zone est composée d'un bâti le plus souvent en ordre discontinu correspondant aux extensions récentes sous forme de lotissement ou d'habitat individuel isolé",
+          "typezone": "U",
+          "destdomi": null,
+          "nomfic": "45340_reglement_20180202.pdf#page=15",
+          "urlfic": null,
+          "insee": null,
+          "datappro": null,
+          "datvalid": "20180202",
+          "idurba": "45340_PLU_20180202",
+          "idzone": null,
+          "lib_idzone": "ZO00000009",
+          "formdomi": null,
+          "destoui": null,
+          "destcdt": null,
+          "destnon": null,
+          "symbole": null
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "scot.5859",
+        "properties": {
+          "gid": 5859,
+          "partition": "scot_200075364",
+          "gpu_id": "ae59371291b6f3cc72426ee349010574",
+          "name": "scot_200075364",
+          "title": "SCOT PETR FORET D'ORLEANS LOIRE SOLOGNE",
+          "approved": true
+        }
+      }
+    ]
+  }
+}

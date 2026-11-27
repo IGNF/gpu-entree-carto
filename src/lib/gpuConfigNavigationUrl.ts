@@ -75,3 +75,20 @@ export function gpuNavigationUrlFromConfigTemplate(
   const href = replaceGpuConfigUrlPlaceholder(template, ph, value)
   return resolveGpuSiteNavigationUrl(href)
 }
+
+/**
+ * Fichier d’un document via `apiDocumentFileUrl` (gpu-site main et dsfr : `/api/document/{id}/files/{fichier}`).
+ * L’ancre `#page=N` du nom de fichier est reportée sur l’URL.
+ */
+export function gpuDocumentFileUrl(documentId: string, fileName: string): string | undefined {
+  const template = readConfigString('apiDocumentFileUrl')
+  const { documentId: idPh, fileName: filePh } = placeholders()
+  const id = documentId.trim()
+  const [path = '', anchor] = fileName.trim().split('#', 2)
+  if (!template || !idPh || !filePh || !id || !path) return undefined
+  const withId = replaceGpuConfigUrlPlaceholder(template, idPh, id)
+  // Segments encodés un à un : un sous-dossier garde ses `/`.
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/')
+  const href = withId.split(filePh).join(encodedPath) + (anchor ? `#${anchor}` : '')
+  return resolveGpuSiteNavigationUrl(href)
+}

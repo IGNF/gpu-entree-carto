@@ -78,32 +78,31 @@
 }
 
 /*
- * DSFR `fr-tabs__panel` : carousel (`left: -100%`) + JS officiel.
- * Ici onglets pilotés par Vue : panneau sélectionné en flux normal.
+ * Onglets DSFR : carrousel animé par le JS DSFR (`--tabs-height`, `fr-tabs__panel--direction-*`),
+ * comme le composant de référence. Seul le padding horizontal est adapté au panneau.
  */
-.ec-fiche-info__tabs.fr-tabs {
-  overflow: visible;
-  height: auto !important;
-}
-
 .ec-fiche-info__tabs .fr-tabs__panel {
-  left: 0;
-  margin-right: 0;
-  flex: none;
-  width: 100%;
+  /* Marge du carrousel DSFR (`left: -100%` + `margin-right: -100%`) : réaffirmée car `.ec-fiche-info__body
+     { margin: 0 }` (panneaux territoire) l’écrase selon l’ordre des feuilles (build) → panneau hors champ. */
+  margin-right: -100%;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
-  transform: none !important;
 }
 
-.ec-fiche-info__tabs .fr-tabs__panel:not(.fr-tabs__panel--selected) {
+/* Sans JS DSFR (pas de `data-fr-js-tabs-group`) : panneau sélectionné seul, sans animation. */
+.ec-fiche-info__tabs.fr-tabs:not([data-fr-js-tabs-group]) {
+  height: auto;
+}
+
+.ec-fiche-info__tabs.fr-tabs:not([data-fr-js-tabs-group])
+  .fr-tabs__panel:not(.fr-tabs__panel--selected) {
   display: none;
-  visibility: hidden;
 }
 
-.ec-fiche-info__tabs .fr-tabs__panel.fr-tabs__panel--selected {
-  display: block;
-  visibility: visible;
+/* Changement de mode Parcelle ↔ Territoire : glissement latéral (`slide-transition.css`). */
+.ec-fiche-info__stage {
+  position: relative;
+  overflow-x: clip;
 }
 
 .ec-fiche-info .ec-fiche-info__load-btn.fr-btn--icon-left .ri-refresh-line {
@@ -324,11 +323,6 @@
 .ec-fiche-info__rule-doc .ri-file-pdf-2-line {
   font-size: 1.125rem;
   line-height: 1;
-}
-
-.ec-fiche-info__rule-doc--muted {
-  pointer-events: none;
-  cursor: default;
 }
 
 .ec-fiche-info__load-wrap {

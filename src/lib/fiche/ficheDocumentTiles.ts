@@ -184,16 +184,12 @@ export function documentTilesListHtml(tiles: string[]): string {
 
 export { FICHE_NON_EXECUTOIRE_CALLOUT_HTML }
 
+/** Page du document (`viewUrl` ou id) ; `archiveUrl` n’est jamais exposé. */
 export function documentTileHrefFromApiFields(fields: {
   id?: string
   viewUrl?: string
-  archiveUrl?: string
 }): string | undefined {
-  return resolveDocumentTileHref({
-    documentId: fields.id,
-    viewUrl: fields.viewUrl,
-    archiveUrl: fields.archiveUrl,
-  })
+  return resolveDocumentTileHref({ documentId: fields.id, viewUrl: fields.viewUrl })
 }
 
 export function procedureTileHref(procedureId?: string, url?: string): string | undefined {

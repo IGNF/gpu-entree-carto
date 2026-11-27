@@ -38,7 +38,7 @@ describe('ficheFieldUsage (motifs de chemins)', () => {
 
 /** Garde-fou : tout champ lu par la fiche sur des réponses réelles doit être déclaré utilisé. */
 describe('FICHE_USED_FIELDS couvre les lectures réelles de la fiche', () => {
-  const fixtures = ['salvetat', 'caen', 'paris', 'limouziniere'].map(
+  const fixtures = ['salvetat', 'caen', 'paris', 'limouziniere', 'salvetat-gpu-site-main'].map(
     (name) =>
       [
         name,

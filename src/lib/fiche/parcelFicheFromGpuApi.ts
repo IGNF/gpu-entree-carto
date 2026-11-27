@@ -164,10 +164,13 @@ function ruleRowHtml(
   zoom: number,
   featureLabel: ParcelFeatureLabel,
   supCategories: SupCategory[],
+  lookup: GpuSiteDocumentLookup | null,
 ): string {
   const props = feature.properties ?? {}
   const { title, subtitle } = ruleTextsForFeature(feature, featureLabel, supCategories)
-  const docLink = ruleWrittenPieceLinkHtml(resolveParcelRuleWrittenPieceHref(props))
+  // Document de la règle (par sa partition) : fichier `nomfic` / `fichier` servi par l’API fichiers.
+  const documentId = gpuSiteDocumentForFeatureProps(props, lookup, { matchPartition: true })?.id
+  const docLink = ruleWrittenPieceLinkHtml(resolveParcelRuleWrittenPieceHref(props, documentId))
   const subBlock = subtitle ? `<p class="ec-fiche-info__rule-sub">${escapeHtml(subtitle)}</p>` : ''
   const iconInner = ruleIconInnerHtml(feature, zoom)
   return `<article class="ec-fiche-info__rule-row"><div class="ec-fiche-info__rule-icon" aria-hidden="true">${iconInner}</div><div class="ec-fiche-info__rule-body"><p class="ec-fiche-info__rule-title">${escapeHtml(title)}</p>${subBlock}</div>${docLink}</article>`
@@ -186,7 +189,6 @@ type GpuSiteDocumentRecord = {
   status?: string
   title?: string
   viewUrl?: string
-  archiveUrl?: string
   type?: string
   typeproc_title?: string
 }
@@ -215,7 +217,6 @@ function gpuSiteDocumentRecordFromApiDoc(doc: Record<string, unknown>): GpuSiteD
     status: coerceDisplayString(doc.status) || undefined,
     title: coerceDisplayString(doc.title) || undefined,
     viewUrl: coerceDisplayString(doc.viewUrl) || undefined,
-    archiveUrl: coerceDisplayString(doc.archiveUrl) || undefined,
     type: coerceDisplayString(doc.type) || undefined,
     typeproc_title: coerceDisplayString(doc.typeproc_title) || undefined,
   }
@@ -245,7 +246,17 @@ function gpuSiteDocumentLookupFromFicheApi(
         registerGpuSiteDocumentRecord(record, byId, byName)
         const docName = coerceDisplayString(doc.name)
         if (docName) byName.set(docName.toUpperCase(), record)
-        if (partitionNorm && record.id) byPartition.set(partitionNorm, record)
+        // Plusieurs versions par partition : garder celle en production (pièces écrites, liens).
+        const current = byPartition.get(partitionNorm)
+        if (
+          partitionNorm &&
+          record.id &&
+          (!current ||
+            current.status !== 'document.production' ||
+            record.status === 'document.production')
+        ) {
+          byPartition.set(partitionNorm, record)
+        }
       }
     }
   }
@@ -322,11 +333,7 @@ function urbanismTileFromGpuSiteRecord(
   const datapproLabel = documentName ? formatDatapproFromDocumentName(documentName) : null
   return documentUrbanismTileHtml({
     title: record.title ?? record.type ?? 'Document d’urbanisme',
-    href: documentTileHrefFromApiFields({
-      id: record.id,
-      archiveUrl: record.archiveUrl,
-      viewUrl: record.viewUrl,
-    }),
+    href: documentTileHrefFromApiFields({ id: record.id, viewUrl: record.viewUrl }),
     effectiveStatus: record.effectiveStatus,
     legalStatus: record.legalStatus,
     status: record.status,
@@ -365,14 +372,14 @@ function documentCardFromFeature(
   const docId = gpuSite?.id || parcelFeatureGpuDocumentId(props)
   const partitionName =
     coerceDisplayString(props.name) || coerceDisplayString(props.partition) || undefined
-  const href =
-    documentTileHrefFromApiFields({
-      id: docId,
-      archiveUrl:
-        coerceDisplayString(props.archiveUrl ?? props.urlfic) || gpuSite?.archiveUrl || undefined,
-      viewUrl: coerceDisplayString(props.viewUrl) || gpuSite?.viewUrl || undefined,
-    }) ?? undefined
   const notInDatabase = !documentFeatureInGpuSite(props, lookup)
+  // Hors base : pas de page document à ouvrir (et ni archive ni `urlfic` exposés).
+  const href = notInDatabase
+    ? undefined
+    : documentTileHrefFromApiFields({
+        id: docId,
+        viewUrl: coerceDisplayString(props.viewUrl) || gpuSite?.viewUrl || undefined,
+      })
   return documentUrbanismTileHtml({
     title,
     href,
@@ -581,7 +588,6 @@ function buildSupDocumentTiles(
         href: documentTileHrefFromApiFields({
           id: coerceDisplayString(doc.id) || undefined,
           viewUrl: coerceDisplayString(doc.viewUrl) || undefined,
-          archiveUrl: coerceDisplayString(doc.archiveUrl) || undefined,
         }),
       }),
     )
@@ -701,12 +707,13 @@ function scotTileFromFeature(
   const legalStatus = coerceDisplayString(props.legalStatus) || gpuSite?.legalStatus || undefined
   return documentUrbanismTileHtml({
     title,
-    href: documentTileHrefFromApiFields({
-      id: docId,
-      archiveUrl:
-        coerceDisplayString(props.archiveUrl ?? props.urlfic) || gpuSite?.archiveUrl || undefined,
-      viewUrl: coerceDisplayString(props.viewUrl) || gpuSite?.viewUrl || undefined,
-    }),
+    // Hors base : pas de page document à ouvrir (et ni archive ni `urlfic` exposés).
+    href: documentFeatureInGpuSite(props, lookup)
+      ? documentTileHrefFromApiFields({
+          id: docId,
+          viewUrl: coerceDisplayString(props.viewUrl) || gpuSite?.viewUrl || undefined,
+        })
+      : undefined,
     effectiveStatus: effective,
     legalStatus,
     status,
@@ -842,7 +849,7 @@ export function buildParcelInfosHtmlFromFiche(
       shouldIncludeParcelRuleFeature(f, section, ficheApi, lookup),
     )
     if (!list.length) continue
-    const rows = list.map((f) => ruleRowHtml(f, zoom, featureLabel, supCategories)).join('')
+    const rows = list.map((f) => ruleRowHtml(f, zoom, featureLabel, supCategories, lookup)).join('')
     parts.push(
       `<section class="ec-fiche-info__rules-section"><h4 class="ec-fiche-info__rules-section-title">${escapeHtml(SECTION_TITLES[section])}</h4>${rows}</section>`,
     )
@@ -873,9 +880,13 @@ function buildScotDocumentTiles(
   mecCatalogVisible: boolean,
 ): string[] {
   const tiles: string[] = []
+  // Un SCoT peut couvrir la parcelle en plusieurs entités (gpu_id distincts) : une seule tuile MEC.
+  const replacedPartitions = new Set<string>()
   for (const feature of dedupeScotFeaturesByGpuId(scotFeatures)) {
     const partition = coerceDisplayString(feature.properties?.partition).toLowerCase()
     if (mecCatalogVisible && partition && blockedParents.has(partition)) {
+      if (replacedPartitions.has(partition)) continue
+      replacedPartitions.add(partition)
       for (const mec of dedupeMecFeaturesByPartition(mecFeatures)) {
         const mecParent = documentPartitionKeyFromMecPartition(
           coerceDisplayString(mec.properties?.partition),

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import mapArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/map/map.svg?url'
-import cityHallArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/buildings/city-hall.svg?url'
-import documentDownloadArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/document/document-download.svg?url'
-import searchArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/digital/search.svg?url'
+// `no-inline` : servis comme fichiers ; une URL `data:` (SVG < 4 Ko) est refusée par Chrome dans `<use>`.
+import mapArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/map/map.svg?url&no-inline'
+import cityHallArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/buildings/city-hall.svg?url&no-inline'
+import documentDownloadArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/document/document-download.svg?url&no-inline'
+import searchArtwork from '@gouvfr/dsfr/dist/artwork/pictograms/digital/search.svg?url&no-inline'
 
 withDefaults(
   defineProps<{

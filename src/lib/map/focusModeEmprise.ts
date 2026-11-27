@@ -16,6 +16,8 @@ import {
 export type FocusModeEmpriseOptions = {
   /** Évite un second chargement fiche quand `scheduleFicheLoadForCherryWhenReady` tourne déjà. */
   skipFicheRefresh?: boolean
+  /** Emprise et fiche à jour sans déplacer la vue (changement de mode, permalien). */
+  skipFit?: boolean
 }
 
 /** Parcelle : zoom serré (souvent > 15) ; territoire : plafond type recherche lieu. */
@@ -25,7 +27,7 @@ export function maxZoomForModeEmpriseFit(map: Map, mode: MapModeId): number {
   return viewMax != null ? Math.min(viewMax, cap) : cap
 }
 
-/** Vol sur l’emprise rouge mode (fiche-info v2, cerise ou emprise déjà affichée). */
+/** Emprise rouge du mode (fiche-info v2, cerise ou emprise déjà affichée). */
 function extentFromVisibleModeEmprise(): Extent | null {
   const host = searchEngineLayerHostRef.value
   return host ? modeEmpriseViewExtent(host) : null
@@ -46,14 +48,16 @@ export async function focusModeEmpriseOnMap(
     if (current && (current.lon !== marker.lon || current.lat !== marker.lat)) return
   }
   if (!extent) return
-  const maxZoom = maxZoomForModeEmpriseFit(map, mode)
-  requestAnimationFrame(() => {
-    animateViewFit(map, extent, {
-      padding: defaultMapViewFitPadding(),
-      maxZoom,
-      size: map.getSize(),
+  if (!options.skipFit) {
+    const maxZoom = maxZoomForModeEmpriseFit(map, mode)
+    requestAnimationFrame(() => {
+      animateViewFit(map, extent, {
+        padding: defaultMapViewFitPadding(),
+        maxZoom,
+        size: map.getSize(),
+      })
     })
-  })
+  }
   if (options.skipFicheRefresh) return
   const zoom = map.getView().getZoom() ?? 6
   refreshFicheForMapModeChange(mode, zoom)

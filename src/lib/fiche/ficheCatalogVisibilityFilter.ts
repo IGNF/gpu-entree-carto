@@ -72,12 +72,15 @@ export function catalogEntryMatchesFamily(
   if (family === 'psmv') return hay.includes('psmv')
   if (family === 'mec') return id.includes('mec') || path.includes('/mec') || hay.includes('mec')
   if (family === 'du') {
+    // Noms de couches de production (`du,psmv`, `info,info_psmv`) ou préfixés `dev-` (base de dev).
+    const h = hay.replaceAll('dev-', '')
     return (
-      hay.includes('dev-du') ||
-      hay.includes('lowscale') ||
-      hay.includes('zone_secteur') ||
-      hay.includes('prescription') ||
-      hay.includes('dev-info')
+      /(^|[/|])du([,/|-]|$)/.test(h) ||
+      h.includes('lowscale') ||
+      h.includes('zone_secteur') ||
+      h.includes('prescription') ||
+      h.includes('info,info_psmv') ||
+      h.includes('info-info-psmv')
     )
   }
   return false
