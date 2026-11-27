@@ -62,3 +62,11 @@
   box-shadow: none !important;
   border: none !important;
 }
+
+/* Hors plage de zoom : titre grisé (la couleur ci-dessus est en `!important`, contre `.ol-control button`). */
+.ec-layer-legends .ec-not-in-zoom-range button.fr-accordion__btn,
+.ec-layer-legends .ec-not-in-zoom-range button.fr-accordion__btn:hover,
+.ec-layer-legends .ec-not-in-zoom-range button.fr-accordion__btn:focus,
+.ec-layer-legends .ec-not-in-zoom-range button.fr-accordion__btn:focus-visible {
+  color: var(--text-disabled-grey, #929292) !important;
+}

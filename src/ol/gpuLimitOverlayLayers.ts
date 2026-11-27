@@ -1,4 +1,4 @@
-import VectorLayer from 'ol/layer/Vector'
+import VectorImageLayer from 'ol/layer/VectorImage'
 import VectorSource from 'ol/source/Vector'
 import GeoJSON from 'ol/format/GeoJSON'
 import Style from 'ol/style/Style'
@@ -67,48 +67,54 @@ async function loadDepartments(): Promise<Feature<Geometry>[]> {
   return departmentsLoad
 }
 
-/** Précharge les GeoJSON limites (appel optionnel au démarrage carte). */
-export function preloadLimitGeoJson(): void {
-  void loadRegions().catch((err) => {
-    console.warn('[entree-carto] limites régions', err)
+/** Propriété des couches limites : données statiques, source partagée avec l’impression. */
+export const GPU_LIMIT_OVERLAY_PROP = 'ecGpuLimitOverlay'
+
+/**
+ * Source chargée à la demande : OpenLayers n’appelle le loader qu’au premier rendu de la couche
+ * (visible et dans sa plage de zoom), pas au démarrage de la carte.
+ */
+function createLimitVectorSource(load: () => Promise<Feature<Geometry>[]>): VectorSource {
+  const source: VectorSource = new VectorSource({
+    loader: (_extent, _resolution, _projection, success) => {
+      load()
+        .then((features) => {
+          source.addFeatures(features)
+          success?.(features)
+        })
+        .catch((err) => {
+          console.warn('[entree-carto] limites administratives GeoJSON', err)
+          // marqué chargé quand même : pas de nouvelle requête à chaque rendu
+          success?.([])
+        })
+    },
   })
-  void loadDepartments().catch((err) => {
-    console.warn('[entree-carto] limites départements', err)
-  })
+  return source
 }
 
 function createLimitVectorLayer(
   load: () => Promise<Feature<Geometry>[]>,
   minResolution: number | undefined,
   maxResolution: number | undefined,
-): VectorLayer {
-  const source = new VectorSource()
-  void load()
-    .then((features) => {
-      source.addFeatures(features)
-      source.changed()
-    })
-    .catch((err) => {
-      console.warn('[entree-carto] limites administratives GeoJSON', err)
-    })
-
-  return new VectorLayer({
+): VectorImageLayer {
+  // Rendu en image : déplacement et zoom fluides malgré les ~180 000 sommets des départements
+  return new VectorImageLayer({
     visible: false,
     minResolution,
     maxResolution,
     zIndex: 20,
     style: limitStyle,
-    source,
-    properties: { ecGpuLimitOverlay: true },
+    source: createLimitVectorSource(load),
+    properties: { [GPU_LIMIT_OVERLAY_PROP]: true },
   })
 }
 
 /** Limites régions (gpu-client `layer.Region`) — instance unique partagée. */
-export function createLimitRegionalLayer(): VectorLayer {
+export function createLimitRegionalLayer(): VectorImageLayer {
   return createLimitVectorLayer(loadRegions, RES_REGION_MIN, RES_REGION_MAX)
 }
 
 /** Limites départements (gpu-client `layer.Department`) — instance unique partagée. */
-export function createLimitDepartmentalLayer(): VectorLayer {
+export function createLimitDepartmentalLayer(): VectorImageLayer {
   return createLimitVectorLayer(loadDepartments, undefined, RES_DEPT_MAX)
 }

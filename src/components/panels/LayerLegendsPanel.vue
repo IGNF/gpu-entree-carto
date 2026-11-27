@@ -56,8 +56,12 @@ function legendImageSrcs(leg: LegendItem): string[] {
   )
 }
 
-function legendImageRowKey(leg: LegendItem, imgIdx: number, src: string): string {
-  return `${leg.id}|${imgIdx}|${legendZoomForBand.value}|${src}`
+/**
+ * Clé stable (sans zoom ni URL) : au changement de zoom, l’image garde son élément et seul `src` change
+ * au seuil d’échelle. Une clé dépendant du zoom recréait toutes les images (saut des lignes).
+ */
+function legendImageRowKey(leg: LegendItem, imgIdx: number): string {
+  return `${leg.id}|${imgIdx}`
 }
 
 const displayLayers = computed(() => dedupeLegendLayersForPanel(props.layers))
@@ -148,7 +152,7 @@ watch(
                   <template v-if="legendImageSrcs(leg).length">
                     <img
                       v-for="(src, imgIdx) in legendImageSrcs(leg)"
-                      :key="legendImageRowKey(leg, imgIdx, src)"
+                      :key="legendImageRowKey(leg, imgIdx)"
                       class="ec-layer-legends__img"
                       :src="src"
                       alt=""

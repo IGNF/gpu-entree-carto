@@ -30,9 +30,14 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 - Carte : zoom par niveaux entiers, comme gpu-client (moins de tuiles chargées).
 - Fonds de plan nets : mêmes tuiles que cartes.gouv.fr à zoom égal (libellés à leur taille normale) ; impression inchangée.
 - Carte : couches GPU en résolution standard sur écran haute densité (tuiles 4 fois plus légères) ; impression toujours nette.
+- Carte : affichage plus rapide et plus fluide (plus de chargements en parallèle, limites administratives chargées seulement quand elles s’affichent).
+- Carte : couches GPU affichées ensemble chargées en une seule requête (moins de requêtes et de données par tuile).
 
 ### Corrigé
 
+- Fiche parcelle : mise en compatibilité d’un SCoT affichée en double dans l’onglet Documents.
+- Fiche info territoire : documents invisibles dans les onglets sur la version construite.
+- Légendes : plus de clignotement à chaque changement de zoom ; légendes hors échelle nettement grisées (titre, libellés, pictos).
 - Fiche parcelle : périmètres d’informations manquants avec le catalogue du Géoportail de l’urbanisme.
 - Fiche parcelle : lien vers la pièce écrite (PDF) de chaque règle quand le service ne fournit que le nom du fichier, servitudes comprises ; pas d’icône sans pièce écrite.
 - Démo en ligne : emprise de la commune affichée en mode Territoire.

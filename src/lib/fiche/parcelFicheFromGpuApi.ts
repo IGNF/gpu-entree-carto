@@ -880,9 +880,13 @@ function buildScotDocumentTiles(
   mecCatalogVisible: boolean,
 ): string[] {
   const tiles: string[] = []
+  // Un SCoT peut couvrir la parcelle en plusieurs entités (gpu_id distincts) : une seule tuile MEC.
+  const replacedPartitions = new Set<string>()
   for (const feature of dedupeScotFeaturesByGpuId(scotFeatures)) {
     const partition = coerceDisplayString(feature.properties?.partition).toLowerCase()
     if (mecCatalogVisible && partition && blockedParents.has(partition)) {
+      if (replacedPartitions.has(partition)) continue
+      replacedPartitions.add(partition)
       for (const mec of dedupeMecFeaturesByPartition(mecFeatures)) {
         const mecParent = documentPartitionKeyFromMecPartition(
           coerceDisplayString(mec.properties?.partition),

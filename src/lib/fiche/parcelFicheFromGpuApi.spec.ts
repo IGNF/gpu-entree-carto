@@ -852,3 +852,50 @@ describe('règles d’urbanisme : réponse réelle gpu-site main (Sully-la-Chape
     expect(html).toContain(`${gpu}/api/document/${supId}/files/AC1_Chateau-IML8LS_20070806_act.pdf`)
   })
 })
+
+describe('onglet Documents : MEC remplaçant un SCoT présent en plusieurs entités (Caen, KX 0013)', () => {
+  afterEach(() => setFicheCatalogFamilyVisibility(null))
+
+  it('une seule tuile MEC, même avec deux entités SCoT de la partition remplacée', () => {
+    setFicheCatalogFamilyVisibility(null)
+    const scotFeature = (id: string, gpuId: string) => ({
+      id,
+      properties: {
+        partition: 'scot_200051183',
+        gpu_id: gpuId,
+        name: 'scot_200051183',
+        title: 'SCOT CAEN METROPOLE',
+      },
+    })
+    const html = buildParcelDocumentsHtmlFromFiche(
+      {
+        features: [
+          scotFeature('scot.4799', '2e7fac47f27a0825cd0091dd1471d985'),
+          scotFeature('scot.4800', 'd6fff17e8f63fbc0c495aeb97a1f758c'),
+          {
+            id: 'mec.20',
+            properties: {
+              partition: 'MEC_1_scot_200051183',
+              idurba: '200051183_SCOT_MEC1_20250909',
+              libelle: 'Centre Pénitentiaire scot',
+            },
+          },
+        ],
+      },
+      {
+        mecsScot: {
+          MEC_1_scot_200051183: {
+            documents: [
+              {
+                id: '70988e89fab69afbbe73e04615b10d2e',
+                title: 'MEC SCoT Caen',
+                status: 'document.production',
+              },
+            ],
+          },
+        },
+      },
+    )
+    expect(html.split('MEC SCoT Caen').length - 1).toBe(1)
+  })
+})

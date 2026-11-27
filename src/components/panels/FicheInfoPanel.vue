@@ -2,7 +2,7 @@
 /**
  * Contenu onglet fiche info — modes Parcelle / Territoire (gpu-client / Figma).
  */
-import { computed, inject, ref, shallowRef, watch, type ShallowRef } from 'vue'
+import { computed, inject, nextTick, ref, shallowRef, watch, type ShallowRef } from 'vue'
 import { mapPrintModalKey } from '@/map/mapPrintModalContext'
 import { useMapLegendZoom } from '@/composables/useMapLegendZoom'
 import type Map from 'ol/Map'
@@ -39,6 +39,7 @@ import '@/styles/fiche-info.css'
 import '@/styles/slide-transition.css'
 import '@gouvfr/dsfr/dist/component/tile/tile.min.css'
 import { syncFicheGeometryHighlight } from '@/lib/fiche/ficheGeometryHighlight'
+import { discloseDsfrTabPanel } from '@/lib/dsfrTabs'
 import { onFicheCatalogLinkClick } from '@/lib/fiche/ficheNoDataMessages'
 import {
   ficheRetryParamsFromSelection,
@@ -95,6 +96,7 @@ function onModeSlideEnd(el: Element): void {
   if (el.matches('.ec-fiche-info__inner--parcel, .ec-fiche-info__inner--territory')) {
     modeSlideName.value = MODE_SLIDE_NONE
   }
+  syncDsfrTabsWithVue()
 }
 const showTerritoryLayout = computed(() => effectiveMode.value === MAP_MODE_TERRITORY)
 
@@ -193,6 +195,37 @@ const activeDocTab = computed(() => {
   const id = activeDocTabId.value
   return tabs.find((t) => t.id === id) ?? tabs[0]
 })
+
+const ficheRootEl = ref<HTMLElement | null>(null)
+
+/**
+ * Onglets choisis par Vue, animés par le JS DSFR : après chaque changement (mode, onglet, liste
+ * d’onglets), réaligne DSFR sur le panneau sélectionné. Sinon, un changement de mode pendant le
+ * chargement pouvait laisser DSFR sans onglet affiché (onglets non sélectionnés, contenu vide).
+ */
+function syncDsfrTabsWithVue(): void {
+  const root = ficheRootEl.value
+  if (!root) return
+  for (const panel of root.querySelectorAll('.ec-fiche-info__tabs > .fr-tabs__panel--selected')) {
+    discloseDsfrTabPanel(panel)
+  }
+}
+watch(
+  () =>
+    [
+      effectiveMode.value,
+      activeParcelTab.value,
+      activeDocTab.value?.id,
+      documentTabs.value.map((t) => t.id).join('|'),
+    ].join('#'),
+  async () => {
+    await nextTick()
+    syncDsfrTabsWithVue()
+    // Le JS DSFR initialise les nouveaux onglets de façon asynchrone (observateur DOM).
+    requestAnimationFrame(syncDsfrTabsWithVue)
+  },
+  { flush: 'post' },
+)
 
 function selectDocTab(id: string): void {
   activeDocTabId.value = id
@@ -317,6 +350,7 @@ const parcelPanelFootnotesHtml = computed(() => {
 
 <template>
   <article
+    ref="ficheRootEl"
     class="ec-fiche-info"
     :class="{ 'ec-fiche-info--territory': showTerritoryLayout }"
     @click="onFicheContentClick"

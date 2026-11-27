@@ -35,7 +35,7 @@ La fiche parcelle **disparaît** de gpu-site (branche DSFR) : son contenu est **
 ### UI mode Territoire
 
 - Proche du visuel cible (onglets Documents / SUP / Procédures) via `buildDocumentTabs`.
-- Onglets DSFR animés par le JS DSFR (carrousel : glissement et hauteur, tous les panneaux rendus) ; sans JS DSFR, panneau sélectionné seul. Changement de mode Parcelle ↔ Territoire : glissement latéral de la fiche (0,3 s, désactivé si « réduire les animations » ; classes partagées `src/styles/slide-transition.css`, aussi utilisées par les onglets du catalogue).
+- Onglets DSFR animés par le JS DSFR (carrousel : glissement et hauteur, tous les panneaux rendus) ; sans JS DSFR, panneau sélectionné seul. L’onglet actif reste piloté par Vue : après chaque changement (mode, onglet, liste d’onglets), le JS DSFR est réaligné sur ce panneau (`src/lib/dsfrTabs.ts`). Changement de mode Parcelle ↔ Territoire : glissement latéral de la fiche (0,3 s, désactivé si « réduire les animations » ; classes partagées `src/styles/slide-transition.css`, aussi utilisées par les onglets du catalogue).
 - Manques fonctionnels listés au § « Écarts ».
 
 ## APIs gpu-site

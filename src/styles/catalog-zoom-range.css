@@ -13,8 +13,15 @@
   opacity: 0.5;
 }
 
-.ec-not-in-zoom-range .ec-layer-legends__img {
-  opacity: 0.5;
+/* Légendes hors échelle : libellés grisés, pictos désaturés (sinon peu perceptible). */
+.ec-not-in-zoom-range .ec-layer-legends__item {
+  color: var(--text-disabled-grey, #929292);
+}
+
+.ec-not-in-zoom-range .ec-layer-legends__img,
+.ec-not-in-zoom-range .ec-layer-legends__swatch {
+  opacity: 0.4;
+  filter: grayscale(1);
 }
 
 .ec-not-in-zoom-range .ec-data-layers__legend-btn,

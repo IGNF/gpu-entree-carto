@@ -82,6 +82,9 @@
  * comme le composant de référence. Seul le padding horizontal est adapté au panneau.
  */
 .ec-fiche-info__tabs .fr-tabs__panel {
+  /* Marge du carrousel DSFR (`left: -100%` + `margin-right: -100%`) : réaffirmée car `.ec-fiche-info__body
+     { margin: 0 }` (panneaux territoire) l’écrase selon l’ordre des feuilles (build) → panneau hors champ. */
+  margin-right: -100%;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
 }

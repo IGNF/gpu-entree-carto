@@ -1,6 +1,7 @@
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorTile from 'ol/layer/VectorTile'
+import VectorImageLayer from 'ol/layer/VectorImage'
 import type BaseLayer from 'ol/layer/Base'
 import Layer from 'ol/layer/Layer'
 import type Map from 'ol/Map'
@@ -9,6 +10,7 @@ import type TileSource from 'ol/source/Tile'
 import TileWMS, { type Options as TileWMSOptions } from 'ol/source/TileWMS'
 import { geopfWmtsPrintSource } from '@/ol/createGeopfWmtsSource'
 import { GPU_WMS_SOURCE_OPTIONS_PROP } from '@/lib/layerConfig/gpuWmsLayers'
+import { GPU_LIMIT_OVERLAY_PROP } from '@/ol/gpuLimitOverlayLayers'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
 import { renderSyncIfAttached } from '@/lib/map/print/waitForMapRender'
 import { searchEngineLayerHostRef } from '@/lib/map/searchResultGraphics'
@@ -71,10 +73,30 @@ function cloneVectorLayer(layer: VectorLayer): VectorLayer {
   })
 }
 
+/**
+ * Limites administratives (données statiques chargées à la demande) : source partagée, pour que
+ * l’aperçu les charge lui-même s’il est zoomé sur une plage que la carte n’a pas encore affichée.
+ */
+function cloneLimitOverlayLayer(layer: VectorImageLayer): VectorImageLayer {
+  return new VectorImageLayer({
+    source: layer.getSource() ?? undefined,
+    style: layer.getStyle(),
+    visible: layer.getVisible(),
+    opacity: layer.getOpacity(),
+    zIndex: layer.getZIndex(),
+    minResolution: layer.getMinResolution(),
+    maxResolution: layer.getMaxResolution(),
+    properties: { [GPU_LIMIT_OVERLAY_PROP]: true },
+  })
+}
+
 export function cloneLayerForPrint(layer: BaseLayer): Layer | null {
   if (!(layer instanceof Layer)) return null
   if (layer instanceof VectorTile) return cloneVectorTileLayer(layer)
   if (layer instanceof VectorLayer) return cloneVectorLayer(layer)
+  if (layer instanceof VectorImageLayer && layer.get(GPU_LIMIT_OVERLAY_PROP)) {
+    return cloneLimitOverlayLayer(layer)
+  }
   if (layer instanceof TileLayer) return cloneTileLayer(layer)
   return null
 }

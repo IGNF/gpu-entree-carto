@@ -38,6 +38,13 @@ Arbre **checkbox** du catalogue _Données_ (équivalent gpu-client `TreeLayerSwi
 - **Hors plage de zoom** : ligne grisée (`ec-not-in-zoom-range`, équivalent gpu-client `notInZoomRange`) — mise à jour au zoom carte ; dossier non tuile grisé si aucun descendant n’est dans la plage.
 - **Couches de données** : une ligne par entrée cochée **dont la tuile WMS est active** sur la carte (agrégat actif → pas les feuilles cochées) — voir [DataLayersManagerPanel](./DataLayersManagerPanel.md).
 - Synchronisation carte via `layerMapHooks` → `GpuWmsLayerRegistry` (démo `/map`).
+- **Regroupement des requêtes WMS** (`GpuWmsLayerRegistry`) : le catalogue pilote toujours la carte entrée par entrée ; le registre fusionne ensuite les couches affichées **contiguës dans l’ordre de la pile**, de **même URL**, **même opacité** et **même réglage noir et blanc** en une seule source (`LAYERS=a,b,c`, premier nom dessiné en bas). Exemple : couches par défaut au zoom 15 → 2 requêtes par tuile (groupe + `mec` opaque) au lieu de 6.
+  - Filtre CQL : un filtre par sous-couche, séparés par `;` (`INCLUDE` pour une sous-couche sans filtre ; nom à virgule `info,info_psmv` → filtre répété), sinon GeoServer refuse la requête.
+  - Groupes recalculés à chaque changement de cases, d’opacité, de noir et blanc ou d’ordre, et quand une couche entre ou sort de sa plage de zoom (ex. `document` → couches DU entre les zooms 11 et 12). Plage du groupe = intersection des plages de ses couches.
+  - Ajouter ou retirer une couche d’un groupe met à jour la même source : les tuiles déjà affichées restent visibles jusqu’au chargement des nouvelles.
+  - Couches hors pile (absentes de l’ordre transmis) : regroupées entre elles par `zIndex` de la config, sous la pile.
+  - Repli : si une tuile d’un groupe échoue (une sous-couche en erreur fait échouer toute la requête, ex. `_previsu` absente), ses couches repassent en requêtes séparées jusqu’au prochain chargement de configuration.
+  - Impression : la couche de groupe porte ses options de source (copie hidpi) et un `id` qui change avec sa composition (cache d’aperçu).
 
 ## Dépendances
 

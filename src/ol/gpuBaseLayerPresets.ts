@@ -3,11 +3,7 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { createGeopfWmtsSource } from '@/ol/createGeopfWmtsSource'
 import type BaseLayer from 'ol/layer/Base'
-import {
-  createLimitDepartmentalLayer,
-  createLimitRegionalLayer,
-  preloadLimitGeoJson,
-} from '@/ol/gpuLimitOverlayLayers'
+import { createLimitDepartmentalLayer, createLimitRegionalLayer } from '@/ol/gpuLimitOverlayLayers'
 import type { GpuBaseLayerThumbnailWmts } from '@/ol/gpuBaseLayerThumbnails'
 import { GpuCadastreLowLayer, registerGpuCadastreLowLayer } from '@/ol/gpuCadastreLowLayer'
 import '@/styles/gpu-base-layers.css'
@@ -223,8 +219,6 @@ const PRESET_INPUTS: GpuBaseLayerPresetInput[] = [
  * Environnement fonds de plan — une instance OL par couche (comme gpu-client `mainLayers`).
  */
 export function createGpuBaseLayerEnvironment(): GpuBaseLayerEnvironment {
-  preloadLimitGeoJson()
-
   const mainLayers = createMainLayerPool()
 
   const presets = PRESET_INPUTS.map(buildPreset)
