@@ -35,6 +35,7 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Corrigé
 
+- Accueil : pictogrammes DSFR du bandeau qui ne s’affichaient pas.
 - Fiche parcelle : mise en compatibilité d’un SCoT affichée en double dans l’onglet Documents.
 - Fiche info territoire : documents invisibles dans les onglets sur la version construite.
 - Légendes : plus de clignotement à chaque changement de zoom ; légendes hors échelle nettement grisées (titre, libellés, pictos).

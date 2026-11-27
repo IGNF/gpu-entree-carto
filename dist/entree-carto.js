@@ -24605,8 +24605,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const aa2 = r1 * Math.sin(alpha);
       const bb = Math.sqrt(r1 * r1 - aa2 * aa2);
-      const dd = r2 - bb;
-      const ee = Math.sqrt(aa2 * aa2 + dd * dd);
+      const dd2 = r2 - bb;
+      const ee = Math.sqrt(aa2 * aa2 + dd2 * dd2);
       const innerMiterRatio = ee / aa2;
       if (innerMiterRatio <= miterLimit) {
         const innerLength = innerMiterRatio * strokeWidth / 2 - r2 - r1;
@@ -48117,7 +48117,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let i2 = 0;
       const ii2 = instructions.length;
       let d = 0;
-      let dd;
+      let dd2;
       const offsetCoords = (
         /** @type {Array<number>} */
         []
@@ -48203,7 +48203,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.CUSTOM:
             d = /** @type {number} */
             instruction[1];
-            dd = instruction[2];
+            dd2 = instruction[2];
             const geometry = (
               /** @type {import("../../geom/SimpleGeometry.js").default} */
               instruction[3]
@@ -48218,7 +48218,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
             const coords = coordinateCache[i2];
             if (fn2) {
-              fn2(pixelCoordinates, d, dd, 2, coords);
+              fn2(pixelCoordinates, d, dd2, 2, coords);
             } else {
               coords[0] = pixelCoordinates[d];
               coords[1] = pixelCoordinates[d + 1];
@@ -48233,7 +48233,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.DRAW_IMAGE:
             d = /** @type {number} */
             instruction[1];
-            dd = /** @type {number} */
+            dd2 = /** @type {number} */
             instruction[2];
             image2 = /** @type {HTMLCanvasElement|HTMLVideoElement|HTMLImageElement} */
             instruction[3];
@@ -48336,7 +48336,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               rotation -= viewRotation;
             }
             let widthIndex = 0;
-            for (; d < dd; d += 2) {
+            for (; d < dd2; d += 2) {
               if (geometryWidths && geometryWidths[widthIndex++] < width / this.pixelRatio) {
                 continue;
               }
@@ -48371,7 +48371,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               if (declutterTree) {
                 let imageArgs, imageDeclutterMode, imageDeclutterBox;
                 if (declutterImageWithText) {
-                  const index2 = dd - d;
+                  const index2 = dd2 - d;
                   if (!declutterImageWithText[index2]) {
                     declutterImageWithText[index2] = {
                       args,
@@ -48654,7 +48654,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           case Instruction.MOVE_TO_LINE_TO:
             d = /** @type {number} */
             instruction[1];
-            dd = /** @type {number} */
+            dd2 = /** @type {number} */
             instruction[2];
             lineOffsetPx = /** @type {number|undefined} */
             instruction[3];
@@ -48664,11 +48664,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 /** @type {boolean|undefined} */
                 instruction[4] ?? false
               );
-              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd - 1]) < 1e-6;
+              const isClosedLine = isClosedRing || Math.abs(pixelCoordinates[d] - pixelCoordinates[dd2 - 2]) < 1e-6 && Math.abs(pixelCoordinates[d + 1] - pixelCoordinates[dd2 - 1]) < 1e-6;
               offsetLineString(
                 pixelCoordinates,
                 d,
-                dd,
+                dd2,
                 2,
                 lineOffsetPx,
                 isClosedLine,
@@ -48681,7 +48681,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             } else {
               lineCoords = pixelCoordinates;
               lineStart = d;
-              lineEnd = dd;
+              lineEnd = dd2;
             }
             x = lineCoords[lineStart];
             y = lineCoords[lineStart + 1];
@@ -63493,9 +63493,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     var y = p5.y / this.a;
     var phi, lam;
     if (this.sphere) {
-      var dd = y + this.lat0;
-      phi = Math.asin(Math.sin(dd) * Math.cos(x));
-      lam = Math.atan2(Math.tan(x), Math.cos(dd));
+      var dd2 = y + this.lat0;
+      phi = Math.asin(Math.sin(dd2) * Math.cos(x));
+      lam = Math.atan2(Math.tan(x), Math.cos(dd2));
     } else {
       var ml1 = this.ml0 / this.a + y;
       var phi1 = imlfn(ml1, this.e0, this.e1, this.e2, this.e3);
@@ -66613,11 +66613,11 @@ Expected function or array of functions, received type ${typeof value2}.`
      * @returns {Number} decimal coordinate
      */
     dmsToDecimal(degrees, minutes, seconds, hemispheres) {
-      var dd = degrees + minutes / 60 + seconds / (60 * 60);
+      var dd2 = degrees + minutes / 60 + seconds / (60 * 60);
       if (hemispheres == "S" || hemispheres == "O") {
-        dd = dd * -1;
+        dd2 = dd2 * -1;
       }
-      return dd;
+      return dd2;
     },
     /**
      * ol coordinate to decimal
@@ -74356,9 +74356,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     const iso = Date.parse(value2);
     if (Number.isFinite(iso)) {
       const d = new Date(iso);
-      const dd = String(d.getDate()).padStart(2, "0");
+      const dd2 = String(d.getDate()).padStart(2, "0");
       const mm = String(d.getMonth() + 1).padStart(2, "0");
-      return `${dd}/${mm}/${d.getFullYear()}`;
+      return `${dd2}/${mm}/${d.getFullYear()}`;
     }
     return value2;
   }
@@ -79535,9 +79535,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       enumerable: true
     });
     return ce(n, Symbol.toStringTag, { value: "Module" }), n;
-  }, K = Symbol("accordions"), ue = /* @__PURE__ */ (function(e2) {
+  }, K = Symbol("accordions"), q = /* @__PURE__ */ (function(e2) {
     return e2[e2.bluesky = 0] = "bluesky", e2[e2.dailymotion = 1] = "dailymotion", e2[e2.facebook = 2] = "facebook", e2[e2.github = 3] = "github", e2[e2.instagram = 4] = "instagram", e2[e2.linkedin = 5] = "linkedin", e2[e2.mastodon = 6] = "mastodon", e2[e2.snapchat = 7] = "snapchat", e2[e2.telegram = 8] = "telegram", e2[e2.threads = 9] = "threads", e2[e2.tiktok = 10] = "tiktok", e2[e2.twitch = 11] = "twitch", e2[e2["twitter-x"] = 12] = "twitter-x", e2[e2.vimeo = 13] = "vimeo", e2[e2.youtube = 14] = "youtube", e2;
-  })({}), q = Symbol("header"), de = Symbol("tabs"), fe = Symbol("vue-dsfr-icon-collections"), pe = Symbol("vue-dsfr-prefer-offline-icons"), J = () => {
+  })({}), ue = Symbol("header"), J = Symbol("tabs"), de = Symbol("vue-dsfr-icon-collections"), fe = Symbol("vue-dsfr-prefer-offline-icons"), Y = () => {
     let e2 = /* @__PURE__ */ ref(), t = /* @__PURE__ */ ref(false), n = /* @__PURE__ */ ref(false), r = () => {
       if (!e2.value) return;
       e2.value.style.setProperty("--collapser", "none");
@@ -79561,34 +79561,34 @@ Expected function or array of functions, received type ${typeof value2}.`
         t.value = false, r2 && ((_b = (_a2 = e2.value) == null ? void 0 : _a2.querySelector("a")) == null ? void 0 : _b.focus()), e2.value && n2 === false && e2.value.style.removeProperty("--collapse-max-height");
       }
     };
-  }, me = "(prefers-color-scheme: dark)", he = "vue-dsfr-scheme", Y, X = "light", ge = "dark", _e = "system", ve = "data-fr-theme", ye = (e2) => [
-    X,
+  }, pe = "(prefers-color-scheme: dark)", me = "vue-dsfr-scheme", he, ge = "light", _e = "dark", ve = "system", X = "data-fr-theme", ye = (e2) => [
     ge,
-    _e
-  ].includes(e2), be = (e2) => [X, ge].includes(e2), xe = (e2) => {
-    let t = e2 ?? (localStorage.getItem(Y) || "system");
-    return ye(t) ? t : _e;
+    _e,
+    ve
+  ].includes(e2), be = (e2) => [ge, _e].includes(e2), xe = (e2) => {
+    let t = e2 ?? (localStorage.getItem(he) || "system");
+    return ye(t) ? t : ve;
   }, Se = (e2, t) => {
     let n = xe(e2);
-    return n === "system" ? (t == null ? void 0 : t.matches) ? ge : X : n;
+    return n === "system" ? (t == null ? void 0 : t.matches) ? _e : ge : n;
   }, Ce = (e2) => {
     if (typeof window > "u") return;
-    Y = (e2 == null ? void 0 : e2.localStorageKey) ?? he;
+    he = (e2 == null ? void 0 : e2.localStorageKey) ?? me;
     let t = {
-      scheme: localStorage.getItem(Y) || "system",
-      dataThemeAttribute: ve,
+      scheme: localStorage.getItem(he) || "system",
+      dataThemeAttribute: X,
       ...e2
-    }, n = window.matchMedia && window.matchMedia(me), r = /* @__PURE__ */ ref(xe(t.scheme));
-    localStorage.setItem(Y, r.value);
-    let i2 = /* @__PURE__ */ ref(Se(r.value, n)), o = /* @__PURE__ */ ref(r.value !== _e);
+    }, n = window.matchMedia && window.matchMedia(pe), r = /* @__PURE__ */ ref(xe(t.scheme));
+    localStorage.setItem(he, r.value);
+    let i2 = /* @__PURE__ */ ref(Se(r.value, n)), o = /* @__PURE__ */ ref(r.value !== ve);
     watchEffect(() => {
       var _a2;
-      (_a2 = document.body.parentElement) == null ? void 0 : _a2.setAttribute(t.dataThemeAttribute || ve, i2.value);
+      (_a2 = document.body.parentElement) == null ? void 0 : _a2.setAttribute(t.dataThemeAttribute || X, i2.value);
     }), n == null ? void 0 : n.addEventListener("change", (e3) => {
-      o.value || (e3.matches ? i2.value = ge : i2.value = X);
-    }), !o.value && (n == null ? void 0 : n.matches) && (i2.value = ge);
+      o.value || (e3.matches ? i2.value = _e : i2.value = ge);
+    }), !o.value && (n == null ? void 0 : n.matches) && (i2.value = _e);
     let s = (e3) => {
-      if (r.value = xe(e3), localStorage.setItem(Y, r.value), be(r.value)) {
+      if (r.value = xe(e3), localStorage.setItem(he, r.value), be(r.value)) {
         i2.value = r.value, o.value = true;
         return;
       }
@@ -79598,7 +79598,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       childList: false,
       attributes: true
     }, u2 = new MutationObserver((e3) => {
-      for (let n2 of e3) if (n2.type === "attributes" && n2.attributeName === (t.dataThemeAttribute || ve)) {
+      for (let n2 of e3) if (n2.type === "attributes" && n2.attributeName === (t.dataThemeAttribute || X)) {
         let e4 = n2.target.getAttribute(n2.attributeName);
         e4 && e4 !== r.value && s(e4);
       }
@@ -79627,7 +79627,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(e2) {
       var _a2;
-      let t = e2, { collapse: n, collapsing: r, cssExpanded: i2, doExpand: a3, onTransitionEnd: s } = J(), d = /* @__PURE__ */ ref(), { isActive: f2, expand: p5 } = ((_a2 = inject(K, void 0)) == null ? void 0 : _a2(/* @__PURE__ */ toRef(() => t.title))) ?? {
+      let t = e2, { collapse: n, collapsing: r, cssExpanded: i2, doExpand: a3, onTransitionEnd: s } = Y(), d = /* @__PURE__ */ ref(), { isActive: f2, expand: p5 } = ((_a2 = inject(K, void 0)) == null ? void 0 : _a2(/* @__PURE__ */ toRef(() => t.title))) ?? {
         isActive: d,
         expand: () => d.value = !d.value
       };
@@ -79778,7 +79778,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       showBreadcrumbLabel: { default: "Voir le fil d’Ariane" }
     },
     setup(e2) {
-      let { collapse: n, collapsing: r, cssExpanded: i2, doExpand: a3, onTransitionEnd: d } = J(), f2 = /* @__PURE__ */ ref(false);
+      let { collapse: n, collapsing: r, cssExpanded: i2, doExpand: a3, onTransitionEnd: d } = Y(), f2 = /* @__PURE__ */ ref(false);
       return watch(f2, (e3, t) => {
         e3 !== t && a3(e3);
       }), (a4, p5) => {
@@ -79867,7 +79867,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       display: { default: "inline-block" }
     },
     setup(e2) {
-      let t = e2, n = inject(fe, []), r = inject(pe, false), i2 = /vi-(.*)/, l = /* @__PURE__ */ ref(null), u2 = /* @__PURE__ */ ref(false), d = computed(() => `${t.scale * 1.2}rem`), f2 = computed(() => t.flip === "both" ? "horizontal,vertical" : t.flip);
+      let t = e2, n = inject(de, []), r = inject(fe, false), i2 = /vi-(.*)/, l = /* @__PURE__ */ ref(null), u2 = /* @__PURE__ */ ref(false), d = computed(() => `${t.scale * 1.2}rem`), f2 = computed(() => t.flip === "both" ? "horizontal,vertical" : t.flip);
       watch(() => t.title, p5);
       async function p5() {
         var _a2, _b, _c2, _d;
@@ -80510,7 +80510,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     "disabled",
     "aria-disabled",
     "required",
-    "aria-describedby"
+    "aria-describedby",
+    "aria-invalid"
   ], rn = ["selected"], an = [
     "selected",
     "value",
@@ -80525,7 +80526,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "value",
     "disabled",
     "aria-disabled"
-  ], cn = ["id"], ln = /* @__PURE__ */ defineComponent({
+  ], cn = ["id"], ln = ["id"], un = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrSelect",
     props: {
@@ -80551,7 +80552,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(e2) {
       let n = e2;
       n.description && console.warn("[DsfrSelect] : La prop `description` est obsolète. Veuillez utiliser `hint` à la place.");
-      let r = computed(() => !!(n.errorMessage || n.isInvalid)), i2 = computed(() => !!(n.successMessage || n.isValid) && !r.value), o = computed(() => r.value ? n.errorMessage : i2.value ? n.successMessage : void 0);
+      let r = computed(() => !!(n.errorMessage || n.isInvalid)), i2 = computed(() => !!(n.successMessage || n.isValid) && !r.value), o = computed(() => r.value ? n.errorMessage : i2.value ? n.successMessage : void 0), d = computed(() => `${n.selectId}-messages`), f2 = computed(() => `${n.selectId}-message-${r.value ? "error" : "valid"}`), p5 = useAttrs(), m = computed(() => [
+        p5["aria-describedby"],
+        n.descriptionId,
+        d.value
+      ].filter(Boolean).join(" ")), h2 = computed(() => r.value ? true : p5["aria-invalid"]);
       return (n2, a3) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-select-group", {
         "fr-select-group--error": r.value,
         "fr-select-group--valid": i2.value
@@ -80571,7 +80576,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           "aria-disabled": e2.disabled,
           required: e2.required
         }, n2.$attrs, {
-          "aria-describedby": [n2.$attrs["aria-describedby"], e2.descriptionId].filter(Boolean).join(" ") || void 0,
+          "aria-describedby": m.value,
+          "aria-invalid": h2.value,
           onChange: a3[0] || (a3[0] = (e3) => {
             var _a2;
             return n2.$emit("update:modelValue", (_a2 = e3.target) == null ? void 0 : _a2.value);
@@ -80602,51 +80608,57 @@ Expected function or array of functions, received type ${typeof value2}.`
             "aria-disabled": !!(e2.disabled || typeof t == "object" && t.disabled || n3.disabled)
           }, toDisplayString(typeof t == "object" ? t.text : t), 9, sn))), 128))], 8, on$1))), 128))
         ], 16, nn),
-        o.value ? (openBlock(), createElementBlock("p", {
+        createBaseVNode("div", {
+          id: d.value,
+          class: "fr-messages-group",
+          "aria-live": "polite"
+        }, [o.value ? (openBlock(), createElementBlock("p", {
           key: 0,
-          id: `select-${r.value ? "error" : "valid"}-desc-${r.value ? "error" : "valid"}`,
+          id: f2.value,
           class: normalizeClass(r.value ? "fr-error-text" : "fr-valid-text")
-        }, toDisplayString(o.value), 11, cn)) : createCommentVNode("", true)
+        }, toDisplayString(o.value), 11, ln)) : createCommentVNode("", true)], 8, cn)
       ], 2));
     }
-  }), un = {
+  }), dn = {
     key: 0,
     class: "fr-table__header"
-  }, dn = {
+  }, fn = {
     key: 0,
     class: "fr-table__detail"
-  }, fn = { class: "fr-table__container" }, pn = { class: "fr-table__content" }, mn = ["id"], hn = {
+  }, pn = { class: "fr-table__container" }, mn = { class: "fr-table__content" }, hn = ["id"], gn = {
     key: 0,
     class: "fr-table__caption__desc"
-  }, gn = {
+  }, _n = {
     key: 0,
     class: "fr-cell--fixed",
     role: "columnheader",
     "data-selection-fixed": ""
-  }, _n = { class: "fr-checkbox-group fr-checkbox-group--sm" }, vn = ["id", "checked"], yn = ["for"], bn = [
+  }, vn = { class: "fr-checkbox-group fr-checkbox-group--sm" }, yn = ["id", "checked"], bn = ["for"], xn = [
     "role",
     "data-col-idx",
     "tabindex",
     "aria-sort"
-  ], xn = ["onClick", "onKeydown"], Sn = ["data-row-key"], Cn = {
+  ], Sn = ["onClick", "onKeydown"], Cn = ["data-row-key"], wn = {
     key: 0,
     class: "fr-cell--fixed",
     role: "columnheader"
-  }, wn = { class: "fr-checkbox-group fr-checkbox-group--sm" }, Tn = ["id", "value"], En = ["for"], Dn = {
+  }, Tn = { class: "fr-checkbox-group fr-checkbox-group--sm" }, En = ["id", "value"], Dn = ["for"], On = {
     key: 0,
     class: "fr-table__footer--start"
-  }, On = {
+  }, kn = {
     key: 0,
     class: "fr-table__detail"
-  }, kn = { class: "fr-table__footer--middle" }, An = {
+  }, An = { class: "fr-table__footer--middle" }, jn = {
     key: 1,
     class: "fr-table__footer--end"
-  }, jn = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Mn = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrDataTable",
     props: /* @__PURE__ */ mergeModels({
+      columns: {},
+      headersRow: { default: () => [] },
       id: { default: () => Z$1("table") },
       title: {},
-      rowKey: { default: 0 },
+      rowKey: {},
       rows: { default: () => [] },
       topActionsRow: { default: () => [] },
       bottomActionsRow: { default: () => [] },
@@ -80655,6 +80667,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       sorted: {},
       sortFn: {},
       manualSort: { type: Boolean },
+      copyableCells: { type: Boolean },
       verticalBorders: { type: Boolean },
       bottomCaption: { type: Boolean },
       noCaption: { type: Boolean },
@@ -80680,9 +80693,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       paginationWrapperClass: {},
       bottomBarDetail: {},
       bottomBarButtons: {},
-      bottomBarButtonsSize: {},
-      columns: {},
-      headersRow: { default: () => [] }
+      bottomBarButtonsSize: {}
     }, {
       selection: { default: () => [] },
       selectionModifiers: {},
@@ -80706,16 +80717,27 @@ Expected function or array of functions, received type ${typeof value2}.`
       "update:sortedDesc"
     ]),
     setup(e2, { emit: n }) {
-      let r = e2, i2 = n, f2 = useModel(e2, "selection"), p5 = useModel(e2, "rowsPerPage"), m = useModel(e2, "currentPage"), h2 = computed(() => Math.ceil(r.rows.length / p5.value)), g = computed(() => r.pages ?? Array.from({ length: h2.value }).map((e3, t) => ({
+      let r = e2, i2 = n, f2 = useModel(e2, "selection"), p5 = useModel(e2, "rowsPerPage"), m = useModel(e2, "currentPage");
+      watchEffect(() => {
+        if (r.columns && r.columns.length > 0 && r.headersRow && r.headersRow.length > 0) throw Error('DsfrDataTable : les props "columns" et "headersRow" sont mutuellement exclusives, elles ne peuvent pas être fournies simultanément.');
+      });
+      let h2 = computed(() => Math.ceil(r.rows.length / p5.value)), g = computed(() => r.pages ?? Array.from({ length: h2.value }).map((e3, t) => ({
         label: `${t + 1}`,
         title: `Page ${t + 1}`,
         href: `#${t + 1}`
       }))), _ = computed(() => m.value * p5.value), x = computed(() => (m.value + 1) * p5.value), T2 = useModel(e2, "sortedBy"), D = useModel(e2, "sortedDesc");
       function ee(e3, t) {
-        let n2 = T2.value ?? r.sorted;
-        return (e3[n2] ?? e3) < (t[n2] ?? t) ? -1 : +((e3[n2] ?? e3) > (t[n2] ?? t));
+        return e3[t];
       }
-      let j = computed(() => r.columns && r.columns.length > 0 ? r.columns.map((e3) => ({
+      function j(e3) {
+        let t = T2.value ?? r.sorted;
+        return t === void 0 ? e3 : ee(e3, t) ?? e3;
+      }
+      function P(e3, t) {
+        let n2 = j(e3), r2 = j(t);
+        return n2 < r2 ? -1 : +(n2 > r2);
+      }
+      let F2 = computed(() => r.columns && r.columns.length > 0 ? r.columns.map((e3) => ({
         key: e3.key ?? e3.label,
         label: e3.label,
         headerAttrs: e3.attrs
@@ -80723,12 +80745,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         key: r.rows[0] && Array.isArray(r.rows[0]) ? t : e3,
         label: e3
       }));
-      function P(e3) {
+      function I2(e3) {
         return r.sortableRows ? r.sortableRows === true || r.sortableRows.includes(String(e3.key)) || r.sortableRows.includes(e3.label) : false;
       }
-      function F2(e3) {
-        let t = j.value.find((t2) => t2.key === e3);
-        if (!(!t || !P(t))) {
+      function L2(e3) {
+        let t = F2.value.find((t2) => t2.key === e3);
+        if (!(!t || !I2(t))) {
           if (T2.value === e3) {
             if (D.value) {
               T2.value = void 0, D.value = false;
@@ -80740,67 +80762,76 @@ Expected function or array of functions, received type ${typeof value2}.`
           D.value = false, T2.value = e3;
         }
       }
-      function I2(e3) {
-        if (P(e3)) return T2.value === e3.key ? D.value ? "descending" : "ascending" : "none";
+      function te(e3) {
+        if (I2(e3)) return T2.value === e3.key ? D.value ? "descending" : "ascending" : "none";
       }
-      let L2 = computed(() => {
+      let z2 = computed(() => {
         if (r.manualSort) return r.rows.slice();
-        let e3 = T2.value ? r.rows.slice().sort(r.sortFn ?? ee) : r.rows.slice();
+        let e3 = T2.value ? r.rows.slice().sort(r.sortFn ?? P) : r.rows.slice();
         return D.value && e3.reverse(), e3;
-      }), te = computed(() => j.value.map((e3) => e3.key)), z2 = computed(() => te.value.findIndex((e3) => e3 === r.rowKey)), B = computed(() => {
-        let e3 = L2.value.map((e4) => Array.isArray(e4) ? e4 : te.value.map((t) => typeof e4 == "object" ? e4[t] ?? e4 : e4));
+      }), B = computed(() => F2.value.map((e3) => e3.key)), re = computed(() => B.value.findIndex((e3) => e3 === r.rowKey)), ie = computed(() => {
+        let e3 = z2.value.map((e4) => Array.isArray(e4) ? {
+          sourceRow: e4,
+          cells: e4
+        } : {
+          sourceRow: e4,
+          cells: B.value.map((t) => typeof e4 == "object" ? ee(e4, t) ?? "" : e4)
+        });
         return r.pagination ? e3.slice(_.value, x.value) : e3;
       });
-      function re(e3) {
-        e3 ? f2.value = B.value.map((e4) => e4[z2.value]) : f2.value.length = 0;
+      function V2(e3, t) {
+        return e3[re.value] ?? `row-${t}`;
       }
-      let ie = computed(() => f2.value.length === B.value.length);
-      function ae() {
+      function se(e3) {
+        e3 ? f2.value = ie.value.map(({ cells: e4 }, t) => V2(e4, t)) : f2.value.length = 0;
+      }
+      let ce2 = computed(() => f2.value.length === ie.value.length);
+      function le2() {
         i2("update:currentPage", 0), f2.value.length = 0;
       }
-      async function oe(e3) {
+      async function K2(e3) {
         var _a2, _b;
-        try {
+        if (r.copyableCells) try {
           await ((_b = (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText) == null ? void 0 : _b.call(_a2, e3));
         } catch {
         }
       }
-      let G = /* @__PURE__ */ ref(null), ce2 = /* @__PURE__ */ ref({}), le2 = /* @__PURE__ */ ref(null), K2 = /* @__PURE__ */ ref({}), ue2 = {
+      let q2 = /* @__PURE__ */ ref(null), ue2 = /* @__PURE__ */ ref({}), J2 = /* @__PURE__ */ ref(null), de2 = /* @__PURE__ */ ref({}), fe2 = {
         sm: "(min-width: 36em)",
         md: "(min-width: 48em)",
         lg: "(min-width: 62em)"
       };
-      function q2(e3) {
+      function Y2(e3) {
         return (e3 == null ? void 0 : e3.fixed) !== void 0 && e3.fixed !== false;
       }
-      function de2(e3) {
-        return q2(e3) ? typeof (e3 == null ? void 0 : e3.fixed) != "string" || typeof window > "u" || typeof window.matchMedia != "function" || window.matchMedia(ue2[e3.fixed]).matches : false;
-      }
-      function fe2(e3, t) {
-        return q2(e3) ? window.getComputedStyle(t).position === "sticky" || de2(e3) : false;
-      }
       function pe2(e3) {
-        if (q2(e3)) return typeof (e3 == null ? void 0 : e3.fixed) == "string" ? `fr-cell--fixed@${e3.fixed}` : "fr-cell--fixed";
+        return Y2(e3) ? typeof (e3 == null ? void 0 : e3.fixed) != "string" || typeof window > "u" || typeof window.matchMedia != "function" || window.matchMedia(fe2[e3.fixed]).matches : false;
       }
-      function J2(e3) {
-        let t = pe2(e3);
+      function me2(e3, t) {
+        return Y2(e3) ? window.getComputedStyle(t).position === "sticky" || pe2(e3) : false;
+      }
+      function he2(e3) {
+        if (Y2(e3)) return typeof (e3 == null ? void 0 : e3.fixed) == "string" ? `fr-cell--fixed@${e3.fixed}` : "fr-cell--fixed";
+      }
+      function ge2(e3) {
+        let t = he2(e3);
         return t ? { [t]: true } : {};
       }
-      let me2 = computed(() => {
+      let _e2 = computed(() => {
         var _a2;
-        return !!((_a2 = r.columns) == null ? void 0 : _a2.some((e3) => q2(e3)));
+        return !!((_a2 = r.columns) == null ? void 0 : _a2.some((e3) => Y2(e3)));
       });
-      function he2(e3) {
-        let t = K2.value[e3];
+      function ve2(e3) {
+        let t = de2.value[e3];
         return t ? { left: t } : void 0;
       }
-      function Y2() {
+      function X2() {
         var _a2;
-        if (!me2.value) {
-          K2.value = {};
+        if (!_e2.value) {
+          de2.value = {};
           return;
         }
-        let e3 = le2.value;
+        let e3 = J2.value;
         if (!e3) return;
         let t = e3.querySelector("thead tr");
         if (!t) return;
@@ -80809,30 +80840,30 @@ Expected function or array of functions, received type ${typeof value2}.`
         let s = Array.from(t.querySelectorAll("th[data-col-idx]"));
         for (let e4 of s) {
           let t2 = Number(e4.dataset.colIdx);
-          Number.isNaN(t2) || !fe2((_a2 = r.columns) == null ? void 0 : _a2[t2], e4) || (n2[t2] = `${a3}px`, a3 += e4.offsetWidth + o);
+          Number.isNaN(t2) || !me2((_a2 = r.columns) == null ? void 0 : _a2[t2], e4) || (n2[t2] = `${a3}px`, a3 += e4.offsetWidth + o);
         }
-        K2.value = n2;
+        de2.value = n2;
       }
-      let X2 = null;
+      let ye2 = null;
       return onMounted(async () => {
-        if (await nextTick(), !G.value) return;
-        let e3 = G.value.offsetHeight;
-        ce2.value = { "--table-offset": `calc(${e3}px + 1rem)` }, X2 = new ResizeObserver(() => {
-          if (!G.value) return;
-          let e4 = G.value.offsetHeight;
-          ce2.value = { "--table-offset": `calc(${e4}px + 1rem)` }, Y2();
-        }), G.value && X2.observe(G.value), le2.value && X2.observe(le2.value), Y2(), window.addEventListener("resize", Y2);
+        if (await nextTick(), !q2.value) return;
+        let e3 = q2.value.offsetHeight;
+        ue2.value = { "--table-offset": `calc(${e3}px + 1rem)` }, ye2 = new ResizeObserver(() => {
+          if (!q2.value) return;
+          let e4 = q2.value.offsetHeight;
+          ue2.value = { "--table-offset": `calc(${e4}px + 1rem)` }, X2();
+        }), q2.value && ye2.observe(q2.value), J2.value && ye2.observe(J2.value), X2(), window.addEventListener("resize", X2);
       }), watch(() => r.columns, async () => {
-        await nextTick(), Y2();
+        await nextTick(), X2();
       }, { deep: true }), watch([
         () => r.selectableRows,
         () => r.pagination,
         () => r.verticalBorders,
-        B
+        ie
       ], async () => {
-        await nextTick(), Y2();
+        await nextTick(), X2();
       }), onBeforeUnmount(() => {
-        X2 == null ? void 0 : X2.disconnect(), window.removeEventListener("resize", Y2);
+        ye2 == null ? void 0 : ye2.disconnect(), window.removeEventListener("resize", X2);
       }), (n2, r2) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-table", {
         "fr-table--sm": e2.size === "sm",
         "fr-table--lg": e2.size === "lg",
@@ -80842,8 +80873,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         "fr-table--multiline": e2.multilineTable,
         "fr-table--caption-bottom": e2.bottomCaption && !e2.noCaption
       }]) }, [
-        n2.$slots.tableTopBar || n2.$slots.tableTopBarDetail || n2.$slots.tableTopBarSearch || n2.$slots.tableTopBarButtons || n2.$slots.tableTopBarSegmented || e2.topBarDetail || e2.topBarButtons ? (openBlock(), createElementBlock("div", un, [renderSlot(n2.$slots, "tableTopBar", {}, () => [
-          renderSlot(n2.$slots, "tableTopBarDetail", { class: "fr-table__detail" }, () => [e2.topBarDetail ? (openBlock(), createElementBlock("p", dn, toDisplayString(e2.topBarDetail), 1)) : createCommentVNode("", true)], true),
+        n2.$slots.tableTopBar || n2.$slots.tableTopBarDetail || n2.$slots.tableTopBarSearch || n2.$slots.tableTopBarButtons || n2.$slots.tableTopBarSegmented || e2.topBarDetail || e2.topBarButtons ? (openBlock(), createElementBlock("div", dn, [renderSlot(n2.$slots, "tableTopBar", {}, () => [
+          renderSlot(n2.$slots, "tableTopBarDetail", { class: "fr-table__detail" }, () => [e2.topBarDetail ? (openBlock(), createElementBlock("p", fn, toDisplayString(e2.topBarDetail), 1)) : createCommentVNode("", true)], true),
           renderSlot(n2.$slots, "tableTopBarSearch", {}, void 0, true),
           renderSlot(n2.$slots, "tableTopBarButtons", {}, () => [e2.topBarButtons && f2.value.length > 0 ? (openBlock(), createBlock(rt, {
             key: 0,
@@ -80854,75 +80885,78 @@ Expected function or array of functions, received type ${typeof value2}.`
         ], true)])) : createCommentVNode("", true),
         createBaseVNode("div", {
           class: "fr-table__wrapper",
-          style: normalizeStyle(ce2.value)
-        }, [createBaseVNode("div", fn, [createBaseVNode("div", pn, [createBaseVNode("table", {
+          style: normalizeStyle(ue2.value)
+        }, [createBaseVNode("div", pn, [createBaseVNode("div", mn, [createBaseVNode("table", {
           id: e2.id,
           ref_key: "tableRef",
-          ref: le2
+          ref: J2
         }, [
           createBaseVNode("caption", {
             ref_key: "captionRef",
-            ref: G
-          }, [createTextVNode(toDisplayString(e2.title) + " ", 1), e2.captionDetail || n2.$slots.captionDescription ? (openBlock(), createElementBlock("div", hn, [renderSlot(n2.$slots, "captionDescription", {}, () => [createTextVNode(toDisplayString(e2.captionDetail), 1)], true)])) : createCommentVNode("", true)], 512),
-          createBaseVNode("thead", null, [renderSlot(n2.$slots, "thead", {}, () => [createBaseVNode("tr", null, [e2.selectableRows ? (openBlock(), createElementBlock("th", gn, [createBaseVNode("div", _n, [createBaseVNode("input", {
+            ref: q2
+          }, [createTextVNode(toDisplayString(e2.title) + " ", 1), e2.captionDetail || n2.$slots.captionDescription ? (openBlock(), createElementBlock("div", gn, [renderSlot(n2.$slots, "captionDescription", {}, () => [createTextVNode(toDisplayString(e2.captionDetail), 1)], true)])) : createCommentVNode("", true)], 512),
+          createBaseVNode("thead", null, [renderSlot(n2.$slots, "thead", {}, () => [createBaseVNode("tr", null, [e2.selectableRows ? (openBlock(), createElementBlock("th", _n, [createBaseVNode("div", vn, [createBaseVNode("input", {
             id: `table-select--${e2.id}-all`,
-            checked: ie.value,
+            checked: ce2.value,
             type: "checkbox",
-            onInput: r2[0] || (r2[0] = (e3) => re(e3.target.checked))
-          }, null, 40, vn), createBaseVNode("label", {
+            onInput: r2[0] || (r2[0] = (e3) => se(e3.target.checked))
+          }, null, 40, yn), createBaseVNode("label", {
             class: "fr-label",
             for: `table-select--${e2.id}-all`
-          }, " Sélectionner tout ", 8, yn)])])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(j.value, (t, r3) => {
-            var _a2, _b, _c2, _d, _e2;
+          }, " Sélectionner tout ", 8, bn)])])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(F2.value, (t, r3) => {
+            var _a2, _b, _c2, _d, _e3;
             return openBlock(), createElementBlock("th", mergeProps({
               key: t.key,
               scope: "col",
               role: ((_b = (_a2 = e2.columns) == null ? void 0 : _a2[r3]) == null ? void 0 : _b.isHeader) ? "columnheader" : void 0,
-              class: [J2((_c2 = e2.columns) == null ? void 0 : _c2[r3]), { "dsfr-data-table__generated-fixed-col": q2((_d = e2.columns) == null ? void 0 : _d[r3]) }],
-              style: q2((_e2 = e2.columns) == null ? void 0 : _e2[r3]) ? he2(r3) : void 0,
+              class: [ge2((_c2 = e2.columns) == null ? void 0 : _c2[r3]), { "dsfr-data-table__generated-fixed-col": Y2((_d = e2.columns) == null ? void 0 : _d[r3]) }],
+              style: Y2((_e3 = e2.columns) == null ? void 0 : _e3[r3]) ? ve2(r3) : void 0,
               "data-col-idx": r3
             }, { ref_for: true }, t.headerAttrs, {
               tabindex: e2.sortableRows ? 0 : void 0,
-              "aria-sort": I2(t)
-            }), [createBaseVNode("div", { class: normalizeClass(["fr-cell-sort", { "sortable-header": P(t) }]) }, [renderSlot(n2.$slots, "header", mergeProps({ ref_for: true }, t), () => [createTextVNode(toDisplayString(t.label), 1)], true), P(t) ? (openBlock(), createElementBlock("button", {
+              "aria-sort": te(t)
+            }), [createBaseVNode("div", { class: normalizeClass(["fr-cell-sort", { "sortable-header": I2(t) }]) }, [renderSlot(n2.$slots, "header", mergeProps({ ref_for: true }, t), () => [createTextVNode(toDisplayString(t.label), 1)], true), I2(t) ? (openBlock(), createElementBlock("button", {
               key: 0,
               type: "button",
               class: normalizeClass(["fr-btn--sort fr-btn fr-btn-sm", {
-                "fr-btn--sort-asc": I2(t) === "ascending",
-                "fr-btn--sort-desc": I2(t) === "descending"
+                "fr-btn--sort-asc": te(t) === "ascending",
+                "fr-btn--sort-desc": te(t) === "descending"
               }]),
-              onClick: (e3) => F2(t.key),
-              onKeydown: [withKeys((e3) => F2(t.key), ["enter"]), withKeys((e3) => F2(t.key), ["space"])]
-            }, " Trier ", 42, xn)) : createCommentVNode("", true)], 2)], 16, bn);
+              onClick: (e3) => L2(t.key),
+              onKeydown: [withKeys((e3) => L2(t.key), ["enter"]), withKeys((e3) => L2(t.key), ["space"])]
+            }, " Trier ", 42, Sn)) : createCommentVNode("", true)], 2)], 16, xn);
           }), 128))])], true)]),
-          createBaseVNode("tbody", null, [renderSlot(n2.$slots, "tbody", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(B.value, (i3, a3) => (openBlock(), createElementBlock("tr", {
-            key: `row-${a3}`,
-            "data-row-key": a3 + 1
-          }, [e2.selectableRows ? (openBlock(), createElementBlock("th", Cn, [createBaseVNode("div", wn, [withDirectives(createBaseVNode("input", {
-            id: `row-select-${e2.id}-${a3}`,
+          createBaseVNode("tbody", null, [renderSlot(n2.$slots, "tbody", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(ie.value, ({ sourceRow: i3, cells: a3 }, d) => (openBlock(), createElementBlock("tr", {
+            key: V2(a3, d),
+            "data-row-key": V2(a3, d)
+          }, [e2.selectableRows ? (openBlock(), createElementBlock("th", wn, [createBaseVNode("div", Tn, [withDirectives(createBaseVNode("input", {
+            id: `row-select-${e2.id}-${d}`,
             "onUpdate:modelValue": r2[1] || (r2[1] = (e3) => f2.value = e3),
-            value: i3[z2.value] ?? `row-${a3}`,
+            value: V2(a3, d),
             type: "checkbox"
-          }, null, 8, Tn), [[vModelCheckbox, f2.value]]), createBaseVNode("label", {
+          }, null, 8, En), [[vModelCheckbox, f2.value]]), createBaseVNode("label", {
             class: "fr-label",
-            for: `row-select-${e2.id}-${a3}`
-          }, " Sélectionner la ligne " + toDisplayString(a3 + 1), 9, En)])])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(i3, (t, r3) => {
-            var _a2, _b, _c2, _d, _e2, _f, _g;
+            for: `row-select-${e2.id}-${d}`
+          }, " Sélectionner la ligne " + toDisplayString(d + 1), 9, Dn)])])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(a3, (t, r3) => {
+            var _a2, _b, _c2, _d, _e3, _f, _g;
             return openBlock(), createBlock(resolveDynamicComponent(((_b = (_a2 = e2.columns) == null ? void 0 : _a2[r3]) == null ? void 0 : _b.isHeader) ? "th" : "td"), {
               key: r3,
               scope: ((_d = (_c2 = e2.columns) == null ? void 0 : _c2[r3]) == null ? void 0 : _d.isHeader) ? "row" : void 0,
-              class: normalizeClass([J2((_e2 = e2.columns) == null ? void 0 : _e2[r3]), { "dsfr-data-table__generated-fixed-col": q2((_f = e2.columns) == null ? void 0 : _f[r3]) }]),
-              style: normalizeStyle(q2((_g = e2.columns) == null ? void 0 : _g[r3]) ? he2(r3) : void 0),
+              class: normalizeClass([ge2((_e3 = e2.columns) == null ? void 0 : _e3[r3]), { "dsfr-data-table__generated-fixed-col": Y2((_f = e2.columns) == null ? void 0 : _f[r3]) }]),
+              style: normalizeStyle(Y2((_g = e2.columns) == null ? void 0 : _g[r3]) ? ve2(r3) : void 0),
               "data-col-idx": r3,
-              tabindex: "0",
-              onKeydown: [withKeys(withModifiers((e3) => oe(typeof t == "object" ? t[z2.value] : String(t)), ["ctrl"]), ["c"]), withKeys(withModifiers((e3) => oe(typeof t == "object" ? t[z2.value] : String(t)), ["meta"]), ["c"])]
+              tabindex: e2.copyableCells ? 0 : void 0,
+              title: e2.copyableCells ? "Copier la valeur de la cellule (Ctrl+C ou Cmd+C)" : void 0,
+              onKeydown: [withKeys(withModifiers((e3) => K2(typeof t == "object" ? t[re.value] : String(t)), ["ctrl"]), ["c"]), withKeys(withModifiers((e3) => K2(typeof t == "object" ? t[re.value] : String(t)), ["meta"]), ["c"])]
             }, {
               default: withCtx(() => {
                 var _a3;
                 return [renderSlot(n2.$slots, "cell", mergeProps({ ref_for: true }, {
-                  colKey: (_a3 = j.value[r3]) == null ? void 0 : _a3.key,
-                  cell: t
-                }), () => [createTextVNode(toDisplayString(typeof t == "object" ? t[z2.value] : t), 1)], true)];
+                  colKey: (_a3 = F2.value[r3]) == null ? void 0 : _a3.key,
+                  cell: t,
+                  row: i3,
+                  rowIndex: d
+                }), () => [createTextVNode(toDisplayString(t), 1)], true)];
               }),
               _: 2
             }, 1064, [
@@ -80930,19 +80964,21 @@ Expected function or array of functions, received type ${typeof value2}.`
               "class",
               "style",
               "data-col-idx",
+              "tabindex",
+              "title",
               "onKeydown"
             ]);
-          }), 128))], 8, Sn))), 128))], true)])
-        ], 8, mn)])])], 4),
+          }), 128))], 8, Cn))), 128))], true)])
+        ], 8, hn)])])], 4),
         e2.bottomActionBarClass || n2.$slots.tableBottomBarPagination || n2.$slots.tableBottomBar || n2.$slots.tableBottomBarActions || e2.bottomBarButtons || e2.pagination || e2.bottomBarDetail ? (openBlock(), createElementBlock("div", {
           key: 1,
           class: normalizeClass(["fr-table__footer", e2.bottomActionBarClass])
-        }, [renderSlot(n2.$slots, "tableBottomBar", {}, () => [renderSlot(n2.$slots, "tableBottomBarPagination", {}, () => [e2.pagination && !n2.$slots.tableBottomBarPagination ? (openBlock(), createElementBlock("div", Dn, [
-          e2.bottomBarDetail ? (openBlock(), createElementBlock("p", On, toDisplayString(e2.bottomBarDetail), 1)) : createCommentVNode("", true),
-          createBaseVNode("div", { class: normalizeClass(["", e2.paginationWrapperClass]) }, [e2.paginationOptions && e2.paginationOptions.length > 0 ? (openBlock(), createBlock(ln, {
+        }, [renderSlot(n2.$slots, "tableBottomBar", {}, () => [renderSlot(n2.$slots, "tableBottomBarPagination", {}, () => [e2.pagination && !n2.$slots.tableBottomBarPagination ? (openBlock(), createElementBlock("div", On, [
+          e2.bottomBarDetail ? (openBlock(), createElementBlock("p", kn, toDisplayString(e2.bottomBarDetail), 1)) : createCommentVNode("", true),
+          createBaseVNode("div", { class: normalizeClass(["", e2.paginationWrapperClass]) }, [e2.paginationOptions && e2.paginationOptions.length > 0 ? (openBlock(), createBlock(un, {
             key: 0,
             modelValue: p5.value,
-            "onUpdate:modelValue": [r2[2] || (r2[2] = (e3) => p5.value = e3), r2[3] || (r2[3] = (e3) => ae())],
+            "onUpdate:modelValue": [r2[2] || (r2[2] = (e3) => p5.value = e3), r2[3] || (r2[3] = (e3) => le2())],
             options: e2.paginationOptions,
             label: e2.paginationSelectLabel,
             "hide-label": true,
@@ -80953,7 +80989,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "label",
             "default-unselected-text"
           ])) : createCommentVNode("", true)], 2),
-          createBaseVNode("div", kn, [createVNode(Qt, {
+          createBaseVNode("div", An, [createVNode(Qt, {
             "current-page": m.value,
             "onUpdate:currentPage": [r2[4] || (r2[4] = (e3) => m.value = e3), r2[5] || (r2[5] = (e3) => f2.value.length = 0)],
             pages: g.value,
@@ -80963,7 +80999,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "pages",
             "aria-label"
           ])]),
-          e2.bottomBarButtons || n2.$slots.tableBottomBarActions ? (openBlock(), createElementBlock("div", An, [renderSlot(n2.$slots, "tableBottomBarActions", {}, () => [e2.bottomBarButtons ? (openBlock(), createBlock(rt, {
+          e2.bottomBarButtons || n2.$slots.tableBottomBarActions ? (openBlock(), createElementBlock("div", jn, [renderSlot(n2.$slots, "tableBottomBarActions", {}, () => [e2.bottomBarButtons ? (openBlock(), createBlock(rt, {
             key: 0,
             buttons: e2.bottomBarButtons,
             size: e2.bottomBarButtonsSize
@@ -80971,7 +81007,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         ])) : createCommentVNode("", true)], true)], true)], 2)) : createCommentVNode("", true)
       ], 2));
     }
-  }), [["__scopeId", "data-v-5bf78c74"]]), Mn = { class: "fr-container flex" }, Nn = { class: "half" }, Pn = { class: "fr-h1" }, Fn = { class: "flex fr-my-md-3w" }, In = { class: "fr-h6" }, Ln = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-ff884126"]]), Nn = { class: "fr-container flex" }, Pn = { class: "half" }, Fn = { class: "fr-h1" }, In = { class: "flex fr-my-md-3w" }, Ln = { class: "fr-h6" }, Rn = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrErrorPage",
     props: {
       title: { default: "Page non trouvée" },
@@ -80983,10 +81019,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(e2) {
       return (t, n) => {
         var _a2;
-        return openBlock(), createElementBlock("div", Mn, [createBaseVNode("div", Nn, [
-          createBaseVNode("h1", Pn, toDisplayString(e2.title), 1),
-          createBaseVNode("span", Fn, toDisplayString(e2.subtitle), 1),
-          createBaseVNode("p", In, toDisplayString(e2.description), 1),
+        return openBlock(), createElementBlock("div", Nn, [createBaseVNode("div", Pn, [
+          createBaseVNode("h1", Fn, toDisplayString(e2.title), 1),
+          createBaseVNode("span", In, toDisplayString(e2.subtitle), 1),
+          createBaseVNode("p", Ln, toDisplayString(e2.description), 1),
           createBaseVNode("p", null, toDisplayString(e2.help), 1),
           ((_a2 = e2.buttons) == null ? void 0 : _a2.length) ? (openBlock(), createBlock(rt, {
             key: 0,
@@ -81001,7 +81037,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })], -1))]);
       };
     }
-  }), [["__scopeId", "data-v-5856459a"]]), Rn = { class: "fr-fieldset" }, zn = ["id"], Bn = { class: "fr-fieldset__element" }, Vn = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-5856459a"]]), zn = { class: "fr-fieldset" }, Bn = ["id"], Vn = { class: "fr-fieldset__element" }, Hn = /* @__PURE__ */ defineComponent({
     __name: "DsfrFieldset",
     props: {
       legend: { default: "" },
@@ -81011,7 +81047,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       hintClass: { default: "" }
     },
     setup(e2) {
-      return (t, n) => (openBlock(), createElementBlock("fieldset", Rn, [e2.legend || t.$slots.legend ? (openBlock(), createElementBlock("legend", {
+      return (t, n) => (openBlock(), createElementBlock("fieldset", zn, [e2.legend || t.$slots.legend ? (openBlock(), createElementBlock("legend", {
         key: 0,
         id: e2.legendId,
         class: normalizeClass(["fr-fieldset__legend", e2.legendClass])
@@ -81022,9 +81058,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           key: 0,
           class: normalizeClass(["fr-hint-text", e2.hintClass])
         }, [createTextVNode(toDisplayString(e2.hint) + " ", 1), renderSlot(t.$slots, "hint")], 2)) : createCommentVNode("", true)
-      ], 10, zn)) : createCommentVNode("", true), createBaseVNode("div", Bn, [renderSlot(t.$slots, "default")])]));
+      ], 10, Bn)) : createCommentVNode("", true), createBaseVNode("div", Vn, [renderSlot(t.$slots, "default")])]));
     }
-  }), Hn = ["href", "download"], Un = { class: "fr-link__detail" }, Wn = /* @__PURE__ */ defineComponent({
+  }), Un = ["href", "download"], Wn = { class: "fr-link__detail" }, Gn = /* @__PURE__ */ defineComponent({
     __name: "DsfrFileDownload",
     props: {
       title: { default: "Télécharger le document" },
@@ -81038,19 +81074,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         href: e2.href,
         download: e2.download,
         class: "fr-link fr-link--download"
-      }, [createTextVNode(toDisplayString(e2.title) + " ", 1), createBaseVNode("span", Un, toDisplayString(e2.format) + " – " + toDisplayString(e2.size), 1)], 8, Hn));
+      }, [createTextVNode(toDisplayString(e2.title) + " ", 1), createBaseVNode("span", Wn, toDisplayString(e2.format) + " – " + toDisplayString(e2.size), 1)], 8, Un));
     }
-  }), Gn = { class: "fr-downloads-group fr-downloads-group--bordered" }, Kn = {
+  }), Kn = { class: "fr-downloads-group fr-downloads-group--bordered" }, qn = {
     key: 0,
     class: "fr-downloads-group__title"
-  }, qn = /* @__PURE__ */ defineComponent({
+  }, Jn = /* @__PURE__ */ defineComponent({
     __name: "DsfrFileDownloadList",
     props: {
       files: { default: () => [] },
       title: { default: "" }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("div", Gn, [e2.title ? (openBlock(), createElementBlock("h4", Kn, toDisplayString(e2.title), 1)) : createCommentVNode("", true), createBaseVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.files, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createVNode(Wn, {
+      return (n, r) => (openBlock(), createElementBlock("div", Kn, [e2.title ? (openBlock(), createElementBlock("h4", qn, toDisplayString(e2.title), 1)) : createCommentVNode("", true), createBaseVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.files, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createVNode(Gn, {
         title: e3.title,
         format: e3.format,
         size: e3.size,
@@ -81064,24 +81100,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         "download"
       ])]))), 128))])]));
     }
-  }), Jn = ["for"], Yn = {
+  }), Yn = ["for"], Xn = {
     key: 0,
     class: "required"
-  }, Xn = {
+  }, Zn = {
     key: 1,
     class: "fr-hint-text"
-  }, Zn = [
+  }, Qn = [
     "id",
     "aria-describedby",
     "value",
     "disabled",
     "aria-disabled",
     "accept"
-  ], Qn = {
+  ], $n = {
     key: 0,
     class: "fr-messages-group",
     role: "alert"
-  }, $n = ["id"], er = /* @__PURE__ */ defineComponent({
+  }, er = ["id"], tr = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrFileUpload",
     props: {
@@ -81110,9 +81146,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           for: e2.id
         }, [
           createTextVNode(toDisplayString(e2.label) + " ", 1),
-          "required" in t2.$attrs && t2.$attrs.required !== false ? (openBlock(), createElementBlock("span", Yn, " *")) : createCommentVNode("", true),
-          e2.hint ? (openBlock(), createElementBlock("span", Xn, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)
-        ], 8, Jn),
+          "required" in t2.$attrs && t2.$attrs.required !== false ? (openBlock(), createElementBlock("span", Xn, " *")) : createCommentVNode("", true),
+          e2.hint ? (openBlock(), createElementBlock("span", Zn, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)
+        ], 8, Yn),
         createBaseVNode("input", mergeProps({
           id: e2.id,
           class: "fr-upload",
@@ -81124,25 +81160,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           "aria-disabled": e2.disabled,
           accept: o.value,
           onChange: n2[0] || (n2[0] = (e3) => i2(e3))
-        }), null, 16, Zn),
-        e2.error || e2.validMessage ? (openBlock(), createElementBlock("div", Qn, [e2.error ? (openBlock(), createElementBlock("p", {
+        }), null, 16, Qn),
+        e2.error || e2.validMessage ? (openBlock(), createElementBlock("div", $n, [e2.error ? (openBlock(), createElementBlock("p", {
           key: 0,
           id: `${e2.id}-desc`,
           class: "fr-error-text fr-mt-3v"
-        }, toDisplayString(e2.error ?? e2.validMessage), 9, $n)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+        }, toDisplayString(e2.error ?? e2.validMessage), 9, er)) : createCommentVNode("", true)])) : createCommentVNode("", true)
       ], 2));
     }
-  }), tr = { class: "fr-follow__newsletter" }, nr = { class: "fr-h5 fr-follow__title" }, rr = { class: "fr-text--sm fr-follow__desc" }, ir = { key: 0 }, ar = ["title"], or = { key: 1 }, sr = ["for"], cr = { class: "fr-input-wrap fr-input-wrap--addon" }, lr = [
+  }), nr = { class: "fr-follow__newsletter" }, rr = { class: "fr-h5 fr-follow__title" }, ir = { class: "fr-text--sm fr-follow__desc" }, ar = { key: 0 }, or = ["title"], sr = { key: 1 }, cr = ["for"], lr = { class: "fr-input-wrap fr-input-wrap--addon" }, ur = [
     "id",
     "aria-describedby",
     "aria-invalid",
     "title",
     "placeholder"
-  ], ur = ["id", "title"], dr = {
+  ], dr = ["id", "title"], fr = {
     key: 0,
     class: "fr-messages-group",
     role: "alert"
-  }, fr = ["id"], pr = ["id"], mr = /* @__PURE__ */ defineComponent({
+  }, pr = ["id"], mr = ["id"], hr = /* @__PURE__ */ defineComponent({
     __name: "DsfrNewsLetter",
     props: /* @__PURE__ */ mergeModels({
       id: { default: () => Z$1("newsletter", "email") },
@@ -81177,17 +81213,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     emits: ["update:email"],
     setup(e2) {
       let t = e2, n = useModel(e2, "email"), r = computed(() => `${t.id}-button`), i2 = computed(() => `${t.id}-hint`), o = computed(() => `${t.id}-desc-error`), u2 = computed(() => t.error ? o.value : t.hintText ? i2.value : void 0);
-      return (t2, a3) => (openBlock(), createElementBlock("div", tr, [createBaseVNode("div", null, [createBaseVNode("h3", nr, toDisplayString(e2.title), 1), createBaseVNode("p", rr, toDisplayString(e2.description), 1)]), e2.onlyCallout ? (openBlock(), createElementBlock("div", ir, [createBaseVNode("button", {
+      return (t2, a3) => (openBlock(), createElementBlock("div", nr, [createBaseVNode("div", null, [createBaseVNode("h3", rr, toDisplayString(e2.title), 1), createBaseVNode("p", ir, toDisplayString(e2.description), 1)]), e2.onlyCallout ? (openBlock(), createElementBlock("div", ar, [createBaseVNode("button", {
         class: "fr-btn",
         title: e2.buttonTitle,
         onClick: a3[0] || (a3[0] = (t3) => e2.buttonAction ? e2.buttonAction(t3) : () => {
         })
-      }, toDisplayString(e2.buttonText), 9, ar)])) : (openBlock(), createElementBlock("div", or, [createBaseVNode("form", { onSubmit: a3[2] || (a3[2] = withModifiers((t3) => e2.onSubmit(n.value), ["prevent"])) }, [
+      }, toDisplayString(e2.buttonText), 9, or)])) : (openBlock(), createElementBlock("div", sr, [createBaseVNode("form", { onSubmit: a3[2] || (a3[2] = withModifiers((t3) => e2.onSubmit(n.value), ["prevent"])) }, [
         createBaseVNode("label", {
           class: "fr-label",
           for: e2.id
-        }, toDisplayString(e2.labelEmail), 9, sr),
-        createBaseVNode("div", cr, [withDirectives(createBaseVNode("input", {
+        }, toDisplayString(e2.labelEmail), 9, cr),
+        createBaseVNode("div", lr, [withDirectives(createBaseVNode("input", {
           id: e2.id,
           "onUpdate:modelValue": a3[1] || (a3[1] = (e3) => n.value = e3),
           class: normalizeClass(["fr-input", { "fr-input--error": e2.error }]),
@@ -81198,27 +81234,27 @@ Expected function or array of functions, received type ${typeof value2}.`
           type: "email",
           name: "newsletter-email",
           autocomplete: "email"
-        }, null, 10, lr), [[vModelText, n.value]]), createBaseVNode("button", {
+        }, null, 10, ur), [[vModelText, n.value]]), createBaseVNode("button", {
           id: r.value,
           class: "fr-btn",
           title: e2.buttonTitle,
           type: "submit"
-        }, toDisplayString(e2.buttonText), 9, ur)]),
-        e2.error ? (openBlock(), createElementBlock("div", dr, [createBaseVNode("p", {
+        }, toDisplayString(e2.buttonText), 9, dr)]),
+        e2.error ? (openBlock(), createElementBlock("div", fr, [createBaseVNode("p", {
           id: o.value,
           class: "fr-error-text"
-        }, toDisplayString(e2.error), 9, fr)])) : createCommentVNode("", true),
+        }, toDisplayString(e2.error), 9, pr)])) : createCommentVNode("", true),
         e2.hintText ? (openBlock(), createElementBlock("p", {
           key: 1,
           id: i2.value,
           class: "fr-hint-text"
-        }, toDisplayString(e2.hintText), 9, pr)) : createCommentVNode("", true)
+        }, toDisplayString(e2.hintText), 9, mr)) : createCommentVNode("", true)
       ], 32)]))]));
     }
-  }), hr = { class: "fr-follow__social" }, gr = {
+  }), gr = { class: "fr-follow__social" }, _r = {
     key: 0,
     class: "fr-btns-group fr-btns-group--lg"
-  }, _r = ["title", "href"], vr = /* @__PURE__ */ defineComponent({
+  }, vr = ["title", "href"], yr = /* @__PURE__ */ defineComponent({
     __name: "DsfrSocialNetworks",
     props: {
       networks: {},
@@ -81227,23 +81263,23 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(e2) {
       return (n, r) => {
         var _a2;
-        return openBlock(), createElementBlock("div", hr, [(openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-h5 fr-mb-3v fr-mb-3v" }, {
+        return openBlock(), createElementBlock("div", gr, [(openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-h5 fr-mb-3v fr-mb-3v" }, {
           default: withCtx(() => [...r[0] || (r[0] = [
             createTextVNode(" Suivez-nous ", -1),
             createBaseVNode("br", null, null, -1),
             createTextVNode(" sur les réseaux sociaux ", -1)
           ])]),
           _: 1
-        })), ((_a2 = e2.networks) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("ul", gr, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.networks, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
+        })), ((_a2 = e2.networks) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("ul", _r, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.networks, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
           class: normalizeClass(["fr-btn", `fr-btn--${e3.type}`]),
           title: e3.name,
           href: e3.href,
           target: "_blank",
           rel: "noopener noreferrer"
-        }, toDisplayString(e3.name), 11, _r)]))), 128))])) : createCommentVNode("", true)]);
+        }, toDisplayString(e3.name), 11, vr)]))), 128))])) : createCommentVNode("", true)]);
       };
     }
-  }), yr = { class: "fr-follow" }, br = { class: "fr-container" }, xr = { class: "fr-grid-row" }, Sr = /* @__PURE__ */ defineComponent({
+  }), br = { class: "fr-follow" }, xr = { class: "fr-container" }, Sr = { class: "fr-grid-row" }, Cr = /* @__PURE__ */ defineComponent({
     __name: "DsfrFollow",
     props: {
       newsletterData: { default: () => void 0 },
@@ -81251,15 +81287,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(e2) {
       let t = e2, n = computed(() => t.networks && t.networks.length), r = computed(() => typeof t.newsletterData == "object");
-      return (t2, i2) => (openBlock(), createElementBlock("div", yr, [createBaseVNode("div", br, [createBaseVNode("div", xr, [renderSlot(t2.$slots, "default", {}, () => [e2.newsletterData ? (openBlock(), createElementBlock("div", {
+      return (t2, i2) => (openBlock(), createElementBlock("div", br, [createBaseVNode("div", xr, [createBaseVNode("div", Sr, [renderSlot(t2.$slots, "default", {}, () => [e2.newsletterData ? (openBlock(), createElementBlock("div", {
         key: 0,
         class: normalizeClass(["fr-col-12", { "fr-col-md-8": n.value }])
-      }, [createVNode(mr, normalizeProps(guardReactiveProps(e2.newsletterData)), null, 16)], 2)) : createCommentVNode("", true), n.value ? (openBlock(), createElementBlock("div", {
+      }, [createVNode(hr, normalizeProps(guardReactiveProps(e2.newsletterData)), null, 16)], 2)) : createCommentVNode("", true), n.value ? (openBlock(), createElementBlock("div", {
         key: 1,
         class: normalizeClass(["fr-col-12", { "fr-col-md-4": r.value }])
-      }, [createVNode(vr, { networks: e2.networks }, null, 8, ["networks"])], 2)) : createCommentVNode("", true)])])])]));
+      }, [createVNode(yr, { networks: e2.networks }, null, 8, ["networks"])], 2)) : createCommentVNode("", true)])])])]));
     }
-  }), Cr = 1, wr = /* @__PURE__ */ defineComponent({
+  }), wr = 1, Tr = /* @__PURE__ */ defineComponent({
     __name: "DsfrFooterLink",
     props: {
       button: { type: Boolean },
@@ -81289,10 +81325,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!(n.value || r.value)) return t.to;
       }), d = computed(() => l.value ? { to: l.value } : { href: c.value }), f2 = computed(() => typeof t.icon == "string" && t.icon.startsWith("fr-icon-")), p5 = computed(() => typeof t.icon == "string" ? {
         name: t.icon,
-        scale: Cr,
+        scale: wr,
         ...t.iconAttrs ?? {}
       } : {
-        scale: Cr,
+        scale: wr,
         ...t.icon ?? {},
         ...t.iconAttrs ?? {}
       });
@@ -81325,10 +81361,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         "onClick"
       ]));
     }
-  }), Tr = { class: "fr-footer__partners" }, Er = { class: "fr-footer__partners-logos" }, Dr = {
+  }), Er = { class: "fr-footer__partners" }, Dr = { class: "fr-footer__partners-logos" }, Or = {
     key: 0,
     class: "fr-footer__partners-main"
-  }, Or = ["href"], kr = ["src", "alt"], Ar = { class: "fr-footer__partners-sub" }, jr = ["href"], Mr = ["src", "alt"], Nr = /* @__PURE__ */ defineComponent({
+  }, kr = ["href"], Ar = ["src", "alt"], jr = { class: "fr-footer__partners-sub" }, Mr = ["href"], Nr = ["src", "alt"], Pr = /* @__PURE__ */ defineComponent({
     __name: "DsfrFooterPartners",
     props: {
       mainPartner: { default: void 0 },
@@ -81337,13 +81373,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       titleTag: { default: "h4" }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("div", Tr, [e2.title ? (openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), {
+      return (n, r) => (openBlock(), createElementBlock("div", Er, [e2.title ? (openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), {
         key: 0,
         class: "fr-footer__partners-title"
       }, {
         default: withCtx(() => [createTextVNode(toDisplayString(e2.title), 1)]),
         _: 1
-      })) : createCommentVNode("", true), createBaseVNode("div", Er, [e2.mainPartner ? (openBlock(), createElementBlock("div", Dr, [createBaseVNode("a", {
+      })) : createCommentVNode("", true), createBaseVNode("div", Dr, [e2.mainPartner ? (openBlock(), createElementBlock("div", Or, [createBaseVNode("a", {
         class: "fr-footer__partners-link",
         href: e2.mainPartner.href,
         target: "_blank",
@@ -81352,7 +81388,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         class: "fr-footer__logo",
         src: e2.mainPartner.logo,
         alt: e2.mainPartner.name
-      }, null, 8, kr)], 8, Or)])) : createCommentVNode("", true), createBaseVNode("div", Ar, [createBaseVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.subPartners, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
+      }, null, 8, Ar)], 8, kr)])) : createCommentVNode("", true), createBaseVNode("div", jr, [createBaseVNode("ul", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.subPartners, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
         class: "fr-footer__partners-link",
         href: e3.href,
         target: "_blank",
@@ -81361,14 +81397,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         class: "fr-footer__logo",
         src: e3.logo,
         alt: e3.name
-      }, null, 8, Mr)], 8, jr)]))), 128))])])])]));
+      }, null, 8, Nr)], 8, Mr)]))), 128))])])])]));
     }
-  }), Pr = ["innerHTML"], Fr = /* @__PURE__ */ defineComponent({
+  }), Fr = ["innerHTML"], Ir = /* @__PURE__ */ defineComponent({
     __name: "DsfrLogo",
     props: {
       small: { type: Boolean },
       large: { type: Boolean },
-      logoText: { default: () => "Gouvernement" }
+      logoText: { default: () => ["République", "Française"] }
     },
     setup(e2) {
       let t = e2, n = computed(() => Array.isArray(t.logoText) ? t.logoText.join("<br>") : t.logoText);
@@ -81378,25 +81414,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           "fr-logo--lg": e2.large && !e2.small
         }]),
         innerHTML: n.value
-      }, null, 10, Pr));
+      }, null, 10, Fr));
     }
-  }), Ir = {
+  }), Lr = {
     id: "footer",
     class: "fr-footer",
     role: "contentinfo"
-  }, Lr = {
+  }, Rr = {
     key: 0,
     class: "fr-footer__top"
-  }, Rr = { class: "fr-container" }, zr = { class: "fr-grid-row fr-grid-row--start fr-grid-row--gutters" }, Br = { class: "fr-container" }, Vr = { class: "fr-footer__body" }, Hr = {
+  }, zr = { class: "fr-container" }, Br = { class: "fr-grid-row fr-grid-row--start fr-grid-row--gutters" }, Vr = { class: "fr-container" }, Hr = { class: "fr-footer__body" }, Ur = {
     key: 0,
     class: "fr-footer__brand fr-enlarge-link"
-  }, Ur = ["href"], Wr = ["src", "alt"], Gr = ["src", "alt"], Kr = {
+  }, Wr = ["href"], Gr = ["src", "alt"], Kr = ["src", "alt"], qr = {
     key: 1,
     class: "fr-footer__brand fr-enlarge-link"
-  }, qr = { class: "fr-footer__content" }, Jr = { class: "fr-footer__content-desc" }, Yr = { class: "fr-footer__content-list" }, Xr = ["href", "title"], Zr = { class: "fr-footer__bottom" }, Qr = { class: "fr-footer__bottom-list" }, $r = {
+  }, Jr = { class: "fr-footer__content" }, Yr = { class: "fr-footer__content-desc" }, Xr = { class: "fr-footer__content-list" }, Zr = ["href", "title"], Qr = { class: "fr-footer__bottom" }, $r = { class: "fr-footer__bottom-list" }, ei = {
     key: 0,
     class: "fr-footer__bottom-copy"
-  }, ei = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, ti = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrFooter",
     props: {
       a11yCompliance: { default: "non conforme" },
@@ -81506,8 +81542,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       }), g = computed(() => m.value ? "" : n.licenceTo), _ = computed(() => m.value ? n.licenceTo : ""), y = computed(() => typeof n.operatorTo == "string" && n.operatorTo.startsWith("http"));
       return (n2, r2) => {
         let a3 = resolveComponent("RouterLink");
-        return openBlock(), createElementBlock("footer", Ir, [p5.value ? (openBlock(), createElementBlock("div", Lr, [createBaseVNode("div", Rr, [createBaseVNode("div", zr, [renderSlot(n2.$slots, "footer-link-lists", {}, void 0, true)])])])) : createCommentVNode("", true), createBaseVNode("div", Br, [
-          createBaseVNode("div", Vr, [e2.operatorImgSrc ? (openBlock(), createElementBlock("div", Hr, [createVNode(Fr, { "logo-text": e2.logoText }, null, 8, ["logo-text"]), y.value ? (openBlock(), createElementBlock("a", {
+        return openBlock(), createElementBlock("footer", Lr, [p5.value ? (openBlock(), createElementBlock("div", Rr, [createBaseVNode("div", zr, [createBaseVNode("div", Br, [renderSlot(n2.$slots, "footer-link-lists", {}, void 0, true)])])])) : createCommentVNode("", true), createBaseVNode("div", Vr, [
+          createBaseVNode("div", Hr, [e2.operatorImgSrc ? (openBlock(), createElementBlock("div", Ur, [createVNode(Ir, { "logo-text": e2.logoText }, null, 8, ["logo-text"]), y.value ? (openBlock(), createElementBlock("a", {
             key: 0,
             href: e2.operatorTo,
             "data-testid": "card-link",
@@ -81517,7 +81553,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             style: normalizeStyle(e2.operatorImgStyle),
             src: e2.operatorImgSrc,
             alt: e2.operatorImgAlt
-          }, null, 12, Wr)], 8, Ur)) : (openBlock(), createBlock(a3, {
+          }, null, 12, Gr)], 8, Wr)) : (openBlock(), createBlock(a3, {
             key: 1,
             class: "fr-footer__brand-link",
             to: e2.homeLink,
@@ -81528,15 +81564,15 @@ Expected function or array of functions, received type ${typeof value2}.`
               style: normalizeStyle(e2.operatorImgStyle),
               src: e2.operatorImgSrc,
               alt: e2.operatorImgAlt
-            }, null, 12, Gr)]),
+            }, null, 12, Kr)]),
             _: 1
-          }, 8, ["to", "title"]))])) : (openBlock(), createElementBlock("div", Kr, [createVNode(a3, {
+          }, 8, ["to", "title"]))])) : (openBlock(), createElementBlock("div", qr, [createVNode(a3, {
             to: e2.homeLink,
             title: e2.homeTitle
           }, {
-            default: withCtx(() => [createVNode(Fr, { "logo-text": e2.logoText }, null, 8, ["logo-text"])]),
+            default: withCtx(() => [createVNode(Ir, { "logo-text": e2.logoText }, null, 8, ["logo-text"])]),
             _: 1
-          }, 8, ["to", "title"])])), createBaseVNode("div", qr, [createBaseVNode("p", Jr, [renderSlot(n2.$slots, "description", {}, () => [createTextVNode(toDisplayString(e2.descText), 1)], true)]), createBaseVNode("ul", Yr, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.ecosystemLinks, ({ href: e3, label: t, title: n3, ...r3 }, i3) => (openBlock(), createElementBlock("li", {
+          }, 8, ["to", "title"])])), createBaseVNode("div", Jr, [createBaseVNode("p", Yr, [renderSlot(n2.$slots, "description", {}, () => [createTextVNode(toDisplayString(e2.descText), 1)], true)]), createBaseVNode("ul", Xr, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.ecosystemLinks, ({ href: e3, label: t, title: n3, ...r3 }, i3) => (openBlock(), createElementBlock("li", {
             key: i3,
             class: "fr-footer__content-item"
           }, [createBaseVNode("a", mergeProps({
@@ -81545,12 +81581,12 @@ Expected function or array of functions, received type ${typeof value2}.`
             target: "_blank",
             rel: "noopener noreferrer",
             title: n3
-          }, { ref_for: true }, r3), toDisplayString(t), 17, Xr)]))), 128))])])]),
-          renderSlot(n2.$slots, "footer-partners", {}, () => [e2.partners ? (openBlock(), createBlock(Nr, normalizeProps(mergeProps({ key: 0 }, e2.partners)), null, 16)) : createCommentVNode("", true)], true),
-          createBaseVNode("div", Zr, [createBaseVNode("ul", Qr, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (e3, t) => (openBlock(), createElementBlock("li", {
+          }, { ref_for: true }, r3), toDisplayString(t), 17, Zr)]))), 128))])])]),
+          renderSlot(n2.$slots, "footer-partners", {}, () => [e2.partners ? (openBlock(), createBlock(Pr, normalizeProps(mergeProps({ key: 0 }, e2.partners)), null, 16)) : createCommentVNode("", true)], true),
+          createBaseVNode("div", Qr, [createBaseVNode("ul", $r, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (e3, t) => (openBlock(), createElementBlock("li", {
             key: t,
             class: "fr-footer__bottom-item"
-          }, [createVNode(wr, mergeProps({ ref_for: true }, e3), null, 16)]))), 128))]), e2.licenceText ? (openBlock(), createElementBlock("div", $r, [createBaseVNode("p", null, [createTextVNode(toDisplayString(e2.licenceText) + " ", 1), (openBlock(), createBlock(resolveDynamicComponent(m.value ? "a" : "RouterLink"), mergeProps({
+          }, [createVNode(Tr, mergeProps({ ref_for: true }, e3), null, 16)]))), 128))]), e2.licenceText ? (openBlock(), createElementBlock("div", ei, [createBaseVNode("p", null, [createTextVNode(toDisplayString(e2.licenceText) + " ", 1), (openBlock(), createBlock(resolveDynamicComponent(m.value ? "a" : "RouterLink"), mergeProps({
             class: "fr-link-licence no-content-after",
             to: m.value ? void 0 : g.value,
             href: m.value ? _.value : void 0,
@@ -81569,7 +81605,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         ])]);
       };
     }
-  }), [["__scopeId", "data-v-c992f399"]]), ti = { class: "fr-footer__top-list" }, ni = ["href"], ri = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-c992f399"]]), ni = { class: "fr-footer__top-list" }, ri = ["href"], ii = /* @__PURE__ */ defineComponent({
     __name: "DsfrFooterLinkList",
     props: {
       categoryName: { default: "Nom de la catégorie" },
@@ -81582,13 +81618,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         return openBlock(), createElementBlock("div", null, [(openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-footer__top-cat" }, {
           default: withCtx(() => [createTextVNode(toDisplayString(e2.categoryName), 1)]),
           _: 1
-        })), createBaseVNode("ul", ti, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [typeof e3.to == "string" && e3.to.startsWith("http") ? (openBlock(), createElementBlock("a", {
+        })), createBaseVNode("ul", ni, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [typeof e3.to == "string" && e3.to.startsWith("http") ? (openBlock(), createElementBlock("a", {
           key: 0,
           class: "fr-footer__top-link",
           target: "_blank",
           rel: "noopener noreferrer",
           href: e3.to
-        }, toDisplayString(e3.label), 9, ni)) : createCommentVNode("", true), typeof e3.to == "object" || typeof e3.to == "string" && !e3.to.startsWith("http") ? (openBlock(), createBlock(i2, {
+        }, toDisplayString(e3.label), 9, ri)) : createCommentVNode("", true), typeof e3.to == "object" || typeof e3.to == "string" && !e3.to.startsWith("http") ? (openBlock(), createBlock(i2, {
           key: 1,
           class: "fr-footer__top-link",
           to: e3.to
@@ -81598,21 +81634,21 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, 1032, ["to"])) : createCommentVNode("", true)]))), 128))])]);
       };
     }
-  }), ii = { class: "fr-connect-group" }, ai = ["href", "title"], oi = /* @__PURE__ */ defineComponent({
+  }), ai = { class: "fr-connect-group" }, oi = ["href", "title"], si = /* @__PURE__ */ defineComponent({
     __name: "DsfrFranceConnect",
     props: {
       secure: { type: Boolean },
       url: {}
     },
     setup(e2) {
-      return (t, n) => (openBlock(), createElementBlock("div", ii, [createBaseVNode("button", { class: normalizeClass(["fr-connect", [{ "fr-connect--plus": e2.secure }]]) }, [...n[0] || (n[0] = [createBaseVNode("span", { class: "fr-connect__login" }, "S’identifier avec ", -1), createBaseVNode("span", { class: "fr-connect__brand" }, "FranceConnect", -1)])], 2), createBaseVNode("p", null, [createBaseVNode("a", {
+      return (t, n) => (openBlock(), createElementBlock("div", ai, [createBaseVNode("button", { class: normalizeClass(["fr-connect", [{ "fr-connect--plus": e2.secure }]]) }, [...n[0] || (n[0] = [createBaseVNode("span", { class: "fr-connect__login" }, "S’identifier avec ", -1), createBaseVNode("span", { class: "fr-connect__brand" }, "FranceConnect", -1)])], 2), createBaseVNode("p", null, [createBaseVNode("a", {
         href: e2.url ?? `https://franceconnect.gouv.fr/${e2.secure ? "france-connect-plus" : ""}`,
         target: "_blank",
         rel: "noopener noreferrer",
         title: `Qu’est-ce que FranceConnect${e2.secure ? "+" : ""} ? - nouvelle fenêtre`
-      }, toDisplayString(`Qu’est-ce que FranceConnect${e2.secure ? "+" : ""} ?`), 9, ai)])]));
+      }, toDisplayString(`Qu’est-ce que FranceConnect${e2.secure ? "+" : ""} ?`), 9, oi)])]));
     }
-  }), si = [
+  }), ci = [
     "input:not([inert]):not([inert] *)",
     "select:not([inert]):not([inert] *)",
     "textarea:not([inert]):not([inert] *)",
@@ -81625,40 +81661,40 @@ Expected function or array of functions, received type ${typeof value2}.`
     '[contenteditable]:not([contenteditable="false"]):not([inert]):not([inert] *)',
     "details>summary:first-of-type:not([inert]):not([inert] *)",
     "details:not([inert]):not([inert] *)"
-  ], ci = /* @__PURE__ */ si.join(","), li = typeof Element > "u", ui = li ? function() {
-  } : Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector, di = !li && Element.prototype.getRootNode ? function(e2) {
+  ], li = /* @__PURE__ */ ci.join(","), ui = typeof Element > "u", di = ui ? function() {
+  } : Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector, fi = !ui && Element.prototype.getRootNode ? function(e2) {
     var _a2;
     return (_a2 = e2 == null ? void 0 : e2.getRootNode) == null ? void 0 : _a2.call(e2);
   } : function(e2) {
     return e2 == null ? void 0 : e2.ownerDocument;
-  }, fi = function(e2, t) {
+  }, pi = function(e2, t) {
     var _a2;
     t === void 0 && (t = true);
     var n = (_a2 = e2 == null ? void 0 : e2.getAttribute) == null ? void 0 : _a2.call(e2, "inert");
-    return n === "" || n === "true" || t && e2 && (typeof e2.closest == "function" ? e2.closest("[inert]") : fi(e2.parentNode));
-  }, pi = function(e2) {
+    return n === "" || n === "true" || t && e2 && (typeof e2.closest == "function" ? e2.closest("[inert]") : pi(e2.parentNode));
+  }, mi = function(e2) {
     var _a2;
     var t = (_a2 = e2 == null ? void 0 : e2.getAttribute) == null ? void 0 : _a2.call(e2, "contenteditable");
     return t === "" || t === "true";
-  }, mi = function(e2, t, n) {
-    if (fi(e2)) return [];
-    var r = Array.prototype.slice.apply(e2.querySelectorAll(ci));
-    return t && ui.call(e2, ci) && r.unshift(e2), r = r.filter(n), r;
   }, hi = function(e2, t, n) {
+    if (pi(e2)) return [];
+    var r = Array.prototype.slice.apply(e2.querySelectorAll(li));
+    return t && di.call(e2, li) && r.unshift(e2), r = r.filter(n), r;
+  }, gi = function(e2, t, n) {
     for (var r = [], i2 = Array.from(e2); i2.length; ) {
       var a3 = i2.shift();
-      if (!fi(a3, false)) {
+      if (!pi(a3, false)) {
         if (a3.tagName === "SLOT") {
-          var o = a3.assignedElements(), s = hi(o.length ? o : a3.children, true, n);
+          var o = a3.assignedElements(), s = gi(o.length ? o : a3.children, true, n);
           n.flatten ? r.push.apply(r, s) : r.push({
             scopeParent: a3,
             candidates: s
           });
         } else {
-          ui.call(a3, ci) && n.filter(a3) && (t || !e2.includes(a3)) && r.push(a3);
-          var c = a3.shadowRoot || typeof n.getShadowRoot == "function" && n.getShadowRoot(a3), l = !fi(c, false) && (!n.shadowRootFilter || n.shadowRootFilter(a3));
+          di.call(a3, li) && n.filter(a3) && (t || !e2.includes(a3)) && r.push(a3);
+          var c = a3.shadowRoot || typeof n.getShadowRoot == "function" && n.getShadowRoot(a3), l = !pi(c, false) && (!n.shadowRootFilter || n.shadowRootFilter(a3));
           if (c && l) {
-            var u2 = hi(c === true ? a3.children : c.children, true, n);
+            var u2 = gi(c === true ? a3.children : c.children, true, n);
             n.flatten ? r.push.apply(r, u2) : r.push({
               scopeParent: a3,
               candidates: u2
@@ -81668,29 +81704,29 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }
     return r;
-  }, gi = function(e2) {
-    return !isNaN(parseInt(e2.getAttribute("tabindex"), 10));
   }, _i = function(e2) {
+    return !isNaN(parseInt(e2.getAttribute("tabindex"), 10));
+  }, vi = function(e2) {
     if (!e2) throw Error("No node provided");
-    return e2.tabIndex < 0 && (/^(AUDIO|VIDEO|DETAILS)$/.test(e2.tagName) || pi(e2)) && !gi(e2) ? 0 : e2.tabIndex;
-  }, vi = function(e2, t) {
-    var n = _i(e2);
-    return n < 0 && t && !gi(e2) ? 0 : n;
+    return e2.tabIndex < 0 && (/^(AUDIO|VIDEO|DETAILS)$/.test(e2.tagName) || mi(e2)) && !_i(e2) ? 0 : e2.tabIndex;
   }, yi = function(e2, t) {
+    var n = vi(e2);
+    return n < 0 && t && !_i(e2) ? 0 : n;
+  }, bi = function(e2, t) {
     return e2.tabIndex === t.tabIndex ? e2.documentOrder - t.documentOrder : e2.tabIndex - t.tabIndex;
-  }, bi = function(e2) {
-    return e2.tagName === "INPUT";
   }, xi = function(e2) {
-    return bi(e2) && e2.type === "hidden";
+    return e2.tagName === "INPUT";
   }, Si = function(e2) {
+    return xi(e2) && e2.type === "hidden";
+  }, Ci = function(e2) {
     return e2.tagName === "DETAILS" && Array.prototype.slice.apply(e2.children).some(function(e3) {
       return e3.tagName === "SUMMARY";
     });
-  }, Ci = function(e2, t) {
+  }, wi = function(e2, t) {
     for (var n = 0; n < e2.length; n++) if (e2[n].checked && e2[n].form === t) return e2[n];
-  }, wi = function(e2) {
+  }, Ti = function(e2) {
     if (!e2.name) return true;
-    var t = e2.form || di(e2), n = function(e3) {
+    var t = e2.form || fi(e2), n = function(e3) {
       return t.querySelectorAll('input[type="radio"][name="' + e3 + '"]');
     }, r;
     if (typeof window < "u" && window.CSS !== void 0 && typeof window.CSS.escape == "function") r = n(window.CSS.escape(e2.name));
@@ -81699,26 +81735,26 @@ Expected function or array of functions, received type ${typeof value2}.`
     } catch (e3) {
       return console.error("Looks like you have a radio button with a name attribute containing invalid CSS selector characters and need the CSS.escape polyfill: %s", e3.message), false;
     }
-    var i2 = Ci(r, e2.form);
+    var i2 = wi(r, e2.form);
     return !i2 || i2 === e2;
-  }, Ti = function(e2) {
-    return bi(e2) && e2.type === "radio";
   }, Ei = function(e2) {
-    return Ti(e2) && !wi(e2);
+    return xi(e2) && e2.type === "radio";
   }, Di = function(e2) {
-    var t = e2 && di(e2), n = t == null ? void 0 : t.host, r = false;
+    return Ei(e2) && !Ti(e2);
+  }, Oi = function(e2) {
+    var t = e2 && fi(e2), n = t == null ? void 0 : t.host, r = false;
     if (t && t !== e2) {
       var i2, a3, o;
       for (r = !!((i2 = n) != null && (a3 = i2.ownerDocument) != null && a3.contains(n) || e2 != null && (o = e2.ownerDocument) != null && o.contains(e2)); !r && n; ) {
         var s, c;
-        t = di(n), n = t == null ? void 0 : t.host, r = !!((s = n) != null && (c = s.ownerDocument) != null && c.contains(n));
+        t = fi(n), n = t == null ? void 0 : t.host, r = !!((s = n) != null && (c = s.ownerDocument) != null && c.contains(n));
       }
     }
     return r;
-  }, Oi = function(e2) {
+  }, ki = function(e2) {
     var t = e2.getBoundingClientRect(), n = t.width, r = t.height;
     return n === 0 && r === 0;
-  }, ki = function(e2, t) {
+  }, Ai = function(e2, t) {
     var n = t.displayCheck, r = t.getShadowRoot;
     if (n === "full-native" && "checkVisibility" in e2) return !e2.checkVisibility({
       checkOpacity: false,
@@ -81729,44 +81765,44 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     var i2 = getComputedStyle(e2).visibility;
     if (i2 === "hidden" || i2 === "collapse") return true;
-    var a3 = ui.call(e2, "details>summary:first-of-type") ? e2.parentElement : e2;
-    if (ui.call(a3, "details:not([open]) *")) return true;
+    var a3 = di.call(e2, "details>summary:first-of-type") ? e2.parentElement : e2;
+    if (di.call(a3, "details:not([open]) *")) return true;
     if (!n || n === "full" || n === "full-native" || n === "legacy-full") {
       if (typeof r == "function") {
         for (var o = e2; e2; ) {
-          var s = e2.parentElement, c = di(e2);
-          if (s && !s.shadowRoot && r(s) === true) return Oi(e2);
+          var s = e2.parentElement, c = fi(e2);
+          if (s && !s.shadowRoot && r(s) === true) return ki(e2);
           e2 = e2.assignedSlot ? e2.assignedSlot : !s && c !== e2.ownerDocument ? c.host : s;
         }
         e2 = o;
       }
-      if (Di(e2)) return !e2.getClientRects().length;
+      if (Oi(e2)) return !e2.getClientRects().length;
       if (n !== "legacy-full") return true;
-    } else if (n === "non-zero-area") return Oi(e2);
+    } else if (n === "non-zero-area") return ki(e2);
     return false;
-  }, Ai = function(e2) {
+  }, ji = function(e2) {
     if (/^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(e2.tagName)) for (var t = e2.parentElement; t; ) {
       if (t.tagName === "FIELDSET" && t.disabled) {
         for (var n = 0; n < t.children.length; n++) {
           var r = t.children.item(n);
-          if (r.tagName === "LEGEND") return ui.call(t, "fieldset[disabled] *") ? true : !r.contains(e2);
+          if (r.tagName === "LEGEND") return di.call(t, "fieldset[disabled] *") ? true : !r.contains(e2);
         }
         return true;
       }
       t = t.parentElement;
     }
     return false;
-  }, ji = function(e2, t) {
-    return !(t.disabled || xi(t) || ki(t, e2) || Si(t) || Ai(t));
   }, Mi = function(e2, t) {
-    return !(Ei(t) || _i(t) < 0 || !ji(e2, t));
-  }, Ni = function(e2) {
+    return !(t.disabled || Si(t) || Ai(t, e2) || Ci(t) || ji(t));
+  }, Ni = function(e2, t) {
+    return !(Di(t) || vi(t) < 0 || !Mi(e2, t));
+  }, Pi = function(e2) {
     var t = parseInt(e2.getAttribute("tabindex"), 10);
     return !!(isNaN(t) || t >= 0);
-  }, Pi = function(e2) {
+  }, Fi = function(e2) {
     var t = [], n = [];
     return e2.forEach(function(e3, r) {
-      var i2 = !!e3.scopeParent, a3 = i2 ? e3.scopeParent : e3, o = vi(a3, i2), s = i2 ? Pi(e3.candidates) : a3;
+      var i2 = !!e3.scopeParent, a3 = i2 ? e3.scopeParent : e3, o = yi(a3, i2), s = i2 ? Fi(e3.candidates) : a3;
       o === 0 ? i2 ? t.push.apply(t, s) : t.push(a3) : n.push({
         documentOrder: r,
         tabIndex: o,
@@ -81774,41 +81810,41 @@ Expected function or array of functions, received type ${typeof value2}.`
         isScope: i2,
         content: s
       });
-    }), n.sort(yi).reduce(function(e3, t2) {
+    }), n.sort(bi).reduce(function(e3, t2) {
       return t2.isScope ? e3.push.apply(e3, t2.content) : e3.push(t2.content), e3;
     }, []).concat(t);
-  }, Fi = function(e2, t) {
-    return t || (t = {}), Pi(t.getShadowRoot ? hi([e2], t.includeContainer, {
-      filter: Mi.bind(null, t),
+  }, Ii = function(e2, t) {
+    return t || (t = {}), Fi(t.getShadowRoot ? gi([e2], t.includeContainer, {
+      filter: Ni.bind(null, t),
       flatten: false,
       getShadowRoot: t.getShadowRoot,
-      shadowRootFilter: Ni
-    }) : mi(e2, t.includeContainer, Mi.bind(null, t)));
-  }, Ii = function(e2, t) {
-    return t || (t = {}), t.getShadowRoot ? hi([e2], t.includeContainer, {
-      filter: ji.bind(null, t),
+      shadowRootFilter: Pi
+    }) : hi(e2, t.includeContainer, Ni.bind(null, t)));
+  }, Li = function(e2, t) {
+    return t || (t = {}), t.getShadowRoot ? gi([e2], t.includeContainer, {
+      filter: Mi.bind(null, t),
       flatten: true,
       getShadowRoot: t.getShadowRoot
-    }) : mi(e2, t.includeContainer, ji.bind(null, t));
-  }, Li = function(e2, t) {
+    }) : hi(e2, t.includeContainer, Mi.bind(null, t));
+  }, Ri = function(e2, t) {
     if (t || (t = {}), !e2) throw Error("No node provided");
-    return ui.call(e2, ci) !== false && Mi(t, e2);
-  }, Ri = /* @__PURE__ */ si.concat("iframe:not([inert]):not([inert] *)").join(","), zi = function(e2, t) {
+    return di.call(e2, li) !== false && Ni(t, e2);
+  }, zi = /* @__PURE__ */ ci.concat("iframe:not([inert]):not([inert] *)").join(","), Bi = function(e2, t) {
     if (t || (t = {}), !e2) throw Error("No node provided");
-    return ui.call(e2, Ri) !== false && ji(t, e2);
+    return di.call(e2, zi) !== false && Mi(t, e2);
   };
-  function Bi(e2, t) {
+  function Vi(e2, t) {
     (t == null || t > e2.length) && (t = e2.length);
     for (var n = 0, r = Array(t); n < t; n++) r[n] = e2[n];
     return r;
   }
-  function Vi(e2) {
-    if (Array.isArray(e2)) return Bi(e2);
+  function Hi(e2) {
+    if (Array.isArray(e2)) return Vi(e2);
   }
-  function Hi(e2, t) {
+  function Ui(e2, t) {
     var n = typeof Symbol < "u" && e2[Symbol.iterator] || e2["@@iterator"];
     if (!n) {
-      if (Array.isArray(e2) || (n = Zi(e2)) || t) {
+      if (Array.isArray(e2) || (n = Qi(e2)) || t) {
         n && (e2 = n);
         var r = 0, i2 = function() {
         };
@@ -81849,21 +81885,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     };
   }
-  function Ui(e2, t, n) {
-    return (t = Xi(t)) in e2 ? Object.defineProperty(e2, t, {
+  function Wi(e2, t, n) {
+    return (t = Zi(t)) in e2 ? Object.defineProperty(e2, t, {
       value: n,
       enumerable: true,
       configurable: true,
       writable: true
     }) : e2[t] = n, e2;
   }
-  function Wi(e2) {
+  function Gi(e2) {
     if (typeof Symbol < "u" && e2[Symbol.iterator] != null || e2["@@iterator"] != null) return Array.from(e2);
   }
-  function Gi() {
+  function Ki() {
     throw TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
-  function Ki(e2, t) {
+  function qi(e2, t) {
     var n = Object.keys(e2);
     if (Object.getOwnPropertySymbols) {
       var r = Object.getOwnPropertySymbols(e2);
@@ -81873,21 +81909,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return n;
   }
-  function qi(e2) {
+  function Ji(e2) {
     for (var t = 1; t < arguments.length; t++) {
       var n = arguments[t] == null ? {} : arguments[t];
-      t % 2 ? Ki(Object(n), true).forEach(function(t2) {
-        Ui(e2, t2, n[t2]);
-      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e2, Object.getOwnPropertyDescriptors(n)) : Ki(Object(n)).forEach(function(t2) {
+      t % 2 ? qi(Object(n), true).forEach(function(t2) {
+        Wi(e2, t2, n[t2]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e2, Object.getOwnPropertyDescriptors(n)) : qi(Object(n)).forEach(function(t2) {
         Object.defineProperty(e2, t2, Object.getOwnPropertyDescriptor(n, t2));
       });
     }
     return e2;
   }
-  function Ji(e2) {
-    return Vi(e2) || Wi(e2) || Zi(e2) || Gi();
+  function Yi(e2) {
+    return Hi(e2) || Gi(e2) || Qi(e2) || Ki();
   }
-  function Yi(e2, t) {
+  function Xi(e2, t) {
     if (typeof e2 != "object" || !e2) return e2;
     var n = e2[Symbol.toPrimitive];
     if (n !== void 0) {
@@ -81897,64 +81933,64 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return (t === "string" ? String : Number)(e2);
   }
-  function Xi(e2) {
-    var t = Yi(e2, "string");
+  function Zi(e2) {
+    var t = Xi(e2, "string");
     return typeof t == "symbol" ? t : t + "";
   }
-  function Zi(e2, t) {
+  function Qi(e2, t) {
     if (e2) {
-      if (typeof e2 == "string") return Bi(e2, t);
+      if (typeof e2 == "string") return Vi(e2, t);
       var n = {}.toString.call(e2).slice(8, -1);
-      return n === "Object" && e2.constructor && (n = e2.constructor.name), n === "Map" || n === "Set" ? Array.from(e2) : n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n) ? Bi(e2, t) : void 0;
+      return n === "Object" && e2.constructor && (n = e2.constructor.name), n === "Map" || n === "Set" ? Array.from(e2) : n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n) ? Vi(e2, t) : void 0;
     }
   }
-  var Qi = {
+  var $i = {
     getActiveTrap: function(e2) {
       return (e2 == null ? void 0 : e2.length) > 0 ? e2[e2.length - 1] : null;
     },
     activateTrap: function(e2, t) {
-      t !== Qi.getActiveTrap(e2) && Qi.pauseTrap(e2);
+      t !== $i.getActiveTrap(e2) && $i.pauseTrap(e2);
       var n = e2.indexOf(t);
       n === -1 || e2.splice(n, 1), e2.push(t);
     },
     deactivateTrap: function(e2, t) {
       var n = e2.indexOf(t);
-      n !== -1 && e2.splice(n, 1), Qi.unpauseTrap(e2);
+      n !== -1 && e2.splice(n, 1), $i.unpauseTrap(e2);
     },
     pauseTrap: function(e2) {
       var _a2;
-      (_a2 = Qi.getActiveTrap(e2)) == null ? void 0 : _a2._setPausedState(true);
+      (_a2 = $i.getActiveTrap(e2)) == null ? void 0 : _a2._setPausedState(true);
     },
     unpauseTrap: function(e2) {
-      var t = Qi.getActiveTrap(e2);
+      var t = $i.getActiveTrap(e2);
       t && !t._isManuallyPaused() && t._setPausedState(false);
     }
-  }, $i = function(e2) {
-    return e2.tagName && e2.tagName.toLowerCase() === "input" && typeof e2.select == "function";
   }, ea = function(e2) {
-    return (e2 == null ? void 0 : e2.key) === "Escape" || (e2 == null ? void 0 : e2.key) === "Esc" || (e2 == null ? void 0 : e2.keyCode) === 27;
+    return e2.tagName && e2.tagName.toLowerCase() === "input" && typeof e2.select == "function";
   }, ta = function(e2) {
-    return (e2 == null ? void 0 : e2.key) === "Tab" || (e2 == null ? void 0 : e2.keyCode) === 9;
+    return (e2 == null ? void 0 : e2.key) === "Escape" || (e2 == null ? void 0 : e2.key) === "Esc" || (e2 == null ? void 0 : e2.keyCode) === 27;
   }, na = function(e2) {
-    return ta(e2) && !e2.shiftKey;
+    return (e2 == null ? void 0 : e2.key) === "Tab" || (e2 == null ? void 0 : e2.keyCode) === 9;
   }, ra = function(e2) {
-    return ta(e2) && e2.shiftKey;
+    return na(e2) && !e2.shiftKey;
   }, ia = function(e2) {
-    return setTimeout(e2, 0);
+    return na(e2) && e2.shiftKey;
   }, aa = function(e2) {
+    return setTimeout(e2, 0);
+  }, oa = function(e2) {
     var t = [...arguments].slice(1);
     return typeof e2 == "function" ? e2.apply(void 0, t) : e2;
-  }, oa = function(e2) {
+  }, sa = function(e2) {
     return e2.target.shadowRoot && typeof e2.composedPath == "function" ? e2.composedPath()[0] : e2.target;
-  }, sa = [], ca = function(e2, t) {
-    var n = (t == null ? void 0 : t.document) || document, r = (t == null ? void 0 : t.trapStack) || sa, i2 = qi({
+  }, ca = [], la = function(e2, t) {
+    var n = (t == null ? void 0 : t.document) || document, r = (t == null ? void 0 : t.trapStack) || ca, i2 = Ji({
       returnFocusOnDeactivate: true,
       escapeDeactivates: true,
       delayInitialFocus: true,
       delayReturnFocus: true,
       isolateSubtrees: false,
-      isKeyForward: na,
-      isKeyBackward: ra
+      isKeyForward: ra,
+      isKeyBackward: ia
     }, t), a3 = {
       containers: [],
       containerGroups: [],
@@ -81980,7 +82016,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
     }, l = function(e3) {
       var t2 = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {}, r2 = t2.hasFallback, a4 = r2 !== void 0 && r2, o2 = t2.params, s2 = o2 === void 0 ? [] : o2, c2 = i2[e3];
-      if (typeof c2 == "function" && (c2 = c2.apply(void 0, Ji(s2))), c2 === true && (c2 = void 0), !c2) {
+      if (typeof c2 == "function" && (c2 = c2.apply(void 0, Yi(s2))), c2 === true && (c2 = void 0), !c2) {
         if (c2 === void 0 || c2 === false) return c2;
         throw Error(`\`${e3}\` was specified but was not a node, or did not return a node`);
       }
@@ -82000,7 +82036,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }, d = function() {
       var e3 = l("initialFocus", { hasFallback: true });
       if (e3 === false) return false;
-      if (e3 === void 0 || e3 && !zi(e3, i2.tabbableOptions)) {
+      if (e3 === void 0 || e3 && !Bi(e3, i2.tabbableOptions)) {
         var t2 = u2(n);
         if (c(t2) >= 0) e3 = t2;
         else {
@@ -82012,17 +82048,17 @@ Expected function or array of functions, received type ${typeof value2}.`
       return e3;
     }, f2 = function() {
       if (a3.containerGroups = a3.containers.map(function(e3) {
-        var t2 = Fi(e3, i2.tabbableOptions), n2 = Ii(e3, i2.tabbableOptions), r2 = t2.length > 0 ? t2[0] : void 0, a4 = t2.length > 0 ? t2[t2.length - 1] : void 0, o2 = n2.find(function(e4) {
-          return Li(e4);
+        var t2 = Ii(e3, i2.tabbableOptions), n2 = Li(e3, i2.tabbableOptions), r2 = t2.length > 0 ? t2[0] : void 0, a4 = t2.length > 0 ? t2[t2.length - 1] : void 0, o2 = n2.find(function(e4) {
+          return Ri(e4);
         }), s2 = n2.slice().reverse().find(function(e4) {
-          return Li(e4);
+          return Ri(e4);
         });
         return {
           container: e3,
           tabbableNodes: t2,
           focusableNodes: n2,
           posTabIndexesFound: !!t2.find(function(e4) {
-            return _i(e4) > 0;
+            return vi(e4) > 0;
           }),
           firstTabbableNode: r2,
           lastTabbableNode: a4,
@@ -82031,9 +82067,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           nextTabbableNode: function(e4) {
             var r3 = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true, i3 = t2.indexOf(e4);
             return i3 < 0 ? r3 ? n2.slice(n2.indexOf(e4) + 1).find(function(e5) {
-              return Li(e5);
+              return Ri(e5);
             }) : n2.slice(0, n2.indexOf(e4)).reverse().find(function(e5) {
-              return Li(e5);
+              return Ri(e5);
             }) : t2[i3 + (r3 ? 1 : -1)];
           }
         };
@@ -82049,14 +82085,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           p5(d());
           return;
         }
-        e3.focus({ preventScroll: !!i2.preventScroll }), a3.mostRecentlyFocusedNode = e3, $i(e3) && e3.select();
+        e3.focus({ preventScroll: !!i2.preventScroll }), a3.mostRecentlyFocusedNode = e3, ea(e3) && e3.select();
       }
     }, m = function(e3) {
       var t2 = l("setReturnFocus", { params: [e3] });
       return t2 || t2 !== false && e3;
     }, h2 = function(e3) {
       var t2 = e3.target, n2 = e3.event, r2 = e3.isBackward, o2 = r2 !== void 0 && r2;
-      t2 || (t2 = oa(n2)), f2();
+      t2 || (t2 = sa(n2)), f2();
       var s2 = null;
       if (a3.tabbableGroups.length > 0) {
         var u3 = c(t2, n2), d2 = u3 >= 0 ? a3.containerGroups[u3] : void 0;
@@ -82066,38 +82102,38 @@ Expected function or array of functions, received type ${typeof value2}.`
             var n3 = e4.firstTabbableNode;
             return t2 === n3;
           });
-          if (p6 < 0 && (d2.container === t2 || zi(t2, i2.tabbableOptions) && !Li(t2, i2.tabbableOptions) && !d2.nextTabbableNode(t2, false)) && (p6 = u3), p6 >= 0) {
+          if (p6 < 0 && (d2.container === t2 || Bi(t2, i2.tabbableOptions) && !Ri(t2, i2.tabbableOptions) && !d2.nextTabbableNode(t2, false)) && (p6 = u3), p6 >= 0) {
             var m2 = p6 === 0 ? a3.tabbableGroups.length - 1 : p6 - 1, h3 = a3.tabbableGroups[m2];
-            s2 = _i(t2) >= 0 ? h3.lastTabbableNode : h3.lastDomTabbableNode;
-          } else ta(n2) || (s2 = d2.nextTabbableNode(t2, false));
+            s2 = vi(t2) >= 0 ? h3.lastTabbableNode : h3.lastDomTabbableNode;
+          } else na(n2) || (s2 = d2.nextTabbableNode(t2, false));
         } else {
           var g2 = a3.tabbableGroups.findIndex(function(e4) {
             var n3 = e4.lastTabbableNode;
             return t2 === n3;
           });
-          if (g2 < 0 && (d2.container === t2 || zi(t2, i2.tabbableOptions) && !Li(t2, i2.tabbableOptions) && !d2.nextTabbableNode(t2)) && (g2 = u3), g2 >= 0) {
+          if (g2 < 0 && (d2.container === t2 || Bi(t2, i2.tabbableOptions) && !Ri(t2, i2.tabbableOptions) && !d2.nextTabbableNode(t2)) && (g2 = u3), g2 >= 0) {
             var _2 = g2 === a3.tabbableGroups.length - 1 ? 0 : g2 + 1, v2 = a3.tabbableGroups[_2];
-            s2 = _i(t2) >= 0 ? v2.firstTabbableNode : v2.firstDomTabbableNode;
-          } else ta(n2) || (s2 = d2.nextTabbableNode(t2));
+            s2 = vi(t2) >= 0 ? v2.firstTabbableNode : v2.firstDomTabbableNode;
+          } else na(n2) || (s2 = d2.nextTabbableNode(t2));
         }
       } else s2 = l("fallbackFocus");
       return s2;
     }, g = function(e3) {
-      if (!(c(oa(e3), e3) >= 0)) {
-        if (aa(i2.clickOutsideDeactivates, e3)) {
+      if (!(c(sa(e3), e3) >= 0)) {
+        if (oa(i2.clickOutsideDeactivates, e3)) {
           o.deactivate({ returnFocus: i2.returnFocusOnDeactivate });
           return;
         }
-        aa(i2.allowOutsideClick, e3) || e3.preventDefault();
+        oa(i2.allowOutsideClick, e3) || e3.preventDefault();
       }
     }, _ = function(e3) {
-      var t2 = oa(e3), n2 = c(t2, e3) >= 0;
+      var t2 = sa(e3), n2 = c(t2, e3) >= 0;
       if (n2 || t2 instanceof Document) n2 && (a3.mostRecentlyFocusedNode = t2);
       else {
         e3.stopImmediatePropagation();
         var r2, o2 = true;
         if (a3.mostRecentlyFocusedNode) {
-          if (_i(a3.mostRecentlyFocusedNode) > 0) {
+          if (vi(a3.mostRecentlyFocusedNode) > 0) {
             var s2 = c(a3.mostRecentlyFocusedNode), l2 = a3.containerGroups[s2].tabbableNodes;
             if (l2.length > 0) {
               var u3 = l2.findIndex(function(e4) {
@@ -82107,7 +82143,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }
           } else a3.containerGroups.some(function(e4) {
             return e4.tabbableNodes.some(function(e5) {
-              return _i(e5) > 0;
+              return vi(e5) > 0;
             });
           }) || (o2 = false);
         } else o2 = false;
@@ -82124,19 +82160,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         event: e3,
         isBackward: t2
       });
-      n2 && (ta(e3) && e3.preventDefault(), p5(n2));
+      n2 && (na(e3) && e3.preventDefault(), p5(n2));
     }, y = function(e3) {
       (i2.isKeyForward(e3) || i2.isKeyBackward(e3)) && v(e3, i2.isKeyBackward(e3));
     }, b = function(e3) {
-      ea(e3) && aa(i2.escapeDeactivates, e3) !== false && (e3.preventDefault(), o.deactivate());
+      ta(e3) && oa(i2.escapeDeactivates, e3) !== false && (e3.preventDefault(), o.deactivate());
     }, x = function(e3) {
-      c(oa(e3), e3) >= 0 || aa(i2.clickOutsideDeactivates, e3) || aa(i2.allowOutsideClick, e3) || (e3.preventDefault(), e3.stopImmediatePropagation());
+      c(sa(e3), e3) >= 0 || oa(i2.clickOutsideDeactivates, e3) || oa(i2.allowOutsideClick, e3) || (e3.preventDefault(), e3.stopImmediatePropagation());
     }, S = function() {
       if (a3.active) {
-        Qi.activateTrap(r, o);
+        $i.activateTrap(r, o);
         var e3;
         return i2.delayInitialFocus ? e3 = new Promise(function(e4) {
-          a3.delayInitialFocusTimer = ia(function() {
+          a3.delayInitialFocusTimer = aa(function() {
             p5(d()), e4();
           });
         }) : p5(d()), n.addEventListener("focusin", _, true), n.addEventListener("mousedown", g, {
@@ -82155,7 +82191,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     }, C = function(e3) {
       a3.active && !a3.paused && o._setSubtreeIsolation(false), a3.adjacentElements.clear(), a3.alreadySilent.clear();
-      var t2 = /* @__PURE__ */ new Set(), n2 = /* @__PURE__ */ new Set(), r2 = Hi(e3), i3;
+      var t2 = /* @__PURE__ */ new Set(), n2 = /* @__PURE__ */ new Set(), r2 = Ui(e3), i3;
       try {
         for (r2.s(); !(i3 = r2.n()).done; ) {
           var s2 = i3.value;
@@ -82164,7 +82200,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             t2.add(l2);
             var u3 = l2.parentElement, d2 = [];
             u3 ? d2 = u3.children : !u3 && c2 && (d2 = l2.getRootNode().children, u3 = l2.getRootNode().host, c2 = typeof ShadowRoot < "u" && u3.getRootNode() instanceof ShadowRoot);
-            var f3 = Hi(d2), p6;
+            var f3 = Ui(d2), p6;
             try {
               for (f3.s(); !(p6 = f3.n()).done; ) {
                 var m2 = p6.value;
@@ -82214,7 +82250,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       },
       activate: function(e3) {
         if (a3.active) return this;
-        var t2 = s(e3, "onActivate"), i3 = s(e3, "onPostActivate"), c2 = s(e3, "checkCanFocusTrap"), l2 = Qi.getActiveTrap(r), d2 = false;
+        var t2 = s(e3, "onActivate"), i3 = s(e3, "onPostActivate"), c2 = s(e3, "checkCanFocusTrap"), l2 = $i.getActiveTrap(r), d2 = false;
         if (l2 && !l2.paused) {
           var p6;
           (p6 = l2._setSubtreeIsolation) == null || p6.call(l2, false), d2 = true;
@@ -82231,7 +82267,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           if (c2) return c2(a3.containers.concat()).then(m2, m2), this;
           m2();
         } catch (e4) {
-          if (l2 === Qi.getActiveTrap(r) && d2) {
+          if (l2 === $i.getActiveTrap(r) && d2) {
             var h3;
             (h3 = l2._setSubtreeIsolation) == null || h3.call(l2, true);
           }
@@ -82241,18 +82277,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       },
       deactivate: function(e3) {
         if (!a3.active) return this;
-        var t2 = qi({
+        var t2 = Ji({
           onDeactivate: i2.onDeactivate,
           onPostDeactivate: i2.onPostDeactivate,
           checkCanReturnFocus: i2.checkCanReturnFocus
         }, e3);
-        clearTimeout(a3.delayInitialFocusTimer), a3.delayInitialFocusTimer = void 0, a3.paused || o._setSubtreeIsolation(false), a3.alreadySilent.clear(), w(), a3.active = false, a3.paused = false, E4(), Qi.deactivateTrap(r, o);
+        clearTimeout(a3.delayInitialFocusTimer), a3.delayInitialFocusTimer = void 0, a3.paused || o._setSubtreeIsolation(false), a3.alreadySilent.clear(), w(), a3.active = false, a3.paused = false, E4(), $i.deactivateTrap(r, o);
         var n2 = s(t2, "onDeactivate"), c2 = s(t2, "onPostDeactivate"), l2 = s(t2, "checkCanReturnFocus"), u3 = s(t2, "delayReturnFocus"), d2 = s(t2, "returnFocus", "returnFocusOnDeactivate");
         n2 == null ? void 0 : n2({ trap: o });
         var f3 = function() {
           d2 && p5(m(a3.nodeFocusedBeforeActivation)), c2 == null ? void 0 : c2({ trap: o });
         }, h3 = function() {
-          u3 && d2 ? ia(f3) : f3();
+          u3 && d2 ? aa(f3) : f3();
         };
         return d2 && l2 ? (l2(m(a3.nodeFocusedBeforeActivation)).then(h3, h3), this) : (h3(), this);
       },
@@ -82309,10 +82345,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       } }
     }), o.updateContainerElements(e2), o;
   };
-  function la(e2) {
+  function ua(e2) {
     return e2;
   }
-  var ua = la({
+  var da = ua({
     escapeDeactivates: {
       type: Boolean,
       default: true
@@ -82347,12 +82383,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       Function
     ],
     tabbableOptions: Object
-  }), da = /* @__PURE__ */ defineComponent({
+  }), fa = /* @__PURE__ */ defineComponent({
     name: "FocusTrap",
     props: Object.assign({ active: {
       type: Boolean,
       default: true
-    } }, ua),
+    } }, da),
     emits: [
       "update:active",
       "activate",
@@ -82369,7 +82405,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return e2 && (e2 instanceof HTMLElement ? e2 : e2.$el);
       });
       function l() {
-        return o || (o = ca(c.value, {
+        return o || (o = la(c.value, {
           escapeDeactivates: t.escapeDeactivates,
           allowOutsideClick: t.allowOutsideClick,
           returnFocusOnDeactivate: t.returnFocusOnDeactivate,
@@ -82412,17 +82448,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       };
     }
-  }), fa = { class: "fr-nav__item" }, pa = [
+  }), pa = { class: "fr-nav__item" }, ma = [
     "aria-controls",
     "aria-expanded",
     "title"
-  ], ma = { class: "fr-hidden-lg" }, ha = ["id"], ga = { class: "fr-menu__list" }, _a = [
+  ], ha = { class: "fr-hidden-lg" }, ga = ["id"], _a = { class: "fr-menu__list" }, va = [
     "hreflang",
     "lang",
     "aria-current",
     "href",
     "onClick"
-  ], va = /* @__PURE__ */ defineComponent({
+  ], ya = /* @__PURE__ */ defineComponent({
     __name: "DsfrLanguageSelector",
     props: {
       id: { default: () => Z$1("language-selector") },
@@ -82433,7 +82469,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["select"],
     setup(e2, { emit: n }) {
-      let r = e2, i2 = n, { collapse: s, collapsing: d, cssExpanded: f2, doExpand: p5, onTransitionEnd: m } = J(), h2 = /* @__PURE__ */ ref(false);
+      let r = e2, i2 = n, { collapse: s, collapsing: d, cssExpanded: f2, doExpand: p5, onTransitionEnd: m } = Y(), h2 = /* @__PURE__ */ ref(false);
       function g(e3) {
         h2.value = false, i2("select", e3);
       }
@@ -82443,14 +82479,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       }), (n2, r2) => (openBlock(), createBlock(resolveDynamicComponent(e2.wrapperTag), { class: "fr-translate fr-nav" }, {
         default: withCtx(() => {
           var _a2, _b;
-          return [createBaseVNode("div", fa, [createBaseVNode("button", {
+          return [createBaseVNode("div", pa, [createBaseVNode("button", {
             class: "fr-translate__btn fr-btn fr-btn--tertiary",
             "aria-controls": e2.id,
             "aria-expanded": h2.value,
             title: e2.title,
             type: "button",
             onClick: r2[0] || (r2[0] = withModifiers((e3) => h2.value = !h2.value, ["prevent", "stop"]))
-          }, [createTextVNode(toDisplayString((_a2 = _.value) == null ? void 0 : _a2.codeIso.toUpperCase()), 1), createBaseVNode("span", ma, " - " + toDisplayString((_b = _.value) == null ? void 0 : _b.label), 1)], 8, pa), createBaseVNode("div", {
+          }, [createTextVNode(toDisplayString((_a2 = _.value) == null ? void 0 : _a2.codeIso.toUpperCase()), 1), createBaseVNode("span", ha, " - " + toDisplayString((_b = _.value) == null ? void 0 : _b.label), 1)], 8, ma), createBaseVNode("div", {
             id: e2.id,
             ref_key: "collapse",
             ref: s,
@@ -82459,25 +82495,25 @@ Expected function or array of functions, received type ${typeof value2}.`
               "fr-collapsing": unref(d)
             }]),
             onTransitionend: r2[1] || (r2[1] = (e3) => unref(m)(h2.value))
-          }, [createBaseVNode("ul", ga, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.languages, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createBaseVNode("a", {
+          }, [createBaseVNode("ul", _a, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.languages, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createBaseVNode("a", {
             class: "fr-translate__language fr-nav__link",
             hreflang: t.codeIso,
             lang: t.codeIso,
             "aria-current": e2.currentLanguage === t.codeIso || void 0,
             href: `#${t.codeIso}`,
             onClick: withModifiers((e3) => g(t), ["prevent", "stop"])
-          }, toDisplayString(`${t.codeIso.toUpperCase()} - ${t.label}`), 9, _a)]))), 128))])], 42, ha)])];
+          }, toDisplayString(`${t.codeIso.toUpperCase()} - ${t.label}`), 9, va)]))), 128))])], 42, ga)])];
         }),
         _: 1
       }));
     }
-  }), ya = ["for"], ba = {
+  }), ba = ["for"], xa = {
     key: 0,
     class: "required"
-  }, xa = {
+  }, Sa = {
     key: 0,
     class: "fr-hint-text"
-  }, Sa = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Ca = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrInput",
     props: /* @__PURE__ */ mergeModels({
@@ -82502,20 +82538,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       let r = e2, i2 = useModel(e2, "modelValue"), d = useAttrs(), f2 = /* @__PURE__ */ ref(null), p5 = () => {
         var _a2;
         return (_a2 = f2.value) == null ? void 0 : _a2.focus();
-      }, m = computed(() => r.isTextarea ? "textarea" : "input"), h2 = computed(() => r.isWithWrapper || d.type === "date" || !!r.wrapperClass), g = computed(() => [
+      }, m = computed(() => r.isInvalid ? true : d["aria-invalid"]), h2 = computed(() => r.isTextarea ? "textarea" : "input"), g = computed(() => r.isWithWrapper || d.type === "date" || !!r.wrapperClass), _ = computed(() => [
         "fr-label",
         { invisible: !r.labelVisible },
         r.labelClass
       ]);
       return n({ focus: p5 }), (n2, r2) => (openBlock(), createElementBlock(Fragment, null, [createBaseVNode("label", {
-        class: normalizeClass(g.value),
+        class: normalizeClass(_.value),
         for: e2.id
-      }, [renderSlot(n2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(n2.$slots, "required-tip", {}, () => ["required" in n2.$attrs && n2.$attrs.required !== false ? (openBlock(), createElementBlock("span", ba, "*")) : createCommentVNode("", true)], true)], true), e2.hint ? (openBlock(), createElementBlock("span", xa, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, ya), h2.value ? (openBlock(), createElementBlock("div", {
+      }, [renderSlot(n2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(n2.$slots, "required-tip", {}, () => ["required" in n2.$attrs && n2.$attrs.required !== false ? (openBlock(), createElementBlock("span", xa, "*")) : createCommentVNode("", true)], true)], true), e2.hint ? (openBlock(), createElementBlock("span", Sa, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, ba), g.value ? (openBlock(), createElementBlock("div", {
         key: 1,
         class: normalizeClass([{ "fr-input-wrap": e2.isWithWrapper || n2.$attrs.type === "date" }, e2.wrapperClass])
-      }, [(openBlock(), createBlock(resolveDynamicComponent(m.value), mergeProps({ id: e2.id }, n2.$attrs, {
+      }, [(openBlock(), createBlock(resolveDynamicComponent(h2.value), mergeProps({ id: e2.id }, n2.$attrs, {
         ref_key: "__input",
         ref: f2,
+        "aria-invalid": m.value,
         class: ["fr-input", {
           "fr-input--error": e2.isInvalid,
           "fr-input--valid": e2.isValid
@@ -82525,15 +82562,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         onInput: r2[1] || (r2[1] = (e3) => n2.$emit("update:modelValue", e3.target.value))
       }), null, 16, [
         "id",
+        "aria-invalid",
         "class",
         "value",
         "aria-describedby"
-      ]))], 2)) : (openBlock(), createBlock(resolveDynamicComponent(m.value), mergeProps({
+      ]))], 2)) : (openBlock(), createBlock(resolveDynamicComponent(h2.value), mergeProps({
         key: 0,
         id: e2.id
       }, n2.$attrs, {
         ref_key: "__input",
         ref: f2,
+        "aria-invalid": m.value,
         class: ["fr-input", {
           "fr-input--error": e2.isInvalid,
           "fr-input--valid": e2.isValid
@@ -82543,15 +82582,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         onInput: r2[0] || (r2[0] = (e3) => i2.value = e3.target.value)
       }), null, 16, [
         "id",
+        "aria-invalid",
         "class",
         "value",
         "aria-describedby"
       ]))], 64));
     }
-  }), [["__scopeId", "data-v-28c26a79"]]), Ca = {
+  }), [["__scopeId", "data-v-26a3fa0b"]]), wa = {
     key: 1,
     class: "fr-sr-only"
-  }, wa = /* @__PURE__ */ defineComponent({
+  }, Ta = /* @__PURE__ */ defineComponent({
     __name: "DsfrSearchBar",
     props: {
       id: { default: () => Z$1("search", "input") },
@@ -82569,7 +82609,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         class: normalizeClass(["fr-search-bar", { "fr-search-bar--lg": e2.large }]),
         role: "search",
         onSubmit: i2[2] || (i2[2] = withModifiers((t) => r("search", e2.modelValue), ["prevent"]))
-      }, [createVNode(Sa, {
+      }, [createVNode(Ca, {
         id: e2.id,
         type: "search",
         placeholder: e2.placeholder,
@@ -82591,11 +82631,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         disabled: e2.disabled,
         "aria-disabled": e2.disabled
       }, {
-        default: withCtx(() => [e2.buttonText ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createTextVNode(toDisplayString(e2.buttonText), 1)], 64)) : (openBlock(), createElementBlock("span", Ca, " Rechercher "))]),
+        default: withCtx(() => [e2.buttonText ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createTextVNode(toDisplayString(e2.buttonText), 1)], 64)) : (openBlock(), createElementBlock("span", wa, " Rechercher "))]),
         _: 1
       }, 8, ["disabled", "aria-disabled"])], 34));
     }
-  }), Ta = 1, Ea = /* @__PURE__ */ defineComponent({
+  }), Ea = 1, Da = /* @__PURE__ */ defineComponent({
     __name: "DsfrHeaderMenuLink",
     props: {
       button: { type: Boolean },
@@ -82625,10 +82665,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (!(r.value || i2.value)) return t.to ?? t.path;
       }), f2 = computed(() => d.value ? { to: d.value } : { href: l.value }), p5 = computed(() => typeof t.icon == "string" && t.icon.startsWith("fr-icon-")), m = computed(() => typeof t.icon == "string" ? {
         name: t.icon,
-        scale: Ta,
+        scale: Ea,
         ...t.iconAttrs ?? {}
       } : {
-        scale: Ta,
+        scale: Ea,
         ...t.icon ?? {},
         ...t.iconAttrs ?? {}
       });
@@ -82657,7 +82697,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         _: 1
       }, 16, ["class", "target"]));
     }
-  }), Da = { class: "fr-btns-group" }, Oa = /* @__PURE__ */ defineComponent({
+  }), Oa = { class: "fr-btns-group" }, ka = /* @__PURE__ */ defineComponent({
     __name: "DsfrHeaderMenuLinks",
     props: {
       links: { default: () => [] },
@@ -82671,58 +82711,58 @@ Expected function or array of functions, received type ${typeof value2}.`
         role: e2.wrapperTag === "nav" ? "navigation" : void 0,
         "aria-label": e2.wrapperTag === "nav" ? e2.navAriaLabel : void 0
       }, {
-        default: withCtx(() => [createBaseVNode("ul", Da, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createVNode(Ea, mergeProps({ ref_for: true }, e3, { "on-click": (t2) => {
+        default: withCtx(() => [createBaseVNode("ul", Oa, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createVNode(Da, mergeProps({ ref_for: true }, e3, { "on-click": (t2) => {
           var _a2;
           r("linkClick", t2), (_a2 = e3.onClick) == null ? void 0 : _a2.call(e3, t2);
         } }), null, 16, ["on-click"])]))), 128))])]),
         _: 1
       }, 8, ["role", "aria-label"]));
     }
-  }), ka = {
+  }), Aa = {
     role: "banner",
     class: "fr-header"
-  }, Aa = { class: "fr-header__body" }, ja = { class: "fr-container width-inherit" }, Ma = { class: "fr-header__body-row" }, Na = { class: "fr-header__brand fr-enlarge-link" }, Pa = { class: "fr-header__brand-top" }, Fa = { class: "fr-header__logo" }, Ia = {
+  }, ja = { class: "fr-header__body" }, Ma = { class: "fr-container width-inherit" }, Na = { class: "fr-header__body-row" }, Pa = { class: "fr-header__brand fr-enlarge-link" }, Fa = { class: "fr-header__brand-top" }, Ia = { class: "fr-header__logo" }, La = {
     key: 0,
     class: "fr-header__operator"
-  }, La = ["src", "alt"], Ra = {
+  }, Ra = ["src", "alt"], za = {
     key: 1,
     class: "fr-header__navbar"
-  }, za = [
+  }, Ba = [
     "aria-label",
     "title",
     "data-fr-opened"
-  ], Ba = { class: "fr-sr-only" }, Va = { class: "fr-sr-only" }, Ha = {
+  ], Va = { class: "fr-sr-only" }, Ha = { class: "fr-sr-only" }, Ua = {
     key: 0,
     class: "fr-header__service"
-  }, Ua = { class: "fr-header__service-title" }, Wa = {
+  }, Wa = { class: "fr-header__service-title" }, Ga = {
     key: 0,
     class: "fr-badge fr-badge--sm fr-badge--green-emeraude"
-  }, Ga = {
+  }, Ka = {
     key: 0,
     class: "fr-header__service-tagline"
-  }, Ka = {
+  }, qa = {
     key: 1,
     class: "fr-header__service"
-  }, qa = { class: "fr-header__tools" }, Ja = {
+  }, Ja = { class: "fr-header__tools" }, Ya = {
     key: 0,
     class: "fr-header__tools-links"
-  }, Ya = {
+  }, Xa = {
     key: 1,
     class: "fr-header__search fr-modal"
-  }, Xa = ["aria-label"], Za = { class: "fr-container" }, Qa = { class: "fr-header__menu-links" }, $a = {
+  }, Za = ["aria-label"], Qa = { class: "fr-container" }, $a = { class: "fr-header__menu-links" }, eo = {
     key: 1,
     class: "flex justify-center items-center"
-  }, eo = { class: "fr-header__menu fr-modal" }, to = {
+  }, to = { class: "fr-header__menu fr-modal" }, no = {
     key: 0,
     class: "fr-container"
-  }, no = "(min-width: 62em)", ro = /* @__PURE__ */ defineComponent({
+  }, ro = "(min-width: 62em)", io = /* @__PURE__ */ defineComponent({
     __name: "DsfrHeader",
     props: {
       searchbarId: { default: "searchbar-header" },
       serviceTitle: { default: void 0 },
       serviceDescription: { default: void 0 },
       homeTo: { default: "/" },
-      logoText: { default: () => "Gouvernement" },
+      logoText: { default: () => ["République", "Française"] },
       modelValue: { default: "" },
       operatorImgAlt: { default: "" },
       operatorImgSrc: { default: "" },
@@ -82760,7 +82800,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         h2.value = false, p5.value = false, m.value = false, (_a2 = document.getElementById("button-menu")) == null ? void 0 : _a2.focus();
       }, _ = (e3) => {
         e3.key === "Escape" && g();
-      }, y = () => typeof window > "u" || typeof window.matchMedia != "function" ? false : window.matchMedia(no).matches, b = () => {
+      }, y = () => typeof window > "u" || typeof window.matchMedia != "function" ? false : window.matchMedia(ro).matches, b = () => {
         !m.value || !y() || (h2.value = false, p5.value = false, m.value = false);
       };
       onMounted(() => {
@@ -82776,28 +82816,28 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, C = () => {
         h2.value = true, p5.value = false, m.value = true;
       }, ee = g, k = computed(() => [n.homeLabel, n.serviceTitle].filter((e3) => e3).join(" - ")), M5 = computed(() => !!i2.operator || !!n.operatorImgSrc), I2 = computed(() => !!i2.mainnav);
-      return provide(q, () => g), (t2, n2) => {
+      return provide(ue, () => g), (t2, n2) => {
         var _a2, _b, _c2;
         let i3 = resolveComponent("RouterLink");
-        return openBlock(), createElementBlock("header", ka, [createBaseVNode("div", Aa, [createBaseVNode("div", ja, [
-          createBaseVNode("div", Ma, [createBaseVNode("div", Na, [
-            createBaseVNode("div", Pa, [
-              createBaseVNode("div", Fa, [!e2.serviceTitle && (!e2.operatorImgSrc || t2.$slots.operator) ? (openBlock(), createBlock(i3, {
+        return openBlock(), createElementBlock("header", Aa, [createBaseVNode("div", ja, [createBaseVNode("div", Ma, [
+          createBaseVNode("div", Na, [createBaseVNode("div", Pa, [
+            createBaseVNode("div", Fa, [
+              createBaseVNode("div", Ia, [!e2.serviceTitle && (!e2.operatorImgSrc || t2.$slots.operator) ? (openBlock(), createBlock(i3, {
                 key: 0,
                 to: e2.homeTo,
                 title: k.value
               }, {
-                default: withCtx(() => [createVNode(Fr, {
+                default: withCtx(() => [createVNode(Ir, {
                   "logo-text": e2.logoText,
                   "data-testid": "header-logo"
                 }, null, 8, ["logo-text"])]),
                 _: 1
-              }, 8, ["to", "title"])) : (openBlock(), createBlock(Fr, {
+              }, 8, ["to", "title"])) : (openBlock(), createBlock(Ir, {
                 key: 1,
                 "logo-text": e2.logoText,
                 "data-testid": "header-logo"
               }, null, 8, ["logo-text"]))]),
-              M5.value ? (openBlock(), createElementBlock("div", Ia, [renderSlot(t2.$slots, "operator", {}, () => [e2.operatorImgSrc ? (openBlock(), createBlock(i3, {
+              M5.value ? (openBlock(), createElementBlock("div", La, [renderSlot(t2.$slots, "operator", {}, () => [e2.operatorImgSrc ? (openBlock(), createBlock(i3, {
                 key: 0,
                 to: e2.homeTo,
                 title: k.value
@@ -82808,10 +82848,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                   src: e2.operatorImgSrc,
                   alt: e2.operatorImgAlt,
                   style: normalizeStyle(e2.operatorImgStyle)
-                }, null, 12, La)) : createCommentVNode("", true)]),
+                }, null, 12, Ra)) : createCommentVNode("", true)]),
                 _: 1
               }, 8, ["to", "title"])) : createCommentVNode("", true)])])) : createCommentVNode("", true),
-              e2.showSearch || I2.value || ((_a2 = e2.quickLinks) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("div", Ra, [e2.showSearch ? (openBlock(), createElementBlock("button", {
+              e2.showSearch || I2.value || ((_a2 = e2.quickLinks) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("div", za, [e2.showSearch ? (openBlock(), createElementBlock("button", {
                 key: 0,
                 class: "fr-btn fr-btn--search",
                 "aria-controls": "header-search",
@@ -82819,7 +82859,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 title: e2.showSearchLabel,
                 "data-fr-opened": m.value,
                 onClick: n2[0] || (n2[0] = withModifiers((e3) => C(), ["prevent", "stop"]))
-              }, [createBaseVNode("span", Ba, toDisplayString(e2.showSearchLabel), 1)], 8, za)) : createCommentVNode("", true), I2.value || ((_b = e2.quickLinks) == null ? void 0 : _b.length) ? (openBlock(), createElementBlock("button", {
+              }, [createBaseVNode("span", Va, toDisplayString(e2.showSearchLabel), 1)], 8, Ba)) : createCommentVNode("", true), I2.value || ((_b = e2.quickLinks) == null ? void 0 : _b.length) ? (openBlock(), createElementBlock("button", {
                 key: 1,
                 id: "button-menu",
                 class: "fr-btn--menu fr-btn",
@@ -82828,26 +82868,26 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "aria-haspopup": "dialog",
                 "data-testid": "open-menu-btn",
                 onClick: n2[1] || (n2[1] = withModifiers((e3) => x(), ["prevent", "stop"]))
-              }, [createBaseVNode("span", Va, toDisplayString(e2.menuLabel), 1)])) : createCommentVNode("", true)])) : createCommentVNode("", true)
+              }, [createBaseVNode("span", Ha, toDisplayString(e2.menuLabel), 1)])) : createCommentVNode("", true)])) : createCommentVNode("", true)
             ]),
-            e2.serviceTitle ? (openBlock(), createElementBlock("div", Ha, [createVNode(i3, mergeProps({
+            e2.serviceTitle ? (openBlock(), createElementBlock("div", Ua, [createVNode(i3, mergeProps({
               to: e2.homeTo,
               title: k.value
             }, t2.$attrs), {
-              default: withCtx(() => [createBaseVNode("p", Ua, [createTextVNode(toDisplayString(e2.serviceTitle) + " ", 1), e2.showBeta ? (openBlock(), createElementBlock("span", Wa, " BETA ")) : createCommentVNode("", true)])]),
+              default: withCtx(() => [createBaseVNode("p", Wa, [createTextVNode(toDisplayString(e2.serviceTitle) + " ", 1), e2.showBeta ? (openBlock(), createElementBlock("span", Ga, " BETA ")) : createCommentVNode("", true)])]),
               _: 1
-            }, 16, ["to", "title"]), e2.serviceDescription ? (openBlock(), createElementBlock("p", Ga, toDisplayString(e2.serviceDescription), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true),
-            !e2.serviceTitle && e2.showBeta ? (openBlock(), createElementBlock("div", Ka, [...n2[9] || (n2[9] = [createBaseVNode("p", { class: "fr-header__service-title" }, [createBaseVNode("span", { class: "fr-badge fr-badge--sm fr-badge--green-emeraude" }, "BETA")], -1)])])) : createCommentVNode("", true)
-          ]), createBaseVNode("div", qa, [((_c2 = e2.quickLinks) == null ? void 0 : _c2.length) || f2.value ? (openBlock(), createElementBlock("div", Ja, [
+            }, 16, ["to", "title"]), e2.serviceDescription ? (openBlock(), createElementBlock("p", Ka, toDisplayString(e2.serviceDescription), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true),
+            !e2.serviceTitle && e2.showBeta ? (openBlock(), createElementBlock("div", qa, [...n2[9] || (n2[9] = [createBaseVNode("p", { class: "fr-header__service-title" }, [createBaseVNode("span", { class: "fr-badge fr-badge--sm fr-badge--green-emeraude" }, "BETA")], -1)])])) : createCommentVNode("", true)
+          ]), createBaseVNode("div", Ja, [((_c2 = e2.quickLinks) == null ? void 0 : _c2.length) || f2.value ? (openBlock(), createElementBlock("div", Ya, [
             renderSlot(t2.$slots, "before-quick-links"),
-            p5.value ? createCommentVNode("", true) : (openBlock(), createBlock(Oa, {
+            p5.value ? createCommentVNode("", true) : (openBlock(), createBlock(ka, {
               key: 0,
               links: e2.quickLinks,
               "nav-aria-label": e2.quickLinksAriaLabel
             }, null, 8, ["links", "nav-aria-label"])),
             renderSlot(t2.$slots, "after-quick-links"),
-            f2.value ? (openBlock(), createBlock(va, mergeProps({ key: 1 }, f2.value, { onSelect: n2[2] || (n2[2] = (e3) => r("languageSelect", e3)) }), null, 16)) : createCommentVNode("", true)
-          ])) : createCommentVNode("", true), e2.showSearch ? (openBlock(), createElementBlock("div", Ya, [createVNode(wa, {
+            f2.value ? (openBlock(), createBlock(ya, mergeProps({ key: 1 }, f2.value, { onSelect: n2[2] || (n2[2] = (e3) => r("languageSelect", e3)) }), null, 16)) : createCommentVNode("", true)
+          ])) : createCommentVNode("", true), e2.showSearch ? (openBlock(), createElementBlock("div", Xa, [createVNode(Ta, {
             id: e2.searchbarId,
             label: e2.searchLabel,
             "model-value": String(e2.modelValue || ""),
@@ -82861,7 +82901,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "model-value",
             "placeholder"
           ])])) : createCommentVNode("", true)])]),
-          h2.value ? (openBlock(), createBlock(unref(da), {
+          h2.value ? (openBlock(), createBlock(unref(fa), {
             key: 0,
             active: h2.value,
             "focus-trap-options": {
@@ -82879,7 +82919,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               "aria-label": e2.menuModalLabel,
               role: "dialog",
               "aria-modal": "true"
-            }, [createBaseVNode("div", Za, [
+            }, [createBaseVNode("div", Qa, [
               createBaseVNode("button", {
                 id: "close-button",
                 class: "fr-btn fr-btn--close",
@@ -82887,10 +82927,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "data-testid": "close-modal-btn",
                 onClick: n2[5] || (n2[5] = withModifiers((e3) => g(), ["prevent", "stop"]))
               }, toDisplayString(e2.closeMenuModalLabel), 1),
-              createBaseVNode("div", Qa, [
-                f2.value ? (openBlock(), createBlock(va, mergeProps({ key: 0 }, f2.value, { onSelect: n2[6] || (n2[6] = (e3) => r("languageSelect", e3)) }), null, 16)) : createCommentVNode("", true),
+              createBaseVNode("div", $a, [
+                f2.value ? (openBlock(), createBlock(ya, mergeProps({ key: 0 }, f2.value, { onSelect: n2[6] || (n2[6] = (e3) => r("languageSelect", e3)) }), null, 16)) : createCommentVNode("", true),
                 renderSlot(t2.$slots, "before-quick-links"),
-                p5.value ? (openBlock(), createBlock(Oa, {
+                p5.value ? (openBlock(), createBlock(ka, {
                   key: 1,
                   role: "navigation",
                   links: e2.quickLinks,
@@ -82904,7 +82944,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 renderSlot(t2.$slots, "after-quick-links")
               ]),
               h2.value ? renderSlot(t2.$slots, "mainnav", { hidemodal: g }, void 0, void 0, 0) : createCommentVNode("", true),
-              m.value ? (openBlock(), createElementBlock("div", $a, [createVNode(wa, {
+              m.value ? (openBlock(), createElementBlock("div", eo, [createVNode(Ta, {
                 "searchbar-id": e2.searchbarId,
                 "model-value": String(e2.modelValue || ""),
                 placeholder: e2.placeholder,
@@ -82915,14 +82955,14 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "model-value",
                 "placeholder"
               ])])) : createCommentVNode("", true)
-            ])], 8, Xa)) : createCommentVNode("", true)]),
+            ])], 8, Za)) : createCommentVNode("", true)]),
             _: 3
           }, 8, ["active"])) : createCommentVNode("", true),
           renderSlot(t2.$slots, "default")
-        ])]), createBaseVNode("div", eo, [I2.value && !h2.value ? (openBlock(), createElementBlock("div", to, [renderSlot(t2.$slots, "mainnav", { hidemodal: g })])) : createCommentVNode("", true)])]);
+        ])]), createBaseVNode("div", to, [I2.value && !h2.value ? (openBlock(), createElementBlock("div", no, [renderSlot(t2.$slots, "mainnav", { hidemodal: g })])) : createCommentVNode("", true)])]);
       };
     }
-  }), io = /* @__PURE__ */ defineComponent({
+  }), ao = /* @__PURE__ */ defineComponent({
     __name: "DsfrHighlight",
     props: {
       text: { default: void 0 },
@@ -82936,11 +82976,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         "fr-text--sm": e2.small && !e2.large
       }) }, [createTextVNode(toDisplayString(e2.text) + " ", 1), renderSlot(t.$slots, "default")], 2)], 2));
     }
-  }), ao = ["data-testid"], oo = {
+  }), oo = ["data-testid"], so = {
     class: "fr-messages-group",
     role: "alert",
     "aria-live": "polite"
-  }, so = ["id", "data-testid"], co = ["id", "data-testid"], lo = ["id", "data-testid"], uo = ["id", "data-testid"], fo = /* @__PURE__ */ defineComponent({
+  }, co = ["id", "data-testid"], lo = ["id", "data-testid"], uo = ["id", "data-testid"], fo = ["id", "data-testid"], po = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrInputGroup",
     props: {
@@ -82960,35 +83000,35 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(e2) {
       let n = e2;
       function r(e3, t) {
-        return Array.from(Array.from({ length: e3.length })).map((e4, n2) => `${t}-${n2 + 1}`).join(" ");
+        return e3.map((e4, n2) => `${t}-${n2 + 1}`).join(" ");
       }
-      let i2 = computed(() => {
-        if (!(!n.errorMessage && !n.validMessage)) {
-          if (Array.isArray(n.errorMessage)) return r(n.errorMessage, n.descriptionId);
-          if (typeof n.errorMessage == "string" || typeof n.validMessage == "string") return n.descriptionId;
-          if (Array.isArray(n.validMessage)) return r(n.validMessage, n.descriptionId);
-        }
+      function i2(e3) {
+        return Array.isArray(e3) ? e3.length > 0 : !!e3;
+      }
+      let u2 = computed(() => i2(n.errorMessage)), d = computed(() => !u2.value && i2(n.validMessage)), f2 = computed(() => {
+        let e3 = u2.value ? n.errorMessage : d.value ? n.validMessage : void 0;
+        if (e3) return Array.isArray(e3) ? r(e3, n.descriptionId) : n.descriptionId;
       });
       return (n2, r2) => (openBlock(), createElementBlock("div", {
         class: normalizeClass(["fr-input-group", [{
           "fr-input-group--disabled": "disabled" in n2.$attrs && n2.$attrs.disabled !== false && n2.$attrs.disabled !== void 0,
-          "fr-input-group--error": e2.errorMessage,
-          "fr-input-group--valid": e2.validMessage && !e2.errorMessage
+          "fr-input-group--error": u2.value,
+          "fr-input-group--valid": d.value
         }, e2.wrapperClass]]),
         "data-testid": e2.inputGroupId
       }, [
         renderSlot(n2.$slots, "before-input"),
         renderSlot(n2.$slots, "default", {
-          isValid: !!e2.validMessage,
-          isInvalid: !!e2.errorMessage,
-          descriptionId: i2.value
+          isValid: d.value,
+          isInvalid: u2.value,
+          descriptionId: f2.value
         }),
-        n2.$slots.default ? createCommentVNode("", true) : (openBlock(), createBlock(Sa, mergeProps({ key: 0 }, n2.$attrs, {
-          "is-valid": !!e2.validMessage,
-          "is-invalid": !!e2.errorMessage,
+        n2.$slots.default ? createCommentVNode("", true) : (openBlock(), createBlock(Ca, mergeProps({ key: 0 }, n2.$attrs, {
+          "is-valid": d.value,
+          "is-invalid": u2.value,
           label: e2.label,
           hint: e2.hint,
-          "description-id": i2.value,
+          "description-id": f2.value,
           "label-visible": e2.labelVisible,
           "model-value": e2.modelValue,
           placeholder: e2.placeholder,
@@ -83003,43 +83043,43 @@ Expected function or array of functions, received type ${typeof value2}.`
           "model-value",
           "placeholder"
         ])),
-        createBaseVNode("div", oo, [Array.isArray(e2.errorMessage) ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(e2.errorMessage, (t, n3) => (openBlock(), createElementBlock("p", {
+        createBaseVNode("div", so, [u2.value && Array.isArray(e2.errorMessage) ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(e2.errorMessage, (t, n3) => (openBlock(), createElementBlock("p", {
           id: `${e2.descriptionId}-${n3 + 1}`,
           key: t,
           "data-testid": e2.descriptionId,
           class: "fr-error-text"
-        }, toDisplayString(t), 9, so))), 128)) : e2.errorMessage ? (openBlock(), createElementBlock("p", {
+        }, toDisplayString(t), 9, co))), 128)) : u2.value && typeof e2.errorMessage == "string" ? (openBlock(), createElementBlock("p", {
           id: e2.descriptionId,
           key: e2.errorMessage,
           "data-testid": e2.descriptionId,
           class: "fr-error-text"
-        }, toDisplayString(e2.errorMessage), 9, co)) : Array.isArray(e2.validMessage) ? (openBlock(true), createElementBlock(Fragment, { key: 2 }, renderList(e2.validMessage, (t, n3) => (openBlock(), createElementBlock("p", {
+        }, toDisplayString(e2.errorMessage), 9, lo)) : d.value && Array.isArray(e2.validMessage) ? (openBlock(true), createElementBlock(Fragment, { key: 2 }, renderList(e2.validMessage, (t, n3) => (openBlock(), createElementBlock("p", {
           id: `${e2.descriptionId}-${n3 + 1}`,
           key: t,
           "data-testid": e2.descriptionId,
           class: "fr-valid-text"
-        }, toDisplayString(t), 9, lo))), 128)) : e2.validMessage ? (openBlock(), createElementBlock("p", {
+        }, toDisplayString(t), 9, uo))), 128)) : d.value && typeof e2.validMessage == "string" ? (openBlock(), createElementBlock("p", {
           id: e2.descriptionId,
           key: e2.validMessage,
           "data-testid": e2.descriptionId,
           class: "fr-valid-text"
-        }, toDisplayString(e2.validMessage), 9, uo)) : createCommentVNode("", true)])
-      ], 10, ao));
+        }, toDisplayString(e2.validMessage), 9, fo)) : createCommentVNode("", true)])
+      ], 10, oo));
     }
-  }), po = [
+  }), mo = [
     "id",
     "aria-labelledby",
     "aria-describedby",
     "role",
     "open"
-  ], mo = { class: "fr-container fr-container--fluid fr-container-md" }, ho = { class: "fr-grid-row fr-grid-row--center" }, go = { class: "fr-modal__header" }, _o = [
+  ], ho = { class: "fr-container fr-container--fluid fr-container-md" }, go = { class: "fr-grid-row fr-grid-row--center" }, _o = { class: "fr-modal__header" }, vo = [
     "id",
     "title",
     "aria-controls"
-  ], vo = ["id"], yo = {
+  ], yo = ["id"], bo = {
     key: 0,
     class: "fr-modal__footer"
-  }, bo = 2, xo = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, xo = 2, So = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrModal",
     props: {
       modalId: { default: () => Z$1("modal", "dialog") },
@@ -83106,12 +83146,12 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       let I2 = computed(() => typeof n.icon == "string" && n.icon.startsWith("fr-icon-")), L2 = computed(() => I2.value ? void 0 : typeof n.icon == "string" ? {
         name: n.icon,
-        scale: bo
+        scale: xo
       } : n.icon && typeof n.icon == "object" ? {
-        scale: bo,
+        scale: xo,
         ...n.icon
       } : void 0);
-      return (t2, n2) => e2.opened ? (openBlock(), createBlock(unref(da), {
+      return (t2, n2) => e2.opened ? (openBlock(), createBlock(unref(fa), {
         key: 0,
         "initial-focus": g,
         "fallback-focus": g,
@@ -83130,7 +83170,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             class: normalizeClass(["fr-modal", { "fr-modal--opened": e2.opened }]),
             open: e2.opened,
             onClick: d
-          }, [createBaseVNode("div", mo, [createBaseVNode("div", ho, [createBaseVNode("div", { class: normalizeClass(["fr-col-12", {
+          }, [createBaseVNode("div", ho, [createBaseVNode("div", go, [createBaseVNode("div", { class: normalizeClass(["fr-col-12", {
             "fr-col-md-8": e2.size === "lg",
             "fr-col-md-6": e2.size === "md",
             "fr-col-md-4": e2.size === "sm"
@@ -83140,7 +83180,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             class: normalizeClass(["fr-modal__body", { "fr-scroll-divider": T2.value }]),
             onScroll: D
           }, [
-            createBaseVNode("div", go, [createBaseVNode("button", {
+            createBaseVNode("div", _o, [createBaseVNode("button", {
               id: p5.value,
               ref_key: "closeBtn",
               ref: m,
@@ -83149,7 +83189,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               "aria-controls": `dialog-${e2.modalId}`,
               type: "button",
               onClick: n2[0] || (n2[0] = (e3) => P())
-            }, [createBaseVNode("span", null, toDisplayString(e2.closeButtonLabel), 1)], 8, _o)]),
+            }, [createBaseVNode("span", null, toDisplayString(e2.closeButtonLabel), 1)], 8, vo)]),
             createBaseVNode("div", {
               ref_key: "modalContent",
               ref: S,
@@ -83163,32 +83203,32 @@ Expected function or array of functions, received type ${typeof value2}.`
                 class: normalizeClass({ [String(e2.icon)]: I2.value })
               }, [e2.icon && L2.value ? (openBlock(), createBlock($, normalizeProps(mergeProps({ key: 0 }, L2.value)), null, 16)) : createCommentVNode("", true)], 2)) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(e2.title), 1)]),
               _: 1
-            }, 8, ["id"])), createBaseVNode("div", { id: `${e2.modalId}-description` }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 8, vo)], 512),
-            ((_a2 = e2.actions) == null ? void 0 : _a2.length) || t2.$slots.footer ? (openBlock(), createElementBlock("div", yo, [renderSlot(t2.$slots, "footer", {}, void 0, true), ((_b = e2.actions) == null ? void 0 : _b.length) ? (openBlock(), createBlock(rt, {
+            }, 8, ["id"])), createBaseVNode("div", { id: `${e2.modalId}-description` }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 8, yo)], 512),
+            ((_a2 = e2.actions) == null ? void 0 : _a2.length) || t2.$slots.footer ? (openBlock(), createElementBlock("div", bo, [renderSlot(t2.$slots, "footer", {}, void 0, true), ((_b = e2.actions) == null ? void 0 : _b.length) ? (openBlock(), createBlock(rt, {
               key: 0,
               align: "right",
               buttons: e2.actions,
               "inline-layout-when": "large",
               reverse: ""
             }, null, 8, ["buttons"])) : createCommentVNode("", true)])) : createCommentVNode("", true)
-          ], 34)], 2)])])], 10, po)];
+          ], 34)], 2)])])], 10, mo)];
         }),
         _: 3
       }, 8, ["tabbable-options"])) : createCommentVNode("", true);
     }
-  }), [["__scopeId", "data-v-c3039e1e"]]), So = ["for"], Co = {
+  }), [["__scopeId", "data-v-c3039e1e"]]), Co = ["for"], wo = {
     key: 0,
     class: "required"
-  }, wo = {
+  }, To = {
     key: 0,
     class: "fr-hint-text"
-  }, To = ["id"], Eo = ["id"], Do = {
+  }, Eo = ["id"], Do = ["id"], Oo = {
     key: 0,
     class: "fr-btns-group"
-  }, Oo = {
+  }, ko = {
     key: 1,
     class: "fr-input-group"
-  }, ko = { class: "fr-input-wrap fr-icon-search-line" }, Ao = { class: "fr-checkbox-group fr-checkbox-group--sm" }, jo = { key: 2 }, Mo = ["id"], No = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Ao = { class: "fr-input-wrap fr-icon-search-line" }, jo = { class: "fr-checkbox-group fr-checkbox-group--sm" }, Mo = { key: 2 }, No = ["id"], Po = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrMultiselect",
     props: /* @__PURE__ */ mergeModels({
       modelValue: {},
@@ -83232,7 +83272,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         if (typeof e3 == "string" || typeof e3 == "number") return e3;
         throw Error("Option is not a valid string, number, or object with idKey.");
-      }, o = (e3, t, n2) => `${t}-${i2(e3, n2)}`, f2 = /* @__PURE__ */ ref(null), p5 = /* @__PURE__ */ ref(false), m = useModel(e2, "modelValue"), h2 = /* @__PURE__ */ ref(0), g = computed(() => n.errorMessage || n.successMessage), _ = computed(() => n.errorMessage ? "error" : "valid"), y = [], { collapse: x, collapsing: C, cssExpanded: w, doExpand: D, onTransitionEnd: ee } = J(), j = () => document.querySelectorAll(`[id^="${n.id}-"][id$="-checkbox"]`), M5 = /* @__PURE__ */ ref(false), P = /* @__PURE__ */ ref("");
+      }, o = (e3, t, n2) => `${t}-${i2(e3, n2)}`, f2 = /* @__PURE__ */ ref(null), p5 = /* @__PURE__ */ ref(false), m = useModel(e2, "modelValue"), h2 = /* @__PURE__ */ ref(0), g = computed(() => n.errorMessage || n.successMessage), _ = computed(() => n.errorMessage ? "error" : "valid"), y = [], { collapse: x, collapsing: C, cssExpanded: w, doExpand: D, onTransitionEnd: ee } = Y(), j = () => document.querySelectorAll(`[id^="${n.id}-"][id$="-checkbox"]`), M5 = /* @__PURE__ */ ref(false), P = /* @__PURE__ */ ref("");
       function I2(e3) {
         e3.key === "Escape" && ne();
       }
@@ -83277,22 +83317,22 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
         document.removeEventListener("click", L2), document.removeEventListener("keydown", I2);
       }
-      let ae = computed(() => n.options.filter((e3) => typeof e3 == "object" && e3 ? n.filteringKeys.some((t) => `${e3[t]}`.toLowerCase().includes(P.value.toLowerCase())) : `${e3}`.toLowerCase().includes(P.value.toLowerCase()))), V2 = computed(() => n.modelValue.length < ae.value.length ? false : ae.value.every((e3) => {
+      let V2 = computed(() => n.options.filter((e3) => typeof e3 == "object" && e3 ? n.filteringKeys.some((t) => `${e3[t]}`.toLowerCase().includes(P.value.toLowerCase())) : `${e3}`.toLowerCase().includes(P.value.toLowerCase()))), H = computed(() => n.modelValue.length < V2.value.length ? false : V2.value.every((e3) => {
         let t = i2(e3, n.idKey);
         return n.modelValue.includes(t);
-      })), oe = () => {
+      })), ae = () => {
         let e3 = new Set(m.value || []);
-        V2.value ? ae.value.forEach((t) => {
+        H.value ? V2.value.forEach((t) => {
           let r2 = i2(t, n.idKey);
           e3.delete(r2);
-        }) : ae.value.forEach((t) => {
+        }) : V2.value.forEach((t) => {
           let r2 = i2(t, n.idKey);
           e3.add(r2);
         }), m.value = Array.from(e3);
-      }, se = (e3) => {
+      }, oe = (e3) => {
         let [t] = j();
         t && (e3.preventDefault(), t.focus());
-      }, G = (e3) => {
+      }, se = (e3) => {
         var _a2;
         e3.preventDefault();
         let t = j(), n2 = document.activeElement, r2 = Array.from(t).indexOf(n2);
@@ -83313,20 +83353,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       onUnmounted(() => {
         ie();
       });
-      let ue2 = computed(() => {
+      let q2 = computed(() => {
         var _a2;
         let e3 = ((_a2 = m.value) == null ? void 0 : _a2.length) ?? 0, t = e3 === 0, n2 = e3 > 1;
         return t ? "Sélectionner une option" : `${e3} option${n2 ? "s" : ""} sélectionnée${n2 ? "s" : ""}`;
-      }), q2 = computed(() => [
+      }), ue2 = computed(() => [
         "fr-label",
         { invisible: !n.labelVisible },
         n.labelClass
       ]);
       return (r2, a3) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-select-group", { [`fr-select-group--${_.value}`]: g.value }]) }, [
         createBaseVNode("label", {
-          class: normalizeClass(q2.value),
+          class: normalizeClass(ue2.value),
           for: e2.id
-        }, [renderSlot(r2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(r2.$slots, "required-tip", {}, () => ["required" in r2.$attrs && r2.$attrs.required !== false ? (openBlock(), createElementBlock("span", Co)) : createCommentVNode("", true)], true)], true), n.hint || r2.$slots.hint ? (openBlock(), createElementBlock("span", wo, [renderSlot(r2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(n.hint), 1)], true)])) : createCommentVNode("", true)], 10, So),
+        }, [renderSlot(r2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(r2.$slots, "required-tip", {}, () => ["required" in r2.$attrs && r2.$attrs.required !== false ? (openBlock(), createElementBlock("span", wo)) : createCommentVNode("", true)], true)], true), n.hint || r2.$slots.hint ? (openBlock(), createElementBlock("span", To, [renderSlot(r2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(n.hint), 1)], true)])) : createCommentVNode("", true)], 10, Co),
         createVNode(nt, mergeProps({
           id: n.id,
           ref_key: "host",
@@ -83342,7 +83382,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           onClick: re,
           onKeydown: withKeys(withModifiers(K2, ["shift"]), ["tab"])
         }), {
-          default: withCtx(() => [renderSlot(r2.$slots, "button-label", {}, () => [createTextVNode(toDisplayString(n.buttonLabel || ue2.value), 1)], true)]),
+          default: withCtx(() => [renderSlot(r2.$slots, "button-label", {}, () => [createTextVNode(toDisplayString(n.buttonLabel || q2.value), 1)], true)]),
           _: 3
         }, 16, [
           "id",
@@ -83366,20 +83406,20 @@ Expected function or array of functions, received type ${typeof value2}.`
           createBaseVNode("p", {
             id: `${e2.id}-text-hint`,
             class: "fr-sr-only"
-          }, " Utilisez la tabulation (ou les touches flèches) pour naviguer dans la liste des suggestions ", 8, Eo),
-          e2.selectAll ? (openBlock(), createElementBlock("ul", Do, [createBaseVNode("li", null, [createVNode(nt, {
+          }, " Utilisez la tabulation (ou les touches flèches) pour naviguer dans la liste des suggestions ", 8, Do),
+          e2.selectAll ? (openBlock(), createElementBlock("ul", Oo, [createBaseVNode("li", null, [createVNode(nt, {
             type: "button",
             name: "select-all",
             secondary: "",
             size: "sm",
-            disabled: ae.value.length === 0,
-            onClick: oe,
+            disabled: V2.value.length === 0,
+            onClick: ae,
             onKeydown: withKeys(withModifiers(K2, ["shift"]), ["tab"])
           }, {
-            default: withCtx(() => [createBaseVNode("span", { class: normalizeClass(["fr-multiselect__search__icon", V2.value ? "fr-icon-close-circle-line" : "fr-icon-check-line"]) }, null, 2), createTextVNode(" " + toDisplayString(n.selectAllLabel[+!!V2.value]), 1)]),
+            default: withCtx(() => [createBaseVNode("span", { class: normalizeClass(["fr-multiselect__search__icon", H.value ? "fr-icon-close-circle-line" : "fr-icon-check-line"]) }, null, 2), createTextVNode(" " + toDisplayString(n.selectAllLabel[+!!H.value]), 1)]),
             _: 1
           }, 8, ["disabled", "onKeydown"])])])) : createCommentVNode("", true),
-          n.search ? (openBlock(), createElementBlock("div", Oo, [createBaseVNode("div", ko, [createVNode(Sa, {
+          n.search ? (openBlock(), createElementBlock("div", ko, [createBaseVNode("div", Ao, [createVNode(Ca, {
             modelValue: P.value,
             "onUpdate:modelValue": a3[0] || (a3[0] = (e3) => P.value = e3),
             "aria-describedby": `${n.id}-text-hint`,
@@ -83388,8 +83428,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             placeholder: "Rechercher",
             type: "text",
             onKeydown: [
-              withKeys(se, ["down"]),
-              withKeys(se, ["right"]),
+              withKeys(oe, ["down"]),
+              withKeys(oe, ["right"]),
               withKeys(K2, ["tab"])
             ]
           }, null, 8, [
@@ -83400,7 +83440,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             class: "fr-messages-group",
             "aria-live": "assertive"
           }, null, -1))])) : createCommentVNode("", true),
-          createVNode(Vn, {
+          createVNode(Hn, {
             id: `${n.id}-checkboxes`,
             class: "fr-multiselect__collapse__fieldset",
             "aria-live": "polite",
@@ -83408,10 +83448,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             legend: n.legend,
             "legend-id": `${n.id}-checkboxes-legend`
           }, {
-            default: withCtx(() => [renderSlot(r2.$slots, "legend", {}, void 0, true), (openBlock(true), createElementBlock(Fragment, null, renderList(ae.value, (t) => (openBlock(), createElementBlock("div", {
+            default: withCtx(() => [renderSlot(r2.$slots, "legend", {}, void 0, true), (openBlock(true), createElementBlock(Fragment, null, renderList(V2.value, (t) => (openBlock(), createElementBlock("div", {
               key: `${o(t, e2.id, n.idKey)}-checkbox`,
               class: "fr-fieldset__element"
-            }, [createBaseVNode("div", Ao, [createVNode(Dt, {
+            }, [createBaseVNode("div", jo, [createVNode(Dt, {
               id: `${o(t, e2.id, n.idKey)}-checkbox`,
               modelValue: m.value,
               "onUpdate:modelValue": a3[1] || (a3[1] = (e3) => m.value = e3),
@@ -83419,8 +83459,8 @@ Expected function or array of functions, received type ${typeof value2}.`
               name: `${o(t, e2.id, n.idKey)}-checkbox`,
               small: "",
               onKeydown: [
-                withKeys(G, ["down"]),
-                withKeys(G, ["right"]),
+                withKeys(se, ["down"]),
+                withKeys(se, ["right"]),
                 withKeys(ce2, ["up"]),
                 withKeys(ce2, ["left"]),
                 withKeys(le2, ["tab"])
@@ -83441,16 +83481,16 @@ Expected function or array of functions, received type ${typeof value2}.`
             "legend",
             "legend-id"
           ]),
-          ae.value.length === 0 ? (openBlock(), createElementBlock("div", jo, [renderSlot(r2.$slots, "no-results", {}, () => [a3[4] || (a3[4] = createTextVNode(" Pas de résultat ", -1))], true)])) : createCommentVNode("", true)
-        ], 46, To)) : createCommentVNode("", true),
+          V2.value.length === 0 ? (openBlock(), createElementBlock("div", Mo, [renderSlot(r2.$slots, "no-results", {}, () => [a3[4] || (a3[4] = createTextVNode(" Pas de résultat ", -1))], true)])) : createCommentVNode("", true)
+        ], 46, Eo)) : createCommentVNode("", true),
         g.value ? (openBlock(), createElementBlock("p", {
           key: 1,
           id: `select-${_.value}-desc-${_.value}`,
           class: normalizeClass(`fr-${_.value}-text`)
-        }, toDisplayString(g.value), 11, Mo)) : createCommentVNode("", true)
+        }, toDisplayString(g.value), 11, No)) : createCommentVNode("", true)
       ], 2));
     }
-  }), [["__scopeId", "data-v-fd3e87f4"]]), Po = ["id", "aria-current"], Fo = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-fd3e87f4"]]), Fo = ["id", "aria-current"], Io = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationItem",
     props: {
       id: { default: () => Z$1("nav", "item") },
@@ -83461,9 +83501,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         id: e2.id,
         class: "fr-nav__item",
         "aria-current": e2.active ? "page" : void 0
-      }, [renderSlot(t.$slots, "default", {}, void 0, true)], 8, Po));
+      }, [renderSlot(t.$slots, "default", {}, void 0, true)], 8, Fo));
     }
-  }), [["__scopeId", "data-v-15cf9b89"]]), Io = ["href"], Lo = 2, Ro = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-15cf9b89"]]), Lo = ["href"], Ro = 2, zo = /* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationMenuLink",
     props: {
       id: { default: () => Z$1("menu-link") },
@@ -83479,12 +83519,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(e2) {
       var _a2;
       let t = e2, n = computed(() => typeof t.to == "string" && t.to.startsWith("http")), r = computed(() => t.icon && typeof t.icon == "string" && t.icon.startsWith("fr-icon-")), i2 = computed(() => r.value || !t.icon ? void 0 : typeof t.icon == "string" ? {
-        scale: Lo,
+        scale: Ro,
         name: t.icon
       } : {
-        scale: Lo,
+        scale: Ro,
         ...t.icon || {}
-      }), l = ((_a2 = hasInjectionContext() ? inject(q, void 0) : void 0) == null ? void 0 : _a2()) ?? (() => {
+      }), l = ((_a2 = hasInjectionContext() ? inject(ue, void 0) : void 0) == null ? void 0 : _a2()) ?? (() => {
       });
       return (t2, a3) => {
         let d = resolveComponent("RouterLink");
@@ -83496,7 +83536,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           onClick: a3[0] || (a3[0] = (n2) => {
             t2.$emit("toggleId", e2.id), e2.onClick(n2);
           })
-        }, toDisplayString(e2.text), 9, Io)) : (openBlock(), createBlock(d, {
+        }, toDisplayString(e2.text), 9, Lo)) : (openBlock(), createBlock(d, {
           key: 1,
           class: normalizeClass(["fr-nav__link", { [String(e2.icon)]: r.value }]),
           "data-testid": "nav-router-link",
@@ -83511,7 +83551,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, 8, ["to", "class"]));
       };
     }
-  }), zo = { class: "fr-col-12 fr-col-lg-3" }, Bo = { class: "fr-mega-menu__category" }, Vo = { class: "fr-mega-menu__list" }, Ho = /* @__PURE__ */ defineComponent({
+  }), Bo = { class: "fr-col-12 fr-col-lg-3" }, Vo = { class: "fr-mega-menu__category" }, Ho = { class: "fr-mega-menu__list" }, Uo = /* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationMegaMenuCategory",
     props: {
       title: {},
@@ -83520,21 +83560,21 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["toggleId"],
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("div", zo, [createBaseVNode("h5", Bo, [createBaseVNode("a", {
+      return (n, r) => (openBlock(), createElementBlock("div", Bo, [createBaseVNode("h5", Vo, [createBaseVNode("a", {
         class: "fr-nav__link",
         href: "#",
         onClick: r[0] || (r[0] = withModifiers(() => {
         }, ["prevent"]))
-      }, toDisplayString(e2.title), 1)]), createBaseVNode("ul", Vo, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", {
+      }, toDisplayString(e2.title), 1)]), createBaseVNode("ul", Ho, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3, t) => (openBlock(), createElementBlock("li", {
         key: t,
         class: "fr-nav__link"
-      }, [createVNode(Ro, mergeProps({ ref_for: true }, e3, { onToggleId: r[1] || (r[1] = (e4) => n.$emit("toggleId", e4)) }), null, 16)]))), 128))])]));
+      }, [createVNode(zo, mergeProps({ ref_for: true }, e3, { onToggleId: r[1] || (r[1] = (e4) => n.$emit("toggleId", e4)) }), null, 16)]))), 128))])]));
     }
-  }), Uo = [
+  }), Wo = [
     "aria-expanded",
     "aria-current",
     "aria-controls"
-  ], Wo = ["id"], Go = { class: "fr-container fr-container--fluid fr-container-lg" }, Ko = { class: "fr-grid-row fr-grid-row-lg--gutters" }, qo = { class: "fr-col-12 fr-col-lg-8 fr-col-offset-lg-4--right fr-mb-4v" }, Jo = { class: "fr-mega-menu__leader" }, Yo = { class: "fr-h4 fr-mb-2v" }, Xo = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  ], Go = ["id"], Ko = { class: "fr-container fr-container--fluid fr-container-lg" }, qo = { class: "fr-grid-row fr-grid-row-lg--gutters" }, Jo = { class: "fr-col-12 fr-col-lg-8 fr-col-offset-lg-4--right fr-mb-4v" }, Yo = { class: "fr-mega-menu__leader" }, Xo = { class: "fr-h4 fr-mb-2v" }, Zo = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationMegaMenu",
     props: {
       id: { default: () => Z$1("mega-menu") },
@@ -83550,7 +83590,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["toggleId"],
     setup(e2) {
-      let n = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: f2, onTransitionEnd: p5 } = J(), m = computed(() => n.id === n.expandedId);
+      let n = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: f2, onTransitionEnd: p5 } = Y(), m = computed(() => n.id === n.expandedId);
       return watch(m, (e3, t) => {
         e3 !== t && f2(e3);
       }), onMounted(() => {
@@ -83563,7 +83603,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           "aria-current": e2.active || void 0,
           "aria-controls": e2.id,
           onClick: a3[0] || (a3[0] = (t) => n2.$emit("toggleId", e2.id))
-        }, toDisplayString(e2.title), 9, Uo), createBaseVNode("div", {
+        }, toDisplayString(e2.title), 9, Wo), createBaseVNode("div", {
           id: e2.id,
           ref_key: "collapse",
           ref: r,
@@ -83574,13 +83614,13 @@ Expected function or array of functions, received type ${typeof value2}.`
           }]),
           tabindex: "-1",
           onTransitionend: a3[4] || (a3[4] = (e3) => unref(p5)(m.value))
-        }, [createBaseVNode("div", Go, [createBaseVNode("button", {
+        }, [createBaseVNode("div", Ko, [createBaseVNode("button", {
           class: "fr-link--close fr-link",
           "aria-controls": "mega-menu-695",
           onClick: a3[1] || (a3[1] = (t) => n2.$emit("toggleId", e2.id))
-        }, " Fermer "), createBaseVNode("div", Ko, [
-          createBaseVNode("div", qo, [createBaseVNode("div", Jo, [
-            createBaseVNode("h4", Yo, toDisplayString(e2.title), 1),
+        }, " Fermer "), createBaseVNode("div", qo, [
+          createBaseVNode("div", Jo, [createBaseVNode("div", Yo, [
+            createBaseVNode("h4", Xo, toDisplayString(e2.title), 1),
             createBaseVNode("p", null, [createTextVNode(toDisplayString(e2.description) + " ", 1), renderSlot(n2.$slots, "description", {}, void 0, true)]),
             createVNode(f3, {
               class: "fr-link fr-icon-arrow-right-line fr-link--icon-right fr-link--align-on-content",
@@ -83592,11 +83632,11 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, 8, ["to"])
           ])]),
           renderSlot(n2.$slots, "default", {}, void 0, true),
-          (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menus, (t, r2) => (openBlock(), createBlock(Ho, mergeProps({ key: r2 }, { ref_for: true }, t, { onToggleId: a3[3] || (a3[3] = (t2) => n2.$emit("toggleId", e2.expandedId)) }), null, 16))), 128))
-        ])])], 42, Wo)], 64);
+          (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menus, (t, r2) => (openBlock(), createBlock(Uo, mergeProps({ key: r2 }, { ref_for: true }, t, { onToggleId: a3[3] || (a3[3] = (t2) => n2.$emit("toggleId", e2.expandedId)) }), null, 16))), 128))
+        ])])], 42, Go)], 64);
       };
     }
-  }), [["__scopeId", "data-v-807e1059"]]), Zo = ["id", "aria-current"], Qo = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-807e1059"]]), Qo = ["id", "aria-current"], $o = /* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationMenuItem",
     props: {
       id: { default: () => Z$1("menu", "item") },
@@ -83607,13 +83647,13 @@ Expected function or array of functions, received type ${typeof value2}.`
         id: e2.id,
         class: "fr-menu__item",
         "aria-current": e2.active ? "page" : void 0
-      }, [renderSlot(t.$slots, "default")], 8, Zo));
+      }, [renderSlot(t.$slots, "default")], 8, Qo));
     }
-  }), $o = [
+  }), es = [
     "aria-expanded",
     "aria-current",
     "aria-controls"
-  ], es = ["id"], ts = { class: "fr-menu__list" }, ns = /* @__PURE__ */ defineComponent({
+  ], ts = ["id"], ns = { class: "fr-menu__list" }, rs = /* @__PURE__ */ defineComponent({
     __name: "DsfrNavigationMenu",
     props: {
       id: { default: () => Z$1("menu") },
@@ -83624,7 +83664,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["toggleId"],
     setup(e2) {
-      let n = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: u2, onTransitionEnd: f2 } = J(), p5 = computed(() => n.id === n.expandedId);
+      let n = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: u2, onTransitionEnd: f2 } = Y(), p5 = computed(() => n.id === n.expandedId);
       return watch(p5, (e3, t) => {
         e3 !== t && u2(e3);
       }), onMounted(() => {
@@ -83635,7 +83675,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-current": e2.active || void 0,
         "aria-controls": e2.id,
         onClick: a3[0] || (a3[0] = (t) => n2.$emit("toggleId", e2.id))
-      }, [createBaseVNode("span", null, toDisplayString(e2.title), 1)], 8, $o), createBaseVNode("div", {
+      }, [createBaseVNode("span", null, toDisplayString(e2.title), 1)], 8, es), createBaseVNode("div", {
         id: e2.id,
         ref_key: "collapse",
         ref: r,
@@ -83645,12 +83685,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         }]),
         "data-testid": "navigation-menu",
         onTransitionend: a3[2] || (a3[2] = (e3) => unref(f2)(p5.value))
-      }, [createBaseVNode("ul", ts, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (t, r2) => (openBlock(), createBlock(Qo, { key: r2 }, {
-        default: withCtx(() => [createVNode(Ro, mergeProps({ ref_for: true }, t, { onToggleId: a3[1] || (a3[1] = (t2) => n2.$emit("toggleId", e2.expandedId)) }), null, 16)]),
+      }, [createBaseVNode("ul", ns, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (t, r2) => (openBlock(), createBlock($o, { key: r2 }, {
+        default: withCtx(() => [createVNode(zo, mergeProps({ ref_for: true }, t, { onToggleId: a3[1] || (a3[1] = (t2) => n2.$emit("toggleId", e2.expandedId)) }), null, 16)]),
         _: 2
-      }, 1024))), 128))])], 42, es)], 64));
+      }, 1024))), 128))])], 42, ts)], 64));
     }
-  }), rs = ["id", "aria-label"], is = { class: "fr-nav__list" }, as = /* @__PURE__ */ defineComponent({
+  }), is = ["id", "aria-label"], as = { class: "fr-nav__list" }, os = /* @__PURE__ */ defineComponent({
     __name: "DsfrNavigation",
     props: {
       id: { default: () => Z$1("nav") },
@@ -83690,23 +83730,23 @@ Expected function or array of functions, received type ${typeof value2}.`
         class: "fr-nav",
         role: "navigation",
         "aria-label": e2.label
-      }, [createBaseVNode("ul", is, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.navItems, (e3, t) => (openBlock(), createBlock(Fo, {
+      }, [createBaseVNode("ul", as, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.navItems, (e3, t) => (openBlock(), createBlock(Io, {
         id: e3.id,
         key: t
       }, {
-        default: withCtx(() => [e3.to && e3.text ? (openBlock(), createBlock(Ro, mergeProps({
+        default: withCtx(() => [e3.to && e3.text ? (openBlock(), createBlock(zo, mergeProps({
           key: 0,
           ref_for: true
         }, e3, {
           "expanded-id": r.value,
           onToggleId: a4[0] || (a4[0] = (e4) => i2(e4))
-        }), null, 16, ["expanded-id"])) : e3.title && e3.links ? (openBlock(), createBlock(ns, mergeProps({
+        }), null, 16, ["expanded-id"])) : e3.title && e3.links ? (openBlock(), createBlock(rs, mergeProps({
           key: 1,
           ref_for: true
         }, e3, {
           "expanded-id": r.value,
           onToggleId: a4[1] || (a4[1] = (e4) => i2(e4))
-        }), null, 16, ["expanded-id"])) : e3.title && e3.menus ? (openBlock(), createBlock(Xo, mergeProps({
+        }), null, 16, ["expanded-id"])) : e3.title && e3.menus ? (openBlock(), createBlock(Zo, mergeProps({
           key: 2,
           ref_for: true
         }, e3, {
@@ -83714,9 +83754,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           onToggleId: a4[2] || (a4[2] = (e4) => i2(e4))
         }), null, 16, ["expanded-id"])) : createCommentVNode("", true)]),
         _: 2
-      }, 1032, ["id"]))), 128))])], 8, rs));
+      }, 1032, ["id"]))), 128))])], 8, is));
     }
-  }), os = { class: "fr-container" }, ss = { class: "fr-notice__body" }, cs = { class: "fr-notice__title" }, ls = { class: "fr-notice__desc" }, us = /* @__PURE__ */ defineComponent({
+  }), ss = { class: "fr-container" }, cs = { class: "fr-notice__body" }, ls = { class: "fr-notice__title" }, us = { class: "fr-notice__desc" }, ds = /* @__PURE__ */ defineComponent({
     __name: "DsfrNotice",
     props: {
       title: { default: "" },
@@ -83726,18 +83766,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["close"],
     setup(e2) {
-      return (t, n) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-notice", `fr-notice--${e2.type}`]) }, [createBaseVNode("div", os, [createBaseVNode("div", ss, [createBaseVNode("p", null, [createBaseVNode("span", cs, [renderSlot(t.$slots, "default", {}, () => [createTextVNode(toDisplayString(e2.title), 1)])]), createBaseVNode("span", ls, [renderSlot(t.$slots, "desc", {}, () => [createTextVNode(toDisplayString(e2.desc), 1)])])]), e2.closeable ? (openBlock(), createElementBlock("button", {
+      return (t, n) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-notice", `fr-notice--${e2.type}`]) }, [createBaseVNode("div", ss, [createBaseVNode("div", cs, [createBaseVNode("p", null, [createBaseVNode("span", ls, [renderSlot(t.$slots, "default", {}, () => [createTextVNode(toDisplayString(e2.title), 1)])]), createBaseVNode("span", us, [renderSlot(t.$slots, "desc", {}, () => [createTextVNode(toDisplayString(e2.desc), 1)])])]), e2.closeable ? (openBlock(), createElementBlock("button", {
         key: 0,
         class: "fr-btn--close fr-btn",
         title: "Masquer le message",
         onClick: n[0] || (n[0] = (e3) => t.$emit("close"))
       }, " Masquer le message ")) : createCommentVNode("", true)])])], 2));
     }
-  }), ds = /^data:image\/svg\+xml(?:;([^,]*))?,(.*)$/i, fs = "script,foreignObject,iframe,object,embed,audio,video,canvas", ps = /^on/i, ms = /^artwork-(?:decorative|minor|major)$/, hs = (e2, t) => e2.toLowerCase().split(";").filter(Boolean).includes("base64") ? globalThis.atob(t) : decodeURIComponent(t), gs = (e2) => {
-    e2.querySelectorAll(fs).forEach((e3) => e3.remove()), [e2, ...Array.from(e2.querySelectorAll("*"))].forEach((e3) => {
+  }), fs = /^data:image\/svg\+xml(?:;([^,]*))?,(.*)$/i, ps = "script,foreignObject,iframe,object,embed,audio,video,canvas", ms = /^on/i, hs = /^artwork-(?:decorative|minor|major)$/, gs = (e2, t) => e2.toLowerCase().split(";").filter(Boolean).includes("base64") ? globalThis.atob(t) : decodeURIComponent(t), _s = (e2) => {
+    e2.querySelectorAll(ps).forEach((e3) => e3.remove()), [e2, ...Array.from(e2.querySelectorAll("*"))].forEach((e3) => {
       Array.from(e3.attributes).forEach((t) => {
         let n = t.name.toLowerCase(), r = t.value.trim();
-        if (ps.test(n) || n === "src" || n === "style") {
+        if (ms.test(n) || n === "src" || n === "style") {
           e3.removeAttribute(t.name);
           return;
         }
@@ -83748,11 +83788,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         (n === "href" || n === "xlink:href") && !r.startsWith("#") && e3.removeAttribute(t.name);
       });
     });
-  }, _s = (e2, t) => {
+  }, vs = (e2, t) => {
     let n = /* @__PURE__ */ new Map();
     e2.querySelectorAll("[id]").forEach((e3) => {
       let r = e3.getAttribute("id");
-      if (!r || !ms.test(r)) return;
+      if (!r || !hs.test(r)) return;
       let i2 = `${r}-${t}`;
       n.set(r, i2), e3.setAttribute("id", i2);
     }), n.size !== 0 && e2.querySelectorAll("*").forEach((e3) => {
@@ -83763,17 +83803,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         }), r !== t2.value && e3.setAttribute(t2.name, r);
       });
     });
-  }, vs = (e2, t) => {
+  }, ys = (e2, t) => {
     if (!e2 || !globalThis.DOMParser || !globalThis.XMLSerializer) return "";
-    let n = e2.match(ds);
+    let n = e2.match(fs);
     if (!n) return "";
     try {
-      let e3 = hs(n[1] ?? "", n[2] ?? ""), r = new DOMParser().parseFromString(e3, "image/svg+xml").documentElement;
-      return r.tagName.toLowerCase() === "svg" ? (gs(r), _s(r, t), new XMLSerializer().serializeToString(r)) : "";
+      let e3 = gs(n[1] ?? "", n[2] ?? ""), r = new DOMParser().parseFromString(e3, "image/svg+xml").documentElement;
+      return r.tagName.toLowerCase() === "svg" ? (_s(r), vs(r, t), new XMLSerializer().serializeToString(r)) : "";
     } catch {
       return "";
     }
-  }, ys = ["src", "title"], bs = ["title", "innerHTML"], xs = ["src", "title"], Ss = { key: 0 }, Cs = ["href"], ws = ["href"], Ts = ["href"], Es = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, bs = ["src", "title"], xs = ["title", "innerHTML"], Ss = ["src", "title"], Cs = { key: 0 }, ws = ["href"], Ts = ["href"], Es = ["href"], Ds = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrPictogram",
     props: {
       imgSrc: { default: void 0 },
@@ -83793,7 +83833,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, i2 = Z$1("pictogram", "artwork").replace(/[^\w-]/g, "_"), o = computed(() => {
         var _a2;
         return !!((_a2 = t.svgPath) == null ? void 0 : _a2.match(n));
-      }), u2 = computed(() => vs(t.svgPath, i2)), d = (e3) => typeof e3 == "string" || typeof e3 == "number" ? e3 : void 0, f2 = computed(() => {
+      }), u2 = computed(() => ys(t.svgPath, i2)), d = (e3) => typeof e3 == "string" || typeof e3 == "number" ? e3 : void 0, f2 = computed(() => {
         let e3 = {
           ...r,
           ...t.svgAttrs
@@ -83809,20 +83849,20 @@ Expected function or array of functions, received type ${typeof value2}.`
         class: "fr-artwork",
         alt: "",
         title: e2.title
-      }, null, 8, ys)) : u2.value ? (openBlock(), createElementBlock("span", {
+      }, null, 8, bs)) : u2.value ? (openBlock(), createElementBlock("span", {
         key: 1,
         "aria-hidden": "true",
         class: "fr-artwork fr-artwork--inline",
         style: normalizeStyle(f2.value),
         title: e2.title,
         innerHTML: u2.value
-      }, null, 12, bs)) : o.value ? (openBlock(), createElementBlock("img", {
+      }, null, 12, xs)) : o.value ? (openBlock(), createElementBlock("img", {
         key: 2,
         src: e2.svgPath,
         class: "fr-artwork",
         alt: "",
         title: e2.title
-      }, null, 8, xs)) : e2.svgPath ? (openBlock(), createElementBlock("svg", mergeProps({
+      }, null, 8, Ss)) : e2.svgPath ? (openBlock(), createElementBlock("svg", mergeProps({
         key: 3,
         "aria-hidden": "true",
         class: "fr-artwork"
@@ -83830,27 +83870,27 @@ Expected function or array of functions, received type ${typeof value2}.`
         ...r,
         ...e2.svgAttrs
       }), [
-        e2.title ? (openBlock(), createElementBlock("title", Ss, toDisplayString(e2.title), 1)) : createCommentVNode("", true),
+        e2.title ? (openBlock(), createElementBlock("title", Cs, toDisplayString(e2.title), 1)) : createCommentVNode("", true),
         createBaseVNode("use", {
           class: "fr-artwork-decorative",
           href: `${e2.svgPath}#artwork-decorative`
-        }, null, 8, Cs),
+        }, null, 8, ws),
         createBaseVNode("use", {
           class: "fr-artwork-minor",
           href: `${e2.svgPath}#artwork-minor`
-        }, null, 8, ws),
+        }, null, 8, Ts),
         createBaseVNode("use", {
           class: "fr-artwork-major",
           href: `${e2.svgPath}#artwork-major`
-        }, null, 8, Ts)
+        }, null, 8, Es)
       ], 16)) : createCommentVNode("", true);
     }
-  }), [["__scopeId", "data-v-644b52dd"]]), Ds = ["aria-label"], Os = { class: "fr-content-media__img" }, ks = [
+  }), [["__scopeId", "data-v-644b52dd"]]), Os = ["aria-label"], ks = { class: "fr-content-media__img" }, As = [
     "src",
     "alt",
     "title",
     "ratio"
-  ], As = { class: "fr-content-media__caption" }, js = /* @__PURE__ */ defineComponent({
+  ], js = { class: "fr-content-media__caption" }, Ms = /* @__PURE__ */ defineComponent({
     __name: "DsfrPicture",
     props: {
       alt: { default: "" },
@@ -83868,19 +83908,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         }]),
         role: "group",
         "aria-label": e2.legend
-      }, [createBaseVNode("div", Os, [renderSlot(t.$slots, "default", {}, () => [e2.src ? (openBlock(), createElementBlock("img", {
+      }, [createBaseVNode("div", ks, [renderSlot(t.$slots, "default", {}, () => [e2.src ? (openBlock(), createElementBlock("img", {
         key: 0,
         src: e2.src,
         class: normalizeClass(["fr-responsive-img", `fr-ratio-${e2.ratio}`]),
         alt: e2.alt,
         title: e2.title,
         ratio: e2.ratio
-      }, null, 10, ks)) : createCommentVNode("", true)])]), createBaseVNode("figcaption", As, toDisplayString(e2.legend), 1)], 10, Ds));
+      }, null, 10, As)) : createCommentVNode("", true)])]), createBaseVNode("figcaption", js, toDisplayString(e2.legend), 1)], 10, Os));
     }
-  }), Ms = ["cite"], Ns = { class: "fr-quote__author" }, Ps = { class: "fr-quote__source" }, Fs = ["href"], Is = {
+  }), Ns = ["cite"], Ps = { class: "fr-quote__author" }, Fs = { class: "fr-quote__source" }, Is = ["href"], Ls = {
     key: 0,
     class: "fr-quote__image"
-  }, Ls = ["src"], Rs = /* @__PURE__ */ defineComponent({
+  }, Rs = ["src"], zs = /* @__PURE__ */ defineComponent({
     __name: "DsfrQuote",
     props: {
       quote: { default: void 0 },
@@ -83896,37 +83936,37 @@ Expected function or array of functions, received type ${typeof value2}.`
       return (n, r) => (openBlock(), createElementBlock("figure", { class: normalizeClass(["fr-quote fr-quote--column", { [`fr-quote--${e2.accent}`]: e2.accent }]) }, [e2.quote ? (openBlock(), createElementBlock("blockquote", {
         key: 0,
         cite: e2.sourceUrl
-      }, [createBaseVNode("p", { class: normalizeClass(`fr-text--${e2.size}`) }, " «" + toDisplayString(" ") + toDisplayString(e2.quote) + toDisplayString(" ") + "» ", 3)], 8, Ms)) : createCommentVNode("", true), createBaseVNode("figcaption", null, [
-        createBaseVNode("p", Ns, toDisplayString(e2.author), 1),
-        createBaseVNode("ul", Ps, [createBaseVNode("li", null, [createBaseVNode("cite", null, toDisplayString(e2.source), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.details, (e3, n2) => (openBlock(), createElementBlock("li", { key: n2 }, [typeof e3 == "object" ? (openBlock(), createElementBlock("a", {
+      }, [createBaseVNode("p", { class: normalizeClass(`fr-text--${e2.size}`) }, " «" + toDisplayString(" ") + toDisplayString(e2.quote) + toDisplayString(" ") + "» ", 3)], 8, Ns)) : createCommentVNode("", true), createBaseVNode("figcaption", null, [
+        createBaseVNode("p", Ps, toDisplayString(e2.author), 1),
+        createBaseVNode("ul", Fs, [createBaseVNode("li", null, [createBaseVNode("cite", null, toDisplayString(e2.source), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.details, (e3, n2) => (openBlock(), createElementBlock("li", { key: n2 }, [typeof e3 == "object" ? (openBlock(), createElementBlock("a", {
           key: 0,
           target: "_blank",
           rel: "noopener noreferrer",
           href: e3.url
-        }, toDisplayString(e3.label), 9, Fs)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(e3), 1)], 64))]))), 128))]),
-        e2.quoteImage ? (openBlock(), createElementBlock("div", Is, [createBaseVNode("img", {
+        }, toDisplayString(e3.label), 9, Is)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(e3), 1)], 64))]))), 128))]),
+        e2.quoteImage ? (openBlock(), createElementBlock("div", Ls, [createBaseVNode("img", {
           src: e2.quoteImage,
           class: "fr-responsive-img",
           alt: ""
-        }, null, 8, Ls)])) : createCommentVNode("", true)
+        }, null, 8, Rs)])) : createCommentVNode("", true)
       ])], 2));
     }
-  }), zs = [
+  }), Bs = [
     "id",
     "name",
     "value",
     "checked",
     "disabled"
-  ], Bs = ["for"], Vs = {
+  ], Vs = ["for"], Hs = {
     key: 0,
     class: "required"
-  }, Hs = {
-    key: 0,
-    class: "fr-hint-text"
   }, Us = {
     key: 0,
+    class: "fr-hint-text"
+  }, Ws = {
+    key: 0,
     class: "fr-radio-rich__pictogram"
-  }, Ws = /* @__PURE__ */ defineComponent({
+  }, Gs = /* @__PURE__ */ defineComponent({
     __name: "DsfrRadioButton",
     props: {
       id: { default: () => Z$1("basic", "radio") },
@@ -83976,12 +84016,12 @@ Expected function or array of functions, received type ${typeof value2}.`
           value: e2.value,
           checked: e2.modelValue === e2.value,
           disabled: e2.disabled
-        }, t2.$attrs, { onClick: r[0] || (r[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, zs),
+        }, t2.$attrs, { onClick: r[0] || (r[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, Bs),
         createBaseVNode("label", {
           for: e2.id,
           class: "fr-label"
-        }, [renderSlot(t2.$slots, "label", { label: e2.label }, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", Vs, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", Hs, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, Bs),
-        e2.img || e2.svgPath ? (openBlock(), createElementBlock("div", Us, [createVNode(Es, {
+        }, [renderSlot(t2.$slots, "label", { label: e2.label }, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", Hs, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", Us, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, Vs),
+        e2.img || e2.svgPath ? (openBlock(), createElementBlock("div", Ws, [createVNode(Ds, {
           "img-src": e2.img,
           "svg-path": e2.svgPath,
           "svg-attrs": e2.svgAttrs,
@@ -83994,19 +84034,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         ])])) : createCommentVNode("", true)
       ], 2)], 2));
     }
-  }), Gs = { class: "fr-form-group" }, Ks = [
+  }), Ks = { class: "fr-form-group" }, qs = [
     "disabled",
     "aria-labelledby",
     "aria-describedby",
     "aria-invalid",
     "role"
-  ], qs = ["id"], Js = {
+  ], Js = ["id"], Ys = {
     key: 0,
     class: "fr-hint-text"
-  }, Ys = {
+  }, Xs = {
     key: 0,
     class: "required"
-  }, Xs = ["id"], Zs = /* @__PURE__ */ defineComponent({
+  }, Zs = ["id"], Qs = /* @__PURE__ */ defineComponent({
     __name: "DsfrRadioButtonSet",
     props: {
       titleId: { default: () => Z$1("radio-button", "group") },
@@ -84033,7 +84073,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let r = e2, i2 = n, d = computed(() => r.errorMessage || r.validMessage), f2 = computed(() => r.errorMessage ? "fr-error-text" : "fr-valid-text"), p5 = (e3) => {
         e3 !== r.modelValue && i2("update:modelValue", e3);
       }, m = computed(() => d.value ? `messages-${r.titleId}` : void 0);
-      return (n2, r2) => (openBlock(), createElementBlock("div", Gs, [createBaseVNode("fieldset", {
+      return (n2, r2) => (openBlock(), createElementBlock("div", Ks, [createBaseVNode("fieldset", {
         class: normalizeClass(["fr-fieldset", {
           "fr-fieldset--error": e2.errorMessage,
           "fr-fieldset--valid": e2.validMessage
@@ -84050,10 +84090,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-fieldset__legend fr-fieldset__legend--regular"
         }, [renderSlot(n2.$slots, "legend", {}, () => [
           createTextVNode(toDisplayString(e2.legend) + " ", 1),
-          e2.hint || n2.$slots.hint ? (openBlock(), createElementBlock("span", Js, [renderSlot(n2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(e2.hint), 1)])])) : createCommentVNode("", true),
-          renderSlot(n2.$slots, "required-tip", {}, () => [e2.required ? (openBlock(), createElementBlock("span", Ys, " *")) : createCommentVNode("", true)])
-        ])], 8, qs)) : createCommentVNode("", true),
-        renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(Ws, mergeProps({
+          e2.hint || n2.$slots.hint ? (openBlock(), createElementBlock("span", Ys, [renderSlot(n2.$slots, "hint", {}, () => [createTextVNode(toDisplayString(e2.hint), 1)])])) : createCommentVNode("", true),
+          renderSlot(n2.$slots, "required-tip", {}, () => [e2.required ? (openBlock(), createElementBlock("span", Xs, " *")) : createCommentVNode("", true)])
+        ])], 8, Js)) : createCommentVNode("", true),
+        renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(Gs, mergeProps({
           key: typeof t.value == "boolean" ? n3 : t.value || n3,
           name: e2.name,
           "aria-disabled": t.disabled
@@ -84077,16 +84117,16 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-messages-group",
           "aria-live": "assertive",
           role: "alert"
-        }, [createBaseVNode("p", { class: normalizeClass(["fr-message fr-message--info flex items-center", f2.value]) }, toDisplayString(d.value), 3)], 8, Xs)) : createCommentVNode("", true)
-      ], 10, Ks)]));
+        }, [createBaseVNode("p", { class: normalizeClass(["fr-message fr-message--info flex items-center", f2.value]) }, toDisplayString(d.value), 3)], 8, Zs)) : createCommentVNode("", true)
+      ], 10, qs)]));
     }
-  }), Qs = ["id"], $s = ["id"], ec = {
+  }), $s = ["id"], ec = ["id"], tc = {
     key: 0,
     class: "required"
-  }, tc = {
+  }, nc = {
     key: 0,
     class: "fr-hint-text"
-  }, nc = ["data-fr-prefix", "data-fr-suffix"], rc = [
+  }, rc = ["data-fr-prefix", "data-fr-suffix"], ic = [
     "id",
     "min",
     "max",
@@ -84096,7 +84136,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], ic = [
+  ], ac = [
     "id",
     "min",
     "max",
@@ -84106,17 +84146,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], ac = {
+  ], oc = {
     key: 1,
     class: "fr-range__min",
     "aria-hidden": "true",
     "data-fr-js-range-limit": "true"
-  }, oc = {
+  }, sc = {
     key: 2,
     class: "fr-range__max",
     "aria-hidden": "true",
     "data-fr-js-range-limit": "true"
-  }, sc = ["id"], cc = ["id"], lc = /* @__PURE__ */ defineComponent({
+  }, cc = ["id"], lc = ["id"], uc = /* @__PURE__ */ defineComponent({
     __name: "DsfrRange",
     props: {
       id: { default: () => Z$1("range") },
@@ -84171,7 +84211,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         createBaseVNode("label", {
           id: `${e2.id}-label`,
           class: "fr-label"
-        }, [renderSlot(t2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", ec, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", tc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, $s),
+        }, [renderSlot(t2.$slots, "label", {}, () => [createTextVNode(toDisplayString(e2.label) + " ", 1), renderSlot(t2.$slots, "required-tip", {}, () => [t2.$attrs.required ? (openBlock(), createElementBlock("span", tc, " *")) : createCommentVNode("", true)])]), e2.hint ? (openBlock(), createElementBlock("span", nc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 8, ec),
         createBaseVNode("div", {
           class: normalizeClass(["fr-range", {
             "fr-range--sm": e2.small,
@@ -84205,7 +84245,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               var _a2;
               return r("update:lowerValue", +((_a2 = e3.target) == null ? void 0 : _a2.value));
             })
-          }, null, 40, rc)) : createCommentVNode("", true),
+          }, null, 40, ic)) : createCommentVNode("", true),
           createBaseVNode("input", {
             id: e2.id,
             ref_key: "input",
@@ -84223,10 +84263,10 @@ Expected function or array of functions, received type ${typeof value2}.`
               var _a2;
               return r("update:modelValue", +((_a2 = e3.target) == null ? void 0 : _a2.value));
             })
-          }, null, 40, ic),
-          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", ac, toDisplayString(e2.min), 1)),
-          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", oc, toDisplayString(e2.max), 1))
-        ], 14, nc),
+          }, null, 40, ac),
+          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", oc, toDisplayString(e2.min), 1)),
+          e2.hideIndicators ? createCommentVNode("", true) : (openBlock(), createElementBlock("span", sc, toDisplayString(e2.max), 1))
+        ], 14, rc),
         e2.message || t2.$slots.messages ? (openBlock(), createElementBlock("div", {
           key: 0,
           id: `${e2.id}-messages`,
@@ -84237,17 +84277,17 @@ Expected function or array of functions, received type ${typeof value2}.`
           key: 0,
           id: `${e2.id}-message-error`,
           class: "fr-message fr-message--error"
-        }, toDisplayString(e2.message), 9, cc)) : createCommentVNode("", true)])], 8, sc)) : createCommentVNode("", true)
-      ], 10, Qs));
+        }, toDisplayString(e2.message), 9, lc)) : createCommentVNode("", true)])], 8, cc)) : createCommentVNode("", true)
+      ], 10, $s));
     }
-  }), uc = { class: "fr-segmented__element" }, dc = [
+  }), dc = { class: "fr-segmented__element" }, fc = [
     "id",
     "name",
     "value",
     "checked",
     "disabled",
     "aria-disabled"
-  ], fc = ["for"], pc = { key: 1 }, mc = /* @__PURE__ */ defineComponent({
+  ], pc = ["for"], mc = { key: 1 }, hc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSegmented",
     props: {
       id: { default: () => Z$1("segmented") },
@@ -84261,7 +84301,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     emits: ["update:modelValue"],
     setup(e2) {
       let t = e2, n = computed(() => typeof t.icon == "string" ? { name: t.icon } : t.icon), r = computed(() => t.icon && typeof t.icon == "string" && t.icon.startsWith("fr-") ? t.icon : "");
-      return (t2, i2) => (openBlock(), createElementBlock("div", uc, [createBaseVNode("input", mergeProps({
+      return (t2, i2) => (openBlock(), createElementBlock("div", dc, [createBaseVNode("input", mergeProps({
         id: e2.id,
         type: "radio",
         name: e2.name,
@@ -84269,19 +84309,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         checked: e2.modelValue === e2.value,
         disabled: e2.disabled,
         "aria-disabled": e2.disabled
-      }, t2.$attrs, { onClick: i2[0] || (i2[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, dc), createBaseVNode("label", {
+      }, t2.$attrs, { onClick: i2[0] || (i2[0] = (n2) => t2.$emit("update:modelValue", e2.value)) }), null, 16, fc), createBaseVNode("label", {
         for: e2.id,
         class: normalizeClass(["fr-label", { [r.value]: r.value }])
       }, [
         e2.icon && !r.value ? (openBlock(), createBlock($, normalizeProps(mergeProps({ key: 0 }, n.value)), null, 16)) : createCommentVNode("", true),
-        e2.icon ? (openBlock(), createElementBlock("span", pc, " ")) : createCommentVNode("", true),
+        e2.icon ? (openBlock(), createElementBlock("span", mc, " ")) : createCommentVNode("", true),
         createTextVNode(" " + toDisplayString(e2.label), 1)
-      ], 10, fc)]));
+      ], 10, pc)]));
     }
-  }), hc = { class: "fr-form-group" }, gc = ["disabled"], _c = ["id"], vc = {
+  }), gc = { class: "fr-form-group" }, _c = ["disabled"], vc = ["id"], yc = {
     key: 0,
     class: "fr-hint-text"
-  }, yc = { class: "fr-segmented__elements" }, bc = /* @__PURE__ */ defineComponent({
+  }, bc = { class: "fr-segmented__elements" }, xc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSegmentedSet",
     props: {
       titleId: { default: () => Z$1("segmented-button", "set") },
@@ -84299,7 +84339,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let r = e2, i2 = n, a3 = (e3) => {
         e3 !== r.modelValue && i2("update:modelValue", e3);
       };
-      return (n2, r2) => (openBlock(), createElementBlock("div", hc, [createBaseVNode("fieldset", {
+      return (n2, r2) => (openBlock(), createElementBlock("div", gc, [createBaseVNode("fieldset", {
         class: normalizeClass(["fr-segmented", {
           "fr-segmented--sm": e2.small,
           "fr-segmented--no-legend": !e2.legend
@@ -84309,7 +84349,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         key: 0,
         id: e2.titleId,
         class: normalizeClass(["fr-segmented__legend", { "fr-segmented__legend--inline": e2.inline }])
-      }, [renderSlot(n2.$slots, "legend", {}, () => [createTextVNode(toDisplayString(e2.legend), 1)]), e2.hint ? (openBlock(), createElementBlock("span", vc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, _c)) : createCommentVNode("", true), createBaseVNode("div", yc, [renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(mc, mergeProps({
+      }, [renderSlot(n2.$slots, "legend", {}, () => [createTextVNode(toDisplayString(e2.legend), 1)]), e2.hint ? (openBlock(), createElementBlock("span", yc, toDisplayString(e2.hint), 1)) : createCommentVNode("", true)], 10, vc)) : createCommentVNode("", true), createBaseVNode("div", bc, [renderSlot(n2.$slots, "default", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.options, (t, n3) => (openBlock(), createBlock(hc, mergeProps({
         key: t.value || n3,
         name: e2.name || t.name
       }, { ref_for: true }, {
@@ -84318,13 +84358,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, {
         "model-value": e2.modelValue,
         "onUpdate:modelValue": r2[0] || (r2[0] = (e3) => a3(e3))
-      }), null, 16, ["name", "model-value"]))), 128))])])], 10, gc)]));
+      }), null, 16, ["name", "model-value"]))), 128))])])], 10, _c)]));
     }
-  }), xc = { class: "fr-share" }, Sc = { class: "fr-share__title" }, Cc = { class: "fr-btns-group" }, wc = [
+  }), Sc = { class: "fr-share" }, Cc = { class: "fr-share__title" }, wc = { class: "fr-btns-group" }, Tc = [
     "title",
     "href",
     "onClick"
-  ], Tc = { key: 0 }, Ec = ["href", "title"], Dc = ["title"], Oc = /* @__PURE__ */ defineComponent({
+  ], Ec = { key: 0 }, Dc = ["href", "title"], Oc = ["title"], kc = /* @__PURE__ */ defineComponent({
     __name: "DsfrShare",
     props: {
       title: { default: "Partager la page" },
@@ -84341,7 +84381,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
       return (i2, a3) => {
         var _a2;
-        return openBlock(), createElementBlock("div", xc, [createBaseVNode("p", Sc, toDisplayString(e2.title), 1), createBaseVNode("ul", Cc, [
+        return openBlock(), createElementBlock("div", Sc, [createBaseVNode("p", Cc, toDisplayString(e2.title), 1), createBaseVNode("ul", wc, [
           (openBlock(true), createElementBlock(Fragment, null, renderList(e2.networks, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
             class: normalizeClass(`fr-btn fr-btn--${e3.name}`),
             title: `${e3.label} - nouvelle fenêtre`,
@@ -84349,27 +84389,27 @@ Expected function or array of functions, received type ${typeof value2}.`
             target: "_blank",
             rel: "noopener noreferrer",
             onClick: withModifiers((t2) => r(e3), ["prevent"])
-          }, toDisplayString(e3.label), 11, wc)]))), 128)),
-          ((_a2 = e2.mail) == null ? void 0 : _a2.to) ? (openBlock(), createElementBlock("li", Tc, [createBaseVNode("a", {
+          }, toDisplayString(e3.label), 11, Tc)]))), 128)),
+          ((_a2 = e2.mail) == null ? void 0 : _a2.to) ? (openBlock(), createElementBlock("li", Ec, [createBaseVNode("a", {
             class: "fr-btn fr-btn--mail",
             href: e2.mail.to,
             title: `${e2.mail.label} - nouvelle fenêtre`,
             target: "_blank",
             rel: "noopener noreferrer"
-          }, toDisplayString(e2.mail.label), 9, Ec)])) : createCommentVNode("", true),
+          }, toDisplayString(e2.mail.label), 9, Dc)])) : createCommentVNode("", true),
           createBaseVNode("li", null, [createBaseVNode("button", {
             class: "fr-btn fr-btn--copy",
             title: e2.copyLabel,
             onClick: a3[0] || (a3[0] = (e3) => n())
-          }, toDisplayString(e2.copyLabel), 9, Dc)])
+          }, toDisplayString(e2.copyLabel), 9, Oc)])
         ])]);
       };
     }
-  }), kc = [
+  }), Ac = [
     "aria-current",
     "aria-expanded",
     "aria-controls"
-  ], Ac = /* @__PURE__ */ defineComponent({
+  ], jc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuButton",
     props: {
       active: { type: Boolean },
@@ -84384,15 +84424,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-expanded": !!e2.expanded,
         "aria-controls": e2.controlId,
         onClick: n[0] || (n[0] = (n2) => t.$emit("toggleExpand", e2.controlId))
-      }, [renderSlot(t.$slots, "default")], 8, kc));
+      }, [renderSlot(t.$slots, "default")], 8, Ac));
     }
-  }), jc = /* @__PURE__ */ defineComponent({
+  }), Mc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuListItem",
     props: { active: { type: Boolean } },
     setup(e2) {
       return (t, n) => (openBlock(), createElementBlock("li", { class: normalizeClass(["fr-sidemenu__item", { "fr-sidemenu__item--active": e2.active }]) }, [renderSlot(t.$slots, "default")], 2));
     }
-  }), Mc = ["id"], Nc = { class: "fr-sidemenu__list" }, Pc = /* @__PURE__ */ defineComponent({
+  }), Nc = ["id"], Pc = { class: "fr-sidemenu__list" }, Fc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuList",
     props: {
       id: {},
@@ -84403,7 +84443,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["toggleExpand"],
     setup(e2, { emit: n }) {
-      let r = e2, i2 = n, { collapse: a3, collapsing: f2, cssExpanded: p5, doExpand: m, onTransitionEnd: h2 } = J();
+      let r = e2, i2 = n, { collapse: a3, collapsing: f2, cssExpanded: p5, doExpand: m, onTransitionEnd: h2 } = Y();
       watch(() => r.expanded, (e3, t) => {
         e3 !== t && m(e3);
       }), onMounted(() => {
@@ -84422,7 +84462,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-collapse--expanded": unref(p5)
           }),
           onTransitionend: r2[1] || (r2[1] = (t) => unref(h2)(!!e2.expanded, e2.focusOnExpanding))
-        }, [createBaseVNode("ul", Nc, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menuItems, (e3, n3) => (openBlock(), createBlock(jc, {
+        }, [createBaseVNode("ul", Pc, [renderSlot(n2.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.menuItems, (e3, n3) => (openBlock(), createBlock(Mc, {
           key: n3,
           active: e3.active
         }, {
@@ -84433,7 +84473,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           }, { ref_for: true }, y(e3.to)), {
             default: withCtx(() => [createTextVNode(toDisplayString(e3.text), 1)]),
             _: 2
-          }, 1040, ["aria-current"])), e3.menuItems ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(Ac, {
+          }, 1040, ["aria-current"])), e3.menuItems ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(jc, {
             active: !!e3.active,
             expanded: !!e3.expanded,
             "control-id": e3.id,
@@ -84459,10 +84499,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             "menu-items"
           ])) : createCommentVNode("", true)], 64)) : createCommentVNode("", true)]),
           _: 2
-        }, 1032, ["active"]))), 128))])], 42, Mc);
+        }, 1032, ["active"]))), 128))])], 42, Nc);
       };
     }
-  }), Fc = ["aria-labelledby"], Ic = { class: "fr-sidemenu__inner" }, Lc = ["aria-controls", "aria-expanded"], Rc = ["id"], zc = /* @__PURE__ */ defineComponent({
+  }), Ic = ["aria-labelledby"], Lc = { class: "fr-sidemenu__inner" }, Rc = ["aria-controls", "aria-expanded"], zc = ["id"], Bc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenu",
     props: {
       buttonLabel: { default: "Dans cette rubrique" },
@@ -84479,18 +84519,18 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["toggleExpand"],
     setup(e2, { emit: t }) {
-      let n = t, { collapse: r, collapsing: i2, cssExpanded: a3, doExpand: s, onTransitionEnd: f2 } = J(), p5 = /* @__PURE__ */ ref(false);
+      let n = t, { collapse: r, collapsing: i2, cssExpanded: a3, doExpand: s, onTransitionEnd: f2 } = Y(), p5 = /* @__PURE__ */ ref(false);
       return watch(p5, (e3, t2) => {
         e3 !== t2 && s(e3);
       }), (t2, s2) => (openBlock(), createElementBlock("nav", {
         class: "fr-sidemenu",
         "aria-labelledby": e2.id
-      }, [createBaseVNode("div", Ic, [createBaseVNode("button", {
+      }, [createBaseVNode("div", Lc, [createBaseVNode("button", {
         class: "fr-sidemenu__btn",
         "aria-controls": e2.id,
         "aria-expanded": p5.value,
         onClick: s2[0] || (s2[0] = withModifiers((e3) => p5.value = !p5.value, ["prevent", "stop"]))
-      }, toDisplayString(e2.buttonLabel), 9, Lc), createBaseVNode("div", {
+      }, toDisplayString(e2.buttonLabel), 9, Rc), createBaseVNode("div", {
         id: e2.id,
         ref_key: "collapse",
         ref: r,
@@ -84502,13 +84542,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       }, [(openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-sidemenu__title" }, {
         default: withCtx(() => [createTextVNode(toDisplayString(e2.headingTitle), 1)]),
         _: 1
-      })), renderSlot(t2.$slots, "default", {}, () => [createVNode(Pc, {
+      })), renderSlot(t2.$slots, "default", {}, () => [createVNode(Fc, {
         id: e2.sideMenuListId,
         "menu-items": e2.menuItems,
         onToggleExpand: s2[1] || (s2[1] = (e3) => n("toggleExpand", e3))
-      }, null, 8, ["id", "menu-items"])])], 42, Rc)])], 8, Fc));
+      }, null, 8, ["id", "menu-items"])])], 42, zc)])], 8, Ic));
     }
-  }), Bc = /* @__PURE__ */ defineComponent({
+  }), Vc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSideMenuLink",
     props: {
       active: { type: Boolean },
@@ -84524,11 +84564,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         _: 3
       }, 16, ["aria-current"]));
     }
-  }), Vc = { class: "fr-skiplinks" }, Hc = {
+  }), Hc = { class: "fr-skiplinks" }, Uc = {
     class: "fr-container",
     role: "navigation",
     "aria-label": "Accès rapide"
-  }, Uc = { class: "fr-skiplinks__list" }, Wc = ["href", "onClick"], Gc = /* @__PURE__ */ defineComponent({
+  }, Wc = { class: "fr-skiplinks__list" }, Gc = ["href", "onClick"], Kc = /* @__PURE__ */ defineComponent({
     __name: "DsfrSkipLinks",
     props: { links: {} },
     setup(e2) {
@@ -84536,56 +84576,56 @@ Expected function or array of functions, received type ${typeof value2}.`
         var _a2;
         (_a2 = document.getElementById(e3)) == null ? void 0 : _a2.focus();
       };
-      return (r, i2) => (openBlock(), createElementBlock("div", Vc, [createBaseVNode("nav", Hc, [createBaseVNode("ul", Uc, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3) => (openBlock(), createElementBlock("li", { key: e3.id }, [createBaseVNode("a", {
+      return (r, i2) => (openBlock(), createElementBlock("div", Hc, [createBaseVNode("nav", Uc, [createBaseVNode("ul", Wc, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.links, (e3) => (openBlock(), createElementBlock("li", { key: e3.id }, [createBaseVNode("a", {
         class: "fr-link",
         href: `#${e3.id}`,
         onClick: (t) => n(e3.id)
-      }, toDisplayString(e3.text), 9, Wc)]))), 128))])])]));
+      }, toDisplayString(e3.text), 9, Gc)]))), 128))])])]));
     }
-  }), Kc = { class: "fr-stepper" }, qc = { class: "fr-stepper__title" }, Jc = { class: "fr-stepper__state" }, Yc = ["data-fr-current-step", "data-fr-steps"], Xc = { class: "fr-stepper__details" }, Zc = {
+  }), qc = { class: "fr-stepper" }, Jc = { class: "fr-stepper__title" }, Yc = { class: "fr-stepper__state" }, Xc = ["data-fr-current-step", "data-fr-steps"], Zc = { class: "fr-stepper__details" }, Qc = {
     key: 0,
     class: "fr-text--bold"
-  }, Qc = /* @__PURE__ */ defineComponent({
+  }, $c = /* @__PURE__ */ defineComponent({
     __name: "DsfrStepper",
     props: {
       steps: { default: () => [] },
       currentStep: { default: 1 }
     },
     setup(e2) {
-      return (t, n) => (openBlock(), createElementBlock("div", Kc, [
-        createBaseVNode("h2", qc, [createTextVNode(toDisplayString(e2.steps[e2.currentStep - 1]) + " ", 1), createBaseVNode("span", Jc, "Étape " + toDisplayString(e2.currentStep) + " sur " + toDisplayString(e2.steps.length), 1)]),
+      return (t, n) => (openBlock(), createElementBlock("div", qc, [
+        createBaseVNode("h2", Jc, [createTextVNode(toDisplayString(e2.steps[e2.currentStep - 1]) + " ", 1), createBaseVNode("span", Yc, "Étape " + toDisplayString(e2.currentStep) + " sur " + toDisplayString(e2.steps.length), 1)]),
         createBaseVNode("div", {
           class: "fr-stepper__steps",
           "data-fr-current-step": e2.currentStep,
           "data-fr-steps": e2.steps.length
-        }, null, 8, Yc),
-        createBaseVNode("p", Xc, [e2.currentStep < e2.steps.length ? (openBlock(), createElementBlock("span", Zc, "Étape suivante :")) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(e2.steps[e2.currentStep]), 1)])
+        }, null, 8, Xc),
+        createBaseVNode("p", Zc, [e2.currentStep < e2.steps.length ? (openBlock(), createElementBlock("span", Qc, "Étape suivante :")) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(e2.steps[e2.currentStep]), 1)])
       ]));
     }
-  }), $c = {
+  }), el = {
     class: "fr-summary",
     role: "navigation",
     "aria-labelledby": "fr-summary-title"
-  }, el = {
+  }, tl = {
     id: "fr-summary-title",
     class: "fr-summary__title"
-  }, tl = { class: "fr-summary__list" }, nl = ["href"], rl = /* @__PURE__ */ defineComponent({
+  }, nl = { class: "fr-summary__list" }, rl = ["href"], il = /* @__PURE__ */ defineComponent({
     __name: "DsfrSummary",
     props: {
       title: { default: "Sommaire" },
       anchors: { default: () => [] }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("nav", $c, [createBaseVNode("h2", el, toDisplayString(e2.title), 1), createBaseVNode("ol", tl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.anchors, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
+      return (n, r) => (openBlock(), createElementBlock("nav", el, [createBaseVNode("h2", tl, toDisplayString(e2.title), 1), createBaseVNode("ol", nl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.anchors, (e3, t) => (openBlock(), createElementBlock("li", { key: t }, [createBaseVNode("a", {
         class: "fr-summary__link",
         href: e3.link
-      }, toDisplayString(e3.name), 9, nl)]))), 128))])]));
+      }, toDisplayString(e3.name), 9, rl)]))), 128))])]));
     }
-  }), il = [
+  }), al = [
     "id",
     "aria-labelledby",
     "tabindex"
-  ], al = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  ], ol = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTabContent",
     props: {
       panelId: {},
@@ -84599,7 +84639,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       let t = e2, n = {
         true: "100%",
         false: "-100%"
-      }, { isVisible: i2, asc: s } = inject(de)(/* @__PURE__ */ toRef(() => t.tabId)), c = computed(() => n[String(s == null ? void 0 : s.value)]), u2 = computed(() => n[String(!(s == null ? void 0 : s.value))]);
+      }, { isVisible: i2, asc: s } = inject(J)(/* @__PURE__ */ toRef(() => t.tabId)), c = computed(() => n[String(s == null ? void 0 : s.value)]), u2 = computed(() => n[String(!(s == null ? void 0 : s.value))]);
       return (t2, n2) => (openBlock(), createBlock(Transition, {
         name: "slide-fade",
         mode: "in-out"
@@ -84610,24 +84650,24 @@ Expected function or array of functions, received type ${typeof value2}.`
           role: "tabpanel",
           "aria-labelledby": e2.tabId,
           tabindex: unref(i2) ? 0 : -1
-        }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 10, il), [[vShow, unref(i2)]])]),
+        }, [renderSlot(t2.$slots, "default", {}, void 0, true)], 10, al), [[vShow, unref(i2)]])]),
         _: 3
       }));
     }
-  }), [["__scopeId", "data-v-d925618f"]]), ol = { role: "presentation" }, sl = [
+  }), [["__scopeId", "data-v-d925618f"]]), sl = { role: "presentation" }, cl = [
     "id",
     "data-testid",
     "tabindex",
     "aria-selected",
     "aria-controls"
-  ], cl = {
+  ], ll = {
     key: 0,
     style: {
       "margin-left": "-0.25rem",
       "margin-right": "0.5rem",
       "font-size": "0.95rem"
     }
-  }, ll = /* @__PURE__ */ defineComponent({
+  }, ul = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "DsfrTabItem",
     props: {
@@ -84653,11 +84693,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         let t2 = e3 == null ? void 0 : e3.key, n2 = a3[t2];
         n2 && r(n2);
       }
-      let { isVisible: u2 } = inject(de)(/* @__PURE__ */ toRef(() => n.tabId)), f2 = useTemplateRef("button");
+      let { isVisible: u2 } = inject(J)(/* @__PURE__ */ toRef(() => n.tabId)), f2 = useTemplateRef("button");
       return watch(u2, () => {
         var _a2;
         u2.value && ((_a2 = f2.value) == null ? void 0 : _a2.focus());
-      }), (t2, n2) => (openBlock(), createElementBlock("li", ol, [createBaseVNode("button", mergeProps(t2.$attrs, {
+      }), (t2, n2) => (openBlock(), createElementBlock("li", sl, [createBaseVNode("button", mergeProps(t2.$attrs, {
         id: e2.tabId,
         ref_key: "button",
         ref: i2,
@@ -84670,9 +84710,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-controls": e2.panelId,
         onClick: n2[0] || (n2[0] = withModifiers((n3) => t2.$emit("click", e2.tabId), ["prevent"])),
         onKeydown: n2[1] || (n2[1] = (e3) => o(e3))
-      }), [e2.icon ? (openBlock(), createElementBlock("span", cl, [createVNode($, { name: e2.icon }, null, 8, ["name"])])) : createCommentVNode("", true), renderSlot(t2.$slots, "default")], 16, sl)]));
+      }), [e2.icon ? (openBlock(), createElementBlock("span", ll, [createVNode($, { name: e2.icon }, null, 8, ["name"])])) : createCommentVNode("", true), renderSlot(t2.$slots, "default")], 16, cl)]));
     }
-  }), ul = /* @__PURE__ */ defineComponent({
+  }), dl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableHeader",
     props: {
       header: { default: "" },
@@ -84690,17 +84730,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, null, 2)) : createCommentVNode("", true)
       ], 16));
     }
-  }), dl = { key: 0 }, fl = /* @__PURE__ */ defineComponent({
+  }), fl = { key: 0 }, pl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableHeaders",
     props: { headers: {} },
     setup(e2) {
-      return (n, r) => e2.headers ? (openBlock(), createElementBlock("tr", dl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.headers, (e3, t) => (openBlock(), createBlock(ul, {
+      return (n, r) => e2.headers ? (openBlock(), createElementBlock("tr", fl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.headers, (e3, t) => (openBlock(), createBlock(dl, {
         key: t,
         header: (typeof e3 == "object" ? e3 : {}).text || e3,
         "header-attrs": e3.headerAttrs
       }, null, 8, ["header", "header-attrs"]))), 128))])) : createCommentVNode("", true);
     }
-  }), pl = /* @__PURE__ */ defineComponent({
+  }), ml = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableCell",
     props: {
       field: {},
@@ -84722,24 +84762,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         _: 1
       }, 16)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(i2.value ? e2.field : e2.field.text), 1)], 64))], 16));
     }
-  }), ml = /* @__PURE__ */ defineComponent({
+  }), hl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTableRow",
     props: {
       rowData: { default: () => [] },
       rowAttrs: { default: () => ({}) }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("tr", normalizeProps(guardReactiveProps(e2.rowAttrs)), [renderSlot(n.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.rowData, (e3, t) => (openBlock(), createBlock(pl, {
+      return (n, r) => (openBlock(), createElementBlock("tr", normalizeProps(guardReactiveProps(e2.rowAttrs)), [renderSlot(n.$slots, "default"), (openBlock(true), createElementBlock(Fragment, null, renderList(e2.rowData, (e3, t) => (openBlock(), createBlock(ml, {
         key: t,
         field: e3 ?? "",
         "cell-attrs": typeof e3 == "object" && e3 && !e3.component ? e3.cellAttrs : {}
       }, null, 8, ["field", "cell-attrs"]))), 128))], 16));
     }
-  }), hl = { class: "caption" }, gl = { key: 1 }, _l = ["colspan"], vl = { class: "flex justify-right" }, yl = { class: "self-center" }, bl = ["for"], xl = ["id"], Sl = ["value"], Cl = {
+  }), gl = { class: "caption" }, _l = { key: 1 }, vl = ["colspan"], yl = { class: "flex justify-right" }, bl = { class: "self-center" }, xl = ["for"], Sl = ["id"], Cl = ["value"], wl = {
     class: "flex ml-1",
     "aria-live": "polite",
     "aria-atomic": "true"
-  }, wl = { class: "self-center fr-m-0" }, Tl = { class: "flex ml-1" }, El = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Tl = { class: "self-center fr-m-0" }, El = { class: "flex ml-1" }, Dl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTable",
     props: {
       title: {},
@@ -84772,8 +84812,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         d.value = m.value, i2("update:currentPage");
       };
       return (n2, r2) => (openBlock(), createElementBlock("div", { class: normalizeClass(["fr-table", { "fr-table--no-caption": e2.noCaption }]) }, [createBaseVNode("table", null, [
-        createBaseVNode("caption", hl, toDisplayString(e2.title), 1),
-        createBaseVNode("thead", null, [renderSlot(n2.$slots, "header", {}, () => [e2.headers && e2.headers.length ? (openBlock(), createBlock(fl, {
+        createBaseVNode("caption", gl, toDisplayString(e2.title), 1),
+        createBaseVNode("thead", null, [renderSlot(n2.$slots, "header", {}, () => [e2.headers && e2.headers.length ? (openBlock(), createBlock(pl, {
           key: 0,
           headers: e2.headers
         }, null, 8, ["headers"])) : createCommentVNode("", true)], true)]),
@@ -84781,14 +84821,14 @@ Expected function or array of functions, received type ${typeof value2}.`
           renderSlot(n2.$slots, "default", {}, void 0, true),
           e2.rows && e2.rows.length ? (openBlock(true), createElementBlock(Fragment, { key: 0 }, renderList(v.value, (t, n3) => {
             var _a2, _b;
-            return openBlock(), createBlock(ml, {
+            return openBlock(), createBlock(hl, {
               key: e2.rowKey && u2(t) ? typeof e2.rowKey == "string" ? (_b = (_a2 = u2(t)) == null ? void 0 : _a2[e2.headers.indexOf(e2.rowKey)]) == null ? void 0 : _b.toString() : e2.rowKey(u2(t) ?? []) : n3,
               "row-data": u2(t),
               "row-attrs": "rowAttrs" in t ? t.rowAttrs : {}
             }, null, 8, ["row-data", "row-attrs"]);
           }), 128)) : createCommentVNode("", true),
-          e2.pagination ? (openBlock(), createElementBlock("tr", gl, [createBaseVNode("td", { colspan: e2.headers.length }, [createBaseVNode("div", vl, [
-            createBaseVNode("div", yl, [createBaseVNode("label", { for: unref(f2) }, "Résultats par page : ", 8, bl), withDirectives(createBaseVNode("select", {
+          e2.pagination ? (openBlock(), createElementBlock("tr", _l, [createBaseVNode("td", { colspan: e2.headers.length }, [createBaseVNode("div", yl, [
+            createBaseVNode("div", bl, [createBaseVNode("label", { for: unref(f2) }, "Résultats par page : ", 8, xl), withDirectives(createBaseVNode("select", {
               id: unref(f2),
               "onUpdate:modelValue": r2[0] || (r2[0] = (e3) => p5.value = e3),
               title: "Résultats par page - le nombre résultats est mis à jour dès sélection d’une valeur",
@@ -84796,9 +84836,9 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, [(openBlock(), createElementBlock(Fragment, null, renderList(h2, (e3, t) => createBaseVNode("option", {
               key: t,
               value: e3
-            }, toDisplayString(e3), 9, Sl)), 64))], 40, xl), [[vModelSelect, p5.value]])]),
-            createBaseVNode("div", Cl, [createBaseVNode("p", wl, " Page " + toDisplayString(d.value) + " sur " + toDisplayString(m.value), 1)]),
-            createBaseVNode("div", Tl, [
+            }, toDisplayString(e3), 9, Cl)), 64))], 40, Sl), [[vModelSelect, p5.value]])]),
+            createBaseVNode("div", wl, [createBaseVNode("p", Tl, " Page " + toDisplayString(d.value) + " sur " + toDisplayString(m.value), 1)]),
+            createBaseVNode("div", El, [
               createBaseVNode("button", {
                 class: "fr-icon-arrow-left-s-first-line",
                 onClick: r2[2] || (r2[2] = (e3) => y())
@@ -84816,11 +84856,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 onClick: r2[5] || (r2[5] = (e3) => C())
               }, [...r2[9] || (r2[9] = [createBaseVNode("span", { class: "fr-sr-only" }, "Dernière page du tableau", -1)])])
             ])
-          ])], 8, _l)])) : createCommentVNode("", true)
+          ])], 8, vl)])) : createCommentVNode("", true)
         ])
       ])], 2));
     }
-  }), [["__scopeId", "data-v-3619f971"]]), Dl = ["aria-label"], Ol = 16, kl = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-3619f971"]]), Ol = ["aria-label"], kl = 16, Al = /* @__PURE__ */ defineComponent({
     __name: "DsfrTabs",
     props: {
       modelValue: { default: 0 },
@@ -84836,7 +84876,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           s("update:modelValue", e3);
         }
       }), p5 = /* @__PURE__ */ ref(/* @__PURE__ */ new Map()), m = /* @__PURE__ */ ref(0);
-      provide(de, (e3) => {
+      provide(J, (e3) => {
         let t = /* @__PURE__ */ ref(true);
         if (watch(f2, (e4, n3) => {
           t.value = e4 > n3;
@@ -84856,11 +84896,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       let h2 = /* @__PURE__ */ ref(null), g = /* @__PURE__ */ ref(null), _ = /* @__PURE__ */ ref(false), v = /* @__PURE__ */ ref(false), y = /* @__PURE__ */ ref(false), x = () => {
         let e3 = g.value;
         if (!e3) return;
-        let t = Math.abs(e3.scrollLeft), n2 = getComputedStyle(e3).direction === "rtl", r2 = t <= Ol, i3 = t >= e3.scrollWidth - e3.clientWidth - Ol;
+        let t = Math.abs(e3.scrollLeft), n2 = getComputedStyle(e3).direction === "rtl", r2 = t <= kl, i3 = t >= e3.scrollWidth - e3.clientWidth - kl;
         n2 ? (y.value = !r2, v.value = !i3) : (v.value = !r2, y.value = !i3);
       }, C = () => {
         let e3 = g.value;
-        e3 && (_.value = e3.scrollWidth > e3.clientWidth + Ol, _.value ? x() : (v.value = false, y.value = false));
+        e3 && (_.value = e3.scrollWidth > e3.clientWidth + kl, _.value ? x() : (v.value = false, y.value = false));
       }, j = /* @__PURE__ */ reactive({}), M5 = (e3) => {
         if (j[e3]) return j[e3];
         let t = Z$1("tab");
@@ -84915,7 +84955,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           role: "tablist",
           "aria-label": e2.tabListName,
           onScroll: x
-        }, [renderSlot(n2.$slots, "tab-items", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabTitles, (e3, t) => (openBlock(), createBlock(ll, {
+        }, [renderSlot(n2.$slots, "tab-items", {}, () => [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabTitles, (e3, t) => (openBlock(), createBlock(ul, {
           key: t,
           icon: e3.icon,
           "panel-id": e3.panelId || `${M5(t)}-panel`,
@@ -84933,10 +84973,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           "panel-id",
           "tab-id",
           "onClick"
-        ]))), 128))])], 42, Dl),
+        ]))), 128))])], 42, Ol),
         (openBlock(true), createElementBlock(Fragment, null, renderList(e2.tabContents, (t, n3) => {
           var _a2, _b, _c2, _d;
-          return openBlock(), createBlock(al, {
+          return openBlock(), createBlock(ol, {
             key: n3,
             "panel-id": ((_b = (_a2 = e2.tabTitles) == null ? void 0 : _a2[n3]) == null ? void 0 : _b.panelId) || `${M5(n3)}-panel`,
             "tab-id": ((_d = (_c2 = e2.tabTitles) == null ? void 0 : _c2[n3]) == null ? void 0 : _d.tabId) || M5(n3)
@@ -84948,7 +84988,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         renderSlot(n2.$slots, "default")
       ], 4));
     }
-  }), Al = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), jl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTag",
     props: {
       label: { default: void 0 },
@@ -85002,7 +85042,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "aria-pressed"
       ]));
     }
-  }), [["__scopeId", "data-v-e5e13669"]]), jl = { class: "fr-tags-group" }, Ml = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-e5e13669"]]), Ml = { class: "fr-tags-group" }, Nl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTags",
     props: {
       tags: { default: () => [] },
@@ -85024,9 +85064,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           i2("update:modelValue", t2);
         }
       }
-      return (n2, r2) => (openBlock(), createElementBlock("ul", jl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tags, (t, n3) => {
+      return (n2, r2) => (openBlock(), createElementBlock("ul", Ml, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tags, (t, n3) => {
         var _a2;
-        return openBlock(), createElementBlock("li", { key: n3 }, [t.selectable ? (openBlock(), createBlock(Al, mergeProps({
+        return openBlock(), createElementBlock("li", { key: n3 }, [t.selectable ? (openBlock(), createBlock(jl, mergeProps({
           key: 0,
           ref_for: true
         }, t, {
@@ -85034,25 +85074,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           selected: ((_a2 = e2.modelValue) == null ? void 0 : _a2.includes(t.value)) || false,
           value: t.value,
           onSelect: r2[0] || (r2[0] = (e3) => a3(e3))
-        }), null, 16, ["selected", "value"])) : (openBlock(), createBlock(Al, mergeProps({
+        }), null, 16, ["selected", "value"])) : (openBlock(), createBlock(jl, mergeProps({
           key: 1,
           ref_for: true
         }, t), null, 16))]);
       }), 128))]));
     }
-  }), Nl = { class: "fr-tile__body" }, Pl = { class: "fr-tile__content" }, Fl = ["download", "href"], Il = {
+  }), Pl = { class: "fr-tile__body" }, Fl = { class: "fr-tile__content" }, Il = ["download", "href"], Ll = {
     key: 0,
     class: "fr-tile__desc"
-  }, Ll = {
+  }, Rl = {
     key: 1,
     class: "fr-tile__detail"
-  }, Rl = {
+  }, zl = {
     key: 2,
     class: "fr-tile__start"
-  }, zl = { class: "fr-tile__header" }, Bl = {
+  }, Bl = { class: "fr-tile__header" }, Vl = {
     key: 0,
     class: "fr-tile__pictogram"
-  }, Vl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }, Hl = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTile",
     props: {
       title: { default: "Titre de la tuile" },
@@ -85104,18 +85144,18 @@ Expected function or array of functions, received type ${typeof value2}.`
           "fr-tile--shadow": e2.shadow,
           "fr-tile--grey": e2.grey,
           "fr-enlarge-button": e2.enlarge
-        }]]) }, [createBaseVNode("div", Nl, [createBaseVNode("div", Pl, [
+        }]]) }, [createBaseVNode("div", Pl, [createBaseVNode("div", Fl, [
           (openBlock(), createBlock(resolveDynamicComponent(e2.titleTag), { class: "fr-tile__title" }, {
             default: withCtx(() => [n.value ? (openBlock(), createElementBlock("a", mergeProps({
               key: 0,
               class: "fr-tile__link",
               target: "_blank",
               rel: "noopener noreferrer",
-              download: e2.download,
+              download: e2.download ? "" : void 0,
               href: e2.disabled ? "" : e2.to
-            }, e2.titleLinkAttrs), toDisplayString(e2.title), 17, Fl)) : createCommentVNode("", true), n.value ? createCommentVNode("", true) : (openBlock(), createBlock(i2, mergeProps({
+            }, e2.titleLinkAttrs), toDisplayString(e2.title), 17, Il)) : createCommentVNode("", true), n.value ? createCommentVNode("", true) : (openBlock(), createBlock(i2, mergeProps({
               key: 1,
-              download: e2.download,
+              download: e2.download ? "" : void 0,
               class: "fr-tile__link",
               to: e2.disabled ? "" : e2.to
             }, e2.titleLinkAttrs), {
@@ -85124,10 +85164,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, 16, ["download", "to"]))]),
             _: 1
           })),
-          e2.description ? (openBlock(), createElementBlock("p", Il, toDisplayString(e2.description), 1)) : createCommentVNode("", true),
-          e2.details ? (openBlock(), createElementBlock("p", Ll, toDisplayString(e2.details), 1)) : createCommentVNode("", true),
-          t2.$slots["start-details"] ? (openBlock(), createElementBlock("div", Rl, [renderSlot(t2.$slots, "start-details", {}, void 0, true)])) : createCommentVNode("", true)
-        ])]), createBaseVNode("div", zl, [renderSlot(t2.$slots, "header", {}, void 0, true), e2.imgSrc || e2.svgPath ? (openBlock(), createElementBlock("div", Bl, [createVNode(Es, {
+          e2.description ? (openBlock(), createElementBlock("p", Ll, toDisplayString(e2.description), 1)) : createCommentVNode("", true),
+          e2.details ? (openBlock(), createElementBlock("p", Rl, toDisplayString(e2.details), 1)) : createCommentVNode("", true),
+          t2.$slots["start-details"] ? (openBlock(), createElementBlock("div", zl, [renderSlot(t2.$slots, "start-details", {}, void 0, true)])) : createCommentVNode("", true)
+        ])]), createBaseVNode("div", Bl, [renderSlot(t2.$slots, "header", {}, void 0, true), e2.imgSrc || e2.svgPath ? (openBlock(), createElementBlock("div", Vl, [createVNode(Ds, {
           "img-src": e2.imgSrc,
           "svg-path": e2.svgPath,
           "svg-attrs": e2.svgAttrs
@@ -85138,23 +85178,23 @@ Expected function or array of functions, received type ${typeof value2}.`
         ])])) : createCommentVNode("", true)])], 2);
       };
     }
-  }), [["__scopeId", "data-v-711ef506"]]), Hl = { class: "fr-grid-row fr-grid-row--gutters" }, Ul = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-187f7597"]]), Ul = { class: "fr-grid-row fr-grid-row--gutters" }, Wl = /* @__PURE__ */ defineComponent({
     __name: "DsfrTiles",
     props: {
       tiles: { default: () => [] },
       horizontal: { type: Boolean }
     },
     setup(e2) {
-      return (n, r) => (openBlock(), createElementBlock("div", Hl, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tiles, (t, n2) => (openBlock(), createElementBlock("div", {
+      return (n, r) => (openBlock(), createElementBlock("div", Ul, [(openBlock(true), createElementBlock(Fragment, null, renderList(e2.tiles, (t, n2) => (openBlock(), createElementBlock("div", {
         key: n2,
         class: normalizeClass({
           [t.containerClass ?? "no-class"]: t.containerClass,
           "fr-col-6 fr-col-md-4 fr-col-lg-3": !t.containerClass && !e2.horizontal,
           "fr-col-12": e2.horizontal
         })
-      }, [createVNode(Vl, mergeProps({ horizontal: e2.horizontal }, { ref_for: true }, t), null, 16, ["horizontal"])], 2))), 128))]));
+      }, [createVNode(Hl, mergeProps({ horizontal: e2.horizontal }, { ref_for: true }, t), null, 16, ["horizontal"])], 2))), 128))]));
     }
-  }), Wl = [
+  }), Gl = [
     "id",
     "disabled",
     "aria-disabled",
@@ -85162,12 +85202,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     "data-testid",
     "aria-describedby",
     "name"
-  ], Gl = [
+  ], Kl = [
     "id",
     "for",
     "data-fr-checked-label",
     "data-fr-unchecked-label"
-  ], Kl = ["id"], ql = ["id"], Jl = ["id"], Yl = /* @__PURE__ */ defineComponent({
+  ], ql = ["id"], Jl = ["id"], Yl = ["id"], Xl = /* @__PURE__ */ defineComponent({
     __name: "DsfrToggleSwitch",
     props: {
       modelValue: { type: Boolean },
@@ -85215,7 +85255,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           "aria-describedby": i2.value,
           name: e2.name,
           onInput: n2[0] || (n2[0] = (e3) => r("update:modelValue", e3.target.checked))
-        }, null, 40, Wl),
+        }, null, 40, Gl),
         createBaseVNode("label", {
           id: i2.value,
           class: "fr-toggle__label",
@@ -85223,12 +85263,12 @@ Expected function or array of functions, received type ${typeof value2}.`
           "data-fr-checked-label": e2.noText ? void 0 : e2.activeText,
           "data-fr-unchecked-label": e2.noText ? void 0 : e2.inactiveText,
           style: { "--toggle-status-width": "3.55208125rem" }
-        }, toDisplayString(e2.label), 9, Gl),
+        }, toDisplayString(e2.label), 9, Kl),
         e2.hint ? (openBlock(), createElementBlock("p", {
           key: 0,
           id: `${e2.inputId}-hint-text`,
           class: "fr-hint-text"
-        }, toDisplayString(e2.hint), 9, Kl)) : createCommentVNode("", true),
+        }, toDisplayString(e2.hint), 9, ql)) : createCommentVNode("", true),
         e2.status ? (openBlock(), createElementBlock("div", {
           key: 1,
           id: `${i2.value}-messages`,
@@ -85240,14 +85280,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-message--error": e2.status === "error",
             "fr-message--valid": e2.status === "valid"
           }])
-        }, toDisplayString(o.value), 11, Jl)], 8, ql)) : createCommentVNode("", true)
+        }, toDisplayString(o.value), 11, Yl)], 8, Jl)) : createCommentVNode("", true)
       ], 2));
     }
-  }), Xl = [
+  }), Zl = [
     "disabled",
     "aria-labelledby",
     "aria-describedby"
-  ], Zl = ["id"], Ql = { class: "fr-fieldset__element" }, $l = { class: "fr-toggle__list" }, eu = ["id"], tu = ["id"], nu = /* @__PURE__ */ defineComponent({
+  ], Ql = ["id"], $l = { class: "fr-fieldset__element" }, eu = { class: "fr-toggle__list" }, tu = ["id"], nu = ["id"], ru = /* @__PURE__ */ defineComponent({
     __name: "DsfrToggleSwitchGroup",
     props: {
       id: { default: () => Z$1("toggle-group") },
@@ -85283,8 +85323,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         createBaseVNode("legend", {
           id: `${e2.id}-legend`,
           class: "fr-fieldset__legend"
-        }, toDisplayString(e2.legend), 9, Zl),
-        createBaseVNode("div", Ql, [createBaseVNode("ul", $l, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createVNode(Yl, mergeProps({ ref_for: true }, t, {
+        }, toDisplayString(e2.legend), 9, Ql),
+        createBaseVNode("div", $l, [createBaseVNode("ul", eu, [(openBlock(true), createElementBlock(Fragment, null, renderList(i2.value, (t, n3) => (openBlock(), createElementBlock("li", { key: n3 }, [createVNode(Xl, mergeProps({ ref_for: true }, t, {
           "input-id": t.resolvedInputId,
           disabled: e2.disabled || t.disabled,
           "border-bottom": e2.borders,
@@ -85310,10 +85350,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             "fr-message--error": e2.status === "error",
             "fr-message--valid": e2.status === "valid"
           }])
-        }, toDisplayString(r.value), 11, tu)) : createCommentVNode("", true)], 8, eu)
-      ], 10, Xl));
+        }, toDisplayString(r.value), 11, nu)) : createCommentVNode("", true)], 8, tu)
+      ], 10, Zl));
     }
-  }), ru = ["id"], iu = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
+  }), iu = ["id"], au = /* @__PURE__ */ Q(/* @__PURE__ */ defineComponent({
     __name: "DsfrTooltip",
     props: {
       content: {},
@@ -85393,9 +85433,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         style: normalizeStyle(g.value),
         role: "tooltip",
         "aria-hidden": "true"
-      }, toDisplayString(e2.content), 15, ru)], 64));
+      }, toDisplayString(e2.content), 15, iu)], 64));
     }
-  }), [["__scopeId", "data-v-bafa0f64"]]), au = { class: "fr-transcription" }, ou = ["aria-expanded", "aria-controls"], su = ["id"], cu = ["id", "aria-labelledby"], lu = { class: "fr-container fr-container--fluid fr-container-md" }, uu = { class: "fr-grid-row fr-grid-row--center" }, du = { class: "fr-col-12 fr-col-md-10 fr-col-lg-8" }, fu = { class: "fr-modal__body" }, pu = { class: "fr-modal__header" }, mu = ["aria-controls"], hu = { class: "fr-modal__content" }, gu = ["id"], _u = { class: "fr-transcription__footer" }, vu = { class: "fr-transcription__actions-group" }, yu = ["aria-controls"], bu = /* @__PURE__ */ defineComponent({
+  }), [["__scopeId", "data-v-bafa0f64"]]), ou = { class: "fr-transcription" }, su = ["aria-expanded", "aria-controls"], cu = ["id"], lu = ["id", "aria-labelledby"], uu = { class: "fr-container fr-container--fluid fr-container-md" }, du = { class: "fr-grid-row fr-grid-row--center" }, fu = { class: "fr-col-12 fr-col-md-10 fr-col-lg-8" }, pu = { class: "fr-modal__body" }, mu = { class: "fr-modal__header" }, hu = ["aria-controls"], gu = { class: "fr-modal__content" }, _u = ["id"], vu = { class: "fr-transcription__footer" }, yu = { class: "fr-transcription__actions-group" }, bu = ["aria-controls"], xu = /* @__PURE__ */ defineComponent({
     __name: "DsfrTranscription",
     props: {
       id: { default: () => Z$1("transcription") },
@@ -85403,16 +85443,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       content: { default: "Transcription du contenu de la vidéo" }
     },
     setup(e2) {
-      let t = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: f2, onTransitionEnd: p5 } = J(), m = /* @__PURE__ */ ref(false), h2 = /* @__PURE__ */ ref(false), g = computed(() => `fr-transcription__modal-${t.id}`), _ = computed(() => `fr-transcription__collapse-${t.id}`);
+      let t = e2, { collapse: r, collapsing: i2, cssExpanded: s, doExpand: f2, onTransitionEnd: p5 } = Y(), m = /* @__PURE__ */ ref(false), h2 = /* @__PURE__ */ ref(false), g = computed(() => `fr-transcription__modal-${t.id}`), _ = computed(() => `fr-transcription__collapse-${t.id}`);
       return watch(h2, (e3, t2) => {
         e3 !== t2 && f2(e3);
-      }), (t2, a3) => (openBlock(), createElementBlock("div", au, [
+      }), (t2, a3) => (openBlock(), createElementBlock("div", ou, [
         createBaseVNode("button", {
           class: "fr-transcription__btn",
           "aria-expanded": h2.value,
           "aria-controls": _.value,
           onClick: a3[0] || (a3[0] = (e3) => h2.value = !h2.value)
-        }, " Transcription ", 8, ou),
+        }, " Transcription ", 8, su),
         createBaseVNode("div", {
           id: _.value,
           ref_key: "collapse",
@@ -85427,25 +85467,25 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: "fr-modal",
           role: "dialog",
           "aria-labelledby": `${g.value}-title`
-        }, [createBaseVNode("div", lu, [createBaseVNode("div", uu, [createBaseVNode("div", du, [createBaseVNode("div", fu, [
-          createBaseVNode("div", pu, [createBaseVNode("button", {
+        }, [createBaseVNode("div", uu, [createBaseVNode("div", du, [createBaseVNode("div", fu, [createBaseVNode("div", pu, [
+          createBaseVNode("div", mu, [createBaseVNode("button", {
             class: "fr-btn--close fr-btn",
             "aria-controls": g.value,
             title: "Fermer"
-          }, " Fermer ", 8, mu)]),
-          createBaseVNode("div", hu, [createBaseVNode("h1", {
+          }, " Fermer ", 8, hu)]),
+          createBaseVNode("div", gu, [createBaseVNode("h1", {
             id: `${g.value}-title`,
             class: "fr-modal__title"
-          }, toDisplayString(e2.title), 9, gu), createTextVNode(" " + toDisplayString(e2.content), 1)]),
-          createBaseVNode("div", _u, [createBaseVNode("div", vu, [createBaseVNode("button", {
+          }, toDisplayString(e2.title), 9, _u), createTextVNode(" " + toDisplayString(e2.content), 1)]),
+          createBaseVNode("div", vu, [createBaseVNode("div", yu, [createBaseVNode("button", {
             class: "fr-btn fr-btn--fullscreen",
             "aria-controls": g.value,
             "data-fr-opened": "false",
             title: "",
             onClick: a3[1] || (a3[1] = (e3) => m.value = true)
-          }, " Agrandir ", 8, yu)])])
-        ])])])])], 8, cu)], 42, su),
-        (openBlock(), createBlock(Teleport, { to: "body" }, [createVNode(xo, {
+          }, " Agrandir ", 8, bu)])])
+        ])])])])], 8, lu)], 42, cu),
+        (openBlock(), createBlock(Teleport, { to: "body" }, [createVNode(So, {
           title: e2.title,
           opened: m.value,
           onClose: a3[3] || (a3[3] = (e3) => m.value = false)
@@ -85455,7 +85495,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }, 8, ["title", "opened"])]))
       ]));
     }
-  }), xu = ["src", "aria-labelledby"], Su = ["id"], Cu = /* @__PURE__ */ defineComponent({
+  }), Su = ["src", "aria-labelledby"], Cu = ["id"], wu = /* @__PURE__ */ defineComponent({
     __name: "DsfrVideo",
     props: {
       ariaLabelledbyId: {},
@@ -85478,50 +85518,50 @@ Expected function or array of functions, received type ${typeof value2}.`
         width: "100%",
         height: "100%",
         allow: "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-      }, null, 8, xu)], 2), createBaseVNode("div", {
+      }, null, 8, Su)], 2), createBaseVNode("div", {
         id: `${unref(n)}-caption`,
         class: "fr-content-media__caption"
-      }, toDisplayString(e2.legend), 9, Su)], 2), createVNode(bu, {
+      }, toDisplayString(e2.legend), 9, Cu)], 2), createVNode(xu, {
         title: e2.transcriptionTitle,
         content: e2.transcriptionContent
       }, null, 8, ["title", "content"])], 64));
     }
-  }), wu = Object.freeze({
+  }), Tu = Object.freeze({
     left: 0,
     top: 0,
     width: 16,
     height: 16
-  }), Tu = Object.freeze({
+  }), Eu = Object.freeze({
     rotate: 0,
     vFlip: false,
     hFlip: false
-  }), Eu = Object.freeze({
-    ...wu,
-    ...Tu
+  }), Du = Object.freeze({
+    ...Tu,
+    ...Eu
   });
   Object.freeze({
-    ...Eu,
+    ...Du,
     body: "",
     hidden: false
-  }), { ...wu };
-  var Du = Object.freeze({
+  }), { ...Tu };
+  var Ou = Object.freeze({
     width: null,
     height: null
-  }), Ou = Object.freeze({
-    ...Du,
-    ...Tu
+  }), ku = Object.freeze({
+    ...Ou,
+    ...Eu
   });
-  function ku(e2, t) {
+  function Au(e2, t) {
     let n = { ...e2 };
     for (let e3 in t) {
       let r = t[e3], i2 = typeof r;
-      e3 in Du ? (r === null || r && (i2 === "string" || i2 === "number")) && (n[e3] = r) : i2 === typeof n[e3] && (n[e3] = e3 === "rotate" ? r % 4 : r);
+      e3 in Ou ? (r === null || r && (i2 === "string" || i2 === "number")) && (n[e3] = r) : i2 === typeof n[e3] && (n[e3] = e3 === "rotate" ? r % 4 : r);
     }
     return n;
   }
-  var Au = /[\s,]+/;
-  function ju(e2, t) {
-    t.split(Au).forEach((t2) => {
+  var ju = /[\s,]+/;
+  function Mu(e2, t) {
+    t.split(ju).forEach((t2) => {
       switch (t2.trim()) {
         case "horizontal":
           e2.hFlip = true;
@@ -85531,7 +85571,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
     });
   }
-  function Mu(e2, t = 0) {
+  function Nu(e2, t = 0) {
     let n = e2.replace(/^-?[0-9.]*/, "");
     function r(e3) {
       for (; e3 < 0; ) e3 += 4;
@@ -85557,14 +85597,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return t;
   }
-  var Nu = /(-?[0-9.]*[0-9]+[0-9.]*)/g, Pu = /^-?[0-9.]*[0-9]+[0-9.]*$/g;
-  function Fu(e2, t, n) {
+  var Pu = /(-?[0-9.]*[0-9]+[0-9.]*)/g, Fu = /^-?[0-9.]*[0-9]+[0-9.]*$/g;
+  function Iu(e2, t, n) {
     if (t === 1) return e2;
     if (n || (n = 100), typeof e2 == "number") return Math.ceil(e2 * t * n) / n;
     if (typeof e2 != "string") return e2;
-    let r = e2.split(Nu);
+    let r = e2.split(Pu);
     if (r === null || !r.length) return e2;
-    let i2 = [], a3 = r.shift(), o = Pu.test(a3);
+    let i2 = [], a3 = r.shift(), o = Fu.test(a3);
     for (; ; ) {
       if (o) {
         let e3 = parseFloat(a3);
@@ -85574,7 +85614,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       o = !o;
     }
   }
-  function Iu(e2, t = "defs") {
+  function Lu(e2, t = "defs") {
     let n = "", r = e2.indexOf("<" + t);
     for (; r >= 0; ) {
       let i2 = e2.indexOf(">", r), a3 = e2.indexOf("</" + t);
@@ -85588,20 +85628,20 @@ Expected function or array of functions, received type ${typeof value2}.`
       content: e2
     };
   }
-  function Lu(e2, t) {
+  function Ru(e2, t) {
     return e2 ? "<defs>" + e2 + "</defs>" + t : t;
   }
-  function Ru(e2, t, n) {
-    let r = Iu(e2);
-    return Lu(r.defs, t + r.content + n);
+  function zu(e2, t, n) {
+    let r = Lu(e2);
+    return Ru(r.defs, t + r.content + n);
   }
-  var zu = (e2) => e2 === "unset" || e2 === "undefined" || e2 === "none";
-  function Bu(e2, t) {
+  var Bu = (e2) => e2 === "unset" || e2 === "undefined" || e2 === "none";
+  function Vu(e2, t) {
     let n = {
-      ...Eu,
+      ...Du,
       ...e2
     }, r = {
-      ...Ou,
+      ...ku,
       ...t
     }, i2 = {
       left: n.left,
@@ -85623,12 +85663,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         case 3:
           s2 = i2.width / 2 + i2.left, t2.unshift("rotate(-90 " + s2.toString() + " " + s2.toString() + ")");
       }
-      o2 % 2 == 1 && (i2.left !== i2.top && (s2 = i2.left, i2.left = i2.top, i2.top = s2), i2.width !== i2.height && (s2 = i2.width, i2.width = i2.height, i2.height = s2)), t2.length && (a3 = Ru(a3, '<g transform="' + t2.join(" ") + '">', "</g>"));
+      o2 % 2 == 1 && (i2.left !== i2.top && (s2 = i2.left, i2.left = i2.top, i2.top = s2), i2.width !== i2.height && (s2 = i2.width, i2.width = i2.height, i2.height = s2)), t2.length && (a3 = zu(a3, '<g transform="' + t2.join(" ") + '">', "</g>"));
     });
     let o = r.width, s = r.height, c = i2.width, l = i2.height, u2, d;
-    o === null ? (d = s === null ? "1em" : s === "auto" ? l : s, u2 = Fu(d, c / l)) : (u2 = o === "auto" ? c : o, d = s === null ? Fu(u2, l / c) : s === "auto" ? l : s);
+    o === null ? (d = s === null ? "1em" : s === "auto" ? l : s, u2 = Iu(d, c / l)) : (u2 = o === "auto" ? c : o, d = s === null ? Iu(u2, l / c) : s === "auto" ? l : s);
     let f2 = {}, p5 = (e3, t2) => {
-      zu(t2) || (f2[e3] = t2.toString());
+      Bu(t2) || (f2[e3] = t2.toString());
     };
     p5("width", u2), p5("height", d);
     let m = [
@@ -85643,67 +85683,67 @@ Expected function or array of functions, received type ${typeof value2}.`
       body: a3
     };
   }
-  var Vu = /\sid="(\S+)"/g, Hu = /* @__PURE__ */ new Map();
-  function Uu(e2) {
-    e2 = e2.replace(/[0-9]+$/, "") || "a";
-    let t = Hu.get(e2) || 0;
-    return Hu.set(e2, t + 1), t ? `${e2}${t}` : e2;
-  }
+  var Hu = /\sid="(\S+)"/g, Uu = /* @__PURE__ */ new Map();
   function Wu(e2) {
+    e2 = e2.replace(/[0-9]+$/, "") || "a";
+    let t = Uu.get(e2) || 0;
+    return Uu.set(e2, t + 1), t ? `${e2}${t}` : e2;
+  }
+  function Gu(e2) {
     let t = [], n;
-    for (; n = Vu.exec(e2); ) t.push(n[1]);
+    for (; n = Hu.exec(e2); ) t.push(n[1]);
     if (!t.length) return e2;
     let r = "suffix" + (Math.random() * 16777216 | Date.now()).toString(16);
     return t.forEach((t2) => {
-      let n2 = Uu(t2), i2 = t2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let n2 = Wu(t2), i2 = t2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       e2 = e2.replace(RegExp('([#;"])(' + i2 + ')([")]|\\.[a-z])', "g"), "$1" + n2 + r + "$3");
     }), e2 = e2.replace(new RegExp(r, "g"), ""), e2;
   }
-  function Gu(e2, t) {
+  function Ku(e2, t) {
     let n = e2.indexOf("xlink:") === -1 ? "" : ' xmlns:xlink="http://www.w3.org/1999/xlink"';
     for (let e3 in t) n += " " + e3 + '="' + t[e3] + '"';
     return '<svg xmlns="http://www.w3.org/2000/svg"' + n + ">" + e2 + "</svg>";
   }
-  function Ku(e2) {
+  function qu(e2) {
     return e2.replace(/"/g, "'").replace(/%/g, "%25").replace(/#/g, "%23").replace(/</g, "%3C").replace(/>/g, "%3E").replace(/\s+/g, " ");
   }
-  function qu(e2) {
-    return "data:image/svg+xml," + Ku(e2);
-  }
   function Ju(e2) {
-    return 'url("' + qu(e2) + '")';
+    return "data:image/svg+xml," + qu(e2);
   }
-  var Yu = {
-    ...Ou,
+  function Yu(e2) {
+    return 'url("' + Ju(e2) + '")';
+  }
+  var Xu = {
+    ...ku,
     inline: false
-  }, Xu = {
+  }, Zu = {
     xmlns: "http://www.w3.org/2000/svg",
     "xmlns:xlink": "http://www.w3.org/1999/xlink",
     "aria-hidden": true,
     role: "img"
-  }, Zu = { display: "inline-block" }, Qu = { backgroundColor: "currentColor" }, $u = { backgroundColor: "transparent" }, ed = {
+  }, Qu = { display: "inline-block" }, $u = { backgroundColor: "currentColor" }, ed = { backgroundColor: "transparent" }, td = {
     Image: "var(--svg)",
     Repeat: "no-repeat",
     Size: "100% 100%"
-  }, td = {
-    webkitMask: Qu,
-    mask: Qu,
-    background: $u
+  }, nd = {
+    webkitMask: $u,
+    mask: $u,
+    background: ed
   };
-  for (let e2 in td) {
-    let t = td[e2];
-    for (let n in ed) t[e2 + n] = ed[n];
+  for (let e2 in nd) {
+    let t = nd[e2];
+    for (let n in td) t[e2 + n] = td[n];
   }
-  var nd = {};
+  var rd = {};
   ["horizontal", "vertical"].forEach((e2) => {
     let t = e2.slice(0, 1) + "Flip";
-    nd[e2 + "-flip"] = t, nd[e2.slice(0, 1) + "-flip"] = t, nd[e2 + "Flip"] = t;
+    rd[e2 + "-flip"] = t, rd[e2.slice(0, 1) + "-flip"] = t, rd[e2 + "Flip"] = t;
   });
-  function rd(e2) {
+  function id(e2) {
     return e2 + (e2.match(/^[-0-9.]+$/) ? "px" : "");
   }
-  var id = (e2, t) => {
-    let n = ku(Yu, t), r = { ...Xu }, i2 = t.mode || "svg", a3 = {}, o = t.style, s = typeof o == "object" && !(o instanceof Array) ? o : {};
+  var ad = (e2, t) => {
+    let n = Au(Xu, t), r = { ...Zu }, i2 = t.mode || "svg", a3 = {}, o = t.style, s = typeof o == "object" && !(o instanceof Array) ? o : {};
     for (let e3 in t) {
       let i3 = t[e3];
       if (i3 !== void 0) switch (e3) {
@@ -85720,47 +85760,47 @@ Expected function or array of functions, received type ${typeof value2}.`
           n[e3] = i3 === true || i3 === "true" || i3 === 1;
           break;
         case "flip":
-          typeof i3 == "string" && ju(n, i3);
+          typeof i3 == "string" && Mu(n, i3);
           break;
         case "color":
           a3.color = i3;
           break;
         case "rotate":
-          typeof i3 == "string" ? n[e3] = Mu(i3) : typeof i3 == "number" && (n[e3] = i3);
+          typeof i3 == "string" ? n[e3] = Nu(i3) : typeof i3 == "number" && (n[e3] = i3);
           break;
         case "ariaHidden":
         case "aria-hidden":
           i3 !== true && i3 !== "true" && delete r["aria-hidden"];
           break;
         default: {
-          let t2 = nd[e3];
-          t2 ? (i3 === true || i3 === "true" || i3 === 1) && (n[t2] = true) : Yu[e3] === void 0 && (r[e3] = i3);
+          let t2 = rd[e3];
+          t2 ? (i3 === true || i3 === "true" || i3 === 1) && (n[t2] = true) : Xu[e3] === void 0 && (r[e3] = i3);
         }
       }
     }
-    let c = Bu(e2, n), l = c.attributes;
+    let c = Vu(e2, n), l = c.attributes;
     if (n.inline && (a3.verticalAlign = "-0.125em"), i2 === "svg") return r.style = {
       ...a3,
       ...s
-    }, Object.assign(r, l), r.innerHTML = Wu(c.body), h("svg", r);
-    let { body: u2, width: d, height: f2 } = e2, p5 = i2 === "mask" || i2 !== "bg" && u2.indexOf("currentColor") !== -1, h$1 = Gu(u2, {
+    }, Object.assign(r, l), r.innerHTML = Gu(c.body), h("svg", r);
+    let { body: u2, width: d, height: f2 } = e2, p5 = i2 === "mask" || i2 !== "bg" && u2.indexOf("currentColor") !== -1, h$1 = Ku(u2, {
       ...l,
       width: d + "",
       height: f2 + ""
     });
     return r.style = {
       ...a3,
-      "--svg": Ju(h$1),
-      width: rd(l.width),
-      height: rd(l.height),
-      ...Zu,
-      ...p5 ? Qu : $u,
+      "--svg": Yu(h$1),
+      width: id(l.width),
+      height: id(l.height),
+      ...Qu,
+      ...p5 ? $u : ed,
       ...s
     }, h("span", r);
-  }, ad = /* @__PURE__ */ Object.create(null), od = /* @__PURE__ */ defineComponent((e2, t) => () => {
-    let n = e2.icon, r = typeof n == "string" ? ad[n] : typeof n == "object" ? n : null;
-    return typeof r != "object" || !r || typeof r.body != "string" ? renderSlot(t.slots, "default") : id({
-      ...Eu,
+  }, od = /* @__PURE__ */ Object.create(null), sd = /* @__PURE__ */ defineComponent((e2, t) => () => {
+    let n = e2.icon, r = typeof n == "string" ? od[n] : typeof n == "object" ? n : null;
+    return typeof r != "object" || !r || typeof r.body != "string" ? renderSlot(t.slots, "default") : ad({
+      ...Du,
       ...r
     }, e2);
   }, { props: [
@@ -85782,7 +85822,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "ariaHidden",
     "customise",
     "title"
-  ] }), sd = /* @__PURE__ */ defineComponent({
+  ] }), cd = /* @__PURE__ */ defineComponent({
     inheritAttrs: false,
     __name: "VIconOffline",
     props: {
@@ -85791,8 +85831,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       title: {}
     },
     setup(e2) {
-      let t = e2, n = inject(fe, []), r = computed(() => Ze(t.name, n));
-      return (t2, n2) => r.value ? (openBlock(), createBlock(unref(od), mergeProps({ key: 0 }, t2.$attrs, {
+      let t = e2, n = inject(de, []), r = computed(() => Ze(t.name, n));
+      return (t2, n2) => r.value ? (openBlock(), createBlock(unref(sd), mergeProps({ key: 0 }, t2.$attrs, {
         icon: r.value,
         "aria-hidden": !(e2.label || e2.title),
         "aria-label": e2.label ?? e2.title,
@@ -85805,7 +85845,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         "title"
       ])) : createCommentVNode("", true);
     }
-  }), cd = /* @__PURE__ */ le({
+  }), ld = /* @__PURE__ */ le({
     DsfrAccordion: () => Ne,
     DsfrAccordionsGroup: () => Fe,
     DsfrAlert: () => Ve,
@@ -85820,97 +85860,97 @@ Expected function or array of functions, received type ${typeof value2}.`
     DsfrCheckbox: () => Dt,
     DsfrCheckboxSet: () => Nt,
     DsfrConsent: () => Rt,
-    DsfrDataTable: () => jn,
-    DsfrErrorPage: () => Ln,
-    DsfrFieldset: () => Vn,
-    DsfrFileDownload: () => Wn,
-    DsfrFileDownloadList: () => qn,
-    DsfrFileUpload: () => er,
-    DsfrFollow: () => Sr,
-    DsfrFooter: () => ei,
-    DsfrFooterLink: () => wr,
-    DsfrFooterLinkList: () => ri,
-    DsfrFooterPartners: () => Nr,
-    DsfrFranceConnect: () => oi,
-    DsfrHeader: () => ro,
-    DsfrHeaderMenuLink: () => Ea,
-    DsfrHeaderMenuLinks: () => Oa,
-    DsfrHighlight: () => io,
-    DsfrInput: () => Sa,
-    DsfrInputGroup: () => fo,
-    DsfrLanguageSelector: () => va,
-    DsfrLogo: () => Fr,
-    DsfrModal: () => xo,
-    DsfrMultiselect: () => No,
-    DsfrNavigation: () => as,
-    DsfrNavigationItem: () => Fo,
-    DsfrNavigationMegaMenu: () => Xo,
-    DsfrNavigationMegaMenuCategory: () => Ho,
-    DsfrNavigationMenu: () => ns,
-    DsfrNavigationMenuItem: () => Qo,
-    DsfrNavigationMenuLink: () => Ro,
-    DsfrNewsLetter: () => mr,
-    DsfrNotice: () => us,
+    DsfrDataTable: () => Mn,
+    DsfrErrorPage: () => Rn,
+    DsfrFieldset: () => Hn,
+    DsfrFileDownload: () => Gn,
+    DsfrFileDownloadList: () => Jn,
+    DsfrFileUpload: () => tr,
+    DsfrFollow: () => Cr,
+    DsfrFooter: () => ti,
+    DsfrFooterLink: () => Tr,
+    DsfrFooterLinkList: () => ii,
+    DsfrFooterPartners: () => Pr,
+    DsfrFranceConnect: () => si,
+    DsfrHeader: () => io,
+    DsfrHeaderMenuLink: () => Da,
+    DsfrHeaderMenuLinks: () => ka,
+    DsfrHighlight: () => ao,
+    DsfrInput: () => Ca,
+    DsfrInputGroup: () => po,
+    DsfrLanguageSelector: () => ya,
+    DsfrLogo: () => Ir,
+    DsfrModal: () => So,
+    DsfrMultiselect: () => Po,
+    DsfrNavigation: () => os,
+    DsfrNavigationItem: () => Io,
+    DsfrNavigationMegaMenu: () => Zo,
+    DsfrNavigationMegaMenuCategory: () => Uo,
+    DsfrNavigationMenu: () => rs,
+    DsfrNavigationMenuItem: () => $o,
+    DsfrNavigationMenuLink: () => zo,
+    DsfrNewsLetter: () => hr,
+    DsfrNotice: () => ds,
     DsfrPagination: () => Qt,
-    DsfrPictogram: () => Es,
-    DsfrPicture: () => js,
-    DsfrQuote: () => Rs,
-    DsfrRadioButton: () => Ws,
-    DsfrRadioButtonSet: () => Zs,
-    DsfrRange: () => lc,
-    DsfrSearchBar: () => wa,
-    DsfrSegmented: () => mc,
-    DsfrSegmentedSet: () => bc,
-    DsfrSelect: () => ln,
-    DsfrShare: () => Oc,
-    DsfrSideMenu: () => zc,
-    DsfrSideMenuButton: () => Ac,
-    DsfrSideMenuLink: () => Bc,
-    DsfrSideMenuList: () => Pc,
-    DsfrSideMenuListItem: () => jc,
-    DsfrSkipLinks: () => Gc,
-    DsfrSocialNetworkIcon: () => ue,
-    DsfrSocialNetworks: () => vr,
-    DsfrStepper: () => Qc,
-    DsfrSummary: () => rl,
-    DsfrTabContent: () => al,
-    DsfrTabItem: () => ll,
-    DsfrTable: () => El,
-    DsfrTableCell: () => pl,
-    DsfrTableHeader: () => ul,
-    DsfrTableHeaders: () => fl,
-    DsfrTableRow: () => ml,
-    DsfrTabs: () => kl,
-    DsfrTag: () => Al,
-    DsfrTags: () => Ml,
-    DsfrTile: () => Vl,
-    DsfrTiles: () => Ul,
-    DsfrToggleSwitch: () => Yl,
-    DsfrToggleSwitchGroup: () => nu,
-    DsfrTooltip: () => iu,
-    DsfrTranscription: () => bu,
-    DsfrVideo: () => Cu,
+    DsfrPictogram: () => Ds,
+    DsfrPicture: () => Ms,
+    DsfrQuote: () => zs,
+    DsfrRadioButton: () => Gs,
+    DsfrRadioButtonSet: () => Qs,
+    DsfrRange: () => uc,
+    DsfrSearchBar: () => Ta,
+    DsfrSegmented: () => hc,
+    DsfrSegmentedSet: () => xc,
+    DsfrSelect: () => un,
+    DsfrShare: () => kc,
+    DsfrSideMenu: () => Bc,
+    DsfrSideMenuButton: () => jc,
+    DsfrSideMenuLink: () => Vc,
+    DsfrSideMenuList: () => Fc,
+    DsfrSideMenuListItem: () => Mc,
+    DsfrSkipLinks: () => Kc,
+    DsfrSocialNetworkIcon: () => q,
+    DsfrSocialNetworks: () => yr,
+    DsfrStepper: () => $c,
+    DsfrSummary: () => il,
+    DsfrTabContent: () => ol,
+    DsfrTabItem: () => ul,
+    DsfrTable: () => Dl,
+    DsfrTableCell: () => ml,
+    DsfrTableHeader: () => dl,
+    DsfrTableHeaders: () => pl,
+    DsfrTableRow: () => hl,
+    DsfrTabs: () => Al,
+    DsfrTag: () => jl,
+    DsfrTags: () => Nl,
+    DsfrTile: () => Hl,
+    DsfrTiles: () => Wl,
+    DsfrToggleSwitch: () => Xl,
+    DsfrToggleSwitchGroup: () => ru,
+    DsfrTooltip: () => au,
+    DsfrTranscription: () => xu,
+    DsfrVideo: () => wu,
     VIcon: () => $,
-    VIconOffline: () => sd,
+    VIconOffline: () => cd,
     registerAccordionKey: () => K,
-    registerNavigationLinkKey: () => q,
-    registerTabKey: () => de,
-    vueDsfrIconCollectionsKey: () => fe,
-    vueDsfrPreferOfflineIconsKey: () => pe
+    registerNavigationLinkKey: () => ue,
+    registerTabKey: () => J,
+    vueDsfrIconCollectionsKey: () => de,
+    vueDsfrPreferOfflineIconsKey: () => fe
   });
-  function ld(e2, t = {}) {
+  function ud(e2, t = {}) {
     return { install(n) {
-      n.provide(fe, e2), n.provide(pe, t.preferOffline ?? false), n.component("VIconOffline") || n.component("VIconOffline", sd);
+      n.provide(de, e2), n.provide(fe, t.preferOffline ?? false), n.component("VIconOffline") || n.component("VIconOffline", cd);
     } };
   }
-  var ud = { install: (e2, { components: t } = {}) => {
-    Object.entries(cd).forEach(([n, r]) => {
+  var dd = { install: (e2, { components: t } = {}) => {
+    Object.entries(ld).forEach(([n, r]) => {
       (t === void 0 || t === "all" || t.map(({ name: e3 }) => e3).includes(n)) && e2.component(n, r);
     }), e2.component("VIcon", $);
   } };
   const VueDsfrExports = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     __proto__: null,
-    DARK_SCHEME: ge,
+    DARK_SCHEME: _e,
     DsfrAccordion: Ne,
     DsfrAccordionsGroup: Fe,
     DsfrAlert: Ve,
@@ -85925,96 +85965,96 @@ Expected function or array of functions, received type ${typeof value2}.`
     DsfrCheckbox: Dt,
     DsfrCheckboxSet: Nt,
     DsfrConsent: Rt,
-    DsfrDataTable: jn,
-    DsfrErrorPage: Ln,
-    DsfrFieldset: Vn,
-    DsfrFileDownload: Wn,
-    DsfrFileDownloadList: qn,
-    DsfrFileUpload: er,
-    DsfrFollow: Sr,
-    DsfrFooter: ei,
-    DsfrFooterLink: wr,
-    DsfrFooterLinkList: ri,
-    DsfrFooterPartners: Nr,
-    DsfrFranceConnect: oi,
-    DsfrHeader: ro,
-    DsfrHeaderMenuLink: Ea,
-    DsfrHeaderMenuLinks: Oa,
-    DsfrHighlight: io,
-    DsfrInput: Sa,
-    DsfrInputGroup: fo,
-    DsfrLanguageSelector: va,
-    DsfrLogo: Fr,
-    DsfrModal: xo,
-    DsfrMultiselect: No,
-    DsfrNavigation: as,
-    DsfrNavigationItem: Fo,
-    DsfrNavigationMegaMenu: Xo,
-    DsfrNavigationMegaMenuCategory: Ho,
-    DsfrNavigationMenu: ns,
-    DsfrNavigationMenuItem: Qo,
-    DsfrNavigationMenuLink: Ro,
-    DsfrNewsLetter: mr,
-    DsfrNotice: us,
+    DsfrDataTable: Mn,
+    DsfrErrorPage: Rn,
+    DsfrFieldset: Hn,
+    DsfrFileDownload: Gn,
+    DsfrFileDownloadList: Jn,
+    DsfrFileUpload: tr,
+    DsfrFollow: Cr,
+    DsfrFooter: ti,
+    DsfrFooterLink: Tr,
+    DsfrFooterLinkList: ii,
+    DsfrFooterPartners: Pr,
+    DsfrFranceConnect: si,
+    DsfrHeader: io,
+    DsfrHeaderMenuLink: Da,
+    DsfrHeaderMenuLinks: ka,
+    DsfrHighlight: ao,
+    DsfrInput: Ca,
+    DsfrInputGroup: po,
+    DsfrLanguageSelector: ya,
+    DsfrLogo: Ir,
+    DsfrModal: So,
+    DsfrMultiselect: Po,
+    DsfrNavigation: os,
+    DsfrNavigationItem: Io,
+    DsfrNavigationMegaMenu: Zo,
+    DsfrNavigationMegaMenuCategory: Uo,
+    DsfrNavigationMenu: rs,
+    DsfrNavigationMenuItem: $o,
+    DsfrNavigationMenuLink: zo,
+    DsfrNewsLetter: hr,
+    DsfrNotice: ds,
     DsfrPagination: Qt,
-    DsfrPictogram: Es,
-    DsfrPicture: js,
-    DsfrQuote: Rs,
-    DsfrRadioButton: Ws,
-    DsfrRadioButtonSet: Zs,
-    DsfrRange: lc,
-    DsfrSearchBar: wa,
-    DsfrSegmented: mc,
-    DsfrSegmentedSet: bc,
-    DsfrSelect: ln,
-    DsfrShare: Oc,
-    DsfrSideMenu: zc,
-    DsfrSideMenuButton: Ac,
-    DsfrSideMenuLink: Bc,
-    DsfrSideMenuList: Pc,
-    DsfrSideMenuListItem: jc,
-    DsfrSkipLinks: Gc,
-    DsfrSocialNetworkIcon: ue,
-    DsfrSocialNetworks: vr,
-    DsfrStepper: Qc,
-    DsfrSummary: rl,
-    DsfrTabContent: al,
-    DsfrTabItem: ll,
-    DsfrTable: El,
-    DsfrTableCell: pl,
-    DsfrTableHeader: ul,
-    DsfrTableHeaders: fl,
-    DsfrTableRow: ml,
-    DsfrTabs: kl,
-    DsfrTag: Al,
-    DsfrTags: Ml,
-    DsfrTile: Vl,
-    DsfrTiles: Ul,
-    DsfrToggleSwitch: Yl,
-    DsfrToggleSwitchGroup: nu,
-    DsfrTooltip: iu,
-    DsfrTranscription: bu,
-    DsfrVideo: Cu,
-    LIGHT_SCHEME: X,
-    SYSTEM_SCHEME: _e,
+    DsfrPictogram: Ds,
+    DsfrPicture: Ms,
+    DsfrQuote: zs,
+    DsfrRadioButton: Gs,
+    DsfrRadioButtonSet: Qs,
+    DsfrRange: uc,
+    DsfrSearchBar: Ta,
+    DsfrSegmented: hc,
+    DsfrSegmentedSet: xc,
+    DsfrSelect: un,
+    DsfrShare: kc,
+    DsfrSideMenu: Bc,
+    DsfrSideMenuButton: jc,
+    DsfrSideMenuLink: Vc,
+    DsfrSideMenuList: Fc,
+    DsfrSideMenuListItem: Mc,
+    DsfrSkipLinks: Kc,
+    DsfrSocialNetworkIcon: q,
+    DsfrSocialNetworks: yr,
+    DsfrStepper: $c,
+    DsfrSummary: il,
+    DsfrTabContent: ol,
+    DsfrTabItem: ul,
+    DsfrTable: Dl,
+    DsfrTableCell: ml,
+    DsfrTableHeader: dl,
+    DsfrTableHeaders: pl,
+    DsfrTableRow: hl,
+    DsfrTabs: Al,
+    DsfrTag: jl,
+    DsfrTags: Nl,
+    DsfrTile: Hl,
+    DsfrTiles: Wl,
+    DsfrToggleSwitch: Xl,
+    DsfrToggleSwitchGroup: ru,
+    DsfrTooltip: au,
+    DsfrTranscription: xu,
+    DsfrVideo: wu,
+    LIGHT_SCHEME: ge,
+    SYSTEM_SCHEME: ve,
     VIcon: $,
-    VIconOffline: sd,
+    VIconOffline: cd,
     alphanum: Te,
-    createVueDsfrIconPlugin: ld,
-    default: ud,
+    createVueDsfrIconPlugin: ud,
+    default: dd,
     getRandomAlphaNum: Ee,
     getRandomId: Oe,
     getRandomString: De,
     registerAccordionKey: K,
-    registerNavigationLinkKey: q,
-    registerTabKey: de,
+    registerNavigationLinkKey: ue,
+    registerTabKey: J,
     repeatFn: ke,
-    useCollapsable: J,
+    useCollapsable: Y,
     useRandomId: Z$1,
     useScheme: Ce,
     useTabs: we,
-    vueDsfrIconCollectionsKey: fe,
-    vueDsfrPreferOfflineIconsKey: pe
+    vueDsfrIconCollectionsKey: de,
+    vueDsfrPreferOfflineIconsKey: fe
   }, Symbol.toStringTag, { value: "Module" }));
   const COEFF_PX2MM = 0.264583333;
   const MM_PER_INCH = 25.4;
@@ -98228,7 +98268,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       return (_ctx, _cache) => {
         var _a2;
         return openBlock(), createBlock(Teleport, { to: "body" }, [
-          createVNode(unref(xo), {
+          createVNode(unref(So), {
             opened: printModalOpened.value,
             title,
             size,
@@ -98244,14 +98284,14 @@ Expected function or array of functions, received type ${typeof value2}.`
                   class: "print-page"
                 }, [
                   createBaseVNode("div", _hoisted_1$g, [
-                    createVNode(unref(ln), {
+                    createVNode(unref(un), {
                       modelValue: selectedPrintTemplateId.value,
                       "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => selectedPrintTemplateId.value = $event),
                       label: "Modèle d'impression",
                       options: printTemplateSelectOptions.value,
                       class: "mb-20"
                     }, null, 8, ["modelValue", "options"]),
-                    createVNode(unref(bc), {
+                    createVNode(unref(xc), {
                       modelValue: printFormState.pageOrientation,
                       "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => printFormState.pageOrientation = $event),
                       inline: false,
@@ -98260,13 +98300,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                       legend: "Mise en page",
                       class: "mb-20"
                     }, null, 8, ["modelValue"]),
-                    createVNode(unref(ln), {
+                    createVNode(unref(un), {
                       modelValue: printFormState.paperFormat,
                       "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => printFormState.paperFormat = $event),
                       label: "Dimensions",
                       options: paperFormatOptions.value
                     }, null, 8, ["modelValue", "options"]),
-                    createVNode(unref(ln), {
+                    createVNode(unref(un), {
                       modelValue: printFormState.margin,
                       "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => printFormState.margin = $event),
                       modelModifiers: { number: true },
@@ -98277,7 +98317,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         { value: 10, text: "Grosse marge - 10mm" }
                       ]
                     }, null, 8, ["modelValue"]),
-                    createVNode(unref(Sa), {
+                    createVNode(unref(Ca), {
                       modelValue: printFormState.printTitle,
                       "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => printFormState.printTitle = $event),
                       disabled: !printFormState.hasTitle,
@@ -98346,13 +98386,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Toutes les légendes"
                       }, null, 8, ["modelValue", "disabled"])
                     ]),
-                    createVNode(unref(ln), {
+                    createVNode(unref(un), {
                       modelValue: printFormState.format,
                       "onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => printFormState.format = $event),
                       label: "Format d'export",
                       options: ["PDF", "PNG", "JPEG"]
                     }, null, 8, ["modelValue"]),
-                    createVNode(unref(ln), {
+                    createVNode(unref(un), {
                       modelValue: printFormState.dpi,
                       "onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => printFormState.dpi = $event),
                       modelModifiers: { number: true },
