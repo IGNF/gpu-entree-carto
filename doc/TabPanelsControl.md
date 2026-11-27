@@ -48,7 +48,7 @@ Panneau latéral à **4 onglets**, à droite de la carte. Seule la **barre d’o
 | #   | Icône                         | Contenu                                                                                                                                                      |
 | --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0   | DSFR `fr-icon-map-pin-2-line` | **Informations / localisation** — `FicheInfoPanel` (présentation Parcelle / Territoire, modal références cadastrales, chargement différé des onglets) ; config GPU puis `/api/fiche-info` si cerise |
-| 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR _Données_ ([CatalogLayerTree](./CatalogLayerTree.md)) et _Fonds de cartes_ ([BaseLayerRadioList](./BaseLayerRadioList.md)) |
+| 1   | Remix `ri-map-2-line`         | **Catalogue** — sous-onglets DSFR _Données_ ([CatalogLayerTree](./CatalogLayerTree.md)) et _Fonds de cartes_ ([BaseLayerRadioList](./BaseLayerRadioList.md)), bascule animée par glissement latéral (`slide-transition.css`) |
 | 2   | Remix `ri-stack-line`         | **Couches de données** — pile des couches cochées dans le catalogue : visibilité, opacité, ordre, retrait                                                    |
 | 3   | Remix `ri-list-indefinite`    | **Légendes** — légendes des couches visibles de la pile                                                                                                      |
 

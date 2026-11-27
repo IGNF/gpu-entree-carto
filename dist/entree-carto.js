@@ -95711,7 +95711,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_11$6 = { class: "print-preview-pagination__label" };
   const _hoisted_12$6 = { class: "print-preview-container" };
   const _hoisted_13$6 = { class: "print-preview-page" };
-  const _hoisted_14$5 = {
+  const _hoisted_14$6 = {
     key: 0,
     class: "print-preview-patience",
     role: "status",
@@ -97526,7 +97526,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                             ])
                           ], 4)
                         ], 4),
-                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$5, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
+                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$6, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
                       ], 2)
                     ], 544)
                   ]),
@@ -119131,75 +119131,77 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-fiche-info__error ec-fiche-info__supplement-error",
     role: "alert"
   };
-  const _hoisted_2$9 = {
-    key: 2,
+  const _hoisted_2$9 = { class: "ec-fiche-info__stage" };
+  const _hoisted_3$9 = {
+    key: 1,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_3$9 = { class: "ec-fiche-info__title" };
-  const _hoisted_4$9 = {
-    key: 3,
+  const _hoisted_4$9 = { class: "ec-fiche-info__title" };
+  const _hoisted_5$8 = {
+    key: 2,
     class: "ec-fiche-info__inner ec-fiche-info__inner--parcel"
   };
-  const _hoisted_5$8 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_6$7 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_7$6 = { class: "ec-fiche-info__title" };
-  const _hoisted_8$5 = { class: "fr-tabs ec-fiche-info__tabs" };
-  const _hoisted_9$5 = {
+  const _hoisted_6$7 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_7$6 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_8$5 = { class: "ec-fiche-info__title" };
+  const _hoisted_9$5 = { class: "fr-tabs ec-fiche-info__tabs" };
+  const _hoisted_10$5 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Fiche parcelle"
   };
-  const _hoisted_10$5 = { role: "presentation" };
-  const _hoisted_11$5 = ["aria-selected"];
-  const _hoisted_12$5 = {
+  const _hoisted_11$5 = { role: "presentation" };
+  const _hoisted_12$5 = ["aria-selected"];
+  const _hoisted_13$5 = {
     key: 0,
     role: "presentation"
   };
-  const _hoisted_13$5 = ["aria-selected"];
-  const _hoisted_14$4 = ["tabindex"];
-  const _hoisted_15$2 = {
-    key: 0,
-    class: "ec-fiche-info__load-wrap"
-  };
+  const _hoisted_14$5 = ["aria-selected"];
+  const _hoisted_15$2 = ["tabindex"];
   const _hoisted_16$2 = {
-    key: 2,
-    class: "ec-fiche-info__error"
-  };
-  const _hoisted_17$2 = { class: "ec-fiche-info__infos-toolbar" };
-  const _hoisted_18$2 = ["disabled"];
-  const _hoisted_19$1 = ["tabindex"];
-  const _hoisted_20$1 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
   };
-  const _hoisted_21$1 = {
+  const _hoisted_17$2 = {
     key: 2,
     class: "ec-fiche-info__error"
   };
-  const _hoisted_22$1 = { class: "ec-fiche-info__parcel-footnotes" };
-  const _hoisted_23$1 = {
-    key: 4,
+  const _hoisted_18$2 = { class: "ec-fiche-info__infos-toolbar" };
+  const _hoisted_19$1 = ["disabled"];
+  const _hoisted_20$1 = ["tabindex"];
+  const _hoisted_21$1 = {
+    key: 0,
+    class: "ec-fiche-info__load-wrap"
+  };
+  const _hoisted_22$1 = {
+    key: 2,
+    class: "ec-fiche-info__error"
+  };
+  const _hoisted_23$1 = { class: "ec-fiche-info__parcel-footnotes" };
+  const _hoisted_24$1 = {
+    key: 3,
     class: "ec-fiche-info__inner ec-fiche-info__inner--territory"
   };
-  const _hoisted_24$1 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_25$1 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_26$1 = { class: "ec-fiche-info__territory-head" };
-  const _hoisted_27 = { class: "ec-fiche-info__title" };
-  const _hoisted_28 = {
+  const _hoisted_25$1 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_26$1 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_27 = { class: "ec-fiche-info__territory-head" };
+  const _hoisted_28 = { class: "ec-fiche-info__title" };
+  const _hoisted_29 = {
     key: 1,
     class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_29 = {
+  const _hoisted_30 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_30 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_31 = {
-    key: 5,
+  const _hoisted_31 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_32 = {
+    key: 4,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_32 = { class: "ec-fiche-info__title" };
+  const _hoisted_33 = { class: "ec-fiche-info__title" };
+  const MODE_SLIDE_NONE = "ec-slide-none";
   const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
@@ -119228,6 +119230,19 @@ Expected function or array of functions, received type ${typeof value2}.`
         return mapMode.mode.value;
       });
       const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL);
+      const modeSlideName = /* @__PURE__ */ ref(MODE_SLIDE_NONE);
+      watch(
+        () => mapMode.mode.value,
+        (next, previous) => {
+          if (previous === void 0 || next === previous) return;
+          modeSlideName.value = next === MAP_MODE_TERRITORY ? "ec-slide-next" : "ec-slide-prev";
+        }
+      );
+      function onModeSlideEnd(el2) {
+        if (el2.matches(".ec-fiche-info__inner--parcel, .ec-fiche-info__inner--territory")) {
+          modeSlideName.value = MODE_SLIDE_NONE;
+        }
+      }
       const showTerritoryLayout = computed(() => effectiveMode.value === MAP_MODE_TERRITORY);
       const parcelLabel = computed(
         () => {
@@ -119433,7 +119448,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return buildParcelFichePanelFootnotesHtml();
       });
       return (_ctx, _cache) => {
-        var _a2, _b, _c2, _d, _e2, _f, _g, _h, _i2;
+        var _a2;
         return openBlock(), createElementBlock("article", {
           class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }]),
           onClick: onFicheContentClick
@@ -119457,264 +119472,280 @@ Expected function or array of functions, received type ${typeof value2}.`
               }, null, -1)
             ])])
           ])) : createCommentVNode("", true),
-          configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
-            key: 1,
-            class: "ec-fiche-info__body",
-            html: unref(FICHE_LOADING_SPINNER_HTML),
-            "aria-live": "polite",
-            "link-target-blank": ""
-          }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_2$9, [
-            createBaseVNode("h2", _hoisted_3$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
-            createVNode(_sfc_main$l, {
-              class: "ec-fiche-info__body",
-              html: emptyBodyHtml.value,
-              "link-target-blank": ""
-            }, null, 8, ["html"])
-          ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", _hoisted_4$9, [
-            createBaseVNode("header", _hoisted_5$8, [
-              createBaseVNode("div", _hoisted_6$7, [
-                createBaseVNode("a", {
-                  href: "#",
-                  class: "fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link",
-                  title: "Recentrer sur la parcelle",
-                  onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
-                }, [..._cache[6] || (_cache[6] = [
-                  createBaseVNode("span", {
-                    class: "ec-fiche-info__mode-tag-icon ec-icon-parcelle",
-                    "aria-hidden": "true"
-                  }, null, -1),
-                  createTextVNode(" Parcelle ", -1)
-                ])])
-              ]),
-              ((_a2 = __props.selection) == null ? void 0 : _a2.cadastreReferences) ? (openBlock(), createElementBlock("button", {
-                key: 0,
-                type: "button",
-                class: "ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left",
-                title: "Références cadastrales",
-                onClick: _cache[1] || (_cache[1] = ($event) => cadastreModalOpen.value = true)
-              }, [..._cache[7] || (_cache[7] = [
-                createBaseVNode("span", {
-                  class: "ri-information-line",
-                  "aria-hidden": "true"
-                }, null, -1),
-                createBaseVNode("span", { class: "visually-hidden" }, "Références cadastrales", -1)
-              ])])) : createCommentVNode("", true)
-            ]),
-            createBaseVNode("h2", _hoisted_7$6, toDisplayString(parcelLabel.value), 1),
-            ((_b = __props.selection) == null ? void 0 : _b.territoryTitle) ? (openBlock(), createElementBlock("button", {
-              key: 0,
-              type: "button",
-              class: "ec-fiche-info__territory-cta fr-btn fr-btn--primary",
-              onClick: activateTerritoryMode
-            }, [
-              createTextVNode(toDisplayString(territoryTitle.value) + " ", 1),
-              _cache[8] || (_cache[8] = createBaseVNode("span", {
-                class: "ri-arrow-right-line",
-                "aria-hidden": "true"
-              }, null, -1))
-            ])) : createCommentVNode("", true),
-            createBaseVNode("div", _hoisted_8$5, [
-              createBaseVNode("ul", _hoisted_9$5, [
-                createBaseVNode("li", _hoisted_10$5, [
-                  createBaseVNode("button", {
-                    id: "ec-fiche-parcel-tab-infos",
-                    type: "button",
-                    role: "tab",
-                    class: "fr-tabs__tab",
-                    "aria-selected": activeParcelTab.value === "infos",
-                    "aria-controls": "ec-fiche-parcel-panel-infos",
-                    onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "infos")
-                  }, " Infos ", 8, _hoisted_11$5)
-                ]),
-                showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_12$5, [
-                  createBaseVNode("button", {
-                    id: "ec-fiche-parcel-tab-documents",
-                    type: "button",
-                    role: "tab",
-                    class: "fr-tabs__tab",
-                    "aria-selected": activeParcelTab.value === "documents",
-                    "aria-controls": "ec-fiche-parcel-panel-documents",
-                    onClick: _cache[3] || (_cache[3] = ($event) => activeParcelTab.value = "documents")
-                  }, " Documents ", 8, _hoisted_13$5)
-                ])) : createCommentVNode("", true)
-              ]),
-              createBaseVNode("div", {
-                id: "ec-fiche-parcel-panel-infos",
-                class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "infos" }]),
-                role: "tabpanel",
-                "aria-labelledby": "ec-fiche-parcel-tab-infos",
-                tabindex: activeParcelTab.value === "infos" ? 0 : -1
-              }, [
-                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_15$2, [
-                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+          createBaseVNode("div", _hoisted_2$9, [
+            createVNode(Transition, {
+              name: modeSlideName.value,
+              onAfterEnter: onModeSlideEnd
+            }, {
+              default: withCtx(() => {
+                var _a3, _b, _c2, _d, _e2, _f, _g, _h;
+                return [
+                  configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
                     key: 0,
                     class: "ec-fiche-info__body",
                     html: unref(FICHE_LOADING_SPINNER_HTML),
+                    "aria-live": "polite",
                     "link-target-blank": ""
-                  }, null, 8, ["html"])) : ((_c2 = __props.selection) == null ? void 0 : _c2.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$l, {
-                    key: 1,
-                    class: "ec-fiche-info__body",
-                    html: __props.selection.parcelInfosHtml,
-                    "link-target-blank": ""
-                  }, null, 8, ["html"])) : createCommentVNode("", true),
-                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_16$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
-                ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                  createBaseVNode("div", _hoisted_17$2, [
-                    _cache[10] || (_cache[10] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
-                    unref(printModal) ? (openBlock(), createElementBlock("button", {
+                  }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_3$9, [
+                    createBaseVNode("h2", _hoisted_4$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
+                    createVNode(_sfc_main$l, {
+                      class: "ec-fiche-info__body",
+                      html: emptyBodyHtml.value,
+                      "link-target-blank": ""
+                    }, null, 8, ["html"])
+                  ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", _hoisted_5$8, [
+                    createBaseVNode("header", _hoisted_6$7, [
+                      createBaseVNode("div", _hoisted_7$6, [
+                        createBaseVNode("a", {
+                          href: "#",
+                          class: "fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link",
+                          title: "Recentrer sur la parcelle",
+                          onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
+                        }, [..._cache[6] || (_cache[6] = [
+                          createBaseVNode("span", {
+                            class: "ec-fiche-info__mode-tag-icon ec-icon-parcelle",
+                            "aria-hidden": "true"
+                          }, null, -1),
+                          createTextVNode(" Parcelle ", -1)
+                        ])])
+                      ]),
+                      ((_a3 = __props.selection) == null ? void 0 : _a3.cadastreReferences) ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left",
+                        title: "Références cadastrales",
+                        onClick: _cache[1] || (_cache[1] = ($event) => cadastreModalOpen.value = true)
+                      }, [..._cache[7] || (_cache[7] = [
+                        createBaseVNode("span", {
+                          class: "ri-information-line",
+                          "aria-hidden": "true"
+                        }, null, -1),
+                        createBaseVNode("span", { class: "visually-hidden" }, "Références cadastrales", -1)
+                      ])])) : createCommentVNode("", true)
+                    ]),
+                    createBaseVNode("h2", _hoisted_8$5, toDisplayString(parcelLabel.value), 1),
+                    ((_b = __props.selection) == null ? void 0 : _b.territoryTitle) ? (openBlock(), createElementBlock("button", {
                       key: 0,
                       type: "button",
-                      class: "fr-btn fr-btn--secondary fr-btn--sm",
-                      disabled: !parcelDetailCached.value,
-                      title: "Imprimer la fiche parcelle",
-                      onClick: printParcelFiche
-                    }, [..._cache[9] || (_cache[9] = [
-                      createBaseVNode("span", {
-                        class: "ri-printer-line",
+                      class: "ec-fiche-info__territory-cta fr-btn fr-btn--primary",
+                      onClick: activateTerritoryMode
+                    }, [
+                      createTextVNode(toDisplayString(territoryTitle.value) + " ", 1),
+                      _cache[8] || (_cache[8] = createBaseVNode("span", {
+                        class: "ri-arrow-right-line",
                         "aria-hidden": "true"
-                      }, null, -1),
-                      createTextVNode(" Imprimer ", -1)
-                    ])], 8, _hoisted_18$2)) : createCommentVNode("", true)
-                  ]),
-                  createVNode(_sfc_main$l, {
-                    class: "ec-fiche-info__body",
-                    html: parcelInfosDisplayHtml.value,
-                    "link-target-blank": ""
-                  }, null, 8, ["html"])
-                ], 64)) : createCommentVNode("", true)
-              ], 10, _hoisted_14$4),
-              createBaseVNode("div", {
-                id: "ec-fiche-parcel-panel-documents",
-                class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
-                role: "tabpanel",
-                "aria-labelledby": "ec-fiche-parcel-tab-documents",
-                tabindex: activeParcelTab.value === "documents" ? 0 : -1
-              }, [
-                (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_20$1, [
-                  parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
-                    key: 0,
-                    class: "ec-fiche-info__body",
-                    html: unref(FICHE_LOADING_SPINNER_HTML),
-                    "link-target-blank": ""
-                  }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
-                    key: 1,
-                    class: "ec-fiche-info__body",
-                    html: parcelDocumentsDisplayHtml.value,
-                    "link-target-blank": ""
-                  }, null, 8, ["html"])) : createCommentVNode("", true),
-                  parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_21$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
-                ])) : (openBlock(), createBlock(_sfc_main$l, {
-                  key: 1,
-                  class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
-                  html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>",
-                  "link-target-blank": ""
-                }, null, 8, ["html"]))
-              ], 10, _hoisted_19$1)
-            ]),
-            createBaseVNode("div", _hoisted_22$1, [
-              createVNode(_sfc_main$l, {
-                class: "ec-fiche-info__body",
-                html: parcelPanelFootnotesHtml.value,
-                "link-target-blank": ""
-              }, null, 8, ["html"])
-            ])
-          ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_23$1, [
-            ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e2 = __props.selection) == null ? void 0 : _e2.parcelLabel) ? (openBlock(), createElementBlock("button", {
-              key: 0,
-              type: "button",
-              class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
-              onClick: activateParcelMode
-            }, [
-              _cache[11] || (_cache[11] = createBaseVNode("span", {
-                class: "ri-arrow-left-line",
-                "aria-hidden": "true"
-              }, null, -1)),
-              ((_f = __props.selection) == null ? void 0 : _f.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
-                createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
-              ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
-              ], 64))
-            ])) : createCommentVNode("", true),
-            createBaseVNode("header", _hoisted_24$1, [
-              createBaseVNode("div", _hoisted_25$1, [
-                createBaseVNode("a", {
-                  href: "#",
-                  class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
-                  title: "Recentrer sur le territoire",
-                  onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
-                }, [..._cache[12] || (_cache[12] = [
-                  createBaseVNode("span", {
-                    class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
-                    "aria-hidden": "true"
-                  }, null, -1),
-                  createTextVNode(" Territoire ", -1)
-                ])])
-              ])
-            ]),
-            createBaseVNode("div", _hoisted_26$1, [
-              createBaseVNode("h2", _hoisted_27, toDisplayString(territoryTitle.value), 1),
-              unref(printModal) ? (openBlock(), createElementBlock("button", {
-                key: 0,
-                type: "button",
-                class: "fr-btn fr-btn--secondary fr-btn--sm",
-                title: "Imprimer la fiche territoire",
-                onClick: printTerritoryFiche
-              }, [..._cache[13] || (_cache[13] = [
-                createBaseVNode("span", {
-                  class: "ri-printer-line",
-                  "aria-hidden": "true"
-                }, null, -1),
-                createTextVNode(" Imprimer ", -1)
-              ])])) : createCommentVNode("", true)
-            ]),
-            documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_28, [
-              createBaseVNode("ul", _hoisted_29, [
-                (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
-                  var _a3;
-                  return openBlock(), createElementBlock("li", {
-                    key: tab.id,
-                    role: "presentation"
-                  }, [
-                    createBaseVNode("button", {
-                      id: `ec-fiche-doc-tab-${tab.id}`,
+                      }, null, -1))
+                    ])) : createCommentVNode("", true),
+                    createBaseVNode("div", _hoisted_9$5, [
+                      createBaseVNode("ul", _hoisted_10$5, [
+                        createBaseVNode("li", _hoisted_11$5, [
+                          createBaseVNode("button", {
+                            id: "ec-fiche-parcel-tab-infos",
+                            type: "button",
+                            role: "tab",
+                            class: "fr-tabs__tab",
+                            "aria-selected": activeParcelTab.value === "infos",
+                            "aria-controls": "ec-fiche-parcel-panel-infos",
+                            onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "infos")
+                          }, " Infos ", 8, _hoisted_12$5)
+                        ]),
+                        showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_13$5, [
+                          createBaseVNode("button", {
+                            id: "ec-fiche-parcel-tab-documents",
+                            type: "button",
+                            role: "tab",
+                            class: "fr-tabs__tab",
+                            "aria-selected": activeParcelTab.value === "documents",
+                            "aria-controls": "ec-fiche-parcel-panel-documents",
+                            onClick: _cache[3] || (_cache[3] = ($event) => activeParcelTab.value = "documents")
+                          }, " Documents ", 8, _hoisted_14$5)
+                        ])) : createCommentVNode("", true)
+                      ]),
+                      createBaseVNode("div", {
+                        id: "ec-fiche-parcel-panel-infos",
+                        class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "infos" }]),
+                        role: "tabpanel",
+                        "aria-labelledby": "ec-fiche-parcel-tab-infos",
+                        tabindex: activeParcelTab.value === "infos" ? 0 : -1
+                      }, [
+                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_16$2, [
+                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+                            key: 0,
+                            class: "ec-fiche-info__body",
+                            html: unref(FICHE_LOADING_SPINNER_HTML),
+                            "link-target-blank": ""
+                          }, null, 8, ["html"])) : ((_c2 = __props.selection) == null ? void 0 : _c2.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$l, {
+                            key: 1,
+                            class: "ec-fiche-info__body",
+                            html: __props.selection.parcelInfosHtml,
+                            "link-target-blank": ""
+                          }, null, 8, ["html"])) : createCommentVNode("", true),
+                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_17$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                        ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                          createBaseVNode("div", _hoisted_18$2, [
+                            _cache[10] || (_cache[10] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
+                            unref(printModal) ? (openBlock(), createElementBlock("button", {
+                              key: 0,
+                              type: "button",
+                              class: "fr-btn fr-btn--secondary fr-btn--sm",
+                              disabled: !parcelDetailCached.value,
+                              title: "Imprimer la fiche parcelle",
+                              onClick: printParcelFiche
+                            }, [..._cache[9] || (_cache[9] = [
+                              createBaseVNode("span", {
+                                class: "ri-printer-line",
+                                "aria-hidden": "true"
+                              }, null, -1),
+                              createTextVNode(" Imprimer ", -1)
+                            ])], 8, _hoisted_19$1)) : createCommentVNode("", true)
+                          ]),
+                          createVNode(_sfc_main$l, {
+                            class: "ec-fiche-info__body",
+                            html: parcelInfosDisplayHtml.value,
+                            "link-target-blank": ""
+                          }, null, 8, ["html"])
+                        ], 64)) : createCommentVNode("", true)
+                      ], 10, _hoisted_15$2),
+                      createBaseVNode("div", {
+                        id: "ec-fiche-parcel-panel-documents",
+                        class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
+                        role: "tabpanel",
+                        "aria-labelledby": "ec-fiche-parcel-tab-documents",
+                        tabindex: activeParcelTab.value === "documents" ? 0 : -1
+                      }, [
+                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_21$1, [
+                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+                            key: 0,
+                            class: "ec-fiche-info__body",
+                            html: unref(FICHE_LOADING_SPINNER_HTML),
+                            "link-target-blank": ""
+                          }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
+                            key: 1,
+                            class: "ec-fiche-info__body",
+                            html: parcelDocumentsDisplayHtml.value,
+                            "link-target-blank": ""
+                          }, null, 8, ["html"])) : createCommentVNode("", true),
+                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_22$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                        ])) : (openBlock(), createBlock(_sfc_main$l, {
+                          key: 1,
+                          class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
+                          html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>",
+                          "link-target-blank": ""
+                        }, null, 8, ["html"]))
+                      ], 10, _hoisted_20$1)
+                    ]),
+                    createBaseVNode("div", _hoisted_23$1, [
+                      createVNode(_sfc_main$l, {
+                        class: "ec-fiche-info__body",
+                        html: parcelPanelFootnotesHtml.value,
+                        "link-target-blank": ""
+                      }, null, 8, ["html"])
+                    ])
+                  ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_24$1, [
+                    ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e2 = __props.selection) == null ? void 0 : _e2.parcelLabel) ? (openBlock(), createElementBlock("button", {
+                      key: 0,
                       type: "button",
-                      role: "tab",
-                      class: "fr-tabs__tab",
-                      "aria-selected": ((_a3 = activeDocTab.value) == null ? void 0 : _a3.id) === tab.id,
-                      "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
-                      onClick: ($event) => selectDocTab(tab.id)
-                    }, toDisplayString(tab.label), 9, _hoisted_30)
-                  ]);
-                }), 128))
-              ]),
-              activeDocTab.value ? (openBlock(), createBlock(_sfc_main$l, {
-                key: 0,
-                id: `ec-fiche-doc-panel-${activeDocTab.value.id}`,
-                class: "fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel fr-tabs__panel--selected",
-                role: "tabpanel",
-                "aria-labelledby": `ec-fiche-doc-tab-${activeDocTab.value.id}`,
-                tabindex: "0",
-                html: activeDocTab.value.bodyHtml,
-                "link-target-blank": ""
-              }, null, 8, ["id", "aria-labelledby", "html"])) : createCommentVNode("", true)
-            ])) : (openBlock(), createBlock(_sfc_main$l, {
-              key: 2,
-              class: "ec-fiche-info__body",
-              html: emptyBodyHtml.value,
-              "link-target-blank": ""
-            }, null, 8, ["html"]))
-          ])) : (openBlock(), createElementBlock("div", _hoisted_31, [
-            createBaseVNode("h2", _hoisted_32, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
-            createVNode(_sfc_main$l, {
-              class: "ec-fiche-info__body",
-              html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
-              "link-target-blank": ""
-            }, null, 8, ["html"])
-          ])),
+                      class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
+                      onClick: activateParcelMode
+                    }, [
+                      _cache[11] || (_cache[11] = createBaseVNode("span", {
+                        class: "ri-arrow-left-line",
+                        "aria-hidden": "true"
+                      }, null, -1)),
+                      ((_f = __props.selection) == null ? void 0 : _f.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                        createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
+                      ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                        createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
+                      ], 64))
+                    ])) : createCommentVNode("", true),
+                    createBaseVNode("header", _hoisted_25$1, [
+                      createBaseVNode("div", _hoisted_26$1, [
+                        createBaseVNode("a", {
+                          href: "#",
+                          class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
+                          title: "Recentrer sur le territoire",
+                          onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
+                        }, [..._cache[12] || (_cache[12] = [
+                          createBaseVNode("span", {
+                            class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
+                            "aria-hidden": "true"
+                          }, null, -1),
+                          createTextVNode(" Territoire ", -1)
+                        ])])
+                      ])
+                    ]),
+                    createBaseVNode("div", _hoisted_27, [
+                      createBaseVNode("h2", _hoisted_28, toDisplayString(territoryTitle.value), 1),
+                      unref(printModal) ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "fr-btn fr-btn--secondary fr-btn--sm",
+                        title: "Imprimer la fiche territoire",
+                        onClick: printTerritoryFiche
+                      }, [..._cache[13] || (_cache[13] = [
+                        createBaseVNode("span", {
+                          class: "ri-printer-line",
+                          "aria-hidden": "true"
+                        }, null, -1),
+                        createTextVNode(" Imprimer ", -1)
+                      ])])) : createCommentVNode("", true)
+                    ]),
+                    documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_29, [
+                      createBaseVNode("ul", _hoisted_30, [
+                        (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
+                          var _a4;
+                          return openBlock(), createElementBlock("li", {
+                            key: tab.id,
+                            role: "presentation"
+                          }, [
+                            createBaseVNode("button", {
+                              id: `ec-fiche-doc-tab-${tab.id}`,
+                              type: "button",
+                              role: "tab",
+                              class: "fr-tabs__tab",
+                              "aria-selected": ((_a4 = activeDocTab.value) == null ? void 0 : _a4.id) === tab.id,
+                              "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
+                              onClick: ($event) => selectDocTab(tab.id)
+                            }, toDisplayString(tab.label), 9, _hoisted_31)
+                          ]);
+                        }), 128))
+                      ]),
+                      (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
+                        var _a4, _b2;
+                        return openBlock(), createBlock(_sfc_main$l, {
+                          id: `ec-fiche-doc-panel-${tab.id}`,
+                          key: tab.id,
+                          class: normalizeClass(["fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel", { "fr-tabs__panel--selected": ((_a4 = activeDocTab.value) == null ? void 0 : _a4.id) === tab.id }]),
+                          role: "tabpanel",
+                          "aria-labelledby": `ec-fiche-doc-tab-${tab.id}`,
+                          tabindex: ((_b2 = activeDocTab.value) == null ? void 0 : _b2.id) === tab.id ? 0 : -1,
+                          html: tab.bodyHtml,
+                          "link-target-blank": ""
+                        }, null, 8, ["id", "class", "aria-labelledby", "tabindex", "html"]);
+                      }), 128))
+                    ])) : (openBlock(), createBlock(_sfc_main$l, {
+                      key: 2,
+                      class: "ec-fiche-info__body",
+                      html: emptyBodyHtml.value,
+                      "link-target-blank": ""
+                    }, null, 8, ["html"]))
+                  ])) : (openBlock(), createElementBlock("div", _hoisted_32, [
+                    createBaseVNode("h2", _hoisted_33, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
+                    createVNode(_sfc_main$l, {
+                      class: "ec-fiche-info__body",
+                      html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
+                      "link-target-blank": ""
+                    }, null, 8, ["html"])
+                  ]))
+                ];
+              }),
+              _: 1
+            }, 8, ["name"])
+          ]),
           (openBlock(), createBlock(Teleport, { to: "body" }, [
             createVNode(_sfc_main$d, {
               open: cadastreModalOpen.value,
-              references: ((_i2 = __props.selection) == null ? void 0 : _i2.cadastreReferences) ?? null,
+              references: ((_a2 = __props.selection) == null ? void 0 : _a2.cadastreReferences) ?? null,
               onClose: _cache[4] || (_cache[4] = ($event) => cadastreModalOpen.value = false)
             }, null, 8, ["open", "references"])
           ]))
@@ -120037,7 +120068,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-base-radio-list__thumb ec-base-radio-list__thumb--blank"
   };
   const _hoisted_13$4 = { class: "ec-base-radio-list__title-slot" };
-  const _hoisted_14$3 = ["onClick"];
+  const _hoisted_14$4 = ["onClick"];
   const _hoisted_15$1 = { class: "ec-base-radio-list__caret-slot" };
   const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
   const _hoisted_17$1 = ["id"];
@@ -120120,7 +120151,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       type: "button",
                       class: "ec-base-radio-list__title",
                       onClick: ($event) => select(preset.id)
-                    }, toDisplayString(preset.label), 9, _hoisted_14$3)
+                    }, toDisplayString(preset.label), 9, _hoisted_14$4)
                   ]),
                   createBaseVNode("div", _hoisted_15$1, [
                     createBaseVNode("button", {
@@ -120174,23 +120205,34 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_5$4 = ["aria-selected", "aria-current", "tabindex"];
   const _hoisted_6$3 = { class: "fr-nav__item" };
   const _hoisted_7$3 = ["aria-selected", "aria-current", "tabindex"];
-  const _hoisted_8$3 = ["hidden"];
+  const _hoisted_8$3 = { class: "ec-layer-catalogue__stage" };
   const _hoisted_9$3 = {
+    id: "ec-catalog-panel-donnees",
+    class: "ec-layer-catalogue__panel",
+    role: "tabpanel",
+    "aria-labelledby": "ec-catalog-tab-donnees"
+  };
+  const _hoisted_10$3 = {
     key: 1,
     class: "ec-layer-catalogue__selection"
   };
-  const _hoisted_10$3 = {
+  const _hoisted_11$3 = {
     key: 2,
     class: "ec-layer-catalogue__waiting",
     role: "status",
     "aria-live": "polite"
   };
-  const _hoisted_11$3 = {
+  const _hoisted_12$3 = {
     key: 3,
     class: "ec-layer-catalogue__hint"
   };
-  const _hoisted_12$3 = ["hidden"];
   const _hoisted_13$3 = {
+    id: "ec-catalog-panel-fonds",
+    class: "ec-layer-catalogue__panel",
+    role: "tabpanel",
+    "aria-labelledby": "ec-catalog-tab-fonds"
+  };
+  const _hoisted_14$3 = {
     key: 1,
     class: "ec-layer-catalogue__hint"
   };
@@ -120209,6 +120251,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const emit2 = __emit;
       const catalogueTab = /* @__PURE__ */ ref("donnees");
+      const catalogueSlide = computed(
+        () => catalogueTab.value === "fonds" ? "ec-slide-next" : "ec-slide-prev"
+      );
       const catalogTreeIndex = computed(() => buildCatalogTreeIndex(props.layerNodes));
       const pinnedExpandIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
       const highlightedNodeIds = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
@@ -120275,64 +120320,74 @@ Expected function or array of functions, received type ${typeof value2}.`
               ])
             ])
           ]),
-          createBaseVNode("div", {
-            id: "ec-catalog-panel-donnees",
-            class: "ec-layer-catalogue__panel",
-            role: "tabpanel",
-            "aria-labelledby": "ec-catalog-tab-donnees",
-            hidden: catalogueTab.value !== "donnees"
-          }, [
-            __props.layerNodes.length ? (openBlock(), createBlock(CatalogLayerSearch, {
-              key: 0,
-              roots: __props.layerNodes,
-              "checked-by-id": __props.inStackById,
-              "map-zoom": __props.mapZoom,
-              onToggle: onCatalogToggle,
-              onFocusNode: onSearchFocusNode
-            }, null, 8, ["roots", "checked-by-id", "map-zoom"])) : createCommentVNode("", true),
-            __props.layerNodes.length ? (openBlock(), createElementBlock("div", _hoisted_9$3, [
-              _cache[3] || (_cache[3] = createBaseVNode("h3", {
-                id: "ec-catalog-selection-title",
-                class: "ec-layer-catalogue__section-title"
-              }, " Sélection des données ", -1)),
-              createVNode(CatalogLayerTree, {
-                nodes: __props.layerNodes,
-                "map-zoom": __props.mapZoom,
-                "catalog-roots": __props.layerNodes,
-                "checked-by-id": __props.inStackById,
-                "pinned-expand-ids": pinnedExpandIds.value,
-                "highlighted-node-ids": highlightedNodeIds.value,
-                "focus-catalog-node-id": focusCatalogNodeId.value,
-                onToggle: onCatalogToggle,
-                onUnpinExpand
-              }, null, 8, ["nodes", "map-zoom", "catalog-roots", "checked-by-id", "pinned-expand-ids", "highlighted-node-ids", "focus-catalog-node-id"])
-            ])) : __props.catalogLayersLoading ? (openBlock(), createElementBlock("div", _hoisted_10$3, [..._cache[4] || (_cache[4] = [
-              createBaseVNode("span", {
-                class: "ri-loader-4-line ec-layer-catalogue__spinner",
-                "aria-hidden": "true"
-              }, null, -1),
-              createBaseVNode("span", null, "En attente de la récupération des couches…", -1)
-            ])])) : (openBlock(), createElementBlock("p", _hoisted_11$3, "Aucune couche disponible."))
-          ], 8, _hoisted_8$3),
-          createBaseVNode("div", {
-            id: "ec-catalog-panel-fonds",
-            class: "ec-layer-catalogue__panel",
-            role: "tabpanel",
-            "aria-labelledby": "ec-catalog-tab-fonds",
-            hidden: catalogueTab.value !== "fonds"
-          }, [
-            __props.basePresets.length ? (openBlock(), createBlock(BaseLayerRadioList, {
-              key: 0,
-              presets: __props.basePresets,
-              "model-value": __props.baseModelValue,
-              "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("update:baseModelValue", $event))
-            }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_13$3, "Aucun fond de plan configuré."))
-          ], 8, _hoisted_12$3)
+          createBaseVNode("div", _hoisted_8$3, [
+            createVNode(Transition, {
+              name: catalogueSlide.value,
+              persisted: ""
+            }, {
+              default: withCtx(() => [
+                withDirectives(createBaseVNode("div", _hoisted_9$3, [
+                  __props.layerNodes.length ? (openBlock(), createBlock(CatalogLayerSearch, {
+                    key: 0,
+                    roots: __props.layerNodes,
+                    "checked-by-id": __props.inStackById,
+                    "map-zoom": __props.mapZoom,
+                    onToggle: onCatalogToggle,
+                    onFocusNode: onSearchFocusNode
+                  }, null, 8, ["roots", "checked-by-id", "map-zoom"])) : createCommentVNode("", true),
+                  __props.layerNodes.length ? (openBlock(), createElementBlock("div", _hoisted_10$3, [
+                    _cache[3] || (_cache[3] = createBaseVNode("h3", {
+                      id: "ec-catalog-selection-title",
+                      class: "ec-layer-catalogue__section-title"
+                    }, " Sélection des données ", -1)),
+                    createVNode(CatalogLayerTree, {
+                      nodes: __props.layerNodes,
+                      "map-zoom": __props.mapZoom,
+                      "catalog-roots": __props.layerNodes,
+                      "checked-by-id": __props.inStackById,
+                      "pinned-expand-ids": pinnedExpandIds.value,
+                      "highlighted-node-ids": highlightedNodeIds.value,
+                      "focus-catalog-node-id": focusCatalogNodeId.value,
+                      onToggle: onCatalogToggle,
+                      onUnpinExpand
+                    }, null, 8, ["nodes", "map-zoom", "catalog-roots", "checked-by-id", "pinned-expand-ids", "highlighted-node-ids", "focus-catalog-node-id"])
+                  ])) : __props.catalogLayersLoading ? (openBlock(), createElementBlock("div", _hoisted_11$3, [..._cache[4] || (_cache[4] = [
+                    createBaseVNode("span", {
+                      class: "ri-loader-4-line ec-layer-catalogue__spinner",
+                      "aria-hidden": "true"
+                    }, null, -1),
+                    createBaseVNode("span", null, "En attente de la récupération des couches…", -1)
+                  ])])) : (openBlock(), createElementBlock("p", _hoisted_12$3, "Aucune couche disponible."))
+                ], 512), [
+                  [vShow, catalogueTab.value === "donnees"]
+                ])
+              ]),
+              _: 1
+            }, 8, ["name"]),
+            createVNode(Transition, {
+              name: catalogueSlide.value,
+              persisted: ""
+            }, {
+              default: withCtx(() => [
+                withDirectives(createBaseVNode("div", _hoisted_13$3, [
+                  __props.basePresets.length ? (openBlock(), createBlock(BaseLayerRadioList, {
+                    key: 0,
+                    presets: __props.basePresets,
+                    "model-value": __props.baseModelValue,
+                    "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("update:baseModelValue", $event))
+                  }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_14$3, "Aucun fond de plan configuré."))
+                ], 512), [
+                  [vShow, catalogueTab.value === "fonds"]
+                ])
+              ]),
+              _: 1
+            }, 8, ["name"])
+          ])
         ]);
       };
     }
   });
-  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-df4b6ad2"]]);
+  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-f46b5b33"]]);
   const _hoisted_1$7 = {
     class: "ec-data-layers",
     "aria-labelledby": "ec-data-layers-title"

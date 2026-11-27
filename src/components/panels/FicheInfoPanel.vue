@@ -36,6 +36,7 @@ import '@gouvfr/dsfr/dist/component/callout/callout.min.css'
 import '@gouvfr/dsfr/dist/component/button/button.min.css'
 import '@/assets/custom-icons/custom-remix-icons.css'
 import '@/styles/fiche-info.css'
+import '@/styles/slide-transition.css'
 import '@gouvfr/dsfr/dist/component/tile/tile.min.css'
 import { syncFicheGeometryHighlight } from '@/lib/fiche/ficheGeometryHighlight'
 import { onFicheCatalogLinkClick } from '@/lib/fiche/ficheNoDataMessages'
@@ -75,6 +76,26 @@ const effectiveMode = computed((): MapModeId | null => {
 })
 
 const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL)
+
+/**
+ * Glissement latéral au changement de mode, dans l’ordre du sélecteur (Parcelle puis Territoire).
+ * Neutre hors changement de mode (nouveau clic, chargement) : pas d’animation.
+ */
+const MODE_SLIDE_NONE = 'ec-slide-none'
+const modeSlideName = ref(MODE_SLIDE_NONE)
+watch(
+  () => mapMode.mode.value,
+  (next, previous) => {
+    if (previous === undefined || next === previous) return
+    modeSlideName.value = next === MAP_MODE_TERRITORY ? 'ec-slide-next' : 'ec-slide-prev'
+  },
+)
+function onModeSlideEnd(el: Element): void {
+  // Le passage peut traverser l’état « chargement » : on attend la fiche du nouveau mode.
+  if (el.matches('.ec-fiche-info__inner--parcel, .ec-fiche-info__inner--territory')) {
+    modeSlideName.value = MODE_SLIDE_NONE
+  }
+}
 const showTerritoryLayout = computed(() => effectiveMode.value === MAP_MODE_TERRITORY)
 
 const parcelLabel = computed(
@@ -317,264 +338,276 @@ const parcelPanelFootnotesHtml = computed(() => {
       </button>
     </p>
 
-    <SanitizedHtml
-      v-if="configLoading || dataLoading"
-      class="ec-fiche-info__body"
-      :html="FICHE_LOADING_SPINNER_HTML"
-      aria-live="polite"
-      link-target-blank
-    />
+    <div class="ec-fiche-info__stage">
+      <Transition :name="modeSlideName" @after-enter="onModeSlideEnd">
+        <SanitizedHtml
+          v-if="configLoading || dataLoading"
+          class="ec-fiche-info__body"
+          :html="FICHE_LOADING_SPINNER_HTML"
+          aria-live="polite"
+          link-target-blank
+        />
 
-    <div v-else-if="isEmpty" class="ec-fiche-info__inner">
-      <h2 class="ec-fiche-info__title">{{ DEFAULT_FICHE_EMPTY.title }}</h2>
-      <SanitizedHtml class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
-    </div>
-
-    <!-- Mode Parcelle -->
-    <div v-else-if="showParcelLayout" class="ec-fiche-info__inner ec-fiche-info__inner--parcel">
-      <header class="ec-fiche-info__topbar">
-        <div class="ec-fiche-info__mode-tags">
-          <a
-            href="#"
-            class="fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link"
-            title="Recentrer sur la parcelle"
-            @click.prevent="recenterOnModeEmprise"
-          >
-            <span class="ec-fiche-info__mode-tag-icon ec-icon-parcelle" aria-hidden="true" />
-            Parcelle
-          </a>
+        <div v-else-if="isEmpty" class="ec-fiche-info__inner">
+          <h2 class="ec-fiche-info__title">{{ DEFAULT_FICHE_EMPTY.title }}</h2>
+          <SanitizedHtml class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
         </div>
-        <button
-          v-if="selection?.cadastreReferences"
-          type="button"
-          class="ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left"
-          title="Références cadastrales"
-          @click="cadastreModalOpen = true"
-        >
-          <span class="ri-information-line" aria-hidden="true" />
-          <span class="visually-hidden">Références cadastrales</span>
-        </button>
-      </header>
 
-      <h2 class="ec-fiche-info__title">{{ parcelLabel }}</h2>
-
-      <button
-        v-if="selection?.territoryTitle"
-        type="button"
-        class="ec-fiche-info__territory-cta fr-btn fr-btn--primary"
-        @click="activateTerritoryMode"
-      >
-        {{ territoryTitle }}
-        <span class="ri-arrow-right-line" aria-hidden="true" />
-      </button>
-
-      <div class="fr-tabs ec-fiche-info__tabs">
-        <ul class="fr-tabs__list" role="tablist" aria-label="Fiche parcelle">
-          <li role="presentation">
-            <button
-              id="ec-fiche-parcel-tab-infos"
-              type="button"
-              role="tab"
-              class="fr-tabs__tab"
-              :aria-selected="activeParcelTab === 'infos'"
-              aria-controls="ec-fiche-parcel-panel-infos"
-              @click="activeParcelTab = 'infos'"
-            >
-              Infos
-            </button>
-          </li>
-          <li v-if="showParcelDocumentsTab" role="presentation">
-            <button
-              id="ec-fiche-parcel-tab-documents"
-              type="button"
-              role="tab"
-              class="fr-tabs__tab"
-              :aria-selected="activeParcelTab === 'documents'"
-              aria-controls="ec-fiche-parcel-panel-documents"
-              @click="activeParcelTab = 'documents'"
-            >
-              Documents
-            </button>
-          </li>
-        </ul>
-
-        <div
-          id="ec-fiche-parcel-panel-infos"
-          class="fr-tabs__panel ec-fiche-info__parcel-panel"
-          :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'infos' }"
-          role="tabpanel"
-          aria-labelledby="ec-fiche-parcel-tab-infos"
-          :tabindex="activeParcelTab === 'infos' ? 0 : -1"
-        >
-          <div
-            v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'infos'"
-            class="ec-fiche-info__load-wrap"
-          >
-            <SanitizedHtml
-              v-if="parcelTabLoading"
-              class="ec-fiche-info__body"
-              :html="FICHE_LOADING_SPINNER_HTML"
-              link-target-blank
-            />
-            <SanitizedHtml
-              v-else-if="selection?.parcelInfosHtml"
-              class="ec-fiche-info__body"
-              :html="selection.parcelInfosHtml"
-              link-target-blank
-            />
-            <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
-          </div>
-          <template v-else-if="parcelDetailReady">
-            <div class="ec-fiche-info__infos-toolbar">
-              <h3 class="ec-fiche-info__section-title">Règles d’urbanisme</h3>
-              <button
-                v-if="printModal"
-                type="button"
-                class="fr-btn fr-btn--secondary fr-btn--sm"
-                :disabled="!parcelDetailCached"
-                title="Imprimer la fiche parcelle"
-                @click="printParcelFiche"
+        <!-- Mode Parcelle -->
+        <div v-else-if="showParcelLayout" class="ec-fiche-info__inner ec-fiche-info__inner--parcel">
+          <header class="ec-fiche-info__topbar">
+            <div class="ec-fiche-info__mode-tags">
+              <a
+                href="#"
+                class="fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link"
+                title="Recentrer sur la parcelle"
+                @click.prevent="recenterOnModeEmprise"
               >
-                <span class="ri-printer-line" aria-hidden="true" />
-                Imprimer
-              </button>
+                <span class="ec-fiche-info__mode-tag-icon ec-icon-parcelle" aria-hidden="true" />
+                Parcelle
+              </a>
             </div>
+            <button
+              v-if="selection?.cadastreReferences"
+              type="button"
+              class="ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left"
+              title="Références cadastrales"
+              @click="cadastreModalOpen = true"
+            >
+              <span class="ri-information-line" aria-hidden="true" />
+              <span class="visually-hidden">Références cadastrales</span>
+            </button>
+          </header>
+
+          <h2 class="ec-fiche-info__title">{{ parcelLabel }}</h2>
+
+          <button
+            v-if="selection?.territoryTitle"
+            type="button"
+            class="ec-fiche-info__territory-cta fr-btn fr-btn--primary"
+            @click="activateTerritoryMode"
+          >
+            {{ territoryTitle }}
+            <span class="ri-arrow-right-line" aria-hidden="true" />
+          </button>
+
+          <div class="fr-tabs ec-fiche-info__tabs">
+            <ul class="fr-tabs__list" role="tablist" aria-label="Fiche parcelle">
+              <li role="presentation">
+                <button
+                  id="ec-fiche-parcel-tab-infos"
+                  type="button"
+                  role="tab"
+                  class="fr-tabs__tab"
+                  :aria-selected="activeParcelTab === 'infos'"
+                  aria-controls="ec-fiche-parcel-panel-infos"
+                  @click="activeParcelTab = 'infos'"
+                >
+                  Infos
+                </button>
+              </li>
+              <li v-if="showParcelDocumentsTab" role="presentation">
+                <button
+                  id="ec-fiche-parcel-tab-documents"
+                  type="button"
+                  role="tab"
+                  class="fr-tabs__tab"
+                  :aria-selected="activeParcelTab === 'documents'"
+                  aria-controls="ec-fiche-parcel-panel-documents"
+                  @click="activeParcelTab = 'documents'"
+                >
+                  Documents
+                </button>
+              </li>
+            </ul>
+
+            <div
+              id="ec-fiche-parcel-panel-infos"
+              class="fr-tabs__panel ec-fiche-info__parcel-panel"
+              :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'infos' }"
+              role="tabpanel"
+              aria-labelledby="ec-fiche-parcel-tab-infos"
+              :tabindex="activeParcelTab === 'infos' ? 0 : -1"
+            >
+              <div
+                v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'infos'"
+                class="ec-fiche-info__load-wrap"
+              >
+                <SanitizedHtml
+                  v-if="parcelTabLoading"
+                  class="ec-fiche-info__body"
+                  :html="FICHE_LOADING_SPINNER_HTML"
+                  link-target-blank
+                />
+                <SanitizedHtml
+                  v-else-if="selection?.parcelInfosHtml"
+                  class="ec-fiche-info__body"
+                  :html="selection.parcelInfosHtml"
+                  link-target-blank
+                />
+                <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
+              </div>
+              <template v-else-if="parcelDetailReady">
+                <div class="ec-fiche-info__infos-toolbar">
+                  <h3 class="ec-fiche-info__section-title">Règles d’urbanisme</h3>
+                  <button
+                    v-if="printModal"
+                    type="button"
+                    class="fr-btn fr-btn--secondary fr-btn--sm"
+                    :disabled="!parcelDetailCached"
+                    title="Imprimer la fiche parcelle"
+                    @click="printParcelFiche"
+                  >
+                    <span class="ri-printer-line" aria-hidden="true" />
+                    Imprimer
+                  </button>
+                </div>
+                <SanitizedHtml
+                  class="ec-fiche-info__body"
+                  :html="parcelInfosDisplayHtml"
+                  link-target-blank
+                />
+              </template>
+            </div>
+
+            <div
+              id="ec-fiche-parcel-panel-documents"
+              class="fr-tabs__panel ec-fiche-info__parcel-panel"
+              :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'documents' }"
+              role="tabpanel"
+              aria-labelledby="ec-fiche-parcel-tab-documents"
+              :tabindex="activeParcelTab === 'documents' ? 0 : -1"
+            >
+              <div
+                v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'documents'"
+                class="ec-fiche-info__load-wrap"
+              >
+                <SanitizedHtml
+                  v-if="parcelTabLoading"
+                  class="ec-fiche-info__body"
+                  :html="FICHE_LOADING_SPINNER_HTML"
+                  link-target-blank
+                />
+                <SanitizedHtml
+                  v-else-if="parcelDocumentsDisplayHtml"
+                  class="ec-fiche-info__body"
+                  :html="parcelDocumentsDisplayHtml"
+                  link-target-blank
+                />
+                <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
+              </div>
+              <SanitizedHtml
+                v-else
+                class="ec-fiche-info__body ec-fiche-info__body--parcel-documents"
+                :html="parcelDocumentsDisplayHtml || '<p>Aucun document.</p>'"
+                link-target-blank
+              />
+            </div>
+          </div>
+
+          <div class="ec-fiche-info__parcel-footnotes">
             <SanitizedHtml
               class="ec-fiche-info__body"
-              :html="parcelInfosDisplayHtml"
+              :html="parcelPanelFootnotesHtml"
               link-target-blank
             />
-          </template>
+          </div>
         </div>
 
+        <!-- Mode Territoire -->
         <div
-          id="ec-fiche-parcel-panel-documents"
-          class="fr-tabs__panel ec-fiche-info__parcel-panel"
-          :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'documents' }"
-          role="tabpanel"
-          aria-labelledby="ec-fiche-parcel-tab-documents"
-          :tabindex="activeParcelTab === 'documents' ? 0 : -1"
+          v-else-if="showTerritoryLayout"
+          class="ec-fiche-info__inner ec-fiche-info__inner--territory"
         >
-          <div
-            v-if="(parcelTabLoading || !parcelDetailReady) && activeParcelTab === 'documents'"
-            class="ec-fiche-info__load-wrap"
+          <button
+            v-if="selection?.parcelSwitchLabel || selection?.parcelLabel"
+            type="button"
+            class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
+            @click="activateParcelMode"
           >
+            <span class="ri-arrow-left-line" aria-hidden="true" />
+            <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
+            <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
+          </button>
+
+          <header class="ec-fiche-info__topbar">
+            <div class="ec-fiche-info__mode-tags">
+              <a
+                href="#"
+                class="fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link"
+                title="Recentrer sur le territoire"
+                @click.prevent="recenterOnModeEmprise"
+              >
+                <span
+                  class="ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill"
+                  aria-hidden="true"
+                />
+                Territoire
+              </a>
+            </div>
+          </header>
+
+          <div class="ec-fiche-info__territory-head">
+            <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
+            <button
+              v-if="printModal"
+              type="button"
+              class="fr-btn fr-btn--secondary fr-btn--sm"
+              title="Imprimer la fiche territoire"
+              @click="printTerritoryFiche"
+            >
+              <span class="ri-printer-line" aria-hidden="true" />
+              Imprimer
+            </button>
+          </div>
+
+          <div v-if="documentTabs.length" class="fr-tabs ec-fiche-info__tabs">
+            <ul class="fr-tabs__list" role="tablist" aria-label="Documents et procédures">
+              <li v-for="tab in documentTabs" :key="tab.id" role="presentation">
+                <button
+                  :id="`ec-fiche-doc-tab-${tab.id}`"
+                  type="button"
+                  role="tab"
+                  class="fr-tabs__tab"
+                  :aria-selected="activeDocTab?.id === tab.id"
+                  :aria-controls="`ec-fiche-doc-panel-${tab.id}`"
+                  @click="selectDocTab(tab.id)"
+                >
+                  {{ tab.label }}
+                </button>
+              </li>
+            </ul>
+            <!-- Tous les panneaux rendus : carrousel DSFR (glissement entre onglets). -->
             <SanitizedHtml
-              v-if="parcelTabLoading"
-              class="ec-fiche-info__body"
-              :html="FICHE_LOADING_SPINNER_HTML"
+              v-for="tab in documentTabs"
+              :id="`ec-fiche-doc-panel-${tab.id}`"
+              :key="tab.id"
+              class="fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel"
+              :class="{ 'fr-tabs__panel--selected': activeDocTab?.id === tab.id }"
+              role="tabpanel"
+              :aria-labelledby="`ec-fiche-doc-tab-${tab.id}`"
+              :tabindex="activeDocTab?.id === tab.id ? 0 : -1"
+              :html="tab.bodyHtml"
               link-target-blank
             />
-            <SanitizedHtml
-              v-else-if="parcelDocumentsDisplayHtml"
-              class="ec-fiche-info__body"
-              :html="parcelDocumentsDisplayHtml"
-              link-target-blank
-            />
-            <p v-if="parcelTabError" class="ec-fiche-info__error">{{ parcelTabError }}</p>
           </div>
           <SanitizedHtml
             v-else
-            class="ec-fiche-info__body ec-fiche-info__body--parcel-documents"
-            :html="parcelDocumentsDisplayHtml || '<p>Aucun document.</p>'"
+            class="ec-fiche-info__body"
+            :html="emptyBodyHtml"
             link-target-blank
           />
         </div>
-      </div>
 
-      <div class="ec-fiche-info__parcel-footnotes">
-        <SanitizedHtml
-          class="ec-fiche-info__body"
-          :html="parcelPanelFootnotesHtml"
-          link-target-blank
-        />
-      </div>
-    </div>
-
-    <!-- Mode Territoire -->
-    <div
-      v-else-if="showTerritoryLayout"
-      class="ec-fiche-info__inner ec-fiche-info__inner--territory"
-    >
-      <button
-        v-if="selection?.parcelSwitchLabel || selection?.parcelLabel"
-        type="button"
-        class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
-        @click="activateParcelMode"
-      >
-        <span class="ri-arrow-left-line" aria-hidden="true" />
-        <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
-        <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
-      </button>
-
-      <header class="ec-fiche-info__topbar">
-        <div class="ec-fiche-info__mode-tags">
-          <a
-            href="#"
-            class="fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link"
-            title="Recentrer sur le territoire"
-            @click.prevent="recenterOnModeEmprise"
-          >
-            <span
-              class="ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill"
-              aria-hidden="true"
-            />
-            Territoire
-          </a>
+        <div v-else class="ec-fiche-info__inner">
+          <h2 class="ec-fiche-info__title">{{ selection?.title }}</h2>
+          <SanitizedHtml
+            class="ec-fiche-info__body"
+            :html="selection?.bodyHtml ?? ''"
+            link-target-blank
+          />
         </div>
-      </header>
-
-      <div class="ec-fiche-info__territory-head">
-        <h2 class="ec-fiche-info__title">{{ territoryTitle }}</h2>
-        <button
-          v-if="printModal"
-          type="button"
-          class="fr-btn fr-btn--secondary fr-btn--sm"
-          title="Imprimer la fiche territoire"
-          @click="printTerritoryFiche"
-        >
-          <span class="ri-printer-line" aria-hidden="true" />
-          Imprimer
-        </button>
-      </div>
-
-      <div v-if="documentTabs.length" class="fr-tabs ec-fiche-info__tabs">
-        <ul class="fr-tabs__list" role="tablist" aria-label="Documents et procédures">
-          <li v-for="tab in documentTabs" :key="tab.id" role="presentation">
-            <button
-              :id="`ec-fiche-doc-tab-${tab.id}`"
-              type="button"
-              role="tab"
-              class="fr-tabs__tab"
-              :aria-selected="activeDocTab?.id === tab.id"
-              :aria-controls="`ec-fiche-doc-panel-${tab.id}`"
-              @click="selectDocTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </li>
-        </ul>
-        <SanitizedHtml
-          v-if="activeDocTab"
-          :id="`ec-fiche-doc-panel-${activeDocTab.id}`"
-          class="fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel fr-tabs__panel--selected"
-          role="tabpanel"
-          :aria-labelledby="`ec-fiche-doc-tab-${activeDocTab.id}`"
-          tabindex="0"
-          :html="activeDocTab.bodyHtml"
-          link-target-blank
-        />
-      </div>
-      <SanitizedHtml v-else class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
-    </div>
-
-    <div v-else class="ec-fiche-info__inner">
-      <h2 class="ec-fiche-info__title">{{ selection?.title }}</h2>
-      <SanitizedHtml
-        class="ec-fiche-info__body"
-        :html="selection?.bodyHtml ?? ''"
-        link-target-blank
-      />
+      </Transition>
     </div>
 
     <Teleport to="body">

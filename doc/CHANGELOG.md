@@ -19,6 +19,7 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Modifié
 
+- Fiche info et catalogue : onglets animés comme le composant onglet DSFR, glissement de la fiche au changement de mode Parcelle / Territoire.
 - Carte : plus de recentrage automatique sur la parcelle ou la commune (changement de mode, permalien) ; les tags Parcelle / Territoire de la fiche recentrent la vue.
 - Fiche info : une seule requête par point, familles (DU, SUP, SCoT) demandées selon le catalogue.
 - Fiche info : contenu filtré selon les couches cochées, mis à jour sans nouvel appel.

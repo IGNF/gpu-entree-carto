@@ -98,3 +98,26 @@ describe('FicheInfoPanel — tags Parcelle / Territoire', () => {
     )
   })
 })
+
+describe('FicheInfoPanel — onglets de documents (territoire)', () => {
+  const selection: FicheInfoSelection = {
+    title: 'Vif (38545)',
+    territoryTitle: 'Vif (38545)',
+    mapMode: MAP_MODE_TERRITORY,
+    raw: { grid: { name: 'VIF' } },
+    documentTabs: [
+      { id: 'du', label: 'Urbanisme', bodyHtml: '<p>PLU de Vif</p>' },
+      { id: 'sup', label: 'Servitude', bodyHtml: '<p>AC1</p>' },
+    ],
+  }
+
+  it('tous les panneaux rendus (carrousel DSFR), un seul sélectionné', async () => {
+    const wrapper = mountPanel(MAP_MODE_TERRITORY, { selection })
+    const panels = () => wrapper.findAll('.ec-fiche-info__doc-panel')
+    expect(panels()).toHaveLength(2)
+    expect(panels().map((p) => p.classes('fr-tabs__panel--selected'))).toEqual([true, false])
+    expect(wrapper.text()).toContain('AC1')
+    await wrapper.findAll('[role=tab]')[1].trigger('click')
+    expect(panels().map((p) => p.classes('fr-tabs__panel--selected'))).toEqual([false, true])
+  })
+})

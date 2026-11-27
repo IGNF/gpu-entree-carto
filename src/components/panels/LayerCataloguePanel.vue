@@ -11,6 +11,7 @@ import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
 import '@gouvfr/dsfr/dist/component/navigation/navigation.min.css'
 import '@/styles/layer-catalogue.css'
+import '@/styles/slide-transition.css'
 
 const props = defineProps<{
   layerNodes: TreeLayerNode[]
@@ -28,6 +29,10 @@ const emit = defineEmits<{
 }>()
 
 const catalogueTab = ref<'donnees' | 'fonds'>('donnees')
+/** Glissement dans l’ordre des onglets (Données puis Fonds de cartes), comme les onglets DSFR. */
+const catalogueSlide = computed(() =>
+  catalogueTab.value === 'fonds' ? 'ec-slide-next' : 'ec-slide-prev',
+)
 
 const catalogTreeIndex = computed(() => buildCatalogTreeIndex(props.layerNodes))
 const pinnedExpandIds = ref<Set<string>>(new Set())
@@ -100,63 +105,70 @@ function onUnpinExpand(nodeId: string) {
       </ul>
     </nav>
 
-    <div
-      id="ec-catalog-panel-donnees"
-      class="ec-layer-catalogue__panel"
-      role="tabpanel"
-      aria-labelledby="ec-catalog-tab-donnees"
-      :hidden="catalogueTab !== 'donnees'"
-    >
-      <CatalogLayerSearch
-        v-if="layerNodes.length"
-        :roots="layerNodes"
-        :checked-by-id="inStackById"
-        :map-zoom="mapZoom"
-        @toggle="onCatalogToggle"
-        @focus-node="onSearchFocusNode"
-      />
-      <div v-if="layerNodes.length" class="ec-layer-catalogue__selection">
-        <h3 id="ec-catalog-selection-title" class="ec-layer-catalogue__section-title">
-          Sélection des données
-        </h3>
-        <CatalogLayerTree
-          :nodes="layerNodes"
-          :map-zoom="mapZoom"
-          :catalog-roots="layerNodes"
-          :checked-by-id="inStackById"
-          :pinned-expand-ids="pinnedExpandIds"
-          :highlighted-node-ids="highlightedNodeIds"
-          :focus-catalog-node-id="focusCatalogNodeId"
-          @toggle="onCatalogToggle"
-          @unpin-expand="onUnpinExpand"
-        />
-      </div>
-      <div
-        v-else-if="catalogLayersLoading"
-        class="ec-layer-catalogue__waiting"
-        role="status"
-        aria-live="polite"
-      >
-        <span class="ri-loader-4-line ec-layer-catalogue__spinner" aria-hidden="true" />
-        <span>En attente de la récupération des couches…</span>
-      </div>
-      <p v-else class="ec-layer-catalogue__hint">Aucune couche disponible.</p>
-    </div>
+    <div class="ec-layer-catalogue__stage">
+      <!-- v-show : l’arbre du catalogue garde son état (dépliage) d’un onglet à l’autre. -->
+      <Transition :name="catalogueSlide">
+        <div
+          v-show="catalogueTab === 'donnees'"
+          id="ec-catalog-panel-donnees"
+          class="ec-layer-catalogue__panel"
+          role="tabpanel"
+          aria-labelledby="ec-catalog-tab-donnees"
+        >
+          <CatalogLayerSearch
+            v-if="layerNodes.length"
+            :roots="layerNodes"
+            :checked-by-id="inStackById"
+            :map-zoom="mapZoom"
+            @toggle="onCatalogToggle"
+            @focus-node="onSearchFocusNode"
+          />
+          <div v-if="layerNodes.length" class="ec-layer-catalogue__selection">
+            <h3 id="ec-catalog-selection-title" class="ec-layer-catalogue__section-title">
+              Sélection des données
+            </h3>
+            <CatalogLayerTree
+              :nodes="layerNodes"
+              :map-zoom="mapZoom"
+              :catalog-roots="layerNodes"
+              :checked-by-id="inStackById"
+              :pinned-expand-ids="pinnedExpandIds"
+              :highlighted-node-ids="highlightedNodeIds"
+              :focus-catalog-node-id="focusCatalogNodeId"
+              @toggle="onCatalogToggle"
+              @unpin-expand="onUnpinExpand"
+            />
+          </div>
+          <div
+            v-else-if="catalogLayersLoading"
+            class="ec-layer-catalogue__waiting"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="ri-loader-4-line ec-layer-catalogue__spinner" aria-hidden="true" />
+            <span>En attente de la récupération des couches…</span>
+          </div>
+          <p v-else class="ec-layer-catalogue__hint">Aucune couche disponible.</p>
+        </div>
+      </Transition>
 
-    <div
-      id="ec-catalog-panel-fonds"
-      class="ec-layer-catalogue__panel"
-      role="tabpanel"
-      aria-labelledby="ec-catalog-tab-fonds"
-      :hidden="catalogueTab !== 'fonds'"
-    >
-      <BaseLayerRadioList
-        v-if="basePresets.length"
-        :presets="basePresets"
-        :model-value="baseModelValue"
-        @update:model-value="emit('update:baseModelValue', $event)"
-      />
-      <p v-else class="ec-layer-catalogue__hint">Aucun fond de plan configuré.</p>
+      <Transition :name="catalogueSlide">
+        <div
+          v-show="catalogueTab === 'fonds'"
+          id="ec-catalog-panel-fonds"
+          class="ec-layer-catalogue__panel"
+          role="tabpanel"
+          aria-labelledby="ec-catalog-tab-fonds"
+        >
+          <BaseLayerRadioList
+            v-if="basePresets.length"
+            :presets="basePresets"
+            :model-value="baseModelValue"
+            @update:model-value="emit('update:baseModelValue', $event)"
+          />
+          <p v-else class="ec-layer-catalogue__hint">Aucun fond de plan configuré.</p>
+        </div>
+      </Transition>
     </div>
   </section>
 </template>
