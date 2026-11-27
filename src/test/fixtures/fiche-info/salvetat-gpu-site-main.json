@@ -1,0 +1,420 @@
+{
+  "parcel": {
+    "gid": 38706891,
+    "numero": "0260",
+    "feuille": 1,
+    "section": "AC",
+    "code_dep": "31",
+    "nom_com": "La Salvetat-Saint-Gilles",
+    "code_com": "526",
+    "com_abs": "000",
+    "code_arr": "000",
+    "idu": "31526000AC0260",
+    "contenance": 2004,
+    "code_insee": "31526",
+    "id": "31_526_000_000_AC_0260"
+  },
+  "parcelFeature": {
+    "type": "Feature",
+    "id": "parcelle.40403191",
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [1.271467, 43.578527],
+            [1.271449, 43.578431],
+            [1.271321, 43.578444],
+            [1.271291, 43.578447],
+            [1.271361, 43.578798],
+            [1.271421, 43.579096],
+            [1.271465, 43.579325],
+            [1.271535, 43.579612],
+            [1.271578, 43.57978],
+            [1.271615, 43.579908],
+            [1.271654, 43.579905],
+            [1.271774, 43.579894],
+            [1.271767, 43.579868],
+            [1.271661, 43.579395],
+            [1.271611, 43.579398],
+            [1.271497, 43.578815],
+            [1.271517, 43.578738],
+            [1.271467, 43.578527]
+          ]
+        ]
+      ]
+    },
+    "geometry_name": "geom",
+    "properties": {
+      "gid": 38706891,
+      "numero": "0260",
+      "feuille": 1,
+      "section": "AC",
+      "code_dep": "31",
+      "nom_com": "La Salvetat-Saint-Gilles",
+      "code_com": "526",
+      "com_abs": "000",
+      "code_arr": "000",
+      "idu": "31526000AC0260",
+      "contenance": 2004,
+      "code_insee": "31526"
+    }
+  },
+  "grid": {
+    "gid": 14072823,
+    "insee": "31526",
+    "name": "LA SALVETAT-SAINT-GILLES",
+    "is_rnu": false,
+    "is_deleted": false,
+    "is_coastline": false,
+    "feature": {
+      "type": "Feature",
+      "id": "municipality.14072823",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [1.253112, 43.569307],
+              [1.253188, 43.569344],
+              [1.252888, 43.569661],
+              [1.251338, 43.569937],
+              [1.250457, 43.569903],
+              [1.249459, 43.569595],
+              [1.248839, 43.56953],
+              [1.248434, 43.569407],
+              [1.246028, 43.569744],
+              [1.244618, 43.569728],
+              [1.243199, 43.569315],
+              [1.242352, 43.569216],
+              [1.239818, 43.569383],
+              [1.238029, 43.569772],
+              [1.237541, 43.569787],
+              [1.245707, 43.577263],
+              [1.248542, 43.580279],
+              [1.249559, 43.579855],
+              [1.251274, 43.581961],
+              [1.254347, 43.5847],
+              [1.256491, 43.584038],
+              [1.25828, 43.583652],
+              [1.262764, 43.582945],
+              [1.269751, 43.580797],
+              [1.26998, 43.581428],
+              [1.270284, 43.581832],
+              [1.270352, 43.582541],
+              [1.270166, 43.583981],
+              [1.269823, 43.585142],
+              [1.27017, 43.585312],
+              [1.270292, 43.585512],
+              [1.270355, 43.585852],
+              [1.270568, 43.586086],
+              [1.270658, 43.586505],
+              [1.270911, 43.586955],
+              [1.271452, 43.586944],
+              [1.27181, 43.587074],
+              [1.272089, 43.587065],
+              [1.273546, 43.587583],
+              [1.274922, 43.585733],
+              [1.275902, 43.584879],
+              [1.276305, 43.58434],
+              [1.277086, 43.583954],
+              [1.2783, 43.583594],
+              [1.280048, 43.582491],
+              [1.282671, 43.580449],
+              [1.286718, 43.578652],
+              [1.288196, 43.578073],
+              [1.290435, 43.575442],
+              [1.290776, 43.575148],
+              [1.29103, 43.575148],
+              [1.291624, 43.574288],
+              [1.292134, 43.572949],
+              [1.293451, 43.57105],
+              [1.29221, 43.570903],
+              [1.290882, 43.571004],
+              [1.285879, 43.571129],
+              [1.283918, 43.570615],
+              [1.283277, 43.570168],
+              [1.283084, 43.570218],
+              [1.282089, 43.570117],
+              [1.279928, 43.569573],
+              [1.278741, 43.569072],
+              [1.277184, 43.567919],
+              [1.276163, 43.567719],
+              [1.274481, 43.567059],
+              [1.272326, 43.566054],
+              [1.270204, 43.567392],
+              [1.269776, 43.56757],
+              [1.266262, 43.567835],
+              [1.263417, 43.567518],
+              [1.261644, 43.567687],
+              [1.260294, 43.5676],
+              [1.259527, 43.567721],
+              [1.257934, 43.5676],
+              [1.25639, 43.568026],
+              [1.254469, 43.568897],
+              [1.25349, 43.569075],
+              [1.253112, 43.569307]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "gid": 14072823,
+        "insee": "31526",
+        "name": "LA SALVETAT-SAINT-GILLES",
+        "is_rnu": false,
+        "is_deleted": false,
+        "is_coastline": false
+      }
+    }
+  },
+  "deletedGrids": [],
+  "dus": {
+    "DU_31526": {
+      "documents": [
+        {
+          "id": "ff4c45ed9b7d91d35221dfed6db6d02c",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "24/11/2025 15:02:22",
+          "updateDate": "24/11/2025 15:49:36",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "31526_PLU_20251013",
+          "type": "PLU",
+          "supCategory": null,
+          "name": "DU_31526",
+          "legalControlStatus": 100,
+          "title": "Plan Local d'Urbanisme (PLU) de la commune de LA SALVETAT-SAINT-GILLES",
+          "projectionCode": "EPSG:2154",
+          "typeref": "01",
+          "fileIdentifier": "GPU-ff4c45ed9b7d91d35221dfed6db6d02c",
+          "protected": false,
+          "grid": { "name": "31526", "title": "LA SALVETAT-SAINT-GILLES" },
+          "publicationDate": "24/11/2025 15:49:36",
+          "statusDate": "24/11/2025 15:49:36",
+          "typeproc": null,
+          "producer": "Le Grand Ouest Toulousain Agglomération",
+          "acteSupCount": null,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/ff4c45ed9b7d91d35221dfed6db6d02c/download/31526_PLU_20251013.zip",
+          "typeproc_title": null,
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": true
+    }
+  },
+  "psmvs": [],
+  "sups": {
+    "172014607_SUP_31_AC1": {
+      "documents": [
+        {
+          "id": "c88982dd1ed196d51cedcd38ff1c39f0",
+          "status": "document.production",
+          "documentSource": "ATOM",
+          "uploadDate": "03/11/2026 22:02:14",
+          "updateDate": "04/11/2026 00:38:17",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "172014607_AC1_031_20261103",
+          "type": "SUP",
+          "supCategory": {
+            "name": "AC1",
+            "libelle": "Servitudes relatives aux monuments historiques (immeubles classés et inscrits, abords des monuments historiques)",
+            "libelleCourt": "Monuments historiques",
+            "downloadable": true,
+            "urlFiche": "https://www.geoportail-urbanisme.gouv.fr/image/fiche_SUP_AC1.pdf"
+          },
+          "name": "172014607_SUP_31_AC1",
+          "legalControlStatus": 100,
+          "title": "Servitude d'Utilité Publique (SUP) de la catégorie AC1 - HAUTE-GARONNE - 172014607",
+          "projectionCode": "EPSG:2154",
+          "fileIdentifier": "GPU-c88982dd1ed196d51cedcd38ff1c39f0",
+          "protected": false,
+          "grid": { "name": "31", "title": "HAUTE-GARONNE" },
+          "publicationDate": "04/11/2026 00:38:17",
+          "statusDate": "04/11/2026 00:38:17",
+          "typeref": null,
+          "typeproc": null,
+          "producer": "Ministère de la culture",
+          "acteSupCount": 574,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/c88982dd1ed196d51cedcd38ff1c39f0/download/172014607_AC1_031_20261103.zip",
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": true
+    },
+    "120064019_SUP_31_T5": {
+      "documents": [
+        {
+          "id": "52624206dc7c0ef8227ffe93e5fb68aa",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "09/11/2026 16:56:35",
+          "updateDate": "09/11/2026 17:14:32",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "120064019_T5_031_20261109",
+          "type": "SUP",
+          "supCategory": {
+            "name": "T5",
+            "libelle": "Servitudes aéronautiques de dégagement (civile)",
+            "libelleCourt": "Dégagement aéronautique",
+            "downloadable": false,
+            "urlFiche": "https://www.geoportail-urbanisme.gouv.fr/image/fiche_SUP_T5.pdf"
+          },
+          "name": "120064019_SUP_31_T5",
+          "legalControlStatus": 100,
+          "title": "Servitude d'Utilité Publique (SUP) de la catégorie T5 - HAUTE-GARONNE - 120064019",
+          "projectionCode": "EPSG:2154",
+          "typeref": null,
+          "fileIdentifier": "GPU-52624206dc7c0ef8227ffe93e5fb68aa",
+          "protected": true,
+          "grid": { "name": "31", "title": "HAUTE-GARONNE" },
+          "publicationDate": "09/11/2026 17:14:32",
+          "statusDate": "09/11/2026 17:14:32",
+          "typeproc": null,
+          "producer": "Direction Générale de l'Aviation Civile (DGAC/SNIA)",
+          "acteSupCount": 10,
+          "archiveUrl": null,
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": true
+    },
+    "130010747_SUP_31_PM1": {
+      "documents": [
+        {
+          "id": "af0b127c69435091d7eb11524c8698e9",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "14/11/2023 16:17:55",
+          "updateDate": "14/11/2023 16:39:09",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "130010747_PM1_031_20231110",
+          "type": "SUP",
+          "supCategory": {
+            "name": "PM1",
+            "libelle": "Plans de prévention des risques naturels prévisibles (PPRNP) et plans de prévention de risques miniers (PPRM) et documents valant PPRNP",
+            "libelleCourt": "Plans de prévention des risques naturels ou miniers",
+            "downloadable": true,
+            "urlFiche": "https://www.geoportail-urbanisme.gouv.fr/image/fiche_SUP_PM1.pdf"
+          },
+          "name": "130010747_SUP_31_PM1",
+          "legalControlStatus": 100,
+          "title": "Servitude d'Utilité Publique (SUP) de la catégorie PM1 - HAUTE-GARONNE - 130010747",
+          "projectionCode": "EPSG:2154",
+          "fileIdentifier": "GPU-af0b127c69435091d7eb11524c8698e9",
+          "protected": false,
+          "grid": { "name": "31", "title": "HAUTE-GARONNE" },
+          "publicationDate": "14/11/2023 16:39:09",
+          "statusDate": "14/11/2023 16:39:09",
+          "typeref": null,
+          "typeproc": null,
+          "producer": "DDT 31 (Direction Départementale des Territoires de Haute-Garonne)",
+          "acteSupCount": 633,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/af0b127c69435091d7eb11524c8698e9/download/130010747_PM1_031_20231110.zip",
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": true
+    }
+  },
+  "scots": {
+    "scot_253102388": {
+      "documents": [
+        {
+          "id": "03fc735c80e996b9a4a71545658a6973",
+          "status": "document.production",
+          "documentSource": "UPLOAD",
+          "uploadDate": "20/03/2026 11:41:41",
+          "updateDate": "20/03/2026 13:54:14",
+          "legalStatus": "APPROVED",
+          "effectiveStatus": "EN_VIGUEUR",
+          "originalName": "253102388_SCOT_20260309",
+          "type": "SCoT",
+          "supCategory": null,
+          "name": "scot_253102388",
+          "legalControlStatus": 100,
+          "title": "Schéma de Cohérence Territorial (SCoT) DE LA GRANDE AGGLOMERATION TOULOUSAINE",
+          "projectionCode": "CRS:84",
+          "typeref": "01",
+          "fileIdentifier": "GPU-03fc735c80e996b9a4a71545658a6973",
+          "protected": false,
+          "grid": { "name": "scot_253102388", "title": "SCOT DE L'AGGLOMERATION TOULOUSAINE" },
+          "publicationDate": "20/03/2026 13:54:05",
+          "statusDate": "20/03/2026 13:54:05",
+          "typeproc": null,
+          "producer": "Syndicat Mixte d'Etudes de l'Agglomération Toulousaine",
+          "acteSupCount": null,
+          "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/03fc735c80e996b9a4a71545658a6973/download/253102388_SCOT_20260309.zip",
+          "typeproc_title": null,
+          "notEnforceable": null
+        }
+      ],
+      "hasPreviousVersions": false
+    }
+  },
+  "mecsDu": [],
+  "mecsScot": [],
+  "is_el9_alert": false,
+  "lowScaleDocument": {
+    "DU_31526": {
+      "id": "ff4c45ed9b7d91d35221dfed6db6d02c",
+      "status": "document.production",
+      "documentSource": "UPLOAD",
+      "uploadDate": "24/11/2025 15:02:22",
+      "updateDate": "24/11/2025 15:49:36",
+      "legalStatus": "APPROVED",
+      "effectiveStatus": "EN_VIGUEUR",
+      "originalName": "31526_PLU_20251013",
+      "type": "PLU",
+      "supCategory": null,
+      "name": "DU_31526",
+      "legalControlStatus": 100,
+      "title": "Plan Local d'Urbanisme (PLU) de la commune de LA SALVETAT-SAINT-GILLES",
+      "projectionCode": "EPSG:2154",
+      "typeref": "01",
+      "fileIdentifier": "GPU-ff4c45ed9b7d91d35221dfed6db6d02c",
+      "protected": false,
+      "grid": {
+        "name": "31526",
+        "title": "LA SALVETAT-SAINT-GILLES",
+        "type": "municipality",
+        "rnu": false
+      },
+      "publicationDate": "24/11/2025 15:49:36",
+      "statusDate": "24/11/2025 15:49:36",
+      "typeproc": null,
+      "producer": "Le Grand Ouest Toulousain Agglomération",
+      "acteSupCount": null,
+      "archiveUrl": "https://www.geoportail-urbanisme.gouv.fr/api/document/ff4c45ed9b7d91d35221dfed6db6d02c/download/31526_PLU_20251013.zip",
+      "typeproc_title": null,
+      "notEnforceable": null,
+      "isAbsorbedMunicipality": false,
+      "du_type": "PLU",
+      "grid_title": "LA SALVETAT-SAINT-GILLES"
+    }
+  },
+  "proceduresByDocument": {
+    "130010747_PM1_031_20231110": [],
+    "31526_PLU_20251013": [],
+    "253102388_SCOT_20260309": [],
+    "172014607_AC1_031_20261103": [],
+    "120064019_T5_031_20261109": []
+  },
+  "notUnforceableByDocument": {
+    "130010747_PM1_031_20231110": false,
+    "31526_PLU_20251013": false,
+    "253102388_SCOT_20260309": false,
+    "172014607_AC1_031_20261103": false,
+    "120064019_T5_031_20261109": false
+  },
+  "typeref": "01",
+  "duLowScale": false,
+  "parcelIncluded": true,
+  "el9Included": true,
+  "duDetailed": true
+}

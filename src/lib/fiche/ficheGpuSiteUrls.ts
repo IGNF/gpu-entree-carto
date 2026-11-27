@@ -42,7 +42,8 @@ export function resolveGpuDocumentViewUrl(documentId: string): string {
   const fromConfig = gpuNavigationUrlFromConfigTemplate('documentViewUrl', 'documentId', documentId)
   if (fromConfig) return fromConfig
   const id = documentId.trim()
-  return resolveGpuSiteNavigationUrl(`/document/${encodeURIComponent(id)}`)
+  // `/document/by-id/` : seule route de gpu-site main, aussi acceptée par gpu-site dsfr.
+  return resolveGpuSiteNavigationUrl(`/document/by-id/${encodeURIComponent(id)}`)
 }
 
 /** Lien fiche procédure gpu-site (`gpu_procedure_view` via `procedureViewUrl` config). */
@@ -74,16 +75,13 @@ function maybeAbsoluteGpuUrl(resolvedHref: string): string {
   }
 }
 
-/** Priorité : `viewUrl` API, `archiveUrl`, lien document par id. */
+/** `viewUrl` API, sinon page du document par id, sinon aucun lien (jamais l’archive ZIP). */
 export function resolveDocumentTileHref(options: {
   viewUrl?: string | null
-  archiveUrl?: string | null
   documentId?: string | null
 }): string | undefined {
   const view = options.viewUrl?.trim()
   if (view) return resolveGpuSiteNavigationUrl(view)
-  const archive = options.archiveUrl?.trim()
-  if (archive) return resolveGpuSiteNavigationUrl(archive)
   const id = options.documentId?.trim()
   if (id) return resolveGpuDocumentViewUrl(id)
   return undefined

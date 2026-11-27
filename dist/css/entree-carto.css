@@ -784,11 +784,6 @@ button[id^="GPshowOverviewMap-"] {}
   line-height: 1;
 }
 
-.ec-fiche-info__rule-doc--muted {
-  pointer-events: none;
-  cursor: default;
-}
-
 .ec-fiche-info__load-wrap {
   display: flex;
   justify-content: center;

@@ -31,6 +31,10 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Corrigé
 
+- Fiche parcelle : périmètres d’informations manquants avec le catalogue du Géoportail de l’urbanisme.
+- Fiche parcelle : lien vers la pièce écrite (PDF) de chaque règle quand le service ne fournit que le nom du fichier, servitudes comprises ; pas d’icône sans pièce écrite.
+- Démo en ligne : emprise de la commune affichée en mode Territoire.
+- Fiche info : les tuiles mènent à la page du document, jamais à un téléchargement (pas de lien si le document n’est pas en base) ; liens SUP et MEC corrigés sur le Géoportail de l’urbanisme.
 - Fiche territoire : titre « Pas de commune à cet emplacement » et message adapté hors commune (en mer).
 - Fiche info : servitude de passage sur le littoral (EL9) affichée pour les communes littorales (territoire) et dans la zone d’alerte (parcelle), avec lien vers l’article L. 121-31 du code de l’urbanisme.
 - Couches WMS : héritage des niveaux de zoom du groupe parent.

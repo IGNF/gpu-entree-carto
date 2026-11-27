@@ -102,6 +102,8 @@ export type GpuFicheInfoPayload = {
     /** Commune littorale : fiche territoire avec la servitude de passage EL9. */
     is_coastline?: boolean | null
     viewUrl?: string
+    /** gpu-site main : entité commune (géométrie EPSG:4326), à défaut de `gridGeometry`. */
+    feature?: { geometry?: unknown } | null
   } | null
   deletedGrids?: GpuFicheDeletedGrid[]
   /** Référentiel cadastral (CNIG), renvoyé par `/api/fiche-info` — pilote la couche cadastre basse. */

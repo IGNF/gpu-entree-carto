@@ -30,4 +30,23 @@ describe('modeEmprisePartsFromFichePayload', () => {
     const parts = modeEmprisePartsFromFichePayload(payload, MAP_MODE_TERRITORY)
     expect(parts).toEqual([{ kind: 'commune', geometry: payload.gridGeometry }])
   })
+
+  it('gpu-site main : géométrie de la commune dans grid.feature.geometry', () => {
+    const geometry = { type: 'MultiPolygon' as const, coordinates: [[[[1.25, 43.57]]]] }
+    const payload: GpuFicheInfoPayload = { grid: { insee: '31526', feature: { geometry } } }
+    expect(modeEmprisePartsFromFichePayload(payload, MAP_MODE_TERRITORY)).toEqual([
+      { kind: 'commune', geometry },
+    ])
+  })
+
+  it('gridGeometry (gpu-site dsfr) prioritaire sur grid.feature.geometry', () => {
+    const gridGeometry = { type: 'Polygon' as const, coordinates: [[[0, 0]]] }
+    const payload: GpuFicheInfoPayload = {
+      grid: { insee: '31526', feature: { geometry: point } },
+      gridGeometry,
+    }
+    expect(modeEmprisePartsFromFichePayload(payload, MAP_MODE_TERRITORY)).toEqual([
+      { kind: 'commune', geometry: gridGeometry },
+    ])
+  })
 })

@@ -71766,7 +71766,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (family === "psmv") return hay.includes("psmv");
     if (family === "mec") return id2.includes("mec") || path.includes("/mec") || hay.includes("mec");
     if (family === "du") {
-      return hay.includes("dev-du") || hay.includes("lowscale") || hay.includes("zone_secteur") || hay.includes("prescription") || hay.includes("dev-info");
+      const h2 = hay.replaceAll("dev-", "");
+      return /(^|[/|])du([,/|-]|$)/.test(h2) || h2.includes("lowscale") || h2.includes("zone_secteur") || h2.includes("prescription") || h2.includes("info,info_psmv") || h2.includes("info-info-psmv");
     }
     return false;
   }
@@ -72019,6 +72020,17 @@ Expected function or array of functions, received type ${typeof value2}.`
     const href = replaceGpuConfigUrlPlaceholder(template, ph, value2);
     return resolveGpuSiteNavigationUrl(href);
   }
+  function gpuDocumentFileUrl(documentId, fileName) {
+    const template = readConfigString("apiDocumentFileUrl");
+    const { documentId: idPh, fileName: filePh } = placeholders();
+    const id2 = documentId.trim();
+    const [path = "", anchor] = fileName.trim().split("#", 2);
+    if (!template || !idPh || !filePh || !id2 || !path) return void 0;
+    const withId = replaceGpuConfigUrlPlaceholder(template, idPh, id2);
+    const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+    const href = withId.split(filePh).join(encodedPath) + (anchor ? `#${anchor}` : "");
+    return resolveGpuSiteNavigationUrl(href);
+  }
   function isAbsoluteUrl(value2) {
     return /^https?:\/\//i.test(value2) || value2.startsWith("//");
   }
@@ -72044,7 +72056,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const fromConfig = gpuNavigationUrlFromConfigTemplate("documentViewUrl", "documentId", documentId);
     if (fromConfig) return fromConfig;
     const id2 = documentId.trim();
-    return resolveGpuSiteNavigationUrl(`/document/${encodeURIComponent(id2)}`);
+    return resolveGpuSiteNavigationUrl(`/document/by-id/${encodeURIComponent(id2)}`);
   }
   function resolveGpuProcedureViewUrl(procedureId) {
     const fromConfig = gpuNavigationUrlFromConfigTemplate(
@@ -72073,12 +72085,10 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   function resolveDocumentTileHref(options) {
-    var _a2, _b, _c2;
+    var _a2, _b;
     const view = (_a2 = options.viewUrl) == null ? void 0 : _a2.trim();
     if (view) return resolveGpuSiteNavigationUrl(view);
-    const archive = (_b = options.archiveUrl) == null ? void 0 : _b.trim();
-    if (archive) return resolveGpuSiteNavigationUrl(archive);
-    const id2 = (_c2 = options.documentId) == null ? void 0 : _c2.trim();
+    const id2 = (_b = options.documentId) == null ? void 0 : _b.trim();
     if (id2) return resolveGpuDocumentViewUrl(id2);
     return void 0;
   }
@@ -72200,11 +72210,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return `<div class="ec-fiche-info__tile-list">${tiles.join("")}</div>`;
   }
   function documentTileHrefFromApiFields(fields) {
-    return resolveDocumentTileHref({
-      documentId: fields.id,
-      viewUrl: fields.viewUrl,
-      archiveUrl: fields.archiveUrl
-    });
+    return resolveDocumentTileHref({ documentId: fields.id, viewUrl: fields.viewUrl });
   }
   function procedureTileHref(procedureId, url) {
     const id2 = procedureId == null ? void 0 : procedureId.trim();
@@ -72885,24 +72891,23 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return documentTilesListHtml(unique2);
   }
-  function resolveParcelRuleWrittenPieceHref(properties) {
+  function resolveParcelRuleWrittenPieceHref(properties, documentId) {
     const urlfic = coerceDisplayString(properties.urlfic);
     if (urlfic) return resolveGpuSiteNavigationUrl(urlfic);
     const nomfic = coerceDisplayString(properties.nomfic);
     if (/^https?:\/\//i.test(nomfic)) {
       return resolveGpuSiteNavigationUrl(nomfic);
     }
-    return "";
+    const fileName = nomfic || coerceDisplayString(properties.fichier);
+    if (!fileName || !documentId) return "";
+    return gpuDocumentFileUrl(documentId, fileName) ?? "";
   }
   const WRITTEN_PIECE_LABEL = "Ouvrir la pièce écrite (PDF)";
   function ruleWrittenPieceLinkHtml(href) {
+    if (!href) return "";
     const btnClass = "ec-fiche-info__rule-doc fr-btn fr-btn--tertiary fr-btn--sm";
     const label = escapeHtml(WRITTEN_PIECE_LABEL);
-    if (href) {
-      return `<a class="${btnClass}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${label}"><span class="ri-file-pdf-2-line" aria-hidden="true"></span><span class="fr-sr-only">${label}</span></a>`;
-    }
-    const unavailable = escapeHtml("Pièce écrite indisponible");
-    return `<span class="${btnClass} ec-fiche-info__rule-doc--muted" title="${unavailable}" aria-label="${unavailable}" aria-disabled="true"><span class="ri-file-pdf-2-line" aria-hidden="true"></span><span class="fr-sr-only">${unavailable}</span></span>`;
+    return `<a class="${btnClass}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${label}"><span class="ri-file-pdf-2-line" aria-hidden="true"></span><span class="fr-sr-only">${label}</span></a>`;
   }
   function isGpuParcelFichePayload(data) {
     return Boolean(data && typeof data === "object" && "features" in data);
@@ -72974,10 +72979,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     const fallback = coerceDisplayString(props.libelle ?? props.typezone ?? props.typepsc ?? props.suptype).slice(0, 4).toUpperCase() || "—";
     return escapeHtml(fallback);
   }
-  function ruleRowHtml(feature, zoom, featureLabel, supCategories) {
+  function ruleRowHtml(feature, zoom, featureLabel, supCategories, lookup2) {
+    var _a2;
     const props = feature.properties ?? {};
     const { title: title2, subtitle } = ruleTextsForFeature(feature, featureLabel, supCategories);
-    const docLink = ruleWrittenPieceLinkHtml(resolveParcelRuleWrittenPieceHref(props));
+    const documentId = (_a2 = gpuSiteDocumentForFeatureProps(props, lookup2, { matchPartition: true })) == null ? void 0 : _a2.id;
+    const docLink = ruleWrittenPieceLinkHtml(resolveParcelRuleWrittenPieceHref(props, documentId));
     const subBlock = subtitle ? `<p class="ec-fiche-info__rule-sub">${escapeHtml(subtitle)}</p>` : "";
     const iconInner = ruleIconInnerHtml(feature, zoom);
     return `<article class="ec-fiche-info__rule-row"><div class="ec-fiche-info__rule-icon" aria-hidden="true">${iconInner}</div><div class="ec-fiche-info__rule-body"><p class="ec-fiche-info__rule-title">${escapeHtml(title2)}</p>${subBlock}</div>${docLink}</article>`;
@@ -72997,7 +73004,6 @@ Expected function or array of functions, received type ${typeof value2}.`
       status: coerceDisplayString(doc2.status) || void 0,
       title: coerceDisplayString(doc2.title) || void 0,
       viewUrl: coerceDisplayString(doc2.viewUrl) || void 0,
-      archiveUrl: coerceDisplayString(doc2.archiveUrl) || void 0,
       type: coerceDisplayString(doc2.type) || void 0,
       typeproc_title: coerceDisplayString(doc2.typeproc_title) || void 0
     };
@@ -73019,7 +73025,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           registerGpuSiteDocumentRecord(record, byId, byName);
           const docName = coerceDisplayString(doc2.name);
           if (docName) byName.set(docName.toUpperCase(), record);
-          if (partitionNorm && record.id) byPartition.set(partitionNorm, record);
+          const current = byPartition.get(partitionNorm);
+          if (partitionNorm && record.id && (!current || current.status !== "document.production" || record.status === "document.production")) {
+            byPartition.set(partitionNorm, record);
+          }
         }
       }
     }
@@ -73039,6 +73048,13 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (name2) {
       const byName = lookup2.byName.get(name2);
       if (byName) return byName;
+    }
+    if (options == null ? void 0 : options.matchPartition) {
+      const partition = coerceDisplayString(props.partition).toLowerCase();
+      if (partition) {
+        const byPartition = lookup2.byPartition.get(partition);
+        if (byPartition) return byPartition;
+      }
     }
     return null;
   }
@@ -73063,11 +73079,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const datapproLabel = documentName ? formatDatapproFromDocumentName(documentName) : null;
     return documentUrbanismTileHtml({
       title: record.title ?? record.type ?? "Document d’urbanisme",
-      href: documentTileHrefFromApiFields({
-        id: record.id,
-        archiveUrl: record.archiveUrl,
-        viewUrl: record.viewUrl
-      }),
+      href: documentTileHrefFromApiFields({ id: record.id, viewUrl: record.viewUrl }),
       effectiveStatus: record.effectiveStatus,
       legalStatus: record.legalStatus,
       status: record.status,
@@ -73092,12 +73104,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     const datapproLabel = name2 ? formatDatapproFromDocumentName(name2) : null;
     const docId = (gpuSite == null ? void 0 : gpuSite.id) || parcelFeatureGpuDocumentId(props);
     const partitionName = coerceDisplayString(props.name) || coerceDisplayString(props.partition) || void 0;
-    const href = documentTileHrefFromApiFields({
-      id: docId,
-      archiveUrl: coerceDisplayString(props.archiveUrl ?? props.urlfic) || (gpuSite == null ? void 0 : gpuSite.archiveUrl) || void 0,
-      viewUrl: coerceDisplayString(props.viewUrl) || (gpuSite == null ? void 0 : gpuSite.viewUrl) || void 0
-    }) ?? void 0;
     const notInDatabase = !documentFeatureInGpuSite(props, lookup2);
+    const href = notInDatabase ? void 0 : documentTileHrefFromApiFields({
+      id: docId,
+      viewUrl: coerceDisplayString(props.viewUrl) || (gpuSite == null ? void 0 : gpuSite.viewUrl) || void 0
+    });
     return documentUrbanismTileHtml({
       title: title2,
       href,
@@ -73267,8 +73278,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           detail: title2,
           href: documentTileHrefFromApiFields({
             id: coerceDisplayString(doc2.id) || void 0,
-            viewUrl: coerceDisplayString(doc2.viewUrl) || void 0,
-            archiveUrl: coerceDisplayString(doc2.archiveUrl) || void 0
+            viewUrl: coerceDisplayString(doc2.viewUrl) || void 0
           })
         })
       );
@@ -73357,11 +73367,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     const legalStatus = coerceDisplayString(props.legalStatus) || (gpuSite == null ? void 0 : gpuSite.legalStatus) || void 0;
     return documentUrbanismTileHtml({
       title: title2,
-      href: documentTileHrefFromApiFields({
+      // Hors base : pas de page document à ouvrir (et ni archive ni `urlfic` exposés).
+      href: documentFeatureInGpuSite(props, lookup2) ? documentTileHrefFromApiFields({
         id: docId,
-        archiveUrl: coerceDisplayString(props.archiveUrl ?? props.urlfic) || (gpuSite == null ? void 0 : gpuSite.archiveUrl) || void 0,
         viewUrl: coerceDisplayString(props.viewUrl) || (gpuSite == null ? void 0 : gpuSite.viewUrl) || void 0
-      }),
+      }) : void 0,
       effectiveStatus: effective,
       legalStatus,
       status,
@@ -73463,7 +73473,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         (f2) => shouldIncludeParcelRuleFeature(f2, section, ficheApi, lookup2)
       );
       if (!list.length) continue;
-      const rows = list.map((f2) => ruleRowHtml(f2, zoom, featureLabel, supCategories)).join("");
+      const rows = list.map((f2) => ruleRowHtml(f2, zoom, featureLabel, supCategories, lookup2)).join("");
       parts.push(
         `<section class="ec-fiche-info__rules-section"><h4 class="ec-fiche-info__rules-section-title">${escapeHtml(SECTION_TITLES[section])}</h4>${rows}</section>`
       );
@@ -74432,6 +74442,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return null;
   }
   function modeEmprisePartsFromFichePayload(payload, mode2) {
+    var _a2, _b;
     const resolvedMode = normalizeMapMode(mode2) ?? MAP_MODE_TERRITORY;
     if (resolvedMode === MAP_MODE_PARCEL) {
       const geometry = parcelGeometryFromPayload(payload);
@@ -74440,7 +74451,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (resolvedMode !== MAP_MODE_TERRITORY) return [];
     const insee = gridInseeFromPayload(payload);
     const parentGeometry = readGeometry$1(payload.parentGridGeometry);
-    const gridGeometry = readGeometry$1(payload.gridGeometry);
+    const gridGeometry = readGeometry$1(payload.gridGeometry) ?? readGeometry$1((_b = (_a2 = payload.grid) == null ? void 0 : _a2.feature) == null ? void 0 : _b.geometry);
     const parts = [];
     if (parentGeometry) {
       parts.push({ kind: "commune", geometry: parentGeometry });
