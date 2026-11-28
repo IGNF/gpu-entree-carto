@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
+import RotateControl from '@/components/map/RotateControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
@@ -43,6 +44,7 @@ const props = defineProps<{
 
 provideMapMode({
   initial: normalizeMapMode(props.params?.mode) ?? undefined,
+  modes: props.params?.modes,
 })
 
 const gpuBaseEnv = createGpuBaseLayerEnvironment()
@@ -186,6 +188,7 @@ function onToggleLayer(id: string, visible: boolean) {
       <MapPrintControl />
       <OverviewMapControl />
       <TerritoriesControl />
+      <RotateControl />
       <ZoomControl />
       <FullScreenControl />
       <ScaleLineControl />

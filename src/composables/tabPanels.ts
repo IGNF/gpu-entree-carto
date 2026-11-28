@@ -1,5 +1,5 @@
 import { shallowRef, type InjectionKey, type Ref } from 'vue'
-import type { MapModeId } from '@/lib/map/mapMode'
+import { ALL_MAP_MODES, type MapModeId } from '@/lib/map/mapMode'
 import type { CadastreReferences } from '@/lib/fiche/ficheCadastreReferences'
 
 /** Onglet interne fiche info (type de document GPU). */
@@ -17,6 +17,8 @@ export interface FicheInfoSelection {
   mapMode?: MapModeId
   /** Ex. AY 0050 (mode Parcelle). */
   parcelLabel?: string
+  /** Mode Coordonnées : « Longitude …, latitude … » sous le titre. */
+  coordinatesLabel?: string
   /** Libellé bouton retour parcelle (mode Territoire) — ou message d’absence de parcelle. */
   parcelSwitchLabel?: string
   parcelMissingAtPoint?: boolean
@@ -137,18 +139,30 @@ export function panelTabs(options?: {
   return tabs
 }
 
-/** Texte fiche lorsqu’aucune cerise / sélection n’est active. */
+/** Clés : identifiants de mode (1 Parcelle, 2 Territoire, 3 Coordonnées). */
+const EMPTY_FICHE_GOALS: Record<MapModeId, { goal: string; label: string }> = {
+  1: { goal: 'sélectionner une parcelle', label: 'Parcelle' },
+  2: { goal: 'sélectionner une commune', label: 'Territoire' },
+  3: { goal: 'afficher les règles d’urbanisme d’un point', label: 'Coordonnées' },
+}
+
+/** Aide de la fiche vide, limitée aux modes activés (le choix du mode n’est cité que s’il y en a plusieurs). */
+export function emptyFicheBodyHtml(modes: readonly MapModeId[]): string {
+  const action = 'cliquez sur la carte ou utilisez la barre de recherche.'
+  const sections = modes.map((mode) => {
+    const { goal, label } = EMPTY_FICHE_GOALS[mode]
+    const steps =
+      modes.length > 1
+        ? `<li>choisissez le mode ${label}</li>\n<li>puis ${action}</li>`
+        : `<li>${action.charAt(0).toUpperCase()}${action.slice(1)}</li>`
+    return `<p>Pour ${goal}&nbsp;:</p>\n<ul>\n${steps}\n</ul>`
+  })
+  return `${sections.join('\n')}
+<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`
+}
+
+/** Texte fiche lorsqu’aucune cerise / sélection n’est active (tous les modes). */
 export const DEFAULT_FICHE_EMPTY: FicheInfoSelection = {
   title: 'Aucune sélection en cours',
-  bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
-<ul>
-<li>choisissez le mode Parcelle</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Pour sélectionner une commune&nbsp;:</p>
-<ul>
-<li>choisissez le mode Territoire</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`,
+  bodyHtml: emptyFicheBodyHtml(ALL_MAP_MODES),
 }

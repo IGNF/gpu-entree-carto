@@ -7,6 +7,68 @@
 
 .ol-custom-zoom-in,
 .ol-custom-zoom-out {}
+/**
+ * Icônes Remix absentes du pack — classe `ri-*` pour cohérence avec remixicon.css.
+ */
+i.ri-draw-line {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: currentColor;
+}
+
+i.ri-draw-line::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3csvg%20width='19'%20height='19'%20viewBox='0%200%2019%2019'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20aria-hidden='true'%3e%3cpath%20d='M15.87%200C14.56%200%2013.46%200.84%2013.05%202.02H12C10.34%202.02%209%203.36%209%205.02V13.02C9%2013.57%208.55%2014.02%208%2014.02H5.83C5.42%2012.85%204.31%2012.02%203%2012.02C1.34%2012.02%200%2013.36%200%2015.02C0%2016.68%201.34%2018.02%203%2018.02C4.31%2018.02%205.42%2017.19%205.83%2016.02H8C9.66%2016.02%2011%2014.68%2011%2013.02V5.02C11%204.47%2011.45%204.02%2012%204.02H13.06C13.48%205.17%2014.57%206%2015.87%206C17.53%206%2018.87%204.66%2018.87%203C18.87%201.34%2017.53%200%2015.87%200ZM3%2016.02C2.45%2016.02%202%2015.57%202%2015.02C2%2014.47%202.45%2014.02%203%2014.02C3.55%2014.02%204%2014.47%204%2015.02C4%2015.57%203.55%2016.02%203%2016.02ZM15.87%204C15.35%204%2014.94%203.6%2014.89%203.09V2.9C14.94%202.39%2015.35%201.99%2015.87%201.99C16.42%201.99%2016.87%202.44%2016.87%202.99C16.87%203.54%2016.42%203.99%2015.87%203.99V4Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3csvg%20width='19'%20height='19'%20viewBox='0%200%2019%2019'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20aria-hidden='true'%3e%3cpath%20d='M15.87%200C14.56%200%2013.46%200.84%2013.05%202.02H12C10.34%202.02%209%203.36%209%205.02V13.02C9%2013.57%208.55%2014.02%208%2014.02H5.83C5.42%2012.85%204.31%2012.02%203%2012.02C1.34%2012.02%200%2013.36%200%2015.02C0%2016.68%201.34%2018.02%203%2018.02C4.31%2018.02%205.42%2017.19%205.83%2016.02H8C9.66%2016.02%2011%2014.68%2011%2013.02V5.02C11%204.47%2011.45%204.02%2012%204.02H13.06C13.48%205.17%2014.57%206%2015.87%206C17.53%206%2018.87%204.66%2018.87%203C18.87%201.34%2017.53%200%2015.87%200ZM3%2016.02C2.45%2016.02%202%2015.57%202%2015.02C2%2014.47%202.45%2014.02%203%2014.02C3.55%2014.02%204%2014.47%204%2015.02C4%2015.57%203.55%2016.02%203%2016.02ZM15.87%204C15.35%204%2014.94%203.6%2014.89%203.09V2.9C14.94%202.39%2015.35%201.99%2015.87%201.99C16.42%201.99%2016.87%202.44%2016.87%202.99C16.87%203.54%2016.42%203.99%2015.87%203.99V4Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
+}
+
+/** Parcelle (mode carte, fiche) — asset projet, masque comme les pictos Remix. */
+i.ec-icon-parcelle,
+span.ec-icon-parcelle {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: currentColor;
+}
+
+i.ec-icon-parcelle::before,
+span.ec-icon-parcelle::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3csvg%20width='16'%20height='16'%20viewBox='0%200%2016%2016'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M13.3399%2010.7934H13.3333V7.21337C14.1066%206.94004%2014.6666%206.20671%2014.6666%205.33337C14.6666%204.22671%2013.7733%203.33337%2012.6666%203.33337C11.9533%203.33337%2011.3333%203.70671%2010.9799%204.26671L5.87325%203.10671C5.75992%202.11337%204.91992%201.33337%203.89325%201.33337C2.79325%201.34004%201.89992%202.23337%201.89992%203.34004C1.89992%204.15337%202.38659%204.85337%203.08659%205.16671L2.71992%2010.78C1.91325%2011.04%201.33325%2011.7867%201.33325%2012.6734C1.33325%2013.78%202.22659%2014.6734%203.33325%2014.6734C4.19992%2014.6734%204.93325%2014.1134%205.21325%2013.34H10.7933C11.0666%2014.1134%2011.7999%2014.6734%2012.6733%2014.6734C13.7799%2014.6734%2014.6733%2013.78%2014.6733%2012.6734C14.6733%2011.8067%2014.1133%2011.0734%2013.3399%2010.7934ZM8.00659%2011.34C6.53325%2011.34%205.33992%2010.1467%205.33992%208.67337C5.33992%207.20004%206.53325%206.00671%208.00659%206.00671C9.47992%206.00671%2010.6733%207.20004%2010.6733%208.67337C10.6733%2010.1467%209.47992%2011.34%208.00659%2011.34Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3csvg%20width='16'%20height='16'%20viewBox='0%200%2016%2016'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M13.3399%2010.7934H13.3333V7.21337C14.1066%206.94004%2014.6666%206.20671%2014.6666%205.33337C14.6666%204.22671%2013.7733%203.33337%2012.6666%203.33337C11.9533%203.33337%2011.3333%203.70671%2010.9799%204.26671L5.87325%203.10671C5.75992%202.11337%204.91992%201.33337%203.89325%201.33337C2.79325%201.34004%201.89992%202.23337%201.89992%203.34004C1.89992%204.15337%202.38659%204.85337%203.08659%205.16671L2.71992%2010.78C1.91325%2011.04%201.33325%2011.7867%201.33325%2012.6734C1.33325%2013.78%202.22659%2014.6734%203.33325%2014.6734C4.19992%2014.6734%204.93325%2014.1134%205.21325%2013.34H10.7933C11.0666%2014.1134%2011.7999%2014.6734%2012.6733%2014.6734C13.7799%2014.6734%2014.6733%2013.78%2014.6733%2012.6734C14.6733%2011.8067%2014.1133%2011.0734%2013.3399%2010.7934ZM8.00659%2011.34C6.53325%2011.34%205.33992%2010.1467%205.33992%208.67337C5.33992%207.20004%206.53325%206.00671%208.00659%206.00671C9.47992%206.00671%2010.6733%207.20004%2010.6733%208.67337C10.6733%2010.1467%209.47992%2011.34%208.00659%2011.34Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
+}
+
+/* Boussole : « N » au-dessus de la pointe nord (verticale, vers le haut) — `RotateControl`, pile mobile. */
+i.ec-icon-compass-north,
+span.ec-icon-compass-north {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: currentColor;
+}
+
+i.ec-icon-compass-north::before,
+span.ec-icon-compass-north::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3csvg%20width='30'%20height='30'%20viewBox='-3%200.9%2030%2030'%20xmlns='http://www.w3.org/2000/svg'%3e%3c!--%20Cadre%20centré%20sur%20le%20milieu%20de%20l’aiguille%20(12%20;%2015,9)%20:%20la%20rotation%20CSS%20tourne%20autour%20de%20l’aiguille,%20pas%20du%20N.%20--%3e%3cpath%20d='M9.2%207.4V1.4h1.5l3.1%203.8V1.4h1.5v6h-1.5L10.7%203.6v3.8z'%20fill='%23000'/%3e%3cpath%20d='M12%208.6l3.6%207.9H8.4z'%20fill='%23000'/%3e%3cpath%20d='M8.9%2017.3h6.2L12%2023.2z'%20fill='none'%20stroke='%23000'%20stroke-width='1.4'%20stroke-linejoin='round'/%3e%3c/svg%3e") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3csvg%20width='30'%20height='30'%20viewBox='-3%200.9%2030%2030'%20xmlns='http://www.w3.org/2000/svg'%3e%3c!--%20Cadre%20centré%20sur%20le%20milieu%20de%20l’aiguille%20(12%20;%2015,9)%20:%20la%20rotation%20CSS%20tourne%20autour%20de%20l’aiguille,%20pas%20du%20N.%20--%3e%3cpath%20d='M9.2%207.4V1.4h1.5l3.1%203.8V1.4h1.5v6h-1.5L10.7%203.6v3.8z'%20fill='%23000'/%3e%3cpath%20d='M12%208.6l3.6%207.9H8.4z'%20fill='%23000'/%3e%3cpath%20d='M8.9%2017.3h6.2L12%2023.2z'%20fill='none'%20stroke='%23000'%20stroke-width='1.4'%20stroke-linejoin='round'/%3e%3c/svg%3e") center / contain no-repeat;
+}
 [id^=GPfullScreen-] {
     bottom: 0.5em;
     left: 0.5em;
@@ -513,6 +575,13 @@ button[id^="GPshowOverviewMap-"] {}
   margin-bottom: 24px;
   padding-left: 0;
   padding-right: 0.5rem;
+}
+
+/* Parcelle / commune quand leur mode n’est pas activé par la config : texte à la place du bouton. */
+.ec-fiche-info .ec-fiche-info__mode-switch-text {
+  margin: 0 0 1rem;
+  font-weight: 700;
+  color: var(--text-title-grey);
 }
 
 .ec-fiche-info .ec-fiche-info__info-btn.fr-btn {
@@ -1063,6 +1132,13 @@ a.ec-fiche-info__doc-card-title:hover {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Fiche « Coordonnées » : lon / lat du point sous le titre. */
+.ec-fiche-info__coordinates {
+  margin: -0.5rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-mention-grey, #666);
 }
 /* Pages annexes impression — typo et images proportionnelles à --print-inner-width. */
 .ec-print-supplement-page {
@@ -1618,16 +1694,16 @@ a.ec-fiche-info__doc-card-title:hover {
   color: var(--text-mention-grey, #666);
 }
 
-.mb-20[data-v-1573ad29] {
+.mb-20[data-v-8abc0928] {
   margin-bottom: 12px;
 }
-.mb-10[data-v-1573ad29] {
+.mb-10[data-v-8abc0928] {
   margin-bottom: 6px;
 }
-.mt-10[data-v-1573ad29] {
+.mt-10[data-v-8abc0928] {
   margin-top: 6px;
 }
-.ec-map-print-form__indent[data-v-1573ad29] {
+.ec-map-print-form__indent[data-v-8abc0928] {
   padding-left: 1.25rem;
 }
 
@@ -1645,14 +1721,14 @@ a.ec-fiche-info__doc-card-title:hover {
   display: flex;
   flex-direction: column;
 }
-.print-page[data-v-1573ad29] {
+.print-page[data-v-8abc0928] {
   flex: 1 1 auto;
   display: flex;
   flex-direction: row;
   min-height: 0;
   position: relative;
 }
-.print-preview-panel[data-v-1573ad29] {
+.print-preview-panel[data-v-8abc0928] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -1663,7 +1739,7 @@ a.ec-fiche-info__doc-card-title:hover {
   gap: 0.5rem;
   box-sizing: border-box;
 }
-.print-preview-column[data-v-1573ad29] {
+.print-preview-column[data-v-8abc0928] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -1677,7 +1753,7 @@ a.ec-fiche-info__doc-card-title:hover {
   overflow: auto;
   box-sizing: border-box;
 }
-.print-preview-column__viewport[data-v-1573ad29] {
+.print-preview-column__viewport[data-v-8abc0928] {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
@@ -1687,16 +1763,16 @@ a.ec-fiche-info__doc-card-title:hover {
   flex-direction: column;
   align-items: flex-start;
 }
-.print-preview-column__viewport--pending .print-preview-column__scale-slot[data-v-1573ad29] {
+.print-preview-column__viewport--pending .print-preview-column__scale-slot[data-v-8abc0928] {
   pointer-events: none;
 }
-.print-preview-column__scale-slot[data-v-1573ad29] {
+.print-preview-column__scale-slot[data-v-8abc0928] {
   flex: 0 0 auto;
   max-width: none;
   margin: 0 auto;
   overflow: visible;
 }
-.print-preview-column__scale-inner[data-v-1573ad29] {
+.print-preview-column__scale-inner[data-v-8abc0928] {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1706,7 +1782,7 @@ a.ec-fiche-info__doc-card-title:hover {
   max-width: none;
   box-sizing: border-box;
 }
-.print-preview-patience[data-v-1573ad29] {
+.print-preview-patience[data-v-8abc0928] {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -1722,7 +1798,7 @@ a.ec-fiche-info__doc-card-title:hover {
   text-align: center;
   pointer-events: none;
 }
-.print-preview-container[data-v-1573ad29] {
+.print-preview-container[data-v-8abc0928] {
   flex: 0 0 auto;
   justify-content: flex-start;
   align-items: flex-start;
@@ -1731,13 +1807,13 @@ a.ec-fiche-info__doc-card-title:hover {
   margin: 6px auto 12px;
   box-shadow: 3px 3px 5px 6px #ccc;
 }
-.print-preview-page[data-v-1573ad29] {
+.print-preview-page[data-v-8abc0928] {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-.print-preview-page--supplement[data-v-1573ad29] {
+.print-preview-page--supplement[data-v-8abc0928] {
   background: #fff;
   min-height: 0;
   flex: 1 1 auto;
@@ -1745,18 +1821,18 @@ a.ec-fiche-info__doc-card-title:hover {
   align-items: center;
   justify-content: flex-start;
 }
-.print-supplement-preview-frame[data-v-1573ad29] {
+.print-supplement-preview-frame[data-v-8abc0928] {
   position: relative;
   flex: 0 0 auto;
   overflow: hidden;
   box-sizing: border-box;
   background: #fff;
 }
-.print-preview-supplement-content[data-v-1573ad29] {
+.print-preview-supplement-content[data-v-8abc0928] {
   width: 100%;
   height: auto;
 }
-.print-supplement-measure[data-v-1573ad29] {
+.print-supplement-measure[data-v-8abc0928] {
   position: fixed;
   left: -10000px;
   top: 0;
@@ -1764,15 +1840,15 @@ a.ec-fiche-info__doc-card-title:hover {
   z-index: -1;
   overflow: visible;
 }
-.print-supplement-measure__viewport[data-v-1573ad29] {
+.print-supplement-measure__viewport[data-v-8abc0928] {
   box-sizing: border-box;
   overflow: visible;
 }
-.print-supplement-measure__content[data-v-1573ad29] {
+.print-supplement-measure__content[data-v-8abc0928] {
   box-sizing: border-box;
   overflow: visible;
 }
-.print-preview-pagination[data-v-1573ad29] {
+.print-preview-pagination[data-v-8abc0928] {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -1783,17 +1859,19 @@ a.ec-fiche-info__doc-card-title:hover {
   padding: 0.15rem 0.5rem 0;
   box-sizing: border-box;
 }
-.print-preview-pagination__label[data-v-1573ad29] {
+.print-preview-pagination__label[data-v-8abc0928] {
   font-size: 0.8125rem;
   text-align: center;
 }
-.print-preview[data-v-1573ad29] {
+.print-preview[data-v-8abc0928] {
   flex: 0 0 auto;
   box-sizing: border-box;
+  /* Papier blanc : sinon transparent, il laisse voir la modale (sombre en thème sombre). */
+  background: #fff;
   display: flex;
   flex-direction: column;
 }
-.print-form[data-v-1573ad29] {
+.print-form[data-v-8abc0928] {
   flex: 0 0 230px;
   margin-right: 10px;
   max-height: 100%;
@@ -1802,33 +1880,33 @@ a.ec-fiche-info__doc-card-title:hover {
   overflow-y: auto;
   align-self: stretch;
 }
-.print-form[data-v-1573ad29] .fr-select-group,
-.print-form[data-v-1573ad29] .fr-input-group,
-.print-form[data-v-1573ad29] .fr-checkbox-group,
-.print-form[data-v-1573ad29] .fr-fieldset {
+.print-form[data-v-8abc0928] .fr-select-group,
+.print-form[data-v-8abc0928] .fr-input-group,
+.print-form[data-v-8abc0928] .fr-checkbox-group,
+.print-form[data-v-8abc0928] .fr-fieldset {
   margin-bottom: 8px;
 }
-.print-form__recenter-place[data-v-1573ad29] {
+.print-form__recenter-place[data-v-8abc0928] {
   margin-top: 12px;
   width: 100%;
 }
-.print-form__replacer-carte[data-v-1573ad29] {
+.print-form__replacer-carte[data-v-8abc0928] {
   margin-top: 8px;
   margin-bottom: 8px;
   width: 100%;
 }
-.print-form__title-hint[data-v-1573ad29] {
+.print-form__title-hint[data-v-8abc0928] {
   margin-top: -0.25rem;
   color: var(--text-mention-grey, #666);
 }
-.map-title[data-v-1573ad29] {
+.map-title[data-v-8abc0928] {
   flex: 0 0 auto;
   margin: 0;
   font-weight: 700;
   text-align: center;
   color: #161616;
 }
-.map[data-v-1573ad29] {
+.map[data-v-8abc0928] {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -1836,11 +1914,11 @@ a.ec-fiche-info__doc-card-title:hover {
   position: relative;
   background: #fff;
 }
-.map[data-v-1573ad29] .ol-viewport {
+.map[data-v-8abc0928] .ol-viewport {
   position: absolute !important;
   inset: 0 !important;
 }
-.ec-map-print-preview-map[data-v-1573ad29] {
+.ec-map-print-preview-map[data-v-8abc0928] {
   /* Facteur papier (printMapUiScale) : attributions et échelle en mm, proportionnelles au format. */
   --ec-print-ui-scale: 1;
   --ec-scale-line-right: calc(6px * var(--ec-print-ui-scale));
@@ -1853,7 +1931,7 @@ a.ec-fiche-info__doc-card-title:hover {
   /* Espace visible entre barre d’échelle et logos (≈ 1,4 mm en A4). */
   --ec-scale-attribution-stack-gap: calc(5px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-control.ol-attribution {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-control.ol-attribution {
   left: auto;
   right: var(--ec-scale-line-right);
   bottom: var(--ec-widget-gap);
@@ -1861,7 +1939,7 @@ a.ec-fiche-info__doc-card-title:hover {
   max-width: none;
   pointer-events: none !important;
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution ul {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution ul {
   display: flex;
   flex-flow: row nowrap;
   align-items: flex-end;
@@ -1873,14 +1951,14 @@ a.ec-fiche-info__doc-card-title:hover {
   white-space: nowrap;
   line-height: 1.1;
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution li {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution li {
   /* DSFR : padding-bottom fixe de 0.25rem sur les li, non proportionnel : le bloc dépassait la
      hauteur prévue (--ec-attribution-block-height) et la barre d’échelle chevauchait les logos. */
   padding-bottom: calc(4px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-ign-svg,
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-marianne-svg,
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution img.map-logo-ministere-svg {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution img.map-logo-ign-svg,
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution img.map-logo-marianne-svg,
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution img.map-logo-ministere-svg {
   display: block;
   width: var(--ec-attribution-logo-width);
   height: var(--ec-attribution-logo-height);
@@ -1891,13 +1969,13 @@ a.ec-fiche-info__doc-card-title:hover {
   background-color: #fff !important;
   padding: calc(2px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution a::after,
-.ec-map-print-preview-map[data-v-1573ad29] .ol-attribution span::after {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution a::after,
+.ec-map-print-preview-map[data-v-8abc0928] .ol-attribution span::after {
   content: none !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-control.ol-scale-line {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-control.ol-scale-line {
   left: auto;
   right: var(--ec-scale-line-right);
   bottom: calc(
@@ -1909,7 +1987,7 @@ a.ec-fiche-info__doc-card-title:hover {
   padding: calc(2px * var(--ec-print-ui-scale));
   border-radius: calc(4px * var(--ec-print-ui-scale));
 }
-.ec-map-print-preview-map[data-v-1573ad29] .ol-scale-line-inner {
+.ec-map-print-preview-map[data-v-8abc0928] .ol-scale-line-inner {
   margin: calc(1px * var(--ec-print-ui-scale));
   border-width: calc(1px * var(--ec-print-ui-scale));
   font-size: calc(10px * var(--ec-print-ui-scale));
@@ -1991,47 +2069,6 @@ dialog[id^="GPterritoriesPanel-"] {
     position: absolute;
 }
 
-/**
- * Icônes Remix absentes du pack — classe `ri-*` pour cohérence avec remixicon.css.
- */
-i.ri-draw-line {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.125em;
-  color: currentColor;
-}
-
-i.ri-draw-line::before {
-  content: '';
-  display: block;
-  width: 100%;
-  height: 100%;
-  background-color: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3csvg%20width='19'%20height='19'%20viewBox='0%200%2019%2019'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20aria-hidden='true'%3e%3cpath%20d='M15.87%200C14.56%200%2013.46%200.84%2013.05%202.02H12C10.34%202.02%209%203.36%209%205.02V13.02C9%2013.57%208.55%2014.02%208%2014.02H5.83C5.42%2012.85%204.31%2012.02%203%2012.02C1.34%2012.02%200%2013.36%200%2015.02C0%2016.68%201.34%2018.02%203%2018.02C4.31%2018.02%205.42%2017.19%205.83%2016.02H8C9.66%2016.02%2011%2014.68%2011%2013.02V5.02C11%204.47%2011.45%204.02%2012%204.02H13.06C13.48%205.17%2014.57%206%2015.87%206C17.53%206%2018.87%204.66%2018.87%203C18.87%201.34%2017.53%200%2015.87%200ZM3%2016.02C2.45%2016.02%202%2015.57%202%2015.02C2%2014.47%202.45%2014.02%203%2014.02C3.55%2014.02%204%2014.47%204%2015.02C4%2015.57%203.55%2016.02%203%2016.02ZM15.87%204C15.35%204%2014.94%203.6%2014.89%203.09V2.9C14.94%202.39%2015.35%201.99%2015.87%201.99C16.42%201.99%2016.87%202.44%2016.87%202.99C16.87%203.54%2016.42%203.99%2015.87%203.99V4Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3csvg%20width='19'%20height='19'%20viewBox='0%200%2019%2019'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20aria-hidden='true'%3e%3cpath%20d='M15.87%200C14.56%200%2013.46%200.84%2013.05%202.02H12C10.34%202.02%209%203.36%209%205.02V13.02C9%2013.57%208.55%2014.02%208%2014.02H5.83C5.42%2012.85%204.31%2012.02%203%2012.02C1.34%2012.02%200%2013.36%200%2015.02C0%2016.68%201.34%2018.02%203%2018.02C4.31%2018.02%205.42%2017.19%205.83%2016.02H8C9.66%2016.02%2011%2014.68%2011%2013.02V5.02C11%204.47%2011.45%204.02%2012%204.02H13.06C13.48%205.17%2014.57%206%2015.87%206C17.53%206%2018.87%204.66%2018.87%203C18.87%201.34%2017.53%200%2015.87%200ZM3%2016.02C2.45%2016.02%202%2015.57%202%2015.02C2%2014.47%202.45%2014.02%203%2014.02C3.55%2014.02%204%2014.47%204%2015.02C4%2015.57%203.55%2016.02%203%2016.02ZM15.87%204C15.35%204%2014.94%203.6%2014.89%203.09V2.9C14.94%202.39%2015.35%201.99%2015.87%201.99C16.42%201.99%2016.87%202.44%2016.87%202.99C16.87%203.54%2016.42%203.99%2015.87%203.99V4Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
-}
-
-/** Parcelle (mode carte, fiche) — asset projet, masque comme les pictos Remix. */
-i.ec-icon-parcelle,
-span.ec-icon-parcelle {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.125em;
-  color: currentColor;
-}
-
-i.ec-icon-parcelle::before,
-span.ec-icon-parcelle::before {
-  content: '';
-  display: block;
-  width: 100%;
-  height: 100%;
-  background-color: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3csvg%20width='16'%20height='16'%20viewBox='0%200%2016%2016'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M13.3399%2010.7934H13.3333V7.21337C14.1066%206.94004%2014.6666%206.20671%2014.6666%205.33337C14.6666%204.22671%2013.7733%203.33337%2012.6666%203.33337C11.9533%203.33337%2011.3333%203.70671%2010.9799%204.26671L5.87325%203.10671C5.75992%202.11337%204.91992%201.33337%203.89325%201.33337C2.79325%201.34004%201.89992%202.23337%201.89992%203.34004C1.89992%204.15337%202.38659%204.85337%203.08659%205.16671L2.71992%2010.78C1.91325%2011.04%201.33325%2011.7867%201.33325%2012.6734C1.33325%2013.78%202.22659%2014.6734%203.33325%2014.6734C4.19992%2014.6734%204.93325%2014.1134%205.21325%2013.34H10.7933C11.0666%2014.1134%2011.7999%2014.6734%2012.6733%2014.6734C13.7799%2014.6734%2014.6733%2013.78%2014.6733%2012.6734C14.6733%2011.8067%2014.1133%2011.0734%2013.3399%2010.7934ZM8.00659%2011.34C6.53325%2011.34%205.33992%2010.1467%205.33992%208.67337C5.33992%207.20004%206.53325%206.00671%208.00659%206.00671C9.47992%206.00671%2010.6733%207.20004%2010.6733%208.67337C10.6733%2010.1467%209.47992%2011.34%208.00659%2011.34Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3csvg%20width='16'%20height='16'%20viewBox='0%200%2016%2016'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M13.3399%2010.7934H13.3333V7.21337C14.1066%206.94004%2014.6666%206.20671%2014.6666%205.33337C14.6666%204.22671%2013.7733%203.33337%2012.6666%203.33337C11.9533%203.33337%2011.3333%203.70671%2010.9799%204.26671L5.87325%203.10671C5.75992%202.11337%204.91992%201.33337%203.89325%201.33337C2.79325%201.34004%201.89992%202.23337%201.89992%203.34004C1.89992%204.15337%202.38659%204.85337%203.08659%205.16671L2.71992%2010.78C1.91325%2011.04%201.33325%2011.7867%201.33325%2012.6734C1.33325%2013.78%202.22659%2014.6734%203.33325%2014.6734C4.19992%2014.6734%204.93325%2014.1134%205.21325%2013.34H10.7933C11.0666%2014.1134%2011.7999%2014.6734%2012.6733%2014.6734C13.7799%2014.6734%2014.6733%2013.78%2014.6733%2012.6734C14.6733%2011.8067%2014.1133%2011.0734%2013.3399%2010.7934ZM8.00659%2011.34C6.53325%2011.34%205.33992%2010.1467%205.33992%208.67337C5.33992%207.20004%206.53325%206.00671%208.00659%206.00671C9.47992%206.00671%2010.6733%207.20004%2010.6733%208.67337C10.6733%2010.1467%209.47992%2011.34%208.00659%2011.34Z'%20fill='%23000'/%3e%3c/svg%3e") center / contain no-repeat;
-}
 /**
  * Styles standalone — mini-carte d’édition géométrique.
  * Toolbar overlay à gauche, boutons 48×48 type cartes.gouv / geopf Drawing.
@@ -3707,6 +3744,31 @@ span.ec-icon-parcelle::before {
 .ec-base-radio-list__caret .fr-icon[data-v-ba4d31e9] {
   --icon-size: 1rem;
 }
+
+.ec-loading-status[data-v-95908845] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey, #666);
+}
+.ec-loading-status__spinner[data-v-95908845] {
+  flex: 0 0 auto;
+  font-size: 1.125rem;
+  color: var(--text-action-high-blue-france, #000091);
+  animation: ec-loading-status-spin-95908845 0.9s linear infinite;
+}
+@keyframes ec-loading-status-spin-95908845 {
+to {
+    transform: rotate(360deg);
+}
+}
+@media (prefers-reduced-motion: reduce) {
+.ec-loading-status__spinner[data-v-95908845] {
+    animation: none;
+}
+}
 /*!
  * DSFR v1.15.4 | SPDX-License-Identifier: Etalab-2.0 | License-Filename: LICENSE.md | restricted use (see terms and conditions)
  */.fr-nav{--underline-img:none;--ul-type:none;--ol-type:none;--ul-start:0;--ol-start:0;--xl-block:0;--li-bottom:0;--ol-content:none;--text-spacing:0;--title-spacing:0}.fr-nav__list{margin:0;padding:0}.fr-nav__item,.fr-nav__list{display:flex;flex-direction:column}.fr-nav__item{align-items:stretch;flex:0 1 auto;position:relative}.fr-nav__item:before{bottom:0;box-shadow:0 -1px 0 0 var(--border-default-grey),inset 0 -1px 0 0 var(--border-default-grey);content:"";display:block;height:100%;left:0;pointer-events:none;position:absolute;right:0;top:0;width:100%}.fr-nav__item:first-child:last-child:before{box-shadow:none}.fr-nav__item .fr-btn,.fr-nav__item .fr-link{min-height:3rem}.fr-nav__btn,.fr-nav__link{--hover-tint:var(--hover);--active-tint:var(--active);align-items:center;color:var(--text-action-high-grey);display:flex;flex-direction:row;font-size:1rem;font-weight:700;height:100%;justify-content:space-between;line-height:1.5rem;margin:0;padding:.75rem 1rem;text-align:left;width:auto}.fr-nav__btn[aria-current]:not([aria-current=false]),.fr-nav__link[aria-current]:not([aria-current=false]){color:var(--text-active-blue-france);position:relative}.fr-nav__btn[aria-current]:not([aria-current=false]):before,.fr-nav__link[aria-current]:not([aria-current=false]):before{--idle:transparent;--hover:var(--background-active-blue-france-hover);--active:var(--background-active-blue-france-active);background-color:var(--background-active-blue-france);content:"";display:block;height:1.5rem;left:0;margin-top:-.75rem;position:absolute;top:50%;width:2px}.fr-nav__link:not([href])[aria-current]:not([aria-current=false]){cursor:default;pointer-events:none}.fr-nav__btn:after{--icon-size:1rem;background-color:currentColor;content:"";display:inline-block;flex:0 0 auto;height:var(--icon-size);margin-left:.5rem;margin-right:0;-webkit-mask-image:url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20width='24'%20height='24'%3e%3cpath%20d='m12%2013.172%204.95-4.95%201.414%201.414L12%2016%205.636%209.636%207.05%208.222l4.95%204.95Z'/%3e%3c/svg%3e");mask-image:url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20width='24'%20height='24'%3e%3cpath%20d='m12%2013.172%204.95-4.95%201.414%201.414L12%2016%205.636%209.636%207.05%208.222l4.95%204.95Z'/%3e%3c/svg%3e");-webkit-mask-size:100% 100%;mask-size:100% 100%;transition:transform .3s;vertical-align:calc((.75em - var(--icon-size))*.5);width:var(--icon-size)}.fr-nav__btn[aria-expanded=true]:after{transform:rotate(-180deg)}.fr-menu{margin:-4px -1rem;padding:4px 1rem;width:auto}.fr-menu.fr-collapsing{margin-top:0;padding-top:0}.fr-menu__list{margin:0;padding:0 1rem 1rem}.fr-menu .fr-nav__link{font-weight:400;height:auto;min-height:auto;padding:.75rem 1rem;width:100%}.fr-menu .fr-nav__link[aria-current]:not([aria-current=false]){position:relative}.fr-menu .fr-nav__link[aria-current]:not([aria-current=false]):before{content:"";display:block;height:1.5rem;left:0;margin-top:-.75rem;position:absolute;top:50%;width:2px}.fr-mega-menu:focus{outline:none}.fr-mega-menu>.fr-container{padding:.5rem 1rem 0}.fr-mega-menu .fr-btn--close{display:none}.fr-mega-menu .fr-nav__link{font-weight:400;height:auto;min-height:auto;padding:.75rem 1rem;width:100%}.fr-mega-menu .fr-nav__link[aria-current]:not([aria-current=false]){position:relative}.fr-mega-menu .fr-nav__link[aria-current]:not([aria-current=false]):before{content:"";display:block;height:1.5rem;left:0;margin-top:-.75rem;position:absolute;top:50%;width:2px}.fr-mega-menu__leader{--underline-img:linear-gradient(0deg,currentColor,currentColor);--text-spacing:0 0 0.5rem;--title-spacing:0 0 0.5rem;padding:.5rem 0 1rem}.fr-mega-menu__leader .fr-link{font-size:.875rem;line-height:1.5rem;padding:0}.fr-mega-menu__leader .fr-link:after,.fr-mega-menu__leader .fr-link:before{--icon-size:1rem}.fr-mega-menu__leader p{font-size:.875rem;line-height:1.5rem}.fr-mega-menu__category .fr-nav__link{font-weight:700}.fr-mega-menu__list{padding-bottom:1rem;position:relative}.fr-mega-menu__list:before{bottom:0;box-shadow:0 1px 0 0 var(--border-default-grey);content:"";display:block;height:100%;left:0;pointer-events:none;position:absolute;right:0;top:0;width:100%}.fr-nav__btn[aria-expanded=true]{--idle:transparent;--hover:var(--background-open-blue-france-hover);--active:var(--background-open-blue-france-active);background-color:var(--background-open-blue-france);color:var(--text-action-high-blue-france)}.fr-nav__btn[aria-expanded=true]:disabled{--idle:transparent;--hover:var(--background-disabled-grey-hover);--active:var(--background-disabled-grey-active);background-color:var(--background-disabled-grey);color:var(--text-disabled-grey)}.fr-nav__item:first-child:before{box-shadow:inset 0 -1px 0 0 var(--border-default-grey)}.fr-nav__item:last-child:before{box-shadow:0 -1px 0 0 var(--border-default-grey)}@media (min-width:36em){
@@ -3821,7 +3883,7 @@ span.ec-icon-parcelle::before {
   overflow-x: clip;
 }
 
-.ec-layer-catalogue__title[data-v-f46b5b33] {
+.ec-layer-catalogue__title[data-v-b3fdabda] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -3829,45 +3891,26 @@ span.ec-icon-parcelle::before {
   font-size: 1.125rem;
   font-weight: 700;
 }
-.ec-layer-catalogue__title-icon[data-v-f46b5b33] {
+.ec-layer-catalogue__title-icon[data-v-b3fdabda] {
   flex: 0 0 auto;
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
 }
-.ec-layer-catalogue__selection[data-v-f46b5b33] {
+.ec-layer-catalogue__selection[data-v-b3fdabda] {
   margin-top: 1.5rem;
 }
-.ec-layer-catalogue__section-title[data-v-f46b5b33] {
+.ec-layer-catalogue__section-title[data-v-b3fdabda] {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
-.ec-layer-catalogue__hint[data-v-f46b5b33] {
+.ec-layer-catalogue__hint[data-v-b3fdabda] {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
-}
-.ec-layer-catalogue__waiting[data-v-f46b5b33] {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--text-mention-grey, #666);
-}
-.ec-layer-catalogue__spinner[data-v-f46b5b33] {
-  flex: 0 0 auto;
-  font-size: 1.125rem;
-  color: var(--text-action-high-blue-france, #000091);
-  animation: ec-layer-catalogue-spin-f46b5b33 0.9s linear infinite;
-}
-@keyframes ec-layer-catalogue-spin-f46b5b33 {
-to {
-    transform: rotate(360deg);
-}
 }
 /**
  * Onglet panneau latéral « Couches de données » (Figma GPU UX/UI).
@@ -4164,7 +4207,7 @@ button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   /*! media lg */}@media (min-width:78em){
   /*! media xl */
   /*! media xl */}@media (forced-colors:active){.fr-accordion__btn:after{background-color:buttontext;forced-color-adjust:none}.fr-accordion{border-bottom:1px solid;border-top:1px solid}.fr-accordion+.fr-accordion{border-top:none}}@media (prefers-reduced-motion:reduce){.fr-accordion .fr-collapse,.fr-accordion__btn:after{transition:none}}@media screen and (-ms-high-contrast:active),screen and (-ms-high-contrast:none){.fr-accordions-group ol,.fr-accordions-group ul{list-style-type:none}.fr-accordions-group ol,.fr-accordions-group ul{margin-bottom:0;margin-top:0;padding-left:0}ul{list-style-type:disc}ol{list-style-type:decimal}ol,ul{margin-bottom:.5rem;margin-top:.5rem;padding-left:1rem}.fr-accordion__btn:after,.fr-accordion__btn:before{background-color:transparent;background-image:url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20width='24'%20height='24'%3e%3cpath%20d='m12%2013.172%204.95-4.95%201.414%201.414L12%2016%205.636%209.636%207.05%208.222l4.95%204.95Z'/%3e%3c/svg%3e");background-repeat:no-repeat;background-size:100%;height:1rem;width:1rem}.fr-accordion__btn[aria-expanded=true]:after{transform:rotate(-180deg)}.fr-accordion:before{box-shadow:inset 0 1px 0 0 #ddd,0 1px 0 0 #ddd}.fr-accordion__btn{color:#000091}.fr-accordion__btn[aria-expanded=true]{background-color:#e3e3fd}}@media print{.fr-accordion{box-shadow:inset 0 0 0 1px var(--border-default-grey)}.fr-accordion:before{box-shadow:none}.fr-accordion__btn{box-shadow:inset 0 0 0 1px var(--border-default-grey);page-break-after:avoid}.fr-accordion__btn:after{-webkit-print-color-adjust:exact;print-color-adjust:exact;transform:rotate(-180deg)}.fr-accordion .fr-collapse{--collapse-max-height:none!important;--collapse:inherit!important;padding:1rem;visibility:visible}}
-.ec-layer-legends__title[data-v-63ba377f] {
+.ec-layer-legends__title[data-v-1aabcf83] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -4172,31 +4215,31 @@ button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   font-size: 1.125rem;
   font-weight: 700;
 }
-.ec-layer-legends__title-icon[data-v-63ba377f] {
+.ec-layer-legends__title-icon[data-v-1aabcf83] {
   flex: 0 0 auto;
   font-size: 1.25rem;
   line-height: 1;
   color: var(--text-action-high-blue-france, #000091);
 }
-.ec-layer-legends__list[data-v-63ba377f] {
+.ec-layer-legends__list[data-v-1aabcf83] {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.ec-layer-legends__item[data-v-63ba377f] {
+.ec-layer-legends__item[data-v-1aabcf83] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
   font-size: 0.8125rem;
 }
-.ec-layer-legends__symbols[data-v-63ba377f] {
+.ec-layer-legends__symbols[data-v-1aabcf83] {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 0.2rem;
 }
-.ec-layer-legends__swatch[data-v-63ba377f] {
+.ec-layer-legends__swatch[data-v-1aabcf83] {
   flex: 0 0 1.25rem;
   width: 1.25rem;
   height: 1rem;
@@ -4204,11 +4247,11 @@ button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   border-radius: 2px;
   opacity: 0.55;
 }
-.ec-layer-legends__img[data-v-63ba377f] {
+.ec-layer-legends__img[data-v-1aabcf83] {
   max-width: 8rem;
   height: auto;
 }
-.ec-layer-legends__hint[data-v-63ba377f] {
+.ec-layer-legends__hint[data-v-1aabcf83] {
   margin: 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
@@ -4692,9 +4735,34 @@ button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   overflow: visible;
 }
 
+/* Emplacement sans outil (ex. démo fiche info sans croquis ni impression) : pas de case vide. */
+.ec-tab-panels__geopf-slot:empty {
+  display: none;
+}
+
+/* Aucun outil du tout : pas de barre blanche vide (`v-show` pose un display en ligne). */
+.ec-tab-panels__geopf-slots:not(:has(.ec-tab-panels__geopf-slot:not(:empty))) {
+  display: none !important;
+}
+
 .ec-map-shell--tab-panels-layout-bottom .ec-tab-panels__bottom-chrome--mobile .ec-tab-panels__tabs {
-  justify-content: flex-end;
-  min-width: min-content;
+  /* `safe` : en cas de débordement, le premier onglet reste atteignable par défilement. */
+  justify-content: safe flex-end;
+  /* Peut rétrécir : défilement horizontal des onglets si la largeur manque encore. */
+  min-width: 0;
+}
+
+/* Téléphones : 8 boutons de 48 px + marges dépassent ~410 px ; boutons compacts pour tenir dans l’écran. */
+@media (max-width: 430px) {
+  .ec-map-shell.ec-map-shell--tab-panels-layout-bottom {
+    --ec-widget-btn-size: 40px;
+  }
+}
+
+@media (max-width: 345px) {
+  .ec-map-shell.ec-map-shell--tab-panels-layout-bottom {
+    --ec-widget-btn-size: 36px;
+  }
 }
 
 .ec-tab-panels__geopf-slot--sketch {
@@ -5136,6 +5204,13 @@ button.fr-btn.ec-data-layers__legend-btn:focus-visible {
   font-size: 1.25rem;
   border-radius: var(--ec-widget-btn-radius, 4px) !important;
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+/* Boussole mobile : bouton seul, au-dessus du zoom. */
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--compass {
+  border-radius: var(--ec-widget-btn-radius, 4px) !important;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  color: var(--text-action-high-blue-france, #000091);
 }
 
 #gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--zoom span {
@@ -6706,6 +6781,9 @@ dialog[id^='GPterritoriesPanel-'] {
 }
 
 .ec-map-shell--tab-panels-layout-bottom {
+  /* Attributions plus discrètes sur téléphone : logos ~60 %. */
+  --ec-attribution-logo-width: 32px;
+  --ec-attribution-logo-height: 34px;
   --ec-mobile-viewport-stack-width: var(--ec-widget-btn-size, 48px);
   --ec-mobile-viewport-stack-gap: var(--ec-widget-gap, 8px);
   --ec-scale-line-right: var(--ec-bottom-right-inset);
@@ -7011,7 +7089,7 @@ dialog[id^='GPterritoriesPanel-'] {
   overflow-wrap: normal;
   word-break: normal;
   text-align: right;
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   line-height: 1.2;
   margin-right: 0;
   padding-bottom: 2px;
@@ -7070,6 +7148,18 @@ dialog[id^='GPterritoriesPanel-'] {
       var(--ec-scale-attribution-stack-gap)
   );
   background: var(--background-default-grey, #fff);
+}
+
+/* Couleurs du thème (comme cartes.gouv) : texte et graduation lisibles en clair comme en sombre. */
+.ol-scale-line-inner {
+  color: var(--text-default-grey, #3a3a3a);
+  border-color: var(--text-default-grey, #3a3a3a);
+}
+
+/* Hors impression : aperçu et export restent en clair (`ec-light-theme`). */
+:root[data-fr-theme='dark'] .ol-scale-line-inner:not(.ec-light-theme *) {
+  color: var(--text-action-high-blue-france);
+  border-color: var(--text-action-high-blue-france);
 }
 
 .ec-map-shell--tab-panels-layout-bottom .ol-scale-line {
@@ -7139,6 +7229,32 @@ dialog[id^='GPterritoriesPanel-'] {
 #gpu-map .ol-attribution a.legal-attribution:hover,
 #gpu-map .ol-attribution a.legal-attribution:focus {
   text-decoration: none;
+}
+
+/* Boussole (`RotateControl`) : au-dessus du zoom ; l’aiguille suit l’orientation de la carte. */
+.position-container-bottom-right > .ec-rotate-control {
+  order: -1;
+}
+
+.ec-rotate-control__btn {
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+.ec-rotate-control__icon {
+  display: inline-block;
+  transition: transform 0.25s;
+}
+
+/* Le SVG a une marge pour que le N tourne autour de l’aiguille : 1,875 rem ≈ aiguille et N en 1,5 rem. */
+.ec-rotate-control__icon.ec-icon-compass-north {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ec-rotate-control__icon {
+    transition: none;
+  }
 }
 /**
  * Sélecteur mode Parcelle / Territoire — à droite de la barre SearchEngine.
@@ -7591,13 +7707,13 @@ dialog[id^='GPterritoriesPanel-'] {
   width: 100% !important;
 }
 
-.ec-embed-viewer[data-v-7dc1461f] {
+.ec-embed-viewer[data-v-01c09813] {
   position: relative;
   width: 100%;
   height: 100%;
   min-height: 500px;
 }
-.ec-embed-viewer__map[data-v-7dc1461f] {
+.ec-embed-viewer__map[data-v-01c09813] {
   width: 100%;
   height: 100%;
 }

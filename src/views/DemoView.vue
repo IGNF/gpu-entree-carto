@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import type { MountedViewer } from '@/lib/mount'
 import MapShell from '@/components/map/MapShell.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
+import RotateControl from '@/components/map/RotateControl.vue'
 import FullScreenControl from '@/components/map/FullScreenControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
@@ -76,6 +77,7 @@ const initialMapModeFromDemo = resolveInitialMapModeFromDemo()
 
 provideMapMode({
   initial: initialMapModeFromDemo,
+  modes: getDemoConfig().map?.modes,
 })
 
 const demoCfg = getDemoConfig()
@@ -126,6 +128,7 @@ onMounted(async () => {
       bbox: !hasLocationHandoff && isValidBbox(cfg.bbox) ? cfg.bbox : null,
       search: initialSearch.value,
       mode: initialMapModeFromDemo,
+      modes: cfg.map?.modes,
     })
     return
   }
@@ -236,6 +239,7 @@ provideMapPermalinkUi({
           <MapPrintControl />
           <OverviewMapControl />
           <TerritoriesControl />
+          <RotateControl />
           <ZoomControl />
           <FullScreenControl />
           <ScaleLineControl />

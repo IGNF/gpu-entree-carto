@@ -447,9 +447,34 @@
   overflow: visible;
 }
 
+/* Emplacement sans outil (ex. démo fiche info sans croquis ni impression) : pas de case vide. */
+.ec-tab-panels__geopf-slot:empty {
+  display: none;
+}
+
+/* Aucun outil du tout : pas de barre blanche vide (`v-show` pose un display en ligne). */
+.ec-tab-panels__geopf-slots:not(:has(.ec-tab-panels__geopf-slot:not(:empty))) {
+  display: none !important;
+}
+
 .ec-map-shell--tab-panels-layout-bottom .ec-tab-panels__bottom-chrome--mobile .ec-tab-panels__tabs {
-  justify-content: flex-end;
-  min-width: min-content;
+  /* `safe` : en cas de débordement, le premier onglet reste atteignable par défilement. */
+  justify-content: safe flex-end;
+  /* Peut rétrécir : défilement horizontal des onglets si la largeur manque encore. */
+  min-width: 0;
+}
+
+/* Téléphones : 8 boutons de 48 px + marges dépassent ~410 px ; boutons compacts pour tenir dans l’écran. */
+@media (max-width: 430px) {
+  .ec-map-shell.ec-map-shell--tab-panels-layout-bottom {
+    --ec-widget-btn-size: 40px;
+  }
+}
+
+@media (max-width: 345px) {
+  .ec-map-shell.ec-map-shell--tab-panels-layout-bottom {
+    --ec-widget-btn-size: 36px;
+  }
 }
 
 .ec-tab-panels__geopf-slot--sketch {
@@ -891,6 +916,13 @@
   font-size: 1.25rem;
   border-radius: var(--ec-widget-btn-radius, 4px) !important;
   box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+}
+
+/* Boussole mobile : bouton seul, au-dessus du zoom. */
+#gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--compass {
+  border-radius: var(--ec-widget-btn-radius, 4px) !important;
+  box-shadow: var(--raised-shadow, 0 2px 6px rgba(0, 0, 18, 0.16));
+  color: var(--text-action-high-blue-france, #000091);
 }
 
 #gpu-map .ec-tab-panels__tabs-control.ol-control button.ec-tab-panels__viewport-tool--zoom span {

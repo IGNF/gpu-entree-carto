@@ -244,6 +244,11 @@ export function setActiveGpuBaseLayer(env: GpuBaseLayerEnvironment, id: GpuBaseL
   for (const key of preset.stack) {
     env.mainLayers[key].setVisible(true)
   }
+  // Fond Cadastre : couches transparentes, le fond de la page (sombre en thème sombre) transparaît.
+  // Pas sur les autres fonds, où le cadastre bas zoom se superpose au plan ou à la photo.
+  const background = id === 'cadastre' ? '#ffffff' : undefined
+  env.mainLayers.cadastreLow.setBackground(background)
+  env.mainLayers.cadastreHigh.setBackground(background)
 }
 
 export function allGpuBaseOlLayers(env: GpuBaseLayerEnvironment): BaseLayer[] {

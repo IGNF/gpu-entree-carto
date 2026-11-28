@@ -48,3 +48,24 @@ describe('waitForMapExportReady — interruption', () => {
     expect(await p).toBe('AbortError')
   })
 })
+
+describe('waitForMapExportReady — délai dépassé', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('resolveOnTimeout : continue avec les tuiles déjà chargées (export lent sur mobile)', async () => {
+    vi.useFakeTimers()
+    const p = waitForMapExportReady(new PendingMap() as unknown as OlMap, {
+      timeoutMs: 1000,
+      resolveOnTimeout: true,
+    })
+    vi.advanceTimersByTime(1000)
+    await expect(p).resolves.toEqual({ timedOut: true })
+  })
+
+  it('sans option : rejette comme avant', async () => {
+    vi.useFakeTimers()
+    const p = waitForMapExportReady(new PendingMap() as unknown as OlMap, { timeoutMs: 1000 })
+    vi.advanceTimersByTime(1000)
+    await expect(p).rejects.toThrow('Délai dépassé')
+  })
+})

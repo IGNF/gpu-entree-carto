@@ -20,8 +20,10 @@ export interface StandardViewerParams {
   bbox?: number[] | null
   document?: StandardViewerDocument | null
   search?: StandardViewerSearch | null
-  /** `1` parcelle, `2` territoire (défaut). Permalink : `mode=`. */
-  mode?: 1 | 2
+  /** `1` parcelle, `2` territoire (défaut), `3` coordonnées. Permalink : `mode=`. */
+  mode?: 1 | 2 | 3
+  /** Modes proposés dans le sélecteur et la fiche (ex. `[1, 2]`) ; absent = les trois. */
+  modes?: Array<1 | 2 | 3>
   layerConfig?: unknown
   legendConfig?: unknown
   legendReferences?: unknown

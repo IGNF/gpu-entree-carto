@@ -57,6 +57,13 @@
   padding-right: 0.5rem;
 }
 
+/* Parcelle / commune quand leur mode n’est pas activé par la config : texte à la place du bouton. */
+.ec-fiche-info .ec-fiche-info__mode-switch-text {
+  margin: 0 0 1rem;
+  font-weight: 700;
+  color: var(--text-title-grey);
+}
+
 .ec-fiche-info .ec-fiche-info__info-btn.fr-btn {
   flex-shrink: 0;
   margin-left: auto;
@@ -605,4 +612,11 @@ a.ec-fiche-info__doc-card-title:hover {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Fiche « Coordonnées » : lon / lat du point sous le titre. */
+.ec-fiche-info__coordinates {
+  margin: -0.5rem 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-mention-grey, #666);
 }

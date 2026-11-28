@@ -12,6 +12,7 @@ import SearchEngineControl from '@/components/map/SearchEngineControl.vue'
 import ClickInfoControl from '@/components/map/ClickInfoControl.vue'
 import MapModeSelector from '@/components/map/MapModeSelector.vue'
 import ZoomControl from '@/components/map/ZoomControl.vue'
+import RotateControl from '@/components/map/RotateControl.vue'
 import ScaleLineControl from '@/components/map/ScaleLineControl.vue'
 import ParcelIdForm from '@/components/demo/ParcelIdForm.vue'
 import RawFicheData from '@/components/demo/RawFicheData.vue'
@@ -105,12 +106,17 @@ onUnmounted(() => {
           @toggle-layer="onToggleLayer"
         >
           <template #extra>
-            <RawFicheData :raw="selection?.raw" :mode="rawMode" />
+            <RawFicheData
+              :raw="selection?.raw"
+              :mode="rawMode"
+              :loading="selection?.loading === 'data'"
+            />
           </template>
         </TabPanelsControl>
         <SearchEngineControl />
         <MapModeSelector />
         <ClickInfoControl toggleable />
+        <RotateControl />
         <ZoomControl />
         <ScaleLineControl />
       </MapShell>

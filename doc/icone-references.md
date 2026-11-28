@@ -89,6 +89,7 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 
 | Aperçu | Libellé | Classe HTML | Catalogue | URL |
 | ------- | ------- | ------------ | --------- | --- |
+| <img src="./img/icon-previews/dsfr/map-pin-2-line.svg" width="24" height="24" alt="" /> | Coordonnées (mode et tag de la fiche) | `fr-icon-map-pin-2-line` | DSFR | [map-pin-2-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=map-pin-2-line) |
 | <img src="./img/icon-previews/custom/parcelle.svg" width="24" height="24" alt="" /> | Parcelle | `ec-icon-parcelle` | Custom | `src/assets/custom-icons/parcelle.svg` (`custom-remix-icons.css`) |
 | <img src="./img/icon-previews/dsfr/france-fill.svg" width="24" height="24" alt="" /> | Territoire | `fr-icon-france-fill` | DSFR | [france-fill](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=france-fill) |
 
@@ -99,6 +100,15 @@ Feuilles de style : DSFR `icons.min.css` (`main.ts`, démo) ; Remix `remixicon.c
 | Aperçu | Libellé | Classe HTML | Catalogue | URL |
 | ------- | ------- | ------------ | --------- | --- |
 | <img src="./img/icon-previews/dsfr/printer-line.svg" width="24" height="24" alt="" /> | Imprimer la carte | `fr-icon-printer-line` | DSFR | [printer-line](https://www.systeme-de-design.gouv.fr/version-courante/fr/fondamentaux/icone/rechercher-une-icone?query=printer-line) |
+| <img src="./img/icon-previews/remix/share-line.svg" width="24" height="24" alt="" /> | Enregistrer / partager (mobile) | `ri-share-line` | Remix | [share-line](https://remixicon.com/icon/share-line) |
+
+---
+
+## Boussole (`RotateControl.vue`, `TabPanelsControl.vue`)
+
+| Aperçu | Libellé | Classe HTML | Catalogue | URL |
+| ------- | ------- | ------------ | --------- | --- |
+| <img src="./img/icon-previews/custom/compass-north.svg" width="24" height="24" alt="" /> | Réorienter la carte vers le nord (« N » sur la pointe nord) | `ec-icon-compass-north` | Custom | `src/assets/custom-icons/compass-north.svg` (`custom-remix-icons.css`) |
 
 ---
 

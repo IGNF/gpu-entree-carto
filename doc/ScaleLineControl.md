@@ -23,6 +23,7 @@ Aucune pour l’instant.
 - **Attributions** en bas (`bottom: gap`), à l’emplacement horizontal de l’ancienne échelle
 - **Échelle** au-dessus des attributions (`--ec-scale-attribution-stack-gap`, 6px)
 - Fond échelle : `var(--background-default-grey)` (comme cartes.gouv)
+- Texte et graduation : `--text-default-grey` ; en **thème sombre** (`data-fr-theme="dark"`), bleu `--text-action-high-blue-france` (comme cartes.gouv). L’impression garde des couleurs claires (papier blanc), quel que soit le thème de l’écran (`printScale.ts`).
 
 ## Dépendances
 

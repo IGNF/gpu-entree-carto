@@ -1,3 +1,4 @@
+import { releaseCanvas } from '@/lib/map/print/printCanvasMemory'
 import { isArrayBufferValue } from '@/lib/map/print/printExportTransfer'
 import { resolveEmbedPrintExportWorkerUrl } from '@/lib/map/print/printExportWorkerUrl'
 
@@ -151,7 +152,12 @@ export async function encodePrintPdf(options: {
   paperHeightMm: number
   orientation: 'portrait' | 'landscape'
 }): Promise<Blob> {
-  const pages = await Promise.all(options.canvases.map((canvas) => canvasToPngBuffer(canvas)))
+  // Une page à la fois, toile libérée aussitôt : évite le pic mémoire (plafond des toiles sur iOS).
+  const pages: ArrayBuffer[] = []
+  for (const canvas of options.canvases) {
+    pages.push(await canvasToPngBuffer(canvas))
+    releaseCanvas(canvas)
+  }
   const id = ++requestId
   const buffer = await runWorkerTask({
     id,

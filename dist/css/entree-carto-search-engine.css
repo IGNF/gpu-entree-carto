@@ -1139,6 +1139,9 @@ dialog[id^='GPterritoriesPanel-'] {
 }
 
 .ec-map-shell--tab-panels-layout-bottom {
+  /* Attributions plus discrètes sur téléphone : logos ~60 %. */
+  --ec-attribution-logo-width: 32px;
+  --ec-attribution-logo-height: 34px;
   --ec-mobile-viewport-stack-width: var(--ec-widget-btn-size, 48px);
   --ec-mobile-viewport-stack-gap: var(--ec-widget-gap, 8px);
   --ec-scale-line-right: var(--ec-bottom-right-inset);
@@ -1444,7 +1447,7 @@ dialog[id^='GPterritoriesPanel-'] {
   overflow-wrap: normal;
   word-break: normal;
   text-align: right;
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   line-height: 1.2;
   margin-right: 0;
   padding-bottom: 2px;
@@ -1503,6 +1506,18 @@ dialog[id^='GPterritoriesPanel-'] {
       var(--ec-scale-attribution-stack-gap)
   );
   background: var(--background-default-grey, #fff);
+}
+
+/* Couleurs du thème (comme cartes.gouv) : texte et graduation lisibles en clair comme en sombre. */
+.ol-scale-line-inner {
+  color: var(--text-default-grey, #3a3a3a);
+  border-color: var(--text-default-grey, #3a3a3a);
+}
+
+/* Hors impression : aperçu et export restent en clair (`ec-light-theme`). */
+:root[data-fr-theme='dark'] .ol-scale-line-inner:not(.ec-light-theme *) {
+  color: var(--text-action-high-blue-france);
+  border-color: var(--text-action-high-blue-france);
 }
 
 .ec-map-shell--tab-panels-layout-bottom .ol-scale-line {
@@ -1572,6 +1587,32 @@ dialog[id^='GPterritoriesPanel-'] {
 #gpu-map .ol-attribution a.legal-attribution:hover,
 #gpu-map .ol-attribution a.legal-attribution:focus {
   text-decoration: none;
+}
+
+/* Boussole (`RotateControl`) : au-dessus du zoom ; l’aiguille suit l’orientation de la carte. */
+.position-container-bottom-right > .ec-rotate-control {
+  order: -1;
+}
+
+.ec-rotate-control__btn {
+  color: var(--text-action-high-blue-france, #000091);
+}
+
+.ec-rotate-control__icon {
+  display: inline-block;
+  transition: transform 0.25s;
+}
+
+/* Le SVG a une marge pour que le N tourne autour de l’aiguille : 1,875 rem ≈ aiguille et N en 1,5 rem. */
+.ec-rotate-control__icon.ec-icon-compass-north {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ec-rotate-control__icon {
+    transition: none;
+  }
 }
 /* SearchEngineAdvanced monté hors carte (accueil gpu-site / démo). */
 

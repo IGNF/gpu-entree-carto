@@ -18,6 +18,8 @@ export type WaitForMapExportReadyOptions = {
   onProgress?: (progress: MapExportReadyProgress) => void
   /** Interruption (préchauffage abandonné) : rejette avec une `AbortError`. */
   signal?: AbortSignal
+  /** Délai dépassé : continuer avec les tuiles déjà chargées (`timedOut: true`) au lieu d’échouer. */
+  resolveOnTimeout?: boolean
 }
 
 function abortError(): DOMException {
@@ -51,7 +53,7 @@ function collectTileSources(map: Map): TileSource[] {
 export async function waitForMapExportReady(
   map: Map,
   options: WaitForMapExportReadyOptions = {},
-): Promise<void> {
+): Promise<{ timedOut: boolean }> {
   if (options.signal?.aborted) throw abortError()
   const timeoutMs = options.timeoutMs ?? 120_000
   const stablePasses = Math.max(1, options.stablePasses ?? 2)
@@ -83,7 +85,7 @@ export async function waitForMapExportReady(
   report()
 
   try {
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<{ timedOut: boolean }>((resolve, reject) => {
       let stableRenderCount = 0
 
       const onRenderComplete = (): void => {
@@ -95,7 +97,7 @@ export async function waitForMapExportReady(
         stableRenderCount += 1
         if (stableRenderCount >= stablePasses) {
           cleanup()
-          resolve()
+          resolve({ timedOut: false })
         } else {
           map.renderSync()
         }
@@ -119,7 +121,8 @@ export async function waitForMapExportReady(
         typeof window !== 'undefined'
           ? window.setTimeout(() => {
               cleanup()
-              reject(new Error('Délai dépassé lors du chargement des tuiles cartographiques.'))
+              if (options.resolveOnTimeout) resolve({ timedOut: true })
+              else reject(new Error('Délai dépassé lors du chargement des tuiles cartographiques.'))
             }, timeoutMs)
           : undefined
 

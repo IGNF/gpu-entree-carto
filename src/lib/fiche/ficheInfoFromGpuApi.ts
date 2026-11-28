@@ -41,7 +41,12 @@ import {
   isGpuParcelFichePayload,
   type GpuParcelFichePayload,
 } from '@/lib/fiche/parcelFicheFromGpuApi'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  MAP_MODE_COORDINATES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
 import { escapeHtml } from '@/lib/fiche/ficheInfoHtml'
 
 type GpuFicheFeature = Record<string, unknown>
@@ -89,6 +94,8 @@ export type GpuFicheInfoPayload = {
   parcel?: Record<string, unknown> | null
   parcelId?: string
   parcelFiche?: GpuParcelFichePayload
+  /** Mode coordonnées (`/api/fiche-info/coordonnees`) : règles au point cliqué, même format. */
+  pointFiche?: GpuParcelFichePayload
   features?: GpuParcelFichePayload['features']
   parcelGeometry?: unknown
   gridGeometry?: unknown
@@ -546,12 +553,43 @@ export function extractParcelFichePayload(data: GpuFicheInfoPayload): GpuParcelF
   return null
 }
 
+/** Libellé du point de la fiche « Coordonnées » (5 décimales, ~1 m). */
+export function formatCoordinatesLabel(lon: number, lat: number): string {
+  return `Longitude ${lon.toFixed(5)}, latitude ${lat.toFixed(5)}`
+}
+
+/**
+ * Mode Coordonnées : même fiche que la parcelle (Infos + Documents, bascules parcelle et commune), avec les
+ * règles au point cliqué (`pointFiche`) au lieu de celles de la parcelle entière, sans références cadastrales.
+ */
+function coordinatesSelectionFromGpuApi(
+  data: GpuFicheInfoPayload,
+  lon: number,
+  lat: number,
+): FicheInfoSelection {
+  const base = ficheSelectionFromGpuApi(data, MAP_MODE_PARCEL, lon, lat)
+  const pointFiche: GpuParcelFichePayload = isGpuParcelFichePayload(data.pointFiche)
+    ? data.pointFiche
+    : { features: [] }
+  return {
+    ...base,
+    title: 'Coordonnées',
+    mapMode: MAP_MODE_COORDINATES,
+    coordinatesLabel: formatCoordinatesLabel(lon, lat),
+    cadastreReferences: null,
+    raw: { ...base.raw, mode: MAP_MODE_COORDINATES, _parcelFiche: pointFiche },
+    parcelInfosHtml: buildParcelInfosHtmlFromFiche(pointFiche, undefined, data),
+    parcelDocumentsHtml: buildParcelDocumentsHtmlFromFiche(pointFiche, data),
+  }
+}
+
 export function ficheSelectionFromGpuApi(
   data: GpuFicheInfoPayload,
   mode: MapModeId,
   lon: number,
   lat: number,
 ): FicheInfoSelection {
+  if (mode === MAP_MODE_COORDINATES) return coordinatesSelectionFromGpuApi(data, lon, lat)
   const hasParcel = ficheHasParcelAtPoint(data)
   const hasTerritory = ficheHasTerritoryAtPoint(data)
   const parcel = data.parcel ?? null

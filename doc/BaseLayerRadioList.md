@@ -16,6 +16,7 @@ Liste verticale de **boutons radio** pour les fonds de plan, avec **vignette** e
 
 ## Comportement
 
+- Fond **Cadastre** : couches cadastre transparentes posées sur un **fond blanc** (`setActiveGpuBaseLayer`), lisible en thème sombre ; pas sur les autres fonds (le cadastre bas zoom s’y superpose au plan ou à la photo).
 - Une seule sélection (pastille `.ec-base-radio`, tokens DSFR bleu France), alignée au centre de la vignette carrée.
 - Bouton **caret** (`fr-icon-arrow-*-s-line`) à droite du titre : affiche/masque sous-titre + description (HTML dans `description`, rendu via `SanitizedHtml` / DOMPurify).
 - **Titre** (label) en gris foncé ; **sous-titre** et **description** en gris mention (même teinte).

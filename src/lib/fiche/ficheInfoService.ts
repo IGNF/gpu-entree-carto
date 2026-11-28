@@ -5,7 +5,12 @@ import {
   ficheServiceUnavailableSelection,
 } from '@/lib/fiche/ficheRetry'
 import type { StandardViewerSearch } from '@/lib/types'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  MAP_MODE_COORDINATES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
 import { TAB_PANEL_IDS, tabPanelsApiRef } from '@/composables/tabPanels'
 import { shallowRef, watch } from 'vue'
@@ -93,50 +98,82 @@ type FichePointCache = {
   byMode: Partial<Record<MapModeId, FicheInfoSelection>>
 }
 
-/** Fiches déjà chargées au point cerise (une entrée par mode). */
-let fichePointCache: FichePointCache | null = null
+/**
+ * Fiches déjà chargées au point cerise, une par route API : Parcelle et Territoire partagent la requête
+ * combinée, Coordonnées a sa route (`/coordonnees`). Réponses jamais fusionnées entre routes : sinon la
+ * fiche d’un mode serait reconstruite à partir de la réponse de l’autre (règles manquantes).
+ */
+type FicheRoute = 'combined' | 'coordinates'
+const fichePointCaches: Record<FicheRoute, FichePointCache | null> = {
+  combined: null,
+  coordinates: null,
+}
+
+function ficheRouteOf(mode: MapModeId): FicheRoute {
+  return mode === MAP_MODE_COORDINATES ? 'coordinates' : 'combined'
+}
+
+function pointCacheFor(mode: MapModeId): FichePointCache | null {
+  return fichePointCaches[ficheRouteOf(mode)]
+}
+
+/** Cache du mode courant (permalien), pour les compléments catalogue sans mode explicite. */
+function activePointCache(): FichePointCache | null {
+  return pointCacheFor(
+    readMapModeFromPermalinkParams(getMapPermalinkParams()) ?? MAP_MODE_TERRITORY,
+  )
+}
 
 function sameMapPoint(a: { lon: number; lat: number }, b: { lon: number; lat: number }): boolean {
   return Math.abs(a.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a.lat - b.lat) <= FICHE_POINT_EPS
 }
 
-function syncFichePointCache(lon: number, lat: number): void {
-  if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
-    fichePointCache = {
-      lon,
-      lat,
-      acquiredFamilies: [],
-      acquiredSupTypes: new Set(),
-      mergedGpuPayload: null,
-      byMode: {},
-    }
+function syncFichePointCache(lon: number, lat: number, mode: MapModeId): FichePointCache {
+  const route = ficheRouteOf(mode)
+  const current = fichePointCaches[route]
+  if (current && sameMapPoint(current, { lon, lat })) return current
+  // Cache de l’autre route resté sur un ancien point : obsolète aussi.
+  for (const other of ['combined', 'coordinates'] as const) {
+    const cache = fichePointCaches[other]
+    if (cache && !sameMapPoint(cache, { lon, lat })) fichePointCaches[other] = null
   }
+  const fresh: FichePointCache = {
+    lon,
+    lat,
+    acquiredFamilies: [],
+    acquiredSupTypes: new Set(),
+    mergedGpuPayload: null,
+    byMode: {},
+  }
+  fichePointCaches[route] = fresh
+  return fresh
 }
 
 function recordGpuPayloadAcquisition(
+  mode: MapModeId,
   lon: number,
   lat: number,
   payload: GpuFicheInfoPayload,
   fetchedFamilies: FicheInfoApiFamily[],
   fetchedSupTypes: string[] | null | undefined,
 ): GpuFicheInfoPayload {
-  syncFichePointCache(lon, lat)
-  const merged = fichePointCache!.mergedGpuPayload
-    ? mergeGpuFicheInfoPayloads(fichePointCache!.mergedGpuPayload, payload)
+  const fichePointCache = syncFichePointCache(lon, lat, mode)
+  const merged = fichePointCache.mergedGpuPayload
+    ? mergeGpuFicheInfoPayloads(fichePointCache.mergedGpuPayload, payload)
     : payload
-  fichePointCache!.mergedGpuPayload = merged
+  fichePointCache.mergedGpuPayload = merged
   // Indicateurs serveur : famille absente de la réponse malgré la demande (absent = incluse).
   const includedFamilies = fetchedFamilies.filter(
     (family) =>
       !(family === 'sup' && payload.supIncluded === false) &&
       !(family === 'scot' && payload.scotIncluded === false),
   )
-  fichePointCache!.acquiredFamilies = unionFicheInfoFamilies(
-    fichePointCache!.acquiredFamilies,
+  fichePointCache.acquiredFamilies = unionFicheInfoFamilies(
+    fichePointCache.acquiredFamilies,
     includedFamilies,
   )
-  fichePointCache!.acquiredSupTypes = unionAcquiredSupTypes(
-    fichePointCache!.acquiredSupTypes,
+  fichePointCache.acquiredSupTypes = unionAcquiredSupTypes(
+    fichePointCache.acquiredSupTypes,
     fetchedSupTypes,
   )
   return merged
@@ -149,7 +186,7 @@ async function fetchFicheGpuPayloadAtPoint(
   signal: AbortSignal,
 ): Promise<GpuFicheInfoPayload | null> {
   const queryArgs = { activeFamilies, activeSupTypes: activeSupTypes ?? undefined }
-  if (preferFicheInfoV2CombinedFetch()) {
+  if (usesCombinedFetch(params.mode)) {
     return fetchGpuFicheInfoCombinedPayload({
       lon: params.lon,
       lat: params.lat,
@@ -161,17 +198,25 @@ async function fetchFicheGpuPayloadAtPoint(
   return fetchGpuFicheInfoPayload({ ...params, ...queryArgs, abortSignal: signal })
 }
 
+/**
+ * Requête combinée (territoire + parcelle en un appel) : pas pour le mode Coordonnées, servi par sa route
+ * (`/coordonnees`, règles au point) et jamais mélangé au cache des deux autres modes.
+ */
+function usesCombinedFetch(mode: MapModeId): boolean {
+  return mode !== MAP_MODE_COORDINATES && preferFicheInfoV2CombinedFetch()
+}
+
 function storeFicheInCache(
   mode: MapModeId,
   lon: number,
   lat: number,
   selection: FicheInfoSelection,
 ): void {
-  syncFichePointCache(lon, lat)
-  fichePointCache!.byMode[mode] = selection
+  syncFichePointCache(lon, lat, mode).byMode[mode] = selection
 }
 
 function cachedFicheForMode(mode: MapModeId, lon: number, lat: number): FicheInfoSelection | null {
+  const fichePointCache = pointCacheFor(mode)
   if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null
   return fichePointCache.byMode[mode] ?? null
 }
@@ -190,6 +235,8 @@ function hydrateFicheSelectionFromCache(
 
 /** Met à jour l’entrée cache de l’autre mode au même point (JSON partagé, visibilité catalogue courante). */
 function syncSiblingFicheCacheAtPoint(lon: number, lat: number, activeMode: MapModeId): void {
+  // Coordonnées : pas de mode jumeau (route à part).
+  if (activeMode === MAP_MODE_COORDINATES) return
   const sibling = activeMode === MAP_MODE_TERRITORY ? MAP_MODE_PARCEL : MAP_MODE_TERRITORY
   const cached = cachedFicheForMode(sibling, lon, lat)
   if (!cached) return
@@ -308,6 +355,7 @@ function showFiche(selection: FicheInfoSelection): void {
 }
 
 function readFicheCherryPoint(): { lon: number; lat: number } | null {
+  const fichePointCache = fichePointCaches.combined ?? fichePointCaches.coordinates
   const fromPermalink = readMapPermalinkMarker(getMapPermalinkParams())
   if (fromPermalink) return fromPermalink
   if (fichePointCache) return { lon: fichePointCache.lon, lat: fichePointCache.lat }
@@ -323,6 +371,7 @@ export const ficheSupplementError = shallowRef<string | null>(null)
 
 /** Familles ou types SUP voulus par le catalogue mais pas encore récupérés au point de la fiche. */
 function ficheCatalogSupplementMissing(): boolean {
+  const fichePointCache = activePointCache()
   if (!fichePointCache?.mergedGpuPayload || !isCatalogDrivenFicheFetchEnabled()) return false
   return !catalogFicheAcquisitionComplete(
     resolveFicheInfoActiveFamiliesForFetch(),
@@ -333,6 +382,7 @@ function ficheCatalogSupplementMissing(): boolean {
 
 /** Réaffiche la fiche courante après changement de visibilité catalogue (permalink). */
 export function refreshFicheForCatalogVisibility(): void {
+  const fichePointCache = activePointCache()
   const api = tabPanelsApiRef.value
   const current = api?.selection.value
   if (!current?.raw || current.loading) return
@@ -384,7 +434,9 @@ function persistFicheCacheAfterCatalogRefresh(next: FicheInfoSelection): void {
   }
 
   const parcelId = parcelIdFromSelection(next)
+  // Mode Coordonnées : `_parcelFiche` contient les règles au point, pas celles de la parcelle entière.
   if (
+    next.mapMode !== MAP_MODE_COORDINATES &&
     parcelId &&
     next.parcelInfosHtml?.trim() &&
     next.parcelDocumentsHtml?.trim() &&
@@ -407,6 +459,7 @@ function persistFicheCacheAfterCatalogRefresh(next: FicheInfoSelection): void {
 export async function ensureFicheCatalogSupplementAtMarker(): Promise<void> {
   if (!isCatalogDrivenFicheFetchEnabled()) return
   const cherry = readFicheCherryPoint()
+  const fichePointCache = activePointCache()
   if (!cherry || !fichePointCache || !sameMapPoint(fichePointCache, cherry)) return
   if (!fichePointCache.mergedGpuPayload) return
 
@@ -461,16 +514,22 @@ export async function ensureFicheCatalogSupplementAtMarker(): Promise<void> {
   }
 
   const merged = recordGpuPayloadAcquisition(
+    mode,
     lon,
     lat,
     partial,
     [...familiesToFetch],
     supTypesToFetch,
   )
-  storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged)
-  for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL] as const) {
-    const selection = selectionFromGpuPayload(merged, mapMode, lon, lat)
-    storeFicheInCache(mapMode, lon, lat, selection)
+  // Coordonnées : réponse de sa route, sans fiche parcelle ; ne pas réécrire le cache des deux autres modes.
+  if (usesCombinedFetch(mode)) {
+    storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged)
+    for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL] as const) {
+      const selection = selectionFromGpuPayload(merged, mapMode, lon, lat)
+      storeFicheInCache(mapMode, lon, lat, selection)
+    }
+  } else {
+    storeFicheInCache(mode, lon, lat, selectionFromGpuPayload(merged, mode, lon, lat))
   }
   const displayed = hydrateFicheSelectionFromCache(
     cachedFicheForMode(mode, lon, lat) ?? selectionFromGpuPayload(merged, mode, lon, lat),
@@ -598,7 +657,7 @@ async function loadFicheForMapPointImpl(params: {
   const markerPlacedAtClick = params.markerPlacedAtClick === true
   const skipLocationMarker = params.skipLocationMarker === true
   const silent = params.silent === true
-  syncFichePointCache(params.lon, params.lat)
+  const fichePointCache = syncFichePointCache(params.lon, params.lat, params.mode)
   const loadingTitle =
     params.loadingTitle ?? (params.mode === MAP_MODE_PARCEL ? 'Parcelle' : 'Document d’urbanisme')
 
@@ -712,6 +771,7 @@ async function loadFicheForMapPointImpl(params: {
   }
 
   payload = recordGpuPayloadAcquisition(
+    params.mode,
     params.lon,
     params.lat,
     payload,
@@ -719,7 +779,7 @@ async function loadFicheForMapPointImpl(params: {
     supTypesToFetch,
   )
 
-  const useCombinedV2 = preferFicheInfoV2CombinedFetch()
+  const useCombinedV2 = usesCombinedFetch(params.mode)
   if (useCombinedV2) {
     storeDualModeFicheCacheFromCombinedPayload(params.lon, params.lat, payload, params.mode)
   } else if (params.mode === MAP_MODE_TERRITORY) {

@@ -39,6 +39,9 @@ export type ScaleLineSnapshot = {
   }
 }
 
+const PRINT_SCALE_BACKGROUND = 'rgba(255, 255, 255, 0.75)'
+const PRINT_SCALE_TEXT = '#333333'
+
 export function captureScaleLineSnapshot(mapRef: HTMLElement): ScaleLineSnapshot | null {
   const scaleLine = mapRef.getElementsByClassName('ol-scale-line')[0] as HTMLElement | undefined
   const scaleLineInner = scaleLine?.children[0] as HTMLElement | undefined
@@ -49,7 +52,6 @@ export function captureScaleLineSnapshot(mapRef: HTMLElement): ScaleLineSnapshot
   const innerRect = scaleLineInner.getBoundingClientRect()
   if (!mapRect.width || !mapRect.height) return null
 
-  const style = getComputedStyle(scaleLine)
   const styleInner = getComputedStyle(scaleLineInner)
 
   return {
@@ -59,7 +61,8 @@ export function captureScaleLineSnapshot(mapRef: HTMLElement): ScaleLineSnapshot
       y: outerRect.top - mapRect.top,
       width: outerRect.width,
       height: outerRect.height,
-      backgroundColor: style.backgroundColor || 'rgba(255, 255, 255, 0.75)',
+      // Papier : couleurs claires, même si l’écran est en thème sombre.
+      backgroundColor: PRINT_SCALE_BACKGROUND,
     },
     inner: {
       x: innerRect.left - mapRect.left,
@@ -74,7 +77,7 @@ export function captureScaleLineSnapshot(mapRef: HTMLElement): ScaleLineSnapshot
       fontWeight: styleInner.fontWeight,
       fontSize: styleInner.fontSize,
       fontFamily: styleInner.fontFamily,
-      color: styleInner.color || '#333333',
+      color: PRINT_SCALE_TEXT,
       text: scaleLineInner.textContent || '',
     },
   }
@@ -142,9 +145,8 @@ export function drawScale(
     innerRect = scaleLineInner.getBoundingClientRect()
     if (!mapRect.width || !mapRect.height) return
 
-    const style = getComputedStyle(scaleLine)
     const styleInner = getComputedStyle(scaleLineInner)
-    outerBackgroundColor = style.backgroundColor || 'rgba(255, 255, 255, 0.75)'
+    outerBackgroundColor = PRINT_SCALE_BACKGROUND
     innerBorderLeftWidth = styleInner.borderLeftWidth || '0'
     innerBorderRightWidth = styleInner.borderRightWidth || '0'
     innerBorderBottomWidth = styleInner.borderBottomWidth || '0'
@@ -153,7 +155,7 @@ export function drawScale(
     innerFontWeight = styleInner.fontWeight
     innerFontSize = styleInner.fontSize
     innerFontFamily = styleInner.fontFamily
-    innerColor = styleInner.color || '#333333'
+    innerColor = PRINT_SCALE_TEXT
     scaleContent = scaleLineInner.textContent || ''
   }
 
@@ -246,7 +248,8 @@ export function drawTitle(
   const lineHeight = parseInt(style.lineHeight, 10) * scaleX * dpiCoeff
 
   ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`
-  ctx.fillStyle = style.color || '#3a3a3a'
+  // Papier blanc : titre sombre, même si l’écran est en thème sombre.
+  ctx.fillStyle = '#3a3a3a'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
 

@@ -37,3 +37,16 @@ describe('mergeGpuFicheInfoPayloads : documents petite échelle', () => {
     ).toEqual([other])
   })
 })
+
+describe('mergeGpuFicheInfoPayloads — mode Coordonnées', () => {
+  it('complément catalogue : règles au point (pointFiche) fusionnées comme celles de la parcelle', () => {
+    const merged = mergeGpuFicheInfoPayloads(
+      { pointFiche: { features: [{ id: 'zone_urba.1', properties: {} }] } },
+      { pointFiche: { features: [{ id: 'assiette_sup_s.2', properties: {} }] } },
+    )
+    expect(merged.pointFiche?.features?.map((f) => f.id)).toEqual([
+      'zone_urba.1',
+      'assiette_sup_s.2',
+    ])
+  })
+})

@@ -35,8 +35,10 @@ export interface DemoMapConfig {
   zoom?: number
   layerNodes?: TreeLayerNode[]
   search?: StandardViewerSearch | null
-  /** Mode fiche / clic info (`1` parcelle, `2` territoire). */
+  /** Mode fiche / clic info au chargement (`1` parcelle, `2` territoire, `3` coordonnées). */
   mode?: MapModeId
+  /** Modes proposés (sélecteur, bascules de la fiche) ; absent = les trois. */
+  modes?: MapModeId[]
 }
 
 export type DemoHomeSearchWidget = 'location' | 'search-engine'

@@ -30,4 +30,18 @@ describe('LayerLegendsPanel', () => {
     })
     expect(wrapper.find('section.fr-accordion').classes()).toContain('ec-not-in-zoom-range')
   })
+
+  it('configuration des couches en cours de chargement : roue de patience', () => {
+    const wrapper = mount(LayerLegendsPanel, {
+      props: {
+        layers: [],
+        mapZoom: 12,
+        catalogEntryInZoomRange: () => true,
+        catalogLayersLoading: true,
+      } as never,
+    })
+    expect(wrapper.find('[role=status]').text()).toContain(
+      'En attente de la récupération des couches',
+    )
+  })
 })

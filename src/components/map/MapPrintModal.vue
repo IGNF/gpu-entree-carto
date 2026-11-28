@@ -53,6 +53,8 @@ import { injectDpiInPng } from '@/lib/map/print/pngDpi'
 import { copyViewState } from '@/lib/map/print/syncPrintMapView'
 import { renderSyncIfAttached, waitForMapRender } from '@/lib/map/print/waitForMapRender'
 import { captureScaleLineSnapshot, drawScale } from '@/lib/map/print/printScale'
+import { assertCanvasUsable, releaseCanvas } from '@/lib/map/print/printCanvasMemory'
+import { canShareExportFiles, shareExportFiles } from '@/lib/map/print/printDelivery'
 import { printPreviewPaperScale } from '@/lib/map/print/printModalLayout'
 import {
   computePrintMapTitleLayout,
@@ -110,6 +112,7 @@ import {
   territoryPrintTitle,
 } from '@/lib/map/print/printFicheSnapshot'
 import { getCachedFicheSelectionAtMarker } from '@/lib/fiche/ficheInfoService'
+import { LIGHT_THEME_SCOPE_CLASS, ensureLightThemeScopeStyle } from '@/lib/theme/lightThemeScope'
 import { dedupeLegendLayersForPanel } from '@/lib/layerConfig/gpuLegendItems'
 import { mapPrintPanelsRef } from '@/map/mapPrintPanelsContext'
 import type { MapPrintModalOpenOptions } from '@/map/mapPrintModalContext'
@@ -120,7 +123,13 @@ import MapPrintFicheParcelPage from '@/components/map/print/MapPrintFicheParcelP
 import MapPrintLegendsPage from '@/components/map/print/MapPrintLegendsPage.vue'
 import PrintExportProgressOverlay from '@/components/map/print/PrintExportProgressOverlay.vue'
 import type { FicheInfoSelection } from '@/composables/tabPanels'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  ALL_MAP_MODES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
+import { tryUseMapMode } from '@/composables/mapMode'
 import {
   resolvePrintFicheSelections,
   type PrintFicheSelections,
@@ -165,6 +174,10 @@ const printModalOpened = ref(false)
 const isExportInProgress = ref(false)
 const exportProgressPercent = ref(0)
 const exportProgressDetail = ref('')
+/** Message de fin d’export (succès, avertissement, erreur), visible jusqu’au prochain export. */
+const exportResultMessage = ref('')
+/** Tuiles non chargées à temps pendant l’export en cours (réseau lent). */
+let exportMapIncomplete = false
 /** Aperçu feuille masqué tant que carte + pagination annexes ne sont pas prêts. */
 const isPreviewLayoutPending = ref(false)
 /** Ignore un `@close` DSFR dans la foulée du clic d’ouverture (carte / focus). */
@@ -208,6 +221,7 @@ function recenterPreviewOnPlace(): void {
 function onModalPrintOpen(options?: MapPrintModalOpenOptions): void {
   printPlaceMarker.value = readMapPermalinkMarker(getMapPermalinkParams())
   applyPrintOpenOptions(options)
+  ensureLightThemeScopeStyle()
   dismissGuardUntil = Date.now() + 500
   printModalOpened.value = true
   void nextTick(() => {
@@ -383,10 +397,16 @@ const parcelCadastreReferences = computed(
   () => parcelSelectionForPrint.value?.cadastreReferences ?? null,
 )
 
-const canPrintTerritoryFiche = computed(() =>
-  isTerritoryFichePrintReady(territorySelectionForPrint.value),
+/** Annexe fiche proposée seulement si son mode est activé par la config de la carte. */
+const enabledMapModes = tryUseMapMode()?.modes ?? ALL_MAP_MODES
+const territoryFicheEnabled = enabledMapModes.includes(MAP_MODE_TERRITORY)
+const parcelFicheEnabled = enabledMapModes.includes(MAP_MODE_PARCEL)
+const canPrintTerritoryFiche = computed(
+  () => territoryFicheEnabled && isTerritoryFichePrintReady(territorySelectionForPrint.value),
 )
-const canPrintParcelFiche = computed(() => isParcelFichePrintReady(parcelSelectionForPrint.value))
+const canPrintParcelFiche = computed(
+  () => parcelFicheEnabled && isParcelFichePrintReady(parcelSelectionForPrint.value),
+)
 const canPrintLegends = computed(() => {
   const zoom = printPreviewLegendZoom.value
   const filtered = dedupeLegendLayersForPanel(panelLegendLayers.value)
@@ -1593,6 +1613,26 @@ function getPrintMapInstance(): OlMap | null {
   return previewMap.value ?? sourceMapRef.value
 }
 
+/** Fichiers prêts à partager (téléphone) : remis par le bouton « Enregistrer / partager ». */
+const pendingShareFiles = shallowRef<File[]>([])
+
+/** Téléphone avec partage : fichier mis de côté pour la feuille de partage ; sinon téléchargement direct. */
+function deliverExportFile(fileName: string, blob: Blob): void {
+  const file = new File([blob], fileName, { type: blob.type })
+  if (canShareExportFiles([file])) {
+    pendingShareFiles.value = [...pendingShareFiles.value, file]
+    return
+  }
+  triggerDownload(fileName, URL.createObjectURL(blob))
+}
+
+async function onClickShareExport(): Promise<void> {
+  const files = pendingShareFiles.value
+  if (!files.length) return
+  await shareExportFiles(files)
+  pendingShareFiles.value = []
+}
+
 function triggerDownload(fileName: string, url: string): void {
   const link = document.createElement('a')
   link.download = fileName
@@ -1695,6 +1735,9 @@ async function buildRasterExportCanvas(
     heightPx: mapHeightPx,
     extent: mapExtent,
     cacheKey: mapCacheKey,
+    onIncomplete: () => {
+      exportMapIncomplete = true
+    },
     onStage: (label) => {
       progress.setDetail(`${prefix}${label}`)
     },
@@ -1712,12 +1755,11 @@ async function buildRasterExportCanvas(
   const finalCanvas = document.createElement('canvas')
   finalCanvas.width = finalWidthPx
   finalCanvas.height = finalHeightPx
-  const finalCtx = finalCanvas.getContext('2d')
-  if (!finalCtx) throw new Error('Contexte canvas indisponible.')
+  const finalCtx = assertCanvasUsable(finalCanvas)
   finalCtx.fillStyle = '#ffffff'
   finalCtx.fillRect(0, 0, finalWidthPx, finalHeightPx)
   finalCtx.drawImage(mapCanvas, marginPx, marginPx + titleHeightPx)
-  mapCanvas.remove()
+  releaseCanvas(mapCanvas)
 
   if (printFormState.hasTitle && printMapTitleLayout.value.displayTitle) {
     const titleCanvas = document.createElement('canvas')
@@ -1852,10 +1894,10 @@ async function exportRasterCanvases(
     try {
       if (printFormState.format === 'PNG') {
         const blob = await encodePrintPngWithDpi(canvas, dpiValue)
-        triggerDownload(fileName, URL.createObjectURL(blob))
+        deliverExportFile(fileName, blob)
       } else {
         const blob = await encodePrintJpeg(canvas, 0.95)
-        triggerDownload(fileName, URL.createObjectURL(blob))
+        deliverExportFile(fileName, blob)
       }
     } catch {
       if (printFormState.format === 'PNG') {
@@ -1865,7 +1907,7 @@ async function exportRasterCanvases(
         triggerDownload(fileName, canvas.toDataURL('image/jpeg', 0.95))
       }
     }
-    canvas.remove()
+    releaseCanvas(canvas)
   }
   progress.tick(0.95)
 }
@@ -1887,8 +1929,7 @@ async function exportPdfFromCanvases(
   })
   progress.setDetail('Finalisation du PDF…')
   progress.tick(0.85)
-  triggerDownload(fileName, URL.createObjectURL(blob))
-  for (const canvas of pages) canvas.remove()
+  deliverExportFile(fileName, blob)
 }
 
 async function syncAnnexPaginationForExport(
@@ -1920,6 +1961,9 @@ async function syncAnnexPaginationForExport(
 async function onClickExportMap(): Promise<void> {
   if (isExportInProgress.value) return
   isExportInProgress.value = true
+  pendingShareFiles.value = []
+  exportResultMessage.value = ''
+  exportMapIncomplete = false
   exportProgressPercent.value = 1
   exportProgressDetail.value = 'Préparation de l’export…'
   const savedPreviewPageIndex = previewPageIndex.value
@@ -1945,10 +1989,14 @@ async function onClickExportMap(): Promise<void> {
       await exportRasterCanvases(canvases, progress)
     }
     progress.endStep()
-    syncExportProgressUi(100, 'Export terminé.')
+    exportResultMessage.value = exportMapIncomplete
+      ? 'Export terminé : certaines tuiles de la carte n’ont pas pu être chargées à temps.'
+      : 'Export terminé.'
+    syncExportProgressUi(100, exportResultMessage.value)
   } catch (err) {
     const message =
       err instanceof Error ? err.message : 'Export impossible. Réessayez avec un titre plus court.'
+    exportResultMessage.value = message
     syncExportProgressUi(exportProgressPercent.value, message)
   } finally {
     previewPageIndex.value = savedPreviewPageIndex
@@ -2028,7 +2076,7 @@ async function onClickExportMap(): Promise<void> {
               label="Afficher l'échelle"
             />
           </div>
-          <div class="mt-10">
+          <div v-if="territoryFicheEnabled" class="mt-10">
             <DsfrCheckbox
               v-model="printFormState.hasTerritoryFiche"
               :value="true"
@@ -2037,7 +2085,7 @@ async function onClickExportMap(): Promise<void> {
               label="Afficher la fiche info territoire"
             />
           </div>
-          <div class="mt-10">
+          <div v-if="parcelFicheEnabled" class="mt-10">
             <DsfrCheckbox
               v-model="printFormState.hasParcelFiche"
               :value="true"
@@ -2110,6 +2158,22 @@ async function onClickExportMap(): Promise<void> {
             no-outline
             @click="onClickExportMap"
           />
+          <p
+            v-if="exportResultMessage && !isExportInProgress"
+            class="print-export-result fr-text--sm"
+            role="status"
+          >
+            {{ exportResultMessage }}
+          </p>
+          <DsfrButton
+            v-if="pendingShareFiles.length"
+            id="print-page-share"
+            label="Enregistrer / partager"
+            title="Enregistrer ou partager le fichier exporté"
+            icon="ri-share-line"
+            secondary
+            @click="onClickShareExport"
+          />
         </div>
         <div class="print-preview-panel">
           <nav class="print-preview-pagination" aria-label="Pages à imprimer">
@@ -2153,8 +2217,10 @@ async function onClickExportMap(): Promise<void> {
                   :style="previewColumnScaleInnerStyle"
                 >
                   <div class="print-preview-container">
+                    <!-- Impression toujours en clair, même si la page est en thème sombre. -->
                     <div
                       class="print-preview"
+                      :class="LIGHT_THEME_SCOPE_CLASS"
                       :style="{
                         width: cssPreviewDimensionPx.width,
                         height: cssPreviewDimensionPx.height,
@@ -2489,6 +2555,8 @@ async function onClickExportMap(): Promise<void> {
 .print-preview {
   flex: 0 0 auto;
   box-sizing: border-box;
+  /* Papier blanc : sinon transparent, il laisse voir la modale (sombre en thème sombre). */
+  background: #fff;
   display: flex;
   flex-direction: column;
 }

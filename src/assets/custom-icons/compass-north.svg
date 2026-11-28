@@ -1,0 +1,6 @@
+<svg width="30" height="30" viewBox="-3 0.9 30 30" xmlns="http://www.w3.org/2000/svg">
+<!-- Cadre centré sur le milieu de l’aiguille (12 ; 15,9) : la rotation CSS tourne autour de l’aiguille, pas du N. -->
+<path d="M9.2 7.4V1.4h1.5l3.1 3.8V1.4h1.5v6h-1.5L10.7 3.6v3.8z" fill="#000"/>
+<path d="M12 8.6l3.6 7.9H8.4z" fill="#000"/>
+<path d="M8.9 17.3h6.2L12 23.2z" fill="none" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>

@@ -3,6 +3,7 @@
  * Données brutes de la réponse fiche-info (démo « Fiche info », onglet « Données brutes ») :
  * arbre repliable, champs non lus par la fiche grisés.
  */
+import LoadingStatus from '@/components/common/LoadingStatus.vue'
 import { computed } from 'vue'
 import RawJsonNode from '@/components/demo/RawJsonNode.vue'
 import { FICHE_USED_FIELDS } from '@/lib/demo/ficheUsedFields'
@@ -13,6 +14,8 @@ const CLIENT_KEYS = ['lon', 'lat', 'mode', 'source'] as const
 const props = defineProps<{
   raw: Record<string, unknown> | null | undefined
   mode: 'parcel' | 'territory'
+  /** Fiche en cours de chargement (roue de patience). */
+  loading?: boolean
 }>()
 
 const patterns = computed(() => FICHE_USED_FIELDS[props.mode])
@@ -44,7 +47,8 @@ const clientKeys = computed(() =>
       <span class="ec-raw-node--used">Champ utilisé par la fiche</span> ·
       <span class="ec-raw-node--unused">Champ non utilisé (grisé)</span>
     </p>
-    <p v-if="!response" class="fr-text--sm">
+    <LoadingStatus v-if="loading" label="Chargement de la réponse…" />
+    <p v-else-if="!response" class="fr-text--sm">
       Cliquez sur la carte ou recherchez un lieu pour afficher la réponse.
     </p>
     <template v-else>

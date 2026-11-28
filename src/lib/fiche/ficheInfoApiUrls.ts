@@ -1,7 +1,7 @@
 import config from '@/lib/config'
-import { MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import { MAP_MODE_COORDINATES, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
 
-export type FicheInfoEndpointKind = 'combined' | 'territoire' | 'parcelle'
+export type FicheInfoEndpointKind = 'combined' | 'territoire' | 'parcelle' | 'coordonnees'
 
 function readConfigUrl(key: string): string | null {
   const bag: Record<string, unknown> = config
@@ -10,6 +10,9 @@ function readConfigUrl(key: string): string | null {
   const trimmed = raw.trim()
   return trimmed.length ? trimmed : null
 }
+
+/** Suffixe de périmètre déjà présent dans `apiFicheInfoUrl`. */
+const SCOPE_SUFFIX_RE = /\/(territoire|parcelle|coordonnees)$/
 
 function normalizeBaseUrl(raw: string): string {
   return raw.trim().replace(/\/$/, '')
@@ -32,23 +35,21 @@ export function resolveFicheInfoEndpointUrl(kind: FicheInfoEndpointKind): string
     const explicit = readConfigUrl('apiFicheInfoParcelleUrl')
     if (explicit) return explicit
   }
+  if (kind === 'coordonnees') {
+    const explicit = readConfigUrl('apiFicheInfoCoordonneesUrl')
+    if (explicit) return explicit
+  }
 
   const base = readConfigUrl('apiFicheInfoUrl')
   if (!base) return null
   const normalized = normalizeBaseUrl(base)
 
   if (kind === 'combined') {
-    if (normalized.endsWith('/territoire') || normalized.endsWith('/parcelle')) {
-      return normalized.replace(/\/(territoire|parcelle)$/, '')
-    }
-    return normalized
+    return normalized.replace(SCOPE_SUFFIX_RE, '')
   }
 
-  const suffix = kind === 'territoire' ? 'territoire' : 'parcelle'
-  if (normalized.endsWith('/territoire') || normalized.endsWith('/parcelle')) {
-    return normalized.replace(/\/(territoire|parcelle)$/, `/${suffix}`)
-  }
-  return `${normalized}/${suffix}`
+  if (SCOPE_SUFFIX_RE.test(normalized)) return normalized.replace(SCOPE_SUFFIX_RE, `/${kind}`)
+  return `${normalized}/${kind}`
 }
 
 /** URL combinée (territoire + parcelle en un appel). */
@@ -67,5 +68,6 @@ export function preferFicheInfoV2CombinedFetch(): boolean {
 }
 
 export function resolveFicheInfoFetchUrl(mode: MapModeId): string | null {
+  if (mode === MAP_MODE_COORDINATES) return resolveFicheInfoEndpointUrl('coordonnees')
   return resolveFicheInfoEndpointUrl(mode === MAP_MODE_TERRITORY ? 'territoire' : 'parcelle')
 }

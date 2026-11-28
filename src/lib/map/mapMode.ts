@@ -4,19 +4,41 @@ import {
   type MapPermalinkParams,
 } from '@/lib/map/mapPermalink'
 
-/** Mode fiche / clic info — aligné gpu-client (`mode=1` parcelle, `mode=2` territoire). */
-export type MapModeId = 1 | 2
+/**
+ * Mode fiche / clic info — aligné gpu-client (`mode=1` parcelle, `mode=2` territoire) ;
+ * `mode=3` coordonnées (entree-carto) : règles au point cliqué, inconnu de gpu-client.
+ */
+export type MapModeId = 1 | 2 | 3
 
 export const MAP_MODE_PARCEL: MapModeId = 1
 export const MAP_MODE_TERRITORY: MapModeId = 2
+export const MAP_MODE_COORDINATES: MapModeId = 3
 export const DEFAULT_MAP_MODE: MapModeId = MAP_MODE_TERRITORY
+/** Tous les modes, dans l’ordre du sélecteur. */
+export const ALL_MAP_MODES: readonly MapModeId[] = [
+  MAP_MODE_COORDINATES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+]
+
+/** Modes activés (config `modes`) dans l’ordre du sélecteur ; absent, vide ou invalide = tous. */
+export function normalizeMapModes(raw: unknown): MapModeId[] {
+  const wanted = new Set(Array.isArray(raw) ? raw.map(normalizeMapMode) : [])
+  const modes = ALL_MAP_MODES.filter((mode) => wanted.has(mode))
+  return modes.length ? modes : [...ALL_MAP_MODES]
+}
+
+/** Mode demandé s’il est activé, sinon Territoire, sinon le premier mode activé. */
+export function resolveEnabledMapMode(mode: MapModeId, modes: readonly MapModeId[]): MapModeId {
+  if (modes.includes(mode)) return mode
+  return modes.includes(DEFAULT_MAP_MODE) ? DEFAULT_MAP_MODE : (modes[0] ?? DEFAULT_MAP_MODE)
+}
 
 export function normalizeMapMode(raw: unknown): MapModeId | null {
-  if (raw === 1 || raw === 2) return raw
-  if (raw === '1' || raw === '2') return Number(raw) as MapModeId
+  if (raw === 1 || raw === 2 || raw === 3) return raw
   if (typeof raw === 'string') {
     const n = parseInt(raw, 10)
-    if (n === 1 || n === 2) return n
+    if (n === 1 || n === 2 || n === 3) return n
   }
   return null
 }

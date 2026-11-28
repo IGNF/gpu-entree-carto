@@ -25,6 +25,7 @@
 | ZoomControl                 | `src/components/map/ZoomControl.vue`                         | [ZoomControl.md](./ZoomControl.md)                              |
 | FullScreenControl           | `src/components/map/FullScreenControl.vue`                   | [FullScreenControl.md](./FullScreenControl.md)                  |
 | ScaleLineControl            | `src/components/map/ScaleLineControl.vue`                    | [ScaleLineControl.md](./ScaleLineControl.md)                    |
+| RotateControl               | `src/components/map/RotateControl.vue`                       | [RotateControl.md](./RotateControl.md)                          |
 | SearchEngineControl         | `src/components/map/SearchEngineControl.vue`                 | [SearchEngineControl.md](./SearchEngineControl.md)              |
 | mountSearchEngine           | `src/lib/mountSearchEngine.ts`                               | [mountSearchEngine.md](./mountSearchEngine.md)                  |
 | LocationSearchWidget        | `src/components/search/LocationSearchWidget.vue`             | [LocationSearchWidget.md](./LocationSearchWidget.md)            |

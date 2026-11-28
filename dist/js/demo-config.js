@@ -58,6 +58,11 @@ window.DEMO_CONFIG = {
     baseLayerId: 'carte',
     zoom: 6,
     /**
+     * Modes fiche info proposés : 1 Parcelle, 2 Territoire, 3 Coordonnées (absent = les trois).
+     * La démo « Fiche info » propose toujours les trois.
+     */
+    modes: [1, 2],
+    /**
      * Catalogue « Données » (onglet panneau latéral).
      * visible = cochée dans le catalogue au chargement.
      */

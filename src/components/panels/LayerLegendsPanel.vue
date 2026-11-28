@@ -2,6 +2,7 @@
 /**
  * Onglet Légendes — une section DSFR `fr-accordion` par couche (repliée par défaut).
  */
+import LoadingStatus from '@/components/common/LoadingStatus.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import type { ManagedLayer } from '@/composables/managedLayers'
 import { legendPanelFocusRef } from '@/composables/tabPanels'
@@ -19,6 +20,8 @@ const props = defineProps<{
   layers: ManagedLayer[]
   mapZoom: number
   catalogEntryInZoomRange: (id: string, zoom: number) => boolean
+  /** Configuration des couches pas encore chargée (gpu-client-config). */
+  catalogLayersLoading?: boolean
 }>()
 
 const expandedByLayerId = ref<Record<string, boolean>>({})
@@ -117,7 +120,11 @@ watch(
       Légendes
     </h2>
 
-    <p v-if="!displayLayers.length" class="ec-layer-legends__hint">
+    <LoadingStatus
+      v-if="catalogLayersLoading && !displayLayers.length"
+      label="En attente de la récupération des couches…"
+    />
+    <p v-else-if="!displayLayers.length" class="ec-layer-legends__hint">
       Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici.
     </p>
 

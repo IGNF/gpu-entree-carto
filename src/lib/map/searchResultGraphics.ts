@@ -7,6 +7,7 @@ import { Fill, Stroke, Style } from 'ol/style'
 import type Map from 'ol/Map'
 import type { Feature as GeoJsonFeature } from 'geojson'
 import {
+  MAP_MODE_COORDINATES,
   MAP_MODE_PARCEL,
   MAP_MODE_TERRITORY,
   readMapModeFromPermalinkParams,
@@ -266,6 +267,8 @@ export async function ensureModeEmpriseOnSearchLayer(
 ): Promise<void> {
   empriseTargetKey = targetKey
   removeModeEmpriseFeatures(host)
+  // Mode Coordonnées : pas d’emprise (seulement la cerise), donc pas de requête.
+  if (mode === MAP_MODE_COORDINATES) return
 
   const fromCache = cachedEmpriseForMode(lon, lat, mode)
   if (fromCache !== null && fromCache.length > 0) {

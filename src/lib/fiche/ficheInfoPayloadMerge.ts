@@ -101,5 +101,12 @@ export function mergeGpuFicheInfoPayloads(
   const parcelMerged = mergeParcelFiche(parcelBase, parcelExtra)
   if (parcelMerged) merged.parcelFiche = parcelMerged
 
+  // Mode Coordonnées : règles au point, même format et même fusion que la fiche parcelle.
+  const pointMerged = mergeParcelFiche(
+    isGpuParcelFichePayload(base.pointFiche) ? base.pointFiche : undefined,
+    isGpuParcelFichePayload(partial.pointFiche) ? partial.pointFiche : undefined,
+  )
+  if (pointMerged) merged.pointFiche = pointMerged
+
   return merged
 }

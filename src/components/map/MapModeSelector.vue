@@ -1,16 +1,26 @@
 <script setup lang="ts">
 /**
- * Sélecteur Parcelle / Territoire (gpu-client : mode=1|2).
+ * Sélecteur Coordonnées / Parcelle / Territoire (gpu-client : mode=1|2 ; 3 = Coordonnées), limité aux
+ * modes activés par la config (`modes`).
  * Placement : à droite du SearchEngine (voir map-mode-selector.css).
  */
 import { computed, inject, nextTick, ref, shallowRef, watch, type ShallowRef } from 'vue'
 import type Map from 'ol/Map'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  ALL_MAP_MODES,
+  MAP_MODE_COORDINATES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
 import { tryUseMapMode } from '@/composables/mapMode'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
 import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import { readCherryOrModeEmprisePoint } from '@/lib/map/searchResultGraphics'
 import '@/assets/custom-icons/custom-remix-icons.css'
+
+/** Clés : identifiants de mode (1 Parcelle, 2 Territoire, 3 Coordonnées). */
+const MODE_LABELS: Record<MapModeId, string> = { 1: 'Parcelle', 2: 'Territoire', 3: 'Coordonnées' }
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +36,15 @@ const emit = defineEmits<{
 }>()
 
 const injected = tryUseMapMode()
+/** Modes activés par la config (tous sans contexte). */
+const modes = computed(() => injected?.modes ?? ALL_MAP_MODES)
+const ariaLabel = computed(
+  () =>
+    `Mode ${modes.value
+      .map((m) => MODE_LABELS[m])
+      .join(', ')
+      .replace(/, ([^,]*)$/, ' ou $1')}`,
+)
 
 const mode = computed<MapModeId>({
   get() {
@@ -69,15 +88,36 @@ watch(
 </script>
 
 <template>
-  <Teleport :to="overlayStopTarget" :disabled="!overlayStopTarget">
+  <!-- Un seul mode activé : rien à choisir. -->
+  <Teleport v-if="modes.length > 1" :to="overlayStopTarget" :disabled="!overlayStopTarget">
     <div
       class="ec-map-mode-selector"
       role="radiogroup"
-      aria-label="Mode Parcelle ou Territoire"
+      :aria-label="ariaLabel"
       data-testid="map-mode-selector"
     >
       <div class="ec-map-mode-selector__options">
         <label
+          v-if="modes.includes(MAP_MODE_COORDINATES)"
+          class="ec-map-mode-selector__option"
+          :class="{ 'is-selected': mode === MAP_MODE_COORDINATES }"
+        >
+          <input
+            v-model="mode"
+            class="ec-map-mode-selector__input"
+            type="radio"
+            name="ec-map-mode"
+            :value="MAP_MODE_COORDINATES"
+          />
+          <span
+            class="ec-map-mode-selector__icon fr-icon fr-icon-map-pin-2-line"
+            aria-hidden="true"
+          />
+          <span class="ec-map-mode-selector__text">Coordonnées</span>
+        </label>
+
+        <label
+          v-if="modes.includes(MAP_MODE_PARCEL)"
           class="ec-map-mode-selector__option"
           :class="{ 'is-selected': mode === MAP_MODE_PARCEL }"
         >
@@ -93,6 +133,7 @@ watch(
         </label>
 
         <label
+          v-if="modes.includes(MAP_MODE_TERRITORY)"
           class="ec-map-mode-selector__option"
           :class="{ 'is-selected': mode === MAP_MODE_TERRITORY }"
         >

@@ -28,6 +28,7 @@ import {
 import { mapPermalinkLayersBridgeRef } from '@/composables/mapPermalinkLayersBridge'
 import { showMapLocationMarker } from '@/composables/mapLocationMarker'
 import { tryUseMapMode } from '@/composables/mapMode'
+import { readMapModeFromPermalinkParams, writeMapModeToLocation } from '@/lib/map/mapMode'
 import { scheduleFicheLoadForCherryWhenReady } from '@/lib/fiche/ficheInfoService'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
 import {
@@ -57,6 +58,11 @@ if (locationHashLooksLikeMapPermalink()) {
   bootstrapMapPermalinkFromLocation()
 } else {
   initMapPermalinkFromLocation()
+}
+// Adresse relue : un mode non proposé par la config (ex. `mode=3`) y est remplacé par le mode retenu.
+const permalinkMode = readMapModeFromPermalinkParams(getMapPermalinkParams())
+if (mapMode && permalinkMode != null && !mapMode.modes.includes(permalinkMode)) {
+  writeMapModeToLocation(mapMode.mode.value)
 }
 
 function applyViewFromPermalink(map: Map): void {

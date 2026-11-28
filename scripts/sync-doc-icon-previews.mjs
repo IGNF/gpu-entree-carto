@@ -16,6 +16,7 @@ const remixIconsRoot = path.join(root, 'node_modules/remixicon/icons')
 const CUSTOM_SOURCES = {
   'ri-draw-line': path.join(root, 'src/assets/custom-icons/draw-line.svg'),
   'ec-icon-parcelle': path.join(root, 'src/assets/custom-icons/parcelle.svg'),
+  'ec-icon-compass-north': path.join(root, 'src/assets/custom-icons/compass-north.svg'),
 }
 
 /** DSFR utility classes without a matching file under dist/icons — preview from Remix (visual proxy). */

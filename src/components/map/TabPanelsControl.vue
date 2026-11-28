@@ -89,6 +89,8 @@ import { TAB_PANELS_AUTO_OPEN_SNAP, type TabPanelsSheetSnapIndex } from '@/lib/m
 import { useTabPanelsLayout } from '@/composables/useTabPanelsLayout'
 import { useTabPanelsMobileSheet } from '@/composables/useTabPanelsMobileSheet'
 import { useMapViewportControls } from '@/composables/useMapViewportControls'
+import { useMapRotation } from '@/composables/useMapRotation'
+import '@/assets/custom-icons/custom-remix-icons.css'
 import { useMobileBottomBarGeopf } from '@/composables/useMobileBottomBarGeopf'
 import '@/styles/tab-panels.css'
 
@@ -159,6 +161,10 @@ const {
 const isBottomLayout = computed(() => layoutMode.value === 'bottom')
 const tabListOrientation = computed(() => (isBottomLayout.value ? 'horizontal' : 'vertical'))
 const { zoomIn, zoomOut, toggleFullscreen, isFullscreen } = useMapViewportControls()
+const { rotation, canRestore, toggleNorth } = useMapRotation(mapRef)
+const compassLabel = computed(() =>
+  canRestore.value ? 'Revenir à l’orientation précédente' : 'Réorienter la carte vers le nord',
+)
 const { startMobileBottomBarGeopfObserver } = useMobileBottomBarGeopf(
   layoutMode,
   mobileSketchSlotEl,
@@ -236,6 +242,8 @@ function onTabClick(index: number) {
 
 function showSelection(next: FicheInfoSelection) {
   selection.value = storeFicheSelection(next)
+  // Panneau déjà ouvert : on garde l’onglet affiché et la hauteur (mobile) ; seule la fiche change.
+  if (isOpen.value) return
   openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP)
 }
 
@@ -710,8 +718,20 @@ onUnmounted(() => {
         v-show="isBottomLayout"
         class="ec-tab-panels__viewport-stack"
         role="group"
-        aria-label="Zoom et plein écran"
+        aria-label="Boussole, zoom et plein écran"
       >
+        <button
+          type="button"
+          class="ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--compass"
+          :aria-label="compassLabel"
+          @click="toggleNorth"
+        >
+          <span
+            class="ec-icon-compass-north ec-rotate-control__icon"
+            :style="{ transform: `rotate(${rotation}rad)` }"
+            aria-hidden="true"
+          />
+        </button>
         <div class="ec-tab-panels__viewport-stack-zoom">
           <button
             type="button"
@@ -793,6 +813,7 @@ onUnmounted(() => {
           >
             <DataLayersManagerPanel
               :layers="layers"
+              :catalog-layers-loading="catalogLayersLoading"
               :map-zoom="mapZoom"
               :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
               @visible="setVisible"
@@ -814,6 +835,7 @@ onUnmounted(() => {
           >
             <LayerLegendsPanel
               :layers="legendLayers"
+              :catalog-layers-loading="catalogLayersLoading"
               :map-zoom="mapZoom"
               :catalog-entry-in-zoom-range="catalogEntryInZoomRange"
             />

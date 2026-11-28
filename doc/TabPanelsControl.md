@@ -34,7 +34,7 @@ Panneau latéral à **4 onglets**, à droite de la carte. Seule la **barre d’o
 - Barre d’onglets **horizontale** en bas (`ec-tab-panels__tabs-control` dans `#gpu-map`), au-dessus du `safe-area-inset-bottom`.
 - Feuille **`ec-tab-panels__surface`** : hauteur pilotée par **`--ec-tab-panels-sheet-fraction`** (snaps **0 / 35 / 70 / 98 %**), poignée **`ec-tab-panels__sheet-grab`** (glissement vertical).
 - Plafond **`--ec-tab-panels-max-sheet-height`** = zone carte (`100cqb`) − safe top − **`--ec-tab-panels-site-header-offset`** (mesure si l’en-tête chevauche la carte).
-- Ouverture d’un onglet (tap) : snap **70 %** ; ouverture auto (click info, recherche lieu, `showSelection`) : snap **aperçu 35 %** (`TAB_PANELS_AUTO_OPEN_SNAP`) ; re-clic : fermeture (0 %). Échelle / attributions remontées via **`--ec-bottom-widgets-lift`** quand la feuille est ouverte.
+- Ouverture d’un onglet (tap) : snap **70 %** ; ouverture auto (click info, recherche lieu, `showSelection`) : snap **aperçu 35 %** (`TAB_PANELS_AUTO_OPEN_SNAP`), **seulement si le panneau est fermé** — panneau ouvert : ni l’onglet ni la hauteur ne changent (la fiche se met à jour en arrière-plan) ; re-clic : fermeture (0 %). Échelle / attributions remontées via **`--ec-bottom-widgets-lift`** quand la feuille est ouverte.
 - **Barre basse** (horizontal) : à **gauche**, **croquis** (1er), **impression**, **minimap**, **territoires** ; à **droite**, les **4 onglets** ; **zoom** / **plein écran** (`ec-tab-panels__viewport-stack`). `useMobileBottomBarGeopf` déplace la racine croquis, le contrôle impression et les widgets geopf. Bouton croquis fixe dans la barre ; barre outils en `absolute` au-dessus, scroll `overflow-y` sur `.ec-geometry-editor__toolbar`. Minimap : `--ec-mobile-minimap-top` (sous la barre recherche).
 - **Réhaussés** au-dessus de la barre (`--ec-mobile-footer-stack-base`, hauteur barre seule — **fixe** quand la feuille bouge) : mini-carte ouverte, **attributions**, **échelle**.
 - **Recherche lieu** : pleine largeur en haut ; **Parcelle / Territoire** (icônes) juste en dessous.
@@ -92,7 +92,7 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 
 - `openTab(index)` / `closePanels()`
 - `openLegendForLayer(layerId)` — onglet Légendes, déplie la couche et scroll (voir [LayerLegendsPanel](./LayerLegendsPanel.md))
-- `showSelection({ title, bodyHtml?, raw? })` — remplit la fiche info, ouvre l’onglet 0
+- `showSelection({ title, bodyHtml?, raw? })` — remplit la fiche info ; ouvre l’onglet 0 seulement si le panneau est fermé
 - `clearSelection()`
 - refs : `isOpen`, `activeTab`, `selection`
 
@@ -121,3 +121,11 @@ Exposée via `provide`, `defineExpose`, et `tabPanelsApiRef` (accès sibling, ex
 - Icônes DSFR + Remix Icon
 - Composants : `FicheInfoPanel`, `LayerCataloguePanel` (+ `CatalogLayerTree`, `BaseLayerRadioList`), `DataLayersManagerPanel`, `LayerLegendsPanel`, `TreeLayerSwitcher` (pile / légendes)
 - Styles catalogue : `src/styles/layer-catalogue.css` (onglets DSFR pleine largeur)
+
+## Mobile : barre du bas
+
+- Boutons compacts sur téléphone (`--ec-widget-btn-size` : 40 px sous 430 px, 36 px sous 345 px) pour que les outils et onglets tiennent dans l’écran ; défilement horizontal des onglets en dernier recours (`justify-content: safe flex-end`).
+- Emplacements d’outils vides masqués (et la barre entière si aucun outil, ex. démo fiche info).
+- Pile à droite : **boussole** ([RotateControl](./RotateControl.md)), zoom, plein écran.
+- Onglets Couches et Légendes : roue de patience tant que la configuration des couches n’est pas chargée (`LoadingStatus`).
+

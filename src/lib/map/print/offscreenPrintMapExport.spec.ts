@@ -8,8 +8,8 @@ import { stubResizeObserver } from '@/test/olJsdom'
 
 const waitSpy = vi.fn(
   (_map: unknown, opts?: { signal?: AbortSignal }) =>
-    new Promise<void>((resolve, reject) => {
-      const t = setTimeout(resolve, 20)
+    new Promise<{ timedOut: boolean }>((resolve, reject) => {
+      const t = setTimeout(() => resolve({ timedOut: false }), 20)
       opts?.signal?.addEventListener('abort', () => {
         clearTimeout(t)
         reject(new DOMException('Aborted', 'AbortError'))
@@ -27,7 +27,14 @@ beforeAll(() => {
   stubResizeObserver()
   // jsdom n’implémente pas le canvas 2D : contexte minimal suffisant pour copier / remplir.
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-    () => ({ drawImage: () => {} }) as unknown as CanvasRenderingContext2D,
+    () =>
+      ({
+        drawImage: () => {},
+        fillRect: () => {},
+        clearRect: () => {},
+        // Toile qui dessine (vérification `assertCanvasUsable`).
+        getImageData: () => ({ data: [255, 0, 0, 255] }),
+      }) as unknown as CanvasRenderingContext2D,
   )
 })
 

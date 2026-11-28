@@ -7,6 +7,7 @@ import CatalogLayerTree from '@/components/layers/CatalogLayerTree.vue'
 import CatalogLayerSearch from '@/components/layers/CatalogLayerSearch.vue'
 import { buildCatalogTreeIndex, catalogAncestorIds } from '@/lib/layerConfig/catalogTreeIndex'
 import BaseLayerRadioList from '@/components/layers/BaseLayerRadioList.vue'
+import LoadingStatus from '@/components/common/LoadingStatus.vue'
 import type { TreeLayerNode } from '@/types/treeLayerNode'
 import type { GpuBaseLayerId, GpuBaseLayerPreset } from '@/ol/gpuBaseLayerPresets'
 import '@gouvfr/dsfr/dist/component/navigation/navigation.min.css'
@@ -139,15 +140,10 @@ function onUnpinExpand(nodeId: string) {
               @unpin-expand="onUnpinExpand"
             />
           </div>
-          <div
+          <LoadingStatus
             v-else-if="catalogLayersLoading"
-            class="ec-layer-catalogue__waiting"
-            role="status"
-            aria-live="polite"
-          >
-            <span class="ri-loader-4-line ec-layer-catalogue__spinner" aria-hidden="true" />
-            <span>En attente de la récupération des couches…</span>
-          </div>
+            label="En attente de la récupération des couches…"
+          />
           <p v-else class="ec-layer-catalogue__hint">Aucune couche disponible.</p>
         </div>
       </Transition>
@@ -206,27 +202,5 @@ function onUnpinExpand(nodeId: string) {
   margin: 0.75rem 0 0;
   font-size: 0.8125rem;
   color: var(--text-mention-grey, #666);
-}
-
-.ec-layer-catalogue__waiting {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--text-mention-grey, #666);
-}
-
-.ec-layer-catalogue__spinner {
-  flex: 0 0 auto;
-  font-size: 1.125rem;
-  color: var(--text-action-high-blue-france, #000091);
-  animation: ec-layer-catalogue-spin 0.9s linear infinite;
-}
-
-@keyframes ec-layer-catalogue-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

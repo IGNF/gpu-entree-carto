@@ -2,6 +2,7 @@
 /**
  * Onglet « Couches de données » — pile des couches choisies dans le catalogue.
  */
+import LoadingStatus from '@/components/common/LoadingStatus.vue'
 import { ref } from 'vue'
 import type { ManagedLayer } from '@/composables/managedLayers'
 import { tabPanelsApiRef } from '@/composables/tabPanels'
@@ -11,6 +12,8 @@ const props = defineProps<{
   layers: ManagedLayer[]
   mapZoom: number
   catalogEntryInZoomRange: (id: string, zoom: number) => boolean
+  /** Configuration des couches pas encore chargée (gpu-client-config). */
+  catalogLayersLoading?: boolean
 }>()
 
 function layerInZoomRange(layer: ManagedLayer): boolean {
@@ -122,7 +125,11 @@ function showDropMarkerBefore(index: number): boolean {
       Couches de données
     </h2>
 
-    <p v-if="!layers.length" class="ec-data-layers__hint">
+    <LoadingStatus
+      v-if="catalogLayersLoading && !layers.length"
+      label="En attente de la récupération des couches…"
+    />
+    <p v-else-if="!layers.length" class="ec-data-layers__hint">
       Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données.
     </p>
 

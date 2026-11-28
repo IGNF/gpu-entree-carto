@@ -2,6 +2,10 @@
 
 Pages de démo locale (`npm run dev`) pour valider les contrôles et le parcours accueil → carte.
 
+## Thème
+
+`index.html` déclare `data-fr-scheme="system"`, comme gpu-site : le DSFR suit le thème clair / sombre du navigateur.
+
 ## Configuration (`demo-config.js`)
 
 Comme gpu-client `exemple-config.js` : éditer **`public/js/demo-config.js`** (`window.DEMO_CONFIG`) pour URL `gpu-client-config`, document, bbox, surcharges API, couches catalogue, etc. — sans rebuild. Voir [DemoConfig.md](./DemoConfig.md).

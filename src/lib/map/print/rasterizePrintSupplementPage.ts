@@ -7,6 +7,7 @@ import {
   resolveSupplementSliceStartPx,
   supplementSliceContentInsetPx,
 } from '@/lib/map/print/printSupplementLayout'
+import { LIGHT_THEME_SCOPE_CLASS, ensureLightThemeScopeStyle } from '@/lib/theme/lightThemeScope'
 
 function applyCssVars(target: HTMLElement, cssVars?: Record<string, string>): void {
   if (!cssVars) return
@@ -27,7 +28,9 @@ function buildSupplementRasterHost(
   cssVars?: Record<string, string>,
   sliceContentInsetPx = 0,
 ): HTMLDivElement {
+  ensureLightThemeScopeStyle()
   const host = document.createElement('div')
+  host.className = LIGHT_THEME_SCOPE_CLASS // rendu final en clair, même en thème sombre
   host.style.position = 'fixed'
   host.style.left = '-10000px'
   host.style.top = '0'

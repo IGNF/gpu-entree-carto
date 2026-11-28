@@ -6,6 +6,10 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Ajouté
 
+- Mode « Coordonnées » : fiche des règles d’urbanisme au point cliqué uniquement, en premier dans le sélecteur de mode.
+- Modes de la fiche info (Coordonnées, Parcelle, Territoire) choisis par la configuration de la carte ; carte principale limitée à Parcelle et Territoire.
+- Boussole : remet la carte face au nord, un second clic rend l’orientation précédente (ordinateur et mobile).
+- Impression sur téléphone : bouton « Enregistrer / partager » à la fin de l’export.
 - Impression de la carte (PDF / PNG / JPEG) avec annexes : fiches territoire et parcelle, légendes.
 - Fiche info parcelle / territoire branchée sur l’API gpu-site `/api/fiche-info` ([FicheInfoApi](./FicheInfoApi.md)).
 - Fiche info : bouton « Réessayer » en cas d’échec, message dédié en cas de saturation (HTTP 429).
@@ -19,7 +23,11 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Modifié
 
-- Fiche info et catalogue : onglets animés comme le composant onglet DSFR, glissement de la fiche au changement de mode Parcelle / Territoire.
+- Panneau ouvert : un clic ou une recherche ne change plus l’onglet affiché ni la hauteur du panneau (mobile).
+- Changement de mode depuis les boutons de la fiche : la vue se recentre sur la parcelle ou la commune.
+- Mobile : barre du bas adaptée aux petits écrans, attributions plus discrètes.
+- Roue de patience dans les onglets Couches, Légendes et Données brutes pendant le chargement.
+- Fiche info et catalogue : onglets animés comme le composant onglet DSFR, glissement de la fiche au changement de mode (Coordonnées, Parcelle, Territoire).
 - Carte : plus de recentrage automatique sur la parcelle ou la commune (changement de mode, permalien) ; les tags Parcelle / Territoire de la fiche recentrent la vue.
 - Fiche info : une seule requête par point, familles (DU, SUP, SCoT) demandées selon le catalogue.
 - Fiche info : contenu filtré selon les couches cochées, mis à jour sans nouvel appel.
@@ -35,6 +43,9 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnement [
 
 ### Corrigé
 
+- Thème sombre : échelle lisible, fond Cadastre sur fond blanc ; impression (aperçu et fichier exporté) toujours en couleurs claires.
+- Impression sur téléphone qui restait bloquée : export même si des tuiles manquent, mémoire libérée au fil de l’export, message de fin conservé.
+- Démo fiche info : barre d’outils vide en bas de carte.
 - Accueil : pictogrammes DSFR du bandeau qui ne s’affichaient pas.
 - Fiche parcelle : mise en compatibilité d’un SCoT affichée en double dans l’onglet Documents.
 - Fiche info territoire : documents invisibles dans les onglets sur la version construite.

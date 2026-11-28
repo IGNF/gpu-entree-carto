@@ -140,6 +140,9 @@ export const FICHE_USED_FIELDS: Record<'parcel' | 'territory', readonly string[]
     'parcelGeometry.**',
     'parcelFeature.geometry.**',
     ...PARCEL_FEATURE_PROPERTIES,
+    // Mode Coordonnées (même fiche, règles au point) : mêmes champs dans `pointFiche`.
+    'pointFiche.features.*.id',
+    ...PARCEL_FEATURE_PROPERTIES.map((path) => path.replace(/^parcelFiche\./, 'pointFiche.')),
   ],
 }
 

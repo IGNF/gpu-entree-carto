@@ -4183,7 +4183,7 @@ this.gpu = (function() {
     }
   }
   function injectToKeepAliveRoot(hook, type, target2, keepAliveRoot) {
-    const injected = injectHook(
+    const injected2 = injectHook(
       type,
       hook,
       keepAliveRoot,
@@ -4192,7 +4192,7 @@ this.gpu = (function() {
     );
     const removal = injectHook(
       "um",
-      () => remove(keepAliveRoot[type], injected),
+      () => remove(keepAliveRoot[type], injected2),
       target2
     );
     removal.flags = 16;
@@ -4894,29 +4894,29 @@ If this is a native custom element, make sure to exclude it from component resol
     }
     for (const key2 in injectOptions) {
       const opt = injectOptions[key2];
-      let injected;
+      let injected2;
       if (isObject(opt)) {
         if ("default" in opt) {
-          injected = inject(
+          injected2 = inject(
             opt.from || key2,
             opt.default,
             true
           );
         } else {
-          injected = inject(opt.from || key2);
+          injected2 = inject(opt.from || key2);
         }
       } else {
-        injected = inject(opt);
+        injected2 = inject(opt);
       }
-      if (/* @__PURE__ */ isRef(injected)) {
+      if (/* @__PURE__ */ isRef(injected2)) {
         Object.defineProperty(ctx, key2, {
           enumerable: true,
           configurable: true,
-          get: () => injected.value,
-          set: (v) => injected.value = v
+          get: () => injected2.value,
+          set: (v) => injected2.value = v
         });
       } else {
-        ctx[key2] = injected;
+        ctx[key2] = injected2;
       }
       {
         checkDuplicateProperties("Inject", key2);
@@ -8852,9 +8852,9 @@ Component that was made reactive: `,
       if (computed2) {
         blocks.push(createInstanceBlock("computed", computed2));
       }
-      const injected = extractKeys(instance, "inject");
-      if (injected) {
-        blocks.push(createInstanceBlock("injected", injected));
+      const injected2 = extractKeys(instance, "inject");
+      if (injected2) {
+        blocks.push(createInstanceBlock("injected", injected2));
       }
       blocks.push([
         "div",
@@ -17999,7 +17999,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return sharedCanvasContext;
   }
-  function releaseCanvas(context) {
+  function releaseCanvas$1(context) {
     const canvas = context.canvas;
     canvas.width = 1;
     canvas.height = 1;
@@ -30781,11 +30781,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     });
     return { map: map2 };
   }
-  const _hoisted_1$s = {
+  const _hoisted_1$u = {
     class: "ec-map-shell",
     "data-testid": "map-shell"
   };
-  const _sfc_main$s = /* @__PURE__ */ defineComponent({
+  const _sfc_main$u = /* @__PURE__ */ defineComponent({
     __name: "MapShell",
     props: {
       layers: { default: () => [] },
@@ -30810,7 +30810,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       __expose({ map: map2 });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$s, [
+        return openBlock(), createElementBlock("div", _hoisted_1$u, [
           createBaseVNode("div", {
             id: "gpu-map",
             ref_key: "mapEl",
@@ -30860,6 +30860,8 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const CONTROL_POSITIONS = {
     zoom: "bottom-right",
+    /** Boussole : avec le zoom, au-dessus de +/− (CSS order). */
+    rotate: "bottom-right",
     fullscreen: "bottom-right",
     overviewMap: "bottom-left",
     territories: "bottom-left",
@@ -31365,12 +31367,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalZoom = GeoportalZoom;
   }
-  const _hoisted_1$r = {
+  const _hoisted_1$t = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$r = /* @__PURE__ */ defineComponent({
+  const _sfc_main$t = /* @__PURE__ */ defineComponent({
     __name: "ZoomControl",
     props: {
       position: { default: CONTROL_POSITIONS.zoom }
@@ -31385,7 +31387,130 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$r);
+        return openBlock(), createElementBlock("span", _hoisted_1$t);
+      };
+    }
+  });
+  const RESET_NORTH_DURATION_MS = 250;
+  function useMapRotation(mapRef) {
+    const rotation = /* @__PURE__ */ ref(0);
+    const previousRotation = /* @__PURE__ */ ref(null);
+    const isNorth = computed(() => Math.abs(rotation.value) < 1e-6);
+    const canRestore = computed(() => isNorth.value && previousRotation.value != null);
+    let key2 = null;
+    watch(
+      mapRef,
+      (map2, _old, onCleanup) => {
+        if (key2) unByKey(key2);
+        key2 = null;
+        if (!map2) return;
+        const view = map2.getView();
+        rotation.value = view.getRotation();
+        key2 = view.on("change:rotation", () => {
+          rotation.value = view.getRotation();
+        });
+        onCleanup(() => {
+          if (key2) unByKey(key2);
+          key2 = null;
+        });
+      },
+      { immediate: true }
+    );
+    function toggleNorth() {
+      var _a2;
+      const view = (_a2 = mapRef.value) == null ? void 0 : _a2.getView();
+      if (!view) return;
+      if (!isNorth.value) {
+        previousRotation.value = view.getRotation();
+        view.animate({ rotation: 0, duration: RESET_NORTH_DURATION_MS });
+      } else if (previousRotation.value != null) {
+        const target2 = previousRotation.value;
+        previousRotation.value = null;
+        view.animate({ rotation: target2, duration: RESET_NORTH_DURATION_MS });
+      }
+    }
+    return { rotation, canRestore, toggleNorth };
+  }
+  let geopfSlotSeq = 0;
+  function placeElementInGeopfContainer(map2, element, corner, options) {
+    const attempt = (options == null ? void 0 : options.attempt) ?? 0;
+    const target2 = map2.getTargetElement();
+    if (!(target2 instanceof HTMLElement)) return;
+    const container = target2.querySelector(`.position-container-${corner}`);
+    if (!(container instanceof HTMLElement)) {
+      if (attempt < 24) {
+        requestAnimationFrame(
+          () => placeElementInGeopfContainer(map2, element, corner, {
+            ...options,
+            attempt: attempt + 1
+          })
+        );
+      }
+      return;
+    }
+    if (options == null ? void 0 : options.slotClass) element.classList.add(options.slotClass);
+    if (!element.id) element.id = `ecGeopfSlot-${++geopfSlotSeq}`;
+    if (element.parentElement !== container) {
+      container.appendChild(element);
+    }
+  }
+  const _hoisted_1$s = {
+    class: "ec-ol-control-host",
+    hidden: "",
+    "aria-hidden": "true"
+  };
+  const LABEL = "Réorienter la carte vers le nord";
+  const RESTORE_LABEL = "Revenir à l’orientation précédente";
+  const _sfc_main$s = /* @__PURE__ */ defineComponent({
+    __name: "RotateControl",
+    setup(__props) {
+      const mapRef = inject("olMap", /* @__PURE__ */ shallowRef(null));
+      const { rotation, canRestore, toggleNorth } = useMapRotation(mapRef);
+      class RotateNorthOlControl extends Control$1 {
+        constructor() {
+          const root = document.createElement("div");
+          root.className = "GPwidget gpf-widget gpf-widget-button ec-rotate-control ol-unselectable";
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "gpf-btn-icon ec-rotate-control__btn";
+          button.setAttribute("aria-label", LABEL);
+          const icon = document.createElement("span");
+          icon.className = "ec-icon-compass-north ec-rotate-control__icon";
+          icon.setAttribute("aria-hidden", "true");
+          button.appendChild(icon);
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleNorth();
+          });
+          root.appendChild(button);
+          super({ element: root });
+          __publicField(this, "icon");
+          __publicField(this, "button");
+          this.icon = icon;
+          this.button = button;
+        }
+        setMap(map2) {
+          super.setMap(map2);
+          if (map2) {
+            placeElementInGeopfContainer(map2, this.element, CONTROL_POSITIONS.rotate);
+          }
+        }
+      }
+      const control = useOlControl(() => new RotateNorthOlControl());
+      watch(
+        [rotation, canRestore, control],
+        ([angle2, restore, current]) => {
+          if (current instanceof RotateNorthOlControl) {
+            current.icon.style.transform = `rotate(${angle2}rad)`;
+            const label = restore ? RESTORE_LABEL : LABEL;
+            current.button.setAttribute("aria-label", label);
+          }
+        },
+        { immediate: true }
+      );
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("span", _hoisted_1$s);
       };
     }
   });
@@ -31585,12 +31710,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalFullScreen = GeoportalFullScreen;
   }
-  const _hoisted_1$q = {
+  const _hoisted_1$r = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$q = /* @__PURE__ */ defineComponent({
+  const _sfc_main$r = /* @__PURE__ */ defineComponent({
     __name: "FullScreenControl",
     props: {
       position: { default: CONTROL_POSITIONS.fullscreen }
@@ -31607,16 +31732,16 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
       });
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$q);
+        return openBlock(), createElementBlock("span", _hoisted_1$r);
       };
     }
   });
-  const _hoisted_1$p = {
+  const _hoisted_1$q = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$p = /* @__PURE__ */ defineComponent({
+  const _sfc_main$q = /* @__PURE__ */ defineComponent({
     __name: "ScaleLineControl",
     setup(__props) {
       useOlControl(
@@ -31626,7 +31751,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$p);
+        return openBlock(), createElementBlock("span", _hoisted_1$q);
       };
     }
   });
@@ -51180,7 +51305,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           0
         );
         this.targetContext_.globalAlpha = alpha;
-        releaseCanvas(
+        releaseCanvas$1(
           /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.context
         );
@@ -53933,7 +54058,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       drawTestTriangle(ctx, 4, 5, 0, 5);
       const data = ctx.getImageData(0, 0, 3, 3).data;
       brokenDiagonalRendering_ = verifyBrokenDiagonalRendering(data, 0) || verifyBrokenDiagonalRendering(data, 4) || verifyBrokenDiagonalRendering(data, 8);
-      releaseCanvas(ctx);
+      releaseCanvas$1(ctx);
       canvasPool.push(ctx.canvas);
     }
     return brokenDiagonalRendering_;
@@ -54146,7 +54271,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       context.restore();
     });
     if (stitchContext) {
-      releaseCanvas(stitchContext);
+      releaseCanvas$1(stitchContext);
       canvasPool.push(stitchContext.canvas);
     }
     if (renderEdges) {
@@ -54743,7 +54868,7 @@ Expected function or array of functions, received type ${typeof value2}.`
      */
     release() {
       if (this.canvas_) {
-        releaseCanvas(
+        releaseCanvas$1(
           /** @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} */
           this.canvas_.getContext("2d")
         );
@@ -68456,13 +68581,27 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const MAP_MODE_PARCEL = 1;
   const MAP_MODE_TERRITORY = 2;
+  const MAP_MODE_COORDINATES = 3;
   const DEFAULT_MAP_MODE = MAP_MODE_TERRITORY;
+  const ALL_MAP_MODES = [
+    MAP_MODE_COORDINATES,
+    MAP_MODE_PARCEL,
+    MAP_MODE_TERRITORY
+  ];
+  function normalizeMapModes(raw) {
+    const wanted = new Set(Array.isArray(raw) ? raw.map(normalizeMapMode) : []);
+    const modes = ALL_MAP_MODES.filter((mode2) => wanted.has(mode2));
+    return modes.length ? modes : [...ALL_MAP_MODES];
+  }
+  function resolveEnabledMapMode(mode2, modes) {
+    if (modes.includes(mode2)) return mode2;
+    return modes.includes(DEFAULT_MAP_MODE) ? DEFAULT_MAP_MODE : modes[0] ?? DEFAULT_MAP_MODE;
+  }
   function normalizeMapMode(raw) {
-    if (raw === 1 || raw === 2) return raw;
-    if (raw === "1" || raw === "2") return Number(raw);
+    if (raw === 1 || raw === 2 || raw === 3) return raw;
     if (typeof raw === "string") {
       const n = parseInt(raw, 10);
-      if (n === 1 || n === 2) return n;
+      if (n === 1 || n === 2 || n === 3) return n;
     }
     return null;
   }
@@ -68498,9 +68637,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function provideMapMode(options) {
     const syncUrl = (options == null ? void 0 : options.syncUrl) !== false;
-    const mode2 = /* @__PURE__ */ ref(resolveInitialMapMode(options == null ? void 0 : options.initial));
+    const modes = normalizeMapModes(options == null ? void 0 : options.modes);
+    const mode2 = /* @__PURE__ */ ref(resolveEnabledMapMode(resolveInitialMapMode(options == null ? void 0 : options.initial), modes));
     const setMode = (next) => {
-      if (mode2.value === next) return;
+      if (mode2.value === next || !modes.includes(next)) return;
       mode2.value = next;
     };
     if (syncUrl && typeof window !== "undefined") {
@@ -68512,7 +68652,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { flush: "post", immediate: true }
       );
     }
-    const ctx = { mode: mode2, setMode };
+    const ctx = { mode: mode2, modes, setMode };
     provide(MAP_MODE_KEY, ctx);
     return ctx;
   }
@@ -68603,19 +68743,28 @@ Expected function or array of functions, received type ${typeof value2}.`
     if (options == null ? void 0 : options.extraTab) tabs.push({ ...options.extraTab, id: TAB_PANEL_IDS.extra });
     return tabs;
   }
+  const EMPTY_FICHE_GOALS = {
+    1: { goal: "sélectionner une parcelle", label: "Parcelle" },
+    2: { goal: "sélectionner une commune", label: "Territoire" },
+    3: { goal: "afficher les règles d’urbanisme d’un point", label: "Coordonnées" }
+  };
+  function emptyFicheBodyHtml(modes) {
+    const action = "cliquez sur la carte ou utilisez la barre de recherche.";
+    const sections = modes.map((mode2) => {
+      const { goal, label } = EMPTY_FICHE_GOALS[mode2];
+      const steps = modes.length > 1 ? `<li>choisissez le mode ${label}</li>
+<li>puis ${action}</li>` : `<li>${action.charAt(0).toUpperCase()}${action.slice(1)}</li>`;
+      return `<p>Pour ${goal}&nbsp;:</p>
+<ul>
+${steps}
+</ul>`;
+    });
+    return `${sections.join("\n")}
+<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`;
+  }
   const DEFAULT_FICHE_EMPTY = {
     title: "Aucune sélection en cours",
-    bodyHtml: `<p>Pour sélectionner une parcelle&nbsp;:</p>
-<ul>
-<li>choisissez le mode Parcelle</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Pour sélectionner une commune&nbsp;:</p>
-<ul>
-<li>choisissez le mode Territoire</li>
-<li>puis cliquez sur la carte ou utilisez la barre de recherche.</li>
-</ul>
-<p>Une fois votre sélection effectuée, les informations correspondantes apparaîtront ici.</p>`
+    bodyHtml: emptyFicheBodyHtml(ALL_MAP_MODES)
   };
   const mapLocationMarkerRef = /* @__PURE__ */ shallowRef(null);
   function setMapLocationMarker(fn2) {
@@ -71928,6 +72077,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const trimmed = raw.trim();
     return trimmed.length ? trimmed : null;
   }
+  const SCOPE_SUFFIX_RE = /\/(territoire|parcelle|coordonnees)$/;
   function normalizeBaseUrl(raw) {
     return raw.trim().replace(/\/$/, "");
   }
@@ -71944,20 +72094,18 @@ Expected function or array of functions, received type ${typeof value2}.`
       const explicit = readConfigUrl("apiFicheInfoParcelleUrl");
       if (explicit) return explicit;
     }
+    if (kind === "coordonnees") {
+      const explicit = readConfigUrl("apiFicheInfoCoordonneesUrl");
+      if (explicit) return explicit;
+    }
     const base = readConfigUrl("apiFicheInfoUrl");
     if (!base) return null;
     const normalized = normalizeBaseUrl(base);
     if (kind === "combined") {
-      if (normalized.endsWith("/territoire") || normalized.endsWith("/parcelle")) {
-        return normalized.replace(/\/(territoire|parcelle)$/, "");
-      }
-      return normalized;
+      return normalized.replace(SCOPE_SUFFIX_RE, "");
     }
-    const suffix = kind === "territoire" ? "territoire" : "parcelle";
-    if (normalized.endsWith("/territoire") || normalized.endsWith("/parcelle")) {
-      return normalized.replace(/\/(territoire|parcelle)$/, `/${suffix}`);
-    }
-    return `${normalized}/${suffix}`;
+    if (SCOPE_SUFFIX_RE.test(normalized)) return normalized.replace(SCOPE_SUFFIX_RE, `/${kind}`);
+    return `${normalized}/${kind}`;
   }
   function resolveFicheInfoCombinedFetchUrl() {
     return resolveFicheInfoEndpointUrl("combined");
@@ -71968,6 +72116,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return bag.apiFicheInfoPreferCombined !== false;
   }
   function resolveFicheInfoFetchUrl(mode2) {
+    if (mode2 === MAP_MODE_COORDINATES) return resolveFicheInfoEndpointUrl("coordonnees");
     return resolveFicheInfoEndpointUrl(mode2 === MAP_MODE_TERRITORY ? "territoire" : "parcelle");
   }
   const OPEN_CATALOG_ATTR = "data-ec-open-catalog";
@@ -74623,7 +74772,25 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return null;
   }
+  function formatCoordinatesLabel(lon, lat) {
+    return `Longitude ${lon.toFixed(5)}, latitude ${lat.toFixed(5)}`;
+  }
+  function coordinatesSelectionFromGpuApi(data, lon, lat) {
+    const base = ficheSelectionFromGpuApi(data, MAP_MODE_PARCEL, lon, lat);
+    const pointFiche = isGpuParcelFichePayload(data.pointFiche) ? data.pointFiche : { features: [] };
+    return {
+      ...base,
+      title: "Coordonnées",
+      mapMode: MAP_MODE_COORDINATES,
+      coordinatesLabel: formatCoordinatesLabel(lon, lat),
+      cadastreReferences: null,
+      raw: { ...base.raw, mode: MAP_MODE_COORDINATES, _parcelFiche: pointFiche },
+      parcelInfosHtml: buildParcelInfosHtmlFromFiche(pointFiche, void 0, data),
+      parcelDocumentsHtml: buildParcelDocumentsHtmlFromFiche(pointFiche, data)
+    };
+  }
   function ficheSelectionFromGpuApi(data, mode2, lon, lat) {
+    if (mode2 === MAP_MODE_COORDINATES) return coordinatesSelectionFromGpuApi(data, lon, lat);
     const hasParcel = ficheHasParcelAtPoint(data);
     const hasTerritory = ficheHasTerritoryAtPoint(data);
     const parcel = data.parcel ?? null;
@@ -75273,6 +75440,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     var _a2, _b;
     empriseTargetKey = targetKey;
     removeModeEmpriseFeatures(host);
+    if (mode2 === MAP_MODE_COORDINATES) return;
     const fromCache = cachedEmpriseForMode(lon, lat, mode2);
     if (fromCache !== null && fromCache.length > 0) {
       if (empriseTargetKey !== targetKey) return;
@@ -75415,6 +75583,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     const parcelExtra = isGpuParcelFichePayload(partial.parcelFiche) ? partial.parcelFiche : void 0;
     const parcelMerged = mergeParcelFiche(parcelBase, parcelExtra);
     if (parcelMerged) merged.parcelFiche = parcelMerged;
+    const pointMerged = mergeParcelFiche(
+      isGpuParcelFichePayload(base.pointFiche) ? base.pointFiche : void 0,
+      isGpuParcelFichePayload(partial.pointFiche) ? partial.pointFiche : void 0
+    );
+    if (pointMerged) merged.pointFiche = pointMerged;
     return merged;
   }
   const FICHE_UNAVAILABLE_BODY = "<p>Indisponibilité du service</p>";
@@ -75422,24 +75595,45 @@ Expected function or array of functions, received type ${typeof value2}.`
   let mapPointRequestSeq = 0;
   let mapPointFetchAbort = null;
   const FICHE_POINT_EPS = 1e-7;
-  let fichePointCache = null;
+  const fichePointCaches = {
+    combined: null,
+    coordinates: null
+  };
+  function ficheRouteOf(mode2) {
+    return mode2 === MAP_MODE_COORDINATES ? "coordinates" : "combined";
+  }
+  function pointCacheFor(mode2) {
+    return fichePointCaches[ficheRouteOf(mode2)];
+  }
+  function activePointCache() {
+    return pointCacheFor(
+      readMapModeFromPermalinkParams(getMapPermalinkParams()) ?? MAP_MODE_TERRITORY
+    );
+  }
   function sameMapPoint(a3, b) {
     return Math.abs(a3.lon - b.lon) <= FICHE_POINT_EPS && Math.abs(a3.lat - b.lat) <= FICHE_POINT_EPS;
   }
-  function syncFichePointCache(lon, lat) {
-    if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) {
-      fichePointCache = {
-        lon,
-        lat,
-        acquiredFamilies: [],
-        acquiredSupTypes: /* @__PURE__ */ new Set(),
-        mergedGpuPayload: null,
-        byMode: {}
-      };
+  function syncFichePointCache(lon, lat, mode2) {
+    const route = ficheRouteOf(mode2);
+    const current = fichePointCaches[route];
+    if (current && sameMapPoint(current, { lon, lat })) return current;
+    for (const other of ["combined", "coordinates"]) {
+      const cache2 = fichePointCaches[other];
+      if (cache2 && !sameMapPoint(cache2, { lon, lat })) fichePointCaches[other] = null;
     }
+    const fresh = {
+      lon,
+      lat,
+      acquiredFamilies: [],
+      acquiredSupTypes: /* @__PURE__ */ new Set(),
+      mergedGpuPayload: null,
+      byMode: {}
+    };
+    fichePointCaches[route] = fresh;
+    return fresh;
   }
-  function recordGpuPayloadAcquisition(lon, lat, payload, fetchedFamilies, fetchedSupTypes) {
-    syncFichePointCache(lon, lat);
+  function recordGpuPayloadAcquisition(mode2, lon, lat, payload, fetchedFamilies, fetchedSupTypes) {
+    const fichePointCache = syncFichePointCache(lon, lat, mode2);
     const merged = fichePointCache.mergedGpuPayload ? mergeGpuFicheInfoPayloads(fichePointCache.mergedGpuPayload, payload) : payload;
     fichePointCache.mergedGpuPayload = merged;
     const includedFamilies = fetchedFamilies.filter(
@@ -75457,7 +75651,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   async function fetchFicheGpuPayloadAtPoint(params2, activeFamilies, activeSupTypes2, signal) {
     const queryArgs = { activeFamilies, activeSupTypes: activeSupTypes2 ?? void 0 };
-    if (preferFicheInfoV2CombinedFetch()) {
+    if (usesCombinedFetch(params2.mode)) {
       return fetchGpuFicheInfoCombinedPayload({
         lon: params2.lon,
         lat: params2.lat,
@@ -75468,11 +75662,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return fetchGpuFicheInfoPayload({ ...params2, ...queryArgs, abortSignal: signal });
   }
+  function usesCombinedFetch(mode2) {
+    return mode2 !== MAP_MODE_COORDINATES && preferFicheInfoV2CombinedFetch();
+  }
   function storeFicheInCache(mode2, lon, lat, selection) {
-    syncFichePointCache(lon, lat);
-    fichePointCache.byMode[mode2] = selection;
+    syncFichePointCache(lon, lat, mode2).byMode[mode2] = selection;
   }
   function cachedFicheForMode(mode2, lon, lat) {
+    const fichePointCache = pointCacheFor(mode2);
     if (!fichePointCache || !sameMapPoint(fichePointCache, { lon, lat })) return null;
     return fichePointCache.byMode[mode2] ?? null;
   }
@@ -75481,6 +75678,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     return withParcelDetailCache(refreshed, mode2);
   }
   function syncSiblingFicheCacheAtPoint(lon, lat, activeMode) {
+    if (activeMode === MAP_MODE_COORDINATES) return;
     const sibling = activeMode === MAP_MODE_TERRITORY ? MAP_MODE_PARCEL : MAP_MODE_TERRITORY;
     const cached = cachedFicheForMode(sibling, lon, lat);
     if (!cached) return;
@@ -75581,6 +75779,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   function readFicheCherryPoint() {
     var _a2, _b;
+    const fichePointCache = fichePointCaches.combined ?? fichePointCaches.coordinates;
     const fromPermalink = readMapPermalinkMarker(getMapPermalinkParams());
     if (fromPermalink) return fromPermalink;
     if (fichePointCache) return { lon: fichePointCache.lon, lat: fichePointCache.lat };
@@ -75592,6 +75791,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   }
   const ficheSupplementError = /* @__PURE__ */ shallowRef(null);
   function ficheCatalogSupplementMissing() {
+    const fichePointCache = activePointCache();
     if (!(fichePointCache == null ? void 0 : fichePointCache.mergedGpuPayload) || !isCatalogDrivenFicheFetchEnabled()) return false;
     return !catalogFicheAcquisitionComplete(
       resolveFicheInfoActiveFamiliesForFetch(),
@@ -75600,6 +75800,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     );
   }
   function refreshFicheForCatalogVisibility() {
+    const fichePointCache = activePointCache();
     const api = tabPanelsApiRef.value;
     const current = api == null ? void 0 : api.selection.value;
     if (!(current == null ? void 0 : current.raw) || current.loading) return;
@@ -75641,7 +75842,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       syncSiblingFicheCacheAtPoint(lon, lat, activeMode);
     }
     const parcelId = parcelIdFromSelection(next);
-    if (parcelId && ((_c2 = next.parcelInfosHtml) == null ? void 0 : _c2.trim()) && ((_d = next.parcelDocumentsHtml) == null ? void 0 : _d.trim()) && next.raw && typeof next.raw === "object") {
+    if (next.mapMode !== MAP_MODE_COORDINATES && parcelId && ((_c2 = next.parcelInfosHtml) == null ? void 0 : _c2.trim()) && ((_d = next.parcelDocumentsHtml) == null ? void 0 : _d.trim()) && next.raw && typeof next.raw === "object") {
       const parcelFiche = next.raw._parcelFiche;
       if (parcelFiche) {
         storeParcelFicheDetailCache({
@@ -75656,6 +75857,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   async function ensureFicheCatalogSupplementAtMarker() {
     if (!isCatalogDrivenFicheFetchEnabled()) return;
     const cherry = readFicheCherryPoint();
+    const fichePointCache = activePointCache();
     if (!cherry || !fichePointCache || !sameMapPoint(fichePointCache, cherry)) return;
     if (!fichePointCache.mergedGpuPayload) return;
     const { lon, lat } = cherry;
@@ -75697,16 +75899,21 @@ Expected function or array of functions, received type ${typeof value2}.`
       return;
     }
     const merged = recordGpuPayloadAcquisition(
+      mode2,
       lon,
       lat,
       partial,
       [...familiesToFetch],
       supTypesToFetch
     );
-    storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged);
-    for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
-      const selection = selectionFromGpuPayload(merged, mapMode, lon, lat);
-      storeFicheInCache(mapMode, lon, lat, selection);
+    if (usesCombinedFetch(mode2)) {
+      storeDualModeFicheCacheFromCombinedPayload(lon, lat, merged);
+      for (const mapMode of [MAP_MODE_TERRITORY, MAP_MODE_PARCEL]) {
+        const selection = selectionFromGpuPayload(merged, mapMode, lon, lat);
+        storeFicheInCache(mapMode, lon, lat, selection);
+      }
+    } else {
+      storeFicheInCache(mode2, lon, lat, selectionFromGpuPayload(merged, mode2, lon, lat));
     }
     const displayed = hydrateFicheSelectionFromCache(
       cachedFicheForMode(mode2, lon, lat) ?? selectionFromGpuPayload(merged, mode2, lon, lat),
@@ -75784,7 +75991,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const markerPlacedAtClick = params2.markerPlacedAtClick === true;
     const skipLocationMarker = params2.skipLocationMarker === true;
     const silent = params2.silent === true;
-    syncFichePointCache(params2.lon, params2.lat);
+    const fichePointCache = syncFichePointCache(params2.lon, params2.lat, params2.mode);
     const loadingTitle = params2.loadingTitle ?? (params2.mode === MAP_MODE_PARCEL ? "Parcelle" : "Document d’urbanisme");
     const desiredFamilies = resolveFicheInfoActiveFamiliesForFetch();
     const acquisitionComplete = fichePointCache && catalogFicheAcquisitionComplete(
@@ -75883,13 +76090,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
     }
     payload = recordGpuPayloadAcquisition(
+      params2.mode,
       params2.lon,
       params2.lat,
       payload,
       familiesToFetch,
       supTypesToFetch
     );
-    const useCombinedV2 = preferFicheInfoV2CombinedFetch();
+    const useCombinedV2 = usesCombinedFetch(params2.mode);
     if (useCombinedV2) {
       storeDualModeFicheCacheFromCombinedPayload(params2.lon, params2.lat, payload, params2.mode);
     } else if (params2.mode === MAP_MODE_TERRITORY) {
@@ -76277,14 +76485,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     host.baseSearchEngine.container.addEventListener("submit", onSubmit, true);
     return () => host.baseSearchEngine.container.removeEventListener("submit", onSubmit, true);
   }
-  const _hoisted_1$o = {
+  const _hoisted_1$p = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const SEARCH_RESULT_FIT_MAX_ZOOM = 19;
   const GPU_PIN_BLUE = "#000091";
-  const _sfc_main$o = /* @__PURE__ */ defineComponent({
+  const _sfc_main$p = /* @__PURE__ */ defineComponent({
     __name: "SearchEngineControl",
     props: {
       placeholder: { default: "Rechercher un lieu..." },
@@ -76633,7 +76841,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { immediate: true }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$o);
+        return openBlock(), createElementBlock("span", _hoisted_1$p);
       };
     }
   });
@@ -77750,12 +77958,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.GeoportalOverviewMap = GeoportalOverviewMap;
   }
-  const _hoisted_1$n = {
+  const _hoisted_1$o = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$n = /* @__PURE__ */ defineComponent({
+  const _sfc_main$o = /* @__PURE__ */ defineComponent({
     __name: "OverviewMapControl",
     props: {
       position: { default: CONTROL_POSITIONS.overviewMap },
@@ -77771,40 +77979,17 @@ Expected function or array of functions, received type ${typeof value2}.`
         })
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$n);
+        return openBlock(), createElementBlock("span", _hoisted_1$o);
       };
     }
   });
-  let geopfSlotSeq = 0;
-  function placeElementInGeopfContainer(map2, element, corner, options) {
-    const attempt = (options == null ? void 0 : options.attempt) ?? 0;
-    const target2 = map2.getTargetElement();
-    if (!(target2 instanceof HTMLElement)) return;
-    const container = target2.querySelector(`.position-container-${corner}`);
-    if (!(container instanceof HTMLElement)) {
-      if (attempt < 24) {
-        requestAnimationFrame(
-          () => placeElementInGeopfContainer(map2, element, corner, {
-            ...options,
-            attempt: attempt + 1
-          })
-        );
-      }
-      return;
-    }
-    if (options == null ? void 0 : options.slotClass) element.classList.add(options.slotClass);
-    if (!element.id) element.id = `ecGeopfSlot-${++geopfSlotSeq}`;
-    if (element.parentElement !== container) {
-      container.appendChild(element);
-    }
-  }
   const mapPrintModalKey = Symbol("mapPrintModal");
-  const _hoisted_1$m = {
+  const _hoisted_1$n = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$m = /* @__PURE__ */ defineComponent({
+  const _sfc_main$n = /* @__PURE__ */ defineComponent({
     __name: "MapPrintControl",
     setup(__props) {
       const printModal = inject(mapPrintModalKey, null);
@@ -77844,7 +78029,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       useOlControl(() => new MapPrintOlControl(openPrintModal));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$m);
+        return openBlock(), createElementBlock("span", _hoisted_1$n);
       };
     }
   });
@@ -86773,6 +86958,24 @@ Expected function or array of functions, received type ${typeof value2}.`
     view.setCenter(center);
     return true;
   }
+  const PRINT_CANVAS_TOO_LARGE_MESSAGE = "Image trop grande pour cet appareil. Choisissez un format papier plus petit ou moins d’annexes.";
+  function releaseCanvas(canvas) {
+    canvas.width = 0;
+    canvas.height = 0;
+    canvas.remove();
+  }
+  function assertCanvasUsable(canvas) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !canvas.width || !canvas.height) throw new Error(PRINT_CANVAS_TOO_LARGE_MESSAGE);
+    const x = canvas.width - 1;
+    const y = canvas.height - 1;
+    ctx.fillStyle = "#ff0000";
+    ctx.fillRect(x, y, 1, 1);
+    const drawn = ctx.getImageData(x, y, 1, 1).data[0] === 255;
+    ctx.clearRect(x, y, 1, 1);
+    if (!drawn) throw new Error(PRINT_CANVAS_TOO_LARGE_MESSAGE);
+    return ctx;
+  }
   function mergeMapLayerCanvases(mapViewport, targetCtx, pixelRatio = 1) {
     const canvases = mapViewport.querySelectorAll(".ol-layer canvas, canvas.ol-layer");
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -86864,7 +87067,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     report();
     try {
-      await new Promise((resolve2, reject) => {
+      return await new Promise((resolve2, reject) => {
         var _a3;
         let stableRenderCount = 0;
         const onRenderComplete = () => {
@@ -86876,7 +87079,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           stableRenderCount += 1;
           if (stableRenderCount >= stablePasses) {
             cleanup();
-            resolve2();
+            resolve2({ timedOut: false });
           } else {
             map2.renderSync();
           }
@@ -86895,7 +87098,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         };
         const timer = typeof window !== "undefined" ? window.setTimeout(() => {
           cleanup();
-          reject(new Error("Délai dépassé lors du chargement des tuiles cartographiques."));
+          if (options.resolveOnTimeout) resolve2({ timedOut: true });
+          else reject(new Error("Délai dépassé lors du chargement des tuiles cartographiques."));
         }, timeoutMs) : void 0;
         map2.renderSync();
       });
@@ -87002,7 +87206,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
   }
   async function renderUncached(previewMap, options) {
-    var _a2, _b, _c2, _d;
+    var _a2, _b, _c2, _d, _e2;
     const { widthPx, heightPx, extent } = options;
     const pixelRatio = printExportPixelRatio(widthPx, ((_a2 = previewMap.getSize()) == null ? void 0 : _a2[0]) ?? widthPx);
     const cssWidth = Math.max(1, Math.round(widthPx / pixelRatio));
@@ -87028,8 +87232,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       exportMap.setSize([cssWidth, cssHeight]);
       exportView.fit(extent, { size: [cssWidth, cssHeight], duration: 0 });
       (_c2 = options.onStage) == null ? void 0 : _c2.call(options, "Chargement des tuiles cartographiques…");
-      await waitForMapExportReady(exportMap, {
+      const { timedOut } = await waitForMapExportReady(exportMap, {
         timeoutMs: 12e4,
+        // Export : mieux vaut une carte avec quelques tuiles manquantes qu’aucun fichier (réseau mobile lent).
+        resolveOnTimeout: Boolean(options.onIncomplete),
         stablePasses: 2,
         signal: options.signal,
         onProgress: ({ pendingTiles, loadedTiles }) => {
@@ -87041,16 +87247,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = widthPx;
       exportCanvas.height = heightPx;
-      const exportCtx = exportCanvas.getContext("2d");
-      if (!exportCtx) {
-        throw new Error("Impossible de récupérer le contexte 2D pour le canvas d’export.");
-      }
+      const exportCtx = assertCanvasUsable(exportCanvas);
       const viewportEl = exportMap.getViewport();
       if (!viewportEl) {
         throw new Error("Viewport carte indisponible.");
       }
       mergeMapLayerCanvases(viewportEl, exportCtx, widthPx / cssWidth);
-      if (options.cacheKey) {
+      if (timedOut) (_e2 = options.onIncomplete) == null ? void 0 : _e2.call(options);
+      else if (options.cacheKey) {
         storePrintMapCanvasCache(options.cacheKey, exportCanvas);
       }
       return exportCanvas;
@@ -87163,6 +87367,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return containerHeight / contentHeight;
   }
+  const PRINT_SCALE_BACKGROUND = "rgba(255, 255, 255, 0.75)";
+  const PRINT_SCALE_TEXT = "#333333";
   function captureScaleLineSnapshot(mapRef) {
     const scaleLine = mapRef.getElementsByClassName("ol-scale-line")[0];
     const scaleLineInner = scaleLine == null ? void 0 : scaleLine.children[0];
@@ -87171,7 +87377,6 @@ Expected function or array of functions, received type ${typeof value2}.`
     const outerRect = scaleLine.getBoundingClientRect();
     const innerRect = scaleLineInner.getBoundingClientRect();
     if (!mapRect.width || !mapRect.height) return null;
-    const style = getComputedStyle(scaleLine);
     const styleInner = getComputedStyle(scaleLineInner);
     return {
       mapRect: { width: mapRect.width, height: mapRect.height },
@@ -87180,7 +87385,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         y: outerRect.top - mapRect.top,
         width: outerRect.width,
         height: outerRect.height,
-        backgroundColor: style.backgroundColor || "rgba(255, 255, 255, 0.75)"
+        // Papier : couleurs claires, même si l’écran est en thème sombre.
+        backgroundColor: PRINT_SCALE_BACKGROUND
       },
       inner: {
         x: innerRect.left - mapRect.left,
@@ -87195,7 +87401,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         fontWeight: styleInner.fontWeight,
         fontSize: styleInner.fontSize,
         fontFamily: styleInner.fontFamily,
-        color: styleInner.color || "#333333",
+        color: PRINT_SCALE_TEXT,
         text: scaleLineInner.textContent || ""
       }
     };
@@ -87253,9 +87459,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       outerRect = scaleLine.getBoundingClientRect();
       innerRect = scaleLineInner.getBoundingClientRect();
       if (!mapRect.width || !mapRect.height) return;
-      const style = getComputedStyle(scaleLine);
       const styleInner = getComputedStyle(scaleLineInner);
-      outerBackgroundColor = style.backgroundColor || "rgba(255, 255, 255, 0.75)";
+      outerBackgroundColor = PRINT_SCALE_BACKGROUND;
       innerBorderLeftWidth = styleInner.borderLeftWidth || "0";
       innerBorderRightWidth = styleInner.borderRightWidth || "0";
       innerBorderBottomWidth = styleInner.borderBottomWidth || "0";
@@ -87264,7 +87469,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       innerFontWeight = styleInner.fontWeight;
       innerFontSize = styleInner.fontSize;
       innerFontFamily = styleInner.fontFamily;
-      innerColor = styleInner.color || "#333333";
+      innerColor = PRINT_SCALE_TEXT;
       scaleContent = scaleLineInner.textContent || "";
     }
     if (!mapRect.width || !mapRect.height) return;
@@ -87302,6 +87507,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     ctx.textBaseline = "middle";
     ctx.fillStyle = innerColor;
     ctx.fillText(scaleContent, innerX + innerWidth / 2, innerY + innerHeight / 2);
+  }
+  function canShareExportFiles(files) {
+    var _a2;
+    if (typeof navigator === "undefined" || typeof window === "undefined") return false;
+    if (!((_a2 = window.matchMedia) == null ? void 0 : _a2.call(window, "(pointer: coarse)").matches)) return false;
+    return typeof navigator.canShare === "function" && navigator.canShare({ files });
+  }
+  async function shareExportFiles(files) {
+    try {
+      await navigator.share({ files });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      for (const file of files) window.open(URL.createObjectURL(file), "_blank");
+    }
   }
   const PREVIEW_FRAME_MARGIN_PX = { top: 6, bottom: 12, horizontal: 10 };
   function printPreviewPaperScale(column, paperPx) {
@@ -88176,7 +88395,11 @@ Expected function or array of functions, received type ${typeof value2}.`
     return new Blob([buffer2], { type: "image/jpeg" });
   }
   async function encodePrintPdf(options) {
-    const pages = await Promise.all(options.canvases.map((canvas) => canvasToPngBuffer(canvas)));
+    const pages = [];
+    for (const canvas of options.canvases) {
+      pages.push(await canvasToPngBuffer(canvas));
+      releaseCanvas(canvas);
+    }
     const id2 = ++requestId;
     const buffer2 = await runWorkerTask({
       id: id2,
@@ -95986,6 +96209,50 @@ Expected function or array of functions, received type ${typeof value2}.`
     var defaultBackgroundColor = typeof backgroundColorOverride === "string" ? parseColor$1(context, backgroundColorOverride) : backgroundColorOverride === null ? COLORS.TRANSPARENT : 4294967295;
     return element === ownerDocument.documentElement ? isTransparent(documentBackgroundColor) ? isTransparent(bodyBackgroundColor) ? defaultBackgroundColor : bodyBackgroundColor : documentBackgroundColor : defaultBackgroundColor;
   };
+  const LIGHT_THEME_SCOPE_CLASS = "ec-light-theme";
+  let injected = false;
+  function styleRules() {
+    const out = [];
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) if (rule instanceof CSSStyleRule) out.push(rule);
+    }
+    return out;
+  }
+  function customProps(rule) {
+    const out = [];
+    for (let i2 = 0; i2 < rule.style.length; i2++) {
+      const name2 = rule.style.item(i2);
+      if (name2.startsWith("--")) out.push([name2, rule.style.getPropertyValue(name2).trim()]);
+    }
+    return out;
+  }
+  function ensureLightThemeScopeStyle() {
+    if (injected) return;
+    const rules = styleRules();
+    const darkNames = new Set(
+      rules.filter((r) => /^:root\[data-fr-theme=["']?dark["']?\]$/.test(r.selectorText)).flatMap((r) => customProps(r).map(([name2]) => name2))
+    );
+    if (!darkNames.size) return;
+    const light = /* @__PURE__ */ new Map();
+    for (const rule of rules) {
+      if (rule.selectorText !== ":root") continue;
+      for (const [name2, value2] of customProps(rule)) {
+        if (darkNames.has(name2) || value2.includes("var(")) light.set(name2, value2);
+      }
+    }
+    const decls = [...light].map(([name2, value2]) => `${name2}: ${value2}`).join(";");
+    const style = document.createElement("style");
+    style.dataset.ecLightTheme = "";
+    style.textContent = `.${LIGHT_THEME_SCOPE_CLASS}{${decls};color-scheme:light;color:var(--text-default-grey)}`;
+    document.head.appendChild(style);
+    injected = true;
+  }
   async function rasterizePrintSupplementPreviewFrame(previewFrameEl, paperWidthMm, paperHeightMm, marginMm, dpi) {
     const paperWidthPx = convertMmToPx(paperWidthMm, dpi);
     const paperHeightPx = convertMmToPx(paperHeightMm, dpi);
@@ -96213,8 +96480,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     const h2 = attrRect.height * domToExportScale;
     ctx.drawImage(shot, x, y, w, h2);
   }
-  const _hoisted_1$l = ["innerHTML"];
-  const _sfc_main$l = /* @__PURE__ */ defineComponent({
+  const _hoisted_1$m = ["innerHTML"];
+  const _sfc_main$m = /* @__PURE__ */ defineComponent({
     __name: "SanitizedHtml",
     props: {
       html: {},
@@ -96224,11 +96491,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       const props = __props;
       const safeHtml = computed(() => sanitizeDisplayHtml(props.html, props.linkTargetBlank));
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$l);
+        return openBlock(), createElementBlock("div", mergeProps(_ctx.$attrs, { innerHTML: safeHtml.value }), null, 16, _hoisted_1$m);
       };
     }
   });
-  const _hoisted_1$k = { class: "ec-print-supplement-page ec-print-fiche" };
+  const _hoisted_1$l = { class: "ec-print-supplement-page ec-print-fiche" };
   const _hoisted_2$f = { class: "ec-print-fiche__title" };
   const _hoisted_3$f = {
     key: 0,
@@ -96238,7 +96505,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 0,
     class: "ec-print-fiche__section-title"
   };
-  const _sfc_main$k = /* @__PURE__ */ defineComponent({
+  const _sfc_main$l = /* @__PURE__ */ defineComponent({
     __name: "MapPrintFicheTerritoryPage",
     props: {
       documentTabs: {},
@@ -96255,7 +96522,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }))
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("article", _hoisted_1$k, [
+        return openBlock(), createElementBlock("article", _hoisted_1$l, [
           createBaseVNode("h2", _hoisted_2$f, toDisplayString(__props.title), 1),
           __props.documentTabs.length ? (openBlock(), createElementBlock("div", _hoisted_3$f, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(sanitizedTabs.value, (tab) => {
@@ -96264,13 +96531,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                 class: "ec-print-fiche__section"
               }, [
                 tab.label !== "Documents" ? (openBlock(), createElementBlock("h3", _hoisted_4$f, toDisplayString(tab.label), 1)) : createCommentVNode("", true),
-                createVNode(_sfc_main$l, {
+                createVNode(_sfc_main$m, {
                   class: "ec-fiche-info__body",
                   html: tab.bodyHtml
                 }, null, 8, ["html"])
               ]);
             }), 128))
-          ])) : bodyPrintHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
+          ])) : bodyPrintHtml.value ? (openBlock(), createBlock(_sfc_main$m, {
             key: 1,
             class: "ec-fiche-info__body",
             html: bodyPrintHtml.value
@@ -96327,14 +96594,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       panelProtectedSupCalloutHtml()
     ].join("");
   }
-  const _hoisted_1$j = { class: "ec-print-supplement-page ec-print-fiche" };
+  const _hoisted_1$k = { class: "ec-print-supplement-page ec-print-fiche" };
   const _hoisted_2$e = { class: "ec-print-fiche__title" };
   const _hoisted_3$e = { class: "ec-print-fiche__sections" };
   const _hoisted_4$e = {
     key: 0,
     class: "ec-print-fiche__section ec-print-fiche__section--cadastre"
   };
-  const _hoisted_5$c = { class: "ec-print-fiche__cadastre-headline" };
+  const _hoisted_5$d = { class: "ec-print-fiche__cadastre-headline" };
   const _hoisted_6$b = { class: "ec-print-fiche__cadastre-dl" };
   const _hoisted_7$9 = {
     key: 1,
@@ -96345,7 +96612,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-print-fiche__section ec-print-fiche__section--documents"
   };
   const _hoisted_9$8 = { class: "ec-print-fiche__section ec-print-fiche__section--footnotes" };
-  const _sfc_main$j = /* @__PURE__ */ defineComponent({
+  const _sfc_main$k = /* @__PURE__ */ defineComponent({
     __name: "MapPrintFicheParcelPage",
     props: {
       title: {},
@@ -96356,12 +96623,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     setup(__props) {
       const parcelPrintFootnotesHtml = buildParcelFichePrintFootnotesHtml();
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("article", _hoisted_1$j, [
+        return openBlock(), createElementBlock("article", _hoisted_1$k, [
           createBaseVNode("h2", _hoisted_2$e, toDisplayString(__props.title), 1),
           createBaseVNode("div", _hoisted_3$e, [
             __props.cadastreReferences ? (openBlock(), createElementBlock("section", _hoisted_4$e, [
               _cache[0] || (_cache[0] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Références cadastrales", -1)),
-              createBaseVNode("p", _hoisted_5$c, toDisplayString(__props.cadastreReferences.headline), 1),
+              createBaseVNode("p", _hoisted_5$d, toDisplayString(__props.cadastreReferences.headline), 1),
               createBaseVNode("dl", _hoisted_6$b, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(__props.cadastreReferences.rows, (row) => {
                   return openBlock(), createElementBlock(Fragment, {
@@ -96375,20 +96642,20 @@ Expected function or array of functions, received type ${typeof value2}.`
             ])) : createCommentVNode("", true),
             __props.infosHtml.trim() ? (openBlock(), createElementBlock("section", _hoisted_7$9, [
               _cache[1] || (_cache[1] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Règles d’urbanisme", -1)),
-              createVNode(_sfc_main$l, {
+              createVNode(_sfc_main$m, {
                 class: "ec-fiche-info__body",
                 html: __props.infosHtml
               }, null, 8, ["html"])
             ])) : createCommentVNode("", true),
             __props.documentsHtml.trim() ? (openBlock(), createElementBlock("section", _hoisted_8$8, [
               _cache[2] || (_cache[2] = createBaseVNode("h3", { class: "ec-print-fiche__section-title" }, "Documents couvrant la parcelle", -1)),
-              createVNode(_sfc_main$l, {
+              createVNode(_sfc_main$m, {
                 class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
                 html: __props.documentsHtml
               }, null, 8, ["html"])
             ])) : createCommentVNode("", true),
             createBaseVNode("section", _hoisted_9$8, [
-              createVNode(_sfc_main$l, {
+              createVNode(_sfc_main$m, {
                 class: "ec-fiche-info__body",
                 html: unref(parcelPrintFootnotesHtml)
               }, null, 8, ["html"])
@@ -96398,7 +96665,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _hoisted_1$i = {
+  const _hoisted_1$j = {
     class: "ec-print-supplement-page ec-print-legends",
     "aria-labelledby": "ec-print-legends-title"
   };
@@ -96414,7 +96681,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 2,
     class: "ec-print-legends__groups"
   };
-  const _hoisted_5$b = { class: "ec-print-legends__group-title" };
+  const _hoisted_5$c = { class: "ec-print-legends__group-title" };
   const _hoisted_6$a = {
     key: 0,
     class: "ec-layer-legends__list"
@@ -96432,7 +96699,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     key: 1,
     class: "ec-layer-legends__hint"
   };
-  const _sfc_main$i = /* @__PURE__ */ defineComponent({
+  const _sfc_main$j = /* @__PURE__ */ defineComponent({
     __name: "MapPrintLegendsPage",
     props: {
       layers: {},
@@ -96454,7 +96721,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return resolveLegendItemImageUrls(leg, props.mapZoom).map((url) => rewriteLocalGpuSiteUrl(url));
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$i, [
+        return openBlock(), createElementBlock("section", _hoisted_1$j, [
           _cache[0] || (_cache[0] = createBaseVNode("h2", {
             id: "ec-print-legends-title",
             class: "ec-print-legends__title"
@@ -96466,7 +96733,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 key: layer.id,
                 class: "ec-print-legends__group"
               }, [
-                createBaseVNode("h3", _hoisted_5$b, toDisplayString(layer.title), 1),
+                createBaseVNode("h3", _hoisted_5$c, toDisplayString(layer.title), 1),
                 ((_a2 = layer.legend) == null ? void 0 : _a2.length) ? (openBlock(), createElementBlock("ul", _hoisted_6$a, [
                   (openBlock(true), createElementBlock(Fragment, null, renderList(layer.legend, (leg) => {
                     return openBlock(), createElementBlock("li", {
@@ -96502,8 +96769,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     }
     return target2;
   };
-  const MapPrintLegendsPage = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-69d3a3f2"]]);
-  const _hoisted_1$h = {
+  const MapPrintLegendsPage = /* @__PURE__ */ _export_sfc(_sfc_main$j, [["__scopeId", "data-v-69d3a3f2"]]);
+  const _hoisted_1$i = {
     class: "print-export-progress",
     role: "status",
     "aria-live": "polite",
@@ -96512,7 +96779,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_2$c = ["aria-valuenow", "aria-valuetext"];
   const _hoisted_3$c = { class: "print-export-progress__detail fr-text--sm fr-mt-2w" };
   const _hoisted_4$c = { class: "print-export-progress__percent fr-text--xs fr-mt-1w" };
-  const _sfc_main$h = /* @__PURE__ */ defineComponent({
+  const _sfc_main$i = /* @__PURE__ */ defineComponent({
     __name: "PrintExportProgressOverlay",
     props: {
       percent: {},
@@ -96520,7 +96787,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     setup(__props) {
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$h, [
+        return openBlock(), createElementBlock("div", _hoisted_1$i, [
           _cache[0] || (_cache[0] = createBaseVNode("p", { class: "print-export-progress__title fr-text--md fr-mb-2w" }, "Traitement en cours…", -1)),
           createBaseVNode("div", {
             class: "print-export-progress__bar",
@@ -96541,7 +96808,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const PrintExportProgressOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-906753a4"]]);
+  const PrintExportProgressOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-906753a4"]]);
   async function ensureModeSelection(mode2, zoom) {
     var _a2, _b;
     let selection = getCachedFicheSelectionAtMarker(mode2);
@@ -96725,26 +96992,37 @@ Expected function or array of functions, received type ${typeof value2}.`
     form.dpi = template.dpi;
     form.format = template.exportFormat;
   }
-  const _hoisted_1$g = { class: "print-form" };
+  const _hoisted_1$h = { class: "print-form" };
   const _hoisted_2$b = {
     key: 0,
     class: "fr-text--xs fr-mb-2w print-form__title-hint"
   };
   const _hoisted_3$b = { class: "mt-10" };
   const _hoisted_4$b = { class: "mt-10" };
-  const _hoisted_5$a = { class: "mt-10" };
-  const _hoisted_6$9 = { class: "mt-10" };
+  const _hoisted_5$b = {
+    key: 1,
+    class: "mt-10"
+  };
+  const _hoisted_6$9 = {
+    key: 2,
+    class: "mt-10"
+  };
   const _hoisted_7$7 = { class: "mt-10" };
   const _hoisted_8$6 = { class: "mt-10 ec-map-print-form__indent" };
-  const _hoisted_9$6 = { class: "print-preview-panel" };
-  const _hoisted_10$6 = {
+  const _hoisted_9$6 = {
+    key: 3,
+    class: "print-export-result fr-text--sm",
+    role: "status"
+  };
+  const _hoisted_10$6 = { class: "print-preview-panel" };
+  const _hoisted_11$6 = {
     class: "print-preview-pagination",
     "aria-label": "Pages à imprimer"
   };
-  const _hoisted_11$6 = { class: "print-preview-pagination__label" };
-  const _hoisted_12$6 = { class: "print-preview-container" };
-  const _hoisted_13$6 = { class: "print-preview-page" };
-  const _hoisted_14$6 = {
+  const _hoisted_12$6 = { class: "print-preview-pagination__label" };
+  const _hoisted_13$6 = { class: "print-preview-container" };
+  const _hoisted_14$5 = { class: "print-preview-page" };
+  const _hoisted_15$4 = {
     key: 0,
     class: "print-preview-patience",
     role: "status",
@@ -96756,9 +97034,10 @@ Expected function or array of functions, received type ${typeof value2}.`
   const PREVIEW_COLUMN_ZOOM_MIN = 0.6;
   const PREVIEW_COLUMN_ZOOM_MAX = 2.5;
   const PREVIEW_COLUMN_ZOOM_STEP = 0.08;
-  const _sfc_main$g = /* @__PURE__ */ defineComponent({
+  const _sfc_main$h = /* @__PURE__ */ defineComponent({
     __name: "MapPrintModal",
     setup(__props, { expose: __expose }) {
+      var _a2;
       function logPrintPreview(step, detail) {
         return;
       }
@@ -96766,12 +97045,14 @@ Expected function or array of functions, received type ${typeof value2}.`
       const isExportInProgress = /* @__PURE__ */ ref(false);
       const exportProgressPercent = /* @__PURE__ */ ref(0);
       const exportProgressDetail = /* @__PURE__ */ ref("");
+      const exportResultMessage = /* @__PURE__ */ ref("");
+      let exportMapIncomplete = false;
       const isPreviewLayoutPending = /* @__PURE__ */ ref(false);
       let dismissGuardUntil = 0;
       function syncNativePrintDialog() {
-        var _a2;
+        var _a3;
         if (!printModalOpened.value) return;
-        const dialog = (_a2 = printPage.value) == null ? void 0 : _a2.closest("dialog");
+        const dialog = (_a3 = printPage.value) == null ? void 0 : _a3.closest("dialog");
         if (!dialog || dialog.open) return;
         try {
           dialog.showModal();
@@ -96801,6 +97082,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       function onModalPrintOpen(options) {
         printPlaceMarker.value = readMapPermalinkMarker(getMapPermalinkParams());
         applyPrintOpenOptions(options);
+        ensureLightThemeScopeStyle();
         dismissGuardUntil = Date.now() + 500;
         printModalOpened.value = true;
         void nextTick(() => {
@@ -96880,23 +97162,23 @@ Expected function or array of functions, received type ${typeof value2}.`
         return fmt;
       });
       const panelSelection = computed(() => {
-        var _a2;
-        return ((_a2 = printPanels.value) == null ? void 0 : _a2.selection.value) ?? null;
+        var _a3;
+        return ((_a3 = printPanels.value) == null ? void 0 : _a3.selection.value) ?? null;
       });
       const panelLegendLayers = computed(() => {
-        var _a2;
-        return ((_a2 = printPanels.value) == null ? void 0 : _a2.legendLayers.value) ?? [];
+        var _a3;
+        return ((_a3 = printPanels.value) == null ? void 0 : _a3.legendLayers.value) ?? [];
       });
       const panelLegendLayersAll = computed(() => {
-        var _a2;
-        return ((_a2 = printPanels.value) == null ? void 0 : _a2.legendLayersAll.value) ?? [];
+        var _a3;
+        return ((_a3 = printPanels.value) == null ? void 0 : _a3.legendLayersAll.value) ?? [];
       });
       const printLegendLayerSource = computed(
         () => printFormState.hasLegends && printFormState.hasAllLegends ? panelLegendLayersAll.value : panelLegendLayers.value
       );
       const panelMapZoom = computed(() => {
-        var _a2;
-        return ((_a2 = printPanels.value) == null ? void 0 : _a2.mapZoom.value) ?? 6;
+        var _a3;
+        return ((_a3 = printPanels.value) == null ? void 0 : _a3.mapZoom.value) ?? 6;
       });
       const printFicheSelections = /* @__PURE__ */ ref(null);
       let printFicheLoadGeneration = 0;
@@ -96921,10 +97203,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       const territorySelectionForPrint = computed(
         () => {
-          var _a2;
+          var _a3;
           return mergeFicheSelectionForPrint(
             MAP_MODE_TERRITORY,
-            (_a2 = printFicheSelections.value) == null ? void 0 : _a2.territory,
+            (_a3 = printFicheSelections.value) == null ? void 0 : _a3.territory,
             panelSelection.value,
             isTerritoryFichePrintReady
           );
@@ -96932,10 +97214,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       const parcelSelectionForPrint = computed(
         () => {
-          var _a2;
+          var _a3;
           return mergeFicheSelectionForPrint(
             MAP_MODE_PARCEL,
-            (_a2 = printFicheSelections.value) == null ? void 0 : _a2.parcel,
+            (_a3 = printFicheSelections.value) == null ? void 0 : _a3.parcel,
             panelSelection.value,
             isParcelFichePrintReady
           );
@@ -96943,27 +97225,32 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       const parcelCadastreReferences = computed(
         () => {
-          var _a2;
-          return ((_a2 = parcelSelectionForPrint.value) == null ? void 0 : _a2.cadastreReferences) ?? null;
+          var _a3;
+          return ((_a3 = parcelSelectionForPrint.value) == null ? void 0 : _a3.cadastreReferences) ?? null;
         }
       );
+      const enabledMapModes = ((_a2 = tryUseMapMode()) == null ? void 0 : _a2.modes) ?? ALL_MAP_MODES;
+      const territoryFicheEnabled = enabledMapModes.includes(MAP_MODE_TERRITORY);
+      const parcelFicheEnabled = enabledMapModes.includes(MAP_MODE_PARCEL);
       const canPrintTerritoryFiche = computed(
-        () => isTerritoryFichePrintReady(territorySelectionForPrint.value)
+        () => territoryFicheEnabled && isTerritoryFichePrintReady(territorySelectionForPrint.value)
       );
-      const canPrintParcelFiche = computed(() => isParcelFichePrintReady(parcelSelectionForPrint.value));
+      const canPrintParcelFiche = computed(
+        () => parcelFicheEnabled && isParcelFichePrintReady(parcelSelectionForPrint.value)
+      );
       const canPrintLegends = computed(() => {
         const zoom = printPreviewLegendZoom.value;
         const filtered = dedupeLegendLayersForPanel(panelLegendLayers.value);
         const all2 = dedupeLegendLayersForPanel(panelLegendLayersAll.value);
         const hasFiltered = filtered.some(
           (layer) => {
-            var _a2;
-            return (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0) > 0 && catalogEntryInZoomRangeForPrint(layer.id, zoom);
+            var _a3;
+            return (((_a3 = layer.legend) == null ? void 0 : _a3.length) ?? 0) > 0 && catalogEntryInZoomRangeForPrint(layer.id, zoom);
           }
         );
         const hasAll = all2.some((layer) => {
-          var _a2;
-          return (((_a2 = layer.legend) == null ? void 0 : _a2.length) ?? 0) > 0;
+          var _a3;
+          return (((_a3 = layer.legend) == null ? void 0 : _a3.length) ?? 0) > 0;
         });
         return hasFiltered || hasAll;
       });
@@ -96974,8 +97261,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       const territoryDocumentTabs = computed(() => {
-        var _a2;
-        return ((_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.documentTabs) ?? [];
+        var _a3;
+        return ((_a3 = territorySelectionForPrint.value) == null ? void 0 : _a3.documentTabs) ?? [];
       });
       const parcelInfosHtml = computed(
         () => buildParcelInfosPrintHtml(parcelSelectionForPrint.value, printPreviewLegendZoom.value)
@@ -97025,10 +97312,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       const annexContentSnapshot = computed(
         () => {
-          var _a2, _b;
+          var _a3, _b;
           return buildAnnexContentMeasureSnapshot({
             territoryTabCount: territoryDocumentTabs.value.length,
-            territoryBodyLength: ((_b = (_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.bodyHtml) == null ? void 0 : _b.length) ?? 0,
+            territoryBodyLength: ((_b = (_a3 = territorySelectionForPrint.value) == null ? void 0 : _a3.bodyHtml) == null ? void 0 : _b.length) ?? 0,
             parcelInfosLength: parcelInfosHtml.value.length,
             parcelDocumentsLength: parcelDocumentsHtml.value.length,
             parcelLegendScale: parcelLegendScaleBand(printPreviewLegendZoom.value),
@@ -97037,8 +97324,8 @@ Expected function or array of functions, received type ${typeof value2}.`
             legendLayerIds: printLegendLayerSource.value.map((layer) => layer.id).join(","),
             legendItemCount: printLegendLayerSource.value.reduce(
               (count, layer) => {
-                var _a3;
-                return count + (((_a3 = layer.legend) == null ? void 0 : _a3.length) ?? 0);
+                var _a4;
+                return count + (((_a4 = layer.legend) == null ? void 0 : _a4.length) ?? 0);
               },
               0
             )
@@ -97238,11 +97525,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         printMapPrewarmScheduler.schedule((signal) => runPrintMapPrewarm(signal));
       }
       async function runPrintMapPrewarm(signal) {
-        var _a2;
+        var _a3;
         const generation = ++printMapPrewarmGeneration;
         if (!printModalOpened.value || isExportInProgress.value || isPreviewLayoutPending.value) return;
         const map2 = previewMap.value;
-        if (!map2 || ((_a2 = currentPreviewPage.value) == null ? void 0 : _a2.kind) !== "map") return;
+        if (!map2 || ((_a3 = currentPreviewPage.value) == null ? void 0 : _a3.kind) !== "map") return;
         const mapSize = map2.getSize();
         if (!mapSize || mapSize[0] < 16 || mapSize[1] < 16) return;
         const dpiValue = printFormState.dpi;
@@ -97273,7 +97560,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (generation !== printMapPrewarmGeneration) return;
       }
       async function remeasureSupplementPageCounts(options = {}) {
-        var _a2, _b;
+        var _a3, _b;
         const blockPreview = options.blockPreview !== false;
         if (isExportInProgress.value && blockPreview) {
           return;
@@ -97300,7 +97587,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (kindsToMeasure.length > 0 && blockPreview) {
           isPreviewLayoutPending.value = true;
         }
-        (_a2 = options.onStage) == null ? void 0 : _a2.call(options, "Analyse de la pagination des annexes…");
+        (_a3 = options.onStage) == null ? void 0 : _a3.call(options, "Analyse de la pagination des annexes…");
         logPrintPreview("mesure: début", {
           cacheHits: kinds.length - kindsToMeasure.length
         });
@@ -97345,8 +97632,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       const catalogEntryInZoomRangeForPrint = (layerId, zoom) => {
-        var _a2;
-        return ((_a2 = printPanels.value) == null ? void 0 : _a2.catalogEntryInZoomRange(layerId, zoom)) ?? true;
+        var _a3;
+        return ((_a3 = printPanels.value) == null ? void 0 : _a3.catalogEntryInZoomRange(layerId, zoom)) ?? true;
       };
       const previewMapHostSize = /* @__PURE__ */ reactive(
         useElementSize(previewMapEl, { width: 0, height: 0 }, { box: "border-box" })
@@ -97386,9 +97673,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       watch(
         () => [previewMapHostSize.width, previewMapHostSize.height],
         () => {
-          var _a2;
+          var _a3;
           if (!printModalOpened.value) return;
-          (_a2 = previewMap.value) == null ? void 0 : _a2.updateSize();
+          (_a3 = previewMap.value) == null ? void 0 : _a3.updateSize();
           renderSyncIfAttached(previewMap.value);
           sanitizePrintPreviewAttributions(previewMapEl.value);
         }
@@ -97507,8 +97794,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       });
       const measureLayoutStyle = computed(
         () => {
-          var _a2;
-          return ((_a2 = measureLayoutOverride.value) == null ? void 0 : _a2.cssVars) ?? supplementLayoutStyle.value;
+          var _a3;
+          return ((_a3 = measureLayoutOverride.value) == null ? void 0 : _a3.cssVars) ?? supplementLayoutStyle.value;
         }
       );
       const supplementPreviewFrame = computed(() => {
@@ -97556,15 +97843,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         return { marginTop: `-${offsetPx}px` };
       });
       function findSupplementPreviewPageRoot() {
-        var _a2, _b;
-        const fromContent = (_a2 = supplementContentRef.value) == null ? void 0 : _a2.closest(".ec-print-supplement-page");
+        var _a3, _b;
+        const fromContent = (_a3 = supplementContentRef.value) == null ? void 0 : _a3.closest(".ec-print-supplement-page");
         if (fromContent instanceof HTMLElement) return fromContent;
         const fromHost = (_b = supplementPreviewEl.value) == null ? void 0 : _b.querySelector(".ec-print-supplement-page");
         return fromHost instanceof HTMLElement ? fromHost : null;
       }
       function findSupplementPreviewFrameEl() {
-        var _a2;
-        const frame = (_a2 = supplementPreviewEl.value) == null ? void 0 : _a2.querySelector(".print-supplement-preview-frame");
+        var _a3;
+        const frame = (_a3 = supplementPreviewEl.value) == null ? void 0 : _a3.querySelector(".print-supplement-preview-frame");
         return frame instanceof HTMLElement ? frame : null;
       }
       function applyCurrentSupplementSliceVisibility() {
@@ -97603,9 +97890,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       watch(
         () => {
-          var _a2;
+          var _a3;
           return [
-            (_a2 = currentPreviewPage.value) == null ? void 0 : _a2.id,
+            (_a3 = currentPreviewPage.value) == null ? void 0 : _a3.id,
             supplementSliceStarts.value,
             isPreviewLayoutPending.value,
             supplementExportInner.value.innerHeightPx,
@@ -97730,15 +98017,15 @@ Expected function or array of functions, received type ${typeof value2}.`
         };
       }
       function detachPreviewMap() {
-        var _a2;
+        var _a3;
         clearPreviewViewCustomizationListeners();
-        (_a2 = previewMap.value) == null ? void 0 : _a2.setTarget(void 0);
+        (_a3 = previewMap.value) == null ? void 0 : _a3.setTarget(void 0);
       }
       function destroyPreviewMap() {
-        var _a2, _b;
+        var _a3, _b;
         clearPreviewViewCustomizationListeners();
         previewMapViewCustomized.value = false;
-        (_a2 = previewMap.value) == null ? void 0 : _a2.setTarget(void 0);
+        (_a3 = previewMap.value) == null ? void 0 : _a3.setTarget(void 0);
         (_b = previewMap.value) == null ? void 0 : _b.dispose();
         previewMap.value = null;
       }
@@ -97941,8 +98228,8 @@ Expected function or array of functions, received type ${typeof value2}.`
         () => {
           if (!printModalOpened.value) return;
           void nextTick(() => {
-            var _a2;
-            (_a2 = previewMap.value) == null ? void 0 : _a2.updateSize();
+            var _a3;
+            (_a3 = previewMap.value) == null ? void 0 : _a3.updateSize();
             renderSyncIfAttached(previewMap.value);
           });
         }
@@ -97955,6 +98242,21 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (printModalOpened.value) return previewMap.value;
         return previewMap.value ?? sourceMapRef.value;
       }
+      const pendingShareFiles = /* @__PURE__ */ shallowRef([]);
+      function deliverExportFile(fileName, blob) {
+        const file = new File([blob], fileName, { type: blob.type });
+        if (canShareExportFiles([file])) {
+          pendingShareFiles.value = [...pendingShareFiles.value, file];
+          return;
+        }
+        triggerDownload(fileName, URL.createObjectURL(blob));
+      }
+      async function onClickShareExport() {
+        const files = pendingShareFiles.value;
+        if (!files.length) return;
+        await shareExportFiles(files);
+        pendingShareFiles.value = [];
+      }
       function triggerDownload(fileName, url) {
         const link = document.createElement("a");
         link.download = fileName;
@@ -97962,14 +98264,14 @@ Expected function or array of functions, received type ${typeof value2}.`
         link.click();
       }
       async function ensureMapPreviewPageVisibleForExport() {
-        var _a2;
+        var _a3;
         const savedIndex = previewPageIndex.value;
         const mapIndex = previewPages.value.findIndex((p5) => p5.kind === "map");
         if (mapIndex >= 0 && previewPageIndex.value !== mapIndex) {
           previewPageIndex.value = mapIndex;
           await nextTick();
           await new Promise((resolve2) => requestAnimationFrame(() => resolve2()));
-          (_a2 = previewMap.value) == null ? void 0 : _a2.updateSize();
+          (_a3 = previewMap.value) == null ? void 0 : _a3.updateSize();
           if (previewMap.value) {
             await waitForMapRender(previewMap.value, 2);
           }
@@ -98039,6 +98341,9 @@ Expected function or array of functions, received type ${typeof value2}.`
           heightPx: mapHeightPx,
           extent: mapExtent,
           cacheKey: mapCacheKey,
+          onIncomplete: () => {
+            exportMapIncomplete = true;
+          },
           onStage: (label) => {
             progress.setDetail(`${prefix}${label}`);
           },
@@ -98055,12 +98360,11 @@ Expected function or array of functions, received type ${typeof value2}.`
         const finalCanvas = document.createElement("canvas");
         finalCanvas.width = finalWidthPx;
         finalCanvas.height = finalHeightPx;
-        const finalCtx = finalCanvas.getContext("2d");
-        if (!finalCtx) throw new Error("Contexte canvas indisponible.");
+        const finalCtx = assertCanvasUsable(finalCanvas);
         finalCtx.fillStyle = "#ffffff";
         finalCtx.fillRect(0, 0, finalWidthPx, finalHeightPx);
         finalCtx.drawImage(mapCanvas, marginPx, marginPx + titleHeightPx);
-        mapCanvas.remove();
+        releaseCanvas(mapCanvas);
         if (printFormState.hasTitle && printMapTitleLayout.value.displayTitle) {
           const titleCanvas = document.createElement("canvas");
           titleCanvas.width = mapWidthPx;
@@ -98172,10 +98476,10 @@ Expected function or array of functions, received type ${typeof value2}.`
           try {
             if (printFormState.format === "PNG") {
               const blob = await encodePrintPngWithDpi(canvas, dpiValue);
-              triggerDownload(fileName, URL.createObjectURL(blob));
+              deliverExportFile(fileName, blob);
             } else {
               const blob = await encodePrintJpeg(canvas, 0.95);
-              triggerDownload(fileName, URL.createObjectURL(blob));
+              deliverExportFile(fileName, blob);
             }
           } catch {
             if (printFormState.format === "PNG") {
@@ -98185,7 +98489,7 @@ Expected function or array of functions, received type ${typeof value2}.`
               triggerDownload(fileName, canvas.toDataURL("image/jpeg", 0.95));
             }
           }
-          canvas.remove();
+          releaseCanvas(canvas);
         }
         progress.tick(0.95);
       }
@@ -98203,8 +98507,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         });
         progress.setDetail("Finalisation du PDF…");
         progress.tick(0.85);
-        triggerDownload(fileName, URL.createObjectURL(blob));
-        for (const canvas of pages) canvas.remove();
+        deliverExportFile(fileName, blob);
       }
       async function syncAnnexPaginationForExport(onStage) {
         const hasAnnex = printFormState.hasTerritoryFiche && canPrintTerritoryFiche.value || printFormState.hasParcelFiche && canPrintParcelFiche.value || printFormState.hasLegends && canPrintLegends.value;
@@ -98229,6 +98532,9 @@ Expected function or array of functions, received type ${typeof value2}.`
       async function onClickExportMap() {
         if (isExportInProgress.value) return;
         isExportInProgress.value = true;
+        pendingShareFiles.value = [];
+        exportResultMessage.value = "";
+        exportMapIncomplete = false;
         exportProgressPercent.value = 1;
         exportProgressDetail.value = "Préparation de l’export…";
         const savedPreviewPageIndex = previewPageIndex.value;
@@ -98252,9 +98558,11 @@ Expected function or array of functions, received type ${typeof value2}.`
             await exportRasterCanvases(canvases, progress);
           }
           progress.endStep();
-          syncExportProgressUi(100, "Export terminé.");
+          exportResultMessage.value = exportMapIncomplete ? "Export terminé : certaines tuiles de la carte n’ont pas pu être chargées à temps." : "Export terminé.";
+          syncExportProgressUi(100, exportResultMessage.value);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Export impossible. Réessayez avec un titre plus court.";
+          exportResultMessage.value = message;
           syncExportProgressUi(exportProgressPercent.value, message);
         } finally {
           previewPageIndex.value = savedPreviewPageIndex;
@@ -98266,7 +98574,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       }
       return (_ctx, _cache) => {
-        var _a2;
+        var _a3;
         return openBlock(), createBlock(Teleport, { to: "body" }, [
           createVNode(unref(So), {
             opened: printModalOpened.value,
@@ -98276,14 +98584,14 @@ Expected function or array of functions, received type ${typeof value2}.`
             onClose: onModalPrintClose
           }, {
             default: withCtx(() => {
-              var _a3, _b, _c2, _d, _e2, _f, _g;
+              var _a4, _b, _c2, _d, _e2, _f, _g;
               return [
                 createBaseVNode("div", {
                   ref_key: "printPage",
                   ref: printPage,
                   class: "print-page"
                 }, [
-                  createBaseVNode("div", _hoisted_1$g, [
+                  createBaseVNode("div", _hoisted_1$h, [
                     createVNode(unref(un), {
                       modelValue: selectedPrintTemplateId.value,
                       "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => selectedPrintTemplateId.value = $event),
@@ -98346,7 +98654,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         label: "Afficher l'échelle"
                       }, null, 8, ["modelValue"])
                     ]),
-                    createBaseVNode("div", _hoisted_5$a, [
+                    unref(territoryFicheEnabled) ? (openBlock(), createElementBlock("div", _hoisted_5$b, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasTerritoryFiche,
                         "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => printFormState.hasTerritoryFiche = $event),
@@ -98355,8 +98663,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                         disabled: !canPrintTerritoryFiche.value,
                         label: "Afficher la fiche info territoire"
                       }, null, 8, ["modelValue", "disabled"])
-                    ]),
-                    createBaseVNode("div", _hoisted_6$9, [
+                    ])) : createCommentVNode("", true),
+                    unref(parcelFicheEnabled) ? (openBlock(), createElementBlock("div", _hoisted_6$9, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasParcelFiche,
                         "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => printFormState.hasParcelFiche = $event),
@@ -98365,7 +98673,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         disabled: !canPrintParcelFiche.value,
                         label: "Afficher la fiche info parcelle"
                       }, null, 8, ["modelValue", "disabled"])
-                    ]),
+                    ])) : createCommentVNode("", true),
                     createBaseVNode("div", _hoisted_7$7, [
                       createVNode(unref(Dt), {
                         modelValue: printFormState.hasLegends,
@@ -98427,10 +98735,20 @@ Expected function or array of functions, received type ${typeof value2}.`
                       icon: "",
                       "no-outline": "",
                       onClick: onClickExportMap
-                    }, null, 8, ["label", "title", "disabled"])
+                    }, null, 8, ["label", "title", "disabled"]),
+                    exportResultMessage.value && !isExportInProgress.value ? (openBlock(), createElementBlock("p", _hoisted_9$6, toDisplayString(exportResultMessage.value), 1)) : createCommentVNode("", true),
+                    pendingShareFiles.value.length ? (openBlock(), createBlock(unref(nt), {
+                      key: 4,
+                      id: "print-page-share",
+                      label: "Enregistrer / partager",
+                      title: "Enregistrer ou partager le fichier exporté",
+                      icon: "ri-share-line",
+                      secondary: "",
+                      onClick: onClickShareExport
+                    })) : createCommentVNode("", true)
                   ]),
-                  createBaseVNode("div", _hoisted_9$6, [
-                    createBaseVNode("nav", _hoisted_10$6, [
+                  createBaseVNode("div", _hoisted_10$6, [
+                    createBaseVNode("nav", _hoisted_11$6, [
                       previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
                         key: 0,
                         type: "button",
@@ -98443,7 +98761,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                           "aria-hidden": "true"
                         }, null, -1)
                       ])])) : createCommentVNode("", true),
-                      createBaseVNode("span", _hoisted_11$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_a3 = currentPreviewPage.value) == null ? void 0 : _a3.label), 1),
+                      createBaseVNode("span", _hoisted_12$6, " Page " + toDisplayString(previewPageIndex.value + 1) + " / " + toDisplayString(previewPages.value.length) + " — " + toDisplayString((_a4 = currentPreviewPage.value) == null ? void 0 : _a4.label), 1),
                       previewPages.value.length > 1 ? (openBlock(), createElementBlock("button", {
                         key: 1,
                         type: "button",
@@ -98477,9 +98795,9 @@ Expected function or array of functions, received type ${typeof value2}.`
                             class: "print-preview-column__scale-inner",
                             style: normalizeStyle(previewColumnScaleInnerStyle.value)
                           }, [
-                            createBaseVNode("div", _hoisted_12$6, [
+                            createBaseVNode("div", _hoisted_13$6, [
                               createBaseVNode("div", {
-                                class: "print-preview",
+                                class: normalizeClass(["print-preview", unref(LIGHT_THEME_SCOPE_CLASS)]),
                                 style: normalizeStyle({
                                   width: cssPreviewDimensionPx.value.width,
                                   height: cssPreviewDimensionPx.value.height,
@@ -98490,7 +98808,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                                   ...supplementLayoutStyle.value
                                 })
                               }, [
-                                withDirectives(createBaseVNode("div", _hoisted_13$6, [
+                                withDirectives(createBaseVNode("div", _hoisted_14$5, [
                                   printFormState.hasTitle ? (openBlock(), createElementBlock("div", {
                                     key: 0,
                                     id: "map-title",
@@ -98529,13 +98847,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                                         class: "print-preview-supplement-content",
                                         style: normalizeStyle(supplementContentOffsetStyle.value)
                                       }, [
-                                        printModalOpened.value && ((_c2 = currentPreviewPage.value) == null ? void 0 : _c2.kind) === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
+                                        printModalOpened.value && ((_c2 = currentPreviewPage.value) == null ? void 0 : _c2.kind) === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$l, {
                                           key: 0,
                                           "document-tabs": territoryDocumentTabs.value,
                                           "body-html": (_d = territorySelectionForPrint.value) == null ? void 0 : _d.bodyHtml,
                                           title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
                                         }, null, 8, ["document-tabs", "body-html", "title"])) : createCommentVNode("", true),
-                                        printModalOpened.value && ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
+                                        printModalOpened.value && ((_e2 = currentPreviewPage.value) == null ? void 0 : _e2.kind) === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$k, {
                                           key: 1,
                                           title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
                                           "infos-html": parcelInfosHtml.value,
@@ -98555,11 +98873,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                                 ], 512), [
                                   [vShow, ((_g = currentPreviewPage.value) == null ? void 0 : _g.kind) !== "map"]
                                 ])
-                              ], 4)
+                              ], 6)
                             ])
                           ], 4)
                         ], 4),
-                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_14$6, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
+                        isPreviewLayoutPending.value ? (openBlock(), createElementBlock("div", _hoisted_15$4, " Préparation de l’aperçu… ")) : createCommentVNode("", true)
                       ], 2)
                     ], 544)
                   ]),
@@ -98592,13 +98910,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                   width: `${measureExportInner.value.innerWidthPx}px`
                 })
               }, [
-                measureKind.value === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$k, {
+                measureKind.value === "ficheTerritory" ? (openBlock(), createBlock(_sfc_main$l, {
                   key: 0,
                   "document-tabs": territoryDocumentTabs.value,
-                  "body-html": (_a2 = territorySelectionForPrint.value) == null ? void 0 : _a2.bodyHtml,
+                  "body-html": (_a3 = territorySelectionForPrint.value) == null ? void 0 : _a3.bodyHtml,
                   title: unref(territoryPrintTitle)(territorySelectionForPrint.value)
                 }, null, 8, ["document-tabs", "body-html", "title"])) : createCommentVNode("", true),
-                measureKind.value === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$j, {
+                measureKind.value === "ficheParcel" ? (openBlock(), createBlock(_sfc_main$k, {
                   key: 1,
                   title: unref(parcelPrintTitle)(parcelSelectionForPrint.value),
                   "infos-html": parcelInfosHtml.value,
@@ -98619,7 +98937,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["__scopeId", "data-v-1573ad29"]]);
+  const MapPrintModal = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-8abc0928"]]);
   const exceptions = ["GPoverviewMap", "GPfullScreen"];
   const gfiIncompatiblePanels = ["GPdrawing", "GPisochron", "GPmeasureArea", "GPmeasureAzimuth", "GPmeasureLength", "GProute", "GPelevationPath", "GPpanoramax", "GPreporting"];
   var gfiActiveBeforePanel = false;
@@ -102460,13 +102778,13 @@ Expected function or array of functions, received type ${typeof value2}.`
   if (window.ol && window.ol.control) {
     window.ol.control.Territories = Territories;
   }
-  const _hoisted_1$f = {
+  const _hoisted_1$g = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
   const PANEL_TITLE = "Sélectionner un territoire";
-  const _sfc_main$f = /* @__PURE__ */ defineComponent({
+  const _sfc_main$g = /* @__PURE__ */ defineComponent({
     __name: "TerritoriesControl",
     props: {
       position: { default: CONTROL_POSITIONS.territories },
@@ -102538,7 +102856,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         { afterCreate: patchTerritoriesPanel }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$f);
+        return openBlock(), createElementBlock("span", _hoisted_1$g);
       };
     }
   });
@@ -119005,12 +119323,12 @@ Expected function or array of functions, received type ${typeof value2}.`
   function setSketchToolEngaged(engaged) {
     sketchToolEngagedRef.value = engaged;
   }
-  const _hoisted_1$e = {
+  const _hoisted_1$f = {
     class: "ec-ol-control-host",
     hidden: "",
     "aria-hidden": "true"
   };
-  const _sfc_main$e = /* @__PURE__ */ defineComponent({
+  const _sfc_main$f = /* @__PURE__ */ defineComponent({
     __name: "SketchControl",
     props: {
       position: { default: CONTROL_POSITIONS.sketch },
@@ -119045,7 +119363,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("span", _hoisted_1$e);
+        return openBlock(), createElementBlock("span", _hoisted_1$f);
       };
     }
   });
@@ -119967,16 +120285,16 @@ Expected function or array of functions, received type ${typeof value2}.`
       catalogEntryInZoomRange
     };
   }
-  const _hoisted_1$d = { class: "ec-fiche-cadastre-modal__panel" };
+  const _hoisted_1$e = { class: "ec-fiche-cadastre-modal__panel" };
   const _hoisted_2$a = { class: "ec-fiche-cadastre-modal__header" };
   const _hoisted_3$a = {
     key: 0,
     class: "ec-fiche-cadastre-modal__body"
   };
   const _hoisted_4$a = { class: "ec-fiche-cadastre-modal__headline-row" };
-  const _hoisted_5$9 = { class: "ec-fiche-cadastre-modal__headline" };
+  const _hoisted_5$a = { class: "ec-fiche-cadastre-modal__headline" };
   const _hoisted_6$8 = { class: "ec-fiche-cadastre-modal__dl" };
-  const _sfc_main$d = /* @__PURE__ */ defineComponent({
+  const _sfc_main$e = /* @__PURE__ */ defineComponent({
     __name: "FicheCadastreReferencesModal",
     props: {
       open: { type: Boolean },
@@ -120000,7 +120318,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           onCancel: _cache[2] || (_cache[2] = withModifiers(($event) => emit2("close"), ["prevent"])),
           onClick: _cache[3] || (_cache[3] = withModifiers(($event) => emit2("close"), ["self"]))
         }, [
-          createBaseVNode("div", _hoisted_1$d, [
+          createBaseVNode("div", _hoisted_1$e, [
             createBaseVNode("header", _hoisted_2$a, [
               _cache[5] || (_cache[5] = createBaseVNode("h2", {
                 id: "ec-fiche-cadastre-modal-title",
@@ -120026,7 +120344,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             ]),
             __props.references ? (openBlock(), createElementBlock("div", _hoisted_3$a, [
               createBaseVNode("div", _hoisted_4$a, [
-                createBaseVNode("p", _hoisted_5$9, toDisplayString(__props.references.headline), 1),
+                createBaseVNode("p", _hoisted_5$a, toDisplayString(__props.references.headline), 1),
                 createBaseVNode("button", {
                   type: "button",
                   class: "ec-fiche-cadastre-modal__copy fr-btn fr-btn--tertiary fr-btn--icon-left",
@@ -120166,7 +120484,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     const tabPanel = (_a2 = dsfr(panel)) == null ? void 0 : _a2.tabPanel;
     if (tabPanel && tabPanel.isDisclosed === false) (_b = tabPanel.disclose) == null ? void 0 : _b.call(tabPanel);
   }
-  const _hoisted_1$c = {
+  const _hoisted_1$d = {
     key: 0,
     class: "ec-fiche-info__error ec-fiche-info__supplement-error",
     role: "alert"
@@ -120177,72 +120495,84 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-fiche-info__inner"
   };
   const _hoisted_4$9 = { class: "ec-fiche-info__title" };
-  const _hoisted_5$8 = {
-    key: 2,
-    class: "ec-fiche-info__inner ec-fiche-info__inner--parcel"
+  const _hoisted_5$9 = {
+    key: 1,
+    class: "ec-fiche-info__mode-switch-text"
   };
   const _hoisted_6$7 = { class: "ec-fiche-info__topbar" };
   const _hoisted_7$6 = { class: "ec-fiche-info__mode-tags" };
   const _hoisted_8$5 = { class: "ec-fiche-info__title" };
-  const _hoisted_9$5 = { class: "fr-tabs ec-fiche-info__tabs" };
+  const _hoisted_9$5 = {
+    key: 1,
+    class: "ec-fiche-info__coordinates"
+  };
   const _hoisted_10$5 = {
+    key: 1,
+    class: "ec-fiche-info__mode-switch-text"
+  };
+  const _hoisted_11$5 = { class: "fr-tabs ec-fiche-info__tabs" };
+  const _hoisted_12$5 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Fiche parcelle"
   };
-  const _hoisted_11$5 = { role: "presentation" };
-  const _hoisted_12$5 = ["aria-selected"];
-  const _hoisted_13$5 = {
+  const _hoisted_13$5 = { role: "presentation" };
+  const _hoisted_14$4 = ["id", "aria-selected", "aria-controls"];
+  const _hoisted_15$3 = {
     key: 0,
     role: "presentation"
   };
-  const _hoisted_14$5 = ["aria-selected"];
-  const _hoisted_15$2 = ["tabindex"];
-  const _hoisted_16$2 = {
+  const _hoisted_16$2 = ["id", "aria-selected", "aria-controls"];
+  const _hoisted_17$2 = ["id", "aria-labelledby", "tabindex"];
+  const _hoisted_18$2 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
   };
-  const _hoisted_17$2 = {
+  const _hoisted_19$1 = {
     key: 2,
     class: "ec-fiche-info__error"
   };
-  const _hoisted_18$2 = { class: "ec-fiche-info__infos-toolbar" };
-  const _hoisted_19$1 = ["disabled"];
-  const _hoisted_20$1 = ["tabindex"];
-  const _hoisted_21$1 = {
+  const _hoisted_20$1 = { class: "ec-fiche-info__infos-toolbar" };
+  const _hoisted_21$1 = ["disabled"];
+  const _hoisted_22$1 = ["id", "aria-labelledby", "tabindex"];
+  const _hoisted_23$1 = {
     key: 0,
     class: "ec-fiche-info__load-wrap"
   };
-  const _hoisted_22$1 = {
-    key: 2,
-    class: "ec-fiche-info__error"
-  };
-  const _hoisted_23$1 = { class: "ec-fiche-info__parcel-footnotes" };
   const _hoisted_24$1 = {
+    key: 2,
+    class: "ec-fiche-info__error"
+  };
+  const _hoisted_25$1 = { class: "ec-fiche-info__parcel-footnotes" };
+  const _hoisted_26$1 = {
     key: 3,
     class: "ec-fiche-info__inner ec-fiche-info__inner--territory"
   };
-  const _hoisted_25$1 = { class: "ec-fiche-info__topbar" };
-  const _hoisted_26$1 = { class: "ec-fiche-info__mode-tags" };
-  const _hoisted_27 = { class: "ec-fiche-info__territory-head" };
-  const _hoisted_28 = { class: "ec-fiche-info__title" };
-  const _hoisted_29 = {
+  const _hoisted_27 = {
+    key: 1,
+    class: "ec-fiche-info__mode-switch-text"
+  };
+  const _hoisted_28 = { class: "ec-fiche-info__topbar" };
+  const _hoisted_29 = { class: "ec-fiche-info__mode-tags" };
+  const _hoisted_30 = { class: "ec-fiche-info__territory-head" };
+  const _hoisted_31 = { class: "ec-fiche-info__title" };
+  const _hoisted_32 = {
     key: 1,
     class: "fr-tabs ec-fiche-info__tabs"
   };
-  const _hoisted_30 = {
+  const _hoisted_33 = {
     class: "fr-tabs__list",
     role: "tablist",
     "aria-label": "Documents et procédures"
   };
-  const _hoisted_31 = ["id", "aria-selected", "aria-controls", "onClick"];
-  const _hoisted_32 = {
+  const _hoisted_34 = ["id", "aria-selected", "aria-controls", "onClick"];
+  const _hoisted_35 = {
     key: 4,
     class: "ec-fiche-info__inner"
   };
-  const _hoisted_33 = { class: "ec-fiche-info__title" };
+  const _hoisted_36 = { class: "ec-fiche-info__title" };
   const MODE_SLIDE_NONE = "ec-slide-none";
-  const _sfc_main$c = /* @__PURE__ */ defineComponent({
+  const _sfc_main$d = /* @__PURE__ */ defineComponent({
     __name: "FicheInfoPanel",
     props: {
       selection: {}
@@ -120269,17 +120599,24 @@ Expected function or array of functions, received type ${typeof value2}.`
         if (isFicheUnavailableSelection(props.selection)) return null;
         return mapMode.mode.value;
       });
-      const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL);
+      const isCoordinatesMode = computed(() => effectiveMode.value === MAP_MODE_COORDINATES);
+      const showParcelLayout = computed(
+        () => effectiveMode.value === MAP_MODE_PARCEL || isCoordinatesMode.value
+      );
+      const parcelLayoutKind = computed(() => isCoordinatesMode.value ? "coordinates" : "parcel");
+      const MODE_ORDER = [MAP_MODE_COORDINATES, MAP_MODE_PARCEL, MAP_MODE_TERRITORY];
       const modeSlideName = /* @__PURE__ */ ref(MODE_SLIDE_NONE);
       watch(
         () => mapMode.mode.value,
         (next, previous) => {
           if (previous === void 0 || next === previous) return;
-          modeSlideName.value = next === MAP_MODE_TERRITORY ? "ec-slide-next" : "ec-slide-prev";
+          modeSlideName.value = MODE_ORDER.indexOf(next) > MODE_ORDER.indexOf(previous) ? "ec-slide-next" : "ec-slide-prev";
         }
       );
       function onModeSlideEnd(el2) {
-        if (el2.matches(".ec-fiche-info__inner--parcel, .ec-fiche-info__inner--territory")) {
+        if (el2.matches(
+          ".ec-fiche-info__inner--parcel, .ec-fiche-info__inner--coordinates, .ec-fiche-info__inner--territory"
+        )) {
           modeSlideName.value = MODE_SLIDE_NONE;
         }
         syncDsfrTabsWithVue();
@@ -120415,19 +120752,31 @@ Expected function or array of functions, received type ${typeof value2}.`
       function selectDocTab(id2) {
         activeDocTabId.value = id2;
       }
+      async function switchModeFromFiche(mode2) {
+        if (mapMode.mode.value === mode2) return;
+        mapMode.setMode(mode2);
+        refreshFicheForMapModeChange(mode2, legendZoom.value);
+        const map2 = mapRef.value;
+        if (map2) await focusModeEmpriseOnMap(map2, mode2, { skipFicheRefresh: true });
+      }
+      const canSwitchToParcel = computed(() => mapMode.modes.includes(MAP_MODE_PARCEL));
+      const canSwitchToTerritory = computed(() => mapMode.modes.includes(MAP_MODE_TERRITORY));
       function activateParcelMode() {
-        if (mapMode.mode.value === MAP_MODE_PARCEL) return;
-        mapMode.setMode(MAP_MODE_PARCEL);
-        refreshFicheForMapModeChange(MAP_MODE_PARCEL, legendZoom.value);
+        void switchModeFromFiche(MAP_MODE_PARCEL);
       }
       function activateTerritoryMode() {
-        if (mapMode.mode.value === MAP_MODE_TERRITORY) return;
-        mapMode.setMode(MAP_MODE_TERRITORY);
-        refreshFicheForMapModeChange(MAP_MODE_TERRITORY, legendZoom.value);
+        void switchModeFromFiche(MAP_MODE_TERRITORY);
       }
       async function recenterOnModeEmprise() {
         const map2 = mapRef.value;
-        if (map2) await focusModeEmpriseOnMap(map2, mapMode.mode.value, { skipFicheRefresh: true });
+        if (!map2) return;
+        if (mapMode.mode.value === MAP_MODE_COORDINATES) {
+          const marker = readMapPermalinkMarker(getMapPermalinkParams());
+          if (marker)
+            map2.getView().animate({ center: fromLonLat([marker.lon, marker.lat]), duration: 300 });
+          return;
+        }
+        await focusModeEmpriseOnMap(map2, mapMode.mode.value, { skipFicheRefresh: true });
       }
       async function loadParcelDetail() {
         if (!props.selection || parcelDetailReady.value) return;
@@ -120503,12 +120852,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       watch(showParcelDocumentsTab, (visible) => {
         if (!visible && activeParcelTab.value === "documents") activeParcelTab.value = "infos";
       });
-      const emptyBodyHtml = computed(
-        () => {
-          var _a2;
-          return ((_a2 = props.selection) == null ? void 0 : _a2.bodyHtml) ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? "";
-        }
-      );
+      const emptyBodyHtml = computed(() => {
+        var _a2;
+        return ((_a2 = props.selection) == null ? void 0 : _a2.bodyHtml) ?? emptyFicheBodyHtml(mapMode.modes);
+      });
       const parcelPanelFootnotesHtml = computed(() => {
         void gpuClientConfigStatus.value;
         return buildParcelFichePanelFootnotesHtml();
@@ -120521,7 +120868,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           class: normalizeClass(["ec-fiche-info", { "ec-fiche-info--territory": showTerritoryLayout.value }]),
           onClick: onFicheContentClick
         }, [
-          unref(ficheSupplementError) && !configLoading.value && !dataLoading.value && !isEmpty2.value ? (openBlock(), createElementBlock("p", _hoisted_1$c, [
+          unref(ficheSupplementError) && !configLoading.value && !dataLoading.value && !isEmpty2.value ? (openBlock(), createElementBlock("p", _hoisted_1$d, [
             createTextVNode(toDisplayString(unref(ficheSupplementError)) + " ", 1),
             createBaseVNode("button", {
               type: "button",
@@ -120546,9 +120893,9 @@ Expected function or array of functions, received type ${typeof value2}.`
               onAfterEnter: onModeSlideEnd
             }, {
               default: withCtx(() => {
-                var _a3, _b, _c2, _d, _e2, _f, _g, _h;
+                var _a3, _b, _c2, _d, _e2, _f, _g, _h, _i2, _j, _k, _l2;
                 return [
-                  configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+                  configLoading.value || dataLoading.value ? (openBlock(), createBlock(_sfc_main$m, {
                     key: 0,
                     class: "ec-fiche-info__body",
                     html: unref(FICHE_LOADING_SPINNER_HTML),
@@ -120556,34 +120903,64 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "link-target-blank": ""
                   }, null, 8, ["html"])) : isEmpty2.value ? (openBlock(), createElementBlock("div", _hoisted_3$9, [
                     createBaseVNode("h2", _hoisted_4$9, toDisplayString(unref(DEFAULT_FICHE_EMPTY).title), 1),
-                    createVNode(_sfc_main$l, {
+                    createVNode(_sfc_main$m, {
                       class: "ec-fiche-info__body",
                       html: emptyBodyHtml.value,
                       "link-target-blank": ""
                     }, null, 8, ["html"])
-                  ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", _hoisted_5$8, [
+                  ])) : showParcelLayout.value ? (openBlock(), createElementBlock("div", {
+                    key: parcelLayoutKind.value,
+                    class: normalizeClass(["ec-fiche-info__inner", `ec-fiche-info__inner--${parcelLayoutKind.value}`])
+                  }, [
+                    isCoordinatesMode.value && !((_a3 = __props.selection) == null ? void 0 : _a3.parcelMissingAtPoint) && ((_b = __props.selection) == null ? void 0 : _b.parcelSwitchLabel) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                      canSwitchToParcel.value ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
+                        onClick: activateParcelMode
+                      }, [
+                        _cache[6] || (_cache[6] = createBaseVNode("span", {
+                          class: "ri-arrow-right-line",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        createTextVNode(" Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
+                      ])) : (openBlock(), createElementBlock("p", _hoisted_5$9, "Parcelle " + toDisplayString(parcelSwitchLabel.value), 1))
+                    ], 64)) : createCommentVNode("", true),
                     createBaseVNode("header", _hoisted_6$7, [
                       createBaseVNode("div", _hoisted_7$6, [
-                        createBaseVNode("a", {
+                        isCoordinatesMode.value ? (openBlock(), createElementBlock("a", {
+                          key: 0,
+                          href: "#",
+                          class: "fr-tag fr-tag--blue-cumulus ec-fiche-info__mode-tag-link",
+                          title: "Recentrer sur le point",
+                          onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
+                        }, [..._cache[7] || (_cache[7] = [
+                          createBaseVNode("span", {
+                            class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-map-pin-2-line",
+                            "aria-hidden": "true"
+                          }, null, -1),
+                          createTextVNode(" Coordonnées ", -1)
+                        ])])) : (openBlock(), createElementBlock("a", {
+                          key: 1,
                           href: "#",
                           class: "fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link",
                           title: "Recentrer sur la parcelle",
                           onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
-                        }, [..._cache[6] || (_cache[6] = [
+                        }, [..._cache[8] || (_cache[8] = [
                           createBaseVNode("span", {
                             class: "ec-fiche-info__mode-tag-icon ec-icon-parcelle",
                             "aria-hidden": "true"
                           }, null, -1),
                           createTextVNode(" Parcelle ", -1)
-                        ])])
+                        ])]))
                       ]),
-                      ((_a3 = __props.selection) == null ? void 0 : _a3.cadastreReferences) ? (openBlock(), createElementBlock("button", {
+                      ((_c2 = __props.selection) == null ? void 0 : _c2.cadastreReferences) ? (openBlock(), createElementBlock("button", {
                         key: 0,
                         type: "button",
                         class: "ec-fiche-info__info-btn fr-btn fr-btn--tertiary fr-btn--icon-left",
                         title: "Références cadastrales",
                         onClick: _cache[1] || (_cache[1] = ($event) => cadastreModalOpen.value = true)
-                      }, [..._cache[7] || (_cache[7] = [
+                      }, [..._cache[9] || (_cache[9] = [
                         createBaseVNode("span", {
                           class: "ri-information-line",
                           "aria-hidden": "true"
@@ -120591,67 +120968,70 @@ Expected function or array of functions, received type ${typeof value2}.`
                         createBaseVNode("span", { class: "visually-hidden" }, "Références cadastrales", -1)
                       ])])) : createCommentVNode("", true)
                     ]),
-                    createBaseVNode("h2", _hoisted_8$5, toDisplayString(parcelLabel.value), 1),
-                    ((_b = __props.selection) == null ? void 0 : _b.territoryTitle) ? (openBlock(), createElementBlock("button", {
-                      key: 0,
-                      type: "button",
-                      class: "ec-fiche-info__territory-cta fr-btn fr-btn--primary",
-                      onClick: activateTerritoryMode
-                    }, [
-                      createTextVNode(toDisplayString(territoryTitle.value) + " ", 1),
-                      _cache[8] || (_cache[8] = createBaseVNode("span", {
-                        class: "ri-arrow-right-line",
-                        "aria-hidden": "true"
-                      }, null, -1))
-                    ])) : createCommentVNode("", true),
-                    createBaseVNode("div", _hoisted_9$5, [
-                      createBaseVNode("ul", _hoisted_10$5, [
-                        createBaseVNode("li", _hoisted_11$5, [
+                    createBaseVNode("h2", _hoisted_8$5, toDisplayString(isCoordinatesMode.value ? "Coordonnées" : parcelLabel.value), 1),
+                    isCoordinatesMode.value && ((_d = __props.selection) == null ? void 0 : _d.coordinatesLabel) ? (openBlock(), createElementBlock("p", _hoisted_9$5, toDisplayString(__props.selection.coordinatesLabel), 1)) : createCommentVNode("", true),
+                    ((_e2 = __props.selection) == null ? void 0 : _e2.territoryTitle) ? (openBlock(), createElementBlock(Fragment, { key: 2 }, [
+                      canSwitchToTerritory.value ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "ec-fiche-info__territory-cta fr-btn fr-btn--primary",
+                        onClick: activateTerritoryMode
+                      }, [
+                        createTextVNode(toDisplayString(territoryTitle.value) + " ", 1),
+                        _cache[10] || (_cache[10] = createBaseVNode("span", {
+                          class: "ri-arrow-right-line",
+                          "aria-hidden": "true"
+                        }, null, -1))
+                      ])) : (openBlock(), createElementBlock("p", _hoisted_10$5, toDisplayString(territoryTitle.value), 1))
+                    ], 64)) : createCommentVNode("", true),
+                    createBaseVNode("div", _hoisted_11$5, [
+                      createBaseVNode("ul", _hoisted_12$5, [
+                        createBaseVNode("li", _hoisted_13$5, [
                           createBaseVNode("button", {
-                            id: "ec-fiche-parcel-tab-infos",
+                            id: `ec-fiche-${parcelLayoutKind.value}-tab-infos`,
                             type: "button",
                             role: "tab",
                             class: "fr-tabs__tab",
                             "aria-selected": activeParcelTab.value === "infos",
-                            "aria-controls": "ec-fiche-parcel-panel-infos",
+                            "aria-controls": `ec-fiche-${parcelLayoutKind.value}-panel-infos`,
                             onClick: _cache[2] || (_cache[2] = ($event) => activeParcelTab.value = "infos")
-                          }, " Infos ", 8, _hoisted_12$5)
+                          }, " Infos ", 8, _hoisted_14$4)
                         ]),
-                        showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_13$5, [
+                        showParcelDocumentsTab.value ? (openBlock(), createElementBlock("li", _hoisted_15$3, [
                           createBaseVNode("button", {
-                            id: "ec-fiche-parcel-tab-documents",
+                            id: `ec-fiche-${parcelLayoutKind.value}-tab-documents`,
                             type: "button",
                             role: "tab",
                             class: "fr-tabs__tab",
                             "aria-selected": activeParcelTab.value === "documents",
-                            "aria-controls": "ec-fiche-parcel-panel-documents",
+                            "aria-controls": `ec-fiche-${parcelLayoutKind.value}-panel-documents`,
                             onClick: _cache[3] || (_cache[3] = ($event) => activeParcelTab.value = "documents")
-                          }, " Documents ", 8, _hoisted_14$5)
+                          }, " Documents ", 8, _hoisted_16$2)
                         ])) : createCommentVNode("", true)
                       ]),
                       createBaseVNode("div", {
-                        id: "ec-fiche-parcel-panel-infos",
+                        id: `ec-fiche-${parcelLayoutKind.value}-panel-infos`,
                         class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "infos" }]),
                         role: "tabpanel",
-                        "aria-labelledby": "ec-fiche-parcel-tab-infos",
+                        "aria-labelledby": `ec-fiche-${parcelLayoutKind.value}-tab-infos`,
                         tabindex: activeParcelTab.value === "infos" ? 0 : -1
                       }, [
-                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_16$2, [
-                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "infos" ? (openBlock(), createElementBlock("div", _hoisted_18$2, [
+                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$m, {
                             key: 0,
                             class: "ec-fiche-info__body",
                             html: unref(FICHE_LOADING_SPINNER_HTML),
                             "link-target-blank": ""
-                          }, null, 8, ["html"])) : ((_c2 = __props.selection) == null ? void 0 : _c2.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$l, {
+                          }, null, 8, ["html"])) : ((_f = __props.selection) == null ? void 0 : _f.parcelInfosHtml) ? (openBlock(), createBlock(_sfc_main$m, {
                             key: 1,
                             class: "ec-fiche-info__body",
                             html: __props.selection.parcelInfosHtml,
                             "link-target-blank": ""
                           }, null, 8, ["html"])) : createCommentVNode("", true),
-                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_17$2, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_19$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
                         ])) : parcelDetailReady.value ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                          createBaseVNode("div", _hoisted_18$2, [
-                            _cache[10] || (_cache[10] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
+                          createBaseVNode("div", _hoisted_20$1, [
+                            _cache[12] || (_cache[12] = createBaseVNode("h3", { class: "ec-fiche-info__section-title" }, "Règles d’urbanisme", -1)),
                             unref(printModal) ? (openBlock(), createElementBlock("button", {
                               key: 0,
                               type: "button",
@@ -120659,81 +121039,89 @@ Expected function or array of functions, received type ${typeof value2}.`
                               disabled: !parcelDetailCached.value,
                               title: "Imprimer la fiche parcelle",
                               onClick: printParcelFiche
-                            }, [..._cache[9] || (_cache[9] = [
+                            }, [..._cache[11] || (_cache[11] = [
                               createBaseVNode("span", {
                                 class: "ri-printer-line",
                                 "aria-hidden": "true"
                               }, null, -1),
                               createTextVNode(" Imprimer ", -1)
-                            ])], 8, _hoisted_19$1)) : createCommentVNode("", true)
+                            ])], 8, _hoisted_21$1)) : createCommentVNode("", true)
                           ]),
-                          createVNode(_sfc_main$l, {
+                          createVNode(_sfc_main$m, {
                             class: "ec-fiche-info__body",
                             html: parcelInfosDisplayHtml.value,
                             "link-target-blank": ""
                           }, null, 8, ["html"])
                         ], 64)) : createCommentVNode("", true)
-                      ], 10, _hoisted_15$2),
+                      ], 10, _hoisted_17$2),
                       createBaseVNode("div", {
-                        id: "ec-fiche-parcel-panel-documents",
+                        id: `ec-fiche-${parcelLayoutKind.value}-panel-documents`,
                         class: normalizeClass(["fr-tabs__panel ec-fiche-info__parcel-panel", { "fr-tabs__panel--selected": activeParcelTab.value === "documents" }]),
                         role: "tabpanel",
-                        "aria-labelledby": "ec-fiche-parcel-tab-documents",
+                        "aria-labelledby": `ec-fiche-${parcelLayoutKind.value}-tab-documents`,
                         tabindex: activeParcelTab.value === "documents" ? 0 : -1
                       }, [
-                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_21$1, [
-                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$l, {
+                        (parcelTabLoading.value || !parcelDetailReady.value) && activeParcelTab.value === "documents" ? (openBlock(), createElementBlock("div", _hoisted_23$1, [
+                          parcelTabLoading.value ? (openBlock(), createBlock(_sfc_main$m, {
                             key: 0,
                             class: "ec-fiche-info__body",
                             html: unref(FICHE_LOADING_SPINNER_HTML),
                             "link-target-blank": ""
-                          }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$l, {
+                          }, null, 8, ["html"])) : parcelDocumentsDisplayHtml.value ? (openBlock(), createBlock(_sfc_main$m, {
                             key: 1,
                             class: "ec-fiche-info__body",
                             html: parcelDocumentsDisplayHtml.value,
                             "link-target-blank": ""
                           }, null, 8, ["html"])) : createCommentVNode("", true),
-                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_22$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
-                        ])) : (openBlock(), createBlock(_sfc_main$l, {
+                          parcelTabError.value ? (openBlock(), createElementBlock("p", _hoisted_24$1, toDisplayString(parcelTabError.value), 1)) : createCommentVNode("", true)
+                        ])) : (openBlock(), createBlock(_sfc_main$m, {
                           key: 1,
                           class: "ec-fiche-info__body ec-fiche-info__body--parcel-documents",
                           html: parcelDocumentsDisplayHtml.value || "<p>Aucun document.</p>",
                           "link-target-blank": ""
                         }, null, 8, ["html"]))
-                      ], 10, _hoisted_20$1)
+                      ], 10, _hoisted_22$1)
                     ]),
-                    createBaseVNode("div", _hoisted_23$1, [
-                      createVNode(_sfc_main$l, {
+                    createBaseVNode("div", _hoisted_25$1, [
+                      createVNode(_sfc_main$m, {
                         class: "ec-fiche-info__body",
                         html: parcelPanelFootnotesHtml.value,
                         "link-target-blank": ""
                       }, null, 8, ["html"])
                     ])
-                  ])) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_24$1, [
-                    ((_d = __props.selection) == null ? void 0 : _d.parcelSwitchLabel) || ((_e2 = __props.selection) == null ? void 0 : _e2.parcelLabel) ? (openBlock(), createElementBlock("button", {
-                      key: 0,
-                      type: "button",
-                      class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
-                      onClick: activateParcelMode
-                    }, [
-                      _cache[11] || (_cache[11] = createBaseVNode("span", {
-                        class: "ri-arrow-left-line",
-                        "aria-hidden": "true"
-                      }, null, -1)),
-                      ((_f = __props.selection) == null ? void 0 : _f.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
-                        createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
-                      ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
-                        createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
-                      ], 64))
-                    ])) : createCommentVNode("", true),
-                    createBaseVNode("header", _hoisted_25$1, [
-                      createBaseVNode("div", _hoisted_26$1, [
+                  ], 2)) : showTerritoryLayout.value ? (openBlock(), createElementBlock("div", _hoisted_26$1, [
+                    ((_g = __props.selection) == null ? void 0 : _g.parcelSwitchLabel) || ((_h = __props.selection) == null ? void 0 : _h.parcelLabel) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                      canSwitchToParcel.value ? (openBlock(), createElementBlock("button", {
+                        key: 0,
+                        type: "button",
+                        class: "ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left",
+                        onClick: activateParcelMode
+                      }, [
+                        _cache[13] || (_cache[13] = createBaseVNode("span", {
+                          class: "ri-arrow-left-line",
+                          "aria-hidden": "true"
+                        }, null, -1)),
+                        ((_i2 = __props.selection) == null ? void 0 : _i2.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                          createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
+                        ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                          createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
+                        ], 64))
+                      ])) : (openBlock(), createElementBlock("p", _hoisted_27, [
+                        ((_j = __props.selection) == null ? void 0 : _j.parcelMissingAtPoint) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                          createTextVNode(toDisplayString(parcelSwitchLabel.value), 1)
+                        ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                          createTextVNode("Parcelle " + toDisplayString(parcelSwitchLabel.value), 1)
+                        ], 64))
+                      ]))
+                    ], 64)) : createCommentVNode("", true),
+                    createBaseVNode("header", _hoisted_28, [
+                      createBaseVNode("div", _hoisted_29, [
                         createBaseVNode("a", {
                           href: "#",
                           class: "fr-tag fr-tag--green-archipel ec-fiche-info__mode-tag-link",
                           title: "Recentrer sur le territoire",
                           onClick: withModifiers(recenterOnModeEmprise, ["prevent"])
-                        }, [..._cache[12] || (_cache[12] = [
+                        }, [..._cache[14] || (_cache[14] = [
                           createBaseVNode("span", {
                             class: "ec-fiche-info__mode-tag-icon fr-icon fr-icon-france-fill",
                             "aria-hidden": "true"
@@ -120742,15 +121130,15 @@ Expected function or array of functions, received type ${typeof value2}.`
                         ])])
                       ])
                     ]),
-                    createBaseVNode("div", _hoisted_27, [
-                      createBaseVNode("h2", _hoisted_28, toDisplayString(territoryTitle.value), 1),
+                    createBaseVNode("div", _hoisted_30, [
+                      createBaseVNode("h2", _hoisted_31, toDisplayString(territoryTitle.value), 1),
                       unref(printModal) ? (openBlock(), createElementBlock("button", {
                         key: 0,
                         type: "button",
                         class: "fr-btn fr-btn--secondary fr-btn--sm",
                         title: "Imprimer la fiche territoire",
                         onClick: printTerritoryFiche
-                      }, [..._cache[13] || (_cache[13] = [
+                      }, [..._cache[15] || (_cache[15] = [
                         createBaseVNode("span", {
                           class: "ri-printer-line",
                           "aria-hidden": "true"
@@ -120758,8 +121146,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                         createTextVNode(" Imprimer ", -1)
                       ])])) : createCommentVNode("", true)
                     ]),
-                    documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_29, [
-                      createBaseVNode("ul", _hoisted_30, [
+                    documentTabs.value.length ? (openBlock(), createElementBlock("div", _hoisted_32, [
+                      createBaseVNode("ul", _hoisted_33, [
                         (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                           var _a4;
                           return openBlock(), createElementBlock("li", {
@@ -120774,13 +121162,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                               "aria-selected": ((_a4 = activeDocTab.value) == null ? void 0 : _a4.id) === tab.id,
                               "aria-controls": `ec-fiche-doc-panel-${tab.id}`,
                               onClick: ($event) => selectDocTab(tab.id)
-                            }, toDisplayString(tab.label), 9, _hoisted_31)
+                            }, toDisplayString(tab.label), 9, _hoisted_34)
                           ]);
                         }), 128))
                       ]),
                       (openBlock(true), createElementBlock(Fragment, null, renderList(documentTabs.value, (tab) => {
                         var _a4, _b2;
-                        return openBlock(), createBlock(_sfc_main$l, {
+                        return openBlock(), createBlock(_sfc_main$m, {
                           id: `ec-fiche-doc-panel-${tab.id}`,
                           key: tab.id,
                           class: normalizeClass(["fr-tabs__panel ec-fiche-info__body ec-fiche-info__doc-panel", { "fr-tabs__panel--selected": ((_a4 = activeDocTab.value) == null ? void 0 : _a4.id) === tab.id }]),
@@ -120791,17 +121179,17 @@ Expected function or array of functions, received type ${typeof value2}.`
                           "link-target-blank": ""
                         }, null, 8, ["id", "class", "aria-labelledby", "tabindex", "html"]);
                       }), 128))
-                    ])) : (openBlock(), createBlock(_sfc_main$l, {
+                    ])) : (openBlock(), createBlock(_sfc_main$m, {
                       key: 2,
                       class: "ec-fiche-info__body",
                       html: emptyBodyHtml.value,
                       "link-target-blank": ""
                     }, null, 8, ["html"]))
-                  ])) : (openBlock(), createElementBlock("div", _hoisted_32, [
-                    createBaseVNode("h2", _hoisted_33, toDisplayString((_g = __props.selection) == null ? void 0 : _g.title), 1),
-                    createVNode(_sfc_main$l, {
+                  ])) : (openBlock(), createElementBlock("div", _hoisted_35, [
+                    createBaseVNode("h2", _hoisted_36, toDisplayString((_k = __props.selection) == null ? void 0 : _k.title), 1),
+                    createVNode(_sfc_main$m, {
                       class: "ec-fiche-info__body",
-                      html: ((_h = __props.selection) == null ? void 0 : _h.bodyHtml) ?? "",
+                      html: ((_l2 = __props.selection) == null ? void 0 : _l2.bodyHtml) ?? "",
                       "link-target-blank": ""
                     }, null, 8, ["html"])
                   ]))
@@ -120811,7 +121199,7 @@ Expected function or array of functions, received type ${typeof value2}.`
             }, 8, ["name"])
           ]),
           (openBlock(), createBlock(Teleport, { to: "body" }, [
-            createVNode(_sfc_main$d, {
+            createVNode(_sfc_main$e, {
               open: cadastreModalOpen.value,
               references: ((_a2 = __props.selection) == null ? void 0 : _a2.cadastreReferences) ?? null,
               onClose: _cache[4] || (_cache[4] = ($event) => cadastreModalOpen.value = false)
@@ -120846,7 +121234,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   function catalogDomIdFromNodeId(nodeId) {
     return nodeId.replace(/[^a-zA-Z0-9_-]/g, "_");
   }
-  const _hoisted_1$b = ["id"];
+  const _hoisted_1$c = ["id"];
   const _hoisted_2$8 = ["aria-expanded", "aria-label", "onClick"];
   const _hoisted_3$8 = {
     key: 1,
@@ -120854,9 +121242,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-hidden": "true"
   };
   const _hoisted_4$8 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-tree__check" };
-  const _hoisted_5$7 = ["id", "checked", "onChange"];
+  const _hoisted_5$8 = ["id", "checked", "onChange"];
   const _hoisted_6$6 = ["for"];
-  const _sfc_main$b = /* @__PURE__ */ defineComponent({
+  const _sfc_main$c = /* @__PURE__ */ defineComponent({
     __name: "CatalogLayerTree",
     props: {
       nodes: {},
@@ -120970,13 +121358,13 @@ Expected function or array of functions, received type ${typeof value2}.`
                     type: "checkbox",
                     checked: Boolean(__props.checkedById[node.id]),
                     onChange: ($event) => onCheck(node, $event.target.checked)
-                  }, null, 40, _hoisted_5$7),
+                  }, null, 40, _hoisted_5$8),
                   createBaseVNode("label", {
                     class: "fr-label",
                     for: `ec-cat-${node.id}`
                   }, toDisplayString(node.title), 9, _hoisted_6$6)
                 ])
-              ], 14, _hoisted_1$b),
+              ], 14, _hoisted_1$c),
               ((_b = node.children) == null ? void 0 : _b.length) && !isCollapsed(node) ? (openBlock(), createBlock(_component_CatalogLayerTree, {
                 key: 0,
                 nodes: node.children,
@@ -120996,8 +121384,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["__scopeId", "data-v-2aad9701"]]);
-  const _hoisted_1$a = {
+  const CatalogLayerTree = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["__scopeId", "data-v-2aad9701"]]);
+  const _hoisted_1$b = {
     class: "ec-catalog-search",
     role: "search"
   };
@@ -121007,14 +121395,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-catalog-search__results"
   };
   const _hoisted_4$7 = { class: "fr-checkbox-group fr-checkbox-group--sm ec-catalog-search__check" };
-  const _hoisted_5$6 = ["id", "checked", "onChange"];
+  const _hoisted_5$7 = ["id", "checked", "onChange"];
   const _hoisted_6$5 = ["for", "onClick"];
   const _hoisted_7$5 = {
     key: 1,
     class: "ec-catalog-search__empty",
     role: "status"
   };
-  const _sfc_main$a = /* @__PURE__ */ defineComponent({
+  const _sfc_main$b = /* @__PURE__ */ defineComponent({
     __name: "CatalogLayerSearch",
     props: {
       roots: {},
@@ -121037,7 +121425,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         return isCatalogNodeInZoomRange(node, props.mapZoom);
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("div", _hoisted_1$a, [
+        return openBlock(), createElementBlock("div", _hoisted_1$b, [
           createBaseVNode("div", _hoisted_2$7, [
             _cache[1] || (_cache[1] = createBaseVNode("label", {
               class: "fr-label",
@@ -121076,7 +121464,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       type: "checkbox",
                       checked: Boolean(__props.checkedById[node.id]),
                       onChange: ($event) => onCheck(node, $event.target.checked)
-                    }, null, 40, _hoisted_5$6),
+                    }, null, 40, _hoisted_5$7),
                     createBaseVNode("label", {
                       class: "fr-label",
                       for: `ec-cat-search-${node.id}`,
@@ -121091,7 +121479,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["__scopeId", "data-v-1e8be340"]]);
+  const CatalogLayerSearch = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["__scopeId", "data-v-1e8be340"]]);
   const GPU_TILE_LAYER_SWITCHER_TILE_COORD = [9, 253, -177];
   const GPU_PREVIEW_TILE_RESOLUTION = 156543.03392804097 / 2 ** GPU_TILE_LAYER_SWITCHER_TILE_COORD[0];
   function wmtsPreviewTileRow(storedRow) {
@@ -121114,14 +121502,14 @@ Expected function or array of functions, received type ${typeof value2}.`
     const style = entry.style ?? "normal";
     return `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${encodeURIComponent(entry.layer)}&STYLE=${encodeURIComponent(style)}&FORMAT=image/${format}&TILEMATRIXSET=${geopfWmtsMatrixSet(entry.layer).id}&TILEMATRIX=${matrix2}&TILEROW=${row}&TILECOL=${col}`;
   }
-  const _hoisted_1$9 = {
+  const _hoisted_1$a = {
     class: "ec-base-radio-list",
     "aria-label": "Fonds de cartes"
   };
   const _hoisted_2$6 = { class: "ec-base-radio-list__list" };
   const _hoisted_3$6 = { class: "ec-base-radio-list__grid" };
   const _hoisted_4$6 = { class: "ec-base-radio-list__radio-slot" };
-  const _hoisted_5$5 = ["for"];
+  const _hoisted_5$6 = ["for"];
   const _hoisted_6$4 = ["id", "value", "checked", "onChange"];
   const _hoisted_7$4 = { class: "fr-sr-only" };
   const _hoisted_8$4 = { class: "ec-base-radio-list__thumb-slot" };
@@ -121136,12 +121524,12 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-base-radio-list__thumb ec-base-radio-list__thumb--blank"
   };
   const _hoisted_13$4 = { class: "ec-base-radio-list__title-slot" };
-  const _hoisted_14$4 = ["onClick"];
-  const _hoisted_15$1 = { class: "ec-base-radio-list__caret-slot" };
+  const _hoisted_14$3 = ["onClick"];
+  const _hoisted_15$2 = { class: "ec-base-radio-list__caret-slot" };
   const _hoisted_16$1 = ["aria-expanded", "aria-controls", "aria-label", "onClick"];
   const _hoisted_17$1 = ["id"];
   const _hoisted_18$1 = { class: "ec-base-radio-list__subtitle" };
-  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+  const _sfc_main$a = /* @__PURE__ */ defineComponent({
     __name: "BaseLayerRadioList",
     props: {
       presets: {},
@@ -121164,7 +121552,7 @@ Expected function or array of functions, received type ${typeof value2}.`
         emit2("update:modelValue", id2);
       }
       return (_ctx, _cache) => {
-        return openBlock(), createElementBlock("section", _hoisted_1$9, [
+        return openBlock(), createElementBlock("section", _hoisted_1$a, [
           createBaseVNode("ul", _hoisted_2$6, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(__props.presets, (preset) => {
               return openBlock(), createElementBlock("li", {
@@ -121191,7 +121579,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                         "aria-hidden": "true"
                       }, null, -1)),
                       createBaseVNode("span", _hoisted_7$4, toDisplayString(preset.label), 1)
-                    ], 8, _hoisted_5$5)
+                    ], 8, _hoisted_5$6)
                   ]),
                   createBaseVNode("div", _hoisted_8$4, [
                     createBaseVNode("button", {
@@ -121219,9 +121607,9 @@ Expected function or array of functions, received type ${typeof value2}.`
                       type: "button",
                       class: "ec-base-radio-list__title",
                       onClick: ($event) => select(preset.id)
-                    }, toDisplayString(preset.label), 9, _hoisted_14$4)
+                    }, toDisplayString(preset.label), 9, _hoisted_14$3)
                   ]),
-                  createBaseVNode("div", _hoisted_15$1, [
+                  createBaseVNode("div", _hoisted_15$2, [
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-base-radio-list__caret fr-btn fr-btn--tertiary-no-outline fr-btn--sm",
@@ -121245,7 +121633,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                     class: "ec-base-radio-list__details-slot"
                   }, [
                     createBaseVNode("p", _hoisted_18$1, toDisplayString(preset.subtitle), 1),
-                    createVNode(_sfc_main$l, {
+                    createVNode(_sfc_main$m, {
                       class: "ec-base-radio-list__desc",
                       html: preset.description
                     }, null, 8, ["html"])
@@ -121258,7 +121646,30 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-ba4d31e9"]]);
+  const BaseLayerRadioList = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["__scopeId", "data-v-ba4d31e9"]]);
+  const _hoisted_1$9 = {
+    class: "ec-loading-status",
+    role: "status",
+    "aria-live": "polite"
+  };
+  const _sfc_main$9 = /* @__PURE__ */ defineComponent({
+    __name: "LoadingStatus",
+    props: {
+      label: {}
+    },
+    setup(__props) {
+      return (_ctx, _cache) => {
+        return openBlock(), createElementBlock("div", _hoisted_1$9, [
+          _cache[0] || (_cache[0] = createBaseVNode("span", {
+            class: "ri-loader-4-line ec-loading-status__spinner",
+            "aria-hidden": "true"
+          }, null, -1)),
+          createBaseVNode("span", null, toDisplayString(__props.label), 1)
+        ]);
+      };
+    }
+  });
+  const LoadingStatus = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-95908845"]]);
   const _hoisted_1$8 = {
     class: "ec-layer-catalogue",
     "aria-labelledby": "ec-layer-catalogue-title"
@@ -121270,7 +121681,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const _hoisted_3$5 = { class: "fr-nav__list" };
   const _hoisted_4$5 = { class: "fr-nav__item" };
-  const _hoisted_5$4 = ["aria-selected", "aria-current", "tabindex"];
+  const _hoisted_5$5 = ["aria-selected", "aria-current", "tabindex"];
   const _hoisted_6$3 = { class: "fr-nav__item" };
   const _hoisted_7$3 = ["aria-selected", "aria-current", "tabindex"];
   const _hoisted_8$3 = { class: "ec-layer-catalogue__stage" };
@@ -121285,22 +121696,16 @@ Expected function or array of functions, received type ${typeof value2}.`
     class: "ec-layer-catalogue__selection"
   };
   const _hoisted_11$3 = {
-    key: 2,
-    class: "ec-layer-catalogue__waiting",
-    role: "status",
-    "aria-live": "polite"
-  };
-  const _hoisted_12$3 = {
     key: 3,
     class: "ec-layer-catalogue__hint"
   };
-  const _hoisted_13$3 = {
+  const _hoisted_12$3 = {
     id: "ec-catalog-panel-fonds",
     class: "ec-layer-catalogue__panel",
     role: "tabpanel",
     "aria-labelledby": "ec-catalog-tab-fonds"
   };
-  const _hoisted_14$3 = {
+  const _hoisted_13$3 = {
     key: 1,
     class: "ec-layer-catalogue__hint"
   };
@@ -121348,7 +121753,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("section", _hoisted_1$8, [
-          _cache[5] || (_cache[5] = createBaseVNode("h2", {
+          _cache[4] || (_cache[4] = createBaseVNode("h2", {
             id: "ec-layer-catalogue-title",
             class: "ec-layer-catalogue__title"
           }, [
@@ -121371,7 +121776,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "aria-controls": "ec-catalog-panel-donnees",
                   tabindex: catalogueTab.value === "donnees" ? 0 : -1,
                   onClick: _cache[0] || (_cache[0] = ($event) => catalogueTab.value = "donnees")
-                }, " Données ", 8, _hoisted_5$4)
+                }, " Données ", 8, _hoisted_5$5)
               ]),
               createBaseVNode("li", _hoisted_6$3, [
                 createBaseVNode("button", {
@@ -121419,13 +121824,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                       onToggle: onCatalogToggle,
                       onUnpinExpand
                     }, null, 8, ["nodes", "map-zoom", "catalog-roots", "checked-by-id", "pinned-expand-ids", "highlighted-node-ids", "focus-catalog-node-id"])
-                  ])) : __props.catalogLayersLoading ? (openBlock(), createElementBlock("div", _hoisted_11$3, [..._cache[4] || (_cache[4] = [
-                    createBaseVNode("span", {
-                      class: "ri-loader-4-line ec-layer-catalogue__spinner",
-                      "aria-hidden": "true"
-                    }, null, -1),
-                    createBaseVNode("span", null, "En attente de la récupération des couches…", -1)
-                  ])])) : (openBlock(), createElementBlock("p", _hoisted_12$3, "Aucune couche disponible."))
+                  ])) : __props.catalogLayersLoading ? (openBlock(), createBlock(LoadingStatus, {
+                    key: 2,
+                    label: "En attente de la récupération des couches…"
+                  })) : (openBlock(), createElementBlock("p", _hoisted_11$3, "Aucune couche disponible."))
                 ], 512), [
                   [vShow, catalogueTab.value === "donnees"]
                 ])
@@ -121437,13 +121839,13 @@ Expected function or array of functions, received type ${typeof value2}.`
               persisted: ""
             }, {
               default: withCtx(() => [
-                withDirectives(createBaseVNode("div", _hoisted_13$3, [
+                withDirectives(createBaseVNode("div", _hoisted_12$3, [
                   __props.basePresets.length ? (openBlock(), createBlock(BaseLayerRadioList, {
                     key: 0,
                     presets: __props.basePresets,
                     "model-value": __props.baseModelValue,
                     "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => emit2("update:baseModelValue", $event))
-                  }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_14$3, "Aucun fond de plan configuré."))
+                  }, null, 8, ["presets", "model-value"])) : (openBlock(), createElementBlock("p", _hoisted_13$3, "Aucun fond de plan configuré."))
                 ], 512), [
                   [vShow, catalogueTab.value === "fonds"]
                 ])
@@ -121455,13 +121857,13 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-f46b5b33"]]);
+  const LayerCataloguePanel = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["__scopeId", "data-v-b3fdabda"]]);
   const _hoisted_1$7 = {
     class: "ec-data-layers",
     "aria-labelledby": "ec-data-layers-title"
   };
   const _hoisted_2$4 = {
-    key: 0,
+    key: 1,
     class: "ec-data-layers__hint"
   };
   const _hoisted_3$4 = {
@@ -121470,7 +121872,7 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-hidden": "true"
   };
   const _hoisted_4$4 = ["onDragover"];
-  const _hoisted_5$3 = { class: "ec-data-layers__head" };
+  const _hoisted_5$4 = { class: "ec-data-layers__head" };
   const _hoisted_6$2 = { class: "ec-data-layers__name" };
   const _hoisted_7$2 = { class: "ec-data-layers__head-end" };
   const _hoisted_8$2 = ["onClick"];
@@ -121480,7 +121882,7 @@ Expected function or array of functions, received type ${typeof value2}.`
   const _hoisted_12$2 = ["onClick"];
   const _hoisted_13$2 = ["onDragstart"];
   const _hoisted_14$2 = { class: "fr-sr-only" };
-  const _hoisted_15 = { class: "ec-data-layers__toolbar" };
+  const _hoisted_15$1 = { class: "ec-data-layers__toolbar" };
   const _hoisted_16 = ["title", "aria-pressed", "onClick"];
   const _hoisted_17 = { class: "fr-sr-only" };
   const _hoisted_18 = ["onClick"];
@@ -121501,7 +121903,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     props: {
       layers: {},
       mapZoom: {},
-      catalogEntryInZoomRange: { type: Function }
+      catalogEntryInZoomRange: { type: Function },
+      catalogLayersLoading: { type: Boolean }
     },
     emits: ["visible", "opacity", "toggle-grayscale", "remove", "reorder", "enable-aggregate-detail", "regroup-aggregate"],
     setup(__props, { emit: __emit }) {
@@ -121597,8 +122000,11 @@ Expected function or array of functions, received type ${typeof value2}.`
             }),
             createTextVNode(" Couches de données ")
           ], -1)),
-          !__props.layers.length ? (openBlock(), createElementBlock("p", _hoisted_2$4, " Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données. ")) : (openBlock(), createElementBlock("ul", {
-            key: 1,
+          __props.catalogLayersLoading && !__props.layers.length ? (openBlock(), createBlock(LoadingStatus, {
+            key: 0,
+            label: "En attente de la récupération des couches…"
+          })) : !__props.layers.length ? (openBlock(), createElementBlock("p", _hoisted_2$4, " Aucune couche dans la pile. Cochez des entrées dans l’onglet Catalogue → Données. ")) : (openBlock(), createElementBlock("ul", {
+            key: 2,
             class: "ec-data-layers__list",
             onDragover: onListDragOver,
             onDrop: withModifiers(onDrop, ["prevent"])
@@ -121617,7 +122023,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                   onDragover: ($event) => onItemDragOver($event, index2),
                   onDrop: withModifiers(onDrop, ["prevent"])
                 }, [
-                  createBaseVNode("div", _hoisted_5$3, [
+                  createBaseVNode("div", _hoisted_5$4, [
                     createBaseVNode("p", _hoisted_6$2, toDisplayString(layer.title), 1),
                     createBaseVNode("div", _hoisted_7$2, [
                       layer.aggregateRegroup ? (openBlock(), createElementBlock("button", {
@@ -121674,7 +122080,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                       ], 40, _hoisted_13$2)
                     ])
                   ]),
-                  createBaseVNode("div", _hoisted_15, [
+                  createBaseVNode("div", _hoisted_15$1, [
                     createBaseVNode("button", {
                       type: "button",
                       class: "ec-data-layers__icon-btn",
@@ -121757,15 +122163,15 @@ Expected function or array of functions, received type ${typeof value2}.`
     "aria-labelledby": "ec-layer-legends-title"
   };
   const _hoisted_2$3 = {
-    key: 0,
+    key: 1,
     class: "ec-layer-legends__hint"
   };
   const _hoisted_3$3 = {
-    key: 1,
+    key: 2,
     class: "fr-accordions-group"
   };
   const _hoisted_4$3 = ["id"];
-  const _hoisted_5$2 = { class: "fr-accordion__title" };
+  const _hoisted_5$3 = { class: "fr-accordion__title" };
   const _hoisted_6$1 = ["aria-expanded", "aria-controls", "onClick"];
   const _hoisted_7$1 = ["id"];
   const _hoisted_8$1 = { class: "ec-layer-legends__collapse-inner" };
@@ -121795,7 +122201,8 @@ Expected function or array of functions, received type ${typeof value2}.`
     props: {
       layers: {},
       mapZoom: {},
-      catalogEntryInZoomRange: { type: Function }
+      catalogEntryInZoomRange: { type: Function },
+      catalogLayersLoading: { type: Boolean }
     },
     setup(__props) {
       const props = __props;
@@ -121882,7 +122289,10 @@ Expected function or array of functions, received type ${typeof value2}.`
             }),
             createTextVNode(" Légendes ")
           ], -1)),
-          !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$3, " Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici. ")) : (openBlock(), createElementBlock("div", _hoisted_3$3, [
+          __props.catalogLayersLoading && !displayLayers.value.length ? (openBlock(), createBlock(LoadingStatus, {
+            key: 0,
+            label: "En attente de la récupération des couches…"
+          })) : !displayLayers.value.length ? (openBlock(), createElementBlock("p", _hoisted_2$3, " Ajoutez et affichez des couches depuis le catalogue pour voir leurs légendes ici. ")) : (openBlock(), createElementBlock("div", _hoisted_3$3, [
             (openBlock(true), createElementBlock(Fragment, null, renderList(displayLayers.value, (layer) => {
               var _a2;
               return openBlock(), createElementBlock("section", {
@@ -121890,7 +122300,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 key: layer.id,
                 class: normalizeClass(["fr-accordion", { "ec-not-in-zoom-range": !layerInZoomRange(layer) }])
               }, [
-                createBaseVNode("h3", _hoisted_5$2, [
+                createBaseVNode("h3", _hoisted_5$3, [
                   createBaseVNode("button", {
                     type: "button",
                     class: "fr-accordion__btn",
@@ -121936,7 +122346,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-63ba377f"]]);
+  const LayerLegendsPanel = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-1aabcf83"]]);
   const TAB_PANELS_MOBILE_MEDIA = "(max-width: 48rem)";
   const TAB_PANELS_SHEET_SNAP_PERCENT = [0, 35, 70, 98];
   const TAB_PANELS_DEFAULT_OPEN_SNAP = 2;
@@ -122345,20 +122755,21 @@ Expected function or array of functions, received type ${typeof value2}.`
   };
   const _hoisted_3$2 = ["aria-orientation"];
   const _hoisted_4$2 = ["id", "aria-selected", "aria-controls", "aria-label", "onClick"];
-  const _hoisted_5$1 = {
+  const _hoisted_5$2 = {
     class: "ec-tab-panels__viewport-stack",
     role: "group",
-    "aria-label": "Zoom et plein écran"
+    "aria-label": "Boussole, zoom et plein écran"
   };
-  const _hoisted_6 = { class: "ec-tab-panels__viewport-stack-zoom" };
-  const _hoisted_7 = ["aria-label", "aria-pressed"];
-  const _hoisted_8 = { class: "ec-tab-panels__panel" };
-  const _hoisted_9 = { class: "ec-tab-panels__panel-body" };
-  const _hoisted_10 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_6 = ["aria-label"];
+  const _hoisted_7 = { class: "ec-tab-panels__viewport-stack-zoom" };
+  const _hoisted_8 = ["aria-label", "aria-pressed"];
+  const _hoisted_9 = { class: "ec-tab-panels__panel" };
+  const _hoisted_10 = { class: "ec-tab-panels__panel-body" };
   const _hoisted_11 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_12 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_13 = ["id", "hidden", "aria-labelledby"];
   const _hoisted_14 = ["id", "hidden", "aria-labelledby"];
+  const _hoisted_15 = ["id", "hidden", "aria-labelledby"];
   const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     __name: "TabPanelsControl",
     props: {
@@ -122407,6 +122818,10 @@ Expected function or array of functions, received type ${typeof value2}.`
       const isBottomLayout = computed(() => layoutMode.value === "bottom");
       const tabListOrientation = computed(() => isBottomLayout.value ? "horizontal" : "vertical");
       const { zoomIn, zoomOut, toggleFullscreen, isFullscreen } = useMapViewportControls();
+      const { rotation, canRestore, toggleNorth } = useMapRotation(mapRef);
+      const compassLabel = computed(
+        () => canRestore.value ? "Revenir à l’orientation précédente" : "Réorienter la carte vers le nord"
+      );
       const { startMobileBottomBarGeopfObserver } = useMobileBottomBarGeopf(
         layoutMode,
         mobileSketchSlotEl,
@@ -122472,6 +122887,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       function showSelection(next) {
         selection.value = storeFicheSelection(next);
+        if (isOpen.value) return;
         openTab(TAB_PANEL_IDS.fiche, TAB_PANELS_AUTO_OPEN_SNAP);
       }
       function updateSelection(next) {
@@ -122681,9 +123097,9 @@ Expected function or array of functions, received type ${typeof value2}.`
         return out;
       }
       function resolveDocumentForCatalogStartup() {
-        const injected = config.document;
-        if (injected && typeof injected === "object" && "type" in injected) {
-          return injected;
+        const injected2 = config.document;
+        if (injected2 && typeof injected2 === "object" && "type" in injected2) {
+          return injected2;
         }
         const demoDoc = getDemoConfig().document;
         if (demoDoc == null ? void 0 : demoDoc.type) return demoDoc;
@@ -122892,24 +123308,37 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }), 128))
               ], 8, _hoisted_3$2)
             ], 2),
-            withDirectives(createBaseVNode("div", _hoisted_5$1, [
-              createBaseVNode("div", _hoisted_6, [
+            withDirectives(createBaseVNode("div", _hoisted_5$2, [
+              createBaseVNode("button", {
+                type: "button",
+                class: "ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--compass",
+                "aria-label": compassLabel.value,
+                onClick: _cache[0] || (_cache[0] = //@ts-ignore
+                (...args) => unref(toggleNorth) && unref(toggleNorth)(...args))
+              }, [
+                createBaseVNode("span", {
+                  class: "ec-icon-compass-north ec-rotate-control__icon",
+                  style: normalizeStyle({ transform: `rotate(${unref(rotation)}rad)` }),
+                  "aria-hidden": "true"
+                }, null, 4)
+              ], 8, _hoisted_6),
+              createBaseVNode("div", _hoisted_7, [
                 createBaseVNode("button", {
                   type: "button",
                   class: "ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--zoom",
                   "aria-label": "Zoom avant",
-                  onClick: _cache[0] || (_cache[0] = //@ts-ignore
+                  onClick: _cache[1] || (_cache[1] = //@ts-ignore
                   (...args) => unref(zoomIn) && unref(zoomIn)(...args))
-                }, [..._cache[8] || (_cache[8] = [
+                }, [..._cache[9] || (_cache[9] = [
                   createBaseVNode("span", { "aria-hidden": "true" }, "+", -1)
                 ])]),
                 createBaseVNode("button", {
                   type: "button",
                   class: "ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--zoom",
                   "aria-label": "Zoom arrière",
-                  onClick: _cache[1] || (_cache[1] = //@ts-ignore
+                  onClick: _cache[2] || (_cache[2] = //@ts-ignore
                   (...args) => unref(zoomOut) && unref(zoomOut)(...args))
-                }, [..._cache[9] || (_cache[9] = [
+                }, [..._cache[10] || (_cache[10] = [
                   createBaseVNode("span", { "aria-hidden": "true" }, "−", -1)
                 ])])
               ]),
@@ -122918,9 +123347,9 @@ Expected function or array of functions, received type ${typeof value2}.`
                 class: normalizeClass(["ec-tab-panels__viewport-tool ec-tab-panels__viewport-tool--remix", unref(isFullscreen) ? "ri-fullscreen-exit-line" : "ri-fullscreen-line"]),
                 "aria-label": unref(isFullscreen) ? "Quitter le plein écran" : "Plein écran",
                 "aria-pressed": unref(isFullscreen),
-                onClick: _cache[2] || (_cache[2] = //@ts-ignore
+                onClick: _cache[3] || (_cache[3] = //@ts-ignore
                 (...args) => unref(toggleFullscreen) && unref(toggleFullscreen)(...args))
-              }, null, 10, _hoisted_7)
+              }, null, 10, _hoisted_8)
             ], 512), [
               [vShow, isBottomLayout.value]
             ])
@@ -122928,23 +123357,23 @@ Expected function or array of functions, received type ${typeof value2}.`
           createBaseVNode("div", {
             class: normalizeClass(["ec-tab-panels__surface", { "ec-tab-panels__surface--visible": isOpen.value }])
           }, [
-            createBaseVNode("div", _hoisted_8, [
+            createBaseVNode("div", _hoisted_9, [
               isBottomLayout.value ? (openBlock(), createElementBlock("div", {
                 key: 0,
                 class: "ec-tab-panels__sheet-grab ec-tab-panels__modal-slider",
                 role: "separator",
                 "aria-orientation": "horizontal",
                 "aria-label": "Slider modale — redimensionner le panneau",
-                onPointerdown: _cache[3] || (_cache[3] = //@ts-ignore
+                onPointerdown: _cache[4] || (_cache[4] = //@ts-ignore
                 (...args) => unref(onSheetGrabPointerDown) && unref(onSheetGrabPointerDown)(...args)),
-                onPointermove: _cache[4] || (_cache[4] = //@ts-ignore
+                onPointermove: _cache[5] || (_cache[5] = //@ts-ignore
                 (...args) => unref(onSheetGrabPointerMove) && unref(onSheetGrabPointerMove)(...args)),
-                onPointerup: _cache[5] || (_cache[5] = //@ts-ignore
+                onPointerup: _cache[6] || (_cache[6] = //@ts-ignore
                 (...args) => unref(onSheetGrabPointerUp) && unref(onSheetGrabPointerUp)(...args)),
-                onPointercancel: _cache[6] || (_cache[6] = //@ts-ignore
+                onPointercancel: _cache[7] || (_cache[7] = //@ts-ignore
                 (...args) => unref(onSheetGrabPointerUp) && unref(onSheetGrabPointerUp)(...args))
               }, null, 32)) : createCommentVNode("", true),
-              createBaseVNode("div", _hoisted_9, [
+              createBaseVNode("div", _hoisted_10, [
                 createBaseVNode("div", {
                   id: `ec-tab-panel-${unref(TAB_PANEL_IDS).fiche}`,
                   class: "ec-tab-panels__pane",
@@ -122952,8 +123381,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                   hidden: activeTab.value !== unref(TAB_PANEL_IDS).fiche,
                   "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).fiche}`
                 }, [
-                  createVNode(_sfc_main$c, { selection: selection.value }, null, 8, ["selection"])
-                ], 8, _hoisted_10),
+                  createVNode(_sfc_main$d, { selection: selection.value }, null, 8, ["selection"])
+                ], 8, _hoisted_11),
                 createBaseVNode("div", {
                   id: `ec-tab-panel-${unref(TAB_PANEL_IDS).catalogue}`,
                   class: "ec-tab-panels__pane",
@@ -122968,10 +123397,10 @@ Expected function or array of functions, received type ${typeof value2}.`
                     "base-presets": __props.basePresets,
                     "base-model-value": __props.baseModelValue,
                     "catalog-layers-loading": __props.catalogLayersLoading,
-                    "onUpdate:baseModelValue": _cache[7] || (_cache[7] = ($event) => emit2("update:baseModelValue", $event)),
+                    "onUpdate:baseModelValue": _cache[8] || (_cache[8] = ($event) => emit2("update:baseModelValue", $event)),
                     onCatalogToggle: unref(setCatalogChecked)
                   }, null, 8, ["layer-nodes", "in-stack-by-id", "map-zoom", "base-presets", "base-model-value", "catalog-layers-loading", "onCatalogToggle"])
-                ], 8, _hoisted_11),
+                ], 8, _hoisted_12),
                 createBaseVNode("div", {
                   id: `ec-tab-panel-${unref(TAB_PANEL_IDS).dataLayers}`,
                   class: "ec-tab-panels__pane",
@@ -122981,6 +123410,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }, [
                   createVNode(_sfc_main$7, {
                     layers: unref(layers),
+                    "catalog-layers-loading": __props.catalogLayersLoading,
                     "map-zoom": unref(mapZoom),
                     "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange),
                     onVisible: unref(setVisible),
@@ -122990,8 +123420,8 @@ Expected function or array of functions, received type ${typeof value2}.`
                     onReorder: unref(reorderStackByDisplayIndex),
                     onEnableAggregateDetail: unref(enableAggregateDetail),
                     onRegroupAggregate: unref(regroupAggregate)
-                  }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range", "onVisible", "onOpacity", "onToggleGrayscale", "onRemove", "onReorder", "onEnableAggregateDetail", "onRegroupAggregate"])
-                ], 8, _hoisted_12),
+                  }, null, 8, ["layers", "catalog-layers-loading", "map-zoom", "catalog-entry-in-zoom-range", "onVisible", "onOpacity", "onToggleGrayscale", "onRemove", "onReorder", "onEnableAggregateDetail", "onRegroupAggregate"])
+                ], 8, _hoisted_13),
                 createBaseVNode("div", {
                   id: `ec-tab-panel-${unref(TAB_PANEL_IDS).legends}`,
                   class: "ec-tab-panels__pane",
@@ -123001,10 +123431,11 @@ Expected function or array of functions, received type ${typeof value2}.`
                 }, [
                   createVNode(LayerLegendsPanel, {
                     layers: unref(legendLayers),
+                    "catalog-layers-loading": __props.catalogLayersLoading,
                     "map-zoom": unref(mapZoom),
                     "catalog-entry-in-zoom-range": unref(catalogEntryInZoomRange)
-                  }, null, 8, ["layers", "map-zoom", "catalog-entry-in-zoom-range"])
-                ], 8, _hoisted_13),
+                  }, null, 8, ["layers", "catalog-layers-loading", "map-zoom", "catalog-entry-in-zoom-range"])
+                ], 8, _hoisted_14),
                 __props.extraTab ? (openBlock(), createElementBlock("div", {
                   key: 0,
                   id: `ec-tab-panel-${unref(TAB_PANEL_IDS).extra}`,
@@ -123014,7 +123445,7 @@ Expected function or array of functions, received type ${typeof value2}.`
                   "aria-labelledby": `ec-tab-${unref(TAB_PANEL_IDS).extra}`
                 }, [
                   renderSlot(_ctx.$slots, "extra")
-                ], 8, _hoisted_14)) : createCommentVNode("", true)
+                ], 8, _hoisted_15)) : createCommentVNode("", true)
               ])
             ])
           ], 2)
@@ -123022,15 +123453,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const _hoisted_1$4 = {
-    class: "ec-map-mode-selector",
-    role: "radiogroup",
-    "aria-label": "Mode Parcelle ou Territoire",
-    "data-testid": "map-mode-selector"
-  };
+  const _hoisted_1$4 = ["aria-label"];
   const _hoisted_2$1 = { class: "ec-map-mode-selector__options" };
   const _hoisted_3$1 = ["value"];
   const _hoisted_4$1 = ["value"];
+  const _hoisted_5$1 = ["value"];
   const _sfc_main$4 = /* @__PURE__ */ defineComponent({
     __name: "MapModeSelector",
     props: {
@@ -123038,15 +123465,20 @@ Expected function or array of functions, received type ${typeof value2}.`
     },
     emits: ["update:modelValue"],
     setup(__props, { emit: __emit }) {
+      const MODE_LABELS = { 1: "Parcelle", 2: "Territoire", 3: "Coordonnées" };
       const props = __props;
       const emit2 = __emit;
-      const injected = tryUseMapMode();
+      const injected2 = tryUseMapMode();
+      const modes = computed(() => (injected2 == null ? void 0 : injected2.modes) ?? ALL_MAP_MODES);
+      const ariaLabel = computed(
+        () => `Mode ${modes.value.map((m) => MODE_LABELS[m]).join(", ").replace(/, ([^,]*)$/, " ou $1")}`
+      );
       const mode2 = computed({
         get() {
-          return props.modelValue ?? (injected == null ? void 0 : injected.mode.value) ?? MAP_MODE_TERRITORY;
+          return props.modelValue ?? (injected2 == null ? void 0 : injected2.mode.value) ?? MAP_MODE_TERRITORY;
         },
         set(next) {
-          if (injected) injected.setMode(next);
+          if (injected2) injected2.setMode(next);
           emit2("update:modelValue", next);
         }
       });
@@ -123075,51 +123507,78 @@ Expected function or array of functions, received type ${typeof value2}.`
         }
       );
       return (_ctx, _cache) => {
-        return openBlock(), createBlock(Teleport, {
+        return modes.value.length > 1 ? (openBlock(), createBlock(Teleport, {
+          key: 0,
           to: overlayStopTarget.value,
           disabled: !overlayStopTarget.value
         }, [
-          createBaseVNode("div", _hoisted_1$4, [
+          createBaseVNode("div", {
+            class: "ec-map-mode-selector",
+            role: "radiogroup",
+            "aria-label": ariaLabel.value,
+            "data-testid": "map-mode-selector"
+          }, [
             createBaseVNode("div", _hoisted_2$1, [
-              createBaseVNode("label", {
-                class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_PARCEL) }])
+              modes.value.includes(unref(MAP_MODE_COORDINATES)) ? (openBlock(), createElementBlock("label", {
+                key: 0,
+                class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_COORDINATES) }])
               }, [
                 withDirectives(createBaseVNode("input", {
                   "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => mode2.value = $event),
                   class: "ec-map-mode-selector__input",
                   type: "radio",
                   name: "ec-map-mode",
-                  value: unref(MAP_MODE_PARCEL)
+                  value: unref(MAP_MODE_COORDINATES)
                 }, null, 8, _hoisted_3$1), [
                   [vModelRadio, mode2.value]
                 ]),
-                _cache[2] || (_cache[2] = createBaseVNode("i", {
-                  class: "ec-map-mode-selector__icon ec-icon-parcelle",
+                _cache[3] || (_cache[3] = createBaseVNode("span", {
+                  class: "ec-map-mode-selector__icon fr-icon fr-icon-map-pin-2-line",
                   "aria-hidden": "true"
                 }, null, -1)),
-                _cache[3] || (_cache[3] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Parcelle", -1))
-              ], 2),
-              createBaseVNode("label", {
-                class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_TERRITORY) }])
+                _cache[4] || (_cache[4] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Coordonnées", -1))
+              ], 2)) : createCommentVNode("", true),
+              modes.value.includes(unref(MAP_MODE_PARCEL)) ? (openBlock(), createElementBlock("label", {
+                key: 1,
+                class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_PARCEL) }])
               }, [
                 withDirectives(createBaseVNode("input", {
                   "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => mode2.value = $event),
                   class: "ec-map-mode-selector__input",
                   type: "radio",
                   name: "ec-map-mode",
-                  value: unref(MAP_MODE_TERRITORY)
+                  value: unref(MAP_MODE_PARCEL)
                 }, null, 8, _hoisted_4$1), [
                   [vModelRadio, mode2.value]
                 ]),
-                _cache[4] || (_cache[4] = createBaseVNode("span", {
+                _cache[5] || (_cache[5] = createBaseVNode("i", {
+                  class: "ec-map-mode-selector__icon ec-icon-parcelle",
+                  "aria-hidden": "true"
+                }, null, -1)),
+                _cache[6] || (_cache[6] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Parcelle", -1))
+              ], 2)) : createCommentVNode("", true),
+              modes.value.includes(unref(MAP_MODE_TERRITORY)) ? (openBlock(), createElementBlock("label", {
+                key: 2,
+                class: normalizeClass(["ec-map-mode-selector__option", { "is-selected": mode2.value === unref(MAP_MODE_TERRITORY) }])
+              }, [
+                withDirectives(createBaseVNode("input", {
+                  "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => mode2.value = $event),
+                  class: "ec-map-mode-selector__input",
+                  type: "radio",
+                  name: "ec-map-mode",
+                  value: unref(MAP_MODE_TERRITORY)
+                }, null, 8, _hoisted_5$1), [
+                  [vModelRadio, mode2.value]
+                ]),
+                _cache[7] || (_cache[7] = createBaseVNode("span", {
                   class: "ec-map-mode-selector__icon fr-icon fr-icon-france-fill",
                   "aria-hidden": "true"
                 }, null, -1)),
-                _cache[5] || (_cache[5] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Territoire", -1))
-              ], 2)
+                _cache[8] || (_cache[8] = createBaseVNode("span", { class: "ec-map-mode-selector__text" }, "Territoire", -1))
+              ], 2)) : createCommentVNode("", true)
             ])
-          ])
-        ], 8, ["to", "disabled"]);
+          ], 8, _hoisted_1$4)
+        ], 8, ["to", "disabled"])) : createCommentVNode("", true);
       };
     }
   });
@@ -123294,6 +123753,10 @@ Expected function or array of functions, received type ${typeof value2}.`
         bootstrapMapPermalinkFromLocation();
       } else {
         initMapPermalinkFromLocation();
+      }
+      const permalinkMode = readMapModeFromPermalinkParams(getMapPermalinkParams());
+      if (mapMode && permalinkMode != null && !mapMode.modes.includes(permalinkMode)) {
+        writeMapModeToLocation(mapMode.mode.value);
       }
       function applyViewFromPermalink(map2) {
         if (appliedViewFromPermalink) return;
@@ -123570,6 +124033,9 @@ Expected function or array of functions, received type ${typeof value2}.`
     for (const key2 of preset.stack) {
       env.mainLayers[key2].setVisible(true);
     }
+    const background = id2 === "cadastre" ? "#ffffff" : void 0;
+    env.mainLayers.cadastreLow.setBackground(background);
+    env.mainLayers.cadastreHigh.setBackground(background);
   }
   function resolveStandardViewerStartupBbox(params2, options) {
     var _a2, _b;
@@ -123598,10 +124064,11 @@ Expected function or array of functions, received type ${typeof value2}.`
       params: {}
     },
     setup(__props) {
-      var _a2;
+      var _a2, _b;
       const props = __props;
       provideMapMode({
-        initial: normalizeMapMode((_a2 = props.params) == null ? void 0 : _a2.mode) ?? void 0
+        initial: normalizeMapMode((_a2 = props.params) == null ? void 0 : _a2.mode) ?? void 0,
+        modes: (_b = props.params) == null ? void 0 : _b.modes
       });
       const gpuBaseEnv = createGpuBaseLayerEnvironment();
       const presets = gpuBaseEnv.presets;
@@ -123642,12 +124109,12 @@ Expected function or array of functions, received type ${typeof value2}.`
         onStackOrder: (ids) => gpuWmsLayerRegistry.applyStackOrder(ids)
       };
       function currentMapZoom() {
-        var _a3, _b;
-        const z2 = (_b = (_a3 = mapShellRef.value) == null ? void 0 : _a3.map) == null ? void 0 : _b.getView().getZoom();
+        var _a3, _b2;
+        const z2 = (_b2 = (_a3 = mapShellRef.value) == null ? void 0 : _a3.map) == null ? void 0 : _b2.getView().getZoom();
         return typeof z2 === "number" && Number.isFinite(z2) ? Math.round(z2) : 6;
       }
       function initLayerStack() {
-        var _a3, _b, _c2;
+        var _a3, _b2, _c2;
         syncEntreeConfigFromGpuScript();
         const layerConfig = resolveLayerConfig((_a3 = props.params) == null ? void 0 : _a3.layerConfig);
         if (!(layerConfig == null ? void 0 : layerConfig.length)) {
@@ -123656,7 +124123,7 @@ Expected function or array of functions, received type ${typeof value2}.`
           return;
         }
         layerNodes.value = layerConfigToTreeNodes(layerConfig, currentMapZoom());
-        gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, ((_b = props.params) == null ? void 0 : _b.document) ?? null);
+        gpuWmsLayerRegistry.loadFromLayerConfig(layerConfig, ((_b2 = props.params) == null ? void 0 : _b2.document) ?? null);
         const map2 = ((_c2 = mapShellRef.value) == null ? void 0 : _c2.map) ?? null;
         if (map2) {
           gpuWmsLayerRegistry.attachMap(map2);
@@ -123687,8 +124154,8 @@ Expected function or array of functions, received type ${typeof value2}.`
           return ((_a3 = mapShellRef.value) == null ? void 0 : _a3.map) ?? null;
         },
         (map2) => {
-          var _a3, _b;
-          if (map2 && ((_b = resolveLayerConfig((_a3 = props.params) == null ? void 0 : _a3.layerConfig)) == null ? void 0 : _b.length)) {
+          var _a3, _b2;
+          if (map2 && ((_b2 = resolveLayerConfig((_a3 = props.params) == null ? void 0 : _a3.layerConfig)) == null ? void 0 : _b2.length)) {
             gpuWmsLayerRegistry.attachMap(map2);
           }
           if (map2) tryApplyEmbedStartupBbox();
@@ -123696,8 +124163,8 @@ Expected function or array of functions, received type ${typeof value2}.`
       );
       watch(
         () => {
-          var _a3, _b, _c2;
-          return [(_a3 = props.params) == null ? void 0 : _a3.bbox, (_b = props.params) == null ? void 0 : _b.document, (_c2 = props.params) == null ? void 0 : _c2.search];
+          var _a3, _b2, _c2;
+          return [(_a3 = props.params) == null ? void 0 : _a3.bbox, (_b2 = props.params) == null ? void 0 : _b2.document, (_c2 = props.params) == null ? void 0 : _c2.search];
         },
         () => tryApplyEmbedStartupBbox()
       );
@@ -123731,7 +124198,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       }
       return (_ctx, _cache) => {
         return openBlock(), createElementBlock("div", _hoisted_1$1, [
-          createVNode(_sfc_main$s, {
+          createVNode(_sfc_main$u, {
             ref_key: "mapShellRef",
             ref: mapShellRef,
             layers: baseLayers.value,
@@ -123749,19 +124216,20 @@ Expected function or array of functions, received type ${typeof value2}.`
                 "layer-map-hooks": layerMapHooks,
                 onToggleLayer
               }, null, 8, ["base-model-value", "base-presets", "layer-nodes"]),
-              createVNode(_sfc_main$o, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
+              createVNode(_sfc_main$p, { "initial-search": initialSearch.value }, null, 8, ["initial-search"]),
               createVNode(_sfc_main$3),
               createVNode(_sfc_main$2, {
                 "skip-marker-restore": Boolean(initialSearch.value)
               }, null, 8, ["skip-marker-restore"]),
               createVNode(_sfc_main$4),
-              createVNode(_sfc_main$e),
-              createVNode(_sfc_main$m),
-              createVNode(_sfc_main$n),
               createVNode(_sfc_main$f),
+              createVNode(_sfc_main$n),
+              createVNode(_sfc_main$o),
+              createVNode(_sfc_main$g),
+              createVNode(_sfc_main$s),
+              createVNode(_sfc_main$t),
               createVNode(_sfc_main$r),
               createVNode(_sfc_main$q),
-              createVNode(_sfc_main$p),
               createVNode(MapPrintModal, {
                 ref_key: "printModalRef",
                 ref: printModalRef
@@ -123773,7 +124241,7 @@ Expected function or array of functions, received type ${typeof value2}.`
       };
     }
   });
-  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-7dc1461f"]]);
+  const EmbedMapViewer = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-01c09813"]]);
   const LOADED = /* @__PURE__ */ new Set();
   function demoExternalBaseUrl() {
     const base = "./";

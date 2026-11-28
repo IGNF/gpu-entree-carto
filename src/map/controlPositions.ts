@@ -5,6 +5,8 @@
  */
 export const CONTROL_POSITIONS = {
   zoom: 'bottom-right',
+  /** Boussole : avec le zoom, au-dessus de +/− (CSS order). */
+  rotate: 'bottom-right',
   fullscreen: 'bottom-right',
   /** ScaleLine OL : bas-droite, décalé via CSS. */
   scaleLine: 'bottom-right',

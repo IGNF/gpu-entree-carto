@@ -9,6 +9,7 @@ Référence client **entree-carto** — les routes sont implémentées côté **
 | `GET /api/fiche-info/territoire?lon=&lat=&zoom=` | Fiche territoire (commune / arrondissement) |
 | `GET /api/fiche-info/parcelle?lon=&lat=&zoom=` | Fiche parcelle |
 | `GET /api/fiche-info?lon=&lat=&zoom=` | Réponse combinée (évite deux appels au changement de mode) |
+| `GET /api/fiche-info/coordonnees?lon=&lat=&zoom=` | Mode Coordonnées : règles au point (`pointFiche.features`, format de `parcelFiche`), documents de la commune, `parcelId` du point, sans fiche parcelle |
 
 Ces routes remplacent `/api/fiche-info-v2*` ; l’ancienne `/api/fiche-info` (paramètres `mode`, `includeParcel`) n’est plus gérée par entree-carto. Seule l’URL vient de la config : le client ne déduit plus de comportement du chemin.
 
@@ -18,6 +19,7 @@ Ces routes remplacent `/api/fiche-info-v2*` ; l’ancienne `/api/fiche-info` (pa
 | --- | ---- |
 | `apiFicheInfoUrl` | URL de base (combinée ; `/territoire` et `/parcelle` en sont dérivées) |
 | `apiFicheInfoTerritoireUrl` | Surcharge endpoint territoire |
+| `apiFicheInfoCoordonneesUrl` | Surcharge endpoint coordonnées (sinon `apiFicheInfoUrl` + `/coordonnees`) |
 | `apiFicheInfoParcelleUrl` | Surcharge endpoint parcelle |
 | `apiFicheInfoCombinedUrl` | Surcharge endpoint combiné |
 | `apiFicheInfoPreferCombined` | `false` pour forcer les appels split `/territoire` et `/parcelle` (défaut : combiné) |
@@ -79,6 +81,7 @@ Même forme que `/api/fiche-info` actuel (`GpuFicheInfoPayload`) + extensions v2
 - **Pas de commune au point** (ex. en mer) : fiche territoire titrée « Pas de commune à cet emplacement », message « Pas de document trouvé à cet emplacement… ».
 - **Parcelle — Infos** : zonages / prescriptions / informations affichés seulement si le document de la partition est **en production** dans la fiche-info API (même critère que les tuiles Documents).
 - Cache **par mode** au point cerise (`ficheInfoService.ts`) ; second clic ou changement de mode **sans** nouveau point = cache (pas de refetch).
+- Ce cache est **séparé par route** : Parcelle / Territoire (requête combinée) d’un côté, Coordonnées (`/coordonnees`, règles au point) de l’autre. Les réponses ne sont jamais fusionnées entre routes : passer de Parcelle à Coordonnées au même point interroge `/coordonnees` une fois, puis chaque mode reprend son cache.
 - Annulation du `fetch` précédent au clic suivant (`AbortController`) ; requête légère `supersede=true` avec `client` / `seq` pour couper le travail Symfony en cours avant le nouvel appel.
 - Présentation : tuiles DSFR horizontales (`ficheDocumentTiles.ts`).
 - **SCoT** : une tuile n’est affichée que si l’`id` document gpu-site correspond au `gpu_id` (ou `gpu_doc_id`) de l’entité WFS au point (plus de seul rapprochement par partition `scot_*`).

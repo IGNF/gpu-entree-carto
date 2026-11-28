@@ -8,9 +8,20 @@ import { useMapLegendZoom } from '@/composables/useMapLegendZoom'
 import type Map from 'ol/Map'
 import SanitizedHtml from '@/components/common/SanitizedHtml.vue'
 import FicheCadastreReferencesModal from '@/components/panels/FicheCadastreReferencesModal.vue'
-import { DEFAULT_FICHE_EMPTY, type FicheInfoSelection } from '@/composables/tabPanels'
+import {
+  DEFAULT_FICHE_EMPTY,
+  emptyFicheBodyHtml,
+  type FicheInfoSelection,
+} from '@/composables/tabPanels'
 import { useMapMode } from '@/composables/mapMode'
-import { MAP_MODE_PARCEL, MAP_MODE_TERRITORY, type MapModeId } from '@/lib/map/mapMode'
+import {
+  MAP_MODE_COORDINATES,
+  MAP_MODE_PARCEL,
+  MAP_MODE_TERRITORY,
+  type MapModeId,
+} from '@/lib/map/mapMode'
+import { fromLonLat } from 'ol/proj'
+import { getMapPermalinkParams, readMapPermalinkMarker } from '@/lib/map/mapPermalink'
 import { FICHE_LOADING_SPINNER_HTML } from '@/lib/fiche/ficheInfoHtml'
 import { gpuClientConfigStatus } from '@/lib/demo/gpuClientConfigState'
 import { focusModeEmpriseOnMap } from '@/lib/map/focusModeEmprise'
@@ -76,24 +87,37 @@ const effectiveMode = computed((): MapModeId | null => {
   return mapMode.mode.value
 })
 
-const showParcelLayout = computed(() => effectiveMode.value === MAP_MODE_PARCEL)
+const isCoordinatesMode = computed(() => effectiveMode.value === MAP_MODE_COORDINATES)
+/** Mode Coordonnées : même mise en page que la parcelle (règles au point). */
+const showParcelLayout = computed(
+  () => effectiveMode.value === MAP_MODE_PARCEL || isCoordinatesMode.value,
+)
+/** Clé et suffixe des identifiants : les deux sous-panneaux coexistent pendant le glissement. */
+const parcelLayoutKind = computed(() => (isCoordinatesMode.value ? 'coordinates' : 'parcel'))
 
 /**
  * Glissement latéral au changement de mode, dans l’ordre du sélecteur (Parcelle puis Territoire).
  * Neutre hors changement de mode (nouveau clic, chargement) : pas d’animation.
  */
 const MODE_SLIDE_NONE = 'ec-slide-none'
+/** Ordre des boutons du sélecteur de mode (sens du glissement). */
+const MODE_ORDER: MapModeId[] = [MAP_MODE_COORDINATES, MAP_MODE_PARCEL, MAP_MODE_TERRITORY]
 const modeSlideName = ref(MODE_SLIDE_NONE)
 watch(
   () => mapMode.mode.value,
   (next, previous) => {
     if (previous === undefined || next === previous) return
-    modeSlideName.value = next === MAP_MODE_TERRITORY ? 'ec-slide-next' : 'ec-slide-prev'
+    modeSlideName.value =
+      MODE_ORDER.indexOf(next) > MODE_ORDER.indexOf(previous) ? 'ec-slide-next' : 'ec-slide-prev'
   },
 )
 function onModeSlideEnd(el: Element): void {
   // Le passage peut traverser l’état « chargement » : on attend la fiche du nouveau mode.
-  if (el.matches('.ec-fiche-info__inner--parcel, .ec-fiche-info__inner--territory')) {
+  if (
+    el.matches(
+      '.ec-fiche-info__inner--parcel, .ec-fiche-info__inner--coordinates, .ec-fiche-info__inner--territory',
+    )
+  ) {
     modeSlideName.value = MODE_SLIDE_NONE
   }
   syncDsfrTabsWithVue()
@@ -231,23 +255,44 @@ function selectDocTab(id: string): void {
   activeDocTabId.value = id
 }
 
-/** Boutons de bascule (« Parcelle … » / commune) : change de mode sans déplacer la vue. */
+/**
+ * Boutons de bascule de la fiche (« Parcelle … » / commune) : change de mode et recentre sur l’emprise
+ * (le sélecteur de mode de la carte, lui, ne recentre pas).
+ */
+async function switchModeFromFiche(mode: MapModeId): Promise<void> {
+  if (mapMode.mode.value === mode) return
+  mapMode.setMode(mode)
+  refreshFicheForMapModeChange(mode, legendZoom.value)
+  const map = mapRef.value
+  if (map) await focusModeEmpriseOnMap(map, mode, { skipFicheRefresh: true })
+}
+
+/** Bascule proposée seulement vers un mode activé par la config (sinon simple texte). */
+const canSwitchToParcel = computed(() => mapMode.modes.includes(MAP_MODE_PARCEL))
+const canSwitchToTerritory = computed(() => mapMode.modes.includes(MAP_MODE_TERRITORY))
+
 function activateParcelMode(): void {
-  if (mapMode.mode.value === MAP_MODE_PARCEL) return
-  mapMode.setMode(MAP_MODE_PARCEL)
-  refreshFicheForMapModeChange(MAP_MODE_PARCEL, legendZoom.value)
+  void switchModeFromFiche(MAP_MODE_PARCEL)
 }
 
 function activateTerritoryMode(): void {
-  if (mapMode.mode.value === MAP_MODE_TERRITORY) return
-  mapMode.setMode(MAP_MODE_TERRITORY)
-  refreshFicheForMapModeChange(MAP_MODE_TERRITORY, legendZoom.value)
+  void switchModeFromFiche(MAP_MODE_TERRITORY)
 }
 
-/** Tags Parcelle / Territoire : seul recentrage de la vue sur l’emprise (parcelle ou commune). */
+/**
+ * Tags Parcelle / Territoire : seul recentrage de la vue sur l’emprise (parcelle ou commune).
+ * Tag Coordonnées : pas d’emprise, recentrage sur la cerise au zoom actuel.
+ */
 async function recenterOnModeEmprise(): Promise<void> {
   const map = mapRef.value
-  if (map) await focusModeEmpriseOnMap(map, mapMode.mode.value, { skipFicheRefresh: true })
+  if (!map) return
+  if (mapMode.mode.value === MAP_MODE_COORDINATES) {
+    const marker = readMapPermalinkMarker(getMapPermalinkParams())
+    if (marker)
+      map.getView().animate({ center: fromLonLat([marker.lon, marker.lat]), duration: 300 })
+    return
+  }
+  await focusModeEmpriseOnMap(map, mapMode.mode.value, { skipFicheRefresh: true })
 }
 
 async function loadParcelDetail(): Promise<void> {
@@ -338,9 +383,7 @@ watch(showParcelDocumentsTab, (visible) => {
   if (!visible && activeParcelTab.value === 'documents') activeParcelTab.value = 'infos'
 })
 
-const emptyBodyHtml = computed(
-  () => props.selection?.bodyHtml ?? DEFAULT_FICHE_EMPTY.bodyHtml ?? '',
-)
+const emptyBodyHtml = computed(() => props.selection?.bodyHtml ?? emptyFicheBodyHtml(mapMode.modes))
 
 const parcelPanelFootnotesHtml = computed(() => {
   void gpuClientConfigStatus.value
@@ -387,11 +430,46 @@ const parcelPanelFootnotesHtml = computed(() => {
           <SanitizedHtml class="ec-fiche-info__body" :html="emptyBodyHtml" link-target-blank />
         </div>
 
-        <!-- Mode Parcelle -->
-        <div v-else-if="showParcelLayout" class="ec-fiche-info__inner ec-fiche-info__inner--parcel">
+        <!-- Modes Parcelle et Coordonnées : même gabarit, un sous-panneau par mode (glissement) -->
+        <div
+          v-else-if="showParcelLayout"
+          :key="parcelLayoutKind"
+          class="ec-fiche-info__inner"
+          :class="`ec-fiche-info__inner--${parcelLayoutKind}`"
+        >
+          <template
+            v-if="
+              isCoordinatesMode && !selection?.parcelMissingAtPoint && selection?.parcelSwitchLabel
+            "
+          >
+            <button
+              v-if="canSwitchToParcel"
+              type="button"
+              class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
+              @click="activateParcelMode"
+            >
+              <span class="ri-arrow-right-line" aria-hidden="true" />
+              Parcelle {{ parcelSwitchLabel }}
+            </button>
+            <p v-else class="ec-fiche-info__mode-switch-text">Parcelle {{ parcelSwitchLabel }}</p>
+          </template>
           <header class="ec-fiche-info__topbar">
             <div class="ec-fiche-info__mode-tags">
               <a
+                v-if="isCoordinatesMode"
+                href="#"
+                class="fr-tag fr-tag--blue-cumulus ec-fiche-info__mode-tag-link"
+                title="Recentrer sur le point"
+                @click.prevent="recenterOnModeEmprise"
+              >
+                <span
+                  class="ec-fiche-info__mode-tag-icon fr-icon fr-icon-map-pin-2-line"
+                  aria-hidden="true"
+                />
+                Coordonnées
+              </a>
+              <a
+                v-else
                 href="#"
                 class="fr-tag fr-tag--purple-glycine ec-fiche-info__mode-tag-link"
                 title="Recentrer sur la parcelle"
@@ -413,28 +491,39 @@ const parcelPanelFootnotesHtml = computed(() => {
             </button>
           </header>
 
-          <h2 class="ec-fiche-info__title">{{ parcelLabel }}</h2>
-
-          <button
-            v-if="selection?.territoryTitle"
-            type="button"
-            class="ec-fiche-info__territory-cta fr-btn fr-btn--primary"
-            @click="activateTerritoryMode"
+          <h2 class="ec-fiche-info__title">
+            {{ isCoordinatesMode ? 'Coordonnées' : parcelLabel }}
+          </h2>
+          <p
+            v-if="isCoordinatesMode && selection?.coordinatesLabel"
+            class="ec-fiche-info__coordinates"
           >
-            {{ territoryTitle }}
-            <span class="ri-arrow-right-line" aria-hidden="true" />
-          </button>
+            {{ selection.coordinatesLabel }}
+          </p>
+
+          <template v-if="selection?.territoryTitle">
+            <button
+              v-if="canSwitchToTerritory"
+              type="button"
+              class="ec-fiche-info__territory-cta fr-btn fr-btn--primary"
+              @click="activateTerritoryMode"
+            >
+              {{ territoryTitle }}
+              <span class="ri-arrow-right-line" aria-hidden="true" />
+            </button>
+            <p v-else class="ec-fiche-info__mode-switch-text">{{ territoryTitle }}</p>
+          </template>
 
           <div class="fr-tabs ec-fiche-info__tabs">
             <ul class="fr-tabs__list" role="tablist" aria-label="Fiche parcelle">
               <li role="presentation">
                 <button
-                  id="ec-fiche-parcel-tab-infos"
+                  :id="`ec-fiche-${parcelLayoutKind}-tab-infos`"
                   type="button"
                   role="tab"
                   class="fr-tabs__tab"
                   :aria-selected="activeParcelTab === 'infos'"
-                  aria-controls="ec-fiche-parcel-panel-infos"
+                  :aria-controls="`ec-fiche-${parcelLayoutKind}-panel-infos`"
                   @click="activeParcelTab = 'infos'"
                 >
                   Infos
@@ -442,12 +531,12 @@ const parcelPanelFootnotesHtml = computed(() => {
               </li>
               <li v-if="showParcelDocumentsTab" role="presentation">
                 <button
-                  id="ec-fiche-parcel-tab-documents"
+                  :id="`ec-fiche-${parcelLayoutKind}-tab-documents`"
                   type="button"
                   role="tab"
                   class="fr-tabs__tab"
                   :aria-selected="activeParcelTab === 'documents'"
-                  aria-controls="ec-fiche-parcel-panel-documents"
+                  :aria-controls="`ec-fiche-${parcelLayoutKind}-panel-documents`"
                   @click="activeParcelTab = 'documents'"
                 >
                   Documents
@@ -456,11 +545,11 @@ const parcelPanelFootnotesHtml = computed(() => {
             </ul>
 
             <div
-              id="ec-fiche-parcel-panel-infos"
+              :id="`ec-fiche-${parcelLayoutKind}-panel-infos`"
               class="fr-tabs__panel ec-fiche-info__parcel-panel"
               :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'infos' }"
               role="tabpanel"
-              aria-labelledby="ec-fiche-parcel-tab-infos"
+              :aria-labelledby="`ec-fiche-${parcelLayoutKind}-tab-infos`"
               :tabindex="activeParcelTab === 'infos' ? 0 : -1"
             >
               <div
@@ -505,11 +594,11 @@ const parcelPanelFootnotesHtml = computed(() => {
             </div>
 
             <div
-              id="ec-fiche-parcel-panel-documents"
+              :id="`ec-fiche-${parcelLayoutKind}-panel-documents`"
               class="fr-tabs__panel ec-fiche-info__parcel-panel"
               :class="{ 'fr-tabs__panel--selected': activeParcelTab === 'documents' }"
               role="tabpanel"
-              aria-labelledby="ec-fiche-parcel-tab-documents"
+              :aria-labelledby="`ec-fiche-${parcelLayoutKind}-tab-documents`"
               :tabindex="activeParcelTab === 'documents' ? 0 : -1"
             >
               <div
@@ -553,16 +642,22 @@ const parcelPanelFootnotesHtml = computed(() => {
           v-else-if="showTerritoryLayout"
           class="ec-fiche-info__inner ec-fiche-info__inner--territory"
         >
-          <button
-            v-if="selection?.parcelSwitchLabel || selection?.parcelLabel"
-            type="button"
-            class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
-            @click="activateParcelMode"
-          >
-            <span class="ri-arrow-left-line" aria-hidden="true" />
-            <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
-            <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
-          </button>
+          <template v-if="selection?.parcelSwitchLabel || selection?.parcelLabel">
+            <button
+              v-if="canSwitchToParcel"
+              type="button"
+              class="ec-fiche-info__back-parcel fr-btn fr-btn--tertiary fr-btn--icon-left"
+              @click="activateParcelMode"
+            >
+              <span class="ri-arrow-left-line" aria-hidden="true" />
+              <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
+              <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
+            </button>
+            <p v-else class="ec-fiche-info__mode-switch-text">
+              <template v-if="selection?.parcelMissingAtPoint">{{ parcelSwitchLabel }}</template>
+              <template v-else>Parcelle {{ parcelSwitchLabel }}</template>
+            </p>
+          </template>
 
           <header class="ec-fiche-info__topbar">
             <div class="ec-fiche-info__mode-tags">

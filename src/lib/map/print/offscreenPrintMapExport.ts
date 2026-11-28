@@ -1,3 +1,4 @@
+import { assertCanvasUsable } from '@/lib/map/print/printCanvasMemory'
 import Map from 'ol/Map'
 import View from 'ol/View'
 import type { Extent } from 'ol/extent'
@@ -35,6 +36,8 @@ export type OffscreenPrintMapExportOptions = {
   onTileProgress?: (loadedTiles: number, pendingTiles: number) => void
   /** Interrompt le rendu (préchauffage abandonné) : rejette avec une `AbortError`, sans cache. */
   signal?: AbortSignal
+  /** Tuiles pas toutes chargées dans le délai (réseau lent) : carte exportée telle quelle, sans cache. */
+  onIncomplete?: () => void
 }
 
 /** Rendus en cours par clé de cache (préchauffage + export simultanés → un seul rendu). */
@@ -114,8 +117,10 @@ async function renderUncached(
     exportView.fit(extent, { size: [cssWidth, cssHeight], duration: 0 })
 
     options.onStage?.('Chargement des tuiles cartographiques…')
-    await waitForMapExportReady(exportMap, {
+    const { timedOut } = await waitForMapExportReady(exportMap, {
       timeoutMs: 120_000,
+      // Export : mieux vaut une carte avec quelques tuiles manquantes qu’aucun fichier (réseau mobile lent).
+      resolveOnTimeout: Boolean(options.onIncomplete),
       stablePasses: 2,
       signal: options.signal,
       onProgress: ({ pendingTiles, loadedTiles }) => {
@@ -127,16 +132,14 @@ async function renderUncached(
     const exportCanvas = document.createElement('canvas')
     exportCanvas.width = widthPx
     exportCanvas.height = heightPx
-    const exportCtx = exportCanvas.getContext('2d')
-    if (!exportCtx) {
-      throw new Error('Impossible de récupérer le contexte 2D pour le canvas d’export.')
-    }
+    const exportCtx = assertCanvasUsable(exportCanvas)
     const viewportEl = exportMap.getViewport()
     if (!viewportEl) {
       throw new Error('Viewport carte indisponible.')
     }
     mergeMapLayerCanvases(viewportEl, exportCtx, widthPx / cssWidth)
-    if (options.cacheKey) {
+    if (timedOut) options.onIncomplete?.()
+    else if (options.cacheKey) {
       storePrintMapCanvasCache(options.cacheKey, exportCanvas)
     }
     return exportCanvas
